@@ -223,6 +223,8 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
     case PROP_TEMPLATE:
       filter->template = (char *) g_value_get_string (value);
       gst_templatematch_load_template (filter);
+      /* This will be recreated in the chain function as required: */
+      cvReleaseImage (&filter->cvDistImage);
       break;
     case PROP_DISPLAY:
       filter->display = g_value_get_boolean (value);
@@ -399,6 +401,8 @@ static void
 gst_templatematch_load_template (GstTemplateMatch * filter)
 {
   if (filter->template) {
+    cvReleaseImage (&filter->cvTemplateImage);
+
     filter->cvTemplateImage =
         cvLoadImage (filter->template, CV_LOAD_IMAGE_COLOR);
 
