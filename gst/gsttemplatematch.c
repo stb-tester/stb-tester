@@ -311,16 +311,14 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
 
-  /* FIXME Why template == NULL returns OK?
-   * shouldn't it be a passthrough instead? */
-  if ((!filter) || (!buf) || filter->template == NULL) {
+  if ((!filter) || (!buf)) {
     return GST_FLOW_OK;
   }
   GST_DEBUG_OBJECT (filter, "Buffer size %u ", GST_BUFFER_SIZE (buf));
 
   filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
 
-  if (!filter->cvDistImage) {
+  if (filter->cvTemplateImage && !filter->cvDistImage) {
     if (filter->cvTemplateImage->width > filter->cvImage->width) {
       GST_WARNING ("Template Image is wider than input image");
     } else if (filter->cvTemplateImage->height > filter->cvImage->height) {
