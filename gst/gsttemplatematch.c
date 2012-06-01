@@ -224,7 +224,7 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       GST_OBJECT_UNLOCK(filter);
       break;
     case PROP_TEMPLATE:
-      gst_templatematch_load_template (filter, g_value_get_string (value));
+      gst_templatematch_load_template (filter, g_value_dup_string (value));
       break;
     case PROP_DISPLAY:
       GST_OBJECT_LOCK(filter);
@@ -290,6 +290,7 @@ gst_templatematch_finalize (GObject * object)
   GstTemplateMatch *filter;
   filter = GST_TEMPLATEMATCH (object);
 
+  g_free(filter->template);
   if (filter->cvImage) {
     cvReleaseImageHeader (&filter->cvImage);
   }
@@ -401,9 +402,11 @@ gst_templatematch_match (IplImage * input, IplImage * template,
 }
 
 
+/* We take ownership of template here */
 static void
 gst_templatematch_load_template (GstTemplateMatch * filter, const char* template)
 {
+  const char *oldTemplateFilename = NULL;
   IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL, *oldDistImage = NULL;
 
   if (template) {
@@ -415,6 +418,7 @@ gst_templatematch_load_template (GstTemplateMatch * filter, const char* template
   }
 
   GST_OBJECT_LOCK(filter);
+  oldTemplateFilename = filter->template;
   filter->template = template;
   oldTemplateImage = filter->cvTemplateImage;
   filter->cvTemplateImage = newTemplateImage;
@@ -425,6 +429,7 @@ gst_templatematch_load_template (GstTemplateMatch * filter, const char* template
 
   cvReleaseImage (&oldDistImage);
   cvReleaseImage (&oldTemplateImage);
+  g_free(oldTemplateFilename);
 }
 
 
