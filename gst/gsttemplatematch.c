@@ -112,7 +112,8 @@ static void gst_templatematch_get_property (GObject * object, guint prop_id,
 static gboolean gst_templatematch_set_caps (GstPad * pad, GstCaps * caps);
 static GstFlowReturn gst_templatematch_chain (GstPad * pad, GstBuffer * buf);
 
-static void gst_templatematch_load_template (GstTemplateMatch * filter);
+static void gst_templatematch_load_template (
+    GstTemplateMatch * filter, const char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
 
@@ -199,6 +200,7 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_METHOD:
+      GST_OBJECT_LOCK(filter);
       switch (g_value_get_int (value)) {
         case 0:
           filter->method = CV_TM_SQDIFF;
@@ -219,15 +221,15 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
           filter->method = CV_TM_CCOEFF_NORMED;
           break;
       }
+      GST_OBJECT_UNLOCK(filter);
       break;
     case PROP_TEMPLATE:
-      filter->template = (char *) g_value_get_string (value);
-      gst_templatematch_load_template (filter);
-      /* This will be recreated in the chain function as required: */
-      cvReleaseImage (&filter->cvDistImage);
+      gst_templatematch_load_template (filter, g_value_get_string (value));
       break;
     case PROP_DISPLAY:
+      GST_OBJECT_LOCK(filter);
       filter->display = g_value_get_boolean (value);
+      GST_OBJECT_UNLOCK(filter);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -308,6 +310,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   GstTemplateMatch *filter;
   CvPoint best_pos;
   double best_res;
+  GstMessage *m = NULL;
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
 
@@ -318,6 +321,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
 
+  GST_OBJECT_LOCK(filter);
   if (filter->cvTemplateImage && !filter->cvDistImage) {
     if (filter->cvTemplateImage->width > filter->cvImage->width) {
       GST_WARNING ("Template Image is wider than input image");
@@ -341,7 +345,6 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   }
   if (filter->cvTemplateImage && filter->cvImage && filter->cvDistImage) {
     GstStructure *s;
-    GstMessage *m;
 
     gst_templatematch_match (filter->cvImage, filter->cvTemplateImage,
         filter->cvDistImage, &best_res, &best_pos, filter->method);
@@ -354,7 +357,6 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         "result", G_TYPE_DOUBLE, best_res, NULL);
 
     m = gst_message_new_element (GST_OBJECT (filter), s);
-    gst_element_post_message (GST_ELEMENT (filter), m);
 
     if (filter->display) {
       CvPoint corner = best_pos;
@@ -368,7 +370,11 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     }
 
   }
+  GST_OBJECT_UNLOCK(filter);
 
+  if (m) {
+    gst_element_post_message (GST_ELEMENT (filter), m);
+  }
   return gst_pad_push (filter->srcpad, buf);
 }
 
@@ -396,19 +402,29 @@ gst_templatematch_match (IplImage * input, IplImage * template,
 
 
 static void
-gst_templatematch_load_template (GstTemplateMatch * filter)
+gst_templatematch_load_template (GstTemplateMatch * filter, const char* template)
 {
-  if (filter->template) {
-    cvReleaseImage (&filter->cvTemplateImage);
+  IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL, *oldDistImage = NULL;
 
-    filter->cvTemplateImage =
-        cvLoadImage (filter->template, CV_LOAD_IMAGE_COLOR);
-
-    if (!filter->cvTemplateImage) {
+  if (template) {
+    newTemplateImage = cvLoadImage (template, CV_LOAD_IMAGE_COLOR);
+    if (!newTemplateImage) {
       GST_WARNING ("Couldn't load template image: %s. error: %s",
-          filter->template, g_strerror (errno));
+          template, g_strerror (errno));
     }
   }
+
+  GST_OBJECT_LOCK(filter);
+  filter->template = template;
+  oldTemplateImage = filter->cvTemplateImage;
+  filter->cvTemplateImage = newTemplateImage;
+  oldDistImage = filter->cvDistImage;
+  /* This will be recreated in the chain function as required: */
+  filter->cvDistImage = NULL;
+  GST_OBJECT_UNLOCK(filter);
+
+  cvReleaseImage (&oldDistImage);
+  cvReleaseImage (&oldTemplateImage);
 }
 
 
