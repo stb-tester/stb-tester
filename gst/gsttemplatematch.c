@@ -361,13 +361,13 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
     if (filter->display) {
       CvPoint corner = best_pos;
+      CvScalar color = CV_RGB(255, 255-pow(255,best_res), 32);
 
       buf = gst_buffer_make_writable (buf);
 
       corner.x += filter->cvTemplateImage->width;
       corner.y += filter->cvTemplateImage->height;
-      cvRectangle (filter->cvImage, best_pos, corner, CV_RGB (255, 32, 32), 3,
-          8, 0);
+      cvRectangle (filter->cvImage, best_pos, corner, color, 3, 8, 0);
     }
 
   }
