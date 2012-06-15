@@ -1,0 +1,4 @@
+#!/bin/sh
+
+PYTHONPATH=@PREFIX@/lib/stbt/:$PYTHONPATH @PREFIX@/lib/stbt/stbt-"$@"
+

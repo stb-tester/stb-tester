@@ -1,0 +1,174 @@
+#!/usr/bin/python
+
+import pygst  # gstreamer
+pygst.require("0.10")
+import gst
+import gtk  # for main loop
+
+import sys
+import traceback
+
+from stbt import hauppauge, VirtualRemote, save_frame
+
+def main(argv):
+    testscript = argv[1]
+    system_under_test = argv[2]  # hostname
+
+    global display, control
+    display = Display(hauppauge())
+    control = VirtualRemote(system_under_test)
+    try:
+        execfile(testscript)
+    except MatchTimeout as e:
+        save_frame(e.screenshot, "screenshot.png")
+        print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
+               "Saved screenshot to '%s'") % (
+            testscript, e.expected, e.timeout_secs, "screenshot.png")
+        traceback.print_tb(sys.exc_traceback)
+        sys.exit(1)
+    finally:
+        display.teardown()
+
+
+def press(*args, **keywords):
+    return control.press(*args, **keywords)
+
+def wait_for_match(*args, **keywords):
+    return display.wait_for_match(*args, **keywords)
+
+def press_until_match(key, image, interval_secs=3, max_presses=10):
+    i = 0
+    while True:
+        try:
+            wait_for_match(image, timeout_secs=interval_secs)
+            return
+        except MatchTimeout:
+            if i < max_presses:
+                press(key)
+                i += 1
+            else:
+                raise
+
+
+class Display:
+    def __init__(self, gst_source_pipeline):
+        imageprocessing = " ! ".join([
+                "queue leaky=2",          # Buffer the video stream, dropping frames if downstream processors aren't fast enough.
+                "ffmpegcolorspace",       # Convert to a colorspace that templatematch can handle.
+                "templatematch name=templatematch method=1", # OpenCV image-processing library.
+                ])
+        xvideo = " ! ".join([
+                "ffmpegcolorspace",       # Convert to a colorspace that xvimagesink can handle.
+                "xvimagesink sync=false", # Display in the X Window System.
+                ])
+        screenshot = "appsink name=screenshot max-buffers=1 drop=true sync=false"
+        pipe = " ".join([
+                gst_source_pipeline,
+                "!", imageprocessing,
+                "! tee name=t",
+                "! queue leaky=2 !", screenshot,
+                "t. ! queue leaky=2 !", xvideo
+                ])
+
+        # Gstreamer loads plugin libraries on demand, when elements that need
+        # those libraries are first mentioned. There is a bug in gst-opencv
+        # where it erroneously claims to provide appsink, preventing the
+        # loading of the real appsink -- so we load it first.
+        # TODO: Fix gst-opencv so that it doesn't prevent appsink from being loaded.
+        gst.parse_launch("appsink")
+
+        self.pipeline = gst.parse_launch(pipe)
+        self.templatematch = first(self.pipeline.elements(),
+                                   lambda x: x.get_name() == "templatematch")
+        self.screenshot = first(self.pipeline.elements(),
+                                lambda x: x.get_name() == "screenshot")
+        self.bus = self.pipeline.get_bus()
+        self.bus.add_signal_watch()
+        self.pipeline.set_state(gst.STATE_PLAYING)
+
+    def wait_for_match(self, image,
+                       timeout_secs=10, certainty=0.98, consecutive_matches=10):
+        """Wait for a stable match.
+
+        "Stable" means 10 consecutive frames with a match at the same x,y
+        position.
+
+        "timeout_secs" is in seconds elapsed, as reported by the video stream.
+        """
+
+        self.templatematch.set_property("template", image)
+        self.match_count, self.last_x, self.last_y = 0, 0, 0
+        self.timeout_secs = timeout_secs
+        self.start_timestamp = None
+        self.certainty = certainty
+        self.consecutive_matches = consecutive_matches
+
+        debug("Searching for " + image)
+        self.bus.connect("message::element", self.bus_message)
+        gtk.main()
+        if self.match_count == self.consecutive_matches:
+            debug("MATCHED " + image)
+            return
+        else:
+            buf = self.screenshot.get_property("last-buffer")
+            raise MatchTimeout(buf, image, timeout_secs)
+
+    def bus_message(self, bus, message):
+        st = message.structure
+        if st.get_name() == "template_match":
+
+            buf = self.screenshot.get_property("last-buffer")
+            if self.start_timestamp == None:
+                self.start_timestamp = buf.timestamp
+
+            certainty = st["result"]
+            debug("Match %d found at %d,%d (last: %d,%d) with dimensions %dx%d."
+                  " Certainty: %d%%. Timestamp: %d."
+                  % (self.match_count,
+                     st["x"], st["y"], self.last_x, self.last_y,
+                     st["width"], st["height"],
+                     certainty*100.0, buf.timestamp))
+
+            if certainty > self.certainty and (
+                    self.match_count == 0 or
+                    (st["x"], st["y"]) == (self.last_x, self.last_y)):
+                self.match_count += 1
+            else:
+                self.match_count = 0
+            self.last_x, self.last_y = st["x"], st["y"]
+
+            timed_out = (buf.timestamp - self.start_timestamp >
+                         self.timeout_secs * 1000000000)
+            if self.match_count == self.consecutive_matches or (
+                    timed_out and self.match_count == 0):
+                self.templatematch.set_property("template", None)
+                self.bus.disconnect_by_func(self.bus_message)
+                gtk.main_quit()
+
+    def teardown(self):
+        if self.pipeline:
+            self.pipeline.set_state(gst.STATE_NULL)
+
+
+class UITestFailure(Exception):
+    pass
+
+class MatchTimeout(UITestFailure):
+    def __init__(self, screenshot, expected, timeout_secs):
+        self.screenshot = screenshot
+        self.expected = expected
+        self.timeout_secs = timeout_secs
+
+
+def first(iterable, predicate):
+    for item in iterable:
+        if predicate(item):
+            return item
+
+
+def debug(s):
+    sys.stderr.write(sys.argv[0] + ": " + str(s) + "\n")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
