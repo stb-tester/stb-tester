@@ -22,7 +22,7 @@ def save_frame(buf, filename):
                 'pngenc',
                 'filesink location="%s"' % filename,
                 ]))
-    src = first(pipeline.elements(), lambda x: x.get_name() == 'src')
+    src, = [x for x in pipeline.elements() if x.get_name() == 'src']
     # This is actually a (synchronous) method call to push-buffer:
     src.emit('push-buffer', buf)
     src.emit('end-of-stream')
@@ -101,3 +101,6 @@ def virtual_remote_listen(listenport=2033):
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return key_reader(read_records(connection, '\n\0'))
 
+
+def debug(s):
+    sys.stderr.write(sys.argv[0] + ": " + str(s) + "\n")
