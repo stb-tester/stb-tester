@@ -19,6 +19,7 @@ def save_frame(buf, filename):
     '''Save a gstreamer buffer to the specified file in png format.'''
     pipeline = gst.parse_launch(" ! ".join([
                 'appsrc name="src" caps="%s"' % buf.get_caps(),
+                'ffmpegcolorspace',
                 'pngenc',
                 'filesink location="%s"' % filename,
                 ]))
