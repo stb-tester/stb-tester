@@ -65,7 +65,7 @@ def read_records(stream, sep):
     buf = ""
     l = len(sep)
     while True:
-        s = stream.recv(4096)
+        s = stream.read(4096)
         if len(s) == 0:
             break
         buf += s
@@ -100,7 +100,7 @@ def virtual_remote_listen(listenport=2033):
     sys.stderr.write("Waiting for connection from virtual remote control port %d...\n" % listenport)
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
-    return key_reader(read_records(connection, '\n\0'))
+    return key_reader(read_records(connection.makefile(), '\n\0'))
 
 
 def debug(s):
