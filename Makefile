@@ -30,3 +30,5 @@ stb-tester-$(VERSION).tar.gz:
 	git archive HEAD --prefix stb-tester-$(VERSION)/ \
 		-o stb-tester-$(VERSION).tar
 	gzip stb-tester-$(VERSION).tar
+
+.DELETE_ON_ERROR:
