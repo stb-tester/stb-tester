@@ -87,11 +87,11 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
 
     def wait_for_match(self, image,
-                       timeout_secs=10, certainty=0.98, consecutive_matches=10):
+                       timeout_secs=10, certainty=0.98, consecutive_matches=3):
         """Wait for a stable match.
 
-        "Stable" means 10 consecutive frames with a match at the same x,y
-        position.
+        "Stable" means 3 consecutive frames with a match certainty > 98% at the
+        same x,y position.
 
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
         """
