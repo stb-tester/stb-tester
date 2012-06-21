@@ -1,7 +1,7 @@
 PREFIX?=/usr/local
 INSTALL?=install
 
-VERSION?=$(shell git describe HEAD --always)
+VERSION?=$(shell git describe --always --dirty)
 
 all: stbt
 
