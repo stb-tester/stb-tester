@@ -165,7 +165,7 @@ TEST SCRIPT BEST PRACTICES
 SEE ALSO
 ========
 
-* github.com/???
+* http://github.com/drothlis/stb-tester
 
 
 AUTHORS
