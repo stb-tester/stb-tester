@@ -8,7 +8,7 @@ A record + playback testing system for set-top boxes
 
 :Copyright: Copyright © 2012 YouView TV Ltd.
 :License: LGPL v2.1 or any later version (see LICENSE file for details)
-:Version: fac6848
+:Version: @VERSION@
 :Manual section: 1
 :Manual group: stb-tester
 
