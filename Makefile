@@ -1,5 +1,6 @@
 PREFIX?=/usr/local
 INSTALL?=install
+TAR?=tar
 
 generate_version := $(shell \
 	git describe --always --dirty > VERSION.now 2>/dev/null && \
@@ -14,11 +15,11 @@ stbt:
 	sed s!@PREFIX@!$(PREFIX)!g stbt.in > stbt
 
 install: stbt stbt.1
-	$(INSTALL) --mode 0755 -d $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1}
-	$(INSTALL) --mode 0755 -t $(DESTDIR)$(PREFIX)/bin stbt
-	$(INSTALL) --mode 0755 -t $(DESTDIR)$(PREFIX)/lib/stbt stbt-record stbt-run
-	$(INSTALL) --mode 0644 -t $(DESTDIR)$(PREFIX)/lib/stbt stbt.py
-	$(INSTALL) --mode 0644 -t $(DESTDIR)$(PREFIX)/share/man/man1 stbt.1
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1}
+	$(INSTALL) -m 0755 stbt $(DESTDIR)$(PREFIX)/bin
+	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(PREFIX)/lib/stbt
+	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(PREFIX)/lib/stbt
+	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(PREFIX)/share/man/man1
 
 doc: stbt.1
 
@@ -32,7 +33,7 @@ stbt.1: README.rst VERSION
 dist: stb-tester-$(VERSION).tar.gz
 
 stb-tester-$(VERSION).tar.gz: stbt.in stbt-record stbt-run stbt.py README.rst VERSION Makefile
-	tar -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
+	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 clean:
 	rm -f stbt.1 stbt
