@@ -77,13 +77,13 @@ above hardware components.
 stb-tester uses gstreamer, an open source multimedia framework. Instead of a
 video-capture card you can use any gstreamer video-source element. For example:
 
-* If you run tests against a VM running the set-top box software instead of a
-  physical set-top box, you could use the ??? gstreamer element to capture
-  video from the VM's X Window.
+* If you run tests against a VM running the set-top box software instead
+  of a physical set-top box, you could use the ximagesrc gstreamer
+  element to capture video from the VM's X Window.
 
-* If your set-top box uses DirectFB, you could install the DirectFBSource???
-  gstreamer element on the set-top box to stream video to a TCPSource???
-  gstreamer element on the test rig.
+* If your set-top box uses DirectFB, you could install the (not yet written)
+  DirectFBSource gstreamer element on the set-top box to stream video to a
+  tcpclientsrc or tcpserversrc gstreamer element on the test rig.
 
 Instead of a hardware infra-red receiver + emitter, you can use a software
 equivalent (for example a server running on the set-top box that listens on
@@ -97,26 +97,36 @@ Linux server
 
 We expect that an 8-core machine will be able to drive 4 set-top boxes
 simultaneously with at least 1 frame per second per set-top box.
-???Assuming enough bandwidth on the USB bus -- need to test this.
+(TODO: Assuming enough bandwidth on the USB bus -- need to test this).
 
 
 SOFTWARE REQUIREMENTS
 =====================
 
-* Linux plus any required drivers for the hardware components.
-* python 2.7
-* gstreamer 0.10
-* OpenCV (image processing library)
-* gst-plugins-bad >= 0.10.??? (for the gstreamer wrappers around OpenCV)
+* Drivers for any required hardware components
 
-  * Until our patches to gst-plugins-bad are accepted upstream, you will need
-    to build libgstopencv from our fork of gst-plugins-bad at ???
+* python (we have tested with 2.6 and 2.7)
+
+* gstreamer 0.10 (multimedia framework)
+
+* OpenCV (image processing library) version >= 2.0.0 and <= 2.3.1
+  (the version restrictions are imposed by gst-plugins-bad).
+
+* gst-plugins-bad (for the gstreamer wrappers around OpenCV)
+  built from source from the head of the 0.10 branch, with the patches from
+  https://bugzilla.gnome.org/show_bug.cgi?id=678485
+  (until such time as the patches are accepted upstream).
+
+  A github repo with the same patches applied is available at
+  https://github.com/drothlis/gst-plugins-bad (branch templatematch-fixes).
 
 
 INSTALLING FROM SOURCE
 ======================
 
 Run "make install" from the stb-tester source directory.
+
+Requires python-docutils (for building the documentation).
 
 
 TEST SCRIPT FORMAT
@@ -147,7 +157,9 @@ TEST SCRIPT BEST PRACTICES
   live TV showing through.
 
 * Don't crop tiny images: Instead of selecting just the text in a menu button,
-  select the whole button.
+  select the whole button. (Larger images provide a greater gap between the
+  "match certainty" reported for non-matching vs. matching images, which makes
+  for more robust tests).
 
 
 SEE ALSO
