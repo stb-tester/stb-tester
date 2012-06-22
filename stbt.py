@@ -1,16 +1,5 @@
 import sys
-
-def hauppauge(device="/dev/video0"):
-    """Gstreamer source configuration for Hauppauge HD PVR
-    (model 49001 LF Rev F2).
-    """
-    return " ! ".join([
-            "v4l2src device=%s" % device, # Video-for-Linux-2 input device.
-            "mpegtsdemux",  # Demultiplex the mpeg transport stream.
-            "video/x-h264", # We only care about the video -- and in fact the aac decoder was causing some problems.
-            "decodebin",    # A gstreamer "bin" is a set of components packaged up for easy use. This one decodes (among other things) H.264.
-            ])
-
+import re
 
 def save_frame(buf, filename):
     '''Save a gstreamer buffer to the specified file in png format.'''
@@ -36,15 +25,29 @@ def save_frame(buf, filename):
         raise RuntimeError(e.message)
 
 
+def uri_to_remote(uri):
+    if uri == 'None':
+        return NullRemote()
+    m = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
+    if m:
+        d = m.groupdict()
+        return VirtualRemote(d['hostname'], int(d['port'] or 2033))
+    else:
+        raise RuntimeException('Invalid remote control URI: "%s"' % uri)
+
+class NullRemote:
+    def press(self, key):
+        pass
+
 class VirtualRemote:
     """Send a key-press to a set-top box running a VirtualRemote listener.
 
         control = VirtualRemote("192.168.0.123")
         control.press("MENU")
     """
-    def __init__(self, stb):
-        self.stb = stb
-        self.port = 2033
+    def __init__(self, hostname, port):
+        self.stb = hostname
+        self.port = port
 
     def press(self, key):
         import socket
@@ -52,6 +55,27 @@ class VirtualRemote:
         s.connect((self.stb, self.port))
         s.send("D\t%s\n\0U\t%s\n\0" % (key, key)) # send key Down, then key Up.
         debug("Pressed " + key)
+
+
+def uri_to_remote_recorder(uri):
+    m = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
+    if m:
+        d = m.groupdict()
+        return virtual_remote_listen(d['hostname'], int(d['port'] or 2033))
+    m = re.match('file://(?P<filename>.+)', uri)
+    if m:
+        return file_remote_recorder(m.group('filename'))
+
+
+def file_remote_recorder(filename):
+    """ A generator that returns lines from the file given by filename.
+
+    Unfortunately treating a file as a iterator doesn't work in the case of
+    interactive input, even when we provide bufsize=1 (line buffered) to the
+    call to open() so we have to have this function to work around it. """
+    f = open(filename, 'r')
+    while True:
+        yield f.readline().rstrip()
 
 
 def read_records(stream, sep):
@@ -89,13 +113,13 @@ def key_reader(cmd_iter):
             yield key
 
 
-def virtual_remote_listen(listenport=2033):
+def virtual_remote_listen(address, port):
     """Waits for a VirtualRemote to connect, and returns an iterator yielding
     keypresses."""
     import socket
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serversocket.bind(('', listenport))
+    serversocket.bind((address, port))
     serversocket.listen(5)
     sys.stderr.write("Waiting for connection from virtual remote control port %d...\n" % listenport)
     (connection, address) = serversocket.accept()

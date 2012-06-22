@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys
-from stbt import hauppauge, VirtualRemote, save_frame, virtual_remote_listen, ArgvHider
+from stbt import save_frame, uri_to_remote, uri_to_remote_recorder, ArgvHider
 
 with ArgvHider():
     import pygst  # gstreamer
@@ -9,10 +9,22 @@ with ArgvHider():
     import gst
 
 import itertools
+import argparse
 
 def main(argv):
-    stb = argv[1]
-    record(hauppauge(), virtual_remote_listen(), VirtualRemote(stb), sys.stdout)
+    parser = argparse.ArgumentParser('Create an stb-tester test script')
+    parser.add_argument('--control',
+        help='The remote control to control the stb')
+    parser.add_argument('--control-recorder',
+        help='The remote control to control the stb')
+    parser.add_argument('--source-pipeline',
+        help='A gstreamer pipeline to use for A/V input')
+    parser.add_argument('-o', '--output-file',
+        help='The filename of the generated script')
+    args = parser.parse_args(argv[1:])
+
+    record(args.source_pipeline, uri_to_remote_recorder(args.control_recorder),
+           uri_to_remote(args.control), open(args.output_file, 'w'))
 
 def record(video_source, remote_input, control, script_out):
     count = itertools.count()

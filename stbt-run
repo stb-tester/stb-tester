@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from stbt import hauppauge, VirtualRemote, save_frame, ArgvHider
+from stbt import save_frame, uri_to_remote, ArgvHider
 import sys
 
 with ArgvHider():
@@ -10,16 +10,21 @@ with ArgvHider():
     import gtk  # for main loop
 
 import traceback
+import argparse
 
 def main(argv):
-    testscript = argv[1]
-    system_under_test = argv[2]  # hostname
+    parser = argparse.ArgumentParser(description='Run an stb-tester test script')
+    parser.add_argument('--control', help='The remote control to control the stb')
+    parser.add_argument('--source-pipeline',
+                        help='A gstreamer pipeline to use for A/V input')
+    parser.add_argument('script', help='The test script to run')
+    args = parser.parse_args(argv[1:])
 
     global display, control
-    display = Display(hauppauge())
-    control = VirtualRemote(system_under_test)
+    display = Display(args.source_pipeline)
+    control = uri_to_remote(args.control)
     try:
-        execfile(testscript)
+        execfile(args.script)
     except MatchTimeout as e:
         save_frame(e.screenshot, "screenshot.png")
         print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
