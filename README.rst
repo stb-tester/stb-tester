@@ -133,6 +133,17 @@ Run "make install" from the stb-tester source directory.
 Requires python-docutils (for building the documentation).
 
 
+SETUP TIPS
+==========
+
+Use "gst-inspect templatematch" to check that gstreamer can find the
+templatematch element. You may need to set GST_PLUGIN_PATH to point
+where you installed gst-plugins-bad.
+
+Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
+working correctly.
+
+
 TEST SCRIPT FORMAT
 ==================
 

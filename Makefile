@@ -38,7 +38,8 @@ stb-tester-$(VERSION).tar.gz: stbt.in stbt-record stbt-run stbt.py README.rst VE
 clean:
 	rm -f stbt.1 stbt
 
-check:
+check: stbt
 	python -m doctest -v stbt.py stbt-run stbt-record
+	tests/run-tests.sh
 
 .DELETE_ON_ERROR:
