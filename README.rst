@@ -103,6 +103,10 @@ simultaneously with at least 1 frame per second per set-top box.
 SOFTWARE REQUIREMENTS
 =====================
 
+* A Unixy operating system (we have only tested on Linux; gstreamer and OpenCV
+  allegedly work on BSD, Mac OS X, and possibly Windows with MingW/MSys; but
+  building gst-plugins-bad, below, can be tricky).
+
 * Drivers for any required hardware components
 
 * python (we have tested with 2.6 and 2.7)
