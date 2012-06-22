@@ -1,6 +1,3 @@
-import pygst  # gstreamer
-pygst.require("0.10")
-import gst
 import sys
 
 def hauppauge(device="/dev/video0"):
@@ -17,6 +14,9 @@ def hauppauge(device="/dev/video0"):
 
 def save_frame(buf, filename):
     '''Save a gstreamer buffer to the specified file in png format.'''
+    import pygst  # gstreamer
+    pygst.require("0.10")
+    import gst
     pipeline = gst.parse_launch(" ! ".join([
                 'appsrc name="src" caps="%s"' % buf.get_caps(),
                 'ffmpegcolorspace',
@@ -101,6 +101,27 @@ def virtual_remote_listen(listenport=2033):
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return key_reader(read_records(connection.makefile(), '\n\0'))
+
+
+class ArgvHider:
+    """ For use with 'with' statement:  Unsets argv and resets it.
+    
+    This is used because otherwise gst-python will exit if '-h', '--help', '-v'
+    or '--version' command line arguments are given.
+
+    Example:
+    >>> sys.argv=['test', '--help']
+    >>> with ArgvHider():
+    ...     import pygst  # gstreamer
+    ...     pygst.require("0.10")
+    ...     import gst
+    ...     import gtk  # for main loop
+    """
+    def __enter__(self):
+        self.argv = sys.argv[:]
+        del sys.argv[1:]
+    def __exit__(self, type, value, traceback):
+        sys.argv = self.argv
 
 
 def debug(s):

@@ -1,14 +1,14 @@
 #!/usr/bin/python
 
-import pygst  # gstreamer
-pygst.require("0.10")
-import gst
+import sys
+from stbt import hauppauge, VirtualRemote, save_frame, virtual_remote_listen, ArgvHider
+
+with ArgvHider():
+    import pygst  # gstreamer
+    pygst.require("0.10")
+    import gst
 
 import itertools
-import sys
-
-from stbt import hauppauge, VirtualRemote, save_frame, virtual_remote_listen
-
 
 def main(argv):
     stb = argv[1]

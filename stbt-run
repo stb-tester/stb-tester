@@ -1,14 +1,15 @@
 #!/usr/bin/python
 
-import pygst  # gstreamer
-pygst.require("0.10")
-import gst
-import gtk  # for main loop
-
+from stbt import hauppauge, VirtualRemote, save_frame, ArgvHider
 import sys
-import traceback
 
-from stbt import hauppauge, VirtualRemote, save_frame
+with ArgvHider():
+    import pygst  # gstreamer
+    pygst.require("0.10")
+    import gst
+    import gtk  # for main loop
+
+import traceback
 
 def main(argv):
     testscript = argv[1]
