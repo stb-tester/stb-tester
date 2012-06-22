@@ -1,4 +1,4 @@
 #!/bin/sh
 
-PYTHONPATH=@PREFIX@/lib/stbt/:$PYTHONPATH @PREFIX@/lib/stbt/stbt-"$@"
+SYSCONFDIR=@SYSCONFDIR@ PREFIX=@PREFIX@ PYTHONPATH=@PREFIX@/lib/stbt/:$PYTHONPATH @PREFIX@/lib/stbt/stbt-"$@"
 

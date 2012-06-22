@@ -71,6 +71,35 @@ Additional options to `stbt record`:
   The file to write the generated test script to.
 
 
+CONFIGURATION
+=============
+
+All parameters that can be passed to the stbt tools can now also be specified in
+configuration files.  Configuration is searched for in (latter taking precedence
+over earlier):
+
+1. /etc/stbt/stbt.conf
+2. ~/.config/stbt/stbt.conf
+3. ./stbt.conf
+4. $STBT_CONFIG_FILE
+
+These files are simple ini files with the form::
+
+    [global]
+        source_pipeline=videotestsrc
+        control=None
+    [run]
+        script=test.py
+    [record]
+        output_file=test.py
+        control_recorder=file:///dev/stdin
+
+Each key corresponds to a command line option with hyphens replaced with
+underscores.  Configuration items in the 'global' section will be passed to
+all tools; this can be overridden in the sections corresponding to each of the
+individual tools.
+
+
 HARDWARE REQUIREMENTS
 =====================
 

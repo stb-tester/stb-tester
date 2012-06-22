@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys
-from stbt import save_frame, uri_to_remote, uri_to_remote_recorder, ArgvHider
+from stbt import save_frame, uri_to_remote, uri_to_remote_recorder, load_defaults, ArgvHider
 
 with ArgvHider():
     import pygst  # gstreamer
@@ -14,13 +14,14 @@ import argparse
 def main(argv):
     parser = argparse.ArgumentParser('Create an stb-tester test script')
     parser.add_argument('--control',
-        help='The remote control to control the stb')
+        help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--control-recorder',
-        help='The remote control to control the stb')
+        help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--source-pipeline',
-        help='A gstreamer pipeline to use for A/V input')
+        help='A gstreamer pipeline to use for A/V input (default: %(default)s)')
     parser.add_argument('-o', '--output-file',
-        help='The filename of the generated script')
+        help='The filename of the generated script (default: %(default)s)')
+    parser.set_defaults(**load_defaults('record'))
     args = parser.parse_args(argv[1:])
 
     record(args.source_pipeline, uri_to_remote_recorder(args.control_recorder),

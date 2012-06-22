@@ -1,5 +1,7 @@
 import sys
 import re
+from os import environ
+import ConfigParser
 
 def save_frame(buf, filename):
     '''Save a gstreamer buffer to the specified file in png format.'''
@@ -125,6 +127,18 @@ def virtual_remote_listen(address, port):
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return key_reader(read_records(connection.makefile(), '\n\0'))
+
+
+def load_defaults(tool):
+    conffile = ConfigParser.SafeConfigParser()
+    conffile.add_section('global')
+    conffile.add_section(tool)
+    conffile.read([
+        ('%s/stbt/stbt.conf' % environ['SYSCONFDIR']) if 'SYSCONFDIR' in environ else '',
+        '%s/stbt/stbt.conf' % environ.get('XDG_CONFIG_HOME', '%s/.config' % environ['HOME']),
+        environ.get('STBT_CONFIG_FILE', ''),
+        'stbt.conf'])
+    return dict(conffile.items('global'), **dict(conffile.items(tool)))
 
 
 class ArgvHider:

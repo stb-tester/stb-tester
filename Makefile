@@ -1,4 +1,5 @@
 PREFIX?=/usr/local
+SYSCONFDIR?=$(PREFIX)/etc
 INSTALL?=install
 TAR?=tar
 
@@ -11,15 +12,18 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt
 
-stbt:
-	sed s!@PREFIX@!$(PREFIX)!g stbt.in > stbt
+stbt: stbt.in
+	sed -e 's,@VERSION@,$(VERSION),g' \
+	    -e 's,@PREFIX@,$(PREFIX),g' \
+	    -e 's,@SYSCONFDIR@,$(SYSCONFDIR),g' $< > $@
 
 install: stbt stbt.1
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1}
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1} $(DESTDIR)$(SYSCONFDIR)/stbt
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(PREFIX)/bin
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(PREFIX)/lib/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(PREFIX)/lib/stbt
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(PREFIX)/share/man/man1
+	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(SYSCONFDIR)/stbt
 
 doc: stbt.1
 
