@@ -19,7 +19,9 @@ stbt: stbt.in
 	    -e 's,@SYSCONFDIR@,$(SYSCONFDIR),g' $< > $@
 
 install: stbt stbt.1
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1} $(DESTDIR)$(SYSCONFDIR)/stbt
+	$(INSTALL) -m 0755 -d \
+	    $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1} \
+	    $(DESTDIR)$(SYSCONFDIR)/stbt
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(PREFIX)/bin
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(PREFIX)/lib/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(PREFIX)/lib/stbt
@@ -37,7 +39,8 @@ stbt.1: README.rst VERSION
 # set correctly
 dist: stb-tester-$(VERSION).tar.gz
 
-stb-tester-$(VERSION).tar.gz: stbt.in stbt-record stbt-run stbt.py README.rst VERSION Makefile
+stb-tester-$(VERSION).tar.gz: stbt.in stbt-record stbt-run stbt.py \
+                              README.rst VERSION Makefile
 	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 clean:
