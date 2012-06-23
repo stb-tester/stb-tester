@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from stbt import save_frame, uri_to_remote, load_defaults, ArgvHider
+from stbt import save_frame, uri_to_remote, load_defaults, ArgvHider, debug
 import sys
 
 with ArgvHider():
@@ -173,10 +173,6 @@ def first(iterable, predicate):
     for item in iterable:
         if predicate(item):
             return item
-
-
-def debug(s):
-    sys.stderr.write(sys.argv[0] + ": " + str(s) + "\n")
 
 
 if __name__ == "__main__":
