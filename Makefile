@@ -48,6 +48,6 @@ clean:
 
 check: stbt
 	python -m doctest -v stbt.py stbt-run stbt-record
-	tests/run-tests.sh
+	PATH="$$PWD:$$PATH" tests/run-tests.sh
 
 .DELETE_ON_ERROR:
