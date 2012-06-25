@@ -153,7 +153,6 @@ class ArgvHider:
     ...     import pygst  # gstreamer
     ...     pygst.require("0.10")
     ...     import gst
-    ...     import gtk  # for main loop
     """
     def __enter__(self):
         self.argv = sys.argv[:]
