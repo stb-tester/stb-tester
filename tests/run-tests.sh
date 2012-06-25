@@ -16,7 +16,7 @@ test_gstreamer() {
 
 test_stbt_run() {
     echo "Testing stbt run:"
-    run stbt run --source-pipeline=videotestsrc test-wait_for_match.py
+    run stbt-run --source-pipeline=videotestsrc --control=None test-wait_for_match.py
 }
 
 run() {
