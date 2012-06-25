@@ -39,8 +39,7 @@ def record(video_source, remote_input, control, script_out):
                         " t. ! queue leaky=2 ! xvimagesink sync=false",
                         ])
     pipeline = gst.parse_launch(display)
-    (screenshot,) = [x for x in pipeline.elements()
-                     if x.get_name() == "screenshot"]
+    screenshot = pipeline.get_by_name("screenshot")
     pipeline.set_state(gst.STATE_PLAYING)
     while True:
         interrupt = False

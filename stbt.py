@@ -14,7 +14,7 @@ def save_frame(buf, filename):
                 'pngenc',
                 'filesink location="%s"' % filename,
                 ]))
-    src, = [x for x in pipeline.elements() if x.get_name() == 'src']
+    src = pipeline.get_by_name("src")
     # This is actually a (synchronous) method call to push-buffer:
     src.emit('push-buffer', buf)
     src.emit('end-of-stream')

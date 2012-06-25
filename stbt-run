@@ -87,10 +87,8 @@ class Display:
         gst.parse_launch("appsink")
 
         self.pipeline = gst.parse_launch(pipe)
-        self.templatematch = first(self.pipeline.elements(),
-                                   lambda x: x.get_name() == "templatematch")
-        self.screenshot = first(self.pipeline.elements(),
-                                lambda x: x.get_name() == "screenshot")
+        self.templatematch = self.pipeline.get_by_name("templatematch")
+        self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
@@ -105,7 +103,7 @@ class Display:
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
         """
 
-        self.templatematch.set_property("template", image)
+        self.templatematch.props.template = image
         self.match_count, self.last_x, self.last_y = 0, 0, 0
         self.timeout_secs = timeout_secs
         self.start_timestamp = None
@@ -150,7 +148,7 @@ class Display:
                          self.timeout_secs * 1000000000)
             if self.match_count == self.consecutive_matches or (
                     timed_out and self.match_count == 0):
-                self.templatematch.set_property("template", None)
+                self.templatematch.props.template = None
                 self.bus.disconnect_by_func(self.bus_message)
                 gtk.main_quit()
 
@@ -167,12 +165,6 @@ class MatchTimeout(UITestFailure):
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
-
-
-def first(iterable, predicate):
-    for item in iterable:
-        if predicate(item):
-            return item
 
 
 if __name__ == "__main__":
