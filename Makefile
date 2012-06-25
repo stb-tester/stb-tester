@@ -39,8 +39,8 @@ stbt.1: README.rst VERSION
 # set correctly
 dist: stb-tester-$(VERSION).tar.gz
 
-stb-tester-$(VERSION).tar.gz: stbt.in stbt-record stbt-run stbt.py \
-                              README.rst VERSION Makefile
+stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
+                              LICENSE Makefile README.rst VERSION
 	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 clean:
