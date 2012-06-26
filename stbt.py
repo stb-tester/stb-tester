@@ -80,18 +80,34 @@ def file_remote_recorder(filename):
         yield f.readline().rstrip()
 
 
+class FileToSocket:
+    """Makes something File-like behave like a Socket for testing purposes
+    
+    >>> import StringIO
+    >>> s = FileToSocket(StringIO.StringIO("Hello"))
+    >>> s.recv(3)
+    'Hel'
+    >>> s.recv(3)
+    'lo'
+    """
+    def __init__(self, f):
+        self.file = f
+    def recv(self, bufsize, flags=0):
+        return self.file.read(bufsize)
+
+
 def read_records(stream, sep):
     r"""Generator that splits stream into records given a separator
 
     >>> import StringIO
     >>> s = StringIO.StringIO('hello\n\0This\n\0is\n\0a\n\0test\n\0')
-    >>> list(read_records(s, '\n\0'))
+    >>> list(read_records(FileToSocket(s), '\n\0'))
     ['hello', 'This', 'is', 'a', 'test']
     """
     buf = ""
     l = len(sep)
     while True:
-        s = stream.read(4096)
+        s = stream.recv(4096)
         if len(s) == 0:
             break
         buf += s
@@ -126,7 +142,7 @@ def virtual_remote_listen(address, port):
     sys.stderr.write("Waiting for connection from virtual remote control port %d...\n" % port)
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
-    return key_reader(read_records(connection.makefile(), '\n\0'))
+    return key_reader(read_records(connection, '\n\0'))
 
 
 def load_defaults(tool):
