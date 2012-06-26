@@ -40,6 +40,7 @@ def record(video_source, remote_input, control, script_out):
                         ])
     pipeline = gst.parse_launch(display)
     screenshot = pipeline.get_by_name("screenshot")
+    pipeline.get_bus().connect("message::error", on_error)
     pipeline.get_bus().connect("message::warning", on_warning)
     pipeline.set_state(gst.STATE_PLAYING)
     while True:
@@ -58,6 +59,12 @@ def record(video_source, remote_input, control, script_out):
             return
         script_out.write("press('%s')\n" % key)
         old_key = key
+
+def on_error(bus, message):
+    assert message.type == gst.MESSAGE_ERROR
+    err, dbg = message.parse_error()
+    sys.stderr.write("Error: %s\n%s\n" % (err, dbg))
+    sys.exit(1)
 
 def on_warning(bus, message):
     assert message.type == gst.MESSAGE_WARNING
