@@ -32,7 +32,7 @@ def main(argv):
         save_frame(e.screenshot, "screenshot.png")
         print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
                "Saved screenshot to '%s'") % (
-            testscript, e.expected, e.timeout_secs, "screenshot.png")
+            args.script, e.expected, e.timeout_secs, "screenshot.png")
         traceback.print_tb(sys.exc_traceback)
         sys.exit(1)
     finally:
