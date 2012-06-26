@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from stbt import ArgvHider, load_defaults, save_frame, uri_to_remote, \
+from stbt import ArgvHider, debug, load_defaults, save_frame, uri_to_remote, \
     uri_to_remote_recorder
 
 with ArgvHider():
@@ -25,6 +25,8 @@ def main(argv):
         help='The filename of the generated script (default: %(default)s)')
     parser.set_defaults(**load_defaults('record'))
     args = parser.parse_args(argv[1:])
+    debug("Arguments:\n" + "\n".join([
+                "%s: %s" % (k, v) for k,v in args.__dict__.items()]))
 
     record(args.source_pipeline, uri_to_remote_recorder(args.control_recorder),
            uri_to_remote(args.control), open(args.output_file, 'w'))

@@ -23,6 +23,8 @@ def main(argv):
         help='The test script to run (default: %(default)s)')
     parser.set_defaults(**load_defaults('run'))
     args = parser.parse_args(argv[1:])
+    debug("Arguments:\n" + "\n".join([
+                "%s: %s" % (k, v) for k,v in args.__dict__.items()]))
 
     global display, control
     display = Display(args.source_pipeline)
