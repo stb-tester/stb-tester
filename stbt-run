@@ -35,7 +35,7 @@ def main(argv):
         save_frame(e.screenshot, "screenshot.png")
         print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
                "Saved screenshot to '%s'") % (
-            testscript, e.expected, e.timeout_secs, "screenshot.png")
+            args.script, e.expected, e.timeout_secs, "screenshot.png")
         traceback.print_tb(sys.exc_traceback)
         sys.exit(1)
     finally:
@@ -93,6 +93,8 @@ class Display:
         self.templatematch = self.pipeline.get_by_name("templatematch")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
+        self.bus.connect("message::error", self.on_error)
+        self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
 
@@ -122,6 +124,17 @@ class Display:
         else:
             buf = self.screenshot.get_property("last-buffer")
             raise MatchTimeout(buf, image, timeout_secs)
+
+    def on_error(self, bus, message):
+        assert message.type == gst.MESSAGE_ERROR
+        err, dbg = message.parse_error()
+        sys.stderr.write("Error: %s\n%s\n" % (err, dbg))
+        sys.exit(1)
+
+    def on_warning(self, bus, message):
+        assert message.type == gst.MESSAGE_WARNING
+        err, dbg = message.parse_warning()
+        sys.stderr.write("Warning: %s\n%s\n" % (err, dbg))
 
     def bus_message(self, bus, message):
         st = message.structure
