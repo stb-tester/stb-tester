@@ -1,6 +1,6 @@
 import sys
 import re
-from os import environ
+import os
 import ConfigParser
 
 def save_frame(buf, filename):
@@ -133,11 +133,24 @@ def load_defaults(tool):
     conffile = ConfigParser.SafeConfigParser()
     conffile.add_section('global')
     conffile.add_section(tool)
-    conffile.read([
-        ('%s/stbt/stbt.conf' % environ['SYSCONFDIR']) if 'SYSCONFDIR' in environ else '',
-        '%s/stbt/stbt.conf' % environ.get('XDG_CONFIG_HOME', '%s/.config' % environ['HOME']),
-        environ.get('STBT_CONFIG_FILE', ''),
+
+    # When run from the installed location (as `stbt run`), will read config
+    # from $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
+    # directory (as `stbt-run`) will read config from the source directory.
+    system_config = os.environ.get(
+        'STBT_SYSTEM_CONFIG',
+        os.path.join(os.path.dirname(__file__), 'stbt.conf'))
+
+    files_read = conffile.read([
+        system_config,
+        # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+        # directory specification:
+        '%s/stbt/stbt.conf' % os.environ.get('XDG_CONFIG_HOME',
+                                             '%s/.config' % os.environ['HOME']),
+        # Config files specific to the test suite / test run:
+        os.environ.get('STBT_CONFIG_FILE', ''),
         'stbt.conf'])
+    assert(system_config in files_read)
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
 
 

@@ -1,3 +1,3 @@
 #!/bin/sh
 
-SYSCONFDIR=@SYSCONFDIR@ @PREFIX@/lib/stbt/stbt-"$@"
+STBT_SYSTEM_CONFIG=@SYSCONFDIR@/stbt/stbt.conf @PREFIX@/lib/stbt/stbt-"$@"
