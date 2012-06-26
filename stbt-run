@@ -90,6 +90,7 @@ class Display:
         self.templatematch = self.pipeline.get_by_name("templatematch")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
+        self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
 
@@ -119,6 +120,11 @@ class Display:
         else:
             buf = self.screenshot.get_property("last-buffer")
             raise MatchTimeout(buf, image, timeout_secs)
+
+    def on_warning(self, bus, message):
+        assert message.type == gst.MESSAGE_WARNING
+        err, dbg = message.parse_warning()
+        sys.stderr.write("Warning: %s\n%s\n" % (err, dbg))
 
     def bus_message(self, bus, message):
         st = message.structure
