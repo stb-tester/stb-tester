@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from stbt import save_frame, uri_to_remote, load_defaults, ArgvHider, debug
-import sys
+from stbt import ArgvHider, debug, load_defaults, save_frame, uri_to_remote
 
 with ArgvHider():
     import pygst  # gstreamer
@@ -9,8 +8,10 @@ with ArgvHider():
     import gst
     import gtk  # for main loop
 
-import traceback
 import argparse
+import sys
+import traceback
+
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Run an stb-tester test script')

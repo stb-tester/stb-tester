@@ -1,7 +1,8 @@
-import sys
-import re
-import os
 import ConfigParser
+import os
+import re
+import sys
+
 
 def save_frame(buf, filename):
     '''Save a gstreamer buffer to the specified file in png format.'''
@@ -82,7 +83,7 @@ def file_remote_recorder(filename):
 
 class FileToSocket:
     """Makes something File-like behave like a Socket for testing purposes
-    
+
     >>> import StringIO
     >>> s = FileToSocket(StringIO.StringIO("Hello"))
     >>> s.recv(3)
@@ -172,7 +173,7 @@ def load_defaults(tool):
 
 class ArgvHider:
     """ For use with 'with' statement:  Unsets argv and resets it.
-    
+
     This is used because otherwise gst-python will exit if '-h', '--help', '-v'
     or '--version' command line arguments are given.
 
