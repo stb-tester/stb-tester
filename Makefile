@@ -46,7 +46,7 @@ stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
 clean:
 	rm -f stbt.1 stbt
 
-check: stbt
+check:
 	python -m doctest -v stbt.py stbt-run stbt-record
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
 	pep8 stbt.py stbt-run stbt-record
