@@ -38,5 +38,6 @@ run test_gsttemplatematch_bgr_fix &&
 
 echo "Testing stbt-run:" &&
 run test_wait_for_match &&
+run test_wait_for_match_no_match &&
 
 echo "All passed."
