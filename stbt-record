@@ -20,13 +20,14 @@ def main(argv):
     parser.add_argument('--control-recorder',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--source-pipeline',
-        help='A gstreamer pipeline to use for A/V input (default: %(default)s)')
+        help='A gstreamer pipeline to use for A/V input (default: '
+             '%(default)s)')
     parser.add_argument('-o', '--output-file',
         help='The filename of the generated script (default: %(default)s)')
     parser.set_defaults(**load_defaults('record'))
     args = parser.parse_args(argv[1:])
     debug("Arguments:\n" + "\n".join([
-                "%s: %s" % (k, v) for k,v in args.__dict__.items()]))
+                "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     record(args.source_pipeline, uri_to_remote_recorder(args.control_recorder),
            uri_to_remote(args.control), open(args.output_file, 'w'))
@@ -40,7 +41,8 @@ def record(video_source, remote_input, control, script_out):
                         " ! queue leaky=2",
                         " ! ffmpegcolorspace",
                         " ! appsink name=screenshot "
-                           "max-buffers=1 drop=true sync=false caps=video/x-raw-rgb",
+                                   "max-buffers=1 drop=true sync=false "
+                                   "caps=video/x-raw-rgb",
                         " t. ! queue leaky=2 ! xvimagesink sync=false",
                         ])
     pipeline = gst.parse_launch(display)
@@ -65,16 +67,19 @@ def record(video_source, remote_input, control, script_out):
         script_out.write("press('%s')\n" % key)
         old_key = key
 
+
 def on_error(bus, message):
     assert message.type == gst.MESSAGE_ERROR
     err, dbg = message.parse_error()
     sys.stderr.write("Error: %s\n%s\n" % (err, dbg))
     sys.exit(1)
 
+
 def on_warning(bus, message):
     assert message.type == gst.MESSAGE_WARNING
     err, dbg = message.parse_warning()
     sys.stderr.write("Warning: %s\n%s\n" % (err, dbg))
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
