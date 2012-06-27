@@ -14,7 +14,8 @@ import sys
 
 
 def main(argv):
-    parser = argparse.ArgumentParser('Create an stb-tester test script')
+    parser = argparse.ArgumentParser(
+        prog='stbt record', description='Create an stb-tester test script')
     parser.add_argument('--control',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--control-recorder',

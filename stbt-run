@@ -14,7 +14,8 @@ import traceback
 
 
 def main(argv):
-    parser = argparse.ArgumentParser('Run an stb-tester test script')
+    parser = argparse.ArgumentParser(
+        prog='stbt run', description='Run an stb-tester test script')
     parser.add_argument('--control',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--source-pipeline',
