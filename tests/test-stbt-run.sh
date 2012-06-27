@@ -9,3 +9,7 @@ test_wait_for_match_no_match() {
     ! stbt-run test-wait_for_match-no-match.py &&
     [ -f screenshot.png ]
 }
+
+test_wait_for_match_changing_template() {
+    stbt-run test-wait_for_match-changing-template.py
+}
