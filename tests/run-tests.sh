@@ -4,25 +4,14 @@
 # See SETUP TIPS in ../README.rst for further information.
 
 cd "$(dirname "$0")"
-source ./test-*.sh
-
-test_gstreamer() {
-    echo "Testing gstreamer + OpenCV installation:"
-    run test_gstreamer_core_elements &&
-    run test_gstreamer_can_find_templatematch &&
-    run test_gsttemplatematch_does_find_a_match &&
-    run test_gsttemplatematch_bgr_fix
-}
-
-test_stbt_run() {
-    echo "Testing stbt run:"
-    run stbt-run --source-pipeline=videotestsrc --control=None test-wait_for_match.py
-}
+for tests in ./test-*.sh; do
+    source $tests
+done
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
-    printf "$*... "
-    $* > "$scratchdir/log" 2>&1
+    printf "$1... "
+    $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
         rm -f "$scratchdir/log" "$scratchdir/gst-launch.log"
@@ -39,5 +28,15 @@ run() {
 timeout() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
 timedout=142
 
-test_gstreamer &&
-test_stbt_run
+############################################################################
+
+echo "Testing gstreamer + OpenCV installation:" &&
+run test_gstreamer_core_elements &&
+run test_gstreamer_can_find_templatematch &&
+run test_gsttemplatematch_does_find_a_match &&
+run test_gsttemplatematch_bgr_fix &&
+
+echo "Testing stbt-run:" &&
+run test_wait_for_match &&
+
+echo "All passed."
