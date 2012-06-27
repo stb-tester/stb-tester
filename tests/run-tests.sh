@@ -31,15 +31,37 @@ timedout=142
 
 ############################################################################
 
-echo "Testing gstreamer + OpenCV installation:" &&
-run test_gstreamer_core_elements &&
-run test_gstreamer_can_find_templatematch &&
-run test_gsttemplatematch_does_find_a_match &&
-run test_gsttemplatematch_bgr_fix &&
+if [ $# -eq 0 ]; then
 
-echo "Testing stbt-run:" &&
-run test_wait_for_match &&
-run test_wait_for_match_no_match &&
-run test_wait_for_match_changing_template &&
+    echo "Testing gstreamer + OpenCV installation:" &&
+    run test_gstreamer_core_elements &&
+    run test_gstreamer_can_find_templatematch &&
+    run test_gsttemplatematch_does_find_a_match &&
+    run test_gsttemplatematch_bgr_fix &&
 
-echo "All passed."
+    echo "Testing stbt-run:" &&
+    run test_wait_for_match &&
+    run test_wait_for_match_no_match &&
+    run test_wait_for_match_changing_template &&
+
+    echo "All passed."
+
+else
+    for t in $*; do
+        run $t || exit
+    done
+fi
+
+exit 0
+
+
+# bash-completion script: Add the below to ~/.bash_completion
+_stbt_run_tests() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local testdir="$(dirname \
+        $(echo $COMP_LINE | grep -o '\b[^ ]*run-tests\.sh\b'))"
+    local testfiles="$(\ls $testdir/test-*.sh)"
+    local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*()/ {print $1}' $testfiles)"
+    COMPREPLY=( $(compgen -W "$testcases" -- "$cur") )
+}
+complete -F _stbt_run_tests run-tests.sh
