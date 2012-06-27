@@ -49,5 +49,6 @@ clean:
 check: stbt
 	python -m doctest -v stbt.py stbt-run stbt-record
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
+	pep8 stbt.py stbt-run stbt-record
 
 .DELETE_ON_ERROR:

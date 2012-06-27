@@ -14,17 +14,18 @@ import traceback
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='Run an stb-tester test script')
+    parser = argparse.ArgumentParser('Run an stb-tester test script')
     parser.add_argument('--control',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--source-pipeline',
-        help='A gstreamer pipeline to use for A/V input (default: %(default)s)')
+        help='A gstreamer pipeline to use for A/V input (default: '
+             '%(default)s)')
     parser.add_argument('script',
         help='The test script to run (default: %(default)s)')
     parser.set_defaults(**load_defaults('run'))
     args = parser.parse_args(argv[1:])
     debug("Arguments:\n" + "\n".join([
-                "%s: %s" % (k, v) for k,v in args.__dict__.items()]))
+                "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     global display, control
     display = Display(args.source_pipeline)
@@ -45,8 +46,10 @@ def main(argv):
 def press(*args, **keywords):
     return control.press(*args, **keywords)
 
+
 def wait_for_match(*args, **keywords):
     return display.wait_for_match(*args, **keywords)
+
 
 def press_until_match(key, image, interval_secs=3, max_presses=10):
     i = 0
@@ -65,15 +68,22 @@ def press_until_match(key, image, interval_secs=3, max_presses=10):
 class Display:
     def __init__(self, gst_source_pipeline):
         imageprocessing = " ! ".join([
-                "queue leaky=2",          # Buffer the video stream, dropping frames if downstream processors aren't fast enough.
-                "ffmpegcolorspace",       # Convert to a colorspace that templatematch can handle.
-                "templatematch name=templatematch method=1", # OpenCV image-processing library.
+                # Buffer the video stream, dropping frames if downstream
+                # processors aren't fast enough:
+                "queue leaky=2",
+                # Convert to a colorspace that templatematch can handle:
+                "ffmpegcolorspace",
+                # OpenCV image-processing library:
+                "templatematch name=templatematch method=1",
                 ])
         xvideo = " ! ".join([
-                "ffmpegcolorspace",       # Convert to a colorspace that xvimagesink can handle.
-                "xvimagesink sync=false", # Display in the X Window System.
+                # Convert to a colorspace that xvimagesink can handle:
+                "ffmpegcolorspace",
+                # Display in the X Window System:
+                "xvimagesink sync=false",
                 ])
-        screenshot = "appsink name=screenshot max-buffers=1 drop=true sync=false"
+        screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
+                      "sync=false")
         pipe = " ".join([
                 gst_source_pipeline,
                 "!", imageprocessing,
@@ -86,7 +96,8 @@ class Display:
         # those libraries are first mentioned. There is a bug in gst-opencv
         # where it erroneously claims to provide appsink, preventing the
         # loading of the real appsink -- so we load it first.
-        # TODO: Fix gst-opencv so that it doesn't prevent appsink from being loaded.
+        # TODO: Fix gst-opencv so that it doesn't prevent appsink from being
+        #       loaded.
         gst.parse_launch("appsink")
 
         self.pipeline = gst.parse_launch(pipe)
@@ -132,12 +143,12 @@ class Display:
                 self.start_timestamp = buf.timestamp
 
             certainty = st["result"]
-            debug("Match %d found at %d,%d (last: %d,%d) with dimensions %dx%d."
-                  " Certainty: %d%%. Timestamp: %d."
+            debug("Match %d found at %d,%d (last: %d,%d) with dimensions "
+                  "%dx%d. Certainty: %d%%. Timestamp: %d."
                   % (self.match_count,
                      st["x"], st["y"], self.last_x, self.last_y,
                      st["width"], st["height"],
-                     certainty*100.0, buf.timestamp))
+                     certainty * 100.0, buf.timestamp))
 
             if certainty > self.certainty and (
                     self.match_count == 0 or
@@ -162,6 +173,7 @@ class Display:
 
 class UITestFailure(Exception):
     pass
+
 
 class MatchTimeout(UITestFailure):
     def __init__(self, screenshot, expected, timeout_secs):

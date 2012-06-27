@@ -21,7 +21,7 @@ def save_frame(buf, filename):
     src.emit('end-of-stream')
     pipeline.set_state(gst.STATE_PLAYING)
     msg = pipeline.get_bus().poll(
-        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND);
+        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
     pipeline.set_state(gst.STATE_NULL)
     if msg.type == gst.MESSAGE_ERROR:
         (e, debug) = msg.parse_error()
@@ -38,9 +38,11 @@ def uri_to_remote(uri):
     else:
         raise RuntimeException('Invalid remote control URI: "%s"' % uri)
 
+
 class NullRemote:
     def press(self, key):
         pass
+
 
 class VirtualRemote:
     """Send a key-press to a set-top box running a VirtualRemote listener.
@@ -56,7 +58,7 @@ class VirtualRemote:
         import socket
         s = socket.socket()
         s.connect((self.stb, self.port))
-        s.send("D\t%s\n\0U\t%s\n\0" % (key, key)) # send key Down, then key Up.
+        s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # send key Down, then key Up
         debug("Pressed " + key)
 
 
@@ -93,6 +95,7 @@ class FileToSocket:
     """
     def __init__(self, f):
         self.file = f
+
     def recv(self, bufsize, flags=0):
         return self.file.read(bufsize)
 
@@ -140,7 +143,8 @@ def virtual_remote_listen(address, port):
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind((address, port))
     serversocket.listen(5)
-    sys.stderr.write("Waiting for connection from virtual remote control port %d...\n" % port)
+    sys.stderr.write("Waiting for connection from virtual remote control "
+                     "port %d...\n" % port)
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return key_reader(read_records(connection, '\n\0'))
@@ -163,7 +167,7 @@ def load_defaults(tool):
         # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
         # directory specification:
         '%s/stbt/stbt.conf' % os.environ.get('XDG_CONFIG_HOME',
-                                             '%s/.config' % os.environ['HOME']),
+                                            '%s/.config' % os.environ['HOME']),
         # Config files specific to the test suite / test run:
         os.environ.get('STBT_CONFIG_FILE', ''),
         'stbt.conf'])
@@ -187,6 +191,7 @@ class ArgvHider:
     def __enter__(self):
         self.argv = sys.argv[:]
         del sys.argv[1:]
+
     def __exit__(self, type, value, traceback):
         sys.argv = self.argv
 
