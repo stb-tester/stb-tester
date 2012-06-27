@@ -11,7 +11,7 @@ generate_version := $(shell \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
 
-all: stbt
+all: stbt stbt.1
 
 stbt: stbt.in
 	sed -e 's,@VERSION@,$(VERSION),g' \
