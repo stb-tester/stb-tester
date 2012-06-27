@@ -44,6 +44,7 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match &&
     run test_wait_for_match_no_match &&
     run test_wait_for_match_changing_template &&
+    run test_wait_for_match_nonexistent_template &&
 
     echo "All passed."
 

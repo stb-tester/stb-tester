@@ -149,6 +149,10 @@ class Display:
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+        if (message.src == self.templatematch and
+                err.message == "OpenCV failed to load template image"):
+            sys.stderr.write("Error: %s\n" % err.message)
+            sys.exit(1)
 
     def bus_message(self, bus, message):
         st = message.structure

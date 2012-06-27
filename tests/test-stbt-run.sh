@@ -28,3 +28,13 @@ test_wait_for_match_changing_template() {
 	EOF
     stbt-run "$scratchdir/test.py"
 }
+
+test_wait_for_match_nonexistent_template() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_match("idontexist.png")
+	EOF
+    rm -f screenshot.png
+    timeout 2 stbt-run "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -ne $timedout -a $ret -ne 0 ]
+}
