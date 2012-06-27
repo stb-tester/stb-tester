@@ -57,6 +57,9 @@ Global options:
 
       v4l2src device=/dev/video0 ! mpegtsdemux ! video/x-h264 ! decodebin
 
+--sink-pipeline=<pipeline>
+  A gstreamer pipeline to use for video output, like `xvimagesink`.
+
 Additional options to `stbt record`:
 
 --control-recorder=<uri>

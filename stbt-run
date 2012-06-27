@@ -20,6 +20,9 @@ def main(argv):
     parser.add_argument('--source-pipeline',
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
+    parser.add_argument('--sink-pipeline',
+        help='A gstreamer pipeline to use for video output '
+             '(default: %(default)s)')
     parser.add_argument('script',
         help='The test script to run (default: %(default)s)')
     parser.set_defaults(**load_defaults('run'))
@@ -28,7 +31,7 @@ def main(argv):
                 "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     global display, control
-    display = Display(args.source_pipeline)
+    display = Display(args.source_pipeline, args.sink_pipeline)
     control = uri_to_remote(args.control)
     try:
         execfile(args.script)
@@ -66,7 +69,7 @@ def press_until_match(key, image, interval_secs=3, max_presses=10):
 
 
 class Display:
-    def __init__(self, gst_source_pipeline):
+    def __init__(self, gst_source_pipeline, gst_sink_pipeline):
         imageprocessing = " ! ".join([
                 # Buffer the video stream, dropping frames if downstream
                 # processors aren't fast enough:
@@ -79,8 +82,7 @@ class Display:
         xvideo = " ! ".join([
                 # Convert to a colorspace that xvimagesink can handle:
                 "ffmpegcolorspace",
-                # Display in the X Window System:
-                "xvimagesink sync=false",
+                gst_sink_pipeline,
                 ])
         screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
                       "sync=false")

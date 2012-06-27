@@ -22,6 +22,9 @@ def main(argv):
     parser.add_argument('--source-pipeline',
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
+    parser.add_argument('--sink-pipeline',
+        help='A gstreamer pipeline to use for video output '
+             '(default: %(default)s)')
     parser.add_argument('-o', '--output-file',
         help='The filename of the generated script (default: %(default)s)')
     parser.set_defaults(**load_defaults('record'))
@@ -29,11 +32,12 @@ def main(argv):
     debug("Arguments:\n" + "\n".join([
                 "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-    record(args.source_pipeline, uri_to_remote_recorder(args.control_recorder),
+    record(args.source_pipeline, args.sink_pipeline,
+           uri_to_remote_recorder(args.control_recorder),
            uri_to_remote(args.control), open(args.output_file, 'w'))
 
 
-def record(video_source, remote_input, control, script_out):
+def record(video_source, video_sink, remote_input, control, script_out):
     count = itertools.count()
     old_key = None
     display = " ".join([video_source,
@@ -43,7 +47,7 @@ def record(video_source, remote_input, control, script_out):
                         " ! appsink name=screenshot "
                                    "max-buffers=1 drop=true sync=false "
                                    "caps=video/x-raw-rgb",
-                        " t. ! queue leaky=2 ! xvimagesink sync=false",
+                        " t. ! queue leaky=2 ! ", video_sink,
                         ])
     pipeline = gst.parse_launch(display)
     screenshot = pipeline.get_by_name("screenshot")
