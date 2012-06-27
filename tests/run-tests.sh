@@ -9,6 +9,7 @@ for tests in ./test-*.sh; do
 done
 
 run() {
+    GST_DEBUG=
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     printf "$1... "
     $1 > "$scratchdir/log" 2>&1
