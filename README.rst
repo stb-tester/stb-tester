@@ -171,9 +171,9 @@ SOFTWARE REQUIREMENTS
 
 * Drivers for any required hardware components
 
-* python (we have tested with 2.6 and 2.7)
+* gstreamer 0.10 (multimedia framework) + gst-plugins-base + gst-plugins-good.
 
-* gstreamer 0.10 (multimedia framework)
+* python (we have tested with 2.6 and 2.7) + pygst + pygtk2.
 
 * OpenCV (image processing library) version >= 2.0.0 and <= 2.3.1
   (the version restrictions are imposed by gst-plugins-bad).
@@ -185,6 +185,9 @@ SOFTWARE REQUIREMENTS
 
   A github repo with the same patches applied is available at
   https://github.com/drothlis/gst-plugins-bad (branch templatematch-fixes).
+
+* For the Hauppauge video capture device you'll need the gstreamer-ffmpeg
+  package (e.g. from the rpmfusion-free repository) for H.264 decoding.
 
 
 INSTALLING FROM SOURCE
