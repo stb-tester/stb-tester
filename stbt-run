@@ -9,6 +9,7 @@ with ArgvHider():
     import gtk  # for main loop
 
 import argparse
+import os.path
 import sys
 import traceback
 
@@ -52,6 +53,7 @@ def press(*args, **keywords):
 
 
 def wait_for_match(*args, **keywords):
+    keywords.update(directory=_caller_dir())
     return display.wait_for_match(*args, **keywords)
 
 
@@ -59,7 +61,8 @@ def press_until_match(key, image, interval_secs=3, max_presses=10):
     i = 0
     while True:
         try:
-            wait_for_match(image, timeout_secs=interval_secs)
+            wait_for_match(image, directory=_caller_dir(),
+                           timeout_secs=interval_secs)
             return
         except MatchTimeout:
             if i < max_presses:
@@ -112,7 +115,7 @@ class Display:
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
 
-    def wait_for_match(self, image,
+    def wait_for_match(self, image, directory,
                        timeout_secs=10, certainty=0.98, consecutive_matches=3):
         """Wait for a stable match of `image` in the source video stream.
 
@@ -122,22 +125,31 @@ class Display:
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
         """
 
-        self.templatematch.props.template = image
+        if os.path.isabs(image):
+            template = image
+        else:
+            # Image is relative to the script's own directory
+            template = os.path.abspath(os.path.join(directory, image))
+            if not os.path.isfile(template):
+                # Fall back to image from cwd, for convenience of the selftests
+                template = os.path.abspath(image)
+
+        self.templatematch.props.template = template
         self.match_count, self.last_x, self.last_y = 0, 0, 0
         self.timeout_secs = timeout_secs
         self.start_timestamp = None
         self.certainty = certainty
         self.consecutive_matches = consecutive_matches
 
-        debug("Searching for " + image)
+        debug("Searching for " + template)
         self.bus.connect("message::element", self.bus_message)
         gtk.main()
         if self.match_count == self.consecutive_matches:
-            debug("MATCHED " + image)
+            debug("MATCHED " + template)
             return
         else:
             buf = self.screenshot.get_property("last-buffer")
-            raise MatchTimeout(buf, image, timeout_secs)
+            raise MatchTimeout(buf, template, timeout_secs)
 
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
@@ -200,6 +212,15 @@ class MatchTimeout(UITestFailure):
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
+
+
+def _caller_dir():
+    # stack()[0] is _caller_dir;
+    # stack()[1] is _caller_dir's caller "f";
+    # stack()[2] is f's caller.
+    import inspect
+    return os.path.dirname(
+        inspect.getframeinfo(inspect.stack()[2][0]).filename)
 
 
 if __name__ == "__main__":

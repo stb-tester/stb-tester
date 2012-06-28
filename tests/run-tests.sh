@@ -16,7 +16,7 @@ run() {
     if [ $? -eq 0 ]; then
         echo "OK"
         rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
-            "$scratchdir/test.py"
+            "$scratchdir/test.py" "$scratchdir/in-script-dir.png"
         rmdir "$scratchdir"
         true
     else
@@ -45,6 +45,7 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_no_match &&
     run test_wait_for_match_changing_template &&
     run test_wait_for_match_nonexistent_template &&
+    run test_wait_for_match_searches_in_script_directory &&
 
     echo "All passed."
 
