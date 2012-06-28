@@ -114,7 +114,7 @@ class Display:
 
     def wait_for_match(self, image,
                        timeout_secs=10, certainty=0.98, consecutive_matches=3):
-        """Wait for a stable match.
+        """Wait for a stable match of `image` in the source video stream.
 
         "Stable" means 3 consecutive frames with a match certainty > 98% at the
         same x,y position.
