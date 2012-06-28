@@ -62,7 +62,8 @@ def record(video_source, video_sink, remote_input, control, script_out):
         except KeyboardInterrupt:
             interrupt = True
         buf = screenshot.get_property('last-buffer')
-        control.press(key)
+        if not interrupt:
+            control.press(key)
         if old_key:
             filename = '%04d-%s-complete.png' % (count.next(), old_key)
             save_frame(buf, filename)
