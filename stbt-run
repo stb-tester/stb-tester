@@ -142,13 +142,13 @@ class Display:
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
-        sys.stderr.write("Error: %s\n%s\n" % (err, dbg))
+        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
         sys.exit(1)
 
     def on_warning(self, bus, message):
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
-        sys.stderr.write("Warning: %s\n%s\n" % (err, dbg))
+        sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def bus_message(self, bus, message):
         st = message.structure
