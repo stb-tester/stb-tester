@@ -15,7 +15,8 @@ run() {
     $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
-        rm -f "$scratchdir/log" "$scratchdir/gst-launch.log"
+        rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
+            "$scratchdir/test.py"
         rmdir "$scratchdir"
         true
     else
