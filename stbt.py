@@ -197,4 +197,4 @@ class ArgvHider:
 
 
 def debug(s):
-    sys.stderr.write(sys.argv[0] + ": " + str(s) + "\n")
+    sys.stderr.write(os.path.basename(sys.argv[0]) + ": " + str(s) + "\n")
