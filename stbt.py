@@ -183,20 +183,41 @@ def save_frame(buf, filename):
         raise RuntimeError(e.message)
 
 
-def uri_to_remote(uri):
-    if uri == 'None':
+def uri_to_remote(uri, display):
+    if uri.lower() == 'none':
         return NullRemote()
-    m = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
-    if m:
-        d = m.groupdict()
+    if uri.lower() == 'test':
+        return VideoTestSrcControl(display)
+    vr = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
+    if vr:
+        d = vr.groupdict()
         return VirtualRemote(d['hostname'], int(d['port'] or 2033))
-    else:
-        raise RuntimeException('Invalid remote control URI: "%s"' % uri)
+    raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
 class NullRemote:
     def press(self, key):
         pass
+
+
+class VideoTestSrcControl:
+    """Remote control used by selftests.
+
+    Changes the videotestsrc image to the specified pattern ("0" to "20").
+    See `gst-inspect videotestsrc`.
+    """
+    def __init__(self, display):
+        self.videosrc = display.pipeline.get_by_name("videotestsrc0")
+        if not self.videosrc:
+            raise ConfigurationError('The "test" control can only be used'
+                                     'with source-pipeline = "videotestsrc"')
+
+    def press(self, key):
+        if key not in [str(x) for x in range(21)]:
+            raise UITestFailure('Key "%s" not valid for the "test" control'
+                                ' (only "0" to "20" allowed)' % key)
+        self.videosrc.props.pattern = int(key)
+        debug("Pressed " + key)
 
 
 class VirtualRemote:
@@ -314,6 +335,10 @@ class MatchTimeout(UITestFailure):
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
+
+
+class ConfigurationError(Exception):
+    pass
 
 
 def load_defaults(tool):

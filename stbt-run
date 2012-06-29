@@ -29,7 +29,7 @@ def main(argv):
 
     global display, control
     display = Display(args.source_pipeline, args.sink_pipeline)
-    control = uri_to_remote(args.control)
+    control = uri_to_remote(args.control, display)
     try:
         execfile(args.script)
     except MatchTimeout as e:

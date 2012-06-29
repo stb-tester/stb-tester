@@ -26,7 +26,7 @@ test_wait_for_match_changing_template() {
 	press("OK")
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
 	EOF
-    stbt-run "$scratchdir/test.py"
+    stbt-run --control=none "$scratchdir/test.py"
 }
 
 test_wait_for_match_nonexistent_template() {
@@ -44,5 +44,14 @@ test_wait_for_match_searches_in_script_directory() {
 	wait_for_match("in-script-dir.png", consecutive_matches=24)
 	EOF
     cp videotestsrc-bw.png "$scratchdir/in-script-dir.png"
+    stbt-run "$scratchdir/test.py"
+}
+
+test_changing_input_video_with_the_test_control() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
+	press("10")  # checkers 8px
+	wait_for_match("videotestsrc-checkers-8.png", consecutive_matches=24)
+	EOF
     stbt-run "$scratchdir/test.py"
 }

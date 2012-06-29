@@ -49,8 +49,13 @@ Global options:
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
 
-  None
+  none
     Ignores key press commands.
+
+  test
+    Used by the selftests to change the input video stream. Only works with
+    `--source-pipeline=videotestsrc`. A script like `press("18")` will change
+    videotestsrc's pattern property (see `gst-inspect videotestsrc`).
 
   vr:<hostname>:<port>
     A "virtual remote" that communicates with the set-top box over TCP.
