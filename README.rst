@@ -47,28 +47,41 @@ OPTIONS
 Global options:
 
 --control=<uri>
-  A URI for a remote control to use for controlling the set top box.  uri can
-  either be 'None' or 'vr:<hostname>:<port>'.  It is indended in the future to
-  add support for the LIRC remote controls.
+  A remote control to use for controlling the set top box. `uri` can be:
+
+  None
+    Ignores key press commands.
+
+  vr:<hostname>:<port>
+    A "virtual remote" that communicates with the set-top box over TCP.
+    Requires a virtual remote listener (which we haven't released yet) running
+    on the stb.
+
+  We intend to add support for LIRC-compatible IR blasters.
 
 --source-pipeline=<pipeline>
   A gstreamer pipeline providing a video stream to use as video output from the
-  set-top box under test.  For the Hauppauge! HD PVR use::
+  set-top box under test.  For the Hauppauge HD PVR use::
 
       v4l2src device=/dev/video0 ! mpegtsdemux ! video/x-h264 ! decodebin
 
 --sink-pipeline=<pipeline>
   A gstreamer pipeline to use for video output, like `xvimagesink`.
 
-Additional options to `stbt record`:
+Additional options to **stbt record**:
 
 --control-recorder=<uri>
-  The source of remote control presses.  uri can either be
-  'vr:<hostname>:<port>' or 'file://<filename>'.  In the former case
-  `stbt record` will listen on the socket <hostname>:<port> for a connection and
-  read a VirtualRemote stream.  In the latter remote control keypresses will be
-  read from a newline separated file.  Example: 'file:///dev/stdin' to use the
-  keyboard as the remote control input.
+  The source of remote control presses.  `uri` can be:
+
+  vr:<hostname>:<port>
+    `stbt record` will listen on the socket <hostname>:<port> for a connection
+    and read a "virtual remote" stream (which we haven't documented yet, but
+    we'll probably change it soon to be compatible with LIRC's protocol).
+
+  file://<filename>
+    Reads remote control keypresses from a newline-separated list of key names.
+    For example, `file:///dev/stdin` to use the keyboard as the remote control
+    input.
 
 -o <filename>, --output-filename=<filename>
   The file to write the generated test script to.
@@ -219,11 +232,11 @@ and maintainability.
 
 The following functions are available:
 
-* press("*key name*")
+* press("`key name`")
 
-* wait_for_match("*filename.png*")
+* wait_for_match("`filename.png`")
 
-* press_until_match("*key name*", "*filename.png*")
+* press_until_match("`key name`", "`filename.png`")
 
 
 TEST SCRIPT BEST PRACTICES
