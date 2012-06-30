@@ -20,6 +20,9 @@ def main(argv):
     parser.add_argument('--sink-pipeline',
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
+    parser.add_argument('--module', metavar='/PATH/TO/MODULE.PY',
+        action='append', default=[],
+        help='Load the specified python module so it is available in SCRIPT')
     parser.add_argument('script',
         help='The test script to run (default: %(default)s)')
     parser.set_defaults(**load_defaults('run'))
@@ -31,6 +34,8 @@ def main(argv):
     display = Display(args.source_pipeline, args.sink_pipeline)
     control = uri_to_remote(args.control, display)
     try:
+        for m in args.module:
+            execfile(m)
         execfile(args.script)
     except MatchTimeout as e:
         save_frame(e.screenshot, "screenshot.png")

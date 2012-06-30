@@ -3,7 +3,8 @@
 # Automated tests to test the stb-tester framework itself.
 # See SETUP TIPS in ../README.rst for further information.
 
-cd "$(dirname "$0")"
+testdir="$(dirname "$0")"
+cd "$testdir"
 for tests in ./test-*.sh; do
     source $tests
 done
@@ -47,6 +48,7 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_nonexistent_template &&
     run test_wait_for_match_searches_in_script_directory &&
     run test_changing_input_video_with_the_test_control &&
+    run test_precondition_script &&
 
     echo "All passed."
 
