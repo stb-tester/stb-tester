@@ -44,7 +44,8 @@ system.
 OPTIONS
 =======
 
-Global options:
+Global options
+--------------
 
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
@@ -55,6 +56,11 @@ Global options:
     `remote_control_name` is the name of a remote-control specification in
     lircd.conf.
 
+  vr:<hostname>:<port>
+    A "virtual remote" that communicates with the set-top box over TCP.
+    Requires a virtual remote listener (which we haven't released yet) running
+    on the stb.
+
   none
     Ignores key press commands.
 
@@ -62,11 +68,6 @@ Global options:
     Used by the selftests to change the input video stream. Only works with
     `--source-pipeline=videotestsrc`. A script like `press("18")` will change
     videotestsrc's pattern property (see `gst-inspect videotestsrc`).
-
-  vr:<hostname>:<port>
-    A "virtual remote" that communicates with the set-top box over TCP.
-    Requires a virtual remote listener (which we haven't released yet) running
-    on the stb.
 
 --source-pipeline=<pipeline>
   A gstreamer pipeline providing a video stream to use as video output from the
@@ -77,7 +78,8 @@ Global options:
 --sink-pipeline=<pipeline>
   A gstreamer pipeline to use for video output, like `xvimagesink`.
 
-Additional options to **stbt record**:
+Additional options to stbt record
+---------------------------------
 
 --control-recorder=<uri>
   The source of remote control presses.  `uri` can be:
@@ -88,9 +90,9 @@ Additional options to **stbt record**:
     `--control`.
 
   vr:<hostname>:<port>
-    `stbt record` will listen on the socket <hostname>:<port> for a connection
-    and read a "virtual remote" stream (which we haven't documented yet, but
-    we'll probably change it soon to be compatible with LIRC's protocol).
+    Listens on the socket <hostname>:<port> for a connection and reads a
+    "virtual remote" stream (which we haven't documented yet, but we'll
+    probably change it soon to be compatible with LIRC's protocol).
 
   file://<filename>
     Reads remote control keypresses from a newline-separated list of key names.
@@ -100,7 +102,8 @@ Additional options to **stbt record**:
 -o <filename>, --output-filename=<filename>
   The file to write the generated test script to.
 
-Additional options to **stbt run**:
+Additional options to stbt run
+------------------------------
 
 --module=<filename>
   Loads the specified python module so it is available in *script*.
