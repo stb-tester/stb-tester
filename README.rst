@@ -6,7 +6,7 @@
 A record + playback testing system for set-top boxes
 ----------------------------------------------------
 
-:Copyright: Copyright © 2012 YouView TV Ltd.
+:Copyright: Copyright (C) 2012 YouView TV Ltd.
 :License: LGPL v2.1 or any later version (see LICENSE file for details)
 :Version: @VERSION@
 :Manual section: 1
@@ -291,4 +291,4 @@ AUTHORS
 =======
 
 * Will Manley <will@williammanley.net>
-* David Röthlisberger <david@rothlis.net>
+* David Rothlisberger <david@rothlis.net>
