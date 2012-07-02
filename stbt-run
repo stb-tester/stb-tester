@@ -53,7 +53,8 @@ def press(*args, **keywords):
 
 
 def wait_for_match(*args, **keywords):
-    keywords.update(directory=_caller_dir())
+    if 'directory' not in keywords:
+        keywords['directory'] = _caller_dir()
     return display.wait_for_match(*args, **keywords)
 
 

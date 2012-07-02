@@ -39,11 +39,28 @@ test_wait_for_match_nonexistent_template() {
     [ $ret -ne $timedout -a $ret -ne 0 ]
 }
 
+test_press_until_match() {
+    # This doesn't test that press_until_match presses repeatedly, but at least
+    # it tests that press_until_match doesn't blow up completely.
+    cat > "$scratchdir/test.py" <<-EOF
+	press_until_match("10", "videotestsrc-checkers-8.png")
+	EOF
+    stbt-run "$scratchdir/test.py"
+}
+
 test_wait_for_match_searches_in_script_directory() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("in-script-dir.png", consecutive_matches=24)
 	EOF
     cp videotestsrc-bw.png "$scratchdir/in-script-dir.png"
+    stbt-run "$scratchdir/test.py"
+}
+
+test_press_until_match_searches_in_script_directory() {
+    cat > "$scratchdir/test.py" <<-EOF
+	press_until_match("10", "in-script-dir.png")
+	EOF
+    cp videotestsrc-checkers-8.png "$scratchdir/in-script-dir.png"
     stbt-run "$scratchdir/test.py"
 }
 
