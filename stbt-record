@@ -48,7 +48,7 @@ def record(display, remote_input, control, script_out):
         interrupt = False
         try:
             key = remote_input.next()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, StopIteration):
             interrupt = True
         buf = display.screenshot.get_property('last-buffer')
         if not interrupt:

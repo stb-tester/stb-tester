@@ -256,7 +256,11 @@ def file_remote_recorder(filename):
     call to open() so we have to have this function to work around it. """
     f = open(filename, 'r')
     while True:
-        yield f.readline().rstrip()
+        line = f.readline()
+        if line == '':
+            f.close()
+            raise StopIteration
+        yield line.rstrip()
 
 
 class FileToSocket:
