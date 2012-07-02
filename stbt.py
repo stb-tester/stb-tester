@@ -197,7 +197,7 @@ def uri_to_remote(uri, display):
 
 class NullRemote:
     def press(self, key):
-        pass
+        debug('NullRemote: Ignoring request to press "%s"' % key)
 
 
 class VideoTestSrcControl:
