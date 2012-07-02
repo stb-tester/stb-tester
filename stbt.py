@@ -256,6 +256,8 @@ def file_remote_recorder(filename):
     interactive input, even when we provide bufsize=1 (line buffered) to the
     call to open() so we have to have this function to work around it. """
     f = open(filename, 'r')
+    if filename == '/dev/stdin':
+        sys.stderr.write('Waiting for keypresses from standard input...\n')
     while True:
         line = f.readline()
         if line == '':
