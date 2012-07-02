@@ -72,7 +72,7 @@ class Display:
                 " ! ffmpegcolorspace",
                 " ! appsink name=screenshot "
                     "max-buffers=1 drop=true sync=false caps=video/x-raw-rgb",
-                " t. ! queue leaky=2 ! ", video_sink
+                " t. ! queue leaky=2 ! ffmpegcolorspace ! ", video_sink
                 ])
         self.pipeline = gst.parse_launch(pipe)
         self.screenshot = self.pipeline.get_by_name("screenshot")
