@@ -49,6 +49,12 @@ Global options:
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
 
+  lirc:<lircd_socket>:<remote_control_name>
+    A hardware infrared emitter controlled by the lirc (Linux Infrared Remote
+    Control) daemon. `lircd_socket` defaults to `/var/run/lirc/lircd`.
+    `remote_control_name` is the name of a remote-control specification in
+    lircd.conf.
+
   none
     Ignores key press commands.
 
@@ -61,8 +67,6 @@ Global options:
     A "virtual remote" that communicates with the set-top box over TCP.
     Requires a virtual remote listener (which we haven't released yet) running
     on the stb.
-
-  We intend to add support for LIRC-compatible IR blasters.
 
 --source-pipeline=<pipeline>
   A gstreamer pipeline providing a video stream to use as video output from the
@@ -77,6 +81,11 @@ Additional options to **stbt record**:
 
 --control-recorder=<uri>
   The source of remote control presses.  `uri` can be:
+
+  lirc:<lircd_socket>:<remote_control_name>
+    A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
+    Control) daemon. `lircd_socket` and `remote_control_name` are as for
+    `--control`.
 
   vr:<hostname>:<port>
     `stbt record` will listen on the socket <hostname>:<port> for a connection
@@ -230,6 +239,10 @@ where you installed gst-plugins-bad.
 
 Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
 working correctly.
+
+If you plan to use real infrared emitters/receivers, use lirc's irsend(1) and
+ircat(1), respectively, to test your lirc setup before integrating with
+stb-tester.
 
 
 TEST SCRIPT FORMAT

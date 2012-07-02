@@ -1,6 +1,7 @@
 import ConfigParser
 import os
 import re
+import socket
 import sys
 
 
@@ -192,6 +193,11 @@ def uri_to_remote(uri, display):
     if vr:
         d = vr.groupdict()
         return VirtualRemote(d['hostname'], int(d['port'] or 2033))
+    lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
+    if lirc:
+        d = lirc.groupdict()
+        return LircRemote(d['lircd_socket'] or '/var/run/lirc/lircd',
+                          d['control_name'])
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
@@ -231,10 +237,24 @@ class VirtualRemote:
         self.port = port
 
     def press(self, key):
-        import socket
         s = socket.socket()
         s.connect((self.stb, self.port))
         s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # send key Down, then key Up
+        debug("Pressed " + key)
+
+
+class LircRemote:
+    """Send a key-press via a LIRC-enabled infrared blaster.
+
+    See http://www.lirc.org/html/technical.html#applications
+    """
+    def __init__(self, lircd_socket, control_name):
+        self.lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.lircd.connect(lircd_socket)
+        self.control_name = control_name
+
+    def press(self, key):
+        self.lircd.send("SEND_ONCE %s %s\n" % (self.control_name, key))
         debug("Pressed " + key)
 
 
@@ -243,6 +263,11 @@ def uri_to_remote_recorder(uri):
     if vr:
         d = vr.groupdict()
         return virtual_remote_listen(d['hostname'], int(d['port'] or 2033))
+    lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
+    if lirc:
+        d = lirc.groupdict()
+        return lirc_remote_listen(d['lircd_socket'] or '/var/run/lirc/lircd',
+                                  d['control_name'])
     f = re.match('file://(?P<filename>.+)', uri)
     if f:
         return file_remote_recorder(f.group('filename'))
@@ -304,12 +329,12 @@ def read_records(stream, sep):
             yield i
 
 
-def key_reader(cmd_iter):
-    r"""Converts virtual remote records into list of keys
+def vr_key_reader(cmd_iter):
+    r"""Converts virtual remote records into list of keypresses
 
-    >>> list(key_reader(['D\tHELLO', 'U\tHELLO']))
+    >>> list(vr_key_reader(['D\tHELLO', 'U\tHELLO']))
     ['HELLO']
-    >>> list(key_reader(['D\tCHEESE', 'D\tHELLO', 'U\tHELLO', 'U\tCHEESE']))
+    >>> list(vr_key_reader(['D\tCHEESE', 'D\tHELLO', 'U\tHELLO', 'U\tCHEESE']))
     ['HELLO', 'CHEESE']
     """
     for i in cmd_iter:
@@ -321,7 +346,6 @@ def key_reader(cmd_iter):
 def virtual_remote_listen(address, port):
     """Waits for a VirtualRemote to connect, and returns an iterator yielding
     keypresses."""
-    import socket
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind((address, port))
@@ -331,6 +355,35 @@ def virtual_remote_listen(address, port):
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return key_reader(read_records(connection, '\n\0'))
+
+
+def lirc_remote_listen(lircd_socket, control_name):
+    """Returns an iterator yielding keypresses received from lircd.
+
+    See http://www.lirc.org/html/technical.html#applications
+    """
+    lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    lircd.connect(lircd_socket)
+    return lirc_key_reader(lircd.makefile(), control_name)
+
+
+def lirc_key_reader(cmd_iter, control_name):
+    r"""Convert lircd messages into list of keypresses
+
+    >>> list(lirc_key_reader(['0000dead 00 MENU My-IR-remote',
+    ...                       '0000beef 00 OK My-IR-remote',
+    ...                       '0000f00b 01 OK My-IR-remote',
+    ...                       'BEGIN', 'SIGHUP', 'END'],
+    ...                      'My-IR-remote'))
+    ['MENU', 'OK']
+    """
+    for s in cmd_iter:
+        debug("lirc_key_reader received: %s" % s.rstrip())
+        m = re.match(r"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" %
+                         control_name,
+                     s)
+        if m and int(m.group('repeat_count')) == 0:
+            yield m.group('key')
 
 
 class UITestFailure(Exception):
