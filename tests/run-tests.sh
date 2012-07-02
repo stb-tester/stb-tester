@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Automated tests to test the stb-tester framework itself.
 # See SETUP TIPS in ../README.rst for further information.
@@ -12,12 +12,14 @@ done
 run() {
     GST_DEBUG=
     scratchdir=$(mktemp -d -t stb-tester.XXX)
+    cp "$testdir/stbt.conf" "$scratchdir"
     printf "$1... "
     $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
         rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
-            "$scratchdir/test.py" "$scratchdir/in-script-dir.png"
+            "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
+            "$scratchdir/stbt.conf"
         rmdir "$scratchdir"
         true
     else
@@ -49,6 +51,9 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_searches_in_script_directory &&
     run test_changing_input_video_with_the_test_control &&
     run test_precondition_script &&
+
+    echo "Testing stbt-record:" &&
+    run test_record &&
 
     echo "All passed."
 
