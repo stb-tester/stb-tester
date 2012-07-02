@@ -239,13 +239,14 @@ class VirtualRemote:
 
 
 def uri_to_remote_recorder(uri):
-    m = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
-    if m:
-        d = m.groupdict()
+    vr = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
+    if vr:
+        d = vr.groupdict()
         return virtual_remote_listen(d['hostname'], int(d['port'] or 2033))
-    m = re.match('file://(?P<filename>.+)', uri)
-    if m:
-        return file_remote_recorder(m.group('filename'))
+    f = re.match('file://(?P<filename>.+)', uri)
+    if f:
+        return file_remote_recorder(f.group('filename'))
+    raise ConfigurationError('Invalid remote control recorder URI: "%s"' % uri)
 
 
 def file_remote_recorder(filename):
