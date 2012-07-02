@@ -33,35 +33,24 @@ def main(argv):
     debug("Arguments:\n" + "\n".join([
                 "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-    record(args.source_pipeline, args.sink_pipeline,
+    display = Display(args.source_pipeline, args.sink_pipeline)
+
+    record(display,
            uri_to_remote_recorder(args.control_recorder),
-           uri_to_remote(args.control), open(args.output_file, 'w'))
+           uri_to_remote(args.control, display),
+           open(args.output_file, 'w'))
 
 
-def record(video_source, video_sink, remote_input, control, script_out):
+def record(display, remote_input, control, script_out):
     count = itertools.count()
     old_key = None
-    display = " ".join([video_source,
-                        " ! tee name=t",
-                        " ! queue leaky=2",
-                        " ! ffmpegcolorspace",
-                        " ! appsink name=screenshot "
-                                   "max-buffers=1 drop=true sync=false "
-                                   "caps=video/x-raw-rgb",
-                        " t. ! queue leaky=2 ! ", video_sink,
-                        ])
-    pipeline = gst.parse_launch(display)
-    screenshot = pipeline.get_by_name("screenshot")
-    pipeline.get_bus().connect("message::error", on_error)
-    pipeline.get_bus().connect("message::warning", on_warning)
-    pipeline.set_state(gst.STATE_PLAYING)
     while True:
         interrupt = False
         try:
             key = remote_input.next()
         except KeyboardInterrupt:
             interrupt = True
-        buf = screenshot.get_property('last-buffer')
+        buf = display.screenshot.get_property('last-buffer')
         if not interrupt:
             control.press(key)
         if old_key:
@@ -74,17 +63,33 @@ def record(video_source, video_sink, remote_input, control, script_out):
         old_key = key
 
 
-def on_error(bus, message):
-    assert message.type == gst.MESSAGE_ERROR
-    err, dbg = message.parse_error()
-    sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
-    sys.exit(1)
+class Display:
+    def __init__(self, video_source, video_sink):
+        pipe = " ".join([
+                video_source,
+                " ! tee name=t",
+                " ! queue leaky=2",
+                " ! ffmpegcolorspace",
+                " ! appsink name=screenshot "
+                    "max-buffers=1 drop=true sync=false caps=video/x-raw-rgb",
+                " t. ! queue leaky=2 ! ", video_sink
+                ])
+        self.pipeline = gst.parse_launch(pipe)
+        self.screenshot = self.pipeline.get_by_name("screenshot")
+        self.pipeline.get_bus().connect("message::error", self.on_error)
+        self.pipeline.get_bus().connect("message::warning", self.on_warning)
+        self.pipeline.set_state(gst.STATE_PLAYING)
 
+    def on_error(self, bus, message):
+        assert message.type == gst.MESSAGE_ERROR
+        err, dbg = message.parse_error()
+        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
+        sys.exit(1)
 
-def on_warning(bus, message):
-    assert message.type == gst.MESSAGE_WARNING
-    err, dbg = message.parse_warning()
-    sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+    def on_warning(self, bus, message):
+        assert message.type == gst.MESSAGE_WARNING
+        err, dbg = message.parse_warning()
+        sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
 
 if __name__ == "__main__":
