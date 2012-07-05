@@ -3,8 +3,8 @@
 # Automated tests to test the stb-tester framework itself.
 # See SETUP TIPS in ../README.rst for further information.
 
-testdir="$(dirname "$0")"
-cd "$testdir"
+cd "$(dirname "$0")"
+testdir=.
 for tests in ./test-*.sh; do
     source $tests
 done
