@@ -16,8 +16,6 @@ stbt.debug("Arguments:\n" + "\n".join([
 stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
 from stbt import press, press_until_match, wait_for_match
 try:
-    for m in args.module:
-        execfile(m)
     execfile(args.script)
 except stbt.MatchTimeout as e:
     stbt.save_frame(e.screenshot, "screenshot.png")

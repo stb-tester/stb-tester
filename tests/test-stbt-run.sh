@@ -75,8 +75,9 @@ test_changing_input_video_with_the_test_control() {
 
 test_precondition_script() {
     cat > "$scratchdir/test.py" <<-EOF
+	from preconditions import *
 	checkers_via_gamut()
 	wait_for_match("videotestsrc-checkers-8.png", consecutive_matches=24)
 	EOF
-    stbt-run --module="$testdir/preconditions.py" "$scratchdir/test.py"
+    PYTHONPATH="$testdir:$PYTHONPATH" stbt-run "$scratchdir/test.py"
 }

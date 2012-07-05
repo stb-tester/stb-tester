@@ -37,9 +37,6 @@ def argparser():
     parser.add_argument('--sink-pipeline',
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
-    parser.add_argument('--module', metavar='/PATH/TO/MODULE.PY',
-        action='append', default=[],
-        help='Load the specified python module so it is available in SCRIPT')
     parser.set_defaults(**load_defaults('run'))
     return parser
 
