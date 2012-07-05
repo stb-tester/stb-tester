@@ -1,3 +1,4 @@
+import argparse
 import ConfigParser
 import os
 import re
@@ -23,6 +24,59 @@ with ArgvHider():
     pygst.require("0.10")
     import gst
     import gtk  # for main loop
+
+
+def argparser():
+    parser = argparse.ArgumentParser(
+        prog='stbt run', description='Run an stb-tester test script')
+    parser.add_argument('--control',
+        help='The remote control to control the stb (default: %(default)s)')
+    parser.add_argument('--source-pipeline',
+        help='A gstreamer pipeline to use for A/V input (default: '
+             '%(default)s)')
+    parser.add_argument('--sink-pipeline',
+        help='A gstreamer pipeline to use for video output '
+             '(default: %(default)s)')
+    parser.add_argument('--module', metavar='/PATH/TO/MODULE.PY',
+        action='append', default=[],
+        help='Load the specified python module so it is available in SCRIPT')
+    parser.set_defaults(**load_defaults('run'))
+    return parser
+
+
+def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
+    global display, control
+    display = Display(gst_source_pipeline, gst_sink_pipeline)
+    control = uri_to_remote(control_uri, display)
+
+
+def teardown_run():
+    display.teardown()
+
+
+def press(*args, **keywords):
+    return control.press(*args, **keywords)
+
+
+def wait_for_match(*args, **keywords):
+    if 'directory' not in keywords:
+        keywords['directory'] = _caller_dir()
+    return display.wait_for_match(*args, **keywords)
+
+
+def press_until_match(key, image, interval_secs=3, max_presses=10):
+    i = 0
+    while True:
+        try:
+            wait_for_match(image, directory=_caller_dir(),
+                           timeout_secs=interval_secs)
+            return
+        except MatchTimeout:
+            if i < max_presses:
+                press(key)
+                i += 1
+            else:
+                raise
 
 
 class Display:
@@ -417,6 +471,15 @@ def load_defaults(tool):
         'stbt.conf'])
     assert(system_config in files_read)
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
+
+
+def _caller_dir():
+    # stack()[0] is _caller_dir;
+    # stack()[1] is _caller_dir's caller "f";
+    # stack()[2] is f's caller.
+    import inspect
+    return os.path.dirname(
+        inspect.getframeinfo(inspect.stack()[2][0]).filename)
 
 
 def debug(s):
