@@ -10,13 +10,6 @@ class ArgvHider:
 
     This is used because otherwise gst-python will exit if '-h', '--help', '-v'
     or '--version' command line arguments are given.
-
-    Example:
-    >>> sys.argv=['test', '--help']
-    >>> with ArgvHider():
-    ...     import pygst  # gstreamer
-    ...     pygst.require("0.10")
-    ...     import gst
     """
     def __enter__(self):
         self.argv = sys.argv[:]
