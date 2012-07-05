@@ -1,8 +1,4 @@
-"""
-'preconditions' module.
-
-Load into stbt-run with: 'stbt-run --module=/path/to/preconditions.py'
-"""
+from stbt import press, wait_for_match
 
 def checkers_via_gamut():
     """Change input video to "gamut" patterns, then "checkers" pattern"""

@@ -102,12 +102,6 @@ Additional options to stbt record
 -o <filename>, --output-filename=<filename>
   The file to write the generated test script to.
 
-Additional options to stbt run
-------------------------------
-
---module=<filename>
-  Loads the specified python module so it is available in *script*.
-
 
 CONFIGURATION
 =============

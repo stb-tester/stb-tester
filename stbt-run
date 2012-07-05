@@ -1,86 +1,28 @@
 #!/usr/bin/env python
 
-from stbt import debug, Display, load_defaults, MatchTimeout, save_frame, \
-    uri_to_remote
-
-import argparse
-import os.path
 import sys
 import traceback
 
-
-def main(argv):
-    parser = argparse.ArgumentParser(
-        prog='stbt run', description='Run an stb-tester test script')
-    parser.add_argument('--control',
-        help='The remote control to control the stb (default: %(default)s)')
-    parser.add_argument('--source-pipeline',
-        help='A gstreamer pipeline to use for A/V input (default: '
-             '%(default)s)')
-    parser.add_argument('--sink-pipeline',
-        help='A gstreamer pipeline to use for video output '
-             '(default: %(default)s)')
-    parser.add_argument('--module', metavar='/PATH/TO/MODULE.PY',
-        action='append', default=[],
-        help='Load the specified python module so it is available in SCRIPT')
-    parser.add_argument('script',
-        help='The test script to run (default: %(default)s)')
-    parser.set_defaults(**load_defaults('run'))
-    args = parser.parse_args(argv[1:])
-    debug("Arguments:\n" + "\n".join([
-                "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
-
-    global display, control
-    display = Display(args.source_pipeline, args.sink_pipeline)
-    control = uri_to_remote(args.control, display)
-    try:
-        for m in args.module:
-            execfile(m)
-        execfile(args.script)
-    except MatchTimeout as e:
-        save_frame(e.screenshot, "screenshot.png")
-        print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
-               "Saved screenshot to '%s'") % (
-            args.script, e.expected, e.timeout_secs, "screenshot.png")
-        traceback.print_tb(sys.exc_traceback)
-        sys.exit(1)
-    finally:
-        display.teardown()
+import stbt
 
 
-def press(*args, **keywords):
-    return control.press(*args, **keywords)
+parser = stbt.argparser()
+parser.add_argument('script',
+    help='The test script to run (default: %(default)s)')
+args = parser.parse_args(sys.argv[1:])
+stbt.debug("Arguments:\n" + "\n".join([
+            "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-
-def wait_for_match(*args, **keywords):
-    if 'directory' not in keywords:
-        keywords['directory'] = _caller_dir()
-    return display.wait_for_match(*args, **keywords)
-
-
-def press_until_match(key, image, interval_secs=3, max_presses=10):
-    i = 0
-    while True:
-        try:
-            wait_for_match(image, directory=_caller_dir(),
-                           timeout_secs=interval_secs)
-            return
-        except MatchTimeout:
-            if i < max_presses:
-                press(key)
-                i += 1
-            else:
-                raise
-
-
-def _caller_dir():
-    # stack()[0] is _caller_dir;
-    # stack()[1] is _caller_dir's caller "f";
-    # stack()[2] is f's caller.
-    import inspect
-    return os.path.dirname(
-        inspect.getframeinfo(inspect.stack()[2][0]).filename)
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
+from stbt import press, press_until_match, wait_for_match
+try:
+    execfile(args.script)
+except stbt.MatchTimeout as e:
+    stbt.save_frame(e.screenshot, "screenshot.png")
+    print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
+           "Saved screenshot to '%s'") % (
+        args.script, e.expected, e.timeout_secs, "screenshot.png")
+    traceback.print_tb(sys.exc_traceback)
+    sys.exit(1)
+finally:
+    stbt.teardown_run()

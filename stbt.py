@@ -1,3 +1,4 @@
+import argparse
 import ConfigParser
 import os
 import re
@@ -24,6 +25,102 @@ with ArgvHider():
     import gst
     import gtk  # for main loop
 
+
+# Functions available to stbt scripts
+#===========================================================================
+
+def press(*args, **keywords):
+    return control.press(*args, **keywords)
+
+
+def wait_for_match(*args, **keywords):
+    if 'directory' not in keywords:
+        keywords['directory'] = _caller_dir()
+    return display.wait_for_match(*args, **keywords)
+
+
+def press_until_match(key, image, interval_secs=3, max_presses=10):
+    i = 0
+    while True:
+        try:
+            wait_for_match(image, directory=_caller_dir(),
+                           timeout_secs=interval_secs)
+            return
+        except MatchTimeout:
+            if i < max_presses:
+                press(key)
+                i += 1
+            else:
+                raise
+
+
+# stbt-run initialisation and convenience functions
+# (you will need these if writing your own version of stbt-run)
+#===========================================================================
+
+def argparser():
+    parser = argparse.ArgumentParser(
+        prog='stbt run', description='Run an stb-tester test script')
+    parser.add_argument('--control',
+        help='The remote control to control the stb (default: %(default)s)')
+    parser.add_argument('--source-pipeline',
+        help='A gstreamer pipeline to use for A/V input (default: '
+             '%(default)s)')
+    parser.add_argument('--sink-pipeline',
+        help='A gstreamer pipeline to use for video output '
+             '(default: %(default)s)')
+    parser.set_defaults(**load_defaults('run'))
+    return parser
+
+
+def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
+    global display, control
+    display = Display(gst_source_pipeline, gst_sink_pipeline)
+    control = uri_to_remote(control_uri, display)
+
+
+def teardown_run():
+    display.teardown()
+
+
+def save_frame(buf, filename):
+    '''Save a gstreamer buffer to the specified file in png format.'''
+    pipeline = gst.parse_launch(" ! ".join([
+                'appsrc name="src" caps="%s"' % buf.get_caps(),
+                'ffmpegcolorspace',
+                'pngenc',
+                'filesink location="%s"' % filename,
+                ]))
+    src = pipeline.get_by_name("src")
+    # This is actually a (synchronous) method call to push-buffer:
+    src.emit('push-buffer', buf)
+    src.emit('end-of-stream')
+    pipeline.set_state(gst.STATE_PLAYING)
+    msg = pipeline.get_bus().poll(
+        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
+    pipeline.set_state(gst.STATE_NULL)
+    if msg.type == gst.MESSAGE_ERROR:
+        (e, debug) = msg.parse_error()
+        raise RuntimeError(e.message)
+
+
+class UITestFailure(Exception):
+    pass
+
+
+class MatchTimeout(UITestFailure):
+    def __init__(self, screenshot, expected, timeout_secs):
+        self.screenshot = screenshot
+        self.expected = expected
+        self.timeout_secs = timeout_secs
+
+
+class ConfigurationError(Exception):
+    pass
+
+
+# Internal
+#===========================================================================
 
 class Display:
     def __init__(self, gst_source_pipeline, gst_sink_pipeline):
@@ -154,27 +251,6 @@ class Display:
     def teardown(self):
         if self.pipeline:
             self.pipeline.set_state(gst.STATE_NULL)
-
-
-def save_frame(buf, filename):
-    '''Save a gstreamer buffer to the specified file in png format.'''
-    pipeline = gst.parse_launch(" ! ".join([
-                'appsrc name="src" caps="%s"' % buf.get_caps(),
-                'ffmpegcolorspace',
-                'pngenc',
-                'filesink location="%s"' % filename,
-                ]))
-    src = pipeline.get_by_name("src")
-    # This is actually a (synchronous) method call to push-buffer:
-    src.emit('push-buffer', buf)
-    src.emit('end-of-stream')
-    pipeline.set_state(gst.STATE_PLAYING)
-    msg = pipeline.get_bus().poll(
-        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
-    pipeline.set_state(gst.STATE_NULL)
-    if msg.type == gst.MESSAGE_ERROR:
-        (e, debug) = msg.parse_error()
-        raise RuntimeError(e.message)
 
 
 def uri_to_remote(uri, display):
@@ -379,21 +455,6 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-class UITestFailure(Exception):
-    pass
-
-
-class MatchTimeout(UITestFailure):
-    def __init__(self, screenshot, expected, timeout_secs):
-        self.screenshot = screenshot
-        self.expected = expected
-        self.timeout_secs = timeout_secs
-
-
-class ConfigurationError(Exception):
-    pass
-
-
 def load_defaults(tool):
     conffile = ConfigParser.SafeConfigParser()
     conffile.add_section('global')
@@ -417,6 +478,15 @@ def load_defaults(tool):
         'stbt.conf'])
     assert(system_config in files_read)
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
+
+
+def _caller_dir():
+    # stack()[0] is _caller_dir;
+    # stack()[1] is _caller_dir's caller "f";
+    # stack()[2] is f's caller.
+    import inspect
+    return os.path.dirname(
+        inspect.getframeinfo(inspect.stack()[2][0]).filename)
 
 
 def debug(s):
