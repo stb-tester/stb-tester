@@ -423,7 +423,7 @@ def virtual_remote_listen(address, port):
                      "port %d...\n" % port)
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
-    return key_reader(read_records(connection, '\n\0'))
+    return vr_key_reader(read_records(connection, '\n\0'))
 
 
 def lirc_remote_listen(lircd_socket, control_name):
