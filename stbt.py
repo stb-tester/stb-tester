@@ -302,13 +302,11 @@ class VirtualRemote:
         control.press("MENU")
     """
     def __init__(self, hostname, port):
-        self.stb = hostname
-        self.port = port
+        self.s = socket.socket()
+        self.s.connect((hostname, port))
 
     def press(self, key):
-        s = socket.socket()
-        s.connect((self.stb, self.port))
-        s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # send key Down, then key Up
+        self.s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then key Up
         debug("Pressed " + key)
 
 
