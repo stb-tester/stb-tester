@@ -35,10 +35,17 @@ def main(argv):
 
     display = Display(args.source_pipeline, args.sink_pipeline)
 
+    try:
+        script = open(args.output_file, 'w')
+    except IOError as e:
+        e.strerror = "Failed to write to output-file '%s': %s" % (
+                args.output_file, e.strerror)
+        raise
+
     record(display,
            uri_to_remote_recorder(args.control_recorder),
            uri_to_remote(args.control, display),
-           open(args.output_file, 'w'))
+           script)
 
 
 def record(display, remote_input, control, script_out):
