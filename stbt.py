@@ -303,7 +303,17 @@ class VirtualRemote:
     """
     def __init__(self, hostname, port):
         self.s = socket.socket()
-        self.s.connect((hostname, port))
+        debug("VirtualRemote: Connecting to %s:%d" % (hostname, port))
+        try:
+            self.s.settimeout(3)
+            self.s.connect((hostname, port))
+            self.s.settimeout(None)
+            debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
+        except socket.error as e:
+            e.args = (("Failed to connect to VirtualRemote at %s:%d: %s" % (
+                hostname, port, e)),)
+            e.strerror = e.args[0]
+            raise
 
     def press(self, key):
         self.s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then key Up
@@ -320,9 +330,19 @@ class LircRemote:
     See http://www.lirc.org/html/technical.html#applications
     """
     def __init__(self, lircd_socket, control_name):
-        self.lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.lircd.connect(lircd_socket)
         self.control_name = control_name
+        self.lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        debug("LircRemote: Connecting to %s" % lircd_socket)
+        try:
+            self.lircd.settimeout(3)
+            self.lircd.connect(lircd_socket)
+            self.lircd.settimeout(None)
+            debug("LircRemote: Connected to %s" % lircd_socket)
+        except socket.error as e:
+            e.args = (("Failed to connect to Lirc socket %s: %s" % (
+                        lircd_socket, e)),)
+            e.strerror = e.args[0]
+            raise
 
     def press(self, key):
         self.lircd.send("SEND_ONCE %s %s\n" % (self.control_name, key))
@@ -434,7 +454,9 @@ def lirc_remote_listen(lircd_socket, control_name):
     See http://www.lirc.org/html/technical.html#applications
     """
     lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    debug("control-recorder connecting to lirc socket '%s'..." % lircd_socket)
     lircd.connect(lircd_socket)
+    debug("control-recorder connected to lirc socket")
     return lirc_key_reader(lircd.makefile(), control_name)
 
 
