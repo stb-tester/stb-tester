@@ -19,10 +19,10 @@ try:
     execfile(args.script)
 except stbt.MatchTimeout as e:
     stbt.save_frame(e.screenshot, "screenshot.png")
+    traceback.print_tb(sys.exc_traceback)
     print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
            "Saved screenshot to '%s'") % (
         args.script, e.expected, e.timeout_secs, "screenshot.png")
-    traceback.print_tb(sys.exc_traceback)
     sys.exit(1)
 finally:
     stbt.teardown_run()
