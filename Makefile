@@ -47,7 +47,7 @@ clean:
 	rm -f stbt.1 stbt
 
 check:
-	python -m doctest -v stbt.py stbt-run stbt-record
+	nosetests --with-doctest -v stbt.py
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
 	pep8 stbt.py stbt-run stbt-record
 

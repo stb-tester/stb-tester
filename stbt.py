@@ -309,6 +309,10 @@ class VirtualRemote:
         self.s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then key Up
         debug("Pressed " + key)
 
+    def close(self):
+        self.s.close()
+        self.s = None
+
 
 class LircRemote:
     """Send a key-press via a LIRC-enabled infrared blaster.
@@ -489,3 +493,22 @@ def _caller_dir():
 
 def debug(s):
     sys.stderr.write(os.path.basename(sys.argv[0]) + ": " + str(s) + "\n")
+
+
+# Tests
+#===========================================================================
+
+def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
+    import threading
+    import time
+    t = threading.Thread()
+    vrl = []
+    t.run = lambda: vrl.append(virtual_remote_listen('localhost', 2033))
+    t.start()
+    time.sleep(0.01)  # Give it a chance to start listening (sorry)
+    vr = VirtualRemote('localhost', 2033)
+    t.join()
+    for i in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
+        vr.press(i)
+    vr.close()
+    assert list(vrl[0]) == ['DOWN', 'DOWN', 'UP', 'GOODBYE']
