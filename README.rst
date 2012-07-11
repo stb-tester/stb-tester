@@ -251,13 +251,15 @@ respectively, are actually python scripts, so you can use the full power of
 python. Don't get too carried away, though; aim for simplicity, readability,
 and maintainability.
 
-The following functions are available:
+The following functions are available (the "keyword arguments" like
+`timeout_secs` are optional, and default to the value shown)::
 
-* press("`key name`")
+  press("KEY NAME")
 
-* wait_for_match("`filename.png`")
+  wait_for_match("filename.png", timeout_secs=10, certainty=0.99)
 
-* press_until_match("`key name`", "`filename.png`")
+  press_until_match("KEY NAME", "filename.png",
+                    interval_secs=3, max_presses=10, certainty=0.99)
 
 
 TEST SCRIPT BEST PRACTICES
