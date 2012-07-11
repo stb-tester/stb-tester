@@ -39,12 +39,16 @@ def wait_for_match(*args, **keywords):
     return display.wait_for_match(*args, **keywords)
 
 
-def press_until_match(key, image, interval_secs=3, max_presses=10):
+def press_until_match(key, image, interval_secs=3, max_presses=10,
+                      certainty=None):
     i = 0
     while True:
         try:
-            wait_for_match(image, directory=_caller_dir(),
-                           timeout_secs=interval_secs)
+            keywords = {'directory': _caller_dir(),
+                        'timeout_secs': interval_secs}
+            if certainty:
+                keywords['certainty'] = certainty
+            wait_for_match(image, **keywords)
             return
         except MatchTimeout:
             if i < max_presses:
