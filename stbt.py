@@ -389,23 +389,6 @@ def file_remote_recorder(filename):
         yield line.rstrip()
 
 
-class FileToSocket:
-    """Makes something File-like behave like a Socket for testing purposes
-
-    >>> import StringIO
-    >>> s = FileToSocket(StringIO.StringIO("Hello"))
-    >>> s.recv(3)
-    'Hel'
-    >>> s.recv(3)
-    'lo'
-    """
-    def __init__(self, f):
-        self.file = f
-
-    def recv(self, bufsize, flags=0):
-        return self.file.read(bufsize)
-
-
 def read_records(stream, sep):
     r"""Generator that splits stream into records given a separator
 
@@ -526,6 +509,23 @@ def debug(s):
 
 # Tests
 #===========================================================================
+
+class FileToSocket:
+    """Makes something File-like behave like a Socket for testing purposes
+
+    >>> import StringIO
+    >>> s = FileToSocket(StringIO.StringIO("Hello"))
+    >>> s.recv(3)
+    'Hel'
+    >>> s.recv(3)
+    'lo'
+    """
+    def __init__(self, f):
+        self.file = f
+
+    def recv(self, bufsize, flags=0):
+        return self.file.read(bufsize)
+
 
 def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     import threading
