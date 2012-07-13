@@ -225,6 +225,9 @@ class Display:
         if st.get_name() == "template_match":
 
             buf = self.screenshot.get_property("last-buffer")
+            if not buf:
+                return
+
             if self.start_timestamp == None:
                 self.start_timestamp = buf.timestamp
 
