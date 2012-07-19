@@ -127,7 +127,7 @@ class ConfigurationError(Exception):
 #===========================================================================
 
 class Display:
-    def __init__(self, gst_source_pipeline, gst_sink_pipeline):
+    def __init__(self, source_pipeline_description, sink_pipeline_description):
         imageprocessing = " ! ".join([
                 # Buffer the video stream, dropping frames if downstream
                 # processors aren't fast enough:
@@ -140,13 +140,12 @@ class Display:
         xvideo = " ! ".join([
                 # Convert to a colorspace that xvimagesink can handle:
                 "ffmpegcolorspace",
-                gst_sink_pipeline,
+                sink_pipeline_description,
                 ])
         screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
                       "sync=false")
         pipe = " ".join([
-                gst_source_pipeline,
-                "!", imageprocessing,
+                imageprocessing,
                 "! tee name=t",
                 "! queue leaky=2 !", screenshot,
                 "t. ! queue leaky=2 !", xvideo
@@ -160,7 +159,14 @@ class Display:
         #       loaded.
         gst.parse_launch("appsink")
 
-        self.pipeline = gst.parse_launch(pipe)
+        self.source_pipeline_description = source_pipeline_description
+        self.source_bin = self.create_source_bin()
+        self.sink_bin = gst.parse_bin_from_description(pipe, True)
+
+        self.pipeline = gst.Pipeline("stb-tester")
+        self.pipeline.add(self.source_bin, self.sink_bin)
+        gst.element_link_many(self.source_bin, self.sink_bin)
+
         self.templatematch = self.pipeline.get_by_name("templatematch")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
@@ -168,6 +174,17 @@ class Display:
         self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
+
+    def create_source_bin(self):
+        source_bin = gst.parse_bin_from_description(
+            self.source_pipeline_description +
+                " ! capsfilter name=padforcer caps=video/x-raw-yuv",
+            False)
+        source_bin.add_pad(
+            gst.GhostPad(
+                "source",
+                source_bin.get_by_name("padforcer").src_pads().next()))
+        return source_bin
 
     def wait_for_match(self, image, directory,
                        timeout_secs=10, certainty=0.98, consecutive_matches=3):
