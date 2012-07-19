@@ -196,7 +196,7 @@ class Display:
         self.consecutive_matches = consecutive_matches
 
         debug("Searching for " + template)
-        self.bus.connect("message::element", self.bus_message)
+        self.bus.connect("message::element", self.on_match)
         gtk.main()
         if self.match_count == self.consecutive_matches:
             debug("MATCHED " + template)
@@ -220,7 +220,7 @@ class Display:
             sys.stderr.write("Error: %s\n" % err.message)
             sys.exit(1)
 
-    def bus_message(self, bus, message):
+    def on_match(self, bus, message):
         st = message.structure
         if st.get_name() == "template_match":
 
@@ -252,7 +252,7 @@ class Display:
             if self.match_count == self.consecutive_matches or (
                     timed_out and self.match_count == 0):
                 self.templatematch.props.template = None
-                self.bus.disconnect_by_func(self.bus_message)
+                self.bus.disconnect_by_func(self.on_match)
                 gtk.main_quit()
 
     def teardown(self):
