@@ -316,6 +316,8 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
         debug("restart_source_bin: set state PLAYING")
 
+        self.underrun_timeout_id = glib.timeout_add(10000,
+                                                    self.restart_source_bin)
         return False  # stop the timeout from running again
 
     def teardown(self):
