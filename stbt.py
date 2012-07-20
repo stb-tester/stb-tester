@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import sys
+import time
 
 
 class ArgvHider:
@@ -23,6 +24,7 @@ with ArgvHider():
     import pygst  # gstreamer
     pygst.require("0.10")
     import gst
+    import glib
     import gtk  # for main loop
 
 
@@ -128,10 +130,12 @@ class ConfigurationError(Exception):
 
 class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
+        gtk.gdk.threads_init()
+
         imageprocessing = " ! ".join([
                 # Buffer the video stream, dropping frames if downstream
                 # processors aren't fast enough:
-                "queue leaky=2",
+                "queue name=q leaky=2",
                 # Convert to a colorspace that templatematch can handle:
                 "ffmpegcolorspace",
                 # OpenCV image-processing library:
@@ -174,6 +178,13 @@ class Display:
         self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
         self.pipeline.set_state(gst.STATE_PLAYING)
+
+        # Handle loss of video (but without end-of-stream event) from the
+        # Hauppauge HDPVR capture device.
+        self.queue = self.pipeline.get_by_name("q")
+        self.underrun_timeout_id = None
+        self.queue.connect("underrun", self.on_underrun)
+        self.queue.connect("running", self.on_running)
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -271,6 +282,41 @@ class Display:
                 self.templatematch.props.template = None
                 self.bus.disconnect_by_func(self.on_match)
                 gtk.main_quit()
+
+    def on_underrun(self, element):
+        if self.underrun_timeout_id:
+            debug("underrun: I already saw a recent underrun; ignoring")
+        else:
+            debug("underrun: scheduling 'restart_source_bin' in 1s")
+            self.underrun_timeout_id = glib.timeout_add(
+                1000, self.restart_source_bin)
+
+    def on_running(self, element):
+        if self.underrun_timeout_id:
+            debug("running: cancelling underrun timer")
+            glib.source_remove(self.underrun_timeout_id)
+            self.underrun_timeout_id = None
+        else:
+            debug("running: no outstanding underrun timers; ignoring")
+
+    def restart_source_bin(self):
+        gst.element_unlink_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_NULL)
+        self.sink_bin.set_state(gst.STATE_READY)
+        self.pipeline.remove(self.source_bin)
+        self.source_bin = None
+        debug("restart_source_bin: set state NULL; waiting 5s")
+        time.sleep(5)
+
+        debug("restart_source_bin: about to set state PLAYING")
+        self.source_bin = self.create_source_bin()
+        self.pipeline.add(self.source_bin)
+        gst.element_link_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_PLAYING)
+        self.pipeline.set_state(gst.STATE_PLAYING)
+        debug("restart_source_bin: set state PLAYING")
+
+        return False  # stop the timeout from running again
 
     def teardown(self):
         if self.pipeline:
