@@ -19,7 +19,7 @@ def main(argv):
     parser.add_argument('--control',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--control-recorder',
-        help='The remote control to control the stb (default: %(default)s)')
+        help='The source of remote control keypresses (default: %(default)s)')
     parser.add_argument('--source-pipeline',
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
