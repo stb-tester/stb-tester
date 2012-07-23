@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-from stbt import ArgvHider, debug, load_defaults, save_frame, uri_to_remote, \
-    uri_to_remote_recorder
+import stbt
 
-with ArgvHider():
+with stbt.ArgvHider():
     import pygst  # gstreamer
     pygst.require("0.10")
     import gst
@@ -28,9 +27,9 @@ def main(argv):
              '(default: %(default)s)')
     parser.add_argument('-o', '--output-file',
         help='The filename of the generated script (default: %(default)s)')
-    parser.set_defaults(**load_defaults('record'))
+    parser.set_defaults(**stbt.load_defaults('record'))
     args = parser.parse_args(argv[1:])
-    debug("Arguments:\n" + "\n".join([
+    stbt.debug("Arguments:\n" + "\n".join([
                 "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     display = Display(args.source_pipeline, args.sink_pipeline)
@@ -43,8 +42,8 @@ def main(argv):
         raise
 
     record(display,
-           uri_to_remote_recorder(args.control_recorder),
-           uri_to_remote(args.control, display),
+           stbt.uri_to_remote_recorder(args.control_recorder),
+           stbt.uri_to_remote(args.control, display),
            script)
 
 
@@ -62,7 +61,7 @@ def record(display, remote_input, control, script_out):
             control.press(key)
         if old_key:
             filename = '%04d-%s-complete.png' % (count.next(), old_key)
-            save_frame(buf, filename)
+            stbt.save_frame(buf, filename)
             script_out.write("wait_for_match('%s')\n" % filename)
         if interrupt:
             return
