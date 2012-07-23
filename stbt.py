@@ -151,7 +151,7 @@ class Display:
         pipe = " ".join([
                 imageprocessing,
                 "! tee name=t",
-                "! queue leaky=2 !", screenshot,
+                "t. ! queue leaky=2 !", screenshot,
                 "t. ! queue leaky=2 !", xvideo
                 ])
 

@@ -74,10 +74,10 @@ class Display:
         pipe = " ".join([
                 video_source,
                 " ! tee name=t",
-                " ! queue leaky=2",
-                " ! ffmpegcolorspace",
-                " ! appsink name=screenshot "
-                    "max-buffers=1 drop=true sync=false caps=video/x-raw-rgb",
+                " t. ! queue leaky=2",
+                "    ! ffmpegcolorspace",
+                "    ! appsink name=screenshot max-buffers=1 drop=true "
+                        "sync=false caps=video/x-raw-rgb",
                 " t. ! queue leaky=2 ! ffmpegcolorspace ! ", video_sink
                 ])
         self.pipeline = gst.parse_launch(pipe)
