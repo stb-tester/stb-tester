@@ -24,7 +24,7 @@ with ArgvHider():
     import pygst  # gstreamer
     pygst.require("0.10")
     import gst
-    import glib
+    import gobject
     import gtk  # for main loop
 
 
@@ -130,7 +130,7 @@ class ConfigurationError(Exception):
 
 class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
-        gtk.gdk.threads_init()
+        gobject.threads_init()
 
         imageprocessing = " ! ".join([
                 # Buffer the video stream, dropping frames if downstream
@@ -288,13 +288,13 @@ class Display:
             debug("underrun: I already saw a recent underrun; ignoring")
         else:
             debug("underrun: scheduling 'restart_source_bin' in 1s")
-            self.underrun_timeout_id = glib.timeout_add(
+            self.underrun_timeout_id = gobject.timeout_add(
                 1000, self.restart_source_bin)
 
     def on_running(self, element):
         if self.underrun_timeout_id:
             debug("running: cancelling underrun timer")
-            glib.source_remove(self.underrun_timeout_id)
+            gobject.source_remove(self.underrun_timeout_id)
             self.underrun_timeout_id = None
         else:
             debug("running: no outstanding underrun timers; ignoring")
@@ -316,8 +316,8 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
         debug("restart_source_bin: set state PLAYING")
 
-        self.underrun_timeout_id = glib.timeout_add(10000,
-                                                    self.restart_source_bin)
+        self.underrun_timeout_id = gobject.timeout_add(
+            10000, self.restart_source_bin)
         return False  # stop the timeout from running again
 
     def teardown(self):
