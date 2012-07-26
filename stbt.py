@@ -501,7 +501,7 @@ def virtual_remote_listen(address, port):
     serversocket.bind((address, port))
     serversocket.listen(5)
     sys.stderr.write("Waiting for connection from virtual remote control "
-                     "port %d...\n" % port)
+                     "on %s:%d...\n" % (address, port))
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
     return vr_key_reader(read_records(connection, '\n\0'))
