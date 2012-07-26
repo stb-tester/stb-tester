@@ -420,6 +420,10 @@ class LircRemote:
         self.lircd.send("SEND_ONCE %s %s\n" % (self.control_name, key))
         debug("Pressed " + key)
 
+    def close(self):
+        self.lircd.close()
+        self.lircd = None
+
 
 def uri_to_remote_recorder(uri):
     vr = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
@@ -606,3 +610,40 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
         vr.press(i)
     vr.close()
     assert list(vrl[0]) == ['DOWN', 'DOWN', 'UP', 'GOODBYE']
+
+
+def fake_lircd(address):
+    import tempfile
+
+    # This needs to accept 2 connections (from LircRemote and
+    # lirc_remote_listen) and, on receiving input from the LircRemote
+    # connection, write to the lirc_remote_listen connection.
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.bind(address)
+    s.listen(5)
+    listener, _ = s.accept()
+    control, _ = s.accept()
+    for cmd in control.makefile():
+        m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
+        if m:
+            d = m.groupdict()
+            listener.send('00000000 0 %s %s\n' % (d['key'], d['control']))
+
+
+def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
+    import tempfile
+    import threading
+    import time
+
+    lircd_socket = tempfile.mktemp()
+    t = threading.Thread()
+    t.run = lambda: fake_lircd(lircd_socket)
+    t.start()
+    time.sleep(0.01)  # Give it a chance to start listening (sorry)
+    listener = lirc_remote_listen(lircd_socket, 'test')
+    control = LircRemote(lircd_socket, 'test')
+    for i in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
+        control.press(i)
+        assert listener.next() == i
+    control.close()
+    t.join()
