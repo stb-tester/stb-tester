@@ -21,12 +21,14 @@ stbt: stbt.in
 install: stbt stbt.1
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1} \
-	    $(DESTDIR)$(SYSCONFDIR)/stbt
+	    $(DESTDIR)$(SYSCONFDIR)/{stbt,bash_completion.d}
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(PREFIX)/bin
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(PREFIX)/lib/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(PREFIX)/lib/stbt
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(PREFIX)/share/man/man1
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(SYSCONFDIR)/stbt
+	$(INSTALL) -m 0644 stbt-completion \
+	    $(DESTDIR)$(SYSCONFDIR)/bash_completion.d/stbt
 
 doc: stbt.1
 
@@ -46,12 +48,16 @@ stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
 clean:
 	rm -f stbt.1 stbt
 
-check: check-nosetests check-integrationtests check-pep8
+check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py
 check-integrationtests:
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
 check-pep8:
 	pep8 stbt.py stbt-run stbt-record
+check-bashcompletion:
+	set -e; \
+	. ./stbt-completion; \
+	for t in `declare -F | awk '/_stbt_test_/ {print $$3}'`; do ($$t); done
 
 .DELETE_ON_ERROR:

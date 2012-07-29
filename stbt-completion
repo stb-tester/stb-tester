@@ -1,0 +1,223 @@
+#!bash
+
+# bash tab-completion for stb-tester
+
+complete -o nospace -F _stbt stbt
+complete -o nospace -F _stbt_run stbt-run
+complete -o nospace -F _stbt_record stbt-record
+
+_stbt() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local IFS=$'\n'
+    if [ $COMP_CWORD = 1 ]; then
+        COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space --help --version run record)" \
+            -- "$cur"))
+    else
+        case "${COMP_WORDS[1]}" in
+            run)      _stbt_run;;
+            record)   _stbt_record;;
+            *)        COMPREPLY=();;
+        esac
+    fi
+}
+
+_stbt_run() {
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control=*) COMPREPLY=($(_stbt_control));;
+        --source-pipeline=*) COMPREPLY=();;
+        --sink-pipeline=*) COMPREPLY=();;
+        *) COMPREPLY=($(compgen \
+            -f -W "$(_stbt_trailing_space \
+                        --control --source-pipeline --sink-pipeline)" \
+            -- "$cur"));;
+    esac
+}
+
+_stbt_record() {
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control=*) COMPREPLY=($(_stbt_control));;
+        --source-pipeline=*) COMPREPLY=();;
+        --sink-pipeline=*) COMPREPLY=();;
+        --control-recorder=*) COMPREPLY=($(_stbt_control_recorder));;
+        -o=*|--output-filename=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        *) COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space \
+                    --control --source-pipeline --sink-pipeline \
+                    --control-recorder -o --output-filename)" \
+            -- "$cur"));;
+    esac
+}
+
+## arguments to command-line options
+############################################################################
+
+_stbt_control() {
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control=lirc:*:) _stbt_lirc_name;;
+        --control=lirc:) _stbt_lirc_socket;;
+        --control=vr:*:) _stbt_vr_port;;
+        --control=vr:) _stbt_vr_hostname;;
+        *)
+            compgen -W "$( \
+                    _stbt_no_space lirc: vr:; _stbt_trailing_space none test)" \
+                -- "$cur";;
+    esac
+}
+
+_stbt_control_recorder() {
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control-recorder=lirc:*:) _stbt_lirc_name;;
+        --control-recorder=lirc:) _stbt_lirc_socket;;
+        --control-recorder=vr:*:) _stbt_vr_port;;
+        --control-recorder=vr:) _stbt_vr_hostname;;
+        --control-recorder=file:) _stbt_control_file;;
+        *) compgen -W "$(_stbt_no_space lirc: vr: file://)" -- "$cur";;
+    esac
+}
+
+_stbt_lirc_socket() {
+    local cur="$_stbt_cur"
+    compgen -W ":" -- "$cur"
+    compgen -f -S ":" -- "$cur"
+}
+
+_stbt_lirc_name() {
+    local cur="$_stbt_cur"
+    local names="$(awk '/^ *name / {print $2}' /etc/lirc/lircd.conf 2>/dev/null)"
+    compgen -W "$(_stbt_trailing_space $names)" -- "$cur"
+}
+
+_stbt_vr_hostname() {
+    local cur="$_stbt_cur"
+    compgen -A hostname -S ":" -- "$cur"
+}
+
+_stbt_vr_port() {
+    local cur="$_stbt_cur"
+    compgen -W "$(_stbt_trailing_space 2033)" -- "$cur"
+}
+
+_stbt_control_file() {
+    local cur="$_stbt_cur"
+    compgen -f -P "//" -- "${cur#//}"
+}
+
+## Helper functions
+############################################################################
+
+# Walks backward from the current word, collecting the entire preceding
+# flag and its argument:
+#     "stbt run --control lirc::name..." => _stbt_prev="--control=lirc::"
+# See test cases in _stbt_test_get_prev, below.
+# Note that COMP_WORDBREAKS by default includes "=" and ":".
+_stbt_get_prev() {
+    local c p pp i
+    c="${COMP_WORDS[COMP_CWORD]}"
+    p="$c"
+    i=$((COMP_CWORD-1))
+    while [ $i -gt 1 ]; do
+        pp="${COMP_WORDS[i]}"  # the word previous to $p
+        case "$pp,$p" in
+            [=:],*|*,[=:]*) p="$pp$p";;
+            *) _stbt_takes_arg "$pp" || break; p="$pp=$p";;
+        esac
+        i=$((i-1))
+    done
+    [[ "$c" == ":" || "$c" == "::" ]] && c=""
+    p="${p%$c}"
+    _stbt_cur="$c"
+    _stbt_prev="$p"
+}
+
+_stbt_takes_arg() {
+    case "$1" in
+        --control|--source-pipeline|--sink-pipeline) true;;
+        --control-recorder|-o|--output-filename) true;;
+        *) false;;
+    esac
+}
+
+_stbt_trailing_space() {
+    local c
+    for c in $*; do printf -- "$c \n"; done
+}
+
+_stbt_no_space() {
+    local c
+    for c in $*; do printf -- "$c\n"; done
+}
+
+## Unit tests
+############################################################################
+
+_stbt_fail() { printf "error: $*\n"; exit 1; }
+
+_stbt_assert_get_prev() {
+    [ "$_stbt_prev" = "$1" ] ||
+        _stbt_fail "_stbt_prev was '$_stbt_prev' (expected '$1')"
+    [ "$_stbt_cur" = "$2" ] ||
+        _stbt_fail "_stbt_cur was '$_stbt_cur' (expected '$2')"
+    echo _stbt_get_prev: ok
+}
+
+_stbt_test_get_prev() {
+    # User types "--control "
+    COMP_WORDS=(stbt run --control ""); COMP_CWORD=3; _stbt_get_prev
+    _stbt_assert_get_prev --control= ""
+
+    COMP_WORDS=(stbt run --control lir); COMP_CWORD=3; _stbt_get_prev
+    _stbt_assert_get_prev --control= lir
+
+    COMP_WORDS=(stbt run --control lirc :); COMP_CWORD=4; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc: ""
+
+    COMP_WORDS=(stbt run --control lirc : /var); COMP_CWORD=5; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc: /var
+
+    COMP_WORDS=(stbt run --control lirc : :); COMP_CWORD=5; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc:: ""
+
+    COMP_WORDS=(stbt run --control lirc ::); COMP_CWORD=4; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc:: ""
+
+    COMP_WORDS=(stbt run --control lirc : : ""); COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc:: ""
+
+    COMP_WORDS=(stbt run --control lirc : : abc); COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc:: abc
+
+    # User types "--control="
+    COMP_WORDS=(stbt run --control = ""); COMP_CWORD=4; _stbt_get_prev
+    _stbt_assert_get_prev --control= ""
+
+    COMP_WORDS=(stbt run --control = lir); COMP_CWORD=4; _stbt_get_prev
+    _stbt_assert_get_prev --control= lir
+
+    # _stbt_prev stops at most recent "--" flag
+    COMP_WORDS=(stbt run -o test.py --control lir); COMP_CWORD=5; _stbt_get_prev
+    _stbt_assert_get_prev --control= lir
+
+    COMP_WORDS=(stbt run -o test.py --control = lirc :); COMP_CWORD=7; _stbt_get_prev
+    _stbt_assert_get_prev --control=lirc: ""
+
+    # --control=file://...
+    COMP_WORDS=(stbt run --control = file : ""); COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev --control=file: ""
+
+    COMP_WORDS=(stbt run --control = file : //); COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev --control=file: //
+
+    COMP_WORDS=(stbt run --control = file : ///dev/stdin); COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev --control=file: ///dev/stdin
+}
