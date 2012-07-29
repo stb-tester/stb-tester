@@ -46,9 +46,12 @@ stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
 clean:
 	rm -f stbt.1 stbt
 
-check:
+check: check-nosetests check-integrationtests check-pep8
+check-nosetests:
 	nosetests --with-doctest -v stbt.py
+check-integrationtests:
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
+check-pep8:
 	pep8 stbt.py stbt-run stbt-record
 
 .DELETE_ON_ERROR:
