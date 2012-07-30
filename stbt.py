@@ -556,9 +556,11 @@ def load_defaults(tool):
         # directory specification:
         '%s/stbt/stbt.conf' % os.environ.get('XDG_CONFIG_HOME',
                                             '%s/.config' % os.environ['HOME']),
+        # Current directory:
+        'stbt.conf',
         # Config files specific to the test suite / test run:
         os.environ.get('STBT_CONFIG_FILE', ''),
-        'stbt.conf'])
+        ])
     assert(system_config in files_read)
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
 

@@ -112,8 +112,8 @@ over earlier):
 
 1. /etc/stbt/stbt.conf
 2. ~/.config/stbt/stbt.conf
-3. $STBT_CONFIG_FILE
-4. $PWD/stbt.conf
+3. $PWD/stbt.conf
+4. $STBT_CONFIG_FILE
 
 These files are simple ini files with the form::
 

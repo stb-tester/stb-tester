@@ -4,7 +4,7 @@
 # See SETUP TIPS in ../README.rst for further information.
 
 cd "$(dirname "$0")"
-testdir=.
+testdir="$PWD"
 for tests in ./test-*.sh; do
     source $tests
 done
@@ -12,9 +12,8 @@ done
 run() {
     GST_DEBUG=
     scratchdir=$(mktemp -d -t stb-tester.XXX)
-    cp "$testdir/stbt.conf" "$scratchdir"
     printf "$1... "
-    $1 > "$scratchdir/log" 2>&1
+    STBT_CONFIG_FILE="$testdir/stbt.conf" $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
         rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
