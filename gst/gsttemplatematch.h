@@ -75,6 +75,7 @@ struct _GstTemplateMatch
   gboolean display;
 
   gchar *template;
+  gchar *debugDirectory;
 
   IplImage *cvImage, *cvGray, *cvTemplateImage, *cvDistImage;
 };

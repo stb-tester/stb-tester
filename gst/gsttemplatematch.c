@@ -83,6 +83,7 @@ enum
   PROP_0,
   PROP_METHOD,
   PROP_TEMPLATE,
+  PROP_DEBUG_DIRECTORY,
   PROP_DISPLAY,
 };
 
@@ -111,6 +112,11 @@ static void gst_templatematch_get_property (GObject * object, guint prop_id,
 
 static gboolean gst_templatematch_set_caps (GstPad * pad, GstCaps * caps);
 static GstFlowReturn gst_templatematch_chain (GstPad * pad, GstBuffer * buf);
+
+static void gst_templatematch_log_image (const IplImage * image,
+    const char * debugDirectory, const char * filename);
+static void gst_templatematch_set_debug_directory (GstTemplateMatch * filter, 
+    const char* debugDirectory);
 
 static void gst_templatematch_load_template (
     GstTemplateMatch * filter, const char * template);
@@ -155,6 +161,11 @@ gst_templatematch_class_init (GstTemplateMatchClass * klass)
   g_object_class_install_property (gobject_class, PROP_TEMPLATE,
       g_param_spec_string ("template", "Template", "Filename of template image",
           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_DEBUG_DIRECTORY,
+      g_param_spec_string ("debugDirectory", "Debug directory",
+          "Directory to store intermediate results for debugging the "
+          "templatematch algorithm",
+          NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_DISPLAY,
       g_param_spec_boolean ("display", "Display",
           "Sets whether the detected template should be highlighted in the output",
@@ -190,6 +201,7 @@ gst_templatematch_init (GstTemplateMatch * filter,
   filter->cvDistImage = NULL;
   filter->cvImage = NULL;
   filter->method = DEFAULT_METHOD;
+  filter->debugDirectory = NULL;
 }
 
 static void
@@ -222,6 +234,10 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
           break;
       }
       GST_OBJECT_UNLOCK(filter);
+      break;
+    case PROP_DEBUG_DIRECTORY:
+      gst_templatematch_set_debug_directory (
+          filter, g_value_dup_string (value));
       break;
     case PROP_TEMPLATE:
       gst_templatematch_load_template (filter, g_value_dup_string (value));
@@ -291,6 +307,9 @@ gst_templatematch_finalize (GObject * object)
   filter = GST_TEMPLATEMATCH (object);
 
   g_free(filter->template);
+  if (filter->debugDirectory) {
+    g_free (filter->debugDirectory);
+  }
   if (filter->cvImage) {
     cvReleaseImageHeader (&filter->cvImage);
   }
@@ -350,6 +369,13 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     gst_templatematch_match (filter->cvImage, filter->cvTemplateImage,
         filter->cvDistImage, &best_res, &best_pos, filter->method);
 
+    gst_templatematch_log_image (filter->cvImage,
+        filter->debugDirectory, "source.png");
+    gst_templatematch_log_image (filter->cvTemplateImage,
+        filter->debugDirectory, "template.png");
+    gst_templatematch_log_image (filter->cvDistImage,
+        filter->debugDirectory, "template_matchtemplate.png");
+
     s = gst_structure_new ("template_match",
         "x", G_TYPE_UINT, best_pos.x,
         "y", G_TYPE_UINT, best_pos.y,
@@ -379,6 +405,28 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   return gst_pad_push (filter->srcpad, buf);
 }
 
+static void
+gst_templatematch_log_image (const IplImage * image,
+    const char * debugDirectory, const char * filename)
+{
+  if (debugDirectory) {
+    char *filepath;
+    asprintf (&filepath, "%s/%s", debugDirectory, filename);
+
+    IplImage *imageToLog = image;
+    if (image->depth == IPL_DEPTH_32F) {
+      imageToLog = cvCreateImage (
+          cvSize (image->width, image->height), IPL_DEPTH_8U, 1);
+      cvConvertScale (image, imageToLog, 255.0, 0);
+    }
+    cvSaveImage (filepath, imageToLog, NULL);
+    if (imageToLog != image) {
+      cvReleaseImage (&imageToLog);
+    }
+    free (filepath);
+  }
+}
+
 
 
 static void
@@ -401,6 +449,18 @@ gst_templatematch_match (IplImage * input, IplImage * template,
   }
 }
 
+/* We take ownership of debugDirectory here */
+static void
+gst_templatematch_set_debug_directory (
+    GstTemplateMatch * filter, const char* debugDirectory)
+{
+  GST_OBJECT_LOCK (filter);
+  if (filter->debugDirectory) {
+    g_free (filter->debugDirectory);
+  }
+  filter->debugDirectory = debugDirectory;
+  GST_OBJECT_UNLOCK (filter);
+}
 
 /* We take ownership of template here */
 static void
