@@ -122,6 +122,8 @@ static void gst_templatematch_load_template (
     GstTemplateMatch * filter, const char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
+static float gst_templatematch_confirm (IplImage * input,
+    IplImage * template, CvPoint * best_pos, const char * debugDirectory);
 
 /* GObject vmethod implementations */
 
@@ -376,6 +378,16 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     gst_templatematch_log_image (filter->cvDistImage,
         filter->debugDirectory, "template_matchtemplate.png");
 
+    if (best_res >= 0.80 && best_res <= 0.99) {
+      float resultPass2 = gst_templatematch_confirm (filter->cvImage,
+          filter->cvTemplateImage, &best_pos, filter->debugDirectory);
+      if (resultPass2 >= 0.85) {
+        best_res = 1.0;
+      } else {
+        best_res = resultPass2;
+      }
+    }
+
     s = gst_structure_new ("template_match",
         "x", G_TYPE_UINT, best_pos.x,
         "y", G_TYPE_UINT, best_pos.y,
@@ -427,7 +439,78 @@ gst_templatematch_log_image (const IplImage * image,
   }
 }
 
+static IplImage  *
+gst_templatematch_copy_image_roi (
+    IplImage * input, int x, int y, int width, int height)
+{
+  IplImage *inputROI = cvCreateImage (
+      cvSize (width, height), input->depth, input->nChannels);
+  cvSetImageROI (input, cvRect(x, y, width, height));
+  cvCopy (input, inputROI, NULL);
+  cvResetImageROI (input);
+  return inputROI;
+}
 
+static IplImage  *
+gst_templatematch_extract_edges (IplImage * input)
+{
+  IplImage      *resultCanny;
+  IplImage      *inputGray;
+  IplConvKernel *crossElement;
+
+  // Apply canny on the image
+  inputGray = cvCreateImage (
+      cvSize (input->width, input->height), IPL_DEPTH_8U, 1);
+  cvCvtColor (input, inputGray, CV_BGR2GRAY);
+  resultCanny = cvCreateImage (
+      cvSize (input->width, input->height), IPL_DEPTH_8U, 1);
+  cvCanny (inputGray, resultCanny, 150, 200, 3);
+  cvReleaseImage (&inputGray);
+
+  // Dilate the image
+  crossElement = cvCreateStructuringElementEx (
+      3, 3, 1, 1, CV_SHAPE_CROSS, NULL);
+  cvDilate (resultCanny, resultCanny, crossElement, 1);
+  cvReleaseStructuringElement (&crossElement);
+
+  return resultCanny;
+}
+
+static float
+gst_templatematch_confirm(IplImage * input, IplImage * template,
+    CvPoint * best_pos, const char * debugDirectory)
+{
+  CvPoint best_edges_pos;
+  double best_edges_res;
+
+  IplImage  * inputROI      = gst_templatematch_copy_image_roi(
+      input, best_pos->x, best_pos->y, template->width, template->height);
+
+  IplImage  * inputEdges    = gst_templatematch_extract_edges(inputROI);
+
+  IplImage  * templateEdges = gst_templatematch_extract_edges(template);
+  
+  IplImage  * distImage     = cvCreateImage( cvSize (1, 1), IPL_DEPTH_32F, 1);
+
+  gst_templatematch_match(inputEdges, templateEdges, distImage, 
+      &best_edges_res, &best_edges_pos, 1);
+
+  gst_templatematch_log_image( inputROI, debugDirectory, 
+      "source_roi.png");
+  gst_templatematch_log_image( inputEdges, debugDirectory, 
+      "source_canny_dilate.png");
+  gst_templatematch_log_image( templateEdges, debugDirectory, 
+      "template_canny_dilate.png");
+  gst_templatematch_log_image( distImage, debugDirectory, 
+      "source_canny_dilate_matchtemplate.png");
+
+  cvReleaseImage(&distImage);
+  cvReleaseImage(&templateEdges);
+  cvReleaseImage(&inputEdges);
+  cvReleaseImage(&inputROI);
+
+  return best_edges_res;
+}
 
 static void
 gst_templatematch_match (IplImage * input, IplImage * template,
