@@ -63,6 +63,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <math.h>
 
 #include "gsttemplatematch.h"
 
@@ -122,7 +123,7 @@ static void gst_templatematch_load_template (
     GstTemplateMatch * filter, const char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
-static float gst_templatematch_confirm (IplImage * input,
+static double gst_templatematch_confirm(IplImage * input, 
     IplImage * template, CvPoint * best_pos, const char * debugDirectory);
 
 /* GObject vmethod implementations */
@@ -375,13 +376,13 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         filter->debugDirectory, "source.png");
     gst_templatematch_log_image (filter->cvTemplateImage,
         filter->debugDirectory, "template.png");
-    gst_templatematch_log_image (filter->cvDistImage,
-        filter->debugDirectory, "template_matchtemplate.png");
-
+    gst_templatematch_log_image( filter->cvDistImage, 
+        filter->debugDirectory, "source_matchtemplate.png");
+    
     if (best_res >= 0.80 && best_res <= 0.99) {
-      float resultPass2 = gst_templatematch_confirm (filter->cvImage,
+      double resultPass2 = gst_templatematch_confirm(filter->cvImage, 
           filter->cvTemplateImage, &best_pos, filter->debugDirectory);
-      if (resultPass2 >= 0.85) {
+      if (resultPass2 >= 0.80) {
         best_res = 1.0;
       } else {
         best_res = resultPass2;
@@ -476,40 +477,119 @@ gst_templatematch_extract_edges (IplImage * input)
   return resultCanny;
 }
 
-static float
-gst_templatematch_confirm(IplImage * input, IplImage * template,
-    CvPoint * best_pos, const char * debugDirectory)
+/**
+ * @brief Compute the number of times to split an image
+ *        to get maximum subimages of size split_limit.
+ * @note  With a size of 350, and a split limit of 100,
+ *        the split number will be 3.
+ *        With a size of 100, and a split limit of 100,
+ *        the split number will be 0.
+ */
+static int
+gst_templatematch_compute_image_split_number (
+    int size, int splitLimit)
 {
-  CvPoint best_edges_pos;
-  double best_edges_res;
+  return (int)( ceil((float)size / splitLimit ) - 1 );
+}
 
-  IplImage  * inputROI      = gst_templatematch_copy_image_roi(
-      input, best_pos->x, best_pos->y, template->width, template->height);
+static void
+gst_templatematch_compute_split_size_and_position (
+    int splitNo, int splitNumber, int imageSize,
+    int *splitSize, int *splitPosition)
+{
+  *splitSize = floor (imageSize / (splitNumber + 1));
+  *splitPosition = *splitSize * splitNo;
+  if (splitNo == splitNumber) {
+    *splitSize = imageSize - splitNumber * *splitSize;
+  }
+}
 
+static double
+gst_templatematch_compute_lowest_match_of_all_subimages (
+    IplImage * inputEdges, IplImage * templateEdges, IplImage  * distImage,
+    const char * debugDirectory)
+{
+  // inputEdges should have the same size as templateEdges
+  double minBestRes = 1.0;
+  int xsplitNumber =
+      gst_templatematch_compute_image_split_number (templateEdges->width, 100);
+  int ysplitNumber =
+      gst_templatematch_compute_image_split_number (templateEdges->height, 100);
+  int xsplitNo, ysplitNo;
+
+  // Apply the template match on every subimage
+  for (xsplitNo = 0; xsplitNo < xsplitNumber + 1; ++xsplitNo) {
+    for (ysplitNo = 0; ysplitNo < ysplitNumber + 1; ++ysplitNo) {
+      int currentSplitX = -1;
+      int currentSplitY = -1;
+      int currentSplitWidth = -1;
+      int currentSplitHeight = -1;
+      CvPoint bestPos;
+      double currentRes = -1.0;
+      char imageName[256];
+
+      gst_templatematch_compute_split_size_and_position (
+          xsplitNo, xsplitNumber, templateEdges->width,
+          &currentSplitWidth, &currentSplitX);
+      gst_templatematch_compute_split_size_and_position (
+          ysplitNo, ysplitNumber, templateEdges->height,
+          &currentSplitHeight, &currentSplitY);
+
+      cvSetImageROI (inputEdges, cvRect (
+          currentSplitX, currentSplitY, currentSplitWidth, currentSplitHeight));
+      cvSetImageROI (templateEdges, cvRect (
+          currentSplitX, currentSplitY, currentSplitWidth, currentSplitHeight));
+
+      snprintf (imageName, 256, "source_roi_canny_dilate_roi_%d_%d.png",
+          currentSplitX, currentSplitY);
+      gst_templatematch_log_image (inputEdges, debugDirectory, imageName);
+
+      snprintf (imageName, 256, "template_canny_dilate_roi_%d_%d.png",
+          currentSplitX, currentSplitY);
+      gst_templatematch_log_image (templateEdges, debugDirectory, imageName);
+
+      gst_templatematch_match (
+          inputEdges, templateEdges, distImage, &currentRes, &bestPos, 1);
+      if (currentRes < minBestRes) {
+        minBestRes = currentRes;
+      }
+
+      snprintf (imageName, 256,
+          "source_roi_canny_dilate_roi_%d_%d_matchtemplate.png",
+          currentSplitX, currentSplitY);
+      gst_templatematch_log_image (distImage, debugDirectory, imageName);
+
+      cvResetImageROI (templateEdges);
+      cvResetImageROI (inputEdges);
+    }
+  }
+  return minBestRes;
+}
+
+static double
+gst_templatematch_confirm(IplImage * input, IplImage * template,
+    CvPoint * bestPos, const char * debugDirectory)
+{
+  double minBestRes     = 1.0;
+  IplImage  * inputROI  = gst_templatematch_copy_image_roi(
+      input, bestPos->x, bestPos->y, template->width, template->height);
   IplImage  * inputEdges    = gst_templatematch_extract_edges(inputROI);
-
   IplImage  * templateEdges = gst_templatematch_extract_edges(template);
-  
   IplImage  * distImage     = cvCreateImage( cvSize (1, 1), IPL_DEPTH_32F, 1);
 
-  gst_templatematch_match(inputEdges, templateEdges, distImage, 
-      &best_edges_res, &best_edges_pos, 1);
+  gst_templatematch_log_image( inputROI, debugDirectory, "source_roi.png");
+  gst_templatematch_log_image( inputEdges, debugDirectory, "source_roi_canny_dilate.png");
+  gst_templatematch_log_image( templateEdges, debugDirectory, "template_canny_dilate.png");
 
-  gst_templatematch_log_image( inputROI, debugDirectory, 
-      "source_roi.png");
-  gst_templatematch_log_image( inputEdges, debugDirectory, 
-      "source_canny_dilate.png");
-  gst_templatematch_log_image( templateEdges, debugDirectory, 
-      "template_canny_dilate.png");
-  gst_templatematch_log_image( distImage, debugDirectory, 
-      "source_canny_dilate_matchtemplate.png");
-
+  minBestRes = gst_templatematch_compute_lowest_match_of_all_subimages(
+    inputEdges, templateEdges, distImage, debugDirectory);
+  
   cvReleaseImage(&distImage);
   cvReleaseImage(&templateEdges);
   cvReleaseImage(&inputEdges);
   cvReleaseImage(&inputROI);
 
-  return best_edges_res;
+  return minBestRes;
 }
 
 static void
