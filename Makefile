@@ -7,8 +7,18 @@ mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
+ifeq ($(prefix),$(HOME))
+  plugindir?=$(HOME)/.gstreamer-0.10/plugins
+else
+  plugindir?=$(libdir)/gstreamer-0.10
+endif
+
 INSTALL?=install
 TAR?=tar  # Must be GNU tar
+
+dependencies = gstreamer-0.10
+dependencies += gstreamer-base-0.10
+dependencies += gstreamer-video-0.10
 
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
@@ -18,21 +28,23 @@ generate_version := $(shell \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
 
-all: stbt stbt.1
+all: stbt stbt.1 gst/libgst-stb-tester.so
 
 stbt: stbt.in
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBDIR@,$(libdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
 
-install: stbt stbt.1
+install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)/stbt $(DESTDIR)$(man1dir) \
+	    $(DESTDIR)$(plugindir) \
 	    $(DESTDIR)$(sysconfdir)/{stbt,bash_completion.d}
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libdir)/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libdir)/stbt
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -53,7 +65,7 @@ stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
 	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 clean:
-	rm -f stbt.1 stbt
+	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so
 
 check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
 check-nosetests:
@@ -68,3 +80,23 @@ check-bashcompletion:
 	for t in `declare -F | awk '/_stbt_test_/ {print $$3}'`; do ($$t); done
 
 .DELETE_ON_ERROR:
+
+
+### GStreamer plugin ###
+
+# CFLAGS and LDFLAGS are for the user to override from the command line.
+CFLAGS ?= -g -O2
+extra_cflags = -fPIC '-DPACKAGE="stb-tester"' '-DVERSION="$(VERSION)"'
+extra_cflags += $(shell pkg-config --cflags $(dependencies))
+extra_ldflags = $(shell pkg-config --libs $(dependencies))
+
+OBJS = gst/gst-stb-tester.o
+OBJS += gst/gstmotiondetect.o
+
+$(OBJS): %.o: %.c
+	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) $<
+# Header dependencies:
+gst/gstmotiondetect.o: gst/gstmotiondetect.h
+
+gst/libgst-stb-tester.so: $(OBJS)
+	$(CC) -shared -o $@ $^ $(extra_ldflags) $(LDFLAGS)

@@ -2,3 +2,5 @@ stbt
 *.pyc
 stbt.1
 VERSION
+gst/*.o
+gst/libgst-stb-tester.so
