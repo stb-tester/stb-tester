@@ -1,5 +1,5 @@
-PREFIX?=/usr/local
-SYSCONFDIR?=$(PREFIX)/etc
+prefix?=/usr/local
+sysconfdir?=$(prefix)/etc
 INSTALL?=install
 TAR?=tar  # Must be GNU tar
 
@@ -15,20 +15,20 @@ all: stbt stbt.1
 
 stbt: stbt.in
 	sed -e 's,@VERSION@,$(VERSION),g' \
-	    -e 's,@PREFIX@,$(PREFIX),g' \
-	    -e 's,@SYSCONFDIR@,$(SYSCONFDIR),g' $< > $@
+	    -e 's,@PREFIX@,$(prefix),g' \
+	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
 
 install: stbt stbt.1
 	$(INSTALL) -m 0755 -d \
-	    $(DESTDIR)$(PREFIX)/{bin,lib/stbt,share/man/man1} \
-	    $(DESTDIR)$(SYSCONFDIR)/{stbt,bash_completion.d}
-	$(INSTALL) -m 0755 stbt $(DESTDIR)$(PREFIX)/bin
-	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(PREFIX)/lib/stbt
-	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(PREFIX)/lib/stbt
-	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(PREFIX)/share/man/man1
-	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(SYSCONFDIR)/stbt
+	    $(DESTDIR)$(prefix)/{bin,lib/stbt,share/man/man1} \
+	    $(DESTDIR)$(sysconfdir)/{stbt,bash_completion.d}
+	$(INSTALL) -m 0755 stbt $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(prefix)/lib/stbt
+	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(prefix)/lib/stbt
+	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(prefix)/share/man/man1
+	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
-	    $(DESTDIR)$(SYSCONFDIR)/bash_completion.d/stbt
+	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 
 doc: stbt.1
 
