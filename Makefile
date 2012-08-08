@@ -90,18 +90,11 @@ check-bashcompletion:
 	for t in `declare -F | awk '/_stbt_test_/ {print $$3}'`; do ($$t); done
 
 
-# Can only be run from within a git clone of stb-tester or VERSION wont be
-# set correctly
+# Can only be run from within a git clone of stb-tester or VERSION (and the
+# list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = stbt.in
-DIST += stbt-record
-DIST += stbt-run
-DIST += stbt.py
-DIST += README.rst
-DIST += stbt.conf
-DIST += LICENSE
-DIST += Makefile
+DIST = $(shell git ls-files)
 DIST += VERSION
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
