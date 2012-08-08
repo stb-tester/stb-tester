@@ -1,3 +1,6 @@
+# The default target of this Makefile is:
+all:
+
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
@@ -21,6 +24,15 @@ dependencies += gstreamer-base-0.10
 dependencies += gstreamer-video-0.10
 dependencies += opencv
 
+# CFLAGS and LDFLAGS are for the user to override from the command line.
+CFLAGS ?= -g -O2
+extra_cflags = -fPIC '-DPACKAGE="stb-tester"' '-DVERSION="$(VERSION)"'
+extra_cflags += $(shell pkg-config --cflags $(dependencies))
+extra_ldflags = $(shell pkg-config --libs $(dependencies))
+
+OBJS = gst/gst-stb-tester.o
+OBJS += gst/gstmotiondetect.o
+
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
 generate_version := $(shell \
@@ -28,6 +40,9 @@ generate_version := $(shell \
 	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
+
+.DELETE_ON_ERROR:
+
 
 all: stbt stbt.1 gst/libgst-stb-tester.so
 
@@ -38,14 +53,16 @@ stbt: stbt.in
 
 install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 -d \
-	    $(DESTDIR)$(bindir) $(DESTDIR)$(libdir)/stbt $(DESTDIR)$(man1dir) \
+	    $(DESTDIR)$(bindir) \
+	    $(DESTDIR)$(libdir)/stbt \
 	    $(DESTDIR)$(plugindir) \
+	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/{stbt,bash_completion.d}
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libdir)/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libdir)/stbt
-	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
+	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -56,14 +73,6 @@ doc: stbt.1
 stbt.1: README.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
 	rst2man > $@
-
-# Can only be run from within a git clone of stb-tester or VERSION wont be
-# set correctly
-dist: stb-tester-$(VERSION).tar.gz
-
-stb-tester-$(VERSION).tar.gz: stbt-record stbt-run stbt.conf stbt.in stbt.py \
-                              LICENSE Makefile README.rst VERSION
-	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so
@@ -80,24 +89,30 @@ check-bashcompletion:
 	. ./stbt-completion; \
 	for t in `declare -F | awk '/_stbt_test_/ {print $$3}'`; do ($$t); done
 
-.DELETE_ON_ERROR:
+
+# Can only be run from within a git clone of stb-tester or VERSION wont be
+# set correctly
+dist: stb-tester-$(VERSION).tar.gz
+
+DIST = stbt.in
+DIST += stbt-record
+DIST += stbt-run
+DIST += stbt.py
+DIST += README.rst
+DIST += stbt.conf
+DIST += LICENSE
+DIST += Makefile
+DIST += VERSION
+
+stb-tester-$(VERSION).tar.gz: $(DIST)
+	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 
-### GStreamer plugin ###
-
-# CFLAGS and LDFLAGS are for the user to override from the command line.
-CFLAGS ?= -g -O2
-extra_cflags = -fPIC '-DPACKAGE="stb-tester"' '-DVERSION="$(VERSION)"'
-extra_cflags += $(shell pkg-config --cflags $(dependencies))
-extra_ldflags = $(shell pkg-config --libs $(dependencies))
-
-OBJS = gst/gst-stb-tester.o
-OBJS += gst/gstmotiondetect.o
+# GStreamer plugin
+gst/libgst-stb-tester.so: $(OBJS)
+	$(CC) -shared -o $@ $^ $(extra_ldflags) $(LDFLAGS)
 
 $(OBJS): %.o: %.c
 	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) $<
 # Header dependencies:
 gst/gstmotiondetect.o: gst/gstmotiondetect.h
-
-gst/libgst-stb-tester.so: $(OBJS)
-	$(CC) -shared -o $@ $^ $(extra_ldflags) $(LDFLAGS)
