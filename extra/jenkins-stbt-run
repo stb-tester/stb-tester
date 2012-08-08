@@ -1,0 +1,97 @@
+#!/bin/bash
+
+#/
+#/ This script is run by Jenkins to run a particular stb-tester script (or
+#/ scripts). It generates a xUnit-format report that Jenkins understands, in
+#/ $WORKSPACE/results.xml.
+#/
+#/ This script takes a list of test names, expected to be found in
+#/ $WORKSPACE (WORKSPACE is set by jenkins). For example:
+#/
+#/     jenkins-stbt-run \
+#/         my-tests-repo/functional/test1 \
+#/         my-tests-repo/integration
+#/
+#/ runs $WORKSPACE/my-tests-repo/functional/test1/test.py
+#/ plus all of the tests under $WORKSPACE/my-tests-repo/integration/.
+#/
+
+set -eu
+IFS=$'\n'
+
+usage() { grep "^#/" $0 | cut -c4-; }
+
+[ $# -gt 0 ] || {
+    echo "$(basename $0): ERROR: Must provide an argument." >&2
+    usage >&2
+    exit 1
+}
+
+_testscripts=( $(cd $WORKSPACE && find "$@" -name test.py) )
+testscripts() { for x in ${_testscripts[*]}; do echo $x; done; }
+
+main() {
+    rm -rf $WORKSPACE/runs
+    run > $WORKSPACE/results.xml
+}
+
+run() {
+    local out=$WORKSPACE/stdout.tmp
+    local err=$WORKSPACE/stderr.tmp
+    trap "rm -f '$out' '$err'" EXIT
+
+    echo "<?xml version='1.0' encoding='UTF-8'?>"
+    echo "<testsuites>"
+
+    for s in $(testsuites); do
+        local ntests=$(testcases $s | wc -l | sed 's/ //g')
+        local dottedname=$(echo $s | sed 's#//*#.#g')
+        echo "<testsuite name='$dottedname' tests='$ntests'>"
+
+        for t in $(testcases $s); do
+            printf "stbt run $WORKSPACE/$s/$t/test.py... " >&2
+            mkdir -p $WORKSPACE/runs/$s/$t
+            cd $WORKSPACE/runs/$s/$t
+            local ret
+            local failure=
+            local start=$(date +%s)
+            set +e
+            DISPLAY=:0.0 stbt run $WORKSPACE/$s/$t/test.py >$out 2>$err
+            ret=$?
+            set -e
+            local end=$(date +%s)
+            if [ $ret -eq 0 ]; then
+                printf "OK\n" >&2
+            else
+                printf "FAIL\n" >&2
+                failure="<failure />"
+            fi
+            echo $ret > exit-status.log
+            cp $out stdout.log
+            cp $err stderr.log
+            cat <<-EOF
+		  <testcase name='$t' time='$((end - start))'>
+		    $failure
+		    <system-out><![CDATA[$(cat $out)]]></system-out>
+		    <system-err><![CDATA[$(cat $err)]]></system-err>
+		  </testcase>
+		EOF
+            sleep 2
+        done
+
+        echo "</testsuite>"
+    done
+    echo "</testsuites>"
+}
+
+testsuites() {
+    # a/b/c/test.py => a/b
+    for t in $(testscripts); do dirname $(dirname $t); done | sort | uniq
+}
+testcases() {
+    # a/b/c/test.py => c
+    local suite=$1
+    for t in $(testscripts | grep $suite); do basename $(dirname $t); done
+}
+
+main
