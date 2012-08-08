@@ -2,12 +2,13 @@
  stbt
 ======
 
-----------------------------------------------------
-A record + playback testing system for set-top boxes
-----------------------------------------------------
+-----------------------------------------------------------------------------
+A video-capture record/playback system for automated testing of set-top boxes
+-----------------------------------------------------------------------------
 
 :Copyright: Copyright (C) 2012 YouView TV Ltd.
-:License: LGPL v2.1 or any later version (see LICENSE file for details)
+:License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
+          the source distribution for details)
 :Version: @VERSION@
 :Manual section: 1
 :Manual group: stb-tester
@@ -106,9 +107,9 @@ Additional options to stbt record
 CONFIGURATION
 =============
 
-All parameters that can be passed to the stbt tools can now also be specified in
-configuration files.  Configuration is searched for in (latter taking precedence
-over earlier):
+All parameters that can be passed to the stbt tools can also be specified in
+configuration files. Configuration is searched for in the following files (with
+later files taking precedence):
 
 1. /etc/stbt/stbt.conf
 2. ~/.config/stbt/stbt.conf
@@ -281,6 +282,7 @@ TEST SCRIPT BEST PRACTICES
 SEE ALSO
 ========
 
+* http://stb-tester.com/
 * http://github.com/drothlis/stb-tester
 
 
