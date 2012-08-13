@@ -62,8 +62,8 @@
 #endif
 
 #include <gst/gst.h>
+#include <gst/video/video.h>
 
-#include "gstopencvutils.h"
 #include "gsttemplatematch.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_templatematch_debug);
