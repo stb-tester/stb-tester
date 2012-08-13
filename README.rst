@@ -74,7 +74,7 @@ Global options
   A gstreamer pipeline providing a video stream to use as video output from the
   set-top box under test.  For the Hauppauge HD PVR use::
 
-      v4l2src device=/dev/video0 ! mpegtsdemux ! video/x-h264 ! decodebin
+      v4l2src device=/dev/video0 ! mpegtsdemux ! video/x-h264 ! decodebin2
 
 --sink-pipeline=<pipeline>
   A gstreamer pipeline to use for video output, like `xvimagesink`.
