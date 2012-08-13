@@ -19,6 +19,7 @@ TAR?=tar  # Must be GNU tar
 dependencies = gstreamer-0.10
 dependencies += gstreamer-base-0.10
 dependencies += gstreamer-video-0.10
+dependencies += opencv
 
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.

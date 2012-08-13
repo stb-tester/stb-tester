@@ -1,7 +1,7 @@
 /* Gstreamer element for motion detection (not motion tracking) using OpenCV.
  *
  * Copyright (C) 2012 YouView TV Ltd.
- * Author: David Rothlisberger <david@rothlis.net>
+ * Author: Hubert Lacote <hubert.lacote@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,8 @@
 
 #include <gst/gst.h>
 #include <gst/base/gstbasetransform.h>
+#include <cv.h>
+#include <highgui.h>
 
 G_BEGIN_DECLS
 
@@ -36,6 +38,13 @@ G_BEGIN_DECLS
 typedef struct _GstMotionDetect GstMotionDetect;
 typedef struct _GstMotionDetectClass GstMotionDetectClass;
 
+enum
+{
+    MOTION_DETECT_STATE_INITIALISING,
+    MOTION_DETECT_STATE_ACQUIRING_REFERENCE_IMAGE,
+    MOTION_DETECT_STATE_REFERENCE_IMAGE_ACQUIRED,
+};
+
 /**
  * GstMotionDetect:
  *
@@ -45,6 +54,10 @@ struct _GstMotionDetect {
   GstBaseTransform element;
 
   gboolean enabled;
+  int state;
+  IplImage *cvCurrentImage;
+  IplImage *cvReferenceImageGray, *cvCurrentImageGray, *cvMaskImage;
+  char *mask;
 };
 
 struct _GstMotionDetectClass {
