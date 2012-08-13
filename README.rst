@@ -261,6 +261,9 @@ The following functions are available (the "keyword arguments" like
   press_until_match("KEY NAME", "filename.png",
                     interval_secs=3, max_presses=10, certainty=0.99)
 
+  wait_for_motion(mask=None, # Filename of mask image
+                  timeout_secs=10, consecutive_frames=10)
+
 
 TEST SCRIPT BEST PRACTICES
 ==========================

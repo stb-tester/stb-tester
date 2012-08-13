@@ -62,6 +62,8 @@ if [ $# -eq 0 ]; then
     run test_press_until_match &&
     run test_wait_for_match_searches_in_script_directory &&
     run test_press_until_match_searches_in_script_directory &&
+    run test_wait_for_motion &&
+    run test_wait_for_motion_no_motion &&
     run test_changing_input_video_with_the_test_control &&
     run test_precondition_script &&
 

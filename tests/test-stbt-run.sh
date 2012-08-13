@@ -64,6 +64,21 @@ test_press_until_match_searches_in_script_directory() {
     stbt-run "$scratchdir/test.py"
 }
 
+test_wait_for_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(consecutive_frames=10)
+	EOF
+    stbt-run "$scratchdir/test.py"
+}
+
+test_wait_for_motion_no_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(mask="videotestsrc-mask-no-video.png",
+	        consecutive_frames=10, timeout_secs=1)
+	EOF
+    ! stbt-run "$scratchdir/test.py"
+}
+
 test_changing_input_video_with_the_test_control() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
