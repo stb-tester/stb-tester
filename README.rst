@@ -195,8 +195,7 @@ SOFTWARE REQUIREMENTS
 =====================
 
 * A Unixy operating system (we have only tested on Linux; gstreamer and OpenCV
-  allegedly work on BSD, Mac OS X, and possibly Windows with MingW/MSys; but
-  building gst-plugins-bad, below, can be tricky).
+  allegedly work on BSD, Mac OS X, and possibly Windows with MingW/MSys).
 
 * Drivers for any required hardware components
 
@@ -205,16 +204,7 @@ SOFTWARE REQUIREMENTS
 * python (we have tested with 2.6 and 2.7) + pygst + pygtk2 (+ nose for the
   self-tests).
 
-* OpenCV (image processing library) version >= 2.0.0 and <= 2.3.1
-  (the version restrictions are imposed by gst-plugins-bad).
-
-* gst-plugins-bad (for the gstreamer wrappers around OpenCV)
-  built from source from the head of the 0.10 branch, with the patches from
-  https://bugzilla.gnome.org/show_bug.cgi?id=678485
-  (until such time as the patches are accepted upstream).
-
-  A github repo with the same patches applied is available at
-  https://github.com/drothlis/gst-plugins-bad (branch templatematch-fixes).
+* OpenCV (image processing library) version >= 2.0.0.
 
 * For the Hauppauge video capture device you'll need the gstreamer-ffmpeg
   package (e.g. from the rpmfusion-free repository) for H.264 decoding.
@@ -233,7 +223,7 @@ SETUP TIPS
 
 Use "gst-inspect templatematch" to check that gstreamer can find the
 templatematch element. You may need to set GST_PLUGIN_PATH to point
-where you installed gst-plugins-bad.
+where you installed libgst-stb-tester.so.
 
 Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
 working correctly.
