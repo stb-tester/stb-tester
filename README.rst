@@ -6,7 +6,7 @@
 A video-capture record/playback system for automated testing of set-top boxes
 -----------------------------------------------------------------------------
 
-:Copyright: Copyright (C) 2012 YouView TV Ltd.
+:Copyright: Copyright (C) 2012 YouView TV Ltd. and others
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
           the source distribution for details)
 :Version: @VERSION@
@@ -283,3 +283,11 @@ AUTHORS
 
 * Will Manley <will@williammanley.net>
 * David Rothlisberger <david@rothlis.net>
+* Hubert Lacote <hubert.lacote@gmail.com>
+
+Original templatematch GStreamer element written by:
+
+* Thomas Vander Stichele <thomas@apestaart.org>
+* Ronald S. Bultje <rbultje@ronald.bitfreak.net>
+* Michael Sheldon <mike@mikeasoft.com>
+* Noam Lewis <jones.noamle@gmail.com>
