@@ -1,4 +1,5 @@
 #include "gstmotiondetect.h"
+#include "gsttemplatematch.h"
 
 #include <gst/gst.h>
 
@@ -8,6 +9,10 @@ plugin_init (GstPlugin * plugin)
 {
   if (!gst_element_register (plugin, "stbt-motiondetect", GST_RANK_NONE,
           gst_motiondetect_get_type()))
+    return FALSE;
+
+  if (!gst_element_register (plugin, "stbt-templatematch", GST_RANK_NONE,
+          gst_templatematch_get_type()))
     return FALSE;
 
   return TRUE;

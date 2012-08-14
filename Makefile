@@ -32,6 +32,7 @@ extra_ldflags = $(shell pkg-config --libs $(dependencies))
 
 OBJS = gst/gst-stb-tester.o
 OBJS += gst/gstmotiondetect.o
+OBJS += gst/gsttemplatematch.o
 
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
@@ -109,3 +110,4 @@ $(OBJS): %.o: %.c
 	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) $<
 # Header dependencies:
 gst/gstmotiondetect.o: gst/gstmotiondetect.h
+gst/gsttemplatematch.o: gst/gsttemplatematch.h

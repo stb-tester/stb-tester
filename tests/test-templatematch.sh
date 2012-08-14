@@ -7,13 +7,10 @@ test_gstreamer_core_elements() {
     [ $? -eq $timedout ]
 }
 
-# Test for opencv templatematch element from gst-plugins-bad.
-#
-# You may need to set GST_PLUGIN_PATH to point where you installed
-# gst-plugins-bad (the package containing the OpenCV templatematch element).
+# Test for our libgst-stb-tester.so gstreamer plugin.
 #
 test_gstreamer_can_find_templatematch() {
-    gst-inspect templatematch >/dev/null
+    gst-inspect stbt-templatematch >/dev/null
 }
 
 # You should see a red rectangle (drawn by templatematch) around the black and
@@ -45,7 +42,7 @@ run_templatematch() {
     GST_DEBUG=4 timeout 2 gst-launch \
         videotestsrc ! \
         ffmpegcolorspace ! \
-        templatematch template="$template" method=1 ! \
+        stbt-templatematch template="$template" method=1 ! \
         ffmpegcolorspace ! \
         ximagesink \
     > "$log" 2>&1

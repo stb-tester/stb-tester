@@ -154,7 +154,7 @@ class Display:
                 # Detect motion when requested:
                 "stbt-motiondetect name=motiondetect enabled=false",
                 # OpenCV image-processing library:
-                "templatematch name=templatematch method=1",
+                "stbt-templatematch name=templatematch method=1",
                 ])
         xvideo = " ! ".join([
                 # Convert to a colorspace that xvimagesink can handle:
