@@ -77,79 +77,6 @@ static void gst_motiondetect_load_mask (GstMotionDetect * filter, char * mask);
 static gboolean gst_motiondetect_check_mask_compability (
     GstMotionDetect * filter);
 
-static gboolean
-gst_opencv_get_ipl_depth_and_channels (GstStructure * structure,
-    gint * ipldepth, gint * channels, GError ** err)
-{
-  gint depth, bpp;
-
-  if (!gst_structure_get_int (structure, "depth", &depth) ||
-      !gst_structure_get_int (structure, "bpp", &bpp)) {
-    g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
-        "No depth/bpp in caps");
-    return FALSE;
-  }
-
-  if (depth != bpp) {
-    g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
-        "Depth and bpp should be equal");
-    return FALSE;
-  }
-
-  if (gst_structure_has_name (structure, "video/x-raw-rgb")) {
-    *channels = 3;
-  } else if (gst_structure_has_name (structure, "video/x-raw-gray")) {
-    *channels = 1;
-  } else {
-    g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
-        "Unsupported caps %s", gst_structure_get_name (structure));
-    return FALSE;
-  }
-
-  if (depth / *channels == 8) {
-    /* TODO signdness? */
-    *ipldepth = IPL_DEPTH_8U;
-  } else if (depth / *channels == 16) {
-    *ipldepth = IPL_DEPTH_16U;
-  } else {
-    g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
-        "Unsupported depth/channels %d/%d", depth, *channels);
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-gboolean
-gst_opencv_parse_iplimage_params_from_structure (GstStructure * structure,
-    gint * width, gint * height, gint * ipldepth, gint * channels,
-    GError ** err)
-{
-  if (!gst_opencv_get_ipl_depth_and_channels (structure, ipldepth, channels,
-          err)) {
-    return FALSE;
-  }
-
-  if (!gst_structure_get_int (structure, "width", width) ||
-      !gst_structure_get_int (structure, "height", height)) {
-    g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
-        "No width/height in caps");
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-gboolean
-gst_opencv_parse_iplimage_params_from_caps (GstCaps * caps, gint * width,
-    gint * height, gint * ipldepth, gint * channels, GError ** err)
-{
-  return
-      gst_opencv_parse_iplimage_params_from_structure (gst_caps_get_structure
-      (caps, 0), width, height, ipldepth, channels, err);
-}
-
-
 static void
 gst_motiondetect_base_init (gpointer gclass)
 {
@@ -280,19 +207,35 @@ static gboolean
 gst_motiondetect_set_caps (GstBaseTransform *trans, GstCaps *incaps,
     GstCaps *outcaps)
 {
-  gint in_width, in_height;
-  gint in_depth, in_channels;
-  GError *in_err = NULL;
+  gint width, height, depth, ipldepth, channels;
+  GError *err = NULL;
+  GstStructure *structure = gst_caps_get_structure (incaps, 0);
   GstMotionDetect *filter = GST_MOTIONDETECT (trans);
   if (!filter) {
     return FALSE;
   }
-
-  if (!gst_opencv_parse_iplimage_params_from_caps (incaps, &in_width,
-          &in_height, &in_depth, &in_channels, &in_err)) {
-    GST_WARNING_OBJECT (trans, "Failed to parse input caps: %s",
-        in_err->message);
-    g_error_free (in_err);
+  
+  if (!gst_structure_get_int (structure, "width", &width) ||
+      !gst_structure_get_int (structure, "height", &height) ||
+      !gst_structure_get_int (structure, "depth", &depth)) {
+    g_set_error (&err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
+        "No width/height/depth in caps");
+    return FALSE;
+  }
+  if (gst_structure_has_name (structure, "video/x-raw-rgb")) {
+    channels = 3;
+  } else if (gst_structure_has_name (structure, "video/x-raw-gray")) {
+    channels = 1;
+  } else {
+    g_set_error (&err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
+        "Unsupported caps %s", gst_structure_get_name (structure));
+    return FALSE;
+  }
+  if (depth / channels == 8) {
+    ipldepth = IPL_DEPTH_8U;
+  } else {
+    g_set_error (&err, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
+        "Unsupported depth/channels %d/%d", depth, channels);
     return FALSE;
   }
 
@@ -310,11 +253,11 @@ gst_motiondetect_set_caps (GstBaseTransform *trans, GstCaps *incaps,
   }
 
   filter->cvCurrentImage =
-    cvCreateImageHeader (cvSize (in_width, in_height), in_depth, in_channels);
+    cvCreateImageHeader (cvSize (width, height), ipldepth, channels);
   filter->cvReferenceImageGray = cvCreateImage(
-    cvSize (in_width, in_height), IPL_DEPTH_8U, 1);
+    cvSize (width, height), IPL_DEPTH_8U, 1);
   filter->cvCurrentImageGray = cvCreateImage(
-    cvSize (in_width, in_height), IPL_DEPTH_8U, 1);
+    cvSize (width, height), IPL_DEPTH_8U, 1);
 
   filter->state = MOTION_DETECT_STATE_ACQUIRING_REFERENCE_IMAGE;
 
