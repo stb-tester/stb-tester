@@ -9,11 +9,14 @@ for tests in ./test-*.sh; do
     source $tests
 done
 
+export STBT_CONFIG_FILE="$testdir/stbt.conf"
+export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
+
 run() {
     GST_DEBUG=
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     printf "$1... "
-    STBT_CONFIG_FILE="$testdir/stbt.conf" $1 > "$scratchdir/log" 2>&1
+    $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
         rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
@@ -42,6 +45,15 @@ if [ $# -eq 0 ]; then
     run test_gsttemplatematch_does_find_a_match &&
     run test_gsttemplatematch_bgr_fix &&
 
+    echo "Testing gstreamer stbt-motiondetect element:" &&
+    run test_gstreamer_can_find_stbt_motiondetect &&
+    run test_stbt_motiondetect_is_not_active_by_default &&
+    run test_stbt_motiondetect_is_not_active_when_disabled &&
+    run test_stbt_motiondetect_reports_motion &&
+    run test_stbt_motiondetect_does_not_report_motion &&
+    run test_stbt_motiondetect_with_mask_reports_motion &&
+    run test_stbt_motiondetect_with_mask_does_not_report_motion &&
+
     echo "Testing stbt-run:" &&
     run test_wait_for_match &&
     run test_wait_for_match_no_match &&
@@ -50,6 +62,8 @@ if [ $# -eq 0 ]; then
     run test_press_until_match &&
     run test_wait_for_match_searches_in_script_directory &&
     run test_press_until_match_searches_in_script_directory &&
+    run test_wait_for_motion &&
+    run test_wait_for_motion_no_motion &&
     run test_changing_input_video_with_the_test_control &&
     run test_precondition_script &&
 

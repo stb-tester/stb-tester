@@ -60,6 +60,12 @@ def press_until_match(key, image, interval_secs=3, max_presses=10,
                 raise
 
 
+def wait_for_motion(*args, **keywords):
+    if 'directory' not in keywords:
+        keywords['directory'] = _caller_dir()
+    return display.wait_for_motion(*args, **keywords)
+
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
@@ -121,6 +127,13 @@ class MatchTimeout(UITestFailure):
         self.timeout_secs = timeout_secs
 
 
+class MotionTimeout(UITestFailure):
+    def __init__(self, screenshot, mask, timeout_secs):
+        self.screenshot = screenshot
+        self.mask = mask
+        self.timeout_secs = timeout_secs
+
+
 class ConfigurationError(Exception):
     pass
 
@@ -138,6 +151,8 @@ class Display:
                 "queue name=q leaky=2",
                 # Convert to a colorspace that templatematch can handle:
                 "ffmpegcolorspace",
+                # Detect motion when requested:
+                "stbt-motiondetect name=motiondetect enabled=false",
                 # OpenCV image-processing library:
                 "templatematch name=templatematch method=1",
                 ])
@@ -172,6 +187,7 @@ class Display:
         gst.element_link_many(self.source_bin, self.sink_bin)
 
         self.templatematch = self.pipeline.get_by_name("templatematch")
+        self.motiondetect = self.pipeline.get_by_name("motiondetect")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
         self.bus.connect("message::error", self.on_error)
@@ -233,6 +249,42 @@ class Display:
             buf = self.screenshot.get_property("last-buffer")
             raise MatchTimeout(buf, template, timeout_secs)
 
+    def wait_for_motion(self, directory,
+                        timeout_secs=10, consecutive_frames=10, mask=None):
+        """Wait for motion in the source video stream."""
+
+        self.motiondetect.props.enabled = True
+        if mask:
+            if os.path.isabs(mask):
+                mask_path = mask
+            else:
+                # Mask is relative to the script's own directory
+                mask_path = os.path.abspath(os.path.join(directory, mask))
+                if not os.path.isfile(mask_path):
+                    # Fall back to mask from cwd, for convenience of selftests
+                    mask_path = os.path.abspath(mask)
+            if not os.path.isfile(mask_path):
+                sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
+                sys.exit(1)
+            debug("Using mask %s" % (mask_path))
+            self.motiondetect.props.mask = mask_path
+
+        self.timeout_secs = timeout_secs
+        self.start_timestamp = None
+        self.consecutive_frames = consecutive_frames
+        self.consecutive_frames_count = 0
+
+        debug("Waiting for %d consecutive frames with motion"
+                % (consecutive_frames))
+        self.bus.connect("message::element", self.on_motion)
+        gtk.main()
+        if self.consecutive_frames_count == self.consecutive_frames:
+            debug("Motion detected.")
+            return
+        else:
+            buf = self.screenshot.get_property("last-buffer")
+            raise MotionTimeout(buf, mask, timeout_secs)
+
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
@@ -281,6 +333,33 @@ class Display:
                     timed_out and self.match_count == 0):
                 self.templatematch.props.template = None
                 self.bus.disconnect_by_func(self.on_match)
+                gtk.main_quit()
+
+    def on_motion(self, bus, message):
+        st = message.structure
+        if st.get_name() == "motiondetect":
+            buf = self.screenshot.get_property("last-buffer")
+            if not buf:
+                return
+
+            if self.start_timestamp == None:
+                self.start_timestamp = buf.timestamp
+
+            has_motion = st["has_motion"]
+            if has_motion:
+                self.consecutive_frames_count += 1
+                debug("Motion detected. Timestamp: %d." % (buf.timestamp))
+            else:
+                self.consecutive_frames_count = 0
+                debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
+
+            timed_out = (buf.timestamp - self.start_timestamp >
+                         self.timeout_secs * 1000000000)
+            if self.consecutive_frames_count == self.consecutive_frames or (
+                    timed_out and self.consecutive_frames_count == 0):
+                self.motiondetect.props.mask = None
+                self.motiondetect.enabled = False
+                self.bus.disconnect_by_func(self.on_motion)
                 gtk.main_quit()
 
     def on_underrun(self, element):
