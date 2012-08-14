@@ -4,6 +4,7 @@ all:
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
+libexecdir?=$(exec_prefix)/libexec
 libdir?=$(exec_prefix)/lib
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
@@ -49,19 +50,19 @@ all: stbt stbt.1 gst/libgst-stb-tester.so
 
 stbt: stbt.in
 	sed -e 's,@VERSION@,$(VERSION),g' \
-	    -e 's,@LIBDIR@,$(libdir),g' \
+	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
 
 install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
-	    $(DESTDIR)$(libdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt \
 	    $(DESTDIR)$(plugindir) \
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/{stbt,bash_completion.d}
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libdir)/stbt
-	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libdir)/stbt
+	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
