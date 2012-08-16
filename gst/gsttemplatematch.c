@@ -270,6 +270,9 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
     case PROP_TEMPLATE:
       g_value_set_string (value, filter->template);
       break;
+    case PROP_DEBUG_DIRECTORY:
+      g_value_set_string (value, filter->debugDirectory);
+      break;
     case PROP_DISPLAY:
       g_value_set_boolean (value, filter->display);
       break;
