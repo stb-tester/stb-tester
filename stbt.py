@@ -198,6 +198,7 @@ class Display:
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
+        self.successive_underruns = 0
         self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
         self.queue.connect("running", self.on_running)
@@ -368,31 +369,36 @@ class Display:
     def on_running(self, element):
         if self.underrun_timeout:
             debug("running: cancelling underrun timer")
+            self.successive_underruns = 0
             self.underrun_timeout.cancel()
             self.underrun_timeout = None
         else:
             debug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
-        self.test_timeout.cancel()
-        gst.element_unlink_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_NULL)
-        self.sink_bin.set_state(gst.STATE_READY)
-        self.pipeline.remove(self.source_bin)
-        self.source_bin = None
-        debug("restart_source_bin: set state NULL; waiting 5s")
-        time.sleep(5)
 
-        debug("restart_source_bin: about to set state PLAYING")
-        self.source_bin = self.create_source_bin()
-        self.pipeline.add(self.source_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_PLAYING)
-        self.pipeline.set_state(gst.STATE_PLAYING)
-        debug("restart_source_bin: set state PLAYING")
+        self.successive_underruns += 1
+        if self.successive_underruns <= 3:
+            self.test_timeout.cancel()
+            gst.element_unlink_many(self.source_bin, self.sink_bin)
+            self.source_bin.set_state(gst.STATE_NULL)
+            self.sink_bin.set_state(gst.STATE_READY)
+            self.pipeline.remove(self.source_bin)
+            self.source_bin = None
+            debug("restart_source_bin: set state NULL; waiting 5s")
+            time.sleep(5)
 
-        self.underrun_timeout.start()
-        self.test_timeout.start()
+            debug("restart_source_bin: about to set state PLAYING")
+            self.source_bin = self.create_source_bin()
+            self.pipeline.add(self.source_bin)
+            gst.element_link_many(self.source_bin, self.sink_bin)
+            self.source_bin.set_state(gst.STATE_PLAYING)
+            self.pipeline.set_state(gst.STATE_PLAYING)
+            debug("restart_source_bin: set state PLAYING")
+
+            self.underrun_timeout.start()
+
+            self.test_timeout.start()
         return False  # stop the timeout from running again
 
     def teardown(self):
