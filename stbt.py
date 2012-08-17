@@ -198,7 +198,7 @@ class Display:
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
-        self.underrun_timeout_id = None
+        self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
         self.queue.connect("running", self.on_running)
 
@@ -234,20 +234,20 @@ class Display:
 
         self.templatematch.props.template = template
         self.match_count, self.last_x, self.last_y = 0, 0, 0
-        self.timeout_secs = timeout_secs
-        self.start_timestamp = None
         self.certainty = certainty
         self.consecutive_matches = consecutive_matches
 
         debug("Searching for " + template)
         self.bus.connect("message::element", self.on_match)
-        gtk.main()
-        if self.match_count == self.consecutive_matches:
-            debug("MATCHED " + template)
-            return
-        else:
-            buf = self.screenshot.get_property("last-buffer")
-            raise MatchTimeout(buf, template, timeout_secs)
+        with GObjectTimeout(timeout_secs, self.on_timeout, self.on_match) as t:
+            self.test_timeout = t
+            gtk.main()
+            if self.match_count == self.consecutive_matches:
+                debug("MATCHED " + template)
+                return
+            else:
+                buf = self.screenshot.get_property("last-buffer")
+                raise MatchTimeout(buf, template, timeout_secs)
 
     def wait_for_motion(self, directory,
                         timeout_secs=10, consecutive_frames=10, mask=None):
@@ -269,21 +269,28 @@ class Display:
             debug("Using mask %s" % (mask_path))
             self.motiondetect.props.mask = mask_path
 
-        self.timeout_secs = timeout_secs
-        self.start_timestamp = None
         self.consecutive_frames = consecutive_frames
         self.consecutive_frames_count = 0
 
         debug("Waiting for %d consecutive frames with motion"
                 % (consecutive_frames))
         self.bus.connect("message::element", self.on_motion)
-        gtk.main()
-        if self.consecutive_frames_count == self.consecutive_frames:
-            debug("Motion detected.")
-            return
-        else:
-            buf = self.screenshot.get_property("last-buffer")
-            raise MotionTimeout(buf, mask, timeout_secs)
+        with GObjectTimeout(timeout_secs,
+                            self.on_timeout, self.on_motion) as t:
+            self.test_timeout = t
+            gtk.main()
+            if self.consecutive_frames_count == self.consecutive_frames:
+                debug("Motion detected.")
+                return
+            else:
+                buf = self.screenshot.get_property("last-buffer")
+                raise MotionTimeout(buf, mask, timeout_secs)
+
+    def on_timeout(self, handler):
+        debug("Timed out")
+        self.bus.disconnect_by_func(handler)
+        gtk.main_quit()
+        return False  # stop the timeout from running again
 
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
@@ -308,9 +315,6 @@ class Display:
             if not buf:
                 return
 
-            if self.start_timestamp == None:
-                self.start_timestamp = buf.timestamp
-
             certainty = st["result"]
             debug("Match %d found at %d,%d (last: %d,%d) with dimensions "
                   "%dx%d. Certainty: %d%%. Timestamp: %d."
@@ -327,10 +331,7 @@ class Display:
                 self.match_count = 0
             self.last_x, self.last_y = st["x"], st["y"]
 
-            timed_out = (buf.timestamp - self.start_timestamp >
-                         self.timeout_secs * 1000000000)
-            if self.match_count == self.consecutive_matches or (
-                    timed_out and self.match_count == 0):
+            if self.match_count == self.consecutive_matches:
                 self.templatematch.props.template = None
                 self.bus.disconnect_by_func(self.on_match)
                 gtk.main_quit()
@@ -342,9 +343,6 @@ class Display:
             if not buf:
                 return
 
-            if self.start_timestamp == None:
-                self.start_timestamp = buf.timestamp
-
             has_motion = st["has_motion"]
             if has_motion:
                 self.consecutive_frames_count += 1
@@ -353,32 +351,30 @@ class Display:
                 self.consecutive_frames_count = 0
                 debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
 
-            timed_out = (buf.timestamp - self.start_timestamp >
-                         self.timeout_secs * 1000000000)
-            if self.consecutive_frames_count == self.consecutive_frames or (
-                    timed_out and self.consecutive_frames_count == 0):
+            if self.consecutive_frames_count == self.consecutive_frames:
                 self.motiondetect.props.mask = None
                 self.motiondetect.enabled = False
                 self.bus.disconnect_by_func(self.on_motion)
                 gtk.main_quit()
 
     def on_underrun(self, element):
-        if self.underrun_timeout_id:
+        if self.underrun_timeout:
             debug("underrun: I already saw a recent underrun; ignoring")
         else:
             debug("underrun: scheduling 'restart_source_bin' in 1s")
-            self.underrun_timeout_id = gobject.timeout_add(
-                1000, self.restart_source_bin)
+            self.underrun_timeout = GObjectTimeout(1, self.restart_source_bin)
+            self.underrun_timeout.start()
 
     def on_running(self, element):
-        if self.underrun_timeout_id:
+        if self.underrun_timeout:
             debug("running: cancelling underrun timer")
-            gobject.source_remove(self.underrun_timeout_id)
-            self.underrun_timeout_id = None
+            self.underrun_timeout.cancel()
+            self.underrun_timeout = None
         else:
             debug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
+        self.test_timeout.cancel()
         gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_NULL)
         self.sink_bin.set_state(gst.STATE_READY)
@@ -395,13 +391,41 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
         debug("restart_source_bin: set state PLAYING")
 
-        self.underrun_timeout_id = gobject.timeout_add(
-            10000, self.restart_source_bin)
+        self.underrun_timeout.start()
+        self.test_timeout.start()
         return False  # stop the timeout from running again
 
     def teardown(self):
         if self.pipeline:
             self.pipeline.set_state(gst.STATE_NULL)
+
+
+class GObjectTimeout:
+    """Responsible for setting a timeout in the GTK main loop.
+
+    Can be used as a Context Manager in a 'with' statement.
+    """
+    def __init__(self, timeout_secs, handler, *args):
+        self.timeout_secs = timeout_secs
+        self.handler = handler
+        self.args = args
+        self.timeout_id = None
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.cancel()
+
+    def start(self):
+        self.timeout_id = gobject.timeout_add(
+            self.timeout_secs * 1000, self.handler, *self.args)
+
+    def cancel(self):
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+        self.timeout_id = None
 
 
 def uri_to_remote(uri, display):
