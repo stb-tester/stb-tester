@@ -59,7 +59,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	    $(DESTDIR)$(libexecdir)/stbt \
 	    $(DESTDIR)$(plugindir) \
 	    $(DESTDIR)$(man1dir) \
-	    $(DESTDIR)$(sysconfdir)/{stbt,bash_completion.d}
+	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libexecdir)/stbt
