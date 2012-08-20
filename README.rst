@@ -221,7 +221,7 @@ Requires python-docutils (for building the documentation).
 SETUP TIPS
 ==========
 
-Use "gst-inspect templatematch" to check that gstreamer can find the
+Use "gst-inspect stbt-templatematch" to check that gstreamer can find the
 templatematch element. You may need to set GST_PLUGIN_PATH to point
 where you installed libgst-stb-tester.so.
 
