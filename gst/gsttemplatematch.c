@@ -118,10 +118,10 @@ static GstFlowReturn gst_templatematch_chain (GstPad * pad, GstBuffer * buf);
 static void gst_templatematch_log_image (const IplImage * image,
     const char * debugDirectory, const char * filename);
 static void gst_templatematch_set_debug_directory (GstTemplateMatch * filter, 
-    const char* debugDirectory);
+    char* debugDirectory);
 
 static void gst_templatematch_load_template (
-    GstTemplateMatch * filter, const char * template);
+    GstTemplateMatch * filter, char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
 static double gst_templatematch_confirm(IplImage * input, 
@@ -430,16 +430,16 @@ gst_templatematch_log_image (const IplImage * image,
     char *filepath;
     asprintf (&filepath, "%s/%s", debugDirectory, filename);
 
-    IplImage *imageToLog = image;
     if (image->depth == IPL_DEPTH_32F) {
-      imageToLog = cvCreateImage (
+      IplImage *scaledImageToLog = cvCreateImage (
           cvSize (image->width, image->height), IPL_DEPTH_8U, 1);
-      cvConvertScale (image, imageToLog, 255.0, 0);
+      cvConvertScale (image, scaledImageToLog, 255.0, 0);
+      cvSaveImage (filepath, scaledImageToLog, NULL);
+      cvReleaseImage (&scaledImageToLog);
+    } else {
+      cvSaveImage (filepath, image, NULL);
     }
-    cvSaveImage (filepath, imageToLog, NULL);
-    if (imageToLog != image) {
-      cvReleaseImage (&imageToLog);
-    }
+
     free (filepath);
   }
 }
@@ -619,7 +619,7 @@ gst_templatematch_match (IplImage * input, IplImage * template,
 /* We take ownership of debugDirectory here */
 static void
 gst_templatematch_set_debug_directory (
-    GstTemplateMatch * filter, const char* debugDirectory)
+    GstTemplateMatch * filter, char* debugDirectory)
 {
   GST_OBJECT_LOCK (filter);
   if (filter->debugDirectory) {
@@ -631,9 +631,9 @@ gst_templatematch_set_debug_directory (
 
 /* We take ownership of template here */
 static void
-gst_templatematch_load_template (GstTemplateMatch * filter, const char* template)
+gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
 {
-  const char *oldTemplateFilename = NULL;
+  char *oldTemplateFilename = NULL;
   IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL, *oldDistImage = NULL;
 
   if (template) {
