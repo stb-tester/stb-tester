@@ -1,5 +1,6 @@
 import argparse
 import ConfigParser
+import errno
 import os
 import re
 import socket
@@ -81,6 +82,19 @@ def argparser():
     parser.add_argument('--sink-pipeline',
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
+
+    class IncreaseDebugLevel(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            global _debug_level
+            _debug_level += 1
+            setattr(namespace, self.dest, _debug_level)
+
+    global _debug_level
+    _debug_level = 0
+    parser.add_argument('-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
+        help='Enable debug output (specify twice to enable GStreamer element '
+             'dumps to ./stbt-debug directory)')
+
     parser.set_defaults(**load_defaults('run'))
     return parser
 
@@ -141,6 +155,9 @@ class ConfigurationError(Exception):
 # Internal
 #===========================================================================
 
+_debug_level = 0
+
+
 class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
         gobject.threads_init()
@@ -193,6 +210,16 @@ class Display:
         self.bus.connect("message::error", self.on_error)
         self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
+
+        if _debug_level > 1:
+            if _mkdir("stbt-debug"):
+                # Note that this will dump a *lot* of files -- several images
+                # per frame processed.
+                self.templatematch.props.debugDirectory = "stbt-debug"
+            else:
+                warn("Failed to create directory 'stbt-debug'. "
+                     "Will not enable templatematch debug dump.")
+
         self.pipeline.set_state(gst.STATE_PLAYING)
 
         # Handle loss of video (but without end-of-stream event) from the
@@ -681,8 +708,23 @@ def _caller_dir():
         inspect.getframeinfo(inspect.stack()[2][0]).filename)
 
 
+def _mkdir(d):
+    try:
+        os.makedirs(d)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            return False
+    return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
+
+
 def debug(s):
-    sys.stderr.write(os.path.basename(sys.argv[0]) + ": " + str(s) + "\n")
+    if _debug_level > 0:
+        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+
+
+def warn(s):
+    sys.stderr.write("%s: warning: %s\n" % (
+            os.path.basename(sys.argv[0]), str(s)))
 
 
 # Tests

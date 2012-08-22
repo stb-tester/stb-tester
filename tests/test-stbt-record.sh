@@ -3,7 +3,7 @@
 test_record() {
     (
         cd "$scratchdir"
-        stbt-record -o test.py --control-recorder=file://<(
+        stbt-record -v -o test.py --control-recorder=file://<(
             sleep 1; echo 15; sleep 1; echo 10; sleep 1; echo 0; sleep 1;)
     )
     sed -e 's/0000-15-complete.png/videotestsrc-gamut.png/' \
@@ -13,5 +13,5 @@ test_record() {
     mv "$scratchdir/test.with-cropped-images.py" "$scratchdir/test.py"
     rm "$scratchdir/"{0000,0001,0002}-*-complete.png
 
-    stbt-run "$scratchdir/test.py"
+    stbt-run -v "$scratchdir/test.py"
 }

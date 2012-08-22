@@ -79,6 +79,15 @@ Global options
 --sink-pipeline=<pipeline>
   A gstreamer pipeline to use for video output, like `xvimagesink`.
 
+-v, --verbose
+  Enable debug output.
+
+  Specify twice to enable GStreamer element dumps to ./stbt-debug directory
+  (currently only the `stbt-templatematch` element). Note that this will dump a
+  *lot* of files -- several images per frame processed. To group the images by
+  frame, sort the files by timestamp. This is intended for debugging the
+  GStreamer elements; it isn't intended for end users.
+
 Additional options to stbt record
 ---------------------------------
 

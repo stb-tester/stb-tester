@@ -49,14 +49,14 @@ run() {
         echo "<testsuite name='$dottedname' tests='$ntests'>"
 
         for t in $(testcases $s); do
-            printf "stbt run $WORKSPACE/$s/$t/test.py... " >&2
+            printf "stbt run -v $WORKSPACE/$s/$t/test.py... " >&2
             mkdir -p $WORKSPACE/runs/$s/$t
             cd $WORKSPACE/runs/$s/$t
             local ret
             local failure=
             local start=$(date +%s)
             set +e
-            DISPLAY=:0.0 stbt run $WORKSPACE/$s/$t/test.py >$out 2>$err
+            DISPLAY=:0.0 stbt run -v $WORKSPACE/$s/$t/test.py >$out 2>$err
             ret=$?
             set -e
             local end=$(date +%s)
