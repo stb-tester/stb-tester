@@ -32,7 +32,7 @@ _stbt_run() {
         --sink-pipeline=*) COMPREPLY=();;
         *) COMPREPLY=($(compgen \
             -f -W "$(_stbt_trailing_space \
-                        -v --verbose \
+                        --help -v --verbose \
                         --control --source-pipeline --sink-pipeline)" \
             -- "$cur"));;
     esac
@@ -50,7 +50,7 @@ _stbt_record() {
         -o=*|--output-filename=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
-                    -v --verbose \
+                    --help -v --verbose \
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder -o --output-filename)" \
             -- "$cur"));;
