@@ -389,8 +389,8 @@ class Display:
         if self.underrun_timeout:
             debug("underrun: I already saw a recent underrun; ignoring")
         else:
-            debug("underrun: scheduling 'restart_source_bin' in 1s")
-            self.underrun_timeout = GObjectTimeout(1, self.restart_source_bin)
+            debug("underrun: scheduling 'restart_source_bin' in 2s")
+            self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
             self.underrun_timeout.start()
 
     def on_running(self, element):
