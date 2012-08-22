@@ -42,15 +42,12 @@ def wait_for_match(*args, **keywords):
     return display.wait_for_match(*args, **keywords)
 
 
-def press_until_match(key, image, interval_secs=3, max_presses=10,
-                      certainty=None):
+def press_until_match(key, image, interval_secs=3, max_presses=10):
     i = 0
     while True:
         try:
             keywords = {'directory': _caller_dir(),
                         'timeout_secs': interval_secs}
-            if certainty:
-                keywords['certainty'] = certainty
             wait_for_match(image, **keywords)
             return
         except MatchTimeout:
@@ -246,10 +243,10 @@ class Display:
         return source_bin
 
     def wait_for_match(self, image, directory,
-                       timeout_secs=10, certainty=0.98, consecutive_matches=3):
+                       timeout_secs=10, consecutive_matches=3):
         """Wait for a stable match of `image` in the source video stream.
 
-        "Stable" means 3 consecutive frames with a match certainty > 98% at the
+        "Stable" means 3 consecutive frames with a match found at the
         same x,y position.
 
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
@@ -266,7 +263,6 @@ class Display:
 
         self.templatematch.props.template = template
         self.match_count, self.last_x, self.last_y = 0, 0, 0
-        self.certainty = certainty
         self.consecutive_matches = consecutive_matches
 
         debug("Searching for " + template)
@@ -355,7 +351,7 @@ class Display:
                      st["width"], st["height"],
                      certainty * 100.0, buf.timestamp))
 
-            if certainty > self.certainty and (
+            if certainty == 1 and (
                     self.match_count == 0 or
                     (st["x"], st["y"]) == (self.last_x, self.last_y)):
                 self.match_count += 1
