@@ -391,20 +391,20 @@ class Display:
 
     def on_underrun(self, element):
         if self.underrun_timeout:
-            debug("underrun: I already saw a recent underrun; ignoring")
+            ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
-            debug("underrun: scheduling 'restart_source_bin' in 2s")
+            ddebug("underrun: scheduling 'restart_source_bin' in 2s")
             self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
             self.underrun_timeout.start()
 
     def on_running(self, element):
         if self.underrun_timeout:
-            debug("running: cancelling underrun timer")
+            ddebug("running: cancelling underrun timer")
             self.successive_underruns = 0
             self.underrun_timeout.cancel()
             self.underrun_timeout = None
         else:
-            debug("running: no outstanding underrun timers; ignoring")
+            ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
 
@@ -416,16 +416,17 @@ class Display:
             self.sink_bin.set_state(gst.STATE_READY)
             self.pipeline.remove(self.source_bin)
             self.source_bin = None
-            debug("restart_source_bin: set state NULL; waiting 5s")
+            debug("Attempting to recover from video loss: "
+                  "Stopping source pipeline and waiting 5s...")
             time.sleep(5)
 
-            debug("restart_source_bin: about to set state PLAYING")
+            debug("Restarting source pipeline...")
             self.source_bin = self.create_source_bin()
             self.pipeline.add(self.source_bin)
             gst.element_link_many(self.source_bin, self.sink_bin)
             self.source_bin.set_state(gst.STATE_PLAYING)
             self.pipeline.set_state(gst.STATE_PLAYING)
-            debug("restart_source_bin: set state PLAYING")
+            debug("Restarted source pipeline")
 
             self.underrun_timeout.start()
 
@@ -723,6 +724,12 @@ def _mkdir(d):
 
 def debug(s):
     if _debug_level > 0:
+        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+
+
+def ddebug(s):
+    """Extra verbose debug for stbt developers, not end users"""
+    if _debug_level > 1:
         sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
 
 
