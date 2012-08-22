@@ -124,7 +124,7 @@ static void gst_templatematch_load_template (
     GstTemplateMatch * filter, char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
-static gboolean gst_templatematch_confirm(IplImage * inputROIGray,
+static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
     IplImage * input, const IplImage * templateGray,
     const CvPoint * bestPos, const char * debugDirectory);
 
@@ -348,8 +348,6 @@ static GstFlowReturn
 gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 {
   GstTemplateMatch *filter;
-  CvPoint best_pos;
-  double best_res;
   GstMessage *m = NULL;
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
@@ -361,7 +359,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
 
-  GST_OBJECT_LOCK(filter);
+  GST_OBJECT_LOCK (filter);
   if (filter->cvTemplateImage && !filter->cvDistImage) {
     if (filter->cvTemplateImage->width > filter->cvImage->width) {
       GST_WARNING ("Template Image is wider than input image");
@@ -385,6 +383,8 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   }
   if (filter->cvTemplateImage && filter->cvImage && filter->cvDistImage &&
       filter->cvImageROIGray && filter->cvTemplateImageGray) {
+    CvPoint best_pos;
+    double best_res;
     GstStructure *s;
 
     gst_templatematch_match (filter->cvImage, filter->cvTemplateImage,
@@ -394,7 +394,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         filter->debugDirectory, "source.png");
     gst_templatematch_log_image (filter->cvTemplateImage,
         filter->debugDirectory, "template.png");
-    gst_templatematch_log_image( filter->cvDistImage, 
+    gst_templatematch_log_image (filter->cvDistImage, 
         filter->debugDirectory, "source_matchtemplate.png");
     
     if (best_res >= 0.80) {
@@ -429,7 +429,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     }
 
   }
-  GST_OBJECT_UNLOCK(filter);
+  GST_OBJECT_UNLOCK (filter);
 
   if (m) {
     gst_element_post_message (GST_ELEMENT (filter), m);
@@ -486,7 +486,7 @@ gst_templatematch_match (IplImage * input, IplImage * template,
  * eroded. If the template is different enough, some white blobs will remain.
  */
 static gboolean
-gst_templatematch_confirm(IplImage * inputROIGray, IplImage * input,
+gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
     const IplImage * templateGray, const CvPoint * bestPos,
     const char * debugDirectory)
 {
@@ -542,7 +542,8 @@ static void
 gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
 {
   char *oldTemplateFilename = NULL;
-  IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL, *oldDistImage = NULL;
+  IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL;
+  IplImage *oldDistImage = NULL;
 
   if (template) {
     newTemplateImage = cvLoadImage (template, CV_LOAD_IMAGE_COLOR);
