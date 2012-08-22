@@ -78,7 +78,7 @@ struct _GstTemplateMatch
   gchar *template;
   gchar *debugDirectory;
 
-  IplImage *cvImage, *cvGray, *cvTemplateImage, *cvDistImage;
+  IplImage *cvImage, *cvTemplateImage, *cvDistImage;
 };
 
 struct _GstTemplateMatchClass
