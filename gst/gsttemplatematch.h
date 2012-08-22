@@ -80,6 +80,7 @@ struct _GstTemplateMatch
 
   IplImage *cvImage, *cvTemplateImage, *cvDistImage;
   IplImage *cvImageROIGray, *cvTemplateImageGray;
+  gboolean capsInitialised, templateImageAcquired;
 };
 
 struct _GstTemplateMatchClass

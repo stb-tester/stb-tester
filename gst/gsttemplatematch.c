@@ -127,6 +127,9 @@ static void gst_templatematch_match (IplImage * input, IplImage * template,
 static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
     IplImage * input, const IplImage * templateGray,
     const CvPoint * bestPos, const char * debugDirectory);
+static void gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter);
+static void gst_templatematch_rebuild_template_images (
+    GstTemplateMatch * filter);
 
 /* GObject vmethod implementations */
 
@@ -209,6 +212,9 @@ gst_templatematch_init (GstTemplateMatch * filter,
   filter->cvTemplateImageGray = NULL;
   filter->method = DEFAULT_METHOD;
   filter->debugDirectory = NULL;
+
+  filter->templateImageAcquired = FALSE;
+  filter->capsInitialised = FALSE;
 }
 
 static void
@@ -307,6 +313,9 @@ gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
   }
   filter->cvImage =
       cvCreateImageHeader (cvSize (width, height), IPL_DEPTH_8U, 3);
+  gst_templatematch_rebuild_dist_image (filter);
+
+  filter->capsInitialised = TRUE;
 
   otherpad = (pad == filter->srcpad) ? filter->sinkpad : filter->srcpad;
   gst_object_unref (filter);
@@ -357,36 +366,13 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   }
   GST_DEBUG_OBJECT (filter, "Buffer size %u ", GST_BUFFER_SIZE (buf));
 
-  filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
-
   GST_OBJECT_LOCK (filter);
-  if (filter->cvTemplateImage && !filter->cvDistImage) {
-    if (filter->cvTemplateImage->width > filter->cvImage->width) {
-      GST_WARNING ("Template Image is wider than input image");
-    } else if (filter->cvTemplateImage->height > filter->cvImage->height) {
-      GST_WARNING ("Template Image is taller than input image");
-    } else {
-
-      GST_DEBUG_OBJECT (filter, "cvCreateImage (Size(%d-%d+1,%d) %d, %d)",
-          filter->cvImage->width, filter->cvTemplateImage->width,
-          filter->cvImage->height - filter->cvTemplateImage->height + 1,
-          IPL_DEPTH_32F, 1);
-      filter->cvDistImage =
-          cvCreateImage (cvSize (filter->cvImage->width -
-              filter->cvTemplateImage->width + 1,
-              filter->cvImage->height - filter->cvTemplateImage->height + 1),
-          IPL_DEPTH_32F, 1);
-      if (!filter->cvDistImage) {
-        GST_WARNING ("Couldn't create dist image.");
-      }
-    }
-  }
-  if (filter->cvTemplateImage && filter->cvImage && filter->cvDistImage &&
-      filter->cvImageROIGray && filter->cvTemplateImageGray) {
+  if (filter->capsInitialised && filter->templateImageAcquired) {
     CvPoint best_pos;
     double best_res;
     GstStructure *s;
 
+    filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
     gst_templatematch_match (filter->cvImage, filter->cvTemplateImage,
         filter->cvDistImage, &best_res, &best_pos, filter->method);
 
@@ -541,9 +527,7 @@ gst_templatematch_set_debug_directory (
 static void
 gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
 {
-  char *oldTemplateFilename = NULL;
-  IplImage *oldTemplateImage = NULL, *newTemplateImage = NULL;
-  IplImage *oldDistImage = NULL;
+  IplImage *newTemplateImage = NULL;
 
   if (template) {
     newTemplateImage = cvLoadImage (template, CV_LOAD_IMAGE_COLOR);
@@ -561,13 +545,59 @@ gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
   }
 
   GST_OBJECT_LOCK(filter);
-  oldTemplateFilename = filter->template;
+  if (filter->template) {
+    g_free(filter->template);
+    filter->template = NULL;
+  }
   filter->template = template;
-  oldTemplateImage = filter->cvTemplateImage;
+  if (filter->cvTemplateImage) {
+    cvReleaseImage (&filter->cvTemplateImage);
+    filter->cvTemplateImage = NULL;
+  }
   filter->cvTemplateImage = newTemplateImage;
-  oldDistImage = filter->cvDistImage;
-  /* This will be recreated in the chain function as required: */
+  gst_templatematch_rebuild_dist_image (filter);
+  gst_templatematch_rebuild_template_images (filter);
+
+  filter->templateImageAcquired = (filter->cvTemplateImage != NULL);
+
+  GST_OBJECT_UNLOCK(filter);
+}
+
+/* Called when a new template image is provided
+ * or when the capabilities are set.
+ */
+static void
+gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter)
+{
+  if (filter->cvTemplateImage && filter->cvImage) {
+    if (filter->cvTemplateImage->width > filter->cvImage->width) {
+      GST_WARNING ("Template Image is wider than input image");
+    } else if (filter->cvTemplateImage->height > filter->cvImage->height) {
+      GST_WARNING ("Template Image is taller than input image");
+    } else {
+      if (filter->cvDistImage) {
+        cvReleaseImage (&filter->cvDistImage);
   filter->cvDistImage = NULL;
+      }
+      GST_DEBUG_OBJECT (filter, "cvCreateImage (Size(%d-%d+1,%d) %d, %d)",
+          filter->cvImage->width, filter->cvTemplateImage->width,
+          filter->cvImage->height - filter->cvTemplateImage->height + 1,
+          IPL_DEPTH_32F, 1);
+      filter->cvDistImage =
+          cvCreateImage (cvSize (filter->cvImage->width -
+              filter->cvTemplateImage->width + 1,
+              filter->cvImage->height - filter->cvTemplateImage->height + 1),
+          IPL_DEPTH_32F, 1);
+      if (!filter->cvDistImage) {
+        GST_WARNING ("Couldn't create dist image.");
+      }
+    }
+  }
+}
+
+static void
+gst_templatematch_rebuild_template_images (GstTemplateMatch * filter)
+{
   if (filter->cvImageROIGray) {
     cvReleaseImage (&filter->cvImageROIGray);
     filter->cvImageROIGray = NULL;
@@ -577,20 +607,15 @@ gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
     filter->cvTemplateImageGray = NULL;
   }
   if (filter->cvTemplateImage) {
-    filter->cvImageROIGray = cvCreateImage(
+    filter->cvImageROIGray = cvCreateImage (
       cvSize (filter->cvTemplateImage->width, filter->cvTemplateImage->height),
       IPL_DEPTH_8U, 1);
-    filter->cvTemplateImageGray = cvCreateImage(
+    filter->cvTemplateImageGray = cvCreateImage (
       cvSize (filter->cvTemplateImage->width, filter->cvTemplateImage->height),
       IPL_DEPTH_8U, 1);
     cvCvtColor (filter->cvTemplateImage,
         filter->cvTemplateImageGray, CV_BGR2GRAY);
   }
-  GST_OBJECT_UNLOCK(filter);
-
-  cvReleaseImage (&oldDistImage);
-  cvReleaseImage (&oldTemplateImage);
-  g_free(oldTemplateFilename);
 }
 
 
