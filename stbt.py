@@ -212,13 +212,17 @@ class Display:
         self.bus.add_signal_watch()
 
         if _debug_level > 1:
-            if _mkdir("stbt-debug"):
+            if _mkdir("stbt-debug/motiondetect") and _mkdir(
+                      "stbt-debug/templatematch"):
                 # Note that this will dump a *lot* of files -- several images
                 # per frame processed.
-                self.templatematch.props.debugDirectory = "stbt-debug"
+                self.motiondetect.props.debugDirectory = (
+                    "stbt-debug/motiondetect")
+                self.templatematch.props.debugDirectory = (
+                    "stbt-debug/templatematch")
             else:
                 warn("Failed to create directory 'stbt-debug'. "
-                     "Will not enable templatematch debug dump.")
+                     "Will not enable motiondetect/templatematch debug dump.")
 
         self.pipeline.set_state(gst.STATE_PLAYING)
 
