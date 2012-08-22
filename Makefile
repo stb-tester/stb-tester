@@ -26,7 +26,7 @@ dependencies += gstreamer-video-0.10
 dependencies += opencv
 
 # CFLAGS and LDFLAGS are for the user to override from the command line.
-CFLAGS ?= -g -O2
+CFLAGS ?= -g -O2 -Werror
 extra_cflags = -fPIC '-DPACKAGE="stb-tester"' '-DVERSION="$(VERSION)"'
 extra_cflags += $(shell pkg-config --cflags $(dependencies))
 extra_ldflags = $(shell pkg-config --libs $(dependencies))
