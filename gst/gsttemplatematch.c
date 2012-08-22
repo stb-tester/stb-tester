@@ -298,6 +298,10 @@ gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
   gst_structure_get_int (structure, "width", &width);
   gst_structure_get_int (structure, "height", &height);
 
+  if (filter->cvImage) {
+    cvReleaseImageHeader (&filter->cvImage);
+    filter->cvImage = NULL;
+  }
   filter->cvImage =
       cvCreateImageHeader (cvSize (width, height), IPL_DEPTH_8U, 3);
 
