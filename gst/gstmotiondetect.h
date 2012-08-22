@@ -58,6 +58,7 @@ struct _GstMotionDetect {
   IplImage *cvCurrentImage;
   IplImage *cvReferenceImageGray, *cvCurrentImageGray, *cvMaskImage;
   char *mask;
+  char *debugDirectory;
 };
 
 struct _GstMotionDetectClass {

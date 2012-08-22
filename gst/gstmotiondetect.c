@@ -56,6 +56,7 @@ enum
 {
     PROP_0,
     PROP_ENABLED,
+    PROP_DEBUG_DIRECTORY,
     PROP_MASK,
 };
 
@@ -69,10 +70,16 @@ static void gst_motiondetect_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 static gboolean gst_motiondetect_set_caps (GstBaseTransform * trans,
     GstCaps * incaps, GstCaps * outcaps);
+    
+static void gst_motiondetect_log_image (const IplImage * image,
+    const char * debugDirectory, int index, const char * filename);
 static GstFlowReturn gst_motiondetect_transform_ip (GstBaseTransform * trans,
     GstBuffer * buf);
 static gboolean gst_motiondetect_apply (IplImage * cvReferenceImage,
     const IplImage * cvCurrentImage, const IplImage * cvMaskImage);
+
+static void gst_motiondetect_set_debug_directory (GstMotionDetect * filter, 
+    char* debugDirectory);
 static void gst_motiondetect_load_mask (GstMotionDetect * filter, char * mask);
 static gboolean gst_motiondetect_check_mask_compability (
     GstMotionDetect * filter);
@@ -108,7 +115,11 @@ gst_motiondetect_class_init (GstMotionDetectClass * klass)
           "Post a message when differences found between successive frames",
           FALSE,
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS));
-
+  g_object_class_install_property (gobject_class, PROP_DEBUG_DIRECTORY,
+      g_param_spec_string ("debugDirectory", "Debug directory",
+          "Directory to store intermediate results for debugging the "
+          "motiondetect algorithm",
+          NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_MASK,
       g_param_spec_string ("mask", "Mask", "Filename of mask image",
           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
@@ -132,6 +143,7 @@ gst_motiondetect_init (GstMotionDetect * filter, GstMotionDetectClass * gclass)
   filter->cvCurrentImageGray = NULL;
   filter->cvMaskImage = NULL;
   filter->mask = NULL;
+  filter->debugDirectory = NULL;
 
   gst_base_transform_set_gap_aware (GST_BASE_TRANSFORM_CAST (filter), TRUE);
 }
@@ -157,6 +169,9 @@ gst_motiondetect_finalize (GObject * object)
   if (filter->mask) {
     g_free(filter->mask);
   }
+  if (filter->debugDirectory) {
+    g_free (filter->debugDirectory);
+  }
 }
 
 static void
@@ -174,6 +189,10 @@ gst_motiondetect_set_property (GObject * object, guint prop_id,
         filter->state = MOTION_DETECT_STATE_ACQUIRING_REFERENCE_IMAGE;
       }
       GST_OBJECT_UNLOCK (filter);
+      break;
+    case PROP_DEBUG_DIRECTORY:
+      gst_motiondetect_set_debug_directory (
+          filter, g_value_dup_string (value));
       break;
     case PROP_MASK:
       gst_motiondetect_load_mask (filter, g_value_dup_string (value));
@@ -193,6 +212,9 @@ gst_motiondetect_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_ENABLED:
       g_value_set_boolean (value, filter->enabled);
+      break;
+    case PROP_DEBUG_DIRECTORY:
+      g_value_set_string (value, filter->debugDirectory);
       break;
     case PROP_MASK:
       g_value_set_string (value, filter->mask);
@@ -264,6 +286,28 @@ gst_motiondetect_set_caps (GstBaseTransform *trans, GstCaps *incaps,
   return gst_motiondetect_check_mask_compability(filter);
 }
 
+static void
+gst_motiondetect_log_image (const IplImage * image,
+    const char * debugDirectory, int index, const char * filename)
+{
+  if (debugDirectory) {
+    char *filepath;
+    asprintf (&filepath, "%s/%05d_%s", debugDirectory, index, filename);
+
+    if (image->depth == IPL_DEPTH_32F) {
+      IplImage *scaledImageToLog = cvCreateImage (
+          cvSize (image->width, image->height), IPL_DEPTH_8U, 1);
+      cvConvertScale (image, scaledImageToLog, 255.0, 0);
+      cvSaveImage (filepath, scaledImageToLog, NULL);
+      cvReleaseImage (&scaledImageToLog);
+    } else {
+      cvSaveImage (filepath, image, NULL);
+    }
+
+    free (filepath);
+  }
+}
+
 static GstFlowReturn
 gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
 {
@@ -276,16 +320,34 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
   GST_OBJECT_LOCK(filter);
   if (filter->enabled && filter->state != MOTION_DETECT_STATE_INITIALISING) {
     IplImage *referenceImageGrayTmp = NULL;
+    static int frameNo = 1;
 
     filter->cvCurrentImage->imageData = (char *) GST_BUFFER_DATA (buf);
     cvCvtColor( filter->cvCurrentImage,
         filter->cvCurrentImageGray, CV_BGR2GRAY );
 
+    if (filter->debugDirectory) {
+      gst_motiondetect_log_image (filter->cvCurrentImageGray, 
+          filter->debugDirectory, frameNo, "source.png");
+    }
+
     if (filter->state == MOTION_DETECT_STATE_REFERENCE_IMAGE_ACQUIRED) {
       gboolean result;
+      
       result = gst_motiondetect_apply(
           filter->cvReferenceImageGray, filter->cvCurrentImageGray,
           filter->cvMaskImage );
+
+      if (filter->debugDirectory) {
+        if (result) {
+          gst_motiondetect_log_image (filter->cvReferenceImageGray, 
+              filter->debugDirectory, frameNo, "absdiff_motion.png");
+        } else {
+          gst_motiondetect_log_image (filter->cvReferenceImageGray, 
+              filter->debugDirectory, frameNo, "absdiff_no_motion.png");
+        }
+      }
+
       GstStructure *s = gst_structure_new ("motiondetect",
           "has_motion", G_TYPE_BOOLEAN, result, NULL);
       m = gst_message_new_element (GST_OBJECT (filter), s);
@@ -295,6 +357,7 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
     filter->cvReferenceImageGray = filter->cvCurrentImageGray;
     filter->cvCurrentImageGray = referenceImageGrayTmp;
     filter->state = MOTION_DETECT_STATE_REFERENCE_IMAGE_ACQUIRED;
+    ++frameNo;
   }
   GST_OBJECT_UNLOCK(filter);
 
@@ -322,6 +385,19 @@ static gboolean gst_motiondetect_apply (
     return FALSE;
   }
 
+}
+
+/* We take ownership of debugDirectory here */
+static void
+gst_motiondetect_set_debug_directory (
+    GstMotionDetect * filter, char* debugDirectory)
+{
+  GST_OBJECT_LOCK (filter);
+  if (filter->debugDirectory) {
+    g_free (filter->debugDirectory);
+  }
+  filter->debugDirectory = debugDirectory;
+  GST_OBJECT_UNLOCK (filter);
 }
 
 /* We take ownership of mask here */
