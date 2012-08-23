@@ -70,7 +70,7 @@ if [ $# -eq 0 ]; then
     echo "Testing stbt-record:" &&
     run test_record &&
 
-    echo "All passed."
+    echo "All passed." || exit
 
 else
     for t in $*; do
