@@ -106,41 +106,37 @@ check_expectations_from_log() {
     local log="$3"
 
     result=`grep 'motiondetect.*has_motion=(boolean)\(true\|false\)' "$log"`
-    got_result=$?
-    local GOT_RESULT=0
-    local DID_NOT_GET_RESULT=1
+    [[ $? -eq 0 ]] && got_result=GOT_RESULT || got_result=DIDNT_GET_RESULT
 
     motion_detected_string=`echo $result | grep 'has_motion=(boolean)true'`
-    motion_detected=$?
-    local GOT_MOTION=0
-    local DID_NOT_GET_MOTION=1
+    [[ $? -eq 0 ]] && motion_detected=GOT_MOTION || \
+            motion_detected=DIDNT_GET_MOTION
 
     no_motion_detected_string=`echo $result | grep 'has_motion=(boolean)false'`
-    no_motion_detected=$?
-    local GOT_NO_MOTION=0
-    local DID_NOT_GET_NO_MOTION=1
+    [[ $? -eq 0 ]] && no_motion_detected=GOT_NO_MOTION || \
+            no_motion_detected=DID_NOT_GET_NO_MOTION
 
     echo -e "\n$result"
 
     case $expect_result:$got_result:$expect_motion:$motion_detected:$no_motion_detected in
-        $DONT_EXPECT_RESULT:$GOT_RESULT:*:*:*) 
+        $DONT_EXPECT_RESULT:GOT_RESULT:*:*:*) 
             echo "did not expect a result." >&2
             return 1;;
-        $EXPECT_RESULT:$DID_NOT_GET_RESULT:*:*:*)
+        $EXPECT_RESULT:DIDNT_GET_RESULT:*:*:*)
             echo "expected a result but nothing was reported." >&2
             return 1;;
-        $EXPECT_RESULT:$GOT_RESULT:$EXPECT_MOTION:$DID_NOT_GET_MOTION:*)
+        $EXPECT_RESULT:GOT_RESULT:$EXPECT_MOTION:DIDNT_GET_MOTION:*)
             echo "'has_motion=true' not reported." >&2
             return 1;;
-        $EXPECT_RESULT:$GOT_RESULT:$EXPECT_MOTION:*:$GOT_NO_MOTION)
+        $EXPECT_RESULT:GOT_RESULT:$EXPECT_MOTION:*:GOT_NO_MOTION)
             echo "'has_motion=false' incorrectly reported." >&2
             echo "$no_motion_detected_string" >&2
             return 1;;
-        $EXPECT_RESULT:$GOT_RESULT:$DONT_EXPECT_MOTION:$GOT_MOTION:*)
+        $EXPECT_RESULT:GOT_RESULT:$DONT_EXPECT_MOTION:GOT_MOTION:*)
             echo "'has_motion=true' incorrectly reported." >&2
             echo "$motion_result" >&2
             return 1;;
-        $EXPECT_RESULT:$GOT_RESULT:$DONT_EXPECT_MOTION:*:$DID_NOT_GET_NO_MOTION)
+        $EXPECT_RESULT:GOT_RESULT:$DONT_EXPECT_MOTION:*:DID_NOT_GET_NO_MOTION)
             echo "'has_motion=false' not reported." >&2
             return 1;;
         *:*:*:*:*) return 0;;
