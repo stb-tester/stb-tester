@@ -385,6 +385,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   GST_OBJECT_LOCK (filter);
   if (filter->capsInitialised && filter->templateImageAcquired) {
     CvPoint best_pos;
+    gboolean matched = FALSE;
     double best_res;
     GstStructure *s;
 
@@ -400,14 +401,11 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         filter->debugDirectory, "source_matchtemplate.png");
     
     if (best_res >= 0.80) {
-      gboolean matchConfirmed = gst_templatematch_confirm (
+      matched = gst_templatematch_confirm (
           filter->cvImageROIGray, filter->cvImage, filter->cvTemplateImageGray,
           filter->noiseThreshold, &best_pos, filter->debugDirectory);
-      if (matchConfirmed) {
-        best_res = 1.0;
-      } else {
-        best_res = 0.0;
-      }
+    } else {
+      matched = FALSE;
     }
 
     s = gst_structure_new ("template_match",
@@ -415,13 +413,14 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         "y", G_TYPE_UINT, best_pos.y,
         "width", G_TYPE_UINT, filter->cvTemplateImage->width,
         "height", G_TYPE_UINT, filter->cvTemplateImage->height,
-        "result", G_TYPE_DOUBLE, best_res, NULL);
+        "first_pass_result", G_TYPE_DOUBLE, best_res,
+        "match", G_TYPE_BOOLEAN, matched, NULL);
 
     m = gst_message_new_element (GST_OBJECT (filter), s);
 
     if (filter->display) {
       CvPoint corner = best_pos;
-      CvScalar color = CV_RGB(255, 255-pow(255,best_res), 32);
+      CvScalar color = CV_RGB(255, matched ? 0 : 255, 32);
 
       buf = gst_buffer_make_writable (buf);
 

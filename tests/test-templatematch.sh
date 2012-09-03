@@ -52,9 +52,9 @@ run_templatematch() {
         return 1
     fi
 
-    if ! grep 'template_match.*result=(double)\(1\|0.99\)' "$log"; then
+    if ! grep 'template_match.*match=(boolean)true' "$log"; then
         echo "templatematch didn't find '$template'."
-        grep 'template_match.*result=' "$log"  # debug for $scratchdir/log
+        grep 'template_match.*match=' "$log"  # debug for $scratchdir/log
         return 1
     fi
 }

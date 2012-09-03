@@ -349,15 +349,16 @@ class Display:
             if not buf:
                 return
 
-            certainty = st["result"]
-            debug("Match %d found at %d,%d (last: %d,%d) with dimensions "
-                  "%dx%d. Certainty: %d%%. Timestamp: %d."
-                  % (self.match_count,
+            matched = st["match"]
+            debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
+                  "%dx%d. 1st pass: %d%%. Timestamp: %d."
+                  % ("Match" if matched else "Weak match",
+                     self.match_count,
                      st["x"], st["y"], self.last_x, self.last_y,
-                     st["width"], st["height"],
-                     certainty * 100.0, buf.timestamp))
+                     st["width"], st["height"], 100 * st["first_pass_result"],
+                     buf.timestamp))
 
-            if certainty == 1 and (
+            if matched and (
                     self.match_count == 0 or
                     (st["x"], st["y"]) == (self.last_x, self.last_y)):
                 self.match_count += 1
