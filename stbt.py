@@ -42,12 +42,14 @@ def wait_for_match(*args, **keywords):
     return display.wait_for_match(*args, **keywords)
 
 
-def press_until_match(key, image, interval_secs=3, max_presses=10):
+def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
+        max_presses=10):
     i = 0
     while True:
         try:
             keywords = {'directory': _caller_dir(),
-                        'timeout_secs': interval_secs}
+                        'timeout_secs': interval_secs,
+                        'noise_threshold': noise_threshold}
             wait_for_match(image, **keywords)
             return
         except MatchTimeout:
@@ -243,13 +245,16 @@ class Display:
         return source_bin
 
     def wait_for_match(self, image, directory,
-                       timeout_secs=10, consecutive_matches=3):
+                       timeout_secs=10, consecutive_matches=3,
+                       noise_threshold=0.16):
         """Wait for a stable match of `image` in the source video stream.
 
         "Stable" means 3 consecutive frames with a match found at the
         same x,y position.
 
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
+
+        "noise_threshold" is a threshold used to confirm a potential match.
         """
 
         if os.path.isabs(image):
@@ -262,6 +267,7 @@ class Display:
                 template = os.path.abspath(image)
 
         self.templatematch.props.template = template
+        self.templatematch.props.noiseThreshold = noise_threshold
         self.match_count, self.last_x, self.last_y = 0, 0, 0
         self.consecutive_matches = consecutive_matches
 

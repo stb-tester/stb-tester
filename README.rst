@@ -255,10 +255,11 @@ The following functions are available (the "keyword arguments" like
 
   press("KEY NAME")
 
-  wait_for_match("filename.png", timeout_secs=10)
+  wait_for_match("filename.png", timeout_secs=10, consecutive_matches=3,
+                 noise_threshold=0.16)
 
   press_until_match("KEY NAME", "filename.png",
-                    interval_secs=3, max_presses=10)
+                    interval_secs=3, noise_threshold=0.16, max_presses=10)
 
   wait_for_motion(mask=None, # Filename of mask image
                   timeout_secs=10, consecutive_frames=10)

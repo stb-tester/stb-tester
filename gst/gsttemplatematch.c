@@ -72,6 +72,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_templatematch_debug);
 #define GST_CAT_DEFAULT gst_templatematch_debug
 
 #define DEFAULT_METHOD (3)
+#define DEFAULT_NOISE_THRESHOLD (0.16f)
 
 /* Filter signals and args */
 enum
@@ -84,6 +85,7 @@ enum
 {
   PROP_0,
   PROP_METHOD,
+  PROP_NOISE_THRESHOLD,
   PROP_TEMPLATE,
   PROP_DEBUG_DIRECTORY,
   PROP_DISPLAY,
@@ -125,7 +127,7 @@ static void gst_templatematch_load_template (
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
 static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
-    IplImage * input, const IplImage * templateGray,
+    IplImage * input, const IplImage * templateGray, float noiseThreshold,
     const CvPoint * bestPos, const char * debugDirectory);
 static void gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter);
 static void gst_templatematch_rebuild_template_images (
@@ -166,6 +168,11 @@ gst_templatematch_class_init (GstTemplateMatchClass * klass)
       g_param_spec_int ("method", "Method",
           "Specifies the way the template must be compared with image regions. 0=SQDIFF, 1=SQDIFF_NORMED, 2=CCOR, 3=CCOR_NORMED, 4=CCOEFF, 5=CCOEFF_NORMED.",
           0, 5, DEFAULT_METHOD, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_NOISE_THRESHOLD,
+      g_param_spec_float ("noiseThreshold", "Noise threshold",
+          "Specifies the threshold to use to confirm a match.",
+          0.0f, 1.0f, DEFAULT_NOISE_THRESHOLD,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_TEMPLATE,
       g_param_spec_string ("template", "Template", "Filename of template image",
           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
@@ -211,6 +218,7 @@ gst_templatematch_init (GstTemplateMatch * filter,
   filter->cvImageROIGray = NULL;
   filter->cvTemplateImageGray = NULL;
   filter->method = DEFAULT_METHOD;
+  filter->noiseThreshold = DEFAULT_NOISE_THRESHOLD;
   filter->debugDirectory = NULL;
 
   filter->templateImageAcquired = FALSE;
@@ -248,6 +256,11 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       }
       GST_OBJECT_UNLOCK(filter);
       break;
+    case PROP_NOISE_THRESHOLD:
+      GST_OBJECT_LOCK(filter);
+      filter->noiseThreshold = g_value_get_float (value);
+      GST_OBJECT_UNLOCK(filter);
+      break;
     case PROP_DEBUG_DIRECTORY:
       gst_templatematch_set_debug_directory (
           filter, g_value_dup_string (value));
@@ -275,6 +288,9 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_METHOD:
       g_value_set_int (value, filter->method);
+      break;
+    case PROP_NOISE_THRESHOLD:
+      g_value_set_float (value, filter->noiseThreshold);
       break;
     case PROP_TEMPLATE:
       g_value_set_string (value, filter->template);
@@ -386,7 +402,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     if (best_res >= 0.80) {
       gboolean matchConfirmed = gst_templatematch_confirm (
           filter->cvImageROIGray, filter->cvImage, filter->cvTemplateImageGray,
-          &best_pos, filter->debugDirectory);
+          filter->noiseThreshold, &best_pos, filter->debugDirectory);
       if (matchConfirmed) {
         best_res = 1.0;
       } else {
@@ -473,12 +489,13 @@ gst_templatematch_match (IplImage * input, IplImage * template,
  */
 static gboolean
 gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
-    const IplImage * templateGray, const CvPoint * bestPos,
+    const IplImage * templateGray, float noiseThreshold, const CvPoint * bestPos,
     const char * debugDirectory)
 {
   IplImage *cvAbsDiffImage = inputROIGray;
   IplConvKernel *kernel = cvCreateStructuringElementEx (
       3, 3, 1, 1, CV_SHAPE_ELLIPSE, NULL );
+  int threshold = (int)(noiseThreshold * 255);
 
   cvSetImageROI (input, cvRect (bestPos->x, bestPos->y, templateGray->width,
     templateGray->height));
@@ -495,7 +512,8 @@ gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
       "absdiff.png");
   
-  cvThreshold (cvAbsDiffImage, cvAbsDiffImage, 40,  255, CV_THRESH_BINARY);
+  cvThreshold (cvAbsDiffImage, cvAbsDiffImage, threshold, 255, 
+      CV_THRESH_BINARY);
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
       "absdiff_threshold.png");
   

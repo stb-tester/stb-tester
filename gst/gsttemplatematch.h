@@ -73,6 +73,7 @@ struct _GstTemplateMatch
   GstPad *sinkpad, *srcpad;
 
   gint method;
+  gfloat noiseThreshold;
   gboolean display;
 
   gchar *template;
