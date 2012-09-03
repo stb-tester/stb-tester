@@ -245,12 +245,12 @@ class Display:
         return source_bin
 
     def wait_for_match(self, image, directory,
-                       timeout_secs=10, consecutive_matches=3,
+                       timeout_secs=10, consecutive_matches=1,
                        noise_threshold=0.16):
-        """Wait for a stable match of `image` in the source video stream.
+        """Wait for a match of `image` in the source video stream.
 
-        "Stable" means 3 consecutive frames with a match found at the
-        same x,y position.
+        "consecutive_matches" enables to wait for several consecutive frames
+        with a match found at the same x,y position.
 
         "timeout_secs" is in seconds elapsed, as reported by the video stream.
 

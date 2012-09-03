@@ -255,7 +255,7 @@ The following functions are available (the "keyword arguments" like
 
   press("KEY NAME")
 
-  wait_for_match("filename.png", timeout_secs=10, consecutive_matches=3,
+  wait_for_match("filename.png", timeout_secs=10, consecutive_matches=1,
                  noise_threshold=0.16)
 
   press_until_match("KEY NAME", "filename.png",
