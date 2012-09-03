@@ -18,11 +18,12 @@ from stbt import press, press_until_match, wait_for_match, wait_for_motion
 try:
     execfile(args.script)
 except stbt.MatchTimeout as e:
-    stbt.save_frame(e.screenshot, "screenshot.png")
     traceback.print_tb(sys.exc_traceback)
-    print ("FAIL: %s: Didn't find match for '%s' after %d seconds. " +
-           "Saved screenshot to '%s'") % (
-        args.script, e.expected, e.timeout_secs, "screenshot.png")
+    print ("FAIL: %s: Didn't find match for '%s' after %d seconds." % (
+        args.script, e.expected, e.timeout_secs))
+    if e.screenshot:
+        stbt.save_frame(e.screenshot, "screenshot.png")
+        print ("Saved screenshot to '%s'." % ("screenshot.png"))
     sys.exit(1)
 finally:
     stbt.teardown_run()
