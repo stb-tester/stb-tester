@@ -17,9 +17,9 @@
 /**
  * SECTION:element-motiondetect
  *
- * If the #GstMotionDetect:enabled property is %TRUE, compares successive video
- * frames and sends a message named #motiondetect if it detects differences
- * between two frames.
+ * If the #StbtMotionDetect:enabled property is %TRUE, compares successive
+ * video frames and sends a message named #motiondetect if it detects
+ * differences between two frames.
  *
  * This element is used by stb-tester to check that video is playing (e.g.
  * after a channel change).
@@ -60,7 +60,7 @@ enum
     PROP_MASK,
 };
 
-GST_BOILERPLATE (GstMotionDetect, gst_motiondetect, GstBaseTransform,
+GST_BOILERPLATE (StbtMotionDetect, gst_motiondetect, GstBaseTransform,
     GST_TYPE_BASE_TRANSFORM);
 
 static void gst_motiondetect_finalize (GObject * object);
@@ -78,11 +78,12 @@ static GstFlowReturn gst_motiondetect_transform_ip (GstBaseTransform * trans,
 static gboolean gst_motiondetect_apply (IplImage * cvReferenceImage,
     const IplImage * cvCurrentImage, const IplImage * cvMaskImage);
 
-static void gst_motiondetect_set_debug_directory (GstMotionDetect * filter, 
+static void gst_motiondetect_set_debug_directory (StbtMotionDetect * filter,
     char* debugDirectory);
-static void gst_motiondetect_load_mask (GstMotionDetect * filter, char * mask);
+static void gst_motiondetect_load_mask (StbtMotionDetect * filter,
+    char * mask);
 static gboolean gst_motiondetect_check_mask_compability (
-    GstMotionDetect * filter);
+    StbtMotionDetect * filter);
 
 static void
 gst_motiondetect_base_init (gpointer gclass)
@@ -101,7 +102,7 @@ gst_motiondetect_base_init (gpointer gclass)
 }
 
 static void
-gst_motiondetect_class_init (GstMotionDetectClass * klass)
+gst_motiondetect_class_init (StbtMotionDetectClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   GstBaseTransformClass *gstbasetrans_class = GST_BASE_TRANSFORM_CLASS (klass);
@@ -134,7 +135,8 @@ gst_motiondetect_class_init (GstMotionDetectClass * klass)
 }
 
 static void
-gst_motiondetect_init (GstMotionDetect * filter, GstMotionDetectClass * gclass)
+gst_motiondetect_init (StbtMotionDetect * filter,
+    StbtMotionDetectClass * gclass)
 {
   filter->enabled = FALSE;
   filter->state = MOTION_DETECT_STATE_INITIALISING;
@@ -153,7 +155,7 @@ gst_motiondetect_finalize (GObject * object)
 {
   G_OBJECT_CLASS (parent_class)->finalize (object);
 
-  GstMotionDetect *filter = GST_MOTIONDETECT (object);
+  StbtMotionDetect *filter = GST_MOTIONDETECT (object);
   if (filter->cvCurrentImage) {
     cvReleaseImageHeader (&filter->cvCurrentImage);
   }
@@ -178,7 +180,7 @@ static void
 gst_motiondetect_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
-  GstMotionDetect *filter = GST_MOTIONDETECT (object);
+  StbtMotionDetect *filter = GST_MOTIONDETECT (object);
 
   switch (prop_id) {
     case PROP_ENABLED:
@@ -207,7 +209,7 @@ static void
 gst_motiondetect_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec)
 {
-  GstMotionDetect *filter = GST_MOTIONDETECT (object);
+  StbtMotionDetect *filter = GST_MOTIONDETECT (object);
 
   switch (prop_id) {
     case PROP_ENABLED:
@@ -232,7 +234,7 @@ gst_motiondetect_set_caps (GstBaseTransform *trans, GstCaps *incaps,
   gint width, height, depth, ipldepth, channels;
   GError *err = NULL;
   GstStructure *structure = gst_caps_get_structure (incaps, 0);
-  GstMotionDetect *filter = GST_MOTIONDETECT (trans);
+  StbtMotionDetect *filter = GST_MOTIONDETECT (trans);
   if (!filter) {
     return FALSE;
   }
@@ -312,7 +314,7 @@ static GstFlowReturn
 gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
 {
   GstMessage *m = NULL;
-  GstMotionDetect *filter = GST_MOTIONDETECT (trans);
+  StbtMotionDetect *filter = GST_MOTIONDETECT (trans);
   if ((!filter) || (!buf)) {
     return GST_FLOW_OK;
   }
@@ -390,7 +392,7 @@ static gboolean gst_motiondetect_apply (
 /* We take ownership of debugDirectory here */
 static void
 gst_motiondetect_set_debug_directory (
-    GstMotionDetect * filter, char* debugDirectory)
+    StbtMotionDetect * filter, char* debugDirectory)
 {
   GST_OBJECT_LOCK (filter);
   if (filter->debugDirectory) {
@@ -402,7 +404,7 @@ gst_motiondetect_set_debug_directory (
 
 /* We take ownership of mask here */
 static void
-gst_motiondetect_load_mask (GstMotionDetect * filter, char* mask)
+gst_motiondetect_load_mask (StbtMotionDetect * filter, char* mask)
 {
   char *oldMaskFilename = NULL;
   IplImage *oldMaskImage = NULL, *newMaskImage = NULL;
@@ -436,7 +438,7 @@ gst_motiondetect_load_mask (GstMotionDetect * filter, char* mask)
 
 
 static gboolean
-gst_motiondetect_check_mask_compability (GstMotionDetect *filter)
+gst_motiondetect_check_mask_compability (StbtMotionDetect *filter)
 {
   if (filter->state != MOTION_DETECT_STATE_INITIALISING &&
       filter->cvMaskImage != NULL &&

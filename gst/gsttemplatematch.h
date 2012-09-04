@@ -56,17 +56,17 @@ G_BEGIN_DECLS
 #define GST_TYPE_TEMPLATEMATCH \
   (gst_templatematch_get_type())
 #define GST_TEMPLATEMATCH(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_TEMPLATEMATCH,GstTemplateMatch))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_TEMPLATEMATCH,StbtTemplateMatch))
 #define GST_TEMPLATEMATCH_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_TEMPLATEMATCH,GstTemplateMatchClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_TEMPLATEMATCH,StbtTemplateMatchClass))
 #define GST_IS_TEMPLATEMATCH(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_TEMPLATEMATCH))
 #define GST_IS_TEMPLATEMATCH_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_TEMPLATEMATCH))
-typedef struct _GstTemplateMatch GstTemplateMatch;
-typedef struct _GstTemplateMatchClass GstTemplateMatchClass;
+typedef struct _StbtTemplateMatch StbtTemplateMatch;
+typedef struct _StbtTemplateMatchClass StbtTemplateMatchClass;
 
-struct _GstTemplateMatch
+struct _StbtTemplateMatch
 {
   GstElement element;
 
@@ -84,7 +84,7 @@ struct _GstTemplateMatch
   gboolean capsInitialised, templateImageAcquired;
 };
 
-struct _GstTemplateMatchClass
+struct _StbtTemplateMatchClass
 {
   GstElementClass parent_class;
 };

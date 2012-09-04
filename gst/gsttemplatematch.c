@@ -105,7 +105,7 @@ static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_STATIC_CAPS (GST_VIDEO_CAPS_BGR)
     );
 
-GST_BOILERPLATE (GstTemplateMatch, gst_templatematch, GstElement,
+GST_BOILERPLATE (StbtTemplateMatch, gst_templatematch, GstElement,
     GST_TYPE_ELEMENT);
 
 static void gst_templatematch_finalize (GObject * object);
@@ -119,19 +119,19 @@ static GstFlowReturn gst_templatematch_chain (GstPad * pad, GstBuffer * buf);
 
 static void gst_templatematch_log_image (const IplImage * image,
     const char * debugDirectory, const char * filename);
-static void gst_templatematch_set_debug_directory (GstTemplateMatch * filter, 
+static void gst_templatematch_set_debug_directory (StbtTemplateMatch * filter,
     char* debugDirectory);
 
 static void gst_templatematch_load_template (
-    GstTemplateMatch * filter, char * template);
+    StbtTemplateMatch * filter, char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
 static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
     IplImage * input, const IplImage * templateGray, float noiseThreshold,
     const CvPoint * bestPos, const char * debugDirectory);
-static void gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter);
+static void gst_templatematch_rebuild_dist_image (StbtTemplateMatch * filter);
 static void gst_templatematch_rebuild_template_images (
-    GstTemplateMatch * filter);
+    StbtTemplateMatch * filter);
 
 /* GObject vmethod implementations */
 
@@ -154,7 +154,7 @@ gst_templatematch_base_init (gpointer gclass)
 
 /* initialize the templatematch's class */
 static void
-gst_templatematch_class_init (GstTemplateMatchClass * klass)
+gst_templatematch_class_init (StbtTemplateMatchClass * klass)
 {
   GObjectClass *gobject_class;
 
@@ -193,8 +193,8 @@ gst_templatematch_class_init (GstTemplateMatchClass * klass)
  * initialize instance structure
  */
 static void
-gst_templatematch_init (GstTemplateMatch * filter,
-    GstTemplateMatchClass * gclass)
+gst_templatematch_init (StbtTemplateMatch * filter,
+    StbtTemplateMatchClass * gclass)
 {
   filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
   gst_pad_set_setcaps_function (filter->sinkpad,
@@ -229,7 +229,7 @@ static void
 gst_templatematch_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
-  GstTemplateMatch *filter = GST_TEMPLATEMATCH (object);
+  StbtTemplateMatch *filter = GST_TEMPLATEMATCH (object);
 
   switch (prop_id) {
     case PROP_METHOD:
@@ -283,7 +283,7 @@ static void
 gst_templatematch_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec)
 {
-  GstTemplateMatch *filter = GST_TEMPLATEMATCH (object);
+  StbtTemplateMatch *filter = GST_TEMPLATEMATCH (object);
 
   switch (prop_id) {
     case PROP_METHOD:
@@ -313,7 +313,7 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
 static gboolean
 gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
 {
-  GstTemplateMatch *filter;
+  StbtTemplateMatch *filter;
   GstPad *otherpad;
   gint width, height;
   GstStructure *structure;
@@ -342,7 +342,7 @@ gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
 static void
 gst_templatematch_finalize (GObject * object)
 {
-  GstTemplateMatch *filter;
+  StbtTemplateMatch *filter;
   filter = GST_TEMPLATEMATCH (object);
 
   g_free(filter->template);
@@ -372,7 +372,7 @@ gst_templatematch_finalize (GObject * object)
 static GstFlowReturn
 gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 {
-  GstTemplateMatch *filter;
+  StbtTemplateMatch *filter;
   GstMessage *m = NULL;
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
@@ -530,7 +530,7 @@ gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
 /* We take ownership of debugDirectory here */
 static void
 gst_templatematch_set_debug_directory (
-    GstTemplateMatch * filter, char* debugDirectory)
+    StbtTemplateMatch * filter, char* debugDirectory)
 {
   GST_OBJECT_LOCK (filter);
   if (filter->debugDirectory) {
@@ -542,7 +542,7 @@ gst_templatematch_set_debug_directory (
 
 /* We take ownership of template here */
 static void
-gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
+gst_templatematch_load_template (StbtTemplateMatch * filter, char* template)
 {
   IplImage *newTemplateImage = NULL;
 
@@ -584,7 +584,7 @@ gst_templatematch_load_template (GstTemplateMatch * filter, char* template)
  * or when the capabilities are set.
  */
 static void
-gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter)
+gst_templatematch_rebuild_dist_image (StbtTemplateMatch * filter)
 {
   if (filter->cvTemplateImage && filter->cvImage) {
     if (filter->cvTemplateImage->width > filter->cvImage->width) {
@@ -613,7 +613,7 @@ gst_templatematch_rebuild_dist_image (GstTemplateMatch * filter)
 }
 
 static void
-gst_templatematch_rebuild_template_images (GstTemplateMatch * filter)
+gst_templatematch_rebuild_template_images (StbtTemplateMatch * filter)
 {
   if (filter->cvImageROIGray) {
     cvReleaseImage (&filter->cvImageROIGray);

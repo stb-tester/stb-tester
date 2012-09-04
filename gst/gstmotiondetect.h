@@ -27,16 +27,16 @@ G_BEGIN_DECLS
 #define GST_TYPE_MOTIONDETECT \
   (gst_motiondetect_get_type())
 #define GST_MOTIONDETECT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_MOTIONDETECT,GstMotionDetect))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_MOTIONDETECT,StbtMotionDetect))
 #define GST_MOTIONDETECT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_MOTIONDETECT,GstMotionDetectClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_MOTIONDETECT,StbtMotionDetectClass))
 #define GST_IS_MOTIONDETECT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_MOTIONDETECT))
 #define GST_IS_MOTIONDETECT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_MOTIONDETECT))
 
-typedef struct _GstMotionDetect GstMotionDetect;
-typedef struct _GstMotionDetectClass GstMotionDetectClass;
+typedef struct _StbtMotionDetect StbtMotionDetect;
+typedef struct _StbtMotionDetectClass StbtMotionDetectClass;
 
 enum
 {
@@ -46,11 +46,11 @@ enum
 };
 
 /**
- * GstMotionDetect:
+ * StbtMotionDetect:
  *
  * Opaque data structure
  */
-struct _GstMotionDetect {
+struct _StbtMotionDetect {
   GstBaseTransform element;
 
   gboolean enabled;
@@ -61,7 +61,7 @@ struct _GstMotionDetect {
   char *debugDirectory;
 };
 
-struct _GstMotionDetectClass {
+struct _StbtMotionDetectClass {
   GstBaseTransformClass parent_class;
 };
 
