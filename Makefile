@@ -70,6 +70,19 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 
+uninstall:
+	rm -f $(DESTDIR)$(bindir)/stbt
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-record
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-run
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
+	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
+	rm -f $(DESTDIR)$(man1dir)/stbt.1
+	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
+	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
+	-rmdir $(DESTDIR)$(libexecdir)/stbt
+	-rmdir $(DESTDIR)$(sysconfdir)/stbt
+	-rmdir $(DESTDIR)$(sysconfdir)/bash_completion.d
+
 doc: stbt.1
 
 # Requires python-docutils
