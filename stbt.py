@@ -438,6 +438,7 @@ class Display:
 
     def teardown(self):
         if self.pipeline:
+            self.pipeline.send_event(gst.event_new_eos())
             self.pipeline.set_state(gst.STATE_NULL)
 
 
