@@ -195,9 +195,10 @@ boxes at once.
 Linux server
 ------------
 
-We expect that an 8-core machine will be able to drive 4 set-top boxes
-simultaneously with at least 1 frame per second per set-top box.
-(TODO: Assuming enough bandwidth on the USB bus -- need to test this).
+An 8-core machine will be able to drive 4 set-top boxes simultaneously with at
+least 1 frame per second per set-top box. (Note that `stbt` currently doesn't
+support multiple infra-red emitters on the same PC, but this is relatively
+trivial to fix and will be addressed in the near future.)
 
 
 SOFTWARE REQUIREMENTS
