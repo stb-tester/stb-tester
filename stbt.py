@@ -37,6 +37,96 @@ def press(*args, **keywords):
     return control.press(*args, **keywords)
 
 
+def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
+    """Return the sequence of frames where `image` was or was not matching
+    in the source video stream.
+
+    "directory" is the directory where to look for the template image.
+
+    "timeout_secs" is in seconds elapsed, from the method call. Note that
+    stopping iterating also enables to interrupt the method.
+
+    "noise_threshold" is a threshold used to confirm a potential match by
+    the gstreamer element stbt-templatematch.
+
+    For every frame processed, a dictionary is returned and contains:
+      "timestamp": video stream timestamp,
+      "match": boolean result,
+      "position": tuple (x, y) that specifies the position of the match,
+      "first_pass_result": value between 0 (poor) and 1 (excellent match).
+    """
+
+    if os.path.isabs(image):
+        template = image
+    else:
+        # Image is relative to the script's own directory
+        template = os.path.abspath(os.path.join(directory, image))
+        if not os.path.isfile(template):
+            # Fall back to image from cwd, for convenience of the selftests
+            template = os.path.abspath(image)
+
+    params = {
+        "template": template,
+        "noiseThreshold": noise_threshold}
+    debug("Searching for " + template)
+    for message, buf in display.detect("template_match", params, timeout_secs):
+        result = {
+            "timestamp": buf.timestamp,
+            "match": message["match"],
+            "position": (message["x"], message["y"]),
+            "first_pass_result": message["first_pass_result"]}
+        debug("%s found: %s" % (
+              "Match" if result["match"] else "Weak match",
+              str(result)))
+
+        yield result
+
+
+def detect_motion(directory, timeout_secs=10, mask=None):
+    """Return the sequence of frames where motion was found in the source
+    video stream.
+
+    "directory" is the directory where to look for the mask image.
+
+    "timeout_secs" is in seconds elapsed, from the method call. Note that
+    stopping iterating also enables to interrupt the method.
+
+    "mask" is a black and white image that specifies which part of the image
+    to process. White pixels will be used and black pixels won't be.
+
+    For every frame processed, a dictionary is returned and contains:
+      "timestamp": video stream timestamp,
+      "motion": boolean result.
+    """
+
+    if mask:
+        if os.path.isabs(mask):
+            mask_path = mask
+        else:
+            # Mask is relative to the script's own directory
+            mask_path = os.path.abspath(os.path.join(directory, mask))
+            if not os.path.isfile(mask_path):
+                # Fall back to mask from cwd, for convenience of selftests
+                mask_path = os.path.abspath(mask)
+        if not os.path.isfile(mask_path):
+            sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
+            sys.exit(1)
+
+    params = {"enabled": True}
+    if mask:
+        params["mask"] = mask_path
+        debug("Using mask %s" % (mask_path))
+    for message, buf in display.detect("motiondetect", params, timeout_secs):
+        result = {
+            "timestamp": buf.timestamp,
+            "motion": message["has_motion"]}
+        debug("%s detected. Timestamp: %d." %
+            ("Motion" if result["motion"] else "No motion",
+             result["timestamp"]))
+
+        yield result
+
+
 def wait_for_match(image, directory=None, timeout_secs=10,
                    consecutive_matches=1, noise_threshold=0.16):
     """Wait for a match of `image` in the source video stream.
@@ -57,8 +147,7 @@ def wait_for_match(image, directory=None, timeout_secs=10,
 
     match_count = 0
     last_pos = (0, 0)
-    for res in display.detect_match(image, directory, timeout_secs,
-                                    noise_threshold):
+    for res in detect_match(image, directory, timeout_secs, noise_threshold):
         if res["match"] and (match_count == 0 or res["position"] == last_pos):
             match_count += 1
         else:
@@ -93,15 +182,15 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
 def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
                     mask=None):
     """Wait for motion in the source video stream.
-    
+
     "directory" is the directory where to look for the mask image. It defaults
     to the caller script's directory.
-    
+
     "timeout_secs" is in seconds elapsed, from the method call.
-    
+
     "consecutive_frames" enables to wait for several consecutive frames with
     motion detected.
-    
+
     "mask" is a black and white image that specifies which part of the image
     to process. White pixels will be used and black pixels won't be.
     """
@@ -110,7 +199,7 @@ def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
 
     debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
     consecutive_frames_count = 0
-    for res in display.detect_motion(directory, timeout_secs, mask):
+    for res in detect_motion(directory, timeout_secs, mask):
         if res["motion"]:
             consecutive_frames_count += 1
         else:
@@ -248,7 +337,7 @@ class Display:
                 # Detect motion when requested:
                 "stbt-motiondetect name=motiondetect enabled=false",
                 # OpenCV image-processing library:
-                "stbt-templatematch name=templatematch method=1",
+                "stbt-templatematch name=template_match method=1",
                 ])
         xvideo = " ! ".join([
                 # Convert to a colorspace that xvimagesink can handle:
@@ -280,7 +369,7 @@ class Display:
         self.pipeline.add(self.source_bin, self.sink_bin)
         gst.element_link_many(self.source_bin, self.sink_bin)
 
-        self.templatematch = self.pipeline.get_by_name("templatematch")
+        self.templatematch = self.pipeline.get_by_name("template_match")
         self.motiondetect = self.pipeline.get_by_name("motiondetect")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
@@ -325,120 +414,48 @@ class Display:
     def capture_screenshot(self):
         return self.screenshot.get_property("last-buffer")
 
-    def detect_match(self, image, directory, timeout_secs=10,
-                     noise_threshold=0.16):
-        """Return the sequence of frames where `image` was or was not matching
-        in the source video stream.
+    def detect(self, element_name, params, timeout_secs):
+        """Return the messages emitted by the named gstreamer element
+        configured with the parameters `params`.
 
-        "directory" is the directory where to look for the template image.
+        "element_name" is the name of the gstreamer element as specified in the
+        pipeline. The name must be the same in the pipeline and in the messages
+        returned by gstreamer.
+
+        "params" is a dictionary of parameters to setup the element. The
+        original parameters will be restored at the end of the call.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
         stopping iterating also enables to interrupt the method.
 
-        "noise_threshold" is a threshold used to confirm a potential match by
-        the gstreamer element stbt-templatematch.
-
-        For every frame processed, a dictionary is returned and contains:
-          "timestamp": video stream timestamp,
-          "match": boolean result,
-          "position": tuple (x, y) that specifies the position of the match,
-          "first_pass_result": value between 0 (poor) and 1 (excellent match).
+        For every frame processed, a tuple is returned: (message, screenshot).
         """
 
-        if os.path.isabs(image):
-            template = image
-        else:
-            # Image is relative to the script's own directory
-            template = os.path.abspath(os.path.join(directory, image))
-            if not os.path.isfile(template):
-                # Fall back to image from cwd, for convenience of the selftests
-                template = os.path.abspath(image)
+        element = self.pipeline.get_by_name(element_name)
+
+        params_backup = {}
+        for key in params.keys():
+            params_backup[key] = getattr(element.props, key)
 
         try:
-            self.templatematch.props.template = template
-            self.templatematch.props.noiseThreshold = noise_threshold
+            for key in params.keys():
+                setattr(element.props, key, params[key])
 
-            debug("Searching for " + template)
             with GObjectTimeout(timeout_secs, self.on_timeout) as t:
                 self.test_timeout = t
 
                 for message in MessageIterator(self.bus, "message::element"):
                     st = message.structure
-                    if st.get_name() == "template_match":
+                    if st.get_name() == element_name:
                         buf = self.screenshot.get_property("last-buffer")
                         if not buf:
                             continue
 
-                        result = {
-                            "timestamp": buf.timestamp,
-                            "match": st["match"],
-                            "position": (st["x"], st["y"]),
-                            "first_pass_result": st["first_pass_result"]}
-                        debug("%s found: %s" % (
-                              "Match" if result["match"] else "Weak match",
-                              str(result)))
-
-                        yield result
+                        yield (st, buf)
 
         finally:
-            self.templatematch.props.template = None
-
-    def detect_motion(self, directory, timeout_secs=10, mask=None):
-        """Return the sequence of frames where motion was found in the source
-        video stream.
-
-        "directory" is the directory where to look for the mask image.
-
-        "timeout_secs" is in seconds elapsed, from the method call. Note that
-        stopping iterating also enables to interrupt the method.
-
-        "mask" is a black and white image that specifies which part of the image
-        to process. White pixels will be used and black pixels won't be.
-
-        For every frame processed, a dictionary is returned and contains:
-          "timestamp": video stream timestamp,
-          "motion": boolean result.
-        """
-
-        if mask:
-            if os.path.isabs(mask):
-                mask_path = mask
-            else:
-                # Mask is relative to the script's own directory
-                mask_path = os.path.abspath(os.path.join(directory, mask))
-                if not os.path.isfile(mask_path):
-                    # Fall back to mask from cwd, for convenience of selftests
-                    mask_path = os.path.abspath(mask)
-            if not os.path.isfile(mask_path):
-                sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
-                sys.exit(1)
-
-        try:
-            self.motiondetect.props.enabled = True
-            if mask:
-                self.motiondetect.props.mask = mask_path
-                debug("Using mask %s" % (mask_path))
-            with GObjectTimeout(timeout_secs, self.on_timeout) as t:
-                self.test_timeout = t
-
-                for message in MessageIterator(self.bus, "message::element"):
-                    st = message.structure
-                    if st.get_name() == "motiondetect":
-                        buf = self.screenshot.get_property("last-buffer")
-                        if not buf:
-                            continue
-                        result = {
-                            "timestamp": buf.timestamp,
-                            "motion": st["has_motion"]}
-                        debug("%s detected. Timestamp: %d." %
-                            ("Motion" if result["motion"] else "No motion",
-                             result["timestamp"]))
-
-                        yield result
-
-        finally:
-            self.motiondetect.props.mask = None
-            self.motiondetect.props.enabled = False
+            for key in params.keys():
+                setattr(element.props, key, params_backup[key])
 
     def on_timeout(self):
         debug("Timed out")
