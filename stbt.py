@@ -288,41 +288,44 @@ class Display:
                 # Fall back to image from cwd, for convenience of the selftests
                 template = os.path.abspath(image)
 
-        self.templatematch.props.template = template
-        self.templatematch.props.noiseThreshold = noise_threshold
+        try:
+            self.templatematch.props.template = template
+            self.templatematch.props.noiseThreshold = noise_threshold
 
-        match_count, last_x, last_y = 0, 0, 0
-        debug("Searching for " + template)
-        with GObjectTimeout(timeout_secs, self.on_timeout) as t:
-            self.test_timeout = t
-            
-            for message in MessageIterator(self.bus, "message::element"):
-                st = message.structure
-                if st.get_name() == "template_match":
-                    buf = self.screenshot.get_property("last-buffer")
-                    if not buf:
-                        continue
+            match_count, last_x, last_y = 0, 0, 0
+            debug("Searching for " + template)
 
-                    matched = st["match"]
-                    debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
-                          "%dx%d. 1st pass: %d%%. Timestamp: %d."
-                          % ("Match" if matched else "Weak match",
-                             match_count,
-                             st["x"], st["y"], last_x, last_y,
-                             st["width"], st["height"], 100 * st["first_pass_result"],
-                             buf.timestamp))
+            with GObjectTimeout(timeout_secs, self.on_timeout) as t:
+                self.test_timeout = t
 
-                    if matched and (
-                            match_count == 0 or
-                            (st["x"], st["y"]) == (last_x, last_y)):
-                        match_count += 1
-                    else:
-                        match_count = 0
-                    last_x, last_y = st["x"], st["y"]
+                for message in MessageIterator(self.bus, "message::element"):
+                    st = message.structure
+                    if st.get_name() == "template_match":
+                        buf = self.screenshot.get_property("last-buffer")
+                        if not buf:
+                            continue
 
-                    if match_count == consecutive_matches:
-                        self.templatematch.props.template = None
-                        break
+                        matched = st["match"]
+                        debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
+                              "%dx%d. 1st pass: %d%%. Timestamp: %d."
+                              % ("Match" if matched else "Weak match",
+                                 match_count,
+                                 st["x"], st["y"], last_x, last_y,
+                                 st["width"], st["height"], 100 * st["first_pass_result"],
+                                 buf.timestamp))
+
+                        if matched and (
+                                match_count == 0 or
+                                (st["x"], st["y"]) == (last_x, last_y)):
+                            match_count += 1
+                        else:
+                            match_count = 0
+                        last_x, last_y = st["x"], st["y"]
+
+                        if match_count == consecutive_matches:
+                            break
+        finally:
+            self.templatematch.props.template = None
 
         if match_count == consecutive_matches:
             debug("MATCHED " + template)
@@ -335,7 +338,6 @@ class Display:
                         timeout_secs=10, consecutive_frames=10, mask=None):
         """Wait for motion in the source video stream."""
 
-        self.motiondetect.props.enabled = True
         if mask:
             if os.path.isabs(mask):
                 mask_path = mask
@@ -349,32 +351,36 @@ class Display:
                 sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
                 sys.exit(1)
             debug("Using mask %s" % (mask_path))
-            self.motiondetect.props.mask = mask_path
 
-        consecutive_frames_count = 0
-        debug("Waiting for %d consecutive frames with motion"
-                % (consecutive_frames))
-        with GObjectTimeout(timeout_secs, self.on_timeout) as t:
-            self.test_timeout = t
-            for message in MessageIterator(self.bus, "message::element"):
-                st = message.structure
-                if st.get_name() == "motiondetect":
-                    buf = self.screenshot.get_property("last-buffer")
-                    if not buf:
-                        continue
+        try:
+            self.motiondetect.props.enabled = True
+            if mask:
+                self.motiondetect.props.mask = mask_path
+            consecutive_frames_count = 0
+            debug("Waiting for %d consecutive frames with motion"
+                    % (consecutive_frames))
+            with GObjectTimeout(timeout_secs, self.on_timeout) as t:
+                self.test_timeout = t
+                for message in MessageIterator(self.bus, "message::element"):
+                    st = message.structure
+                    if st.get_name() == "motiondetect":
+                        buf = self.screenshot.get_property("last-buffer")
+                        if not buf:
+                            continue
 
-                    has_motion = st["has_motion"]
-                    if has_motion:
-                        consecutive_frames_count += 1
-                        debug("Motion detected. Timestamp: %d." % (buf.timestamp))
-                    else:
-                        consecutive_frames_count = 0
-                        debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
+                        has_motion = st["has_motion"]
+                        if has_motion:
+                            consecutive_frames_count += 1
+                            debug("Motion detected. Timestamp: %d." % (buf.timestamp))
+                        else:
+                            consecutive_frames_count = 0
+                            debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
 
-                    if consecutive_frames_count == consecutive_frames:
-                        self.motiondetect.props.mask = None
-                        self.motiondetect.enabled = False
-                        break
+                        if consecutive_frames_count == consecutive_frames:
+                            break
+        finally:
+            self.motiondetect.props.mask = None
+            self.motiondetect.props.enabled = False
 
         if consecutive_frames_count == consecutive_frames:
             debug("Motion detected.")
