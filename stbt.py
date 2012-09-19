@@ -1,5 +1,6 @@
 import argparse
 import ConfigParser
+import Queue
 import errno
 import os
 import re
@@ -157,6 +158,27 @@ class ConfigurationError(Exception):
 _debug_level = 0
 
 
+def MessageIterator(bus, signal):
+    queue = Queue.Queue()
+
+    def sig(bus, message):
+        queue.put(message)
+        gtk.main_quit()
+    bus.connect(signal, sig)
+    try:
+        stop = False
+        while not stop:
+            gtk.main()
+            # Check what interrupted the main loop (new message, error thrown)
+            try:
+                item = queue.get(block=False)
+                yield item
+            except Queue.Empty:
+                stop = True
+    finally:
+        bus.disconnect_by_func(sig)
+
+
 class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
         gobject.threads_init()
@@ -268,20 +290,46 @@ class Display:
 
         self.templatematch.props.template = template
         self.templatematch.props.noiseThreshold = noise_threshold
-        self.match_count, self.last_x, self.last_y = 0, 0, 0
-        self.consecutive_matches = consecutive_matches
 
+        match_count, last_x, last_y = 0, 0, 0
         debug("Searching for " + template)
-        self.bus.connect("message::element", self.on_match)
-        with GObjectTimeout(timeout_secs, self.on_timeout, self.on_match) as t:
+        with GObjectTimeout(timeout_secs, self.on_timeout) as t:
             self.test_timeout = t
-            gtk.main()
-            if self.match_count == self.consecutive_matches:
-                debug("MATCHED " + template)
-                return
-            else:
-                buf = self.screenshot.get_property("last-buffer")
-                raise MatchTimeout(buf, template, timeout_secs)
+            
+            for message in MessageIterator(self.bus, "message::element"):
+                st = message.structure
+                if st.get_name() == "template_match":
+                    buf = self.screenshot.get_property("last-buffer")
+                    if not buf:
+                        continue
+
+                    matched = st["match"]
+                    debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
+                          "%dx%d. 1st pass: %d%%. Timestamp: %d."
+                          % ("Match" if matched else "Weak match",
+                             match_count,
+                             st["x"], st["y"], last_x, last_y,
+                             st["width"], st["height"], 100 * st["first_pass_result"],
+                             buf.timestamp))
+
+                    if matched and (
+                            match_count == 0 or
+                            (st["x"], st["y"]) == (last_x, last_y)):
+                        match_count += 1
+                    else:
+                        match_count = 0
+                    last_x, last_y = st["x"], st["y"]
+
+                    if match_count == consecutive_matches:
+                        self.templatematch.props.template = None
+                        break
+
+        if match_count == consecutive_matches:
+            debug("MATCHED " + template)
+            return
+        else:
+            buf = self.screenshot.get_property("last-buffer")
+            raise MatchTimeout(buf, template, timeout_secs)
 
     def wait_for_motion(self, directory,
                         timeout_secs=10, consecutive_frames=10, mask=None):
@@ -303,26 +351,40 @@ class Display:
             debug("Using mask %s" % (mask_path))
             self.motiondetect.props.mask = mask_path
 
-        self.consecutive_frames = consecutive_frames
-        self.consecutive_frames_count = 0
-
+        consecutive_frames_count = 0
         debug("Waiting for %d consecutive frames with motion"
                 % (consecutive_frames))
-        self.bus.connect("message::element", self.on_motion)
-        with GObjectTimeout(timeout_secs,
-                            self.on_timeout, self.on_motion) as t:
+        with GObjectTimeout(timeout_secs, self.on_timeout) as t:
             self.test_timeout = t
-            gtk.main()
-            if self.consecutive_frames_count == self.consecutive_frames:
-                debug("Motion detected.")
-                return
-            else:
-                buf = self.screenshot.get_property("last-buffer")
-                raise MotionTimeout(buf, mask, timeout_secs)
+            for message in MessageIterator(self.bus, "message::element"):
+                st = message.structure
+                if st.get_name() == "motiondetect":
+                    buf = self.screenshot.get_property("last-buffer")
+                    if not buf:
+                        continue
 
-    def on_timeout(self, handler):
+                    has_motion = st["has_motion"]
+                    if has_motion:
+                        consecutive_frames_count += 1
+                        debug("Motion detected. Timestamp: %d." % (buf.timestamp))
+                    else:
+                        consecutive_frames_count = 0
+                        debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
+
+                    if consecutive_frames_count == consecutive_frames:
+                        self.motiondetect.props.mask = None
+                        self.motiondetect.enabled = False
+                        break
+
+        if consecutive_frames_count == consecutive_frames:
+            debug("Motion detected.")
+            return
+        else:
+            buf = self.screenshot.get_property("last-buffer")
+            raise MotionTimeout(buf, mask, timeout_secs)
+
+    def on_timeout(self):
         debug("Timed out")
-        self.bus.disconnect_by_func(handler)
         gtk.main_quit()
         return False  # stop the timeout from running again
 
@@ -340,57 +402,6 @@ class Display:
                 err.message == "OpenCV failed to load template image"):
             sys.stderr.write("Error: %s\n" % err.message)
             sys.exit(1)
-
-    def on_match(self, bus, message):
-        st = message.structure
-        if st.get_name() == "template_match":
-
-            buf = self.screenshot.get_property("last-buffer")
-            if not buf:
-                return
-
-            matched = st["match"]
-            debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
-                  "%dx%d. 1st pass: %d%%. Timestamp: %d."
-                  % ("Match" if matched else "Weak match",
-                     self.match_count,
-                     st["x"], st["y"], self.last_x, self.last_y,
-                     st["width"], st["height"], 100 * st["first_pass_result"],
-                     buf.timestamp))
-
-            if matched and (
-                    self.match_count == 0 or
-                    (st["x"], st["y"]) == (self.last_x, self.last_y)):
-                self.match_count += 1
-            else:
-                self.match_count = 0
-            self.last_x, self.last_y = st["x"], st["y"]
-
-            if self.match_count == self.consecutive_matches:
-                self.templatematch.props.template = None
-                self.bus.disconnect_by_func(self.on_match)
-                gtk.main_quit()
-
-    def on_motion(self, bus, message):
-        st = message.structure
-        if st.get_name() == "motiondetect":
-            buf = self.screenshot.get_property("last-buffer")
-            if not buf:
-                return
-
-            has_motion = st["has_motion"]
-            if has_motion:
-                self.consecutive_frames_count += 1
-                debug("Motion detected. Timestamp: %d." % (buf.timestamp))
-            else:
-                self.consecutive_frames_count = 0
-                debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
-
-            if self.consecutive_frames_count == self.consecutive_frames:
-                self.motiondetect.props.mask = None
-                self.motiondetect.enabled = False
-                self.bus.disconnect_by_func(self.on_motion)
-                gtk.main_quit()
 
     def on_underrun(self, element):
         if self.underrun_timeout:
