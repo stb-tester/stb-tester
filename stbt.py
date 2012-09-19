@@ -1,3 +1,4 @@
+from collections import namedtuple
 import argparse
 import ConfigParser
 import Queue
@@ -37,6 +38,19 @@ def press(*args, **keywords):
     return control.press(*args, **keywords)
 
 
+Position = namedtuple('Position', 'x y')
+
+
+"""
+"timestamp": video stream timestamp,
+"match": boolean result,
+"position": position of the match,
+"first_pass_result": value between 0 (poor) and 1 (excellent match).
+"""
+MatchResult = namedtuple('MatchResult',
+                         'timestamp match position first_pass_result')
+
+
 def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
     """Return the sequence of frames where `image` was or was not matching
     in the source video stream.
@@ -49,11 +63,7 @@ def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
     "noise_threshold" is a threshold used to confirm a potential match by
     the gstreamer element stbt-templatematch.
 
-    For every frame processed, a dictionary is returned and contains:
-      "timestamp": video stream timestamp,
-      "match": boolean result,
-      "position": tuple (x, y) that specifies the position of the match,
-      "first_pass_result": value between 0 (poor) and 1 (excellent match).
+    For every frame processed, a MatchResult is returned.
     """
 
     if os.path.isabs(image):
@@ -70,16 +80,21 @@ def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
         "noiseThreshold": noise_threshold}
     debug("Searching for " + template)
     for message, buf in display.detect("template_match", params, timeout_secs):
-        result = {
-            "timestamp": buf.timestamp,
-            "match": message["match"],
-            "position": (message["x"], message["y"]),
-            "first_pass_result": message["first_pass_result"]}
+        result = MatchResult(timestamp=buf.timestamp,
+                             match=message["match"],
+                             position=Position(message["x"], message["y"]),
+                             first_pass_result=message["first_pass_result"])
         debug("%s found: %s" % (
-              "Match" if result["match"] else "Weak match",
-              str(result)))
+              "Match" if result.match else "Weak match", str(result)))
 
         yield result
+
+
+"""
+"timestamp": video stream timestamp,
+"motion": boolean result.
+"""
+MotionResult = namedtuple('MotionResult', 'timestamp motion')
 
 
 def detect_motion(directory, timeout_secs=10, mask=None):
@@ -94,9 +109,7 @@ def detect_motion(directory, timeout_secs=10, mask=None):
     "mask" is a black and white image that specifies which part of the image
     to process. White pixels will be used and black pixels won't be.
 
-    For every frame processed, a dictionary is returned and contains:
-      "timestamp": video stream timestamp,
-      "motion": boolean result.
+    For every frame processed, a MotionResult is returned.
     """
 
     if mask:
@@ -117,12 +130,10 @@ def detect_motion(directory, timeout_secs=10, mask=None):
         params["mask"] = mask_path
         debug("Using mask %s" % (mask_path))
     for message, buf in display.detect("motiondetect", params, timeout_secs):
-        result = {
-            "timestamp": buf.timestamp,
-            "motion": message["has_motion"]}
+        result = MotionResult(timestamp=buf.timestamp,
+                              motion=message["has_motion"])
         debug("%s detected. Timestamp: %d." %
-            ("Motion" if result["motion"] else "No motion",
-             result["timestamp"]))
+              ("Motion" if result.motion else "No motion", result.timestamp))
 
         yield result
 
@@ -146,13 +157,13 @@ def wait_for_match(image, directory=None, timeout_secs=10,
         directory = _caller_dir()
 
     match_count = 0
-    last_pos = (0, 0)
+    last_pos = Position(0, 0)
     for res in detect_match(image, directory, timeout_secs, noise_threshold):
-        if res["match"] and (match_count == 0 or res["position"] == last_pos):
+        if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
             match_count = 0
-        last_pos = res["position"]
+        last_pos = res.position
         if match_count == consecutive_matches:
             debug("Matched " + image)
             return
@@ -200,7 +211,7 @@ def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
     debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
     consecutive_frames_count = 0
     for res in detect_motion(directory, timeout_secs, mask):
-        if res["motion"]:
+        if res.motion:
             consecutive_frames_count += 1
         else:
             consecutive_frames_count = 0
