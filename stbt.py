@@ -90,10 +90,37 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
                 raise
 
 
-def wait_for_motion(*args, **keywords):
-    if 'directory' not in keywords:
-        keywords['directory'] = _caller_dir()
-    return display.wait_for_motion(*args, **keywords)
+def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
+                    mask=None):
+    """Wait for motion in the source video stream.
+    
+    "directory" is the directory where to look for the mask image. It defaults
+    to the caller script's directory.
+    
+    "timeout_secs" is in seconds elapsed, from the method call.
+    
+    "consecutive_frames" enables to wait for several consecutive frames with
+    motion detected.
+    
+    "mask" is a black and white image that specifies which part of the image
+    to process. White pixels will be used and black pixels won't be.
+    """
+    if directory == None:
+        directory = _caller_dir()
+
+    debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
+    consecutive_frames_count = 0
+    for res in display.detect_motion(directory, timeout_secs, mask):
+        if res["motion"]:
+            consecutive_frames_count += 1
+        else:
+            consecutive_frames_count = 0
+        if consecutive_frames_count == consecutive_frames:
+            debug("Motion detected.")
+            return
+
+    screenshot = display.capture_screenshot()
+    raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
 # stbt-run initialisation and convenience functions
@@ -356,9 +383,22 @@ class Display:
         finally:
             self.templatematch.props.template = None
 
-    def wait_for_motion(self, directory,
-                        timeout_secs=10, consecutive_frames=10, mask=None):
-        """Wait for motion in the source video stream."""
+    def detect_motion(self, directory, timeout_secs=10, mask=None):
+        """Return the sequence of frames where motion was found in the source
+        video stream.
+
+        "directory" is the directory where to look for the mask image.
+
+        "timeout_secs" is in seconds elapsed, from the method call. Note that
+        stopping iterating also enables to interrupt the method.
+
+        "mask" is a black and white image that specifies which part of the image
+        to process. White pixels will be used and black pixels won't be.
+
+        For every frame processed, a dictionary is returned and contains:
+          "timestamp": video stream timestamp,
+          "motion": boolean result.
+        """
 
         if mask:
             if os.path.isabs(mask):
@@ -372,44 +412,33 @@ class Display:
             if not os.path.isfile(mask_path):
                 sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
                 sys.exit(1)
-            debug("Using mask %s" % (mask_path))
 
         try:
             self.motiondetect.props.enabled = True
             if mask:
                 self.motiondetect.props.mask = mask_path
-            consecutive_frames_count = 0
-            debug("Waiting for %d consecutive frames with motion"
-                    % (consecutive_frames))
+                debug("Using mask %s" % (mask_path))
             with GObjectTimeout(timeout_secs, self.on_timeout) as t:
                 self.test_timeout = t
+
                 for message in MessageIterator(self.bus, "message::element"):
                     st = message.structure
                     if st.get_name() == "motiondetect":
                         buf = self.screenshot.get_property("last-buffer")
                         if not buf:
                             continue
+                        result = {
+                            "timestamp": buf.timestamp,
+                            "motion": st["has_motion"]}
+                        debug("%s detected. Timestamp: %d." %
+                            ("Motion" if result["motion"] else "No motion",
+                             result["timestamp"]))
 
-                        has_motion = st["has_motion"]
-                        if has_motion:
-                            consecutive_frames_count += 1
-                            debug("Motion detected. Timestamp: %d." % (buf.timestamp))
-                        else:
-                            consecutive_frames_count = 0
-                            debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
+                        yield result
 
-                        if consecutive_frames_count == consecutive_frames:
-                            break
         finally:
             self.motiondetect.props.mask = None
             self.motiondetect.props.enabled = False
-
-        if consecutive_frames_count == consecutive_frames:
-            debug("Motion detected.")
-            return
-        else:
-            buf = self.screenshot.get_property("last-buffer")
-            raise MotionTimeout(buf, mask, timeout_secs)
 
     def on_timeout(self):
         debug("Timed out")
