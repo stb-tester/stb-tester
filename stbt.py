@@ -37,10 +37,39 @@ def press(*args, **keywords):
     return control.press(*args, **keywords)
 
 
-def wait_for_match(*args, **keywords):
-    if 'directory' not in keywords:
-        keywords['directory'] = _caller_dir()
-    return display.wait_for_match(*args, **keywords)
+def wait_for_match(image, directory=None, timeout_secs=10,
+                   consecutive_matches=1, noise_threshold=0.16):
+    """Wait for a match of `image` in the source video stream.
+
+    "directory" is the directory where to look for the template image. It
+    defaults to the caller script's directory.
+
+    "timeout_secs" is in seconds elapsed, from the method call.
+
+    "consecutive_matches" enables to wait for several consecutive frames
+    with a match found at the same x,y position.
+
+    "noise_threshold" is a threshold used to confirm a potential match.
+    """
+
+    if directory == None:
+        directory = _caller_dir()
+
+    match_count = 0
+    last_pos = (0, 0)
+    for res in display.detect_match(image, directory, timeout_secs,
+                                    noise_threshold):
+        if res["match"] and (match_count == 0 or res["position"] == last_pos):
+            match_count += 1
+        else:
+            match_count = 0
+        last_pos = res["position"]
+        if match_count == consecutive_matches:
+            debug("Matched " + image)
+            return
+
+    screenshot = display.capture_screenshot()
+    raise MatchTimeout(screenshot, image, timeout_secs)
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
@@ -266,17 +295,27 @@ class Display:
                 source_bin.get_by_name("padforcer").src_pads().next()))
         return source_bin
 
-    def wait_for_match(self, image, directory,
-                       timeout_secs=10, consecutive_matches=1,
-                       noise_threshold=0.16):
-        """Wait for a match of `image` in the source video stream.
+    def capture_screenshot(self):
+        return self.screenshot.get_property("last-buffer")
 
-        "consecutive_matches" enables to wait for several consecutive frames
-        with a match found at the same x,y position.
+    def detect_match(self, image, directory, timeout_secs=10,
+                     noise_threshold=0.16):
+        """Return the sequence of frames where `image` was or was not matching
+        in the source video stream.
 
-        "timeout_secs" is in seconds elapsed, as reported by the video stream.
+        "directory" is the directory where to look for the template image.
 
-        "noise_threshold" is a threshold used to confirm a potential match.
+        "timeout_secs" is in seconds elapsed, from the method call. Note that
+        stopping iterating also enables to interrupt the method.
+
+        "noise_threshold" is a threshold used to confirm a potential match by
+        the gstreamer element stbt-templatematch.
+
+        For every frame processed, a dictionary is returned and contains:
+          "timestamp": video stream timestamp,
+          "match": boolean result,
+          "position": tuple (x, y) that specifies the position of the match,
+          "first_pass_result": value between 0 (poor) and 1 (excellent match).
         """
 
         if os.path.isabs(image):
@@ -292,9 +331,7 @@ class Display:
             self.templatematch.props.template = template
             self.templatematch.props.noiseThreshold = noise_threshold
 
-            match_count, last_x, last_y = 0, 0, 0
             debug("Searching for " + template)
-
             with GObjectTimeout(timeout_secs, self.on_timeout) as t:
                 self.test_timeout = t
 
@@ -305,34 +342,19 @@ class Display:
                         if not buf:
                             continue
 
-                        matched = st["match"]
-                        debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
-                              "%dx%d. 1st pass: %d%%. Timestamp: %d."
-                              % ("Match" if matched else "Weak match",
-                                 match_count,
-                                 st["x"], st["y"], last_x, last_y,
-                                 st["width"], st["height"], 100 * st["first_pass_result"],
-                                 buf.timestamp))
+                        result = {
+                            "timestamp": buf.timestamp,
+                            "match": st["match"],
+                            "position": (st["x"], st["y"]),
+                            "first_pass_result": st["first_pass_result"]}
+                        debug("%s found: %s" % (
+                              "Match" if result["match"] else "Weak match",
+                              str(result)))
 
-                        if matched and (
-                                match_count == 0 or
-                                (st["x"], st["y"]) == (last_x, last_y)):
-                            match_count += 1
-                        else:
-                            match_count = 0
-                        last_x, last_y = st["x"], st["y"]
+                        yield result
 
-                        if match_count == consecutive_matches:
-                            break
         finally:
             self.templatematch.props.template = None
-
-        if match_count == consecutive_matches:
-            debug("MATCHED " + template)
-            return
-        else:
-            buf = self.screenshot.get_property("last-buffer")
-            raise MatchTimeout(buf, template, timeout_secs)
 
     def wait_for_motion(self, directory,
                         timeout_secs=10, consecutive_frames=10, mask=None):
