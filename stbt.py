@@ -47,10 +47,9 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
     i = 0
     while True:
         try:
-            keywords = {'directory': _caller_dir(),
-                        'timeout_secs': interval_secs,
-                        'noise_threshold': noise_threshold}
-            wait_for_match(image, **keywords)
+            wait_for_match(
+                image, directory=_caller_dir(), timeout_secs=interval_secs,
+                noise_threshold=noise_threshold)
             return
         except MatchTimeout:
             if i < max_presses:
