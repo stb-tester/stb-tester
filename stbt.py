@@ -51,11 +51,12 @@ MatchResult = namedtuple('MatchResult',
                          'timestamp match position first_pass_result')
 
 
-def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
+def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
     """Return the sequence of frames where `image` was or was not matching
     in the source video stream.
 
-    "directory" is the directory where to look for the template image.
+    "directory" is the directory where to look for the template image. It
+    defaults to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. Note that
     stopping iterating also enables to interrupt the method.
@@ -65,6 +66,9 @@ def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
 
     For every frame processed, a MatchResult is returned.
     """
+
+    if directory == None:
+        directory = _caller_dir()
 
     if os.path.isabs(image):
         template = image
@@ -97,11 +101,12 @@ def detect_match(image, directory, timeout_secs=10, noise_threshold=0.16):
 MotionResult = namedtuple('MotionResult', 'timestamp motion')
 
 
-def detect_motion(directory, timeout_secs=10, mask=None):
+def detect_motion(directory=None, timeout_secs=10, mask=None):
     """Return the sequence of frames where motion was found in the source
     video stream.
 
-    "directory" is the directory where to look for the mask image.
+    "directory" is the directory where to look for the mask image. It defaults
+    to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. Note that
     stopping iterating also enables to interrupt the method.
@@ -111,6 +116,9 @@ def detect_motion(directory, timeout_secs=10, mask=None):
 
     For every frame processed, a MotionResult is returned.
     """
+
+    if directory == None:
+        directory = _caller_dir()
 
     if mask:
         if os.path.isabs(mask):
