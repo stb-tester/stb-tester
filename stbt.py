@@ -52,14 +52,15 @@ MatchResult = namedtuple('MatchResult',
 
 
 def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
-    """Return the sequence of frames where `image` was or was not matching
-    in the source video stream.
+    """Generator that yields the sequence of frames where `image` was or was
+    not matching in the source video stream.
 
     "directory" is the directory where to look for the template image. It
     defaults to the caller script's directory.
 
-    "timeout_secs" is in seconds elapsed, from the method call. Note that
-    stopping iterating also enables to interrupt the method.
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, the method call will return. Note that stopping iterating also
+    enables to interrupt the method.
 
     "noise_threshold" is a threshold used to confirm a potential match by
     the gstreamer element stbt-templatematch.
@@ -102,14 +103,15 @@ MotionResult = namedtuple('MotionResult', 'timestamp motion')
 
 
 def detect_motion(directory=None, timeout_secs=10, mask=None):
-    """Return the sequence of frames where motion was found in the source
-    video stream.
+    """Generator that yields the sequence of frames where motion was found in
+    the source video stream.
 
     "directory" is the directory where to look for the mask image. It defaults
     to the caller script's directory.
 
-    "timeout_secs" is in seconds elapsed, from the method call. Note that
-    stopping iterating also enables to interrupt the method.
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, the method call will return. Note that the caller can also
+    choose to stop iterating over this method's results.
 
     "mask" is a black and white image that specifies which part of the image
     to process. White pixels will be used and black pixels won't be.
@@ -153,7 +155,8 @@ def wait_for_match(image, directory=None, timeout_secs=10,
     "directory" is the directory where to look for the template image. It
     defaults to the caller script's directory.
 
-    "timeout_secs" is in seconds elapsed, from the method call.
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, a MatchTimeout exception will be raised.
 
     "consecutive_matches" enables to wait for several consecutive frames
     with a match found at the same x,y position.
@@ -205,7 +208,8 @@ def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
     "directory" is the directory where to look for the mask image. It defaults
     to the caller script's directory.
 
-    "timeout_secs" is in seconds elapsed, from the method call.
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, a MotionTimeout exception will be raised.
 
     "consecutive_frames" enables to wait for several consecutive frames with
     motion detected.
@@ -434,8 +438,8 @@ class Display:
         return self.screenshot.get_property("last-buffer")
 
     def detect(self, element_name, params, timeout_secs):
-        """Return the messages emitted by the named gstreamer element
-        configured with the parameters `params`.
+        """Generator that yields the messages emitted by the named gstreamer
+        element configured with the parameters `params`.
 
         "element_name" is the name of the gstreamer element as specified in the
         pipeline. The name must be the same in the pipeline and in the messages
