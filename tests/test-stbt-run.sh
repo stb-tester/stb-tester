@@ -169,6 +169,18 @@ test_detect_match_times_out() {
     stbt-run -v "$scratchdir/test.py"
 }
 
+test_detect_match_times_out_during_yield() {
+    cat > "$scratchdir/test.py" <<-EOF
+	for match_result in detect_match("videotestsrc-redblue.png",
+	                                 timeout_secs=1):
+	    import time
+	    time.sleep(2.0)
+	EOF
+    timeout 4 stbt-run -v "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -ne $timedout -a $ret -eq 0 ]
+}
+
 test_detect_match_example_press_and_wait_for_match() {
     cat > "$scratchdir/test.py" <<-EOF
 	key_sent = False
@@ -240,6 +252,17 @@ test_detect_motion_times_out() {
 	    pass
 	EOF
     stbt-run -v "$scratchdir/test.py"
+}
+
+test_detect_motion_times_out_during_yield() {
+    cat > "$scratchdir/test.py" <<-EOF
+	for motion_result in detect_motion(timeout_secs=1):
+	    import time
+	    time.sleep(2.0)
+	EOF
+    timeout 4 stbt-run -v "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -ne $timedout -a $ret -eq 0 ]
 }
 
 test_detect_motion_changing_mask() {
