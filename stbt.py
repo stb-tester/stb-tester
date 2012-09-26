@@ -418,6 +418,7 @@ class Display:
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
+        self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
@@ -464,15 +465,25 @@ class Display:
             for key in params.keys():
                 setattr(element.props, key, params[key])
 
-            with GObjectTimeout(timeout_secs, self.on_timeout) as t:
+            # Timeout after 5s in case no messages are received on the bus.
+            # This happens when starting a new instance of stbt when the
+            # Hauppauge HDPVR capture device is stopping.
+            with GObjectTimeout(timeout_secs=5, handler=self.on_timeout) as t:
                 self.test_timeout = t
 
+                start_timestamp = None
                 for message in MessageIterator(self.bus, "message::element"):
                     st = message.structure
                     if st.get_name() == element_name:
                         buf = self.screenshot.get_property("last-buffer")
                         if not buf:
                             continue
+
+                        if not start_timestamp:
+                            start_timestamp = buf.timestamp
+                        if (buf.timestamp - start_timestamp >
+                            timeout_secs * 1000000000):
+                            return
 
                         yield (st, buf)
 
@@ -501,6 +512,11 @@ class Display:
             sys.exit(1)
 
     def on_underrun(self, element):
+        # Cancel test_timeout as messages are obviously received on the bus.
+        if self.test_timeout:
+            self.test_timeout.cancel()
+            self.test_timeout = None
+
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
@@ -509,6 +525,11 @@ class Display:
             self.underrun_timeout.start()
 
     def on_running(self, element):
+        # Cancel test_timeout as messages are obviously received on the bus.
+        if self.test_timeout:
+            self.test_timeout.cancel()
+            self.test_timeout = None
+
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
             self.successive_underruns = 0
@@ -518,30 +539,30 @@ class Display:
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
-
         self.successive_underruns += 1
-        if self.successive_underruns <= 3:
-            self.test_timeout.cancel()
-            gst.element_unlink_many(self.source_bin, self.sink_bin)
-            self.source_bin.set_state(gst.STATE_NULL)
-            self.sink_bin.set_state(gst.STATE_READY)
-            self.pipeline.remove(self.source_bin)
-            self.source_bin = None
-            debug("Attempting to recover from video loss: "
-                  "Stopping source pipeline and waiting 5s...")
-            time.sleep(5)
+        if self.successive_underruns > 3:
+            sys.stderr.write("Error: too many underrun.\n")
+            sys.exit(1)
 
-            debug("Restarting source pipeline...")
-            self.source_bin = self.create_source_bin()
-            self.pipeline.add(self.source_bin)
-            gst.element_link_many(self.source_bin, self.sink_bin)
-            self.source_bin.set_state(gst.STATE_PLAYING)
-            self.pipeline.set_state(gst.STATE_PLAYING)
-            debug("Restarted source pipeline")
+        gst.element_unlink_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_NULL)
+        self.sink_bin.set_state(gst.STATE_READY)
+        self.pipeline.remove(self.source_bin)
+        self.source_bin = None
+        debug("Attempting to recover from video loss: "
+              "Stopping source pipeline and waiting 5s...")
+        time.sleep(5)
 
-            self.underrun_timeout.start()
+        debug("Restarting source pipeline...")
+        self.source_bin = self.create_source_bin()
+        self.pipeline.add(self.source_bin)
+        gst.element_link_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_PLAYING)
+        self.pipeline.set_state(gst.STATE_PLAYING)
+        debug("Restarted source pipeline")
 
-            self.test_timeout.start()
+        self.underrun_timeout.start()
+
         return False  # stop the timeout from running again
 
     def teardown(self):
