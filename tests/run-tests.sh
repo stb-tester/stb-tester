@@ -64,7 +64,22 @@ if [ $# -eq 0 ]; then
     run test_press_until_match_searches_in_script_directory &&
     run test_wait_for_motion &&
     run test_wait_for_motion_no_motion &&
+    run test_wait_for_motion_nonexistent_mask &&
     run test_changing_input_video_with_the_test_control &&
+    run test_detect_match_reports_match &&
+    run test_detect_match_reports_match_position &&
+    run test_detect_match_reports_valid_timestamp &&
+    run test_detect_match_reports_no_match &&
+    run test_detect_match_times_out &&
+    run test_detect_match_times_out_during_yield &&
+    run test_detect_match_example_press_and_wait_for_match &&
+    run test_detect_motion_reports_motion &&
+    run test_detect_motion_reports_valid_timestamp &&
+    run test_detect_motion_reports_no_motion  &&
+    run test_detect_motion_times_out &&
+    run test_detect_motion_times_out_during_yield &&
+    run test_detect_motion_changing_mask &&
+    run test_detect_motion_example_press_and_wait_for_no_motion &&
     run test_precondition_script &&
 
     echo "Testing stbt-record:" &&

@@ -1,5 +1,7 @@
+from collections import namedtuple
 import argparse
 import ConfigParser
+import Queue
 import errno
 import os
 import re
@@ -36,10 +38,149 @@ def press(*args, **keywords):
     return control.press(*args, **keywords)
 
 
-def wait_for_match(*args, **keywords):
-    if 'directory' not in keywords:
-        keywords['directory'] = _caller_dir()
-    return display.wait_for_match(*args, **keywords)
+Position = namedtuple('Position', 'x y')
+
+
+"""
+"timestamp": video stream timestamp,
+"match": boolean result,
+"position": position of the match,
+"first_pass_result": value between 0 (poor) and 1 (excellent match).
+"""
+MatchResult = namedtuple('MatchResult',
+                         'timestamp match position first_pass_result')
+
+
+def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
+    """Generator that yields the sequence of frames where `image` was or was
+    not matching in the source video stream.
+
+    "directory" is the directory where to look for the template image. It
+    defaults to the caller script's directory.
+
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, the method call will return. Note that stopping iterating also
+    enables to interrupt the method.
+
+    "noise_threshold" is a threshold used to confirm a potential match by
+    the gstreamer element stbt-templatematch.
+
+    For every frame processed, a MatchResult is returned.
+    """
+
+    if directory == None:
+        directory = _caller_dir()
+
+    if os.path.isabs(image):
+        template = image
+    else:
+        # Image is relative to the script's own directory
+        template = os.path.abspath(os.path.join(directory, image))
+        if not os.path.isfile(template):
+            # Fall back to image from cwd, for convenience of the selftests
+            template = os.path.abspath(image)
+
+    params = {
+        "template": template,
+        "noiseThreshold": noise_threshold}
+    debug("Searching for " + template)
+    for message, buf in display.detect("template_match", params, timeout_secs):
+        result = MatchResult(timestamp=buf.timestamp,
+                             match=message["match"],
+                             position=Position(message["x"], message["y"]),
+                             first_pass_result=message["first_pass_result"])
+        debug("%s found: %s" % (
+              "Match" if result.match else "Weak match", str(result)))
+
+        yield result
+
+
+"""
+"timestamp": video stream timestamp,
+"motion": boolean result.
+"""
+MotionResult = namedtuple('MotionResult', 'timestamp motion')
+
+
+def detect_motion(directory=None, timeout_secs=10, mask=None):
+    """Generator that yields the sequence of frames where motion was found in
+    the source video stream.
+
+    "directory" is the directory where to look for the mask image. It defaults
+    to the caller script's directory.
+
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, the method call will return. Note that the caller can also
+    choose to stop iterating over this method's results.
+
+    "mask" is a black and white image that specifies which part of the image
+    to process. White pixels will be used and black pixels won't be.
+
+    For every frame processed, a MotionResult is returned.
+    """
+
+    if directory == None:
+        directory = _caller_dir()
+
+    if mask:
+        if os.path.isabs(mask):
+            mask_path = mask
+        else:
+            # Mask is relative to the script's own directory
+            mask_path = os.path.abspath(os.path.join(directory, mask))
+            if not os.path.isfile(mask_path):
+                # Fall back to mask from cwd, for convenience of selftests
+                mask_path = os.path.abspath(mask)
+        if not os.path.isfile(mask_path):
+            sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
+            sys.exit(1)
+
+    params = {"enabled": True}
+    if mask:
+        params["mask"] = mask_path
+        debug("Using mask %s" % (mask_path))
+    for message, buf in display.detect("motiondetect", params, timeout_secs):
+        result = MotionResult(timestamp=buf.timestamp,
+                              motion=message["has_motion"])
+        debug("%s detected. Timestamp: %d." %
+              ("Motion" if result.motion else "No motion", result.timestamp))
+
+        yield result
+
+
+def wait_for_match(image, directory=None, timeout_secs=10,
+                   consecutive_matches=1, noise_threshold=0.16):
+    """Wait for a match of `image` in the source video stream.
+
+    "directory" is the directory where to look for the template image. It
+    defaults to the caller script's directory.
+
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, a MatchTimeout exception will be raised.
+
+    "consecutive_matches" enables to wait for several consecutive frames
+    with a match found at the same x,y position.
+
+    "noise_threshold" is a threshold used to confirm a potential match.
+    """
+
+    if directory == None:
+        directory = _caller_dir()
+
+    match_count = 0
+    last_pos = Position(0, 0)
+    for res in detect_match(image, directory, timeout_secs, noise_threshold):
+        if res.match and (match_count == 0 or res.position == last_pos):
+            match_count += 1
+        else:
+            match_count = 0
+        last_pos = res.position
+        if match_count == consecutive_matches:
+            debug("Matched " + image)
+            return
+
+    screenshot = display.capture_screenshot()
+    raise MatchTimeout(screenshot, image, timeout_secs)
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
@@ -59,10 +200,38 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
                 raise
 
 
-def wait_for_motion(*args, **keywords):
-    if 'directory' not in keywords:
-        keywords['directory'] = _caller_dir()
-    return display.wait_for_motion(*args, **keywords)
+def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
+                    mask=None):
+    """Wait for motion in the source video stream.
+
+    "directory" is the directory where to look for the mask image. It defaults
+    to the caller script's directory.
+
+    "timeout_secs" is in seconds elapsed, from the method call. At the end of
+    the timeout, a MotionTimeout exception will be raised.
+
+    "consecutive_frames" enables to wait for several consecutive frames with
+    motion detected.
+
+    "mask" is a black and white image that specifies which part of the image
+    to process. White pixels will be used and black pixels won't be.
+    """
+    if directory == None:
+        directory = _caller_dir()
+
+    debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
+    consecutive_frames_count = 0
+    for res in detect_motion(directory, timeout_secs, mask):
+        if res.motion:
+            consecutive_frames_count += 1
+        else:
+            consecutive_frames_count = 0
+        if consecutive_frames_count == consecutive_frames:
+            debug("Motion detected.")
+            return
+
+    screenshot = display.capture_screenshot()
+    raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
 # stbt-run initialisation and convenience functions
@@ -156,6 +325,27 @@ class ConfigurationError(Exception):
 _debug_level = 0
 
 
+def MessageIterator(bus, signal):
+    queue = Queue.Queue()
+
+    def sig(bus, message):
+        queue.put(message)
+        gtk.main_quit()
+    bus.connect(signal, sig)
+    try:
+        stop = False
+        while not stop:
+            gtk.main()
+            # Check what interrupted the main loop (new message, error thrown)
+            try:
+                item = queue.get(block=False)
+                yield item
+            except Queue.Empty:
+                stop = True
+    finally:
+        bus.disconnect_by_func(sig)
+
+
 class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
         gobject.threads_init()
@@ -169,7 +359,7 @@ class Display:
                 # Detect motion when requested:
                 "stbt-motiondetect name=motiondetect enabled=false",
                 # OpenCV image-processing library:
-                "stbt-templatematch name=templatematch method=1",
+                "stbt-templatematch name=template_match method=1",
                 ])
         xvideo = " ! ".join([
                 # Convert to a colorspace that xvimagesink can handle:
@@ -201,7 +391,7 @@ class Display:
         self.pipeline.add(self.source_bin, self.sink_bin)
         gst.element_link_many(self.source_bin, self.sink_bin)
 
-        self.templatematch = self.pipeline.get_by_name("templatematch")
+        self.templatematch = self.pipeline.get_by_name("template_match")
         self.motiondetect = self.pipeline.get_by_name("motiondetect")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
@@ -227,6 +417,7 @@ class Display:
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
+        self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
@@ -243,85 +434,64 @@ class Display:
                 source_bin.get_by_name("padforcer").src_pads().next()))
         return source_bin
 
-    def wait_for_match(self, image, directory,
-                       timeout_secs=10, consecutive_matches=1,
-                       noise_threshold=0.16):
-        """Wait for a match of `image` in the source video stream.
+    def capture_screenshot(self):
+        return self.screenshot.get_property("last-buffer")
 
-        "consecutive_matches" enables to wait for several consecutive frames
-        with a match found at the same x,y position.
+    def detect(self, element_name, params, timeout_secs):
+        """Generator that yields the messages emitted by the named gstreamer
+        element configured with the parameters `params`.
 
-        "timeout_secs" is in seconds elapsed, as reported by the video stream.
+        "element_name" is the name of the gstreamer element as specified in the
+        pipeline. The name must be the same in the pipeline and in the messages
+        returned by gstreamer.
 
-        "noise_threshold" is a threshold used to confirm a potential match.
+        "params" is a dictionary of parameters to setup the element. The
+        original parameters will be restored at the end of the call.
+
+        "timeout_secs" is in seconds elapsed, from the method call. Note that
+        stopping iterating also enables to interrupt the method.
+
+        For every frame processed, a tuple is returned: (message, screenshot).
         """
 
-        if os.path.isabs(image):
-            template = image
-        else:
-            # Image is relative to the script's own directory
-            template = os.path.abspath(os.path.join(directory, image))
-            if not os.path.isfile(template):
-                # Fall back to image from cwd, for convenience of the selftests
-                template = os.path.abspath(image)
+        element = self.pipeline.get_by_name(element_name)
 
-        self.templatematch.props.template = template
-        self.templatematch.props.noiseThreshold = noise_threshold
-        self.match_count, self.last_x, self.last_y = 0, 0, 0
-        self.consecutive_matches = consecutive_matches
+        params_backup = {}
+        for key in params.keys():
+            params_backup[key] = getattr(element.props, key)
 
-        debug("Searching for " + template)
-        self.bus.connect("message::element", self.on_match)
-        with GObjectTimeout(timeout_secs, self.on_timeout, self.on_match) as t:
-            self.test_timeout = t
-            gtk.main()
-            if self.match_count == self.consecutive_matches:
-                debug("MATCHED " + template)
-                return
-            else:
-                buf = self.screenshot.get_property("last-buffer")
-                raise MatchTimeout(buf, template, timeout_secs)
+        try:
+            for key in params.keys():
+                setattr(element.props, key, params[key])
 
-    def wait_for_motion(self, directory,
-                        timeout_secs=10, consecutive_frames=10, mask=None):
-        """Wait for motion in the source video stream."""
+            # Timeout after 5s in case no messages are received on the bus.
+            # This happens when starting a new instance of stbt when the
+            # Hauppauge HDPVR capture device is stopping.
+            with GObjectTimeout(timeout_secs=5, handler=self.on_timeout) as t:
+                self.test_timeout = t
 
-        self.motiondetect.props.enabled = True
-        if mask:
-            if os.path.isabs(mask):
-                mask_path = mask
-            else:
-                # Mask is relative to the script's own directory
-                mask_path = os.path.abspath(os.path.join(directory, mask))
-                if not os.path.isfile(mask_path):
-                    # Fall back to mask from cwd, for convenience of selftests
-                    mask_path = os.path.abspath(mask)
-            if not os.path.isfile(mask_path):
-                sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
-                sys.exit(1)
-            debug("Using mask %s" % (mask_path))
-            self.motiondetect.props.mask = mask_path
+                start_timestamp = None
+                for message in MessageIterator(self.bus, "message::element"):
+                    st = message.structure
+                    if st.get_name() == element_name:
+                        buf = self.screenshot.get_property("last-buffer")
+                        if not buf:
+                            continue
 
-        self.consecutive_frames = consecutive_frames
-        self.consecutive_frames_count = 0
+                        if not start_timestamp:
+                            start_timestamp = buf.timestamp
+                        if (buf.timestamp - start_timestamp >
+                            timeout_secs * 1000000000):
+                            return
 
-        debug("Waiting for %d consecutive frames with motion"
-                % (consecutive_frames))
-        self.bus.connect("message::element", self.on_motion)
-        with GObjectTimeout(timeout_secs,
-                            self.on_timeout, self.on_motion) as t:
-            self.test_timeout = t
-            gtk.main()
-            if self.consecutive_frames_count == self.consecutive_frames:
-                debug("Motion detected.")
-                return
-            else:
-                buf = self.screenshot.get_property("last-buffer")
-                raise MotionTimeout(buf, mask, timeout_secs)
+                        yield (st, buf)
 
-    def on_timeout(self, handler):
+        finally:
+            for key in params.keys():
+                setattr(element.props, key, params_backup[key])
+
+    def on_timeout(self):
         debug("Timed out")
-        self.bus.disconnect_by_func(handler)
         gtk.main_quit()
         return False  # stop the timeout from running again
 
@@ -340,58 +510,12 @@ class Display:
             sys.stderr.write("Error: %s\n" % err.message)
             sys.exit(1)
 
-    def on_match(self, bus, message):
-        st = message.structure
-        if st.get_name() == "template_match":
-
-            buf = self.screenshot.get_property("last-buffer")
-            if not buf:
-                return
-
-            matched = st["match"]
-            debug("%s %d found at %d,%d (last: %d,%d) with dimensions "
-                  "%dx%d. 1st pass: %d%%. Timestamp: %d."
-                  % ("Match" if matched else "Weak match",
-                     self.match_count,
-                     st["x"], st["y"], self.last_x, self.last_y,
-                     st["width"], st["height"], 100 * st["first_pass_result"],
-                     buf.timestamp))
-
-            if matched and (
-                    self.match_count == 0 or
-                    (st["x"], st["y"]) == (self.last_x, self.last_y)):
-                self.match_count += 1
-            else:
-                self.match_count = 0
-            self.last_x, self.last_y = st["x"], st["y"]
-
-            if self.match_count == self.consecutive_matches:
-                self.templatematch.props.template = None
-                self.bus.disconnect_by_func(self.on_match)
-                gtk.main_quit()
-
-    def on_motion(self, bus, message):
-        st = message.structure
-        if st.get_name() == "motiondetect":
-            buf = self.screenshot.get_property("last-buffer")
-            if not buf:
-                return
-
-            has_motion = st["has_motion"]
-            if has_motion:
-                self.consecutive_frames_count += 1
-                debug("Motion detected. Timestamp: %d." % (buf.timestamp))
-            else:
-                self.consecutive_frames_count = 0
-                debug("No Motion detected. Timestamp: %d." % (buf.timestamp))
-
-            if self.consecutive_frames_count == self.consecutive_frames:
-                self.motiondetect.props.mask = None
-                self.motiondetect.enabled = False
-                self.bus.disconnect_by_func(self.on_motion)
-                gtk.main_quit()
-
     def on_underrun(self, element):
+        # Cancel test_timeout as messages are obviously received on the bus.
+        if self.test_timeout:
+            self.test_timeout.cancel()
+            self.test_timeout = None
+
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
@@ -400,6 +524,11 @@ class Display:
             self.underrun_timeout.start()
 
     def on_running(self, element):
+        # Cancel test_timeout as messages are obviously received on the bus.
+        if self.test_timeout:
+            self.test_timeout.cancel()
+            self.test_timeout = None
+
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
             self.successive_underruns = 0
@@ -409,30 +538,30 @@ class Display:
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
-
         self.successive_underruns += 1
-        if self.successive_underruns <= 3:
-            self.test_timeout.cancel()
-            gst.element_unlink_many(self.source_bin, self.sink_bin)
-            self.source_bin.set_state(gst.STATE_NULL)
-            self.sink_bin.set_state(gst.STATE_READY)
-            self.pipeline.remove(self.source_bin)
-            self.source_bin = None
-            debug("Attempting to recover from video loss: "
-                  "Stopping source pipeline and waiting 5s...")
-            time.sleep(5)
+        if self.successive_underruns > 3:
+            sys.stderr.write("Error: too many underrun.\n")
+            sys.exit(1)
 
-            debug("Restarting source pipeline...")
-            self.source_bin = self.create_source_bin()
-            self.pipeline.add(self.source_bin)
-            gst.element_link_many(self.source_bin, self.sink_bin)
-            self.source_bin.set_state(gst.STATE_PLAYING)
-            self.pipeline.set_state(gst.STATE_PLAYING)
-            debug("Restarted source pipeline")
+        gst.element_unlink_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_NULL)
+        self.sink_bin.set_state(gst.STATE_READY)
+        self.pipeline.remove(self.source_bin)
+        self.source_bin = None
+        debug("Attempting to recover from video loss: "
+              "Stopping source pipeline and waiting 5s...")
+        time.sleep(5)
 
-            self.underrun_timeout.start()
+        debug("Restarting source pipeline...")
+        self.source_bin = self.create_source_bin()
+        self.pipeline.add(self.source_bin)
+        gst.element_link_many(self.source_bin, self.sink_bin)
+        self.source_bin.set_state(gst.STATE_PLAYING)
+        self.pipeline.set_state(gst.STATE_PLAYING)
+        debug("Restarted source pipeline")
 
-            self.test_timeout.start()
+        self.underrun_timeout.start()
+
         return False  # stop the timeout from running again
 
     def teardown(self):
