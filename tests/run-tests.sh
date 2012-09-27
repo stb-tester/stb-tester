@@ -72,6 +72,7 @@ if [ $# -eq 0 ]; then
     run test_detect_match_reports_no_match &&
     run test_detect_match_times_out &&
     run test_detect_match_times_out_during_yield &&
+    run test_detect_match_changing_template_is_not_racy &&
     run test_detect_match_example_press_and_wait_for_match &&
     run test_detect_motion_reports_motion &&
     run test_detect_motion_reports_valid_timestamp &&
@@ -79,6 +80,7 @@ if [ $# -eq 0 ]; then
     run test_detect_motion_times_out &&
     run test_detect_motion_times_out_during_yield &&
     run test_detect_motion_changing_mask &&
+    run test_detect_motion_changing_mask_is_not_racy &&
     run test_detect_motion_example_press_and_wait_for_no_motion &&
     run test_precondition_script &&
 

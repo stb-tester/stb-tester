@@ -181,6 +181,32 @@ test_detect_match_times_out_during_yield() {
     [ $ret -ne $timedout -a $ret -eq 0 ]
 }
 
+test_detect_match_changing_template_is_not_racy() {
+    # This test can seem a bit complicated, but the race occured even with:
+    #   # Supposed to match and matches
+    #   wait_for_match("videotestsrc-bw.png", timeout_secs=1)
+    #   # Not supposed to match but matches intermittently
+    #   wait_for_match("videotestsrc-bw-flipped.png", timeout_secs=1)
+    cat > "$scratchdir/test.py" <<-EOF
+	for match_result in detect_match("videotestsrc-bw.png", timeout_secs=1):
+	    if not match_result.match:
+	        raise Exception("Match not reported.")
+	    # Leave time for another frame to be processed with this template
+	    import time
+	    time.sleep(1.0) # make sure the test fail (0.1s also works)
+	    break
+	for match_result in detect_match("videotestsrc-bw-flipped.png"):
+	    # Not supposed to match
+	    if not match_result.match:
+	        import sys
+	        sys.exit(0)
+	    else:
+	        raise Exception("Wrongly reported a match: race condition.")
+	raise Exception("Timeout occured without any result reported.")
+	EOF
+    stbt-run -v "$scratchdir/test.py"
+}
+
 test_detect_match_example_press_and_wait_for_match() {
     cat > "$scratchdir/test.py" <<-EOF
 	key_sent = False
@@ -273,6 +299,27 @@ test_detect_motion_changing_mask() {
 	    if not motion_result.motion:
 	        import sys
 	        sys.exit(0)
+	raise Exception("Timeout occured without any result reported.")
+	EOF
+    stbt-run -v "$scratchdir/test.py"
+}
+
+test_detect_motion_changing_mask_is_not_racy() {
+    cat > "$scratchdir/test.py" <<-EOF
+	for motion_result in detect_motion(mask="videotestsrc-mask-video.png"):
+	    if not motion_result.motion:
+	        raise Exception("Motion not reported.")
+	    # Leave time for another frame to be processed with this mask
+	    import time
+	    time.sleep(1.0) # make sure the test fail (0.1s also works)
+	    break
+	for motion_result in detect_motion(mask="videotestsrc-mask-no-video.png"):
+	    # Not supposed to detect motion
+	    if not motion_result.motion:
+	        import sys
+	        sys.exit(0)
+	    else:
+	        raise Exception("Wrongly reported motion: race condition.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt-run -v "$scratchdir/test.py"
