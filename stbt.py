@@ -477,6 +477,11 @@ class Display:
 
                 start_timestamp = None
                 for message in MessageIterator(self.bus, "message::element"):
+                    # Cancel test_timeout as messages are obviously received.
+                    if self.test_timeout:
+                        self.test_timeout.cancel()
+                        self.test_timeout = None
+
                     st = message.structure
                     if st.get_name() == element_name:
                         buf = self.screenshot.get_property("last-buffer")
