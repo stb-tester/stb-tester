@@ -351,7 +351,9 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
       }
 
       GstStructure *s = gst_structure_new ("motiondetect",
-          "has_motion", G_TYPE_BOOLEAN, result, NULL);
+          "has_motion", G_TYPE_BOOLEAN, result,
+          "masked", G_TYPE_BOOLEAN, (filter->mask != NULL),
+          "mask_path", G_TYPE_STRING, filter->mask, NULL);
       m = gst_message_new_element (GST_OBJECT (filter), s);
     }
 
@@ -419,10 +421,10 @@ gst_motiondetect_load_mask (StbtMotionDetect * filter, char* mask)
           ("While attempting to load mask '%s'", mask));
       GST_WARNING ("Couldn't load mask image: %s. error: %s",
           mask, g_strerror (errno));
+      g_free (mask);
+      mask = NULL;
     }
     gst_motiondetect_check_mask_compability(filter);
-    g_free (mask);
-    mask = NULL;
   }
 
   GST_OBJECT_LOCK(filter);

@@ -414,6 +414,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
         "width", G_TYPE_UINT, filter->cvTemplateImage->width,
         "height", G_TYPE_UINT, filter->cvTemplateImage->height,
         "first_pass_result", G_TYPE_DOUBLE, best_res,
+        "template_path", G_TYPE_STRING, filter->template,
         "match", G_TYPE_BOOLEAN, matched, NULL);
 
     m = gst_message_new_element (GST_OBJECT (filter), s);

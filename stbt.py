@@ -85,14 +85,16 @@ def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
         "noiseThreshold": noise_threshold}
     debug("Searching for " + template)
     for message, buf in display.detect("template_match", params, timeout_secs):
-        result = MatchResult(timestamp=buf.timestamp,
-                             match=message["match"],
-                             position=Position(message["x"], message["y"]),
-                             first_pass_result=message["first_pass_result"])
-        debug("%s found: %s" % (
-              "Match" if result.match else "Weak match", str(result)))
+        # Only delivers messages that were generated with the right template.
+        if message["template_path"] == template:
+            result = MatchResult(timestamp=buf.timestamp,
+                match=message["match"],
+                position=Position(message["x"], message["y"]),
+                first_pass_result=message["first_pass_result"])
+            debug("%s found: %s" % (
+                  "Match" if result.match else "Weak match", str(result)))
 
-        yield result
+            yield result
 
 
 """
@@ -140,12 +142,15 @@ def detect_motion(directory=None, timeout_secs=10, mask=None):
         params["mask"] = mask_path
         debug("Using mask %s" % (mask_path))
     for message, buf in display.detect("motiondetect", params, timeout_secs):
-        result = MotionResult(timestamp=buf.timestamp,
-                              motion=message["has_motion"])
-        debug("%s detected. Timestamp: %d." %
-              ("Motion" if result.motion else "No motion", result.timestamp))
+        # Only delivers messages that were generated with the right mask.
+        if (mask and message["masked"] and message["mask_path"] == mask_path) \
+                or (not mask and not message["masked"]):
+            result = MotionResult(timestamp=buf.timestamp,
+                                  motion=message["has_motion"])
+            debug("%s detected. Timestamp: %d." %
+                ("Motion" if result.motion else "No motion", result.timestamp))
 
-        yield result
+            yield result
 
 
 def wait_for_match(image, directory=None, timeout_secs=10,
