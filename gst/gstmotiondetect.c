@@ -343,11 +343,15 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
       if (filter->debugDirectory) {
         if (result) {
           gst_motiondetect_log_image (filter->cvReferenceImageGray, 
-              filter->debugDirectory, frameNo, "absdiff_motion.png");
+              filter->debugDirectory, frameNo,
+              "absdiff_not_masked_motion.png");
         } else {
           gst_motiondetect_log_image (filter->cvReferenceImageGray, 
-              filter->debugDirectory, frameNo, "absdiff_no_motion.png");
+              filter->debugDirectory, frameNo,
+              "absdiff_not_masked_no_motion.png");
         }
+        gst_motiondetect_log_image (filter->cvMaskImage,
+              filter->debugDirectory, frameNo, "mask.png");
       }
 
       GstStructure *s = gst_structure_new ("motiondetect",
