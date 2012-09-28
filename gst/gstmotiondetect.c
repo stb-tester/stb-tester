@@ -58,6 +58,7 @@ enum
     PROP_ENABLED,
     PROP_DEBUG_DIRECTORY,
     PROP_MASK,
+    PROP_DISPLAY,
 };
 
 GST_BOILERPLATE (StbtMotionDetect, gst_motiondetect, GstBaseTransform,
@@ -124,6 +125,10 @@ gst_motiondetect_class_init (StbtMotionDetectClass * klass)
   g_object_class_install_property (gobject_class, PROP_MASK,
       g_param_spec_string ("mask", "Mask", "Filename of mask image",
           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_DISPLAY,
+      g_param_spec_boolean ("display", "Display",
+          "Sets whether detected motion should be highlighted in the output",
+          TRUE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   GST_DEBUG_CATEGORY_INIT (
       gst_motiondetect_debug, "stbt-motiondetect", 0, "Motion detection");
@@ -144,8 +149,10 @@ gst_motiondetect_init (StbtMotionDetect * filter,
   filter->cvReferenceImageGray = NULL;
   filter->cvCurrentImageGray = NULL;
   filter->cvMaskImage = NULL;
+  filter->cvInvertedMaskImage = NULL;
   filter->mask = NULL;
   filter->debugDirectory = NULL;
+  filter->display = TRUE;
 
   gst_base_transform_set_gap_aware (GST_BASE_TRANSFORM_CAST (filter), TRUE);
 }
@@ -167,6 +174,9 @@ gst_motiondetect_finalize (GObject * object)
   }
   if (filter->cvMaskImage) {
     cvReleaseImage (&filter->cvMaskImage);
+  }
+  if (filter->cvInvertedMaskImage) {
+    cvReleaseImage (&filter->cvInvertedMaskImage);
   }
   if (filter->mask) {
     g_free(filter->mask);
@@ -199,6 +209,11 @@ gst_motiondetect_set_property (GObject * object, guint prop_id,
     case PROP_MASK:
       gst_motiondetect_load_mask (filter, g_value_dup_string (value));
       break;
+    case PROP_DISPLAY:
+      GST_OBJECT_LOCK(filter);
+      filter->display = g_value_get_boolean (value);
+      GST_OBJECT_UNLOCK(filter);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -220,6 +235,9 @@ gst_motiondetect_get_property (GObject * object, guint prop_id,
       break;
     case PROP_MASK:
       g_value_set_string (value, filter->mask);
+      break;
+    case PROP_DISPLAY:
+      g_value_set_boolean (value, filter->display);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -359,6 +377,16 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
           "masked", G_TYPE_BOOLEAN, (filter->mask != NULL),
           "mask_path", G_TYPE_STRING, filter->mask, NULL);
       m = gst_message_new_element (GST_OBJECT (filter), s);
+
+      if (filter->display) {
+        buf = gst_buffer_make_writable (buf);
+        cvSubS (filter->cvCurrentImage, CV_RGB(100, 100, 100),
+            filter->cvCurrentImage, filter->cvInvertedMaskImage);
+        if (result) {
+          cvAddS (filter->cvCurrentImage, CV_RGB(50, 0, 0),
+              filter->cvCurrentImage, filter->cvMaskImage);
+        }
+      }
     }
 
     referenceImageGrayTmp = filter->cvReferenceImageGray;
@@ -436,6 +464,15 @@ gst_motiondetect_load_mask (StbtMotionDetect * filter, char* mask)
   filter->mask = mask;
   oldMaskImage = filter->cvMaskImage;
   filter->cvMaskImage = newMaskImage;
+
+  if (filter->cvInvertedMaskImage) {
+    cvReleaseImage (&filter->cvInvertedMaskImage);
+    filter->cvInvertedMaskImage = NULL;
+  }
+  if (filter->cvMaskImage) {
+    filter->cvInvertedMaskImage = cvCloneImage (filter->cvMaskImage);
+    cvNot(filter->cvMaskImage, filter->cvInvertedMaskImage);
+  }
   GST_OBJECT_UNLOCK(filter);
 
   cvReleaseImage (&oldMaskImage);

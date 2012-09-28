@@ -57,8 +57,10 @@ struct _StbtMotionDetect {
   int state;
   IplImage *cvCurrentImage;
   IplImage *cvReferenceImageGray, *cvCurrentImageGray, *cvMaskImage;
+  IplImage *cvInvertedMaskImage;
   char *mask;
   char *debugDirectory;
+  gboolean display;
 };
 
 struct _StbtMotionDetectClass {
