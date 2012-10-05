@@ -188,8 +188,12 @@ def wait_for_match(image, directory=None, timeout_secs=10,
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
-def press_until_match(key, image, interval_secs=3, noise_threshold=0.16,
-        max_presses=10):
+def press_until_match(key, image,
+        directory=None, interval_secs=3, noise_threshold=0.16, max_presses=10):
+
+    if directory == None:
+        directory = _caller_dir()
+
     i = 0
     while True:
         try:
