@@ -85,7 +85,7 @@ def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
         "noiseThreshold": noise_threshold}
     debug("Searching for " + template)
     for message, buf in display.detect("template_match", params, timeout_secs):
-        # Only delivers messages that were generated with the right template.
+        # Discard messages generated from previous call with different template
         if message["template_path"] == template:
             result = MatchResult(timestamp=buf.timestamp,
                 match=message["match"],
@@ -142,7 +142,7 @@ def detect_motion(directory=None, timeout_secs=10, mask=None):
         params["mask"] = mask_path
         debug("Using mask %s" % (mask_path))
     for message, buf in display.detect("motiondetect", params, timeout_secs):
-        # Only delivers messages that were generated with the right mask.
+        # Discard messages generated from previous calls with a different mask
         if (mask and message["masked"] and message["mask_path"] == mask_path) \
                 or (not mask and not message["masked"]):
             result = MotionResult(timestamp=buf.timestamp,
