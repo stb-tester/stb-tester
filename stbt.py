@@ -3,6 +3,7 @@ import argparse
 import ConfigParser
 import Queue
 import errno
+import inspect
 import os
 import re
 import socket
@@ -51,12 +52,9 @@ MatchResult = namedtuple('MatchResult',
                          'timestamp match position first_pass_result')
 
 
-def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
+def detect_match(image, timeout_secs=10, noise_threshold=0.16):
     """Generator that yields the sequence of frames where `image` was or was
     not matching in the source video stream.
-
-    "directory" is the directory where to look for the template image. It
-    defaults to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. At the end of
     the timeout, the method call will return. Note that stopping iterating also
@@ -68,32 +66,23 @@ def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
     For every frame processed, a MatchResult is returned.
     """
 
-    if directory == None:
-        directory = _caller_dir()
-
-    if os.path.isabs(image):
-        template = image
-    else:
-        # Image is relative to the script's own directory
-        template = os.path.abspath(os.path.join(directory, image))
-        if not os.path.isfile(template):
-            # Fall back to image from cwd, for convenience of the selftests
-            template = os.path.abspath(image)
-
     params = {
-        "template": template,
-        "noiseThreshold": noise_threshold}
-    debug("Searching for " + template)
+        "template": _find_path(image),
+        "noiseThreshold": noise_threshold,
+        }
+    debug("Searching for " + params["template"])
+    if not os.path.isfile(params["template"]):
+        raise UITestError("No such template file: %s" % image)
+
     for message, buf in display.detect("template_match", params, timeout_secs):
         # Discard messages generated from previous call with different template
-        if message["template_path"] == template:
+        if message["template_path"] == params["template"]:
             result = MatchResult(timestamp=buf.timestamp,
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
             debug("%s found: %s" % (
                   "Match" if result.match else "Weak match", str(result)))
-
             yield result
 
 
@@ -104,12 +93,9 @@ def detect_match(image, directory=None, timeout_secs=10, noise_threshold=0.16):
 MotionResult = namedtuple('MotionResult', 'timestamp motion')
 
 
-def detect_motion(directory=None, timeout_secs=10, mask=None):
+def detect_motion(timeout_secs=10, mask=None):
     """Generator that yields the sequence of frames where motion was found in
     the source video stream.
-
-    "directory" is the directory where to look for the mask image. It defaults
-    to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. At the end of
     the timeout, the method call will return. Note that the caller can also
@@ -121,44 +107,29 @@ def detect_motion(directory=None, timeout_secs=10, mask=None):
     For every frame processed, a MotionResult is returned.
     """
 
-    if directory == None:
-        directory = _caller_dir()
-
-    if mask:
-        if os.path.isabs(mask):
-            mask_path = mask
-        else:
-            # Mask is relative to the script's own directory
-            mask_path = os.path.abspath(os.path.join(directory, mask))
-            if not os.path.isfile(mask_path):
-                # Fall back to mask from cwd, for convenience of selftests
-                mask_path = os.path.abspath(mask)
-        if not os.path.isfile(mask_path):
-            sys.stderr.write("Error: mask '%s' does not exist.\n" % (mask))
-            sys.exit(1)
-
+    debug("Searching for motion")
     params = {"enabled": True}
     if mask:
-        params["mask"] = mask_path
-        debug("Using mask %s" % (mask_path))
-    for message, buf in display.detect("motiondetect", params, timeout_secs):
+        params["mask"] = _find_path(mask)
+        debug("Using mask %s" % (params["mask"]))
+        if not os.path.isfile(params["mask"]):
+            debug("No such mask file: %s" % mask)
+            raise UITestError("No such mask file: %s" % mask)
+
+    for msg, buf in display.detect("motiondetect", params, timeout_secs):
         # Discard messages generated from previous calls with a different mask
-        if (mask and message["masked"] and message["mask_path"] == mask_path) \
-                or (not mask and not message["masked"]):
+        if ((mask and msg["masked"] and msg["mask_path"] == params["mask"])
+                or (not mask and not msg["masked"])):
             result = MotionResult(timestamp=buf.timestamp,
-                                  motion=message["has_motion"])
+                                  motion=msg["has_motion"])
             debug("%s detected. Timestamp: %d." %
                 ("Motion" if result.motion else "No motion", result.timestamp))
-
             yield result
 
 
-def wait_for_match(image, directory=None, timeout_secs=10,
+def wait_for_match(image, timeout_secs=10,
                    consecutive_matches=1, noise_threshold=0.16):
     """Wait for a match of `image` in the source video stream.
-
-    "directory" is the directory where to look for the template image. It
-    defaults to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. At the end of
     the timeout, a MatchTimeout exception will be raised.
@@ -169,12 +140,9 @@ def wait_for_match(image, directory=None, timeout_secs=10,
     "noise_threshold" is a threshold used to confirm a potential match.
     """
 
-    if directory == None:
-        directory = _caller_dir()
-
     match_count = 0
     last_pos = Position(0, 0)
-    for res in detect_match(image, directory, timeout_secs, noise_threshold):
+    for res in detect_match(image, timeout_secs, noise_threshold):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -189,17 +157,13 @@ def wait_for_match(image, directory=None, timeout_secs=10,
 
 
 def press_until_match(key, image,
-        directory=None, interval_secs=3, noise_threshold=0.16, max_presses=10):
-
-    if directory == None:
-        directory = _caller_dir()
+                      interval_secs=3, noise_threshold=0.16, max_presses=10):
 
     i = 0
     while True:
         try:
-            wait_for_match(
-                image, directory=_caller_dir(), timeout_secs=interval_secs,
-                noise_threshold=noise_threshold)
+            wait_for_match(image, timeout_secs=interval_secs,
+                           noise_threshold=noise_threshold)
             return
         except MatchTimeout:
             if i < max_presses:
@@ -209,12 +173,8 @@ def press_until_match(key, image,
                 raise
 
 
-def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
-                    mask=None):
+def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
     """Wait for motion in the source video stream.
-
-    "directory" is the directory where to look for the mask image. It defaults
-    to the caller script's directory.
 
     "timeout_secs" is in seconds elapsed, from the method call. At the end of
     the timeout, a MotionTimeout exception will be raised.
@@ -225,12 +185,9 @@ def wait_for_motion(directory=None, timeout_secs=10, consecutive_frames=10,
     "mask" is a black and white image that specifies which part of the image
     to process. White pixels will be used and black pixels won't be.
     """
-    if directory == None:
-        directory = _caller_dir()
-
     debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
     consecutive_frames_count = 0
-    for res in detect_motion(directory, timeout_secs, mask):
+    for res in detect_motion(timeout_secs, mask):
         if res.motion:
             consecutive_frames_count += 1
         else:
@@ -304,6 +261,10 @@ def save_frame(buf, filename):
     if msg.type == gst.MESSAGE_ERROR:
         err, dbg = msg.parse_error()
         raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
+
+
+class UITestError(Exception):
+    pass
 
 
 class UITestFailure(Exception):
@@ -847,13 +808,28 @@ def load_defaults(tool):
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
 
 
-def _caller_dir():
-    # stack()[0] is _caller_dir;
-    # stack()[1] is _caller_dir's caller "f";
-    # stack()[2] is f's caller.
-    import inspect
-    return os.path.dirname(
-        inspect.getframeinfo(inspect.stack()[2][0]).filename)
+def _find_path(image):
+    """Searches for the given filename and returns the full path.
+
+    Searches in the directory of the script that called (for example)
+    detect_match, then in the directory of that script's caller, etc.
+    """
+
+    if os.path.isabs(image):
+        return image
+
+    # stack()[0] is _find_path;
+    # stack()[1] is _find_path's caller, e.g. detect_match;
+    # stack()[2] is detect_match's caller (the user script).
+    for caller in inspect.stack()[2:]:
+        caller_image = os.path.join(
+            os.path.dirname(inspect.getframeinfo(caller[0]).filename),
+            image)
+        if os.path.isfile(caller_image):
+            return os.path.abspath(caller_image)
+
+    # Fall back to image from cwd, for convenience of the selftests
+    return os.path.abspath(image)
 
 
 def _mkdir(d):

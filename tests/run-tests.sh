@@ -19,9 +19,10 @@ run() {
     $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
-        rm -f "$scratchdir/log" "$scratchdir/gst-launch.log" \
+        rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
             "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
-            "$scratchdir/stbt.conf"
+            "$scratchdir/stbt.conf" \
+            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
         rmdir "$scratchdir"
         true
     else

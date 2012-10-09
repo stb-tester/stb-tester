@@ -39,6 +39,15 @@ test_wait_for_match_nonexistent_template() {
     [ $ret -ne $timedout -a $ret -ne 0 ]
 }
 
+test_detect_match_nonexistent_template() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import sys
+	m = detect_match("idontexist.png").next()
+	sys.exit(0 if m.match else 1)
+	EOF
+    ! stbt-run -v "$scratchdir/test.py"
+}
+
 test_press_until_match() {
     # This doesn't test that press_until_match presses repeatedly, but at least
     # it tests that press_until_match doesn't blow up completely.
@@ -62,6 +71,56 @@ test_press_until_match_searches_in_script_directory() {
 	EOF
     cp videotestsrc-checkers-8.png "$scratchdir/in-script-dir.png"
     stbt-run -v "$scratchdir/test.py"
+}
+
+test_detect_match_searches_in_script_directory() {
+    cat > "$scratchdir/test.py" <<-EOF
+	m = detect_match("in-script-dir.png").next()
+	if not m.match:
+	    raise Exception("'No match' when expecting match.")
+	EOF
+    cp videotestsrc-bw.png "$scratchdir/in-script-dir.png"
+    stbt-run -v "$scratchdir/test.py"
+}
+
+test_detect_match_searches_in_library_directory() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt_helpers
+	stbt_helpers.find()
+	EOF
+    mkdir "$scratchdir/stbt_helpers"
+    cat > "$scratchdir/stbt_helpers/__init__.py" <<-EOF
+	import stbt
+	def find():
+	    m = stbt.detect_match("in-helpers-dir.png").next()
+	    if not m.match:
+	        raise Exception("'No match' when expecting match.")
+	EOF
+    cp videotestsrc-bw.png "$scratchdir/stbt_helpers/in-helpers-dir.png"
+    PYTHONPATH="$scratchdir:$PYTHONPATH" stbt-run -v "$scratchdir/test.py"
+}
+
+test_detect_match_searches_in_caller_directory() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt_tests
+	stbt_tests.find()
+	EOF
+    mkdir "$scratchdir/stbt_tests"
+    cat > "$scratchdir/stbt_tests/__init__.py" <<-EOF
+	import stbt_helpers
+	def find():
+	    stbt_helpers.find("in-caller-dir.png")
+	EOF
+    mkdir "$scratchdir/stbt_helpers"
+    cat > "$scratchdir/stbt_helpers/__init__.py" <<-EOF
+	import stbt
+	def find(image):
+	    m = stbt.detect_match(image).next()
+	    if not m.match:
+	        raise Exception("'No match' when expecting match.")
+	EOF
+    cp videotestsrc-bw.png "$scratchdir/stbt_tests/in-caller-dir.png"
+    PYTHONPATH="$scratchdir:$PYTHONPATH" stbt-run -v "$scratchdir/test.py"
 }
 
 test_wait_for_motion() {
