@@ -3,11 +3,25 @@
 # Automated tests to test the stb-tester framework itself.
 # See SETUP TIPS in ../README.rst for further information.
 
+#/ Usage: run-tests.sh [options] [testnames...]
+#/
+#/         -l      Leave the scratch dir created in /tmp
+#/
+#/         If any test names are specified, only those test cases will be run.
+
 cd "$(dirname "$0")"
 testdir="$PWD"
 for tests in ./test-*.sh; do
     source $tests
 done
+
+while getopts "l" option; do
+    case $option in
+        l) leave_scratch_dir=true;;
+        *) grep '^#/' < "$0" | cut -c4- >&2; exit 1;; # Print usage message
+    esac
+done
+shift $(($OPTIND-1))
 
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
@@ -19,11 +33,13 @@ run() {
     $1 > "$scratchdir/log" 2>&1
     if [ $? -eq 0 ]; then
         echo "OK"
-        rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
-            "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
-            "$scratchdir/stbt.conf" \
-            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
-        rmdir "$scratchdir"
+        if [ "$leave_scratch_dir" != true ]; then
+            rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
+                "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
+                "$scratchdir/stbt.conf" \
+                "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
+            rmdir "$scratchdir"
+        fi
         true
     else
         echo "FAIL"
