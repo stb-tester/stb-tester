@@ -518,8 +518,8 @@ class Display:
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
-        if (message.src == self.templatematch and
-                err.message == "OpenCV failed to load template image"):
+        if (err.message == "OpenCV failed to load template image" or
+                err.message == "OpenCV failed to load mask image"):
             raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_underrun(self, element):
