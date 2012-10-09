@@ -302,8 +302,8 @@ def save_frame(buf, filename):
         gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
     pipeline.set_state(gst.STATE_NULL)
     if msg.type == gst.MESSAGE_ERROR:
-        (e, debug) = msg.parse_error()
-        raise RuntimeError(e.message)
+        err, dbg = msg.parse_error()
+        raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
 
 
 class UITestFailure(Exception):
@@ -512,8 +512,7 @@ class Display:
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
-        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
-        sys.exit(1)
+        raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_warning(self, bus, message):
         assert message.type == gst.MESSAGE_WARNING
@@ -521,8 +520,7 @@ class Display:
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
         if (message.src == self.templatematch and
                 err.message == "OpenCV failed to load template image"):
-            sys.stderr.write("Error: %s\n" % err.message)
-            sys.exit(1)
+            raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_underrun(self, element):
         # Cancel test_timeout as messages are obviously received on the bus.
@@ -554,8 +552,7 @@ class Display:
     def restart_source_bin(self):
         self.successive_underruns += 1
         if self.successive_underruns > 3:
-            sys.stderr.write("Error: too many underrun.\n")
-            sys.exit(1)
+            raise RuntimeError("Too many underruns.")
 
         gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_NULL)
