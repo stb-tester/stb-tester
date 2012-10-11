@@ -36,6 +36,7 @@ test_wait_for_match_nonexistent_template() {
     rm -f screenshot.png
     timeout 2 stbt-run -v "$scratchdir/test.py"
     local ret=$?
+    echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]
 }
 

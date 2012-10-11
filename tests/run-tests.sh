@@ -43,7 +43,8 @@ run() {
         true
     else
         echo "FAIL"
-        echo "See '$scratchdir/log'"
+        echo "Showing '$scratchdir/log':"
+        cat "$scratchdir/log"
         false
     fi
 }
