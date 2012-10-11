@@ -34,7 +34,7 @@ test_wait_for_match_nonexistent_template() {
 	wait_for_match("idontexist.png")
 	EOF
     rm -f screenshot.png
-    timeout 2 stbt-run -v "$scratchdir/test.py"
+    timeout 4 stbt-run -v "$scratchdir/test.py"
     local ret=$?
     echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]
@@ -145,8 +145,9 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    timeout 2 stbt-run -v "$scratchdir/test.py"
+    timeout 4 stbt-run -v "$scratchdir/test.py"
     local ret=$?
+    echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]
 }
 
@@ -238,6 +239,7 @@ test_detect_match_times_out_during_yield() {
 	EOF
     timeout 4 stbt-run -v "$scratchdir/test.py"
     local ret=$?
+    echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -eq 0 ]
 }
 
@@ -348,6 +350,7 @@ test_detect_motion_times_out_during_yield() {
 	EOF
     timeout 4 stbt-run -v "$scratchdir/test.py"
     local ret=$?
+    echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -eq 0 ]
 }
 
