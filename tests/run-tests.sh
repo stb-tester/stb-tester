@@ -5,7 +5,8 @@
 
 #/ Usage: run-tests.sh [options] [testnames...]
 #/
-#/         -l      Leave the scratch dir created in /tmp
+#/         -l      Leave the scratch dir created in /tmp.
+#/         -v      Verbose (don't suppress console output from tests).
 #/
 #/         If any test names are specified, only those test cases will be run.
 
@@ -15,9 +16,10 @@ for tests in ./test-*.sh; do
     source $tests
 done
 
-while getopts "l" option; do
+while getopts "lv" option; do
     case $option in
         l) leave_scratch_dir=true;;
+        v) verbose=true;;
         *) grep '^#/' < "$0" | cut -c4- >&2; exit 1;; # Print usage message
     esac
 done
@@ -31,22 +33,20 @@ run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     printf "$1... "
     $1 > "$scratchdir/log" 2>&1
-    if [ $? -eq 0 ]; then
-        echo "OK"
-        if [ "$leave_scratch_dir" != true ]; then
-            rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
-                "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
-                "$scratchdir/stbt.conf" \
-                "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
-            rmdir "$scratchdir"
-        fi
-        true
-    else
-        echo "FAIL"
+    local status=$?
+    [ $status -eq 0 ] && echo "OK" || echo "FAIL"
+    if [[ "$verbose" = "true" || $status -ne 0 ]]; then
         echo "Showing '$scratchdir/log':"
         cat "$scratchdir/log"
-        false
     fi
+    if [[ "$leave_scratch_dir" != "true" && $status -eq 0 ]]; then
+        rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
+            "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
+            "$scratchdir/stbt.conf" \
+            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
+        rmdir "$scratchdir"
+    fi
+    [ $status -eq 0 ]
 }
 
 # Portable timeout command. Usage: timeout <secs> <command> [<args>...]
