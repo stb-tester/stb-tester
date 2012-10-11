@@ -50,7 +50,12 @@ run() {
 }
 
 # Portable timeout command. Usage: timeout <secs> <command> [<args>...]
-timeout() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
+timeout() { perl -e \
+    'alarm shift @ARGV;
+     exec @ARGV;
+     print "timeout: command not found: @ARGV\n";
+     exit 1;' \
+    "$@"; }
 timedout=142
 
 ############################################################################
