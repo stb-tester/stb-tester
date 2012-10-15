@@ -29,7 +29,7 @@ with ArgvHider():
     pygst.require("0.10")
     import gst
     import gobject
-    import gtk  # for main loop
+    import glib
 
 
 # Functions available to stbt scripts
@@ -293,6 +293,7 @@ class ConfigurationError(Exception):
 #===========================================================================
 
 _debug_level = 0
+_mainloop = glib.MainLoop()
 
 
 def MessageIterator(bus, signal):
@@ -300,12 +301,12 @@ def MessageIterator(bus, signal):
 
     def sig(bus, message):
         queue.put(message)
-        gtk.main_quit()
+        _mainloop.quit()
     bus.connect(signal, sig)
     try:
         stop = False
         while not stop:
-            gtk.main()
+            _mainloop.run()
             # Check what interrupted the main loop (new message, error thrown)
             try:
                 item = queue.get(block=False)
@@ -467,7 +468,7 @@ class Display:
 
     def on_timeout(self):
         debug("Timed out")
-        gtk.main_quit()
+        _mainloop.quit()
         return False  # stop the timeout from running again
 
     def on_error(self, bus, message):
