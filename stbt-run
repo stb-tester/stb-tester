@@ -7,8 +7,11 @@ import stbt
 
 
 parser = stbt.argparser()
+parser.prog = 'stbt run'
+parser.description = 'Run an stb-tester test script'
 parser.add_argument('script',
     help='The test script to run (default: %(default)s)')
+parser.set_defaults(**stbt.load_defaults('run'))
 args = parser.parse_args(sys.argv[1:])
 stbt.debug("Arguments:\n" + "\n".join([
             "%s: %s" % (k, v) for k, v in args.__dict__.items()]))

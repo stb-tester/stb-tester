@@ -205,8 +205,7 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
 #===========================================================================
 
 def argparser():
-    parser = argparse.ArgumentParser(
-        prog='stbt run', description='Run an stb-tester test script')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--control',
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument('--source-pipeline',
@@ -228,7 +227,6 @@ def argparser():
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
-    parser.set_defaults(**load_defaults('run'))
     return parser
 
 

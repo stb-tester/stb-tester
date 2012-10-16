@@ -13,18 +13,11 @@ import sys
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(
-        prog='stbt record', description='Create an stb-tester test script')
-    parser.add_argument('--control',
-        help='The remote control to control the stb (default: %(default)s)')
+    parser = stbt.argparser()
+    parser.prog = 'stbt record'
+    parser.description = 'Create an stb-tester test script'
     parser.add_argument('--control-recorder',
         help='The source of remote control keypresses (default: %(default)s)')
-    parser.add_argument('--source-pipeline',
-        help='A gstreamer pipeline to use for A/V input (default: '
-             '%(default)s)')
-    parser.add_argument('--sink-pipeline',
-        help='A gstreamer pipeline to use for video output '
-             '(default: %(default)s)')
     parser.add_argument('-o', '--output-file',
         help='The filename of the generated script (default: %(default)s)')
     parser.set_defaults(**stbt.load_defaults('record'))
