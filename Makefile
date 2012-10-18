@@ -97,6 +97,7 @@ README.rst: stbt.py api-doc.sh
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so
 
+check: all
 check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py
