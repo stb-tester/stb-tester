@@ -251,19 +251,93 @@ respectively, are actually python scripts, so you can use the full power of
 python. Don't get too carried away, though; aim for simplicity, readability,
 and maintainability.
 
-The following functions are available (the "keyword arguments" like
-`timeout_secs` are optional, and default to the value shown)::
+The following functions are available:
 
-  press("KEY NAME")
+.. <start python docs>
 
-  wait_for_match("filename.png", timeout_secs=10, consecutive_matches=1,
-                 noise_threshold=0.16)
+press(key)
+    Send the specified key-press to the system under test.
 
-  press_until_match("KEY NAME", "filename.png",
-                    interval_secs=3, noise_threshold=0.16, max_presses=10)
+    The mechanism used to send the key-press depends on what you've configured
+    with `--control`.
 
-  wait_for_motion(mask=None, # Filename of mask image
-                  timeout_secs=10, consecutive_frames=10)
+    `key` is a string. The allowed values depend on the control you're using:
+    If that's lirc, then `key` is a key name from your lirc config file.
+
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=0.16)
+    Search for `image` in the source video stream.
+
+    Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
+
+    `consecutive_matches` forces this function to wait for several consecutive
+    frames with a match found at the same x,y position.
+
+    Increase `noise_threshold` to avoid false negatives, at the risk of
+    increasing false positives (a value of 1.0 will report a match every time);
+    increase `consecutive_matches` to avoid false positives due to noise. But
+    please let us know if you are having trouble with image matches, so that we
+    can improve the matching algorithm.
+
+press_until_match(key, image, interval_secs=3, noise_threshold=0.16, max_presses=10)
+    Calls `press` as many times as necessary to find the specified `image`.
+
+    Raises `MatchTimeout` if no match is found after `max_presses` times.
+
+    `interval_secs` is the number of seconds to wait for a match before
+    pressing again.
+
+wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None)
+    Search for motion in the source video stream.
+
+    Raises `MotionTimeout` if no motion is detected after `timeout_secs`
+    seconds.
+
+    Considers the video stream to have motion if there were differences between
+    10 consecutive frames (or the number specified with `consecutive_frames`).
+
+    `mask` is a black and white image that specifies which part of the image
+    to search for motion. White pixels select the area to search; black pixels
+    the area to ignore.
+
+detect_match(image, timeout_secs=10, noise_threshold=0.16)
+    Generator that yields a sequence of one `MatchResult` for each frame in
+    the source video stream.
+
+    Returns after `timeout_secs` seconds. (Note that the caller can also choose
+    to stop iterating over this function's results at any time.)
+
+    `noise_threshold` is a parameter used by the templatematch algorithm.
+    Increase `noise_threshold` to avoid false negatives, at the risk of
+    increasing false positives (a value of 1.0 will report a match every time).
+
+detect_motion(timeout_secs=10, mask=None)
+    Generator that yields a sequence of one `MotionResult` for each frame
+    in the source video stream.
+
+    Returns after `timeout_secs` seconds. (Note that the caller can also choose
+    to stop iterating over this function's results at any time.)
+
+    `mask` is a black and white image that specifies which part of the image
+    to search for motion. White pixels select the area to search; black pixels
+    the area to ignore.
+
+class MatchResult
+    * `timestamp`: Video stream timestamp.
+    * `match`: Boolean result.
+    * `position`: `Position` of the match.
+    * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
+      from the first pass of the two-pass templatematch algorithm.
+
+class Position
+    * `x` and `y`: Integer coordinates from the top left corner of the video
+      frame.
+
+class MotionResult
+    * `timestamp`: Video stream timestamp.
+    * `motion`: Boolean result.
+
+
+.. <end python docs>
 
 
 TEST SCRIPT BEST PRACTICES

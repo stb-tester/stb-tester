@@ -35,35 +35,48 @@ with ArgvHider():
 # Functions available to stbt scripts
 #===========================================================================
 
-def press(*args, **keywords):
-    return control.press(*args, **keywords)
+def press(key):
+    """Send the specified key-press to the system under test.
+
+    The mechanism used to send the key-press depends on what you've configured
+    with `--control`.
+
+    `key` is a string. The allowed values depend on the control you're using:
+    If that's lirc, then `key` is a key name from your lirc config file.
+    """
+    return control.press(key)
 
 
-Position = namedtuple('Position', 'x y')
+class Position(namedtuple('Position', 'x y')):
+    """
+    * `x` and `y`: Integer coordinates from the top left corner of the video
+      frame.
+    """
+    pass
 
 
-"""
-"timestamp": video stream timestamp,
-"match": boolean result,
-"position": position of the match,
-"first_pass_result": value between 0 (poor) and 1 (excellent match).
-"""
-MatchResult = namedtuple('MatchResult',
-                         'timestamp match position first_pass_result')
+class MatchResult(
+    namedtuple('MatchResult', 'timestamp match position first_pass_result')):
+    """
+    * `timestamp`: Video stream timestamp.
+    * `match`: Boolean result.
+    * `position`: `Position` of the match.
+    * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
+      from the first pass of the two-pass templatematch algorithm.
+    """
+    pass
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=0.16):
-    """Generator that yields the sequence of frames where `image` was or was
-    not matching in the source video stream.
+    """Generator that yields a sequence of one `MatchResult` for each frame in
+    the source video stream.
 
-    "timeout_secs" is in seconds elapsed, from the method call. At the end of
-    the timeout, the method call will return. Note that stopping iterating also
-    enables to interrupt the method.
+    Returns after `timeout_secs` seconds. (Note that the caller can also choose
+    to stop iterating over this function's results at any time.)
 
-    "noise_threshold" is a threshold used to confirm a potential match by
-    the gstreamer element stbt-templatematch.
-
-    For every frame processed, a MatchResult is returned.
+    `noise_threshold` is a parameter used by the templatematch algorithm.
+    Increase `noise_threshold` to avoid false negatives, at the risk of
+    increasing false positives (a value of 1.0 will report a match every time).
     """
 
     params = {
@@ -86,25 +99,24 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
             yield result
 
 
-"""
-"timestamp": video stream timestamp,
-"motion": boolean result.
-"""
-MotionResult = namedtuple('MotionResult', 'timestamp motion')
+class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
+    """
+    * `timestamp`: Video stream timestamp.
+    * `motion`: Boolean result.
+    """
+    pass
 
 
 def detect_motion(timeout_secs=10, mask=None):
-    """Generator that yields the sequence of frames where motion was found in
-    the source video stream.
+    """Generator that yields a sequence of one `MotionResult` for each frame
+    in the source video stream.
 
-    "timeout_secs" is in seconds elapsed, from the method call. At the end of
-    the timeout, the method call will return. Note that the caller can also
-    choose to stop iterating over this method's results.
+    Returns after `timeout_secs` seconds. (Note that the caller can also choose
+    to stop iterating over this function's results at any time.)
 
-    "mask" is a black and white image that specifies which part of the image
-    to process. White pixels will be used and black pixels won't be.
-
-    For every frame processed, a MotionResult is returned.
+    `mask` is a black and white image that specifies which part of the image
+    to search for motion. White pixels select the area to search; black pixels
+    the area to ignore.
     """
 
     debug("Searching for motion")
@@ -129,15 +141,18 @@ def detect_motion(timeout_secs=10, mask=None):
 
 def wait_for_match(image, timeout_secs=10,
                    consecutive_matches=1, noise_threshold=0.16):
-    """Wait for a match of `image` in the source video stream.
+    """Search for `image` in the source video stream.
 
-    "timeout_secs" is in seconds elapsed, from the method call. At the end of
-    the timeout, a MatchTimeout exception will be raised.
+    Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
-    "consecutive_matches" enables to wait for several consecutive frames
-    with a match found at the same x,y position.
+    `consecutive_matches` forces this function to wait for several consecutive
+    frames with a match found at the same x,y position.
 
-    "noise_threshold" is a threshold used to confirm a potential match.
+    Increase `noise_threshold` to avoid false negatives, at the risk of
+    increasing false positives (a value of 1.0 will report a match every time);
+    increase `consecutive_matches` to avoid false positives due to noise. But
+    please let us know if you are having trouble with image matches, so that we
+    can improve the matching algorithm.
     """
 
     match_count = 0
@@ -158,7 +173,13 @@ def wait_for_match(image, timeout_secs=10,
 
 def press_until_match(key, image,
                       interval_secs=3, noise_threshold=0.16, max_presses=10):
+    """Calls `press` as many times as necessary to find the specified `image`.
 
+    Raises `MatchTimeout` if no match is found after `max_presses` times.
+
+    `interval_secs` is the number of seconds to wait for a match before
+    pressing again.
+    """
     i = 0
     while True:
         try:
@@ -174,16 +195,17 @@ def press_until_match(key, image,
 
 
 def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
-    """Wait for motion in the source video stream.
+    """Search for motion in the source video stream.
 
-    "timeout_secs" is in seconds elapsed, from the method call. At the end of
-    the timeout, a MotionTimeout exception will be raised.
+    Raises `MotionTimeout` if no motion is detected after `timeout_secs`
+    seconds.
 
-    "consecutive_frames" enables to wait for several consecutive frames with
-    motion detected.
+    Considers the video stream to have motion if there were differences between
+    10 consecutive frames (or the number specified with `consecutive_frames`).
 
-    "mask" is a black and white image that specifies which part of the image
-    to process. White pixels will be used and black pixels won't be.
+    `mask` is a black and white image that specifies which part of the image
+    to search for motion. White pixels select the area to search; black pixels
+    the area to ignore.
     """
     debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
     consecutive_frames_count = 0

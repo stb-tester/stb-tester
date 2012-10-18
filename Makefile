@@ -90,6 +90,10 @@ stbt.1: README.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
 	rst2man > $@
 
+# Ensure the docs for python functions are kept in sync with the code
+README.rst: stbt.py api-doc.sh
+	./api-doc.sh $@
+
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so
 
