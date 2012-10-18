@@ -283,7 +283,7 @@ class MotionTimeout(UITestFailure):
         self.timeout_secs = timeout_secs
 
 
-class ConfigurationError(Exception):
+class ConfigurationError(UITestError):
     pass
 
 
