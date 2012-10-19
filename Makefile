@@ -38,7 +38,7 @@ OBJS += gst/gsttemplatematch.o
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
 generate_version := $(shell \
-	git describe --always --dirty > VERSION.now 2>/dev/null && \
+	GIT_DIR=.git git describe --always --dirty > VERSION.now 2>/dev/null && \
 	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
