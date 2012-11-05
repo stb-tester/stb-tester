@@ -143,6 +143,7 @@ def wait_for_match(image, timeout_secs=10,
                    consecutive_matches=1, noise_threshold=0.16):
     """Search for `image` in the source video stream.
 
+    Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
     `consecutive_matches` forces this function to wait for several consecutive
@@ -165,7 +166,7 @@ def wait_for_match(image, timeout_secs=10,
         last_pos = res.position
         if match_count == consecutive_matches:
             debug("Matched " + image)
-            return
+            return res
 
     screenshot = display.capture_screenshot()
     raise MatchTimeout(screenshot, image, timeout_secs)
@@ -175,6 +176,7 @@ def press_until_match(key, image,
                       interval_secs=3, noise_threshold=0.16, max_presses=10):
     """Calls `press` as many times as necessary to find the specified `image`.
 
+    Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `max_presses` times.
 
     `interval_secs` is the number of seconds to wait for a match before
@@ -183,9 +185,8 @@ def press_until_match(key, image,
     i = 0
     while True:
         try:
-            wait_for_match(image, timeout_secs=interval_secs,
-                           noise_threshold=noise_threshold)
-            return
+            return wait_for_match(image, timeout_secs=interval_secs,
+                                  noise_threshold=noise_threshold)
         except MatchTimeout:
             if i < max_presses:
                 press(key)
@@ -197,6 +198,7 @@ def press_until_match(key, image,
 def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
     """Search for motion in the source video stream.
 
+    Returns `MotionResult` when motion is detected.
     Raises `MotionTimeout` if no motion is detected after `timeout_secs`
     seconds.
 
@@ -216,7 +218,7 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
             consecutive_frames_count = 0
         if consecutive_frames_count == consecutive_frames:
             debug("Motion detected.")
-            return
+            return res
 
     screenshot = display.capture_screenshot()
     raise MotionTimeout(screenshot, mask, timeout_secs)
