@@ -339,6 +339,24 @@ class MotionResult
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
 
+class MatchTimeout(UITestFailure)
+    * `screenshot`: A GStreamer frame from the source video when the search
+      for the expected image timed out.
+    * `expected`: Filename of the image that was being searched for.
+    * `timeout_secs`: Number of seconds that the image was searched for.
+
+class MotionTimeout(UITestFailure)
+    * `screenshot`: A GStreamer frame from the source video when the search
+      for motion timed out.
+    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
+    * `timeout_secs`: Number of seconds that motion was searched for.
+
+class UITestFailure(Exception)
+    The test failed because the system under test didn't behave as expected.
+
+class UITestError(Exception)
+    The test script had an unrecoverable error.
+
 
 .. <end python docs>
 

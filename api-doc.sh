@@ -18,8 +18,15 @@ doc() {
     # stbt.Position = class Position(Position)
     #  |  `x` and `y`: Integer coordinates from the top left corner.
     #  |  
-    #  |  __dict__
-    #  |      dictionary for instance variables ...
+    #  |  Method resolution order:
+    #  ...
+
+    # $ pydoc stbt.UITestError
+    # stbt.UITestError = class UITestError(exceptions.Exception)
+    #  |  The test script had an unrecoverable error.
+    #  |  
+    #  |  Method resolution order:
+    #  ...
 
     pydoc stbt.$1 |
     awk -v f=$1 '
@@ -27,6 +34,7 @@ doc() {
         /^ \| *$/ { print ""; exit; }
         { sub("^stbt." f " = ", "");
           sub("class " f "\\(" f "\\)", "class " f);
+          sub("exceptions.Exception", "Exception");
           sub(/^ *$/, "");
           sub(/^ \|  /, "    ");
           print; }'
@@ -51,6 +59,10 @@ last_line=$(( $(line "<end python docs>" $target) - 1 ))
     doc MatchResult
     doc Position
     doc MotionResult
+    doc MatchTimeout
+    doc MotionTimeout
+    doc UITestFailure
+    doc UITestError
     sed -n "$last_line,\$ p" $target
 } > $target.new &&
 mv $target.new $target
