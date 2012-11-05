@@ -303,8 +303,8 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None)
     the area to ignore.
 
 detect_match(image, timeout_secs=10, noise_threshold=0.16)
-    Generator that yields a sequence of one `MatchResult` for each frame in
-    the source video stream.
+    Generator that yields a sequence of one `MatchResult` for each frame
+    processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
@@ -315,7 +315,7 @@ detect_match(image, timeout_secs=10, noise_threshold=0.16)
 
 detect_motion(timeout_secs=10, mask=None)
     Generator that yields a sequence of one `MotionResult` for each frame
-    in the source video stream.
+    processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
