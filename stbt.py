@@ -224,6 +224,27 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
+def save_frame(buf, filename):
+    '''Save a gstreamer buffer to the specified file in png format.'''
+    pipeline = gst.parse_launch(" ! ".join([
+                'appsrc name="src" caps="%s"' % buf.get_caps(),
+                'ffmpegcolorspace',
+                'pngenc',
+                'filesink location="%s"' % filename,
+                ]))
+    src = pipeline.get_by_name("src")
+    # This is actually a (synchronous) method call to push-buffer:
+    src.emit('push-buffer', buf)
+    src.emit('end-of-stream')
+    pipeline.set_state(gst.STATE_PLAYING)
+    msg = pipeline.get_bus().poll(
+        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
+    pipeline.set_state(gst.STATE_NULL)
+    if msg.type == gst.MESSAGE_ERROR:
+        err, dbg = msg.parse_error()
+        raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
+
+
 class UITestError(Exception):
     """The test script had an unrecoverable error."""
     pass
@@ -303,27 +324,6 @@ def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
 
 def teardown_run():
     display.teardown()
-
-
-def save_frame(buf, filename):
-    '''Save a gstreamer buffer to the specified file in png format.'''
-    pipeline = gst.parse_launch(" ! ".join([
-                'appsrc name="src" caps="%s"' % buf.get_caps(),
-                'ffmpegcolorspace',
-                'pngenc',
-                'filesink location="%s"' % filename,
-                ]))
-    src = pipeline.get_by_name("src")
-    # This is actually a (synchronous) method call to push-buffer:
-    src.emit('push-buffer', buf)
-    src.emit('end-of-stream')
-    pipeline.set_state(gst.STATE_PLAYING)
-    msg = pipeline.get_bus().poll(
-        gst.MESSAGE_ERROR | gst.MESSAGE_EOS, 25 * gst.SECOND)
-    pipeline.set_state(gst.STATE_NULL)
-    if msg.type == gst.MESSAGE_ERROR:
-        err, dbg = msg.parse_error()
-        raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
 
 
 # Internal

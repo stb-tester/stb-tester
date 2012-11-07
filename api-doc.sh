@@ -56,6 +56,7 @@ last_line=$(( $(line "<end python docs>" $target) - 1 ))
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc save_frame
     doc MatchResult
     doc Position
     doc MotionResult

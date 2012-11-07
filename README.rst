@@ -324,6 +324,9 @@ detect_motion(timeout_secs=10, mask=None)
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
+save_frame(buf, filename)
+    Save a gstreamer buffer to the specified file in png format.
+
 class MatchResult
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
