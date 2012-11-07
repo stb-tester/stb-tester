@@ -224,6 +224,47 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
+class UITestError(Exception):
+    """The test script had an unrecoverable error."""
+    pass
+
+
+class UITestFailure(Exception):
+    """The test failed because the system under test didn't behave as expected.
+    """
+    pass
+
+
+class MatchTimeout(UITestFailure):
+    """
+    * `screenshot`: A GStreamer frame from the source video when the search
+      for the expected image timed out.
+    * `expected`: Filename of the image that was being searched for.
+    * `timeout_secs`: Number of seconds that the image was searched for.
+    """
+    def __init__(self, screenshot, expected, timeout_secs):
+        self.screenshot = screenshot
+        self.expected = expected
+        self.timeout_secs = timeout_secs
+
+
+class MotionTimeout(UITestFailure):
+    """
+    * `screenshot`: A GStreamer frame from the source video when the search
+      for motion timed out.
+    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
+    * `timeout_secs`: Number of seconds that motion was searched for.
+    """
+    def __init__(self, screenshot, mask, timeout_secs):
+        self.screenshot = screenshot
+        self.mask = mask
+        self.timeout_secs = timeout_secs
+
+
+class ConfigurationError(UITestError):
+    pass
+
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
@@ -283,47 +324,6 @@ def save_frame(buf, filename):
     if msg.type == gst.MESSAGE_ERROR:
         err, dbg = msg.parse_error()
         raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
-
-
-class UITestError(Exception):
-    """The test script had an unrecoverable error."""
-    pass
-
-
-class UITestFailure(Exception):
-    """The test failed because the system under test didn't behave as expected.
-    """
-    pass
-
-
-class MatchTimeout(UITestFailure):
-    """
-    * `screenshot`: A GStreamer frame from the source video when the search
-      for the expected image timed out.
-    * `expected`: Filename of the image that was being searched for.
-    * `timeout_secs`: Number of seconds that the image was searched for.
-    """
-    def __init__(self, screenshot, expected, timeout_secs):
-        self.screenshot = screenshot
-        self.expected = expected
-        self.timeout_secs = timeout_secs
-
-
-class MotionTimeout(UITestFailure):
-    """
-    * `screenshot`: A GStreamer frame from the source video when the search
-      for motion timed out.
-    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
-    * `timeout_secs`: Number of seconds that motion was searched for.
-    """
-    def __init__(self, screenshot, mask, timeout_secs):
-        self.screenshot = screenshot
-        self.mask = mask
-        self.timeout_secs = timeout_secs
-
-
-class ConfigurationError(UITestError):
-    pass
 
 
 # Internal
