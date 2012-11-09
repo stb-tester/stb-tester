@@ -511,7 +511,8 @@ class Display:
     def on_error(self, bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
-        raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
+        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
+        sys.exit(1)
 
     def on_warning(self, bus, message):
         assert message.type == gst.MESSAGE_WARNING
@@ -519,7 +520,8 @@ class Display:
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
         if (err.message == "OpenCV failed to load template image" or
                 err.message == "OpenCV failed to load mask image"):
-            raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
+            sys.stderr.write("Error: %s\n" % err.message)
+            sys.exit(1)
 
     def on_underrun(self, element):
         # Cancel test_timeout as messages are obviously received on the bus.
@@ -551,7 +553,8 @@ class Display:
     def restart_source_bin(self):
         self.successive_underruns += 1
         if self.successive_underruns > 3:
-            raise RuntimeError("Too many underruns.")
+            sys.stderr.write("Error: Video loss. Too many underruns.\n")
+            sys.exit(1)
 
         gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_NULL)
