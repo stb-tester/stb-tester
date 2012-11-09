@@ -472,10 +472,10 @@ class Display:
             for key in params.keys():
                 setattr(element.props, key, params[key])
 
-            # Timeout after 5s in case no messages are received on the bus.
+            # Timeout after 10s in case no messages are received on the bus.
             # This happens when starting a new instance of stbt when the
-            # Hauppauge HDPVR capture device is stopping.
-            with GObjectTimeout(timeout_secs=5, handler=self.on_timeout) as t:
+            # Hauppauge HDPVR video-capture device fails to run.
+            with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
                 self.test_timeout = t
 
                 start_timestamp = None
