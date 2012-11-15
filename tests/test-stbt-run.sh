@@ -342,6 +342,13 @@ test_detect_motion_times_out() {
     stbt-run -v "$scratchdir/test.py"
 }
 
+test_detect_motion_with_debug_output_does_not_segfault_without_mask() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(timeout_secs=1)
+	EOF
+    stbt-run -vv "$scratchdir/test.py"
+}
+
 test_detect_motion_times_out_during_yield() {
     cat > "$scratchdir/test.py" <<-EOF
 	for motion_result in detect_motion(timeout_secs=1):

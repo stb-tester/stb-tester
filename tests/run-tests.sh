@@ -94,6 +94,7 @@ if [ $# -eq 0 ]; then
     run test_detect_match_reports_valid_timestamp &&
     run test_detect_match_reports_no_match &&
     run test_detect_match_times_out &&
+    run test_detect_motion_with_debug_output_does_not_segfault_without_mask &&
     run test_detect_match_times_out_during_yield &&
     run test_detect_match_changing_template_is_not_racy &&
     run test_detect_match_example_press_and_wait_for_match &&

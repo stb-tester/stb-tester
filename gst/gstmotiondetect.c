@@ -310,7 +310,7 @@ static void
 gst_motiondetect_log_image (const IplImage * image,
     const char * debugDirectory, int index, const char * filename)
 {
-  if (debugDirectory) {
+  if (image && debugDirectory) {
     char *filepath;
     asprintf (&filepath, "%s/%05d_%s", debugDirectory, index, filename);
 
