@@ -107,7 +107,7 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     pass
 
 
-def detect_motion(timeout_secs=10, mask=None):
+def detect_motion(timeout_secs=10, noise_threshold=0.16, mask=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the source video stream.
 
@@ -120,7 +120,10 @@ def detect_motion(timeout_secs=10, mask=None):
     """
 
     debug("Searching for motion")
-    params = {"enabled": True}
+    params = {
+        "enabled": True,
+        "noiseThreshold": noise_threshold,      
+        }
     if mask:
         params["mask"] = _find_path(mask)
         debug("Using mask %s" % (params["mask"]))
@@ -195,7 +198,8 @@ def press_until_match(key, image,
                 raise
 
 
-def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
+def wait_for_motion(timeout_secs=10, consecutive_frames=10, 
+        noise_threshold=0.16, mask=None):
     """Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
@@ -205,13 +209,15 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
     Considers the video stream to have motion if there were differences between
     10 consecutive frames (or the number specified with `consecutive_frames`).
 
+    `noise_threshold` is a threshold used to confirm a potential match.
+
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
     """
     debug("Waiting for %d consecutive frames with motion" % consecutive_frames)
     consecutive_frames_count = 0
-    for res in detect_motion(timeout_secs, mask):
+    for res in detect_motion(timeout_secs, noise_threshold, mask):
         if res.motion:
             consecutive_frames_count += 1
         else:
