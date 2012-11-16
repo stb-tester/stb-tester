@@ -254,6 +254,12 @@ def get_frame():
     return display.capture_screenshot()
 
 
+def debug(s):
+    """Print the given string to stderr if stbt run `--verbose` was given."""
+    if _debug_level > 0:
+        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+
+
 class UITestError(Exception):
     """The test script had an unrecoverable error."""
     pass
@@ -889,11 +895,6 @@ def _mkdir(d):
         if e.errno != errno.EEXIST:
             return False
     return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
-
-
-def debug(s):
-    if _debug_level > 0:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
 
 
 def ddebug(s):

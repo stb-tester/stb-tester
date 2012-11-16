@@ -19,7 +19,7 @@ stbt.debug("Arguments:\n" + "\n".join([
 stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
 from stbt import press, press_until_match, wait_for_match, wait_for_motion, \
     detect_match, MatchResult, Position, detect_motion, MotionResult, \
-    save_frame, get_frame, \
+    save_frame, get_frame, debug, \
     UITestError, UITestFailure, MatchTimeout, MotionTimeout, ConfigurationError
 try:
     execfile(args.script)

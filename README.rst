@@ -333,6 +333,9 @@ save_frame(buf, filename)
 get_frame()
     Get a GStreamer buffer containing the current video frame.
 
+debug(s)
+    Print the given string to stderr if stbt run `--verbose` was given.
+
 class MatchResult
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
