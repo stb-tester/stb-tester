@@ -225,7 +225,11 @@ def wait_for_motion(timeout_secs=10, consecutive_frames=10, mask=None):
 
 
 def save_frame(buf, filename):
-    '''Save a gstreamer buffer to the specified file in png format.'''
+    """Save a GStreamer buffer to the specified file in png format.
+
+    Takes a buffer `buf` obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
+    """
     pipeline = gst.parse_launch(" ! ".join([
                 'appsrc name="src" caps="%s"' % buf.get_caps(),
                 'ffmpegcolorspace',
@@ -243,6 +247,11 @@ def save_frame(buf, filename):
     if msg.type == gst.MESSAGE_ERROR:
         err, dbg = msg.parse_error()
         raise RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg))
+
+
+def get_frame():
+    """Get a GStreamer buffer containing the current video frame."""
+    return display.capture_screenshot()
 
 
 class UITestError(Exception):

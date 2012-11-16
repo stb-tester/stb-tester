@@ -43,7 +43,9 @@ run() {
         rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
             "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
             "$scratchdir/stbt.conf" \
-            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests"
+            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests" \
+            "$scratchdir/get-screenshot.py" "$scratchdir/match-screenshot.py" \
+            "$scratchdir/gamut.png"
         rmdir "$scratchdir"
     fi
     [ $status -eq 0 ]
@@ -107,6 +109,7 @@ if [ $# -eq 0 ]; then
     run test_detect_motion_changing_mask_is_not_racy &&
     run test_detect_motion_example_press_and_wait_for_no_motion &&
     run test_precondition_script &&
+    run test_get_frame_and_save_frame &&
 
     echo "Testing stbt-record:" &&
     run test_record &&

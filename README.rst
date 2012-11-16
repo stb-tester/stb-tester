@@ -325,7 +325,13 @@ detect_motion(timeout_secs=10, mask=None)
     the area to ignore.
 
 save_frame(buf, filename)
-    Save a gstreamer buffer to the specified file in png format.
+    Save a GStreamer buffer to the specified file in png format.
+
+    Takes a buffer `buf` obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
+
+get_frame()
+    Get a GStreamer buffer containing the current video frame.
 
 class MatchResult
     * `timestamp`: Video stream timestamp.

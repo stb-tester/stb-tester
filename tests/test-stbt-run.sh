@@ -421,3 +421,20 @@ test_precondition_script() {
 	EOF
     PYTHONPATH="$testdir:$PYTHONPATH" stbt-run -v "$scratchdir/test.py"
 }
+
+test_get_frame_and_save_frame() {
+    cat > "$scratchdir/get-screenshot.py" <<-EOF
+	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
+	press("15")
+	wait_for_match("videotestsrc-gamut.png", consecutive_matches=24)
+	save_frame(get_frame(), "$scratchdir/gamut.png")
+	EOF
+    stbt-run -v "$scratchdir/get-screenshot.py"
+
+    cat > "$scratchdir/match-screenshot.py" <<-EOF
+	press("15")
+	# noise_threshold accounts for match rectangle in the screenshot.
+	wait_for_match("$scratchdir/gamut.png", noise_threshold=0.7)
+	EOF
+    stbt-run -v "$scratchdir/match-screenshot.py"
+}
