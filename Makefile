@@ -131,3 +131,7 @@ $(OBJS): %.o: %.c
 # Header dependencies:
 gst/gstmotiondetect.o: gst/gstmotiondetect.h
 gst/gsttemplatematch.o: gst/gsttemplatematch.h
+
+
+.PHONY: all clean check dist doc install uninstall
+.PHONY: check-bashcompletion check-integrationtests check-nosetests check-pep8
