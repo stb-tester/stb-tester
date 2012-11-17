@@ -2,6 +2,7 @@
 stbt
 *.pyc
 stbt.1
+stbt-debug
 VERSION
 gst/*.o
 gst/libgst-stb-tester.so
