@@ -27,7 +27,7 @@ dependencies += opencv
 
 # CFLAGS and LDFLAGS are for the user to override from the command line.
 CFLAGS ?= -g -O2 -Werror
-extra_cflags = -fPIC '-DPACKAGE="stb-tester"' '-DVERSION="$(VERSION)"'
+extra_cflags = -fPIC '-DPACKAGE="stb-tester"'
 extra_cflags += $(shell pkg-config --cflags $(dependencies))
 extra_ldflags = $(shell pkg-config --libs $(dependencies))
 
@@ -128,10 +128,12 @@ gst/libgst-stb-tester.so: $(OBJS) .stbt-ldflags
 	$(CC) -shared -o $@ $(OBJS) $(extra_ldflags) $(LDFLAGS)
 
 $(OBJS): %.o: %.c .stbt-cflags
-	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) $<
+	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) \
+	    '-DVERSION="$(VERSION)"' $<
 # Header dependencies:
 gst/gstmotiondetect.o: gst/gstmotiondetect.h
 gst/gsttemplatematch.o: gst/gsttemplatematch.h
+gst/gst-stb-tester.o: VERSION
 
 
 # Force rebuild if installation directories or compilation flags change
