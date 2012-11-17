@@ -48,7 +48,7 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt stbt.1 gst/libgst-stb-tester.so
 
-stbt: stbt.in
+stbt: stbt.in .stbt-prefix
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
@@ -95,7 +95,8 @@ README.rst: stbt.py api-doc.sh
 	./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so
+	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
+	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
 check: all
 check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
@@ -123,15 +124,33 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 
 
 # GStreamer plugin
-gst/libgst-stb-tester.so: $(OBJS)
-	$(CC) -shared -o $@ $^ $(extra_ldflags) $(LDFLAGS)
+gst/libgst-stb-tester.so: $(OBJS) .stbt-ldflags
+	$(CC) -shared -o $@ $(OBJS) $(extra_ldflags) $(LDFLAGS)
 
-$(OBJS): %.o: %.c
+$(OBJS): %.o: %.c .stbt-cflags
 	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) $<
 # Header dependencies:
 gst/gstmotiondetect.o: gst/gstmotiondetect.h
 gst/gsttemplatematch.o: gst/gsttemplatematch.h
 
 
+# Force rebuild if installation directories or compilation flags change
+sq = $(subst ','\'',$(1)) # function to escape single quotes (')
+.stbt-prefix: flags = libexecdir=$(call sq,$(libexecdir)):\
+                      sysconfdir=$(call sq,$(sysconfdir))
+.stbt-cflags: flags = CC=$(call sq,$(CC)):\
+                      extra_cflags=$(call sq,$(extra_cflags)):\
+                      CPPFLAGS=$(call sq,$(CPPFLAGS)):\
+                      CFLAGS=$(call sq,$(CFLAGS))
+.stbt-ldflags: flags = extra_ldflags=$(call sq,$(extra_ldflags)):\
+                       LDFLAGS=$(call sq,$(LDFLAGS))
+.stbt-prefix .stbt-cflags .stbt-ldflags: FORCE
+	@if [ '$(flags)' != "$$(cat $@ 2>/dev/null)" ]; then \
+	    [ -f $@ ] && echo "*** new $@" >&2; \
+	    echo '$(flags)' > $@; \
+	fi
+
+
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pep8
+.PHONY: FORCE

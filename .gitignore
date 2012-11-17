@@ -1,4 +1,7 @@
 .DS_Store
+.STBT-CFLAGS
+.STBT-LDFLAGS
+.STBT-PREFIX
 stbt
 *.pyc
 stbt.1
