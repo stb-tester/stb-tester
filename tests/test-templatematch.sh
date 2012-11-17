@@ -39,7 +39,7 @@ run_templatematch() {
     local template="$1"
     local log="$2"
 
-    GST_DEBUG=4 timeout 2 gst-launch \
+    timeout 2 gst-launch --messages \
         videotestsrc ! \
         ffmpegcolorspace ! \
         stbt-templatematch template="$template" method=1 ! \

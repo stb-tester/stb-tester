@@ -82,7 +82,7 @@ run_motiondetect() {
     local parameters="$2"
     local log="$3"
 
-    GST_DEBUG=4 timeout 2 gst-launch \
+    timeout 2 gst-launch --messages \
         $source_pipeline ! \
         ffmpegcolorspace ! \
         stbt-motiondetect $parameters ! \
