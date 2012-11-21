@@ -98,7 +98,7 @@ clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
-check: all
+check: gst/libgst-stb-tester.so
 check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py
