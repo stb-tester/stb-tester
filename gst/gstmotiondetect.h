@@ -60,6 +60,7 @@ struct _StbtMotionDetect {
   IplImage *cvInvertedMaskImage;
   char *mask;
   char *debugDirectory;
+  gfloat noiseThreshold;
   gboolean display;
 };
 
