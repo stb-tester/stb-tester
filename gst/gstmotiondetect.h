@@ -52,6 +52,8 @@ enum
  */
 struct _StbtMotionDetect {
   GstBaseTransform element;
+  
+  gfloat noiseThreshold;
 
   gboolean enabled;
   int state;
