@@ -104,6 +104,11 @@ check-nosetests:
 	nosetests --with-doctest -v stbt.py
 check-integrationtests:
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
+	! which bash >/dev/null 2>&1 || { \
+	  echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
+	  bash -c "! grep -hEwo 'test_[a-z_]+' tests/test-*.sh |\
+	    grep -v -F -f <(grep -Ewo 'test_[a-z_]+' tests/run-tests.sh)" && \
+	  echo "OK"; }
 check-pep8:
 	pep8 stbt.py stbt-run stbt-record
 check-bashcompletion:

@@ -87,9 +87,13 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_no_match &&
     run test_wait_for_match_changing_template &&
     run test_wait_for_match_nonexistent_template &&
+    run test_detect_match_nonexistent_template &&
     run test_press_until_match &&
     run test_wait_for_match_searches_in_script_directory &&
     run test_press_until_match_searches_in_script_directory &&
+    run test_detect_match_searches_in_script_directory &&
+    run test_detect_match_searches_in_library_directory &&
+    run test_detect_match_searches_in_caller_directory &&
     run test_wait_for_motion &&
     run test_wait_for_motion_no_motion &&
     run test_wait_for_motion_nonexistent_mask &&
