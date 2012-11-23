@@ -29,7 +29,6 @@ export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
 
 run() {
-    GST_DEBUG=
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     printf "$1... "
     $1 > "$scratchdir/log" 2>&1
