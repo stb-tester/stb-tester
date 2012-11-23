@@ -78,6 +78,9 @@ if [ $# -eq 0 ]; then
     run test_stbt_motiondetect_does_not_report_motion &&
     run test_stbt_motiondetect_with_mask_reports_motion &&
     run test_stbt_motiondetect_with_mask_does_not_report_motion &&
+    run test_stbt_motiondetect_with_high_noisethreshold_reports_motion &&
+    run test_stbt_motiondetect_with_low_noisethreshold_does_not_report_motion &&
+    run test_stbt_motiondetect_reports_motion_on_progress_dots &&
 
     echo "Testing stbt-run:" &&
     run test_wait_for_match &&
