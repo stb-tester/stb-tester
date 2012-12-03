@@ -943,7 +943,6 @@ class FileToSocket:
 
 def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     import threading
-    import time
     t = threading.Thread()
     vrl = []
     t.run = lambda: vrl.append(virtual_remote_listen('localhost', 2033))
@@ -958,8 +957,6 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
 
 
 def fake_lircd(address):
-    import tempfile
-
     # This needs to accept 2 connections (from LircRemote and
     # lirc_remote_listen) and, on receiving input from the LircRemote
     # connection, write to the lirc_remote_listen connection.
@@ -978,7 +975,6 @@ def fake_lircd(address):
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     import tempfile
     import threading
-    import time
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
