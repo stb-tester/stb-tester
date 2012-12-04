@@ -48,7 +48,7 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt stbt.1 gst/libgst-stb-tester.so
 
-stbt: stbt.in .stbt-prefix
+stbt: stbt.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
