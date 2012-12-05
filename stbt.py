@@ -688,26 +688,33 @@ class VirtualRemote:
         control.press("MENU")
     """
     def __init__(self, hostname, port):
-        self.s = socket.socket()
+        self.hostname = hostname
+        self.port = port
+        # Connect once so that the test fails immediately if STB not found
+        # (instead of failing at the first `press` in the script).
         debug("VirtualRemote: Connecting to %s:%d" % (hostname, port))
-        try:
-            self.s.settimeout(3)
-            self.s.connect((hostname, port))
-            self.s.settimeout(None)
-            debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
-        except socket.error as e:
-            e.args = (("Failed to connect to VirtualRemote at %s:%d: %s" % (
-                hostname, port, e)),)
-            e.strerror = e.args[0]
-            raise
+        self._connect()
+        debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
 
     def press(self, key):
-        self.s.send("D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then key Up
+        self._connect().sendall(
+            "D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then Up
         debug("Pressed " + key)
 
     def close(self):
-        self.s.close()
-        self.s = None
+        pass
+
+    def _connect(self):
+        try:
+            s = socket.socket()
+            s.settimeout(3)
+            s.connect((self.hostname, self.port))
+            return s
+        except socket.error as e:
+            e.args = (("Failed to connect to VirtualRemote at %s:%d: %s" % (
+                self.hostname, self.port, e)),)
+            e.strerror = e.args[0]
+            raise
 
 
 class LircRemote:
@@ -731,7 +738,7 @@ class LircRemote:
             raise
 
     def press(self, key):
-        self.lircd.send("SEND_ONCE %s %s\n" % (self.control_name, key))
+        self.lircd.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         debug("Pressed " + key)
 
     def close(self):
@@ -943,17 +950,26 @@ class FileToSocket:
 
 def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     import threading
+
+    received = []
+    keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
+
+    def listener():
+        # "* 2" is once for VirtualRemote's __init__ and once for press.
+        for _ in range(len(keys) * 2):
+            for k in virtual_remote_listen('localhost', 2033):
+                received.append(k)
+
     t = threading.Thread()
-    vrl = []
-    t.run = lambda: vrl.append(virtual_remote_listen('localhost', 2033))
+    t.run = listener
     t.start()
-    time.sleep(0.01)  # Give it a chance to start listening (sorry)
-    vr = VirtualRemote('localhost', 2033)
+    for k in keys:
+        time.sleep(0.01)  # Give listener a chance to start listening (sorry)
+        vr = VirtualRemote('localhost', 2033)
+        time.sleep(0.01)
+        vr.press(k)
     t.join()
-    for i in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
-        vr.press(i)
-    vr.close()
-    assert list(vrl[0]) == ['DOWN', 'DOWN', 'UP', 'GOODBYE']
+    assert received == keys
 
 
 def fake_lircd(address):
@@ -969,7 +985,7 @@ def fake_lircd(address):
         m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
         if m:
             d = m.groupdict()
-            listener.send('00000000 0 %s %s\n' % (d['key'], d['control']))
+            listener.sendall('00000000 0 %s %s\n' % (d['key'], d['control']))
 
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
