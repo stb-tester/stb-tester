@@ -392,10 +392,26 @@ TEST SCRIPT BEST PRACTICES
   different each time the test case is run), nor translucent menu overlays with
   live TV showing through.
 
-* Don't crop tiny images: Instead of selecting just the text in a menu button,
-  select the whole button. (Larger images provide a greater gap between the
-  "match certainty" reported for non-matching vs. matching images, which makes
-  for more robust tests).
+* Crop template images as tightly as possible. For example if you're looking
+  for a button, don't include the background outside of the button. (This is
+  particularly important if your system-under-test is still under development
+  and minor aesthetic changes to the UI are common.)
+
+* Always follow a `press` with a `wait_for_match` -- don't assume that
+  the `press` worked.
+
+* Use `press_until_match` instead of assuming that the position of a menu item
+  will never change within that menu.
+
+* Use the `timeout_secs` parameter of `wait_for_match` and `wait_for_motion`
+  instead of using `time.sleep`.
+
+* Rename the template images captured by `stbt record` to a name that explains
+  the contents of the image.
+
+* Extract common navigation patterns into separate python functions. It is
+  useful to start each test script by calling a function that brings the
+  system-under-test to a known state.
 
 
 SEE ALSO
