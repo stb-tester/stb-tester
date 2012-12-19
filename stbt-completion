@@ -47,12 +47,12 @@ _stbt_record() {
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
         --control-recorder=*) COMPREPLY=($(_stbt_control_recorder));;
-        -o=*|--output-filename=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        -o=*|--output-file=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
                     --help -v --verbose \
                     --control --source-pipeline --sink-pipeline \
-                    --control-recorder -o --output-filename)" \
+                    --control-recorder -o --output-file)" \
             -- "$cur"));;
     esac
 }
@@ -145,7 +145,7 @@ _stbt_get_prev() {
 _stbt_takes_arg() {
     case "$1" in
         --control|--source-pipeline|--sink-pipeline) true;;
-        --control-recorder|-o|--output-filename) true;;
+        --control-recorder|-o|--output-file) true;;
         *) false;;
     esac
 }
