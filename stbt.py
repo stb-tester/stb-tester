@@ -701,9 +701,6 @@ class VirtualRemote:
             "D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then Up
         debug("Pressed " + key)
 
-    def close(self):
-        pass
-
     def _connect(self):
         try:
             s = socket.socket()
@@ -723,27 +720,30 @@ class LircRemote:
     See http://www.lirc.org/html/technical.html#applications
     """
     def __init__(self, lircd_socket, control_name):
+        self.lircd_socket = lircd_socket
         self.control_name = control_name
-        self.lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # Connect once so that the test fails immediately if Lirc isn't running
+        # (instead of failing at the first `press` in the script).
         debug("LircRemote: Connecting to %s" % lircd_socket)
-        try:
-            self.lircd.settimeout(3)
-            self.lircd.connect(lircd_socket)
-            self.lircd.settimeout(None)
-            debug("LircRemote: Connected to %s" % lircd_socket)
-        except socket.error as e:
-            e.args = (("Failed to connect to Lirc socket %s: %s" % (
-                        lircd_socket, e)),)
-            e.strerror = e.args[0]
-            raise
+        self._connect()
+        debug("LircRemote: Connected to %s" % lircd_socket)
 
     def press(self, key):
-        self.lircd.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
+        self._connect().sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         debug("Pressed " + key)
 
-    def close(self):
-        self.lircd.close()
-        self.lircd = None
+    def _connect(self):
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(3)
+            s.connect(self.lircd_socket)
+            s.settimeout(None)
+            return s
+        except socket.error as e:
+            e.args = (("Failed to connect to Lirc socket %s: %s" % (
+                        self.lircd_socket, e)),)
+            e.strerror = e.args[0]
+            raise
 
 
 def uri_to_remote_recorder(uri):
@@ -972,25 +972,29 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     assert received == keys
 
 
-def fake_lircd(address):
-    # This needs to accept 2 connections (from LircRemote and
-    # lirc_remote_listen) and, on receiving input from the LircRemote
-    # connection, write to the lirc_remote_listen connection.
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.bind(address)
-    s.listen(5)
-    listener, _ = s.accept()
-    control, _ = s.accept()
-    for cmd in control.makefile():
-        m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
-        if m:
-            d = m.groupdict()
-            listener.sendall('00000000 0 %s %s\n' % (d['key'], d['control']))
-
-
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     import tempfile
     import threading
+
+    keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
+
+    def fake_lircd(address):
+        # This needs to accept 2 connections (from LircRemote and
+        # lirc_remote_listen) and, on receiving input from the LircRemote
+        # connection, write to the lirc_remote_listen connection.
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(address)
+        s.listen(5)
+        listener, _ = s.accept()
+        # "* 1" is for LircRemote's __init__.
+        for _ in range(len(keys) + 1):
+            control, _ = s.accept()
+            for cmd in control.makefile():
+                m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
+                if m:
+                    d = m.groupdict()
+                    listener.sendall(
+                        '00000000 0 %s %s\n' % (d['key'], d['control']))
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
@@ -999,8 +1003,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     time.sleep(0.01)  # Give it a chance to start listening (sorry)
     listener = lirc_remote_listen(lircd_socket, 'test')
     control = LircRemote(lircd_socket, 'test')
-    for i in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
+    for i in keys:
         control.press(i)
         assert listener.next() == i
-    control.close()
     t.join()
