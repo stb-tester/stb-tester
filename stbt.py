@@ -788,7 +788,6 @@ def read_records(stream, sep):
     ['hello', 'This', 'is', 'a', 'test']
     """
     buf = ""
-    l = len(sep)
     while True:
         s = stream.recv(4096)
         if len(s) == 0:
