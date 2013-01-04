@@ -10,6 +10,8 @@ import socket
 import sys
 import time
 
+import irnetbox
+
 
 class ArgvHider:
     """ For use with 'with' statement:  Unsets argv and resets it.
@@ -653,6 +655,11 @@ def uri_to_remote(uri, display):
         d = lirc.groupdict()
         return LircRemote(d['lircd_socket'] or '/var/run/lirc/lircd',
                           d['control_name'])
+    irnb = re.match(
+        r'irnetbox:(?P<hostname>[^:]+):(?P<output>\d+):(?P<config>.+)', uri)
+    if irnb:
+        d = irnb.groupdict()
+        return IRNetBoxRemote(d['hostname'], d['output'], d['config'])
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
@@ -742,6 +749,41 @@ class LircRemote:
         except socket.error as e:
             e.args = (("Failed to connect to Lirc socket %s: %s" % (
                         self.lircd_socket, e)),)
+            e.strerror = e.args[0]
+            raise
+
+
+class IRNetBoxRemote:
+    """Send a key-press via the network-controlled RedRat IRNetBox IR emitter.
+
+    See http://www.redrat.co.uk/products/irnetbox.html
+
+    """
+    def __init__(self, hostname, output, config_file):
+        self.hostname = hostname
+        self.output = int(output)
+        self.config = irnetbox.RemoteControlConfig(config_file)
+        # Connect once so that the test fails immediately if irNetBox not found
+        # (instead of failing at the first `press` in the script).
+        debug("IRNetBoxRemote: Connecting to %s" % hostname)
+        with self._connect() as irnb:
+            irnb.power_on()
+        time.sleep(0.5)
+        debug("IRNetBoxRemote: Connected to %s" % hostname)
+
+    def press(self, key):
+        with self._connect() as irnb:
+            irnb.irsend_raw(
+                port=self.output, power=100, data=self.config[key])
+        time.sleep(0.5)
+        debug("Pressed " + key)
+
+    def _connect(self):
+        try:
+            return irnetbox.IRNetBox(self.hostname)
+        except socket.error as e:
+            e.args = (("Failed to connect to IRNetBox %s: %s" % (
+                        self.hostname, e)),)
             e.strerror = e.args[0]
             raise
 
