@@ -219,7 +219,8 @@ SOFTWARE REQUIREMENTS
 
 * gstreamer 0.10 (multimedia framework) + gst-plugins-base + gst-plugins-good.
 
-* python (we have tested with 2.6 and 2.7) + pygst + docutils (for building
+* python (we have tested with 2.6 and 2.7; on <2.7 you will also need to
+  install the python-argparse package) + pygst + docutils (for building
   the documentation) + nose (for the self-tests).
 
 * OpenCV (image processing library) version >= 2.0.0.
