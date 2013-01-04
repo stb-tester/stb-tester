@@ -66,7 +66,6 @@ class IRNetBox:
                 else:
                     raise
         self._responses = _read_responses(self._socket)
-        sys.stderr.write("Connected to irNetBox '%s'\n" % hostname)
 
     def __enter__(self):
         return self
@@ -128,12 +127,7 @@ class IRNetBox:
 
     def _send(self, message_type, message_data=""):
         self._socket.sendall(_message(message_type, message_data))
-        sys.stderr.write("Sent %s\n" % MESSAGE_NAMES[message_type])
         response_type, response_data = self._responses.next()
-
-        sys.stderr.write("Received %s\n" % (
-            "ERROR" if response_type == MessageTypes.ERROR
-                else "%s ACK" % MESSAGE_NAMES[response_type]))
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
 
