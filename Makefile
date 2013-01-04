@@ -63,7 +63,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 stbt.py $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
@@ -75,6 +75,7 @@ uninstall:
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-record
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-run
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
+	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
@@ -101,7 +102,7 @@ clean:
 check: gst/libgst-stb-tester.so
 check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
 check-nosetests:
-	nosetests --with-doctest -v stbt.py
+	nosetests --with-doctest -v stbt.py irnetbox.py
 check-integrationtests:
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
 	@! which bash >/dev/null 2>&1 || { \

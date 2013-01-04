@@ -64,13 +64,17 @@ _stbt_control() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
+        --control=irnetbox:*:*:) _stbt_irnetbox_config;;
+        --control=irnetbox:*:) _stbt_irnetbox_output;;
+        --control=irnetbox:) _stbt_hostname;;
         --control=lirc:*:) _stbt_lirc_name;;
         --control=lirc:) _stbt_lirc_socket;;
         --control=vr:*:) _stbt_vr_port;;
-        --control=vr:) _stbt_vr_hostname;;
+        --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space lirc: vr:; _stbt_trailing_space none test)" \
+                    _stbt_no_space irnetbox: lirc: vr:
+                    _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac
 }
@@ -82,10 +86,22 @@ _stbt_control_recorder() {
         --control-recorder=lirc:*:) _stbt_lirc_name;;
         --control-recorder=lirc:) _stbt_lirc_socket;;
         --control-recorder=vr:*:) _stbt_vr_port;;
-        --control-recorder=vr:) _stbt_vr_hostname;;
+        --control-recorder=vr:) _stbt_hostname;;
         --control-recorder=file:) _stbt_control_file;;
         *) compgen -W "$(_stbt_no_space lirc: vr: file://)" -- "$cur";;
     esac
+}
+
+_stbt_irnetbox_output() {
+    local cur="$_stbt_cur"
+    compgen -S ":" -W "$(
+            _stbt_no_space 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)" \
+        -- "$cur"
+}
+
+_stbt_irnetbox_config() {
+    local cur="$_stbt_cur"
+    compgen -f -- "$cur"
 }
 
 _stbt_lirc_socket() {
@@ -100,7 +116,7 @@ _stbt_lirc_name() {
     compgen -W "$(_stbt_trailing_space $names)" -- "$cur"
 }
 
-_stbt_vr_hostname() {
+_stbt_hostname() {
     local cur="$_stbt_cur"
     compgen -A hostname -S ":" -- "$cur"
 }
