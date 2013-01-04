@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.8
+Version: 0.9
 Release: 1%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
