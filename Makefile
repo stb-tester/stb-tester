@@ -126,6 +126,10 @@ DIST = $(shell git ls-files)
 DIST += VERSION
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
+	@$(TAR) --version 2>/dev/null | grep -q GNU || { \
+	    printf 'Error: "make dist" requires GNU tar ' >&2; \
+	    printf '(use "make dist TAR=gnutar").\n' >&2; \
+	    exit 1; }
 	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 
