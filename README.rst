@@ -436,6 +436,7 @@ AUTHORS
 * Will Manley <will@williammanley.net>
 * David Rothlisberger <david@rothlis.net>
 * Hubert Lacote <hubert.lacote@gmail.com>
+* and contributors
 
 Original templatematch GStreamer element written by:
 
