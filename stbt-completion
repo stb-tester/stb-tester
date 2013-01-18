@@ -73,7 +73,7 @@ _stbt_control() {
         --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc: vr:
+                    _stbt_no_space irnetbox: lirc:: vr:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac
