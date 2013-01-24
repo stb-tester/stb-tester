@@ -43,6 +43,7 @@ def main(argv):
 def record(display, remote_input, control, script_out):
     count = itertools.count()
     old_key = None
+    script_out.write("import stbt\n\n\n")
     while True:
         interrupt = False
         try:
@@ -55,10 +56,10 @@ def record(display, remote_input, control, script_out):
         if old_key:
             filename = '%04d-%s-complete.png' % (count.next(), old_key)
             stbt.save_frame(buf, filename)
-            script_out.write("wait_for_match('%s')\n" % filename)
+            script_out.write("stbt.wait_for_match('%s')\n" % filename)
         if interrupt:
             return
-        script_out.write("press('%s')\n" % key)
+        script_out.write("stbt.press('%s')\n" % key)
         old_key = key
 
 
