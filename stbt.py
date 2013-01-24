@@ -413,14 +413,6 @@ class Display:
                 "t. ! queue leaky=2 !", xvideo
                 ])
 
-        # Gstreamer loads plugin libraries on demand, when elements that need
-        # those libraries are first mentioned. There is a bug in gst-opencv
-        # where it erroneously claims to provide appsink, preventing the
-        # loading of the real appsink -- so we load it first.
-        # TODO: Fix gst-opencv so that it doesn't prevent appsink from being
-        #       loaded.
-        gst.parse_launch("appsink")
-
         self.source_pipeline_description = source_pipeline_description
         self.source_bin = self.create_source_bin()
         self.sink_bin = gst.parse_bin_from_description(pipe, True)
