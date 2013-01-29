@@ -112,7 +112,10 @@ _stbt_lirc_socket() {
 
 _stbt_lirc_name() {
     local cur="$_stbt_cur"
-    local names="$(awk '/^ *name / {print $2}' /etc/lirc/lircd.conf 2>/dev/null)"
+    local names="$(
+        cat /etc/lirc/lircd.conf 2>/dev/null |
+        awk '/^begin remote/         { inremote = 1 }
+             inremote && /^ *name /  { print $2; inremote = 0 }')"
     compgen -W "$(_stbt_trailing_space $names)" -- "$cur"
 }
 
