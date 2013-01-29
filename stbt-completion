@@ -150,7 +150,7 @@ _stbt_get_prev() {
     while [ $i -gt 1 ]; do
         pp="${COMP_WORDS[i]}"  # the word previous to $p
         case "$pp,$p" in
-            [=:],*|*,[=:]*) p="$pp$p";;
+            [=:],*|::,*|*,[=:]*) p="$pp$p";;
             *) _stbt_takes_arg "$pp" || break; p="$pp=$p";;
         esac
         i=$((i-1))
