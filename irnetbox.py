@@ -56,7 +56,7 @@ class IRNetBox:
                 self._socket.connect((hostname, port))
                 break
             except socket.error as e:
-                if e.errno == 61 and i < 5:  # Connection refused
+                if e.errno == errno.ECONNREFUSED and i < 5:
                     delay = 0.1 * 2**i
                     sys.stderr.write(
                         "Connection to irNetBox '%s:%d' refused; "
