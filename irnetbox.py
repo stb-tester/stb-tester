@@ -67,6 +67,8 @@ class IRNetBox:
                 else:
                     raise
         self._responses = _read_responses(self._socket)
+        self.irnetbox_model = 0
+        self._get_version()
 
     def __enter__(self):
         return self
@@ -93,6 +95,12 @@ class IRNetBox:
         """
         self._send(MessageTypes.POWER_OFF)
 
+    def reset(self):
+        """Reset the CPLD"""
+        self._send(
+            MessageTypes.CPLD_INSTRUCTION,
+            struct.pack("B", 0x00))
+
     def indicators_on(self):
         """Enable LED indicators on the front panel (§5.2.4)."""
         self._send(
@@ -113,24 +121,56 @@ class IRNetBox:
         * `data` is a byte array as exported by the RedRat Signal DB Utility.
 
         """
-        ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        ports[port-1] = power
-        sequence_number = random.randint(0, 2**16 - 1)
-        delay = 0  # use the default delay of 100ms
-        self._send(
-            MessageTypes.OUTPUT_IR_ASYNC,
-            struct.pack(
-                ">HH16s%ds" % len(data),
-                sequence_number,
-                delay,
-                struct.pack("16B", *ports),
-                data))
+        if self.irnetbox_model == NetBoxTypes.MK2:
+            self.reset()
+            self.indicators_on()
+            self._send(MessageTypes.SET_MEMORY)
+            self._send(MessageTypes.CPLD_INSTRUCTION, struct.pack("B", 0x00))
+            if power < 33:
+                self._send(
+                    MessageTypes.CPLD_INSTRUCTION,
+                    struct.pack("B", port + 1))
+            elif power < 66:
+                self._send(
+                    MessageTypes.CPLD_INSTRUCTION,
+                    struct.pack("B", port + 31))
+            else:
+                self._send(
+                    MessageTypes.CPLD_INSTRUCTION,
+                    struct.pack("B", port + 1))
+                self._send(
+                    MessageTypes.CPLD_INSTRUCTION,
+                    struct.pack("B", port + 31))
+            self._send(MessageTypes.DOWNLOAD_SIGNAL, data)
+            self._send(MessageTypes.OUTPUT_IR_SIGNAL)
+            self.reset()
+        elif self.irnetbox_model == NetBoxTypes.MK3:
+            ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ports[port-1] = power
+            sequence_number = random.randint(0, 2**16 - 1)
+            delay = 0  # use the default delay of 100ms
+            self._send(
+                MessageTypes.OUTPUT_IR_ASYNC,
+                struct.pack(
+                    ">HH16s%ds" % len(data),
+                    sequence_number,
+                    delay,
+                    struct.pack("16B", *ports),
+                    data))
+        elif self.irnetbox_model == NetBoxTypes.MK1:
+            raise Exception("IRNetBox MK1 not supported")
 
     def _send(self, message_type, message_data=""):
         self._socket.sendall(_message(message_type, message_data))
         response_type, response_data = self._responses.next()
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
+        if response_type == MessageTypes.DEVICE_VERSION:
+            self.irnetbox_model, = struct.unpack(
+                '<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
+
+    def _get_version(self):
+        self._send(MessageTypes.DEVICE_VERSION)
 
 
 class RemoteControlConfig:
@@ -147,6 +187,10 @@ class MessageTypes:
     POWER_ON = 0x05
     POWER_OFF = 0x06
     CPLD_INSTRUCTION = 0x07
+    DEVICE_VERSION = 0x09
+    SET_MEMORY = 0x10
+    DOWNLOAD_SIGNAL = 0x11
+    OUTPUT_IR_SIGNAL = 0x12
     OUTPUT_IR_ASYNC = 0x30
     IR_ASYNC_COMPLETE = 0x31
 
@@ -159,6 +203,13 @@ MESSAGE_NAMES = {
     MessageTypes.OUTPUT_IR_ASYNC: "OUTPUT_IR_ASYNC",
     MessageTypes.IR_ASYNC_COMPLETE: "IR_ASYNC_COMPLETE",
 }
+
+
+class NetBoxTypes:
+    """§5.2.6"""
+    MK1 = 2
+    MK2 = 7
+    MK3 = 8
 
 
 def _message(message_type, message_data):
