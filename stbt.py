@@ -298,6 +298,10 @@ class MatchTimeout(UITestFailure):
         self.expected = expected
         self.timeout_secs = timeout_secs
 
+    def __str__(self):
+        return "Didn't find match for '%s' after %d seconds." % (
+            self.expected, self.timeout_secs)
+
 
 class MotionTimeout(UITestFailure):
     """
@@ -310,6 +314,11 @@ class MotionTimeout(UITestFailure):
         self.screenshot = screenshot
         self.mask = mask
         self.timeout_secs = timeout_secs
+
+    def __str__(self):
+        return "Didn't find motion%s after %d seconds." % (
+            " (with mask '%s')" % self.mask if self.mask else "",
+            self.timeout_secs)
 
 
 class ConfigurationError(UITestError):

@@ -25,9 +25,7 @@ try:
     execfile(args.script)
 except Exception as e:
     traceback.print_tb(sys.exc_traceback)
-    if isinstance(e, stbt.MatchTimeout):
-        print ("FAIL: %s: Didn't find match for '%s' after %d seconds." % (
-            args.script, e.expected, e.timeout_secs))
+    print ("FAIL: %s: %s" % (args.script, e))
     if hasattr(e, "screenshot") and e.screenshot:
         stbt.save_frame(e.screenshot, "screenshot.png")
         print ("Saved screenshot to '%s'." % ("screenshot.png"))
