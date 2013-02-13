@@ -39,6 +39,7 @@ signal defined in the config file):
 """
 
 import binascii
+import errno
 import random
 import re
 import socket
