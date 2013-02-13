@@ -500,7 +500,7 @@ class Display:
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
                 self.test_timeout = t
 
-                start_timestamp = None
+                self.start_timestamp = None
                 for message in MessageIterator(self.bus, "message::element"):
                     # Cancel test_timeout as messages are obviously received.
                     if self.test_timeout:
@@ -513,9 +513,9 @@ class Display:
                         if not buf:
                             continue
 
-                        if not start_timestamp:
-                            start_timestamp = buf.timestamp
-                        if (buf.timestamp - start_timestamp >
+                        if not self.start_timestamp:
+                            self.start_timestamp = buf.timestamp
+                        if (buf.timestamp - self.start_timestamp >
                             timeout_secs * 1000000000):
                             return
 
@@ -593,6 +593,7 @@ class Display:
         gst.element_link_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_PLAYING)
         self.pipeline.set_state(gst.STATE_PLAYING)
+        self.start_timestamp = None
         debug("Restarted source pipeline")
 
         self.underrun_timeout.start()
