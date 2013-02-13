@@ -24,11 +24,13 @@ from stbt import press, press_until_match, wait_for_match, wait_for_motion, \
 try:
     execfile(args.script)
 except Exception as e:
+    sys.stderr.write("Traceback (most recent call last):\n")
     traceback.print_tb(sys.exc_traceback)
-    print ("FAIL: %s: %s" % (args.script, e))
+    sys.stderr.write("%s: %s\n" % (type(e).__name__, str(e)))
+    sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))
     if hasattr(e, "screenshot") and e.screenshot:
         stbt.save_frame(e.screenshot, "screenshot.png")
-        print ("Saved screenshot to '%s'." % ("screenshot.png"))
+        sys.stderr.write("Saved screenshot to '%s'." % ("screenshot.png"))
     sys.exit(1)
 finally:
     stbt.teardown_run()
