@@ -100,7 +100,7 @@ clean:
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
 check: gst/libgst-stb-tester.so
-check: check-nosetests check-integrationtests check-pep8 check-bashcompletion
+check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
 check-integrationtests:
@@ -110,8 +110,8 @@ check-integrationtests:
 	  bash -c "! grep -hEwo 'test_[a-z_]+' tests/test-*.sh |\
 	    grep -v -F -f <(grep -Ewo 'test_[a-z_]+' tests/run-tests.sh)" && \
 	  echo "OK"; }
-check-pep8:
-	pep8 stbt.py stbt-run stbt-record
+check-pylint:
+	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record
 check-bashcompletion:
 	set -e; \
 	. ./stbt-completion; \
