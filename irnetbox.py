@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 
-"""Python module to control the RedRat irNetBox-III infrared emitter.
+"""Python module to control the RedRat irNetBox infrared emitter.
 
 Author: David Rothlisberger <david@rothlis.net>
-Copyright 2012 YouView TV Ltd.
+Copyright 2012 YouView TV Ltd and contributors.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-The irNetBox-III is a network-controlled infrared emitter:
+The irNetBox is a network-controlled infrared emitter:
 http://www.redrat.co.uk/products/irnetbox.html
 
-This module only supports version III of the irNetBox hardware.
+This module only supports versions II and III of the irNetBox hardware.
 
 "§" section numbers in the function docstrings are from "The irNetBox
 Network Control Protocol":
 http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
 
 Thanks to Chris Dodge at RedRat for friendly and prompt answers to all my
-questions.
+questions, and to Emmett Kelly for the mk-II implementation.
 
 Classes:
 

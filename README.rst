@@ -58,12 +58,13 @@ Global options
     lircd.conf.
 
   irnetbox:<hostname>:<output>:<config_file>
-    RedRat irNetBox-III network-controlled infrared emitter hardware.
-    `hostname` is the hostname or IP address of the irNetBox-III device.
+    RedRat irNetBox network-controlled infrared emitter hardware.
+    `hostname` is the hostname or IP address of the irNetBox device.
     `output` is the infrared output to use, a number between 1 and 16
     (inclusive). `config_file` is the configuration file that describes the
     infrared protocol to use; it can be created with RedRat's (Windows-only)
     "IR Signal Database Utility".
+    stbt supports the irNetBox models II and III.
 
   vr:<hostname>:<port>
     A "virtual remote" that communicates with the set-top box over TCP.
