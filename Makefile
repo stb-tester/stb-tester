@@ -164,5 +164,5 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 
 .PHONY: all clean check dist doc install uninstall
-.PHONY: check-bashcompletion check-integrationtests check-nosetests check-pep8
+.PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
 .PHONY: FORCE
