@@ -82,6 +82,7 @@ uninstall:
 	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
+	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
 	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
