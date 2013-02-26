@@ -601,6 +601,7 @@ class Display:
         self.pipeline.add(self.source_bin)
         gst.element_link_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_PLAYING)
+        self.sink_bin.set_state(gst.STATE_PLAYING)
         self.pipeline.set_state(gst.STATE_PLAYING)
         self.start_timestamp = None
         debug("Restarted source pipeline")
