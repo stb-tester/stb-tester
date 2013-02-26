@@ -195,16 +195,6 @@ class MessageTypes:
     IR_ASYNC_COMPLETE = 0x31
 
 
-MESSAGE_NAMES = {
-    MessageTypes.ERROR: "ERROR",
-    MessageTypes.POWER_ON: "POWER_ON",
-    MessageTypes.POWER_OFF: "POWER_OFF",
-    MessageTypes.CPLD_INSTRUCTION: "CPLD_INSTRUCTION",
-    MessageTypes.OUTPUT_IR_ASYNC: "OUTPUT_IR_ASYNC",
-    MessageTypes.IR_ASYNC_COMPLETE: "IR_ASYNC_COMPLETE",
-}
-
-
 class NetBoxTypes:
     """§5.2.6"""
     MK1 = 2
