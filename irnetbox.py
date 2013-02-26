@@ -121,7 +121,9 @@ class IRNetBox:
         * `data` is a byte array as exported by the RedRat Signal DB Utility.
 
         """
-        if self.irnetbox_model == NetBoxTypes.MK2:
+        if self.irnetbox_model == NetBoxTypes.MK1:
+            raise Exception("IRNetBox MK1 not supported")
+        elif self.irnetbox_model == NetBoxTypes.MK2:
             self.reset()
             self.indicators_on()
             self._send(MessageTypes.SET_MEMORY)
@@ -144,7 +146,7 @@ class IRNetBox:
             self._send(MessageTypes.DOWNLOAD_SIGNAL, data)
             self._send(MessageTypes.OUTPUT_IR_SIGNAL)
             self.reset()
-        elif self.irnetbox_model == NetBoxTypes.MK3:
+        else:
             ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             ports[port-1] = power
             sequence_number = random.randint(0, 2**16 - 1)
@@ -157,8 +159,6 @@ class IRNetBox:
                     delay,
                     struct.pack("16B", *ports),
                     data))
-        elif self.irnetbox_model == NetBoxTypes.MK1:
-            raise Exception("IRNetBox MK1 not supported")
 
     def _send(self, message_type, message_data=""):
         self._socket.sendall(_message(message_type, message_data))
