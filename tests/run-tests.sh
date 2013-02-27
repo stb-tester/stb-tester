@@ -93,8 +93,14 @@ if [ $# -eq 0 ]; then
     run test_detect_match_searches_in_script_directory &&
     run test_detect_match_searches_in_library_directory &&
     run test_detect_match_searches_in_caller_directory &&
-    run test_wait_for_motion &&
-    run test_wait_for_motion_no_motion &&
+    run test_wait_for_motion_int &&
+    run test_wait_for_motion_str &&
+    run test_wait_for_motion_no_motion_int &&
+    run test_wait_for_motion_no_motion_str &&
+    run test_wait_for_motion_half_motion_str_2of4 &&
+    run test_wait_for_motion_half_motion_str_2of3 &&
+    run test_wait_for_motion_half_motion_str_3of4 &&
+    run test_wait_for_motion_half_motion_int &&
     run test_wait_for_motion_nonexistent_mask &&
     run test_changing_input_video_with_the_test_control &&
     run test_detect_match_reports_match &&

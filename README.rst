@@ -305,8 +305,13 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     Raises `MotionTimeout` if no motion is detected after `timeout_secs`
     seconds.
 
-    Considers the video stream to have motion if there were differences between
-    10 consecutive frames (or the number specified with `consecutive_frames`).
+    Considers the video stream to have motion if there were diferences between
+    10 consecutive frames, or the number specified by `consecutive_frames`,
+    which can be:
+
+    * a positive integer value, or
+    * a string in the form "x/y", where `x` is the number of frames with motion
+      detected out of a sliding window of `y` frames.
 
     Increase `noise_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 0.0 will never report motion).
