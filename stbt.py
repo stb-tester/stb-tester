@@ -57,8 +57,8 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class MatchResult(
-    namedtuple('MatchResult', 'timestamp match position first_pass_result')):
+class MatchResult(namedtuple(
+        'MatchResult', 'timestamp match position first_pass_result')):
     """
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
@@ -457,7 +457,7 @@ class Display:
 
         if _debug_level > 1:
             if _mkdir("stbt-debug/motiondetect") and _mkdir(
-                      "stbt-debug/templatematch"):
+                        "stbt-debug/templatematch"):
                 # Note that this will dump a *lot* of files -- several images
                 # per frame processed.
                 self.motiondetect.props.debugDirectory = (
@@ -542,7 +542,7 @@ class Display:
                         if not self.start_timestamp:
                             self.start_timestamp = buf.timestamp
                         if (buf.timestamp - self.start_timestamp >
-                            timeout_secs * 1000000000):
+                                timeout_secs * 1000000000):
                             return
 
                         yield (st, buf)
