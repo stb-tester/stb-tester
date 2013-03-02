@@ -84,7 +84,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
     params = {
         "template": _find_path(image),
         "noiseThreshold": noise_threshold,
-        }
+    }
     debug("Searching for " + params["template"])
     if not os.path.isfile(params["template"]):
         raise UITestError("No such template file: %s" % image)
@@ -92,7 +92,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
     for message, buf in display.detect("template_match", params, timeout_secs):
         # Discard messages generated from previous call with different template
         if message["template_path"] == params["template"]:
-            result = MatchResult(timestamp=buf.timestamp,
+            result = MatchResult(
+                timestamp=buf.timestamp,
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
@@ -130,7 +131,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
     params = {
         "enabled": True,
         "noiseThreshold": noise_threshold,
-        }
+    }
     if mask:
         params["mask"] = _find_path(mask)
         debug("Using mask %s" % (params["mask"]))
@@ -144,8 +145,8 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
                 or (not mask and not msg["masked"])):
             result = MotionResult(timestamp=buf.timestamp,
                                   motion=msg["has_motion"])
-            debug("%s detected. Timestamp: %d." %
-                ("Motion" if result.motion else "No motion", result.timestamp))
+            debug("%s detected. Timestamp: %d." % (
+                "Motion" if result.motion else "No motion", result.timestamp))
             yield result
 
 
@@ -205,7 +206,8 @@ def press_until_match(key, image,
                 raise
 
 
-def wait_for_motion(timeout_secs=10, consecutive_frames=10,
+def wait_for_motion(
+        timeout_secs=10, consecutive_frames=10,
         noise_threshold=0.84, mask=None):
     """Search for motion in the source video stream.
 
@@ -263,11 +265,11 @@ def save_frame(buf, filename):
     property of `MatchTimeout` or `MotionTimeout`.
     """
     pipeline = gst.parse_launch(" ! ".join([
-                'appsrc name="src" caps="%s"' % buf.get_caps(),
-                'ffmpegcolorspace',
-                'pngenc',
-                'filesink location="%s"' % filename,
-                ]))
+        'appsrc name="src" caps="%s"' % buf.get_caps(),
+        'ffmpegcolorspace',
+        'pngenc',
+        'filesink location="%s"' % filename,
+    ]))
     src = pipeline.get_by_name("src")
     # This is actually a (synchronous) method call to push-buffer:
     src.emit('push-buffer', buf)
@@ -348,12 +350,15 @@ class ConfigurationError(UITestError):
 
 def argparser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--control',
+    parser.add_argument(
+        '--control',
         help='The remote control to control the stb (default: %(default)s)')
-    parser.add_argument('--source-pipeline',
+    parser.add_argument(
+        '--source-pipeline',
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
-    parser.add_argument('--sink-pipeline',
+    parser.add_argument(
+        '--sink-pipeline',
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
 
@@ -365,7 +370,8 @@ def argparser():
 
     global _debug_level
     _debug_level = 0
-    parser.add_argument('-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
+    parser.add_argument(
+        '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
@@ -415,29 +421,29 @@ class Display:
         gobject.threads_init()
 
         imageprocessing = " ! ".join([
-                # Buffer the video stream, dropping frames if downstream
-                # processors aren't fast enough:
-                "queue name=q leaky=2",
-                # Convert to a colorspace that templatematch can handle:
-                "ffmpegcolorspace",
-                # Detect motion when requested:
-                "stbt-motiondetect name=motiondetect enabled=false",
-                # OpenCV image-processing library:
-                "stbt-templatematch name=template_match method=1",
-                ])
+            # Buffer the video stream, dropping frames if downstream
+            # processors aren't fast enough:
+            "queue name=q leaky=2",
+            # Convert to a colorspace that templatematch can handle:
+            "ffmpegcolorspace",
+            # Detect motion when requested:
+            "stbt-motiondetect name=motiondetect enabled=false",
+            # OpenCV image-processing library:
+            "stbt-templatematch name=template_match method=1",
+        ])
         xvideo = " ! ".join([
-                # Convert to a colorspace that xvimagesink can handle:
-                "ffmpegcolorspace",
-                sink_pipeline_description,
-                ])
+            # Convert to a colorspace that xvimagesink can handle:
+            "ffmpegcolorspace",
+            sink_pipeline_description,
+        ])
         screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
                       "sync=false")
         pipe = " ".join([
-                imageprocessing,
-                "! tee name=t",
-                "t. ! queue leaky=2 !", screenshot,
-                "t. ! queue leaky=2 !", xvideo
-                ])
+            imageprocessing,
+            "! tee name=t",
+            "t. ! queue leaky=2 !", screenshot,
+            "t. ! queue leaky=2 !", xvideo
+        ])
 
         self.source_pipeline_description = source_pipeline_description
         self.source_bin = self.create_source_bin()
@@ -457,7 +463,7 @@ class Display:
 
         if _debug_level > 1:
             if _mkdir("stbt-debug/motiondetect") and _mkdir(
-                        "stbt-debug/templatematch"):
+                    "stbt-debug/templatematch"):
                 # Note that this will dump a *lot* of files -- several images
                 # per frame processed.
                 self.motiondetect.props.debugDirectory = (
@@ -481,8 +487,8 @@ class Display:
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
-            self.source_pipeline_description +
-                " ! capsfilter name=padforcer caps=video/x-raw-yuv",
+            "%s ! capsfilter name=padforcer caps=video/x-raw-yuv" % (
+                self.source_pipeline_description),
             False)
         source_bin.add_pad(
             gst.GhostPad(
@@ -768,7 +774,7 @@ class LircRemote:
             return s
         except socket.error as e:
             e.args = (("Failed to connect to Lirc socket %s: %s" % (
-                        self.lircd_socket, e)),)
+                self.lircd_socket, e)),)
             e.strerror = e.args[0]
             raise
 
@@ -803,7 +809,7 @@ class IRNetBoxRemote:
             return irnetbox.IRNetBox(self.hostname)
         except socket.error as e:
             e.args = (("Failed to connect to IRNetBox %s: %s" % (
-                        self.hostname, e)),)
+                self.hostname, e)),)
             e.strerror = e.args[0]
             raise
 
@@ -913,9 +919,9 @@ def lirc_key_reader(cmd_iter, control_name):
     """
     for s in cmd_iter:
         debug("lirc_key_reader received: %s" % s.rstrip())
-        m = re.match(r"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" %
-                         control_name,
-                     s)
+        m = re.match(
+            r"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" % control_name,
+            s)
         if m and int(m.group('repeat_count')) == 0:
             yield m.group('key')
 
@@ -936,11 +942,11 @@ def load_defaults(tool):
         system_config,
         # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
         # directory specification:
-        '%s/stbt/stbt.conf' % os.environ.get('XDG_CONFIG_HOME',
-                                            '%s/.config' % os.environ['HOME']),
+        '%s/stbt/stbt.conf' % os.environ.get(
+            'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
         # Config files specific to the test suite / test run:
         os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
+    ])
     assert(system_config in files_read)
     return dict(conffile.items('global'), **dict(conffile.items(tool)))
 
@@ -986,7 +992,7 @@ def ddebug(s):
 
 def warn(s):
     sys.stderr.write("%s: warning: %s\n" % (
-            os.path.basename(sys.argv[0]), str(s)))
+        os.path.basename(sys.argv[0]), str(s)))
 
 
 # Tests

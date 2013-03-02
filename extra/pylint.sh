@@ -13,7 +13,7 @@ pylintoptions() {
 }
 pep8options() {
     case "$1" in
-        irnetbox.py) echo ,E203,E225,E226,E251,E501;;
+        irnetbox.py) echo --ignore=E128,E203,E225,E226,E251,E501;;
     esac
 }
 
@@ -22,7 +22,7 @@ for f in "$@"; do
     r=0
     pylint --rcfile="$(dirname "$0")/pylint.conf" --errors-only \
         $(pylintoptions $f) $f || r=1 ret=1
-    pep8 --ignore=E123,E124,E126,E127,E128$(pep8options $f) $f || r=1 ret=1
+    pep8 $(pep8options $f) $f || r=1 ret=1
     [ $r -eq 0 ] && echo "$f OK"
 done
 exit $ret
