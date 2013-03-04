@@ -331,7 +331,7 @@ gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
       cvCreateImageHeader (cvSize (width, height), IPL_DEPTH_8U, 3);
   gst_templatematch_rebuild_dist_image (filter);
 
-  filter->capsInitialised = TRUE;
+  filter->capsInitialised = (filter->cvImage != NULL);
 
   otherpad = (pad == filter->srcpad) ? filter->sinkpad : filter->srcpad;
   gst_object_unref (filter);
