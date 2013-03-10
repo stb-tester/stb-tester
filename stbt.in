@@ -8,10 +8,11 @@
 #/             <command> [args]
 #/
 #/ Available commands are:
-#/     run     Run a stbt script
-#/     record  Record a stbt script
-#/     config  Print configuration value
-#/     tv      View live video on screen
+#/     run            Run a stbt script
+#/     record         Record a stbt script
+#/     config         Print configuration value
+#/     screenshot     Capture a single screenshot
+#/     tv             View live video on screen
 #/
 #/ For help on a specific command do 'stbt <command> --help'.
 #/ See 'man stbt' for more detailed information.
@@ -24,7 +25,7 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester @VERSION@"; exit 0;;
-    run|record|config|tv)
+    run|record|config|screenshot|tv)
         STBT_SYSTEM_CONFIG=@SYSCONFDIR@/stbt/stbt.conf @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;

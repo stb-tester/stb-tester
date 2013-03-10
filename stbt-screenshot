@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt screenshot [-h]
+#/
+#/ Capture a screenshot from the system-under-test to 'screenshot.png', using
+#/ the GStreamer source pipeline specified in your stbt config file.
+#/
+#/ Options:
+#/   -h, --help     Show this help message and exit.
+
+[[ "$1" == -h || "$1" == --help ]] && { grep '^#/' "$0" | cut -c4-; exit 0; }
+
+stbt run -v --control=none <(cat <<-EOF
+	import time
+	try:
+	    wait_for_motion(timeout_secs=1)  # just make sure video is running
+	except MotionTimeout:
+	    pass
+	time.sleep(1)  # Avoid red wait_for_motion artifacts in screenshot
+	save_frame(get_frame(), "screenshot.png")
+	print "Screenshot saved to 'screenshot.png'"
+	EOF
+    )

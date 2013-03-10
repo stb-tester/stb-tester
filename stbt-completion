@@ -15,7 +15,7 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config tv)" \
+                    run record config screenshot tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in

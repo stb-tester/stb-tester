@@ -133,6 +133,9 @@ if [ $# -eq 0 ]; then
     run test_that_stbt_config_searches_global_section_if_key_not_in_tool_section &&
     run test_that_stbt_config_returns_failure_on_key_not_found &&
 
+    echo "Testing stbt-screenshot:" &&
+    run test_that_stbt_screenshot_saves_file_to_disk &&
+
     echo "All passed." || exit
 
 else
