@@ -14,7 +14,8 @@ _stbt() {
     local IFS=$'\n'
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
-            -W "$(_stbt_trailing_space --help --version run record config)" \
+            -W "$(_stbt_trailing_space --help --version \
+                    run record config tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
