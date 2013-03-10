@@ -26,9 +26,29 @@ class ArgvHider:
     def __exit__(self, type, value, traceback):
         sys.argv = self.argv
 
+
+class StdErrHider:
+    """For use with 'with' statement: Hide stderr output.
+
+    This is used because otherwise gst-python will print
+    'pygobject_register_sinkfunc is deprecated'.
+    """
+    def __enter__(self):
+        fd = sys.__stderr__.fileno()
+        self.saved_fd = os.dup(fd)
+        sys.__stderr__.flush()
+        self.null_stream = open(os.devnull, 'w', 0)
+        os.dup2(self.null_stream.fileno(), fd)
+
+    def __exit__(self, type, value, traceback):
+        sys.__stderr__.flush()
+        os.dup2(self.saved_fd, sys.__stderr__.fileno())
+        self.null_stream.close()
+
+
 import pygst  # gstreamer
 pygst.require("0.10")
-with ArgvHider():
+with ArgvHider(), StdErrHider():
     import gst
 import gobject
 import glib

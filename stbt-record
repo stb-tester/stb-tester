@@ -4,7 +4,7 @@ import stbt
 
 import pygst  # gstreamer
 pygst.require("0.10")
-with stbt.ArgvHider():
+with stbt.ArgvHider(), stbt.StdErrHider():
     import gst
 
 import argparse
