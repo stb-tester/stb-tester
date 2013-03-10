@@ -35,6 +35,10 @@ OBJS = gst/gst-stb-tester.o
 OBJS += gst/gstmotiondetect.o
 OBJS += gst/gsttemplatematch.o
 
+tools = stbt-run
+tools += stbt-record
+tools += stbt-config
+
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
 generate_version := $(shell \
@@ -62,7 +66,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0755 stbt-record stbt-run $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
@@ -72,8 +76,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-record
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-run
+	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
@@ -107,15 +110,19 @@ check-integrationtests:
 	PATH="$$PWD:$$PATH" tests/run-tests.sh
 	@! which bash >/dev/null 2>&1 || { \
 	  echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
-	  bash -c "! grep -hEwo 'test_[a-z_]+' tests/test-*.sh |\
-	    grep -v -F -f <(grep -Ewo 'test_[a-z_]+' tests/run-tests.sh)" && \
+	  bash -c "! grep -hEwo '^test_[a-zA-Z_]+' tests/test-*.sh |\
+	    grep -v -F -f <(grep -Ewo 'test_[a-zA-Z_]+' tests/run-tests.sh)" && \
 	  echo "OK"; }
 check-pylint:
-	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record
+	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record stbt-config
 check-bashcompletion:
-	set -e; \
-	. ./stbt-completion; \
-	for t in `declare -F | awk '/_stbt_test_/ {print $$3}'`; do ($$t); done
+	@echo Running stbt-completion unit tests
+	@bash -c ' \
+	    set -e; \
+	    . ./stbt-completion; \
+	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
+	        ($$t); \
+	    done'
 
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the

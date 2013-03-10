@@ -955,7 +955,7 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-def load_defaults(tool):
+def load_config(tool):
     conffile = ConfigParser.SafeConfigParser()
 
     # When run from the installed location (as `stbt run`), will read config
@@ -975,7 +975,9 @@ def load_defaults(tool):
         os.environ.get('STBT_CONFIG_FILE', ''),
     ])
     assert(system_config in files_read)
-    return dict(conffile.items('global'), **dict(conffile.items(tool)))
+    return dict(
+        conffile.items('global'),
+        **dict(conffile.items(tool)) if tool else {})
 
 
 def _find_path(image):

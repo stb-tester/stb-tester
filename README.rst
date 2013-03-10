@@ -41,6 +41,8 @@ something like this::
 success or failure for easy integration with your existing test reporting
 system.
 
+**stbt** has other auxiliary sub-commands; run `stbt --help` for details.
+
 
 OPTIONS
 =======
