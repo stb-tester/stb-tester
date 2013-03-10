@@ -948,8 +948,6 @@ def lirc_key_reader(cmd_iter, control_name):
 
 def load_defaults(tool):
     conffile = ConfigParser.SafeConfigParser()
-    conffile.add_section('global')
-    conffile.add_section(tool)
 
     # When run from the installed location (as `stbt run`), will read config
     # from $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
