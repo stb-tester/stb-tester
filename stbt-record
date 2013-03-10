@@ -2,9 +2,9 @@
 
 import stbt
 
+import pygst  # gstreamer
+pygst.require("0.10")
 with stbt.ArgvHider():
-    import pygst  # gstreamer
-    pygst.require("0.10")
     import gst
 
 import argparse

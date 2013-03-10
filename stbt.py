@@ -26,12 +26,12 @@ class ArgvHider:
     def __exit__(self, type, value, traceback):
         sys.argv = self.argv
 
+import pygst  # gstreamer
+pygst.require("0.10")
 with ArgvHider():
-    import pygst  # gstreamer
-    pygst.require("0.10")
     import gst
-    import gobject
-    import glib
+import gobject
+import glib
 
 
 # Functions available to stbt scripts
