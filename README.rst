@@ -359,6 +359,15 @@ save_frame(buf, filename)
 get_frame()
     Get a GStreamer buffer containing the current video frame.
 
+get_config(key, tool=None)
+    Read the value of `key` from the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `tool` section or `key` is not
+    found.
+
 debug(s)
     Print the given string to stderr if stbt run `--verbose` was given.
 

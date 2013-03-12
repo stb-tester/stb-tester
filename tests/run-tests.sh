@@ -122,6 +122,7 @@ if [ $# -eq 0 ]; then
     run test_detect_motion_example_press_and_wait_for_no_motion &&
     run test_precondition_script &&
     run test_get_frame_and_save_frame &&
+    run test_get_config &&
 
     echo "Testing stbt-record:" &&
     run test_record &&

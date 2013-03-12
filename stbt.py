@@ -317,6 +317,23 @@ def get_frame():
     return display.capture_screenshot()
 
 
+def get_config(key, tool=None):
+    """Read the value of `key` from the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `tool` section or `key` is not
+    found.
+    """
+    try:
+        return load_config(tool)[key]
+    except KeyError:
+        raise ConfigurationError("No such config key: '%s'" % key)
+    except ConfigParser.NoSectionError:
+        raise ConfigurationError("No such config section: '%s'" % tool)
+
+
 def debug(s):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -420,6 +437,7 @@ def teardown_run():
 # Internal
 #===========================================================================
 
+_config = None
 _debug_level = 0
 _mainloop = glib.MainLoop()
 
@@ -956,28 +974,31 @@ def lirc_key_reader(cmd_iter, control_name):
 
 
 def load_config(tool):
-    conffile = ConfigParser.SafeConfigParser()
+    global _config
+    if not _config:
+        _config = ConfigParser.SafeConfigParser()
 
-    # When run from the installed location (as `stbt run`), will read config
-    # from $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
-    # directory (as `stbt-run`) will read config from the source directory.
-    system_config = os.environ.get(
-        'STBT_SYSTEM_CONFIG',
-        os.path.join(os.path.dirname(__file__), 'stbt.conf'))
+        # When run from the installed location (as `stbt run`), will read from
+        # $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
+        # directory (as `stbt-run`) will read config from the source directory.
+        system_config = os.environ.get(
+            'STBT_SYSTEM_CONFIG',
+            os.path.join(os.path.dirname(__file__), 'stbt.conf'))
 
-    files_read = conffile.read([
-        system_config,
-        # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-        # directory specification:
-        '%s/stbt/stbt.conf' % os.environ.get(
-            'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-        # Config files specific to the test suite / test run:
-        os.environ.get('STBT_CONFIG_FILE', ''),
-    ])
-    assert(system_config in files_read)
+        files_read = _config.read([
+            system_config,
+            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+            # directory specification:
+            '%s/stbt/stbt.conf' % os.environ.get(
+                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
+            # Config files specific to the test suite / test run:
+            os.environ.get('STBT_CONFIG_FILE', ''),
+        ])
+        assert(system_config in files_read)
+
     return dict(
-        conffile.items('global'),
-        **dict(conffile.items(tool)) if tool else {})
+        _config.items('global'),
+        **dict(_config.items(tool)) if tool else {})
 
 
 def _find_path(image):
