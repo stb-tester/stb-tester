@@ -39,6 +39,7 @@ tools = stbt-run
 tools += stbt-record
 tools += stbt-config
 tools += stbt-screenshot
+tools += stbt-templatematch
 tools += stbt-tv
 
 # Generate version from 'git describe' when in git repository, and from

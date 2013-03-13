@@ -15,13 +15,14 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config screenshot tv)" \
+                    run record config screenshot templatematch tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
             run)      _stbt_run;;
             record)   _stbt_record;;
             config)   _stbt_config;;
+            templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
         esac
     fi
@@ -75,6 +76,24 @@ _stbt_config() {
             -W "$(_stbt_trailing_space $(_stbt_config_keys "$prev"))" \
             -- "$cur"))
     fi
+}
+
+_stbt_templatematch() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local v
+    [[ $COMP_CWORD -gt 2 && ${COMP_WORDS[2]} == "-v" ]] && v="-v" || v=
+    [[ ${COMP_WORDS[2]} == "--help" ]] && return
+
+    case "$v,$COMP_CWORD" in
+        ,2) COMPREPLY=($(compgen \
+                -f -W "$(_stbt_trailing_space --help -v)" \
+                -- "$cur"));;
+        *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
+        ,4|*,*) COMPREPLY=($(compgen \
+            -W "$(_stbt_no_space noise_threshold= )" \
+            -- "$cur"));;
+    esac
 }
 
 ## arguments to command-line options

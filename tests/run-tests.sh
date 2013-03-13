@@ -136,6 +136,11 @@ if [ $# -eq 0 ]; then
     echo "Testing stbt-screenshot:" &&
     run test_that_stbt_screenshot_saves_file_to_disk &&
 
+    echo "Testing stbt-templatematch:" &&
+    run test_that_stbt_templatematch_finds_match &&
+    run test_that_stbt_templatematch_doesnt_find_match &&
+    run test_that_stbt_templatematch_applies_noise_threshold_parameter &&
+
     echo "All passed." || exit
 
 else
