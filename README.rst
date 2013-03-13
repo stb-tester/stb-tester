@@ -136,13 +136,13 @@ later files taking precedence):
 These files are simple ini files with the form::
 
     [global]
-        source_pipeline=videotestsrc
-        control=None
+    source_pipeline = videotestsrc
+    control = None
     [run]
-        script=test.py
+    script = test.py
     [record]
-        output_file=test.py
-        control_recorder=file:///dev/stdin
+    output_file = test.py
+    control_recorder = file:///dev/stdin
 
 Each key corresponds to a command line option with hyphens replaced with
 underscores.  Configuration items in the 'global' section will be passed to
