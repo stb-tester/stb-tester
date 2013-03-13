@@ -1,6 +1,4 @@
-#!bash
-
-# bash tab-completion for stb-tester
+# Bash tab-completion for stb-tester.               -*- shell-script -*-
 
 complete -o nospace -F _stbt stbt
 complete -o nospace -F _stbt_run stbt-run
