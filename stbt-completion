@@ -91,7 +91,7 @@ _stbt_templatematch() {
                 -- "$cur"));;
         *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
         ,4|*,*) COMPREPLY=($(compgen \
-            -W "$(_stbt_no_space noise_threshold= )" \
+            -W "$(_stbt_no_space confirm_threshold= )" \
             -- "$cur"));;
     esac
 }

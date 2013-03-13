@@ -18,8 +18,14 @@ import re
 import socket
 import sys
 import time
+import warnings
 
 import irnetbox
+
+
+warnings.filterwarnings(
+    action="always", message='stbt-templatematch',
+    category=DeprecationWarning, module='stbt')
 
 
 class ArgvHider:
@@ -98,21 +104,68 @@ class MatchResult(namedtuple(
     pass
 
 
-def detect_match(image, timeout_secs=10, noise_threshold=0.16):
+def detect_match(image, timeout_secs=10,
+        match_method=1, match_threshold=0.80,
+        confirm_method=1, erode_passes=1,
+        confirm_threshold=None, noise_threshold=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
-    `noise_threshold` is a parameter used by the templatematch algorithm.
-    Increase `noise_threshold` to avoid false negatives, at the risk of
+    `match_method` is a parameter used by the templatematch algorithm.
+    It dictates which method is used by OpenCVs cvMatchTemplate algorithm
+    to produce its "heat map" of template locations. See
+    http://docs.opencv.org/doc/tutorials/imgproc/histograms/
+    template_matching/template_matching.html
+
+    `match_threshold` is a parameter used by the templatematch algorithm.
+    It dictates how strong a result from cvTemplateMatch must be before the
+    potential match will be checked. A value of 0 will mean that every match
+    will be passes to the confirmation stage, whilst a value of 1 means
+    (theoretically) that only a perfect match will be confirmed. (In practice,
+    a value of 1 is useless because of the way cvTemplateMatch works, and due
+    to limitations in the storage of floating point numbers in binary. See
+    http://docs.python.org/2/tutorial/floatingpoint.html.)
+
+    `confirm_method` is a parameter used by the templatematch algorithm.
+    It dictates which method to use to confirm the match found by
+    cvMatchTemplate. 0 (zero) means "don't confirm, always return true".
+
+    `erode_passes` is a parameter used by the templatematch algorithm.
+    Increasing the number of erode steps makes your test less sensitive to
+    noise and small variances, at the cost of of being more likely to report
+    a false positive.
+
+    `confirm_threshold` is a parameter used by the templatematch algorithm.
+    Increase `confirm_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 1.0 will report a match every time).
+    `noise_threshold` is a synonym for `confirm_threshold` and is marked for
+    deprecation.
     """
+
+    if noise_threshold and confirm_threshold:
+        raise ConfigurationError("`noise_threshold` and `confirm_threshold` "
+                                 "cannot be used together. `noise_threshold` "
+                                 "is marked for deprecation.")
+    if noise_threshold:
+        deprecation("`noise_threshold` is marked for deprecation. Please " +
+                    "use `confirm_threshold` instead.")
+        confirm_threshold = noise_threshold
+    # This sets the default value in neither parameter is set. Once
+    # noise_threshold is removed, confirm_threshold's default should be
+    # reinstated in the parameter line.
+    if not noise_threshold and not confirm_threshold:
+        confirm_threshold = 0.16
 
     params = {
         "template": _find_path(image),
-        "noiseThreshold": noise_threshold,
+        "matchMethod": match_method,
+        "matchThreshold": match_threshold,
+        "confirmMethod": confirm_method,
+        "erodePasses": erode_passes,
+        "confirmThreshold": confirm_threshold,
     }
     debug("Searching for " + params["template"])
     if not os.path.isfile(params["template"]):
@@ -179,8 +232,9 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             yield result
 
 
-def wait_for_match(image, timeout_secs=10,
-                   consecutive_matches=1, noise_threshold=0.16):
+def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
+        match_method=1, match_threshold=0.8, confirm_method=1,
+        erode_passes=1, confirm_threshold=None, noise_threshold=None):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -189,16 +243,34 @@ def wait_for_match(image, timeout_secs=10,
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position.
 
-    Increase `noise_threshold` to avoid false negatives, at the risk of
+    Increase `confirm_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 1.0 will report a match every time);
     increase `consecutive_matches` to avoid false positives due to noise. But
     please let us know if you are having trouble with image matches, so that we
     can improve the matching algorithm.
+
+    See `detect_match` for details on the remaining parameters.
     """
+
+    if noise_threshold and confirm_threshold:
+        raise ConfigurationError("`noise_threshold` and `confirm_threshold` "
+                                 "cannot be used together. `noise_threshold` "
+                                 "is marked for deprecation.")
+    if noise_threshold:
+        deprecation("`noise_threshold` is marked for deprecation. Please "
+                    "use `confirm_threshold` instead.")
+        confirm_threshold = noise_threshold
+    # This sets the default value in neither parameter is set. Once
+    # noise_threshold is removed, confirm_threshold's default should be
+    # reinstated in the parameter line.
+    if not noise_threshold and not confirm_threshold:
+        confirm_threshold = 0.16
 
     match_count = 0
     last_pos = Position(0, 0)
-    for res in detect_match(image, timeout_secs, noise_threshold):
+    for res in detect_match(
+            image, timeout_secs, match_method, match_threshold,
+            confirm_method, erode_passes, confirm_threshold):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -212,8 +284,9 @@ def wait_for_match(image, timeout_secs=10,
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
-def press_until_match(key, image,
-                      interval_secs=3, noise_threshold=0.16, max_presses=10):
+def press_until_match(key, image, interval_secs=3, match_method=1,
+        match_threshold=0.80, confirm_method=1, erode_passes=1,
+        confirm_threshold=None, noise_threshold=None,  max_presses=10):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -221,12 +294,32 @@ def press_until_match(key, image,
 
     `interval_secs` is the number of seconds to wait for a match before
     pressing again.
+
+    See `detect_match` for details on the remaining parameters.
     """
+    if noise_threshold and confirm_threshold:
+        raise ConfigurationError("`noise_threshold` and `confirm_threshold` "
+                                 "cannot be used together. `noise_threshold` "
+                                 "is marked for deprecation.")
+    if noise_threshold:
+        deprecation("`noise_threshold` is marked for deprecation. Please "
+                    "use `confirm_threshold` instead.")
+        confirm_threshold = noise_threshold
+    # This sets the default value in neither parameter is set. Once
+    # noise_threshold is removed, confirm_threshold's default should be
+    # reinstated in the parameter line.
+    if not noise_threshold and not confirm_threshold:
+        confirm_threshold = 0.16
+
     i = 0
+
     while True:
         try:
-            return wait_for_match(image, timeout_secs=interval_secs,
-                                  noise_threshold=noise_threshold)
+            return wait_for_match(
+                    image, timeout_secs=interval_secs,
+                    match_method=match_method, match_threshold=match_threshold,
+                    confirm_method=confirm_method, erode_passes=erode_passes,
+                    confirm_threshold=confirm_threshold)
         except MatchTimeout:
             if i < max_presses:
                 press(key)
@@ -476,7 +569,7 @@ class Display:
             # Detect motion when requested:
             "stbt-motiondetect name=motiondetect enabled=false",
             # OpenCV image-processing library:
-            "stbt-templatematch name=template_match method=1",
+            "stbt-templatematch name=template_match",
         ])
         xvideo = " ! ".join([
             # Convert to a colorspace that xvimagesink can handle:
@@ -1044,6 +1137,10 @@ def ddebug(s):
 def warn(s):
     sys.stderr.write("%s: warning: %s\n" % (
         os.path.basename(sys.argv[0]), str(s)))
+
+
+def deprecation(message):
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
 
 
 # Tests
