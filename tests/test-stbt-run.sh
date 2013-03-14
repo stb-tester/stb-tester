@@ -398,7 +398,11 @@ test_detect_motion_with_debug_output_does_not_segfault_without_mask() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_motion(timeout_secs=1)
 	EOF
-    stbt-run -vv "$scratchdir/test.py"
+    stbt-run -vv "$scratchdir/test.py"  # creates stbt-debug
+
+    if [ $? -eq 0 ] && [ -d "stbt-debug" ] && [ "$leave_scratch_dir" != "true" ]; then
+        rm -rf "stbt-debug"
+    fi
 }
 
 test_detect_motion_times_out_during_yield() {
