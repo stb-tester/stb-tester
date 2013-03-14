@@ -90,6 +90,7 @@ typedef enum {
 typedef enum {
   GST_TM_CONFIRM_METHOD_NONE,
   GST_TM_CONFIRM_METHOD_ABSDIFF,
+  GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF
 } GstTMConfirmMethod;
 
 typedef struct _StbtTemplateMatch StbtTemplateMatch;

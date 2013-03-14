@@ -9,7 +9,8 @@ test_wait_for_match() {
 
 test_wait_for_match_no_match() {
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", timeout_secs=1)
+	wait_for_match("videotestsrc-bw-flipped.png", confirm_method=1,
+	    confirm_threshold=0.16, timeout_secs=1)
 	EOF
     rm -f screenshot.png
     ! stbt-run -v "$scratchdir/test.py" &&
@@ -102,6 +103,23 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
     stbt-run -v "$scratchdir/test.py"
 }
 
+test_wait_for_match_confirm_methods_produce_different_results() {
+    local source_pipeline='filesrc location="known-fail-source.png" ! \
+        decodebin2 ! imagefreeze ! ffmpegcolorspace'
+
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_match("known-fail-template.png", confirm_method=2)
+	EOF
+    ! stbt-run -v --source-pipeline="$source_pipeline" --control=None \
+        "$scratchdir/test.py"
+
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_match("known-fail-template.png", confirm_method=1)
+	EOF
+    stbt-run -v --source-pipeline="$source_pipeline" --control=None \
+        "$scratchdir/test.py"
+}
+
 test_wait_for_match_erode_passes_affects_match() {
     # This test demonstrates that changing the number of erodePasses
     # can cause incongruent images to match falsely.
@@ -128,13 +146,13 @@ test_wait_for_match_confirm_threshold_affects_match() {
         decodebin2 ! imagefreeze ! ffmpegcolorspace'
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.5, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", confirm_threshold=0.55, timeout_secs=1)
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.4, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", confirm_threshold=0.45, timeout_secs=1)
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py"
@@ -409,7 +427,8 @@ test_detect_match_changing_template_is_not_racy() {
 	    import time
 	    time.sleep(1.0) # make sure the test fail (0.1s also works)
 	    break
-	for match_result in detect_match("videotestsrc-bw-flipped.png"):
+	for match_result in detect_match("videotestsrc-bw-flipped.png",
+	    confirm_method=1, confirm_threshold=0.16):
 	    # Not supposed to match
 	    if not match_result.match:
 	        import sys

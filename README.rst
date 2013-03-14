@@ -276,7 +276,7 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, match_method=1, match_threshold=0.8, confirm_method=1, erode_passes=1, confirm_threshold=None, noise_threshold=None)
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None)
     Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -293,7 +293,7 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, match_method=1, ma
 
     See `detect_match` for details on the remaining parameters.
 
-press_until_match(key, image, interval_secs=3, match_method=1, match_threshold=0.8, confirm_method=1, erode_passes=1, confirm_threshold=None, noise_threshold=None, max_presses=10)
+press_until_match(key, image, interval_secs=3, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None, max_presses=10)
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -327,7 +327,7 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-detect_match(image, timeout_secs=10, match_method=1, match_threshold=0.8, confirm_method=1, erode_passes=1, confirm_threshold=None, noise_threshold=None)
+detect_match(image, timeout_secs=10, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None)
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -436,6 +436,79 @@ class UITestError(Exception)
 
 
 .. <end python docs>
+
+
+CUSTOMISING THE TEMPLATEMATCH ALGORITHM
+---------------------------------------
+
+It is possible to customise the templatematch algorithm by overriding the default
+parameter values. This can be done in either `stbt.conf` or in a keyword
+argument to one of the functions `detect_match()`, `wait_for_match()`, and
+`press_until_match()`.
+
+`match_method` (int) default: 1
+  The method that is used by OpenCV's cvMatchTemplate algorithm to produce its
+  "heat map" of template locations. See `OpenCV Tutorials: Template Matching
+  <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
+
+`match_threshold` (float) default: 0.8
+  How strong a result from cvTemplateMatch must be before the potential match
+  will be checked. A value of 0 will mean that every match will be passes to
+  the confirmation stage, whilst a value of 1 means (theoretically) that only
+  a perfect match will be confirmed. (In practice, a value of 1 is useless
+  because of the way cvTemplateMatch works, and due to limitations in the
+  storage of floating point numbers in binary.  See
+  http://docs.python.org/2/tutorial/floatingpoint.html.)
+
+`confirm_method` (int) default: 2
+  The method to use for confirming the match found by cvMatchTemplate:
+
+  (0) None
+
+      Do not confirm the match. Assume that the potential match found is
+      correct.
+
+  (1) Absolute Difference (`absdiff`)
+
+      The absolute difference between template and source Region of Interest
+      (ROI) is calculated; thresholded and eroded to account for potential
+      noise; and if any white pixels remain then the match is deemed false.
+
+      When matching solid regions of colour, particularly where there are
+      regions of either black or white, `absdiff` is better than
+      `normed-absdiff` because is does not alter the luminance range, which can
+      lead to false matches. For example, an image which is half white and half
+      non-white, once normalised, will match a similar image which is half
+      white and half black because the half which is non-white becomes black so
+      that the maximum luminance range of [0..255] is occupied.
+
+  (2) Normalized Absolute Difference (`normed-absdiff`)
+
+      As with `absdiff` but both template and ROI are normalized before the
+      absolute difference is calculated. This has the effect of exaggerating
+      small differences between images with similar, small ranges of pixel
+      brightnesses (luminance).
+
+      This method is more accurate than `absdiff` at reporting true
+      and false matches when there is noise involved, particularly aliased
+      text. However it will, in general, require a greater confirm_threshold
+      than the equivalent match with absdiff. The important thing to remember
+      is that an increase of, say, 0.1 to the `confirm_threshold` when using
+      `absdiff` is (very roughly) the equivalent of an increase of 0.05 when
+      using `normed-absdiff`. In other words, the `confirm_threshold` is more
+      sensitive and fine-tunable when using `normed-absdiff`.
+
+`erode_passes` (int) default: 1
+  The number of erode steps. Increasing the number of erode steps makes your
+  test less sensitive to noise and small variances, at the cost of of being
+  more likely to report a false positive.
+
+`confirm_threshold` (float) default: 0.28
+  Increase `confirm_threshold` to avoid false negatives, at the risk of
+  increasing false positives (a value of 1.0 will report a match every time).
+
+Please let us know if you are having trouble with image matches so that we can
+further improve the matching algorithm.
 
 
 TEST SCRIPT BEST PRACTICES

@@ -112,7 +112,7 @@ class MatchResult(namedtuple(
 
 def detect_match(image, timeout_secs=10,
         match_method=1, match_threshold=0.80,
-        confirm_method=1, erode_passes=1,
+        confirm_method=2, erode_passes=1,
         confirm_threshold=None, noise_threshold=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
@@ -163,7 +163,7 @@ def detect_match(image, timeout_secs=10,
     # noise_threshold is removed, confirm_threshold's default should be
     # reinstated in the parameter line.
     if not noise_threshold and not confirm_threshold:
-        confirm_threshold = 0.16
+        confirm_threshold = 0.28
 
     params = {
         "template": _find_path(image),
@@ -243,7 +243,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-        match_method=1, match_threshold=0.8, confirm_method=1,
+        match_method=1, match_threshold=0.8, confirm_method=2,
         erode_passes=1, confirm_threshold=None, noise_threshold=None):
     """Search for `image` in the source video stream.
 
@@ -274,7 +274,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     # noise_threshold is removed, confirm_threshold's default should be
     # reinstated in the parameter line.
     if not noise_threshold and not confirm_threshold:
-        confirm_threshold = 0.16
+        confirm_threshold = 0.28
 
     match_count = 0
     last_pos = Position(0, 0)
@@ -295,7 +295,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
 
 def press_until_match(key, image, interval_secs=3, match_method=1,
-        match_threshold=0.80, confirm_method=1, erode_passes=1,
+        match_threshold=0.80, confirm_method=2, erode_passes=1,
         confirm_threshold=None, noise_threshold=None,  max_presses=10):
     """Calls `press` as many times as necessary to find the specified `image`.
 
@@ -319,7 +319,7 @@ def press_until_match(key, image, interval_secs=3, match_method=1,
     # noise_threshold is removed, confirm_threshold's default should be
     # reinstated in the parameter line.
     if not noise_threshold and not confirm_threshold:
-        confirm_threshold = 0.16
+        confirm_threshold = 0.28
 
     i = 0
 
