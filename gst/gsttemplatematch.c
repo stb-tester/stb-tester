@@ -73,9 +73,9 @@ GST_DEBUG_CATEGORY_STATIC (gst_templatematch_debug);
 
 #define DEFAULT_MATCH_METHOD GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED
 #define DEFAULT_MATCH_THRESHOLD (0.80f)
-#define DEFAULT_CONFIRM_METHOD GST_TM_CONFIRM_METHOD_ABSDIFF
+#define DEFAULT_CONFIRM_METHOD GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF
 #define DEFAULT_ERODE_PASSES (1)
-#define DEFAULT_CONFIRM_THRESHOLD (0.16f)
+#define DEFAULT_CONFIRM_THRESHOLD (0.28f)
 
 #define GST_TM_MATCH_METHOD (gst_tm_match_method_get_type())
 static GType
@@ -109,6 +109,8 @@ gst_tm_confirm_method_get_type (void)
   static const GEnumValue confirm_method_types[] = {
     {GST_TM_CONFIRM_METHOD_NONE, "Do not use confirm step", "none"},
     {GST_TM_CONFIRM_METHOD_ABSDIFF, "Absolute difference", "absdiff"},
+    {GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF, "Normalised absolute difference",
+        "normed-absdiff"},
     {0, NULL, NULL}
   };
   if (!gst_tm_confirm_method_type) {
@@ -180,6 +182,10 @@ static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
     const CvPoint * bestPos, const int method, const int erodePasses,
     const char * debugDirectory);
 static gboolean gst_templatematch_confirm_absdiff (IplImage * inputROIGray,
+    IplImage * input, const IplImage * templateGray, float confirmThreshold,
+    const CvPoint * bestPos, const int erodePasses,
+    const char * debugDirectory);
+static gboolean gst_templatematch_confirm_normed_absdiff (IplImage * inputROIGray,
     IplImage * input, const IplImage * templateGray, float confirmThreshold,
     const CvPoint * bestPos, const int erodePasses,
     const char * debugDirectory);
@@ -583,6 +589,8 @@ gst_templatematch_match (IplImage * input, IplImage * template,
 /* Confirm the match returned by template match using specified method:
  * none : Do not confirm the match, assume correct
  * absdiff : Absolute difference between template and source
+ * normed-absdiff : Absolute difference between normalised template and source
+ * See specific confirm methods for more explanation
  */
 static gboolean
 gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
@@ -597,6 +605,11 @@ gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
       break;
     case GST_TM_CONFIRM_METHOD_ABSDIFF:
       confirmed = gst_templatematch_confirm_absdiff (
+              inputROIGray, input, templateGray, confirmThreshold,
+              bestPos, erodePasses, debugDirectory);
+      break;
+    case GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF:
+      confirmed = gst_templatematch_confirm_normed_absdiff (
               inputROIGray, input, templateGray, confirmThreshold,
               bestPos, erodePasses, debugDirectory);
       break;
@@ -642,6 +655,65 @@ gst_templatematch_confirm_absdiff (IplImage * inputROIGray, IplImage * input,
   
   cvErode (cvAbsDiffImage, cvAbsDiffImage, kernel, erodePasses);
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
+      "absdiff_threshold_erode.png");
+
+  cvResetImageROI (input);
+
+  cvReleaseStructuringElement (&kernel);
+
+  return cvCountNonZero (cvAbsDiffImage) == 0;
+}
+
+/* As with the regular absdiff confirm algorithm, except both template
+ * and source images are normalised before the absolute difference/
+ * threshold/erode is performed. This helps to accentuate differences
+ * between images with low brightness variation, and requires a slightly
+ * higher threshold value to eliminate the accentuated noise.
+ */
+static gboolean
+gst_templatematch_confirm_normed_absdiff (IplImage * inputROIGray,
+        IplImage * input, const IplImage * templateGray, float confirmThreshold,
+        const CvPoint * bestPos, const int erodePasses,
+        const char * debugDirectory)
+{
+  IplImage *templateGrayNormalized = cvCloneImage(templateGray);
+  IplImage *inputROIGrayNormalized = inputROIGray;
+  IplImage *cvAbsDiffImage = inputROIGray;
+  IplConvKernel *kernel = cvCreateStructuringElementEx (
+      3, 3, 1, 1, CV_SHAPE_ELLIPSE, NULL );
+  int threshold = (int)(confirmThreshold * 255);
+
+  cvSetImageROI (input, cvRect (bestPos->x, bestPos->y, templateGray->width,
+    templateGray->height));
+  gst_templatematch_log_image (input, debugDirectory, "source_roi.png");
+
+  cvCvtColor (input, inputROIGray, CV_BGR2GRAY);
+  gst_templatematch_log_image (inputROIGray, debugDirectory,
+      "source_roi_gray.png");
+  gst_templatematch_log_image (templateGray, debugDirectory,
+      "template_gray.png");
+
+  cvNormalize (inputROIGray, inputROIGrayNormalized,
+      0, 255, CV_MINMAX, CV_8UC1);
+  cvNormalize (templateGray, templateGrayNormalized,
+      0, 255, CV_MINMAX, CV_8UC1);
+  gst_templatematch_log_image(inputROIGrayNormalized,
+      debugDirectory, "source_roi_gray_normalized.png");
+  gst_templatematch_log_image(templateGrayNormalized,
+      debugDirectory, "template_gray_normalized.png");
+
+  cvAbsDiff (inputROIGrayNormalized, templateGrayNormalized,
+      cvAbsDiffImage);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
+      "absdiff.png");
+
+  cvThreshold (cvAbsDiffImage, cvAbsDiffImage, threshold, 255,
+      CV_THRESH_BINARY);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
+      "absdiff_threshold.png");
+
+  cvErode (cvAbsDiffImage, cvAbsDiffImage, kernel, erodePasses);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
       "absdiff_threshold_erode.png");
 
   cvResetImageROI (input);
