@@ -122,9 +122,24 @@ if [ $# -eq 0 ]; then
     run test_detect_motion_example_press_and_wait_for_no_motion &&
     run test_precondition_script &&
     run test_get_frame_and_save_frame &&
+    run test_get_config &&
 
     echo "Testing stbt-record:" &&
     run test_record &&
+
+    echo "Testing stbt-config:" &&
+    run test_that_stbt_config_reads_from_STBT_CONFIG_FILE &&
+    run test_that_stbt_config_tool_section_overrides_global_section &&
+    run test_that_stbt_config_searches_global_section_if_key_not_in_tool_section &&
+    run test_that_stbt_config_returns_failure_on_key_not_found &&
+
+    echo "Testing stbt-screenshot:" &&
+    run test_that_stbt_screenshot_saves_file_to_disk &&
+
+    echo "Testing stbt-templatematch:" &&
+    run test_that_stbt_templatematch_finds_match &&
+    run test_that_stbt_templatematch_doesnt_find_match &&
+    run test_that_stbt_templatematch_applies_noise_threshold_parameter &&
 
     echo "All passed." || exit
 

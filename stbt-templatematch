@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt templatematch [-h] [-v] \
+#/             <full frame> <template image> [<wait_for_match parameters>...]
+#/
+#/ Run stbt's templatematch algorithm against a single frame (which you can
+#/ capture using `stbt screenshot`).
+#/
+#/ e.g.: stbt templatematch full-frame.png button.png noise_threshold=0.20
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0;;
+        -v) v="-v";;
+        *) break;;
+    esac
+    shift
+done
+[ $# -lt 2 ] && { usage >&2; exit 1; }
+videoframe="$1" template="$2"; shift 2
+args="timeout_secs=1"
+while [ $# -gt 0 ]; do args+=", $1"; shift; done
+
+script="stbt-templatematch.$$.py"
+trap "rm $script" EXIT
+
+cat > $script <<-EOF
+	import sys
+	try:
+	    wait_for_match("$template", $args)
+	except MatchTimeout:  # Stop stbt creating screenshot.png
+	    print "Didn't find match for '$template'."
+	    sys.exit(1)
+	EOF
+stbt run -v $v --source-pipeline="filesrc location=$videoframe \
+        ! decodebin2 ! imagefreeze ! ffmpegcolorspace" \
+    --control=none $script

@@ -28,7 +28,7 @@ def main(argv):
     parser.add_argument(
         '-o', '--output-file',
         help='The filename of the generated script (default: %(default)s)')
-    parser.set_defaults(**stbt.load_defaults('record'))
+    parser.set_defaults(**stbt.load_config('record'))
     args = parser.parse_args(argv[1:])
     stbt.debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))

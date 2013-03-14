@@ -14,12 +14,15 @@ _stbt() {
     local IFS=$'\n'
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
-            -W "$(_stbt_trailing_space --help --version run record)" \
+            -W "$(_stbt_trailing_space --help --version \
+                    run record config screenshot templatematch tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
             run)      _stbt_run;;
             record)   _stbt_record;;
+            config)   _stbt_config;;
+            templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
         esac
     fi
@@ -56,6 +59,39 @@ _stbt_record() {
                     --help -v --verbose \
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder -o --output-file)" \
+            -- "$cur"));;
+    esac
+}
+
+_stbt_config() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    if [ $COMP_CWORD -eq 2 ]; then
+        COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space \
+                    --help $(_stbt_config_sections) $(_stbt_config_keys))" \
+            -- "$cur"))
+    elif [[ $COMP_CWORD -eq 3 && "$prev" != --help ]]; then
+        COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space $(_stbt_config_keys "$prev"))" \
+            -- "$cur"))
+    fi
+}
+
+_stbt_templatematch() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local v
+    [[ $COMP_CWORD -gt 2 && ${COMP_WORDS[2]} == "-v" ]] && v="-v" || v=
+    [[ ${COMP_WORDS[2]} == "--help" ]] && return
+
+    case "$v,$COMP_CWORD" in
+        ,2) COMPREPLY=($(compgen \
+                -f -W "$(_stbt_trailing_space --help -v)" \
+                -- "$cur"));;
+        *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
+        ,4|*,*) COMPREPLY=($(compgen \
+            -W "$(_stbt_no_space noise_threshold= )" \
             -- "$cur"));;
     esac
 }
@@ -135,6 +171,36 @@ _stbt_vr_port() {
 _stbt_control_file() {
     local cur="$_stbt_cur"
     compgen -f -P "//" -- "${cur#//}"
+}
+
+_stbt_config_sections() {
+    _stbt_config_file_contents |
+    perl -lne 'print if s/^\s*\[([a-zA-Z0-9_]+)\]\s*/\1/' |
+    sort |
+    uniq
+}
+
+_stbt_config_keys() {
+    _stbt_config_file_contents |
+    { [ -z "$1" ] && cat ||
+        # Restrict to config section [$1]
+        perl -lne "print if /^\s*\[$1\]/ ... /^\s*\[/"; } |
+    perl -lne 'print if s/^\s*([a-zA-Z0-9_]+)\s*=.*/\1/' |
+    sort |
+    uniq
+}
+
+_stbt_config_file_contents() {
+    [ -n "$in_unit_test" ] && { cat; return; }
+
+    local system_config=$(
+        awk -F'[ =]+' '/STBT_SYSTEM_CONFIG/ {print $3}' "$(which stbt)")
+    local user_config="$XDG_CONFIG_HOME"
+    [ -n "$user_config" ] || user_config="$HOME/.config"
+    user_config+="/stbt/stbt.conf"
+    for f in "$system_config" "$user_config" "$STBT_CONFIG_FILE"; do
+        [ -r "$f" ] && cat "$f"
+    done
 }
 
 ## Helper functions
@@ -244,4 +310,38 @@ _stbt_test_get_prev() {
 
     COMP_WORDS=(stbt run --control = file : ///dev/stdin); COMP_CWORD=6; _stbt_get_prev
     _stbt_assert_get_prev --control=file: ///dev/stdin
+}
+
+_stbt_config_for_tests() {
+    cat <<-EOF
+	[global]
+	key1 = hi there
+	key2=hi there
+	  key3 = hi there
+	  	key4	= hi there
+	  	[run]
+	key5 = hi there
+	EOF
+}
+
+_stbt_test_config_sections() {
+    diff \
+        <(_stbt_config_for_tests | in_unit_test=yes _stbt_config_sections) \
+        <(printf "global\nrun\n") ||
+    _stbt_fail "_stbt_config_sections unexpected output"
+    echo _stbt_config_sections: ok
+}
+
+_stbt_test_config_keys() {
+    diff \
+        <(_stbt_config_for_tests | in_unit_test=yes _stbt_config_keys) \
+        <(printf "key1\nkey2\nkey3\nkey4\nkey5\n") ||
+    _stbt_fail "_stbt_config_keys unexpected output"
+    echo _stbt_config_keys: ok
+
+    diff \
+        <(_stbt_config_for_tests | in_unit_test=yes _stbt_config_keys global) \
+        <(printf "key1\nkey2\nkey3\nkey4\n") ||
+    _stbt_fail "_stbt_config_keys 'global' unexpected output"
+    echo _stbt_config_keys: ok
 }

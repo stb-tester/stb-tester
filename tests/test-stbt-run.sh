@@ -490,3 +490,22 @@ test_get_frame_and_save_frame() {
 	EOF
     stbt-run -v "$scratchdir/match-screenshot.py"
 }
+
+test_get_config() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt
+	assert stbt.get_config("test_key") == "this is a test value"
+	assert stbt.get_config("test_key", tool="special") == \
+	    "overrides the global value"
+	assert stbt.get_config("control", tool="special") == "test"
+	try:
+	    stbt.get_config("no_such_key")
+	    stbt.get_config("test_key", tool="no_such_section")
+	    assert False
+	except AssertionError:
+	    raise
+	except:
+	    pass
+	EOF
+    stbt run "$scratchdir/test.py"
+}

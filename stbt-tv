@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt tv [-h] [-f] [-v] [source pipeline]
+#/
+#/ Show the video captured from the GStreamer source pipeline specified on the
+#/ command line or in your stbt config file.
+#/
+#/ The appropriate sink for your system will be used, regardless of the
+#/ sink_pipeline specified in your stbt configuration file.
+#/
+#/ Options:
+#/   -h, --help     Show this help message and exit.
+#/   -f             Do not show video output (i.e. direct the output to
+#/                  'fakesink'). This is to activate the pass-through output of
+#/                  Blackmagic cards for monitoring.
+#/   -v             Enable 'gst-launch' verbose output.
+
+set -eu
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0;;
+        -f) sink="fakesink silent=true";;
+        -v) v="-v";;
+        -*) usage >&2; exit 1;;
+        *) break;;
+    esac
+    shift
+done
+
+source_pipeline=${*:-$(stbt config run source_pipeline)}
+
+: ${sink:=$(
+        case "$(uname)" in
+            (Darwin) echo glimagesink;;
+            (Linux) lspci | grep -q VMware &&
+                        echo ximagesink || echo xvimagesink;;
+            (*) echo ximagesink;;
+        esac)}
+
+set -x
+gst-launch ${v:-} $source_pipeline ! ffmpegcolorspace ! $sink sync=false
