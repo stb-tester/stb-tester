@@ -14,7 +14,9 @@
 
 [[ "$1" == -h || "$1" == --help ]] && { grep '^#/' "$0" | cut -c4-; exit 0; }
 
-stbt run -v --control=none <(cat <<-EOF
+STBT_LIBEXEC="$(dirname "$0")"
+
+"$STBT_LIBEXEC/stbt-run" -v --control=none <(cat <<-EOF
 	import time
 	try:
 	    wait_for_motion(timeout_secs=1)  # just make sure video is running

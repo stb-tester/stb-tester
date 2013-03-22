@@ -25,6 +25,7 @@ while getopts "lv" option; do
 done
 shift $(($OPTIND-1))
 
+export PATH="$testdir/..:$PATH"
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
 

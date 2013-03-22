@@ -105,12 +105,11 @@ clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
-check: gst/libgst-stb-tester.so
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
-check-integrationtests:
-	PATH="$$PWD:$$PATH" tests/run-tests.sh
+check-integrationtests: gst/libgst-stb-tester.so
+	tests/run-tests.sh
 	@! which bash >/dev/null 2>&1 || { \
 	  echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
 	  bash -c "! grep -hEwo '^test_[a-zA-Z_]+' tests/test-*.sh |\
