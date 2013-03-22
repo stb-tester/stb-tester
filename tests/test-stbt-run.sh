@@ -507,5 +507,5 @@ test_get_config() {
 	except:
 	    pass
 	EOF
-    stbt run "$scratchdir/test.py"
+    stbt-run "$scratchdir/test.py"
 }
