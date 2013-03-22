@@ -32,7 +32,7 @@ except Exception as e:
     sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))
     if hasattr(e, "screenshot") and e.screenshot:
         stbt.save_frame(e.screenshot, "screenshot.png")
-        sys.stderr.write("Saved screenshot to '%s'." % ("screenshot.png"))
+        sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     raise
 finally:
     stbt.teardown_run()
