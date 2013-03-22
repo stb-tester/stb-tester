@@ -192,9 +192,9 @@ video-capture card you can use any gstreamer video-source element. For example:
   of a physical set-top box, you could use the ximagesrc gstreamer
   element to capture video from the VM's X Window.
 
-* If your set-top box uses DirectFB, you could install the (not yet written)
-  DirectFBSource gstreamer element on the set-top box to stream video to a
-  tcpclientsrc or tcpserversrc gstreamer element on the test rig.
+* If your set-top box uses DirectFB, you could install the DirectFBSource
+  gstreamer element (https://bugzilla.gnome.org/show_bug.cgi?id=685877) on the
+  set-top box to stream video to a updsrc gstreamer element on the test rig.
 
 Instead of a hardware infra-red receiver + emitter, you can use a software
 equivalent (for example a server running on the set-top box that listens on
