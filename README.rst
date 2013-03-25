@@ -276,24 +276,30 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None)
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, \*\*kwargs)
     Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
     `consecutive_matches` forces this function to wait for several consecutive
-    frames with a match found at the same x,y position.
+    frames with a match found at the same x,y position. Increase
+    `consecutive_matches` to avoid false positives due to noise.
 
-    Increase `confirm_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 1.0 will report a match every time);
-    increase `consecutive_matches` to avoid false positives due to noise. But
-    please let us know if you are having trouble with image matches, so that we
-    can improve the matching algorithm.
+    The templatematch parameter `noise_threshold` is marked for deprecation
+    but appears in the args for backward compatibility with positional
+    argument syntax. It is now a synonym for `confirm_threshold`. Please use
+    `confirm_threshold` from now on.
 
-    See `detect_match` for details on the remaining parameters.
+    Any other keyword arguments passed to the function using `kwargs` will be
+    used to customise the templatematch algorithm parameters. If no
+    templatematch arguments are explicitly passed, then the default values
+    from `stbt.conf` will be used instead.
 
-press_until_match(key, image, interval_secs=3, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None, max_presses=10)
+    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
+    README.rst or man page) for a description of all templatematch parameters.
+
+press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, \*\*kwargs)
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -302,7 +308,18 @@ press_until_match(key, image, interval_secs=3, match_method=1, match_threshold=0
     `interval_secs` is the number of seconds to wait for a match before
     pressing again.
 
-    See `detect_match` for details on the remaining parameters.
+    The templatematch parameter `noise_threshold` is marked for deprecation
+    but appears in the args for backward compatibility with positional
+    argument syntax. It is now a synonym for `confirm_threshold`. Please use
+    `confirm_threshold` from now on.
+
+    Any other keyword arguments passed to the function using `kwargs` will be
+    used to customise the templatematch algorithm parameters. If no
+    templatematch arguments are explicitly passed, then the default values
+    from `stbt.conf` will be used instead.
+
+    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
+    README.rst or man page) for a description of all templatematch parameters.
 
 wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, mask=None)
     Search for motion in the source video stream.
@@ -327,42 +344,25 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-detect_match(image, timeout_secs=10, match_method=1, match_threshold=0.8, confirm_method=2, erode_passes=1, confirm_threshold=None, noise_threshold=None)
+detect_match(image, timeout_secs=10, noise_threshold=None, \*\*kwargs)
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
-    `match_method` is a parameter used by the templatematch algorithm.
-    It dictates which method is used by OpenCVs cvMatchTemplate algorithm
-    to produce its "heat map" of template locations. See
-    http://docs.opencv.org/doc/tutorials/imgproc/histograms/
-    template_matching/template_matching.html
+    The templatematch parameter `noise_threshold` is marked for deprecation
+    but appears in the args for backward compatibility with positional
+    argument syntax. It is now a synonym for `confirm_threshold`. Please use
+    `confirm_threshold` from now on.
 
-    `match_threshold` is a parameter used by the templatematch algorithm.
-    It dictates how strong a result from cvTemplateMatch must be before the
-    potential match will be checked. A value of 0 will mean that every match
-    will be passes to the confirmation stage, whilst a value of 1 means
-    (theoretically) that only a perfect match will be confirmed. (In practice,
-    a value of 1 is useless because of the way cvTemplateMatch works, and due
-    to limitations in the storage of floating point numbers in binary. See
-    http://docs.python.org/2/tutorial/floatingpoint.html.)
+    Any other keyword arguments passed to the function using `kwargs` will be
+    used to customise the templatematch algorithm parameters. If no
+    templatematch arguments are explicitly passed, then the default values
+    from `stbt.conf` will be used instead.
 
-    `confirm_method` is a parameter used by the templatematch algorithm.
-    It dictates which method to use to confirm the match found by
-    cvMatchTemplate. 0 (zero) means "don't confirm, always return true".
-
-    `erode_passes` is a parameter used by the templatematch algorithm.
-    Increasing the number of erode steps makes your test less sensitive to
-    noise and small variances, at the cost of of being more likely to report
-    a false positive.
-
-    `confirm_threshold` is a parameter used by the templatematch algorithm.
-    Increase `confirm_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 1.0 will report a match every time).
-    `noise_threshold` is a synonym for `confirm_threshold` and is marked for
-    deprecation.
+    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
+    README.rst or man page) for a description of all templatematch parameters.
 
 detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     Generator that yields a sequence of one `MotionResult` for each frame

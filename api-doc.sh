@@ -35,6 +35,7 @@ doc() {
         { sub("^stbt." f " = ", "");
           sub("class " f "\\(" f "\\)", "class " f);
           sub("exceptions.Exception", "Exception");
+          sub(/\*\*kwargs/, "\\*\\*kwargs");
           sub(/^ *$/, "");
           sub(/^ \|  /, "    ");
           print; }'
