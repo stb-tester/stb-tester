@@ -32,6 +32,23 @@ test_gsttemplatematch_has_all_element_properties() {
     PYTHONPATH=$testdir/.. python $scratchdir/test.py
 }
 
+test_gsttemplatematch_defaults_match_stbt_conf() {
+    cat > $scratchdir/test.py <<-EOF
+	import stbt
+	import gst
+	tol = 1e-6
+	py_param = stbt.build_templatematch_params()
+	c_param = gst.element_factory_make('stbt-templatematch').props
+	assert c_param.matchMethod == py_param['match_method']
+	assert abs(c_param.matchThreshold - py_param['match_threshold']) < tol
+	assert c_param.confirmMethod == py_param['confirm_method']
+	assert c_param.erodePasses == py_param['erode_passes']
+	assert abs(c_param.confirmThreshold - py_param['confirm_threshold']) < tol
+	EOF
+    PYTHONPATH=$testdir/.. python $scratchdir/test.py
+}
+
+
 # You should see a red rectangle (drawn by templatematch) around the black and
 # white rectangles on the right of the test video.
 #

@@ -68,6 +68,7 @@ if [ $# -eq 0 ]; then
     run test_gstreamer_core_elements &&
     run test_gstreamer_can_find_templatematch &&
     run test_gsttemplatematch_has_all_element_properties &&
+    run test_gsttemplatematch_defaults_match_stbt_conf &&
     run test_gsttemplatematch_does_find_a_match &&
     run test_gsttemplatematch_bgr_fix &&
 
