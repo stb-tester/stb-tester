@@ -215,10 +215,9 @@ trivial to fix and will be addressed in the near future.)
 SOFTWARE REQUIREMENTS
 =====================
 
-* A Unixy operating system (we have only tested on Linux; gstreamer and OpenCV
-  allegedly work on BSD, Mac OS X, and possibly Windows with MingW/MSys).
+* A Unixy operating system (we have only tested on Linux and Mac OS X).
 
-* Drivers for any required hardware components
+* Drivers for any required hardware components.
 
 * gstreamer 0.10 (multimedia framework) + gst-plugins-base + gst-plugins-good.
 
@@ -237,7 +236,8 @@ INSTALLING FROM SOURCE
 
 Run "make install" from the stb-tester source directory.
 
-Requires python-docutils (for building the documentation).
+See http://stb-tester.com/getting-started.html#install-stb-tester-from-source
+for the required dependencies.
 
 
 SETUP TIPS
