@@ -558,9 +558,10 @@ class Display:
         original parameters will be restored at the end of the call.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
-        stopping iterating also enables to interrupt the method.
+        you can also simply stop iterating over the sequence yielded by this
+        method.
 
-        For every frame processed, a tuple is returned: (message, screenshot).
+        For every frame processed, returns a tuple: (message, screenshot).
         """
 
         element = self.pipeline.get_by_name(element_name)
