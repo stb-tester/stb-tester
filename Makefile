@@ -99,12 +99,12 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: stbt.py api-doc.sh
-	./api-doc.sh $@
+README.rst: stbt.py api-doc.sh README.rst.in
+	./api-doc.sh README.rst.in $@
 
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
-	    .stbt-prefix .stbt-cflags .stbt-ldflags
+	    .stbt-prefix .stbt-cflags .stbt-ldflags README.rst
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
