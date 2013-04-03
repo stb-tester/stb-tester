@@ -58,7 +58,7 @@ class IRNetBox:
                 break
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED and i < 5:
-                    delay = 0.1 * 2**i
+                    delay = 0.1 * (2 ** i)
                     sys.stderr.write(
                         "Connection to irNetBox '%s:%d' refused; "
                         "retrying in %.2fs.\n" %
@@ -73,7 +73,7 @@ class IRNetBox:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback):
         self._socket.close()
 
     def power_on(self):
@@ -148,8 +148,8 @@ class IRNetBox:
             self.reset()
         else:
             ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            ports[port-1] = power
-            sequence_number = random.randint(0, 2**16 - 1)
+            ports[port - 1] = power
+            sequence_number = random.randint(0, (2 ** 16) - 1)
             delay = 0  # use the default delay of 100ms
             self._send(
                 MessageTypes.OUTPUT_IR_ASYNC,
@@ -173,15 +173,11 @@ class IRNetBox:
         self._send(MessageTypes.DEVICE_VERSION)
 
 
-class RemoteControlConfig:
-    def __init__(self, filename):
-        self._data = _parse_config(open(filename))
-
-    def __getitem__(self, key):
-        return self._data[key]
+def RemoteControlConfig(filename):
+    return _parse_config(open(filename))
 
 
-class MessageTypes:
+class MessageTypes:  # pylint: disable=W0232,R0903
     """§5.2"""
     ERROR = 0x01
     POWER_ON = 0x05
@@ -195,7 +191,7 @@ class MessageTypes:
     IR_ASYNC_COMPLETE = 0x31
 
 
-class NetBoxTypes:
+class NetBoxTypes:  # pylint: disable=W0232,R0903
     """§5.2.6"""
     MK1 = 2
     MK2 = 7
@@ -245,13 +241,13 @@ def _read_responses(stream):
                 break
             response_type, response_data = struct.unpack(
                 ">B%ds" % data_len,
-                buf[2 : 3+data_len])
+                buf[2:(3 + data_len)])
             if response_type != MessageTypes.IR_ASYNC_COMPLETE:
                 yield response_type, response_data
-            buf = buf[3+data_len :]
+            buf = buf[(3 + data_len):]
 
 
-def _parse_config(file):
+def _parse_config(config_file):
     """Read irNetBox configuration file.
 
     Which is produced by RedRat's (Windows-only) "IR Signal Database Utility".
@@ -259,13 +255,13 @@ def _parse_config(file):
     This doesn't support config files with "double signals" (where 2 different
     signals were recorded from alternate presses of the same button on the
     remote control unit).
-
     """
     d = {}
-    for line in file:
+    for line in config_file:
         fields = re.split("[\t ]+", line.rstrip(), maxsplit=3)
         if len(fields) == 4:
-            name, type_, max_num_lengths, data = fields
+            # (name, type, max_num_lengths, data)
+            name, type_, _, data = fields
             if type_ == "MOD_SIG":
                 d[name] = binascii.unhexlify(data)
     return d
@@ -297,7 +293,8 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 def test_that_parse_config_understands_redrat_format():
     import StringIO
 
-    f = StringIO.StringIO(re.sub("^ +", "", flags=re.MULTILINE, string=
+    # pylint: disable=C0301
+    f = StringIO.StringIO(re.sub("^ +", "", flags=re.MULTILINE, string=''\
         """Device TestRCU
 
         Note: The data is of the form <signal name> MOD_SIG <max_num_lengths> <byte_array_in_ascii_hex>.
@@ -323,8 +320,10 @@ class _FileToSocket:
     >>> s.recv(3)
     ''
     """
+    # pylint: disable=R0903
+
     def __init__(self, f):
         self.file = f
 
-    def recv(self, bufsize, flags=0):
+    def recv(self, bufsize, flags=0):  # pylint: disable=W0613
         return self.file.read(bufsize)
