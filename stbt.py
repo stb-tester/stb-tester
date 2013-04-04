@@ -1071,9 +1071,9 @@ def build_templatematch_params(**kwargs):
         kwargs['confirm_threshold'] = kwargs.pop('noise_threshold')
 
     # config-file value -> correctly typed gst pipeline value
-    key_type = {'match_method': int,
+    key_type = {'match_method': str,
                 'match_threshold': float,
-                'confirm_method': int,
+                'confirm_method': str,
                 'erode_passes': int,
                 'confirm_threshold': float}
 
@@ -1226,9 +1226,9 @@ def test_build_templatematch_params_detects_undefined():
 
     def mock_load_config(tool):
         # missing 'confirm_threshold'
-        return dict(match_method=1,
+        return dict(match_method="sqdiff-normed",
                     match_threshold=0.80,
-                    confirm_method=2,
+                    confirm_method="normed-absdiff",
                     erode_passes=1)
 
     load_config = mock_load_config

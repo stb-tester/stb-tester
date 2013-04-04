@@ -446,7 +446,7 @@ parameter values. This can be done in either `stbt.conf` or in a keyword
 argument to one of the functions `detect_match()`, `wait_for_match()`, and
 `press_until_match()`.
 
-`match_method` (int) default: 1
+`match_method` (str) default: sqdiff-normed
   The method that is used by OpenCV's cvMatchTemplate algorithm to produce its
   "heat map" of template locations. See `OpenCV Tutorials: Template Matching
   <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
@@ -460,7 +460,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   storage of floating point numbers in binary.  See
   http://docs.python.org/2/tutorial/floatingpoint.html.)
 
-`confirm_method` (int) default: 2
+`confirm_method` (str) default: normed-absdiff
   The method to use for confirming the match found by cvMatchTemplate:
 
   (0) None

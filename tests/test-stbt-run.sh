@@ -9,7 +9,7 @@ test_wait_for_match() {
 
 test_wait_for_match_no_match() {
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", confirm_method=1,
+	wait_for_match("videotestsrc-bw-flipped.png", confirm_method="absdiff",
 	    confirm_threshold=0.16, timeout_secs=1)
 	EOF
     rm -f screenshot.png
@@ -57,48 +57,50 @@ test_wait_for_match_noise_threshold_and_confirm_threshold_raises_error() {
 }
 
 test_wait_for_match_match_method_param_affects_first_pass() {
-    # This works on the fact that match_method=3 (ccorr-normed) registers a
+    # This works on the fact that match_method="ccorr-normed" registers a
     # first_pass_result greater than 0.80 which is then falsely confirmed as
-    # a match, whereas match_method=1 (sqdiff-normed) does not produce a
+    # a match, whereas match_method="sqdiff-normed" does not produce a
     # first_pass_result above 0.80 and so the match fails.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", match_method=3, timeout_secs=1)
+	wait_for_match("videotestsrc-bw-flipped.png", match_method="ccorr-normed",
+	               timeout_secs=1)
 	EOF
     stbt-run -v "$scratchdir/test.py"
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", match_method=1, timeout_secs=1)
+	wait_for_match("videotestsrc-bw-flipped.png", match_method="sqdiff-normed",
+	               timeout_secs=1)
 	EOF
     ! stbt-run -v "$scratchdir/test.py"
 }
 
 test_wait_for_match_match_threshold_param_affects_match() {
-    # Confirm_method=0 (none) means that if anything passes the first pass of
+    # Confirm_method="none" means that if anything passes the first pass of
     # templatematching, it is considered a positive result. Using this, by
     # using 2 detect_matches with match_thresholds either side of the
     # first_pass_result of this match, we can get one to pass and the other
     # to fail.
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("videotestsrc-checkers-8.png", timeout_secs=1,
-	               match_threshold=0.8, confirm_method=0)
+	               match_threshold=0.8, confirm_method="none")
 	EOF
     ! stbt-run -v "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("videotestsrc-checkers-8.png", timeout_secs=1,
-	               match_threshold=0.2, confirm_method=0)
+	               match_threshold=0.2, confirm_method="none")
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
 
 test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_zero() {
     # With match_threshold=0, the first pass is meaningless, and with
-    # confirm_method=0 (none), any image with match any source.
+    # confirm_method="none", any image with match any source.
     # (In use, this scenario is completely useless).
     cat > "$scratchdir/test.py" <<-EOF
 	import glob
 	for img in glob.glob("*.png"):
-	     wait_for_match(img, match_threshold=0, confirm_method=0)
+	     wait_for_match(img, match_threshold=0, confirm_method="none")
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
@@ -108,13 +110,13 @@ test_wait_for_match_confirm_methods_produce_different_results() {
         decodebin2 ! imagefreeze ! ffmpegcolorspace'
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method=2)
+	wait_for_match("known-fail-template.png", confirm_method="normed-absdiff")
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py"
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method=1)
+	wait_for_match("known-fail-template.png", confirm_method="absdiff")
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py"
@@ -428,7 +430,7 @@ test_detect_match_changing_template_is_not_racy() {
 	    time.sleep(1.0) # make sure the test fail (0.1s also works)
 	    break
 	for match_result in detect_match("videotestsrc-bw-flipped.png",
-	    confirm_method=1, confirm_threshold=0.16):
+	    confirm_method="absdiff", confirm_threshold=0.16):
 	    # Not supposed to match
 	    if not match_result.match:
 	        import sys
