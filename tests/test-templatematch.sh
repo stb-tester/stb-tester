@@ -38,9 +38,9 @@ test_gsttemplatematch_defaults_match_stbt_conf() {
 	tol = 1e-6
 	py_param = stbt.build_templatematch_params()
 	c_param = gst.element_factory_make('stbt-templatematch').props
-	assert c_param.matchMethod == py_param['match_method']
+	assert c_param.matchMethod.value_nick == py_param['match_method']
 	assert abs(c_param.matchThreshold - py_param['match_threshold']) < tol
-	assert c_param.confirmMethod == py_param['confirm_method']
+	assert c_param.confirmMethod.value_nick == py_param['confirm_method']
 	assert c_param.erodePasses == py_param['erode_passes']
 	assert abs(c_param.confirmThreshold - py_param['confirm_threshold']) < tol
 	EOF
