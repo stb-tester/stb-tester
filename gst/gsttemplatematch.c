@@ -317,18 +317,24 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       switch (g_value_get_enum (value)) {
         case GST_TM_MATCH_METHOD_CV_TM_SQDIFF:
           filter->matchMethod = CV_TM_SQDIFF;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_SQDIFF_NORMED` instead of `CV_TM_SQDIFF`.");
           break;
         case GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED:
           filter->matchMethod = CV_TM_SQDIFF_NORMED;
           break;
         case GST_TM_MATCH_METHOD_CV_TM_CCORR:
           filter->matchMethod = CV_TM_CCORR;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_CCORR_NORMED` instead of `CV_TM_CCORR`.");
           break;
         case GST_TM_MATCH_METHOD_CV_TM_CCORR_NORMED:
           filter->matchMethod = CV_TM_CCORR_NORMED;
           break;
         case GST_TM_MATCH_METHOD_CV_TM_CCOEFF:
           filter->matchMethod = CV_TM_CCOEFF;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_CCOEFF_NORMED` instead of `CV_TM_CCOEFF`.");
           break;
         case GST_TM_MATCH_METHOD_CV_TM_CCOEFF_NORMED:
           filter->matchMethod = CV_TM_CCOEFF_NORMED;
