@@ -82,6 +82,7 @@ uninstall:
 	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
+	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
 	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
@@ -98,12 +99,12 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: stbt.py api-doc.sh
-	./api-doc.sh $@
+README.rst: stbt.py api-doc.sh README.rst.in
+	./api-doc.sh README.rst.in $@
 
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
-	    .stbt-prefix .stbt-cflags .stbt-ldflags
+	    .stbt-prefix .stbt-cflags .stbt-ldflags README.rst
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:

@@ -10,7 +10,7 @@
 #/ Run stbt's templatematch algorithm against a single frame (which you can
 #/ capture using `stbt screenshot`).
 #/
-#/ e.g.: stbt templatematch full-frame.png button.png noise_threshold=0.20
+#/ e.g.: stbt templatematch full-frame.png button.png confirm_threshold=0.20
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 

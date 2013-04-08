@@ -63,6 +63,36 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_TEMPLATEMATCH))
 #define GST_IS_TEMPLATEMATCH_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_TEMPLATEMATCH))
+
+/* stbt's wrappers for OpenCV's cvMatchTemplate method enums,
+ * which wrap the enums as G_TYPE_ENUMs,
+ * associated with `filter->matchMethod`
+ * where OpenCVs method enum names are
+ * @CV_TM_SQDIFF
+ * @CV_TM_SQDIFF_NORMED
+ * @CV_TM_CCORR
+ * @CV_TM_CCORR_NORMED
+ * @CV_TM_CCOEFF
+ * @CV_TM_CCOEFF_NORMED
+ */
+typedef enum {
+  GST_TM_MATCH_METHOD_CV_TM_SQDIFF,
+  GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED,
+  GST_TM_MATCH_METHOD_CV_TM_CCORR,
+  GST_TM_MATCH_METHOD_CV_TM_CCORR_NORMED,
+  GST_TM_MATCH_METHOD_CV_TM_CCOEFF,
+  GST_TM_MATCH_METHOD_CV_TM_CCOEFF_NORMED
+} GstTMMatchMethod;
+
+/* stbt's enums for confirming a template match result
+ * associated with `filter->confirmMethod`
+ */
+typedef enum {
+  GST_TM_CONFIRM_METHOD_NONE,
+  GST_TM_CONFIRM_METHOD_ABSDIFF,
+  GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF
+} GstTMConfirmMethod;
+
 typedef struct _StbtTemplateMatch StbtTemplateMatch;
 typedef struct _StbtTemplateMatchClass StbtTemplateMatchClass;
 
@@ -72,8 +102,11 @@ struct _StbtTemplateMatch
 
   GstPad *sinkpad, *srcpad;
 
-  gint method;
-  gfloat noiseThreshold;
+  GstTMMatchMethod matchMethod;
+  gfloat matchThreshold;
+  GstTMConfirmMethod confirmMethod;
+  gint erodePasses;
+  gfloat confirmThreshold;
   gboolean display;
 
   gchar *template;

@@ -12,5 +12,6 @@ test_that_stbt_templatematch_applies_noise_threshold_parameter() {
     ! stbt-templatematch videotestsrc-full-frame.png \
             videotestsrc-redblue-with-dots.png &&
     stbt-templatematch videotestsrc-full-frame.png \
-            videotestsrc-redblue-with-dots.png noise_threshold=0.9
+            videotestsrc-redblue-with-dots.png \
+            confirm_method=\"absdiff\" confirm_threshold=0.9
 }

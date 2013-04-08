@@ -1,7 +1,8 @@
 #!/bin/sh
 
-# Generates documentation from python docstrings, and inserts it at the right
-# place in the README file specified in $1.
+# Generates documentation from python docstrings. Read an input file $1 and
+# inserts the python at the right place in the output file specified in output
+# file $2.
 
 doc() {
     # $ pydoc stbt.press
@@ -35,21 +36,37 @@ doc() {
         { sub("^stbt." f " = ", "");
           sub("class " f "\\(" f "\\)", "class " f);
           sub("exceptions.Exception", "Exception");
+          sub(/\*\*kwargs/, "\\*\\*kwargs");
           sub(/^ *$/, "");
           sub(/^ \|  /, "    ");
           print; }'
+}
+
+# substitutes templatematch params from stbt.conf
+templatematch_params()
+{
+    script=$(mktemp --tmpdir api-doc-XXXX.py)
+    cat > $script <<-EOF
+	from sys import stdin, stdout
+	import stbt
+	params = stbt.build_templatematch_params()
+	stdout.writelines(stdin.read().format(**params))
+	EOF
+    PYTHONPATH=. python $script
+    rm $script
 }
 
 line() {
     grep -n "$1" $2 | awk -F: '{print $1}'
 }
 
-target=$1
-first_line=$(( $(line "<start python docs>" $target) + 1 ))
-last_line=$(( $(line "<end python docs>" $target) - 1 ))
+input=$1
+output=$2
+first_line=$(( $(line "<start python docs>" $input) + 1 ))
+last_line=$(( $(line "<end python docs>" $input) - 1 ))
 
 {
-    sed "$first_line q" $target
+    sed "$first_line q" $input
     doc press
     doc wait_for_match
     doc press_until_match
@@ -67,6 +84,7 @@ last_line=$(( $(line "<end python docs>" $target) - 1 ))
     doc MotionTimeout
     doc UITestFailure
     doc UITestError
-    sed -n "$last_line,\$ p" $target
-} > $target.new &&
-mv $target.new $target
+    sed -n "$last_line,\$ p" $input
+} | templatematch_params > $output
+
+
