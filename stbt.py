@@ -22,34 +22,37 @@ import time
 import irnetbox
 
 
-class ArgvHider:
+class ArgvHider:  # pylint: disable=W0232
     """ For use with 'with' statement:  Unsets argv and resets it.
 
     This is used because otherwise gst-python will exit if '-h', '--help', '-v'
     or '--version' command line arguments are given.
     """
+
     def __enter__(self):
-        self.argv = sys.argv[:]
+        self.argv = sys.argv[:]  # pylint: disable=W0201
         del sys.argv[1:]
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ex_type, exc_value, traceback):
         sys.argv = self.argv
 
 
-class StdErrHider:
+class StdErrHider:  # pylint: disable=W0232
     """For use with 'with' statement: Hide stderr output.
 
     This is used because otherwise gst-python will print
     'pygobject_register_sinkfunc is deprecated'.
     """
+
     def __enter__(self):
+        # pylint: disable=W0201
         fd = sys.__stderr__.fileno()
         self.saved_fd = os.dup(fd)
         sys.__stderr__.flush()
         self.null_stream = open(os.devnull, 'w', 0)
         os.dup2(self.null_stream.fileno(), fd)
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback):
         sys.__stderr__.flush()
         os.dup2(self.saved_fd, sys.__stderr__.fileno())
         self.null_stream.close()
@@ -57,7 +60,7 @@ class StdErrHider:
 
 import pygst  # gstreamer
 pygst.require("0.10")
-with ArgvHider(), StdErrHider():
+with ArgvHider(), StdErrHider():  # pylint: disable=C0321
     import gst
 import gobject
 import glib
@@ -65,6 +68,7 @@ import glib
 
 # Functions available to stbt scripts
 #===========================================================================
+# -- warn about missing docstrings # pylint: enable=C0111
 
 def press(key):
     """Send the specified key-press to the system under test.
@@ -75,7 +79,7 @@ def press(key):
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
     """
-    return control.press(key)
+    return _control.press(key)
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -83,6 +87,7 @@ class Position(namedtuple('Position', 'x y')):
     * `x` and `y`: Integer coordinates from the top left corner of the video
       frame.
     """
+    # pylint: disable=R0903,W0232
     pass
 
 
@@ -95,6 +100,7 @@ class MatchResult(namedtuple(
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     """
+    # pylint: disable=R0903,W0232
     pass
 
 
@@ -118,7 +124,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
     if not os.path.isfile(params["template"]):
         raise UITestError("No such template file: %s" % image)
 
-    for message, buf in display.detect("template_match", params, timeout_secs):
+    for message, buf in _display.detect(
+            "template_match", params, timeout_secs):
         # Discard messages generated from previous call with different template
         if message["template_path"] == params["template"]:
             result = MatchResult(
@@ -126,6 +133,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
+            # pylint: disable=E1101
             debug("%s found: %s" % (
                   "Match" if result.match else "Weak match", str(result)))
             yield result
@@ -136,6 +144,7 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
     """
+    # pylint: disable=R0903,W0232
     pass
 
 
@@ -168,12 +177,13 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in display.detect("motiondetect", params, timeout_secs):
+    for msg, buf in _display.detect("motiondetect", params, timeout_secs):
         # Discard messages generated from previous calls with a different mask
         if ((mask and msg["masked"] and msg["mask_path"] == params["mask"])
                 or (not mask and not msg["masked"])):
             result = MotionResult(timestamp=buf.timestamp,
                                   motion=msg["has_motion"])
+            # pylint: disable=E1101
             debug("%s detected. Timestamp: %d." % (
                 "Motion" if result.motion else "No motion", result.timestamp))
             yield result
@@ -208,7 +218,7 @@ def wait_for_match(image, timeout_secs=10,
             debug("Matched " + image)
             return res
 
-    screenshot = display.capture_screenshot()
+    screenshot = _display.capture_screenshot()
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
@@ -283,7 +293,7 @@ def wait_for_motion(
             debug("Motion detected.")
             return res
 
-    screenshot = display.capture_screenshot()
+    screenshot = _display.capture_screenshot()
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
@@ -314,7 +324,7 @@ def save_frame(buf, filename):
 
 def get_frame():
     """Get a GStreamer buffer containing the current video frame."""
-    return display.capture_screenshot()
+    return _display.capture_screenshot()
 
 
 def get_config(key, tool=None):
@@ -334,10 +344,11 @@ def get_config(key, tool=None):
         raise ConfigurationError("No such config section: '%s'" % tool)
 
 
-def debug(s):
+def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+        sys.stderr.write("%s: %s\n" % \
+                (os.path.basename(sys.argv[0]), str(msg)))
 
 
 class UITestError(Exception):
@@ -359,6 +370,7 @@ class MatchTimeout(UITestFailure):
     * `timeout_secs`: Number of seconds that the image was searched for.
     """
     def __init__(self, screenshot, expected, timeout_secs):
+        super(MatchTimeout, self).__init__()
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
@@ -376,6 +388,7 @@ class MotionTimeout(UITestFailure):
     * `timeout_secs`: Number of seconds that motion was searched for.
     """
     def __init__(self, screenshot, mask, timeout_secs):
+        super(MotionTimeout, self).__init__()
         self.screenshot = screenshot
         self.mask = mask
         self.timeout_secs = timeout_secs
@@ -386,9 +399,11 @@ class MotionTimeout(UITestFailure):
             self.timeout_secs)
 
 
-class ConfigurationError(UITestError):
+class ConfigurationError(UITestError):  # pylint: disable=C0111
     pass
 
+
+# -- don't warn about missing docstrings anymore # pylint: disable=C0111
 
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
@@ -425,13 +440,13 @@ def argparser():
 
 
 def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
-    global display, control
-    display = Display(gst_source_pipeline, gst_sink_pipeline)
-    control = uri_to_remote(control_uri, display)
+    global _display, _control
+    _display = Display(gst_source_pipeline, gst_sink_pipeline)
+    _control = uri_to_remote(control_uri, _display)
 
 
 def teardown_run():
-    display.teardown()
+    _display.teardown()
 
 
 # Internal
@@ -441,11 +456,14 @@ _config = None
 _debug_level = 0
 _mainloop = glib.MainLoop()
 
+_display = None
+_control = None
+
 
 def MessageIterator(bus, signal):
     queue = Queue.Queue()
 
-    def sig(bus, message):
+    def sig(bus, message):  # pylint: disable=W0613
         queue.put(message)
         _mainloop.quit()
     bus.connect(signal, sig)
@@ -463,7 +481,7 @@ def MessageIterator(bus, signal):
         bus.disconnect_by_func(sig)
 
 
-class Display:
+class Display:  # pylint: disable=R0902
     def __init__(self, source_pipeline_description, sink_pipeline_description):
         gobject.threads_init()
 
@@ -526,6 +544,7 @@ class Display:
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
+        self.start_timestamp = None
         self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
@@ -605,18 +624,21 @@ class Display:
             for key in params.keys():
                 setattr(element.props, key, params_backup[key])
 
-    def on_timeout(self):
+    @staticmethod  # pylint: disable=W0613
+    def on_timeout(*args):
         debug("Timed out")
         _mainloop.quit()
         return False  # stop the timeout from running again
 
-    def on_error(self, bus, message):
+    @staticmethod
+    def on_error(bus, message):  # pylint: disable=W0613
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
         sys.exit(1)
 
-    def on_warning(self, bus, message):
+    @staticmethod
+    def on_warning(bus, message):  # pylint: disable=W0613
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
@@ -625,7 +647,7 @@ class Display:
             sys.stderr.write("Error: %s\n" % err.message)
             sys.exit(1)
 
-    def on_underrun(self, element):
+    def on_underrun(self, element):  # pylint: disable=W0613
         # Cancel test_timeout as messages are obviously received on the bus.
         if self.test_timeout:
             self.test_timeout.cancel()
@@ -638,7 +660,7 @@ class Display:
             self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
             self.underrun_timeout.start()
 
-    def on_running(self, element):
+    def on_running(self, element):  # pylint: disable=W0613
         # Cancel test_timeout as messages are obviously received on the bus.
         if self.test_timeout:
             self.test_timeout.cancel()
@@ -702,7 +724,7 @@ class GObjectTimeout:
         self.start()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback):
         self.cancel()
 
     def start(self):
@@ -738,7 +760,9 @@ def uri_to_remote(uri, display):
 
 
 class NullRemote:
-    def press(self, key):
+    # pylint: disable=W0232,R0903
+    @staticmethod
+    def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
 
@@ -748,6 +772,8 @@ class VideoTestSrcControl:
     Changes the videotestsrc image to the specified pattern ("0" to "20").
     See `gst-inspect videotestsrc`.
     """
+    # pylint: disable=R0903
+
     def __init__(self, display):
         self.videosrc = display.pipeline.get_by_name("videotestsrc0")
         if not self.videosrc:
@@ -768,6 +794,8 @@ class VirtualRemote:
         control = VirtualRemote("192.168.0.123")
         control.press("MENU")
     """
+    # pylint: disable=R0903
+
     def __init__(self, hostname, port):
         self.hostname = hostname
         self.port = port
@@ -778,6 +806,7 @@ class VirtualRemote:
         debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
 
     def press(self, key):
+        # pylint: disable=W1401
         self._connect().sendall(
             "D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then Up
         debug("Pressed " + key)
@@ -800,6 +829,8 @@ class LircRemote:
 
     See http://www.lirc.org/html/technical.html#applications
     """
+    # pylint: disable=R0903
+
     def __init__(self, lircd_socket, control_name):
         self.lircd_socket = lircd_socket
         self.control_name = control_name
@@ -833,6 +864,8 @@ class IRNetBoxRemote:
     See http://www.redrat.co.uk/products/irnetbox.html
 
     """
+    # pylint: disable=R0903
+
     def __init__(self, hostname, output, config_file):
         self.hostname = hostname
         self.output = int(output)
@@ -940,6 +973,7 @@ def virtual_remote_listen(address, port):
                      "on %s:%d...\n" % (address, port))
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
+    # pylint: disable=W1401
     return vr_key_reader(read_records(connection, '\n\0'))
 
 
@@ -1059,10 +1093,11 @@ class FileToSocket:
     >>> s.recv(3)
     'lo'
     """
+    # pylint: disable=R0903
     def __init__(self, f):
         self.file = f
 
-    def recv(self, bufsize, flags=0):
+    def recv(self, bufsize, flags=0):  # pylint: disable=W0613
         return self.file.read(bufsize)
 
 
@@ -1111,7 +1146,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                 m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
                 if m:
                     d = m.groupdict()
-                    listener.sendall(
+                    listener.sendall(  # pylint: disable=E1101
                         '00000000 0 %s %s\n' % (d['key'], d['control']))
 
     lircd_socket = tempfile.mktemp()

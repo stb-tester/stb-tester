@@ -10,10 +10,9 @@ import stbt
 
 import pygst  # gstreamer
 pygst.require("0.10")
-with stbt.ArgvHider(), stbt.StdErrHider():
+with stbt.ArgvHider(), stbt.StdErrHider():  # pylint: disable=C0321
     import gst
 
-import argparse
 import itertools
 import sys
 
@@ -88,13 +87,15 @@ class Display:
         self.pipeline.get_bus().connect("message::warning", self.on_warning)
         self.pipeline.set_state(gst.STATE_PLAYING)
 
-    def on_error(self, bus, message):
+    @staticmethod
+    def on_error(bus, message):  # pylint: disable=W0613
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
         sys.exit(1)
 
-    def on_warning(self, bus, message):
+    @staticmethod
+    def on_warning(bus, message):  # pylint: disable=W0613
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
