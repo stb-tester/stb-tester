@@ -347,8 +347,8 @@ def get_config(key, tool=None):
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
-        sys.stderr.write("%s: %s\n" % \
-                (os.path.basename(sys.argv[0]), str(msg)))
+        sys.stderr.write(
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
 class UITestError(Exception):
