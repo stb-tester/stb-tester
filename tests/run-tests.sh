@@ -28,6 +28,7 @@ shift $(($OPTIND-1))
 export PATH="$testdir/..:$PATH"
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
+rm -f ~/.gstreamer-0.10/registry.*
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
