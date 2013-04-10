@@ -42,30 +42,12 @@ doc() {
           print; }'
 }
 
-# substitutes templatematch params from stbt.conf
-templatematch_params()
-{
-    script=$(mktemp --tmpdir api-doc-XXXX.py)
-    cat > $script <<-EOF
-	from sys import stdin, stdout
-	import stbt
-	params = stbt.build_templatematch_params()
-	stdout.writelines(stdin.read().format(**params))
-	EOF
-    PYTHONPATH=. python $script
-    rm $script
-}
+# Keeps the python API section in sync with the docstrings in the source code.
+python_docstrings() {
+    local input=$1
+    local first_line=$(( $(line "<start python docs>" $input) + 1 ))
+    local last_line=$(( $(line "<end python docs>" $input) - 1 ))
 
-line() {
-    grep -n "$1" $2 | awk -F: '{print $1}'
-}
-
-input=$1
-output=$2
-first_line=$(( $(line "<start python docs>" $input) + 1 ))
-last_line=$(( $(line "<end python docs>" $input) - 1 ))
-
-{
     sed "$first_line q" $input
     doc press
     doc wait_for_match
@@ -85,6 +67,27 @@ last_line=$(( $(line "<end python docs>" $input) - 1 ))
     doc UITestFailure
     doc UITestError
     sed -n "$last_line,\$ p" $input
-} | templatematch_params > $output
+}
+line() {
+    grep -n "$1" $2 | awk -F: '{print $1}'
+}
 
+# substitutes templatematch params from stbt.conf
+templatematch_params()
+{
+    script=$(mktemp --tmpdir api-doc-XXXX.py)
+    cat > $script <<-EOF
+	from sys import stdin, stdout
+	import stbt
+	params = stbt.build_templatematch_params()
+	stdout.writelines(stdin.read().format(**params))
+	EOF
+    PYTHONPATH=. python $script
+    rm $script
+}
 
+input=$1
+output=$2
+
+python_docstrings $input |
+templatematch_params > $output
