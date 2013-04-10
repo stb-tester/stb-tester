@@ -75,7 +75,7 @@ line() {
 # substitutes templatematch params from stbt.conf
 templatematch_params()
 {
-    script=$(mktemp --tmpdir api-doc-XXXX.py)
+    script=$(mktemp -t api-doc-XXXX.py)
     cat > $script <<-EOF
 	from sys import stdin, stdout
 	import stbt
