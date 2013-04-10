@@ -296,7 +296,7 @@ def test_that_parse_config_understands_redrat_format():
     # pylint: disable=C0301
     f = StringIO.StringIO(
         re.sub(
-            "^ +", "", flags=re.MULTILINE, string=
+            "^ +", "", flags=re.MULTILINE, string=""
             """Device TestRCU
 
             Note: The data is of the form <signal name> MOD_SIG <max_num_lengths> <byte_array_in_ascii_hex>.
