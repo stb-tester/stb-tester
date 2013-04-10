@@ -3,7 +3,7 @@
 
 # Test for a correct installation of gstreamer
 test_gstreamer_core_elements() {
-    timeout 2 gst-launch videotestsrc num-buffers=10 ! ximagesink
+    timeout 5 gst-launch videotestsrc num-buffers=10 ! ximagesink
 }
 
 # Test for our libgst-stb-tester.so gstreamer plugin.
