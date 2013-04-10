@@ -132,7 +132,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
     """
 
     templatematch_params = build_templatematch_params(
-            noise_threshold=noise_threshold, **kwargs)
+        noise_threshold=noise_threshold, **kwargs)
 
     params = {
         "template": _find_path(image),
@@ -212,7 +212,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-        noise_threshold=None, **kwargs):
+                   noise_threshold=None, **kwargs):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -254,7 +254,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=None,
-        max_presses=10, **kwargs):
+                      max_presses=10, **kwargs):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -282,7 +282,7 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
     while True:
         try:
             return wait_for_match(image, timeout_secs=interval_secs,
-                    noise_threshold=noise_threshold, **kwargs)
+                                  noise_threshold=noise_threshold, **kwargs)
         except MatchTimeout:
             if i < max_presses:
                 press(key)
@@ -1093,15 +1093,15 @@ def build_templatematch_params(**kwargs):
     # warnings to be removed once noise_threshold is unsupported
     if kwargs.get('noise_threshold') and kwargs.get('confirm_threshold'):
         raise ConfigurationError(
-                "`noise_threshold` and `confirm_threshold` "
-                "cannot be used together. "
-                "`noise_threshold` is marked for deprecation.")
+            "`noise_threshold` and `confirm_threshold` "
+            "cannot be used together. "
+            "`noise_threshold` is marked for deprecation.")
     elif kwargs.get('noise_threshold'):
         warnings.warn(
-                "stbt-templatematch: "
-                "`noise_threshold` is marked for deprecation. "
-                "Please use `confirm_threshold` instead.",
-                DeprecationWarning, stacklevel=2)
+            "stbt-templatematch: "
+            "`noise_threshold` is marked for deprecation. "
+            "Please use `confirm_threshold` instead.",
+            DeprecationWarning, stacklevel=2)
         kwargs['confirm_threshold'] = kwargs.pop('noise_threshold')
 
     # config-file value -> correctly typed gst pipeline value
@@ -1123,7 +1123,7 @@ def build_templatematch_params(**kwargs):
             val = kwargs.get(key, val)
         if val is None:
             raise ConfigurationError(
-                    "templatematch parameter '%s' undefined" % key)
+                "templatematch parameter '%s' undefined" % key)
         params[key] = val
 
     return params
