@@ -1256,10 +1256,10 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
 
 
 def test_build_templatematch_params_detects_undefined():
-    global load_config
+    global load_config  # pylint: disable=W0601
     _load_config = load_config
 
-    def mock_load_config(tool):
+    def mock_load_config(_tool):
         # missing 'confirm_threshold'
         return dict(match_method=1,
                     match_threshold=0.80,
