@@ -9,7 +9,7 @@ test_that_stbt_config_tool_section_overrides_global_section() {
 }
 
 test_that_stbt_config_searches_global_section_if_key_not_in_tool_section() {
-    [ "$(stbt-config special control)" = "test" ]
+    [ "$(stbt-config special not_special)" = "this is a global value" ]
 }
 
 test_that_stbt_config_returns_failure_on_key_not_found() {

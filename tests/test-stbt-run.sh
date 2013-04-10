@@ -501,7 +501,8 @@ test_get_config() {
 	assert stbt.get_config("test_key") == "this is a test value"
 	assert stbt.get_config("test_key", tool="special") == \
 	    "overrides the global value"
-	assert stbt.get_config("control", tool="special") == "test"
+	assert stbt.get_config("not_special", tool="special") == \
+	    "this is a global value"
 	try:
 	    stbt.get_config("no_such_key")
 	    stbt.get_config("test_key", tool="no_such_section")
