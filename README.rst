@@ -368,7 +368,7 @@ get_config(key, tool=None)
     Raises `ConfigurationError` if the specified `tool` section or `key` is not
     found.
 
-debug(s)
+debug(msg)
     Print the given string to stderr if stbt run `--verbose` was given.
 
 class MatchResult
