@@ -28,7 +28,7 @@ test_gsttemplatematch_has_all_element_properties() {
 	assert hasattr(gst_params, 'debugDirectory')
 	assert hasattr(gst_params, 'display')
 	EOF
-    PYTHONPATH=$testdir/.. python $scratchdir/test.py
+    python $scratchdir/test.py
 }
 
 # You should see a red rectangle (drawn by templatematch) around the black and
