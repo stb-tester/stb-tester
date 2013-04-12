@@ -111,11 +111,10 @@ check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
 check-integrationtests: gst/libgst-stb-tester.so
 	tests/run-tests.sh
-	@! which bash >/dev/null 2>&1 || { \
-	  echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
-	  bash -c "! grep -hEwo '^test_[a-zA-Z_]+' tests/test-*.sh |\
-	    grep -v -F -f <(grep -Ewo 'test_[a-zA-Z_]+' tests/run-tests.sh)" && \
-	  echo "OK"; }
+	@echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
+	bash -c "! grep -hEwo '^test_[a-zA-Z_]+' tests/test-*.sh |\
+	  grep -v -F -f <(grep -Ewo 'test_[a-zA-Z_]+' tests/run-tests.sh)" && \
+	echo "OK"
 check-pylint:
 	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record stbt-config
 check-bashcompletion:
