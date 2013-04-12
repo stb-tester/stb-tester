@@ -133,11 +133,11 @@ def detect_match(image, timeout_secs=10, noise_threshold=0.16):
     if not os.path.isfile(params["template"]):
         raise UITestError("No such template file: %s" % image)
 
-    for message, buf in display.detect("template_match", params, timeout_secs):
+    for message in display.detect("template_match", params, timeout_secs):
         # Discard messages generated from previous call with different template
         if message["template_path"] == params["template"]:
             result = MatchResult(
-                timestamp=buf.timestamp,
+                timestamp=message["timestamp"],
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
@@ -183,11 +183,11 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in display.detect("motiondetect", params, timeout_secs):
+    for msg in display.detect("motiondetect", params, timeout_secs):
         # Discard messages generated from previous calls with a different mask
         if ((mask and msg["masked"] and msg["mask_path"] == params["mask"])
                 or (not mask and not msg["masked"])):
-            result = MotionResult(timestamp=buf.timestamp,
+            result = MotionResult(timestamp=msg["timestamp"],
                                   motion=msg["has_motion"])
             debug("%s detected. Timestamp: %d." % (
                 "Motion" if result.motion else "No motion", result.timestamp))
@@ -601,15 +601,21 @@ class Display:
 
     def save_config(self):
         self.last_config['queue.leaky'] = self.queue.props.leaky
-        self.last_config['queue.max_size_buffers'] = self.queue.props.max_size_buffers
-        self.last_config['queue.max_size_time'] = self.queue.props.max_size_time
-        self.last_config['queue.max_size_bytes'] = self.queue.props.max_size_bytes
+        self.last_config['queue.max_size_buffers'] = \
+            self.queue.props.max_size_buffers
+        self.last_config['queue.max_size_time'] = \
+            self.queue.props.max_size_time
+        self.last_config['queue.max_size_bytes'] = \
+            self.queue.props.max_size_bytes
 
     def restore_last_saved_config(self):
         self.queue.props.leaky = self.last_config['queue.leaky']
-        self.queue.props.max_size_buffers = self.last_config['queue.max_size_buffers']
-        self.queue.props.max_size_time = self.last_config['queue.max_size_time']
-        self.queue.props.max_size_bytes = self.last_config['queue.max_size_bytes']
+        self.queue.props.max_size_buffers = \
+            self.last_config['queue.max_size_buffers']
+        self.queue.props.max_size_time = \
+            self.last_config['queue.max_size_time']
+        self.queue.props.max_size_bytes = \
+            self.last_config['queue.max_size_bytes']
 
     @contextmanager
     def process_all_frames(self):
@@ -623,7 +629,8 @@ class Display:
         self.queue.props.leaky = 0
         yield
         self.restore_last_saved_config()
-        self.underrun_handler_id = self.queue.connect("underrun", self.on_underrun)
+        self.underrun_handler_id = self.queue.connect("underrun",
+                                                      self.on_underrun)
         self.catch_up_live_stream()
 
     def detect(self, element_name, params, timeout_secs):
@@ -641,7 +648,8 @@ class Display:
         you can also simply stop iterating over the sequence yielded by this
         method.
 
-        For every frame processed, returns a tuple: (message, screenshot).
+        For every frame processed, returns the message emitted by the named
+        gstreamer element.
         """
 
         element = self.pipeline.get_by_name(element_name)
@@ -679,7 +687,7 @@ class Display:
                                 timeout_secs * 1000000000):
                             return
 
-                        yield (st, buf)
+                        yield st
 
         finally:
             for key in params.keys():

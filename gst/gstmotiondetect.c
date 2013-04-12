@@ -389,8 +389,10 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
               filter->debugDirectory, frameNo, "mask.png");
       }
 
+      guint64 timestamp = GST_BUFFER_TIMESTAMP(buf);
       GstStructure *s = gst_structure_new ("motiondetect",
           "has_motion", G_TYPE_BOOLEAN, result,
+          "timestamp", G_TYPE_UINT64, timestamp,
           "masked", G_TYPE_BOOLEAN, (filter->mask != NULL),
           "mask_path", G_TYPE_STRING, filter->mask, NULL);
       m = gst_message_new_element (GST_OBJECT (filter), s);

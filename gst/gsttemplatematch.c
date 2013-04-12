@@ -408,11 +408,13 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
       matched = FALSE;
     }
 
+    guint64 timestamp = GST_BUFFER_TIMESTAMP(buf);
     s = gst_structure_new ("template_match",
         "x", G_TYPE_UINT, best_pos.x,
         "y", G_TYPE_UINT, best_pos.y,
         "width", G_TYPE_UINT, filter->cvTemplateImage->width,
         "height", G_TYPE_UINT, filter->cvTemplateImage->height,
+        "timestamp", G_TYPE_UINT64, timestamp,
         "first_pass_result", G_TYPE_DOUBLE, best_res,
         "template_path", G_TYPE_STRING, filter->template,
         "match", G_TYPE_BOOLEAN, matched, NULL);
