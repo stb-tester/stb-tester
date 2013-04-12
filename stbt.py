@@ -23,11 +23,6 @@ import warnings
 import irnetbox
 
 
-warnings.filterwarnings(
-    action="always", message='stbt-templatematch',
-    category=DeprecationWarning, module='stbt')
-
-
 class ArgvHider:  # pylint: disable=W0232
     """ For use with 'with' statement:  Unsets argv and resets it.
 
@@ -70,6 +65,11 @@ with ArgvHider(), StdErrHider():  # pylint: disable=C0321
     import gst
 import gobject
 import glib
+
+
+warnings.filterwarnings(
+    action="always", message='stbt-templatematch',
+    category=DeprecationWarning, module='stbt')
 
 
 # Functions available to stbt scripts
