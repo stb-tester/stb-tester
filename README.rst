@@ -446,7 +446,7 @@ parameter values. This can be done in either `stbt.conf` or in a keyword
 argument to one of the functions `detect_match()`, `wait_for_match()`, and
 `press_until_match()`.
 
-`match_method` (str) default: "``sqdiff-normed``"
+`match_method` (str) default: sqdiff-normed
   The template comparison method that is used by the OpenCV `cvMatchTemplate()`
   algorithm to produce its "heat map" of template locations:
 
@@ -463,7 +463,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   `OpenCV Tutorials: Template Matching
   <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
 
-`match_threshold` (float) default: ``0.8``
+`match_threshold` (float) default: 0.80
   How strong a result from cvTemplateMatch must be before the potential match
   will be checked. A value of 0 will mean that every match will be passes to
   the confirmation stage, whilst a value of 1 means (theoretically) that only
@@ -472,7 +472,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   storage of floating point numbers in binary.  See
   http://docs.python.org/2/tutorial/floatingpoint.html.)
 
-`confirm_method` (str) default: "``normed-absdiff``"
+`confirm_method` (str) default: normed-absdiff
   The method to use for confirming the match found by cvMatchTemplate:
 
   "``none``"
@@ -510,12 +510,12 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
       ``normed-absdiff``. In other words, the `confirm_threshold` is more
       sensitive and fine-tunable when using ``normed-absdiff``.
 
-`erode_passes` (int) default: ``1``
+`erode_passes` (int) default: 1
   The number of erode steps. Increasing the number of erode steps makes your
   test less sensitive to noise and small variances, at the cost of of being
   more likely to report a false positive.
 
-`confirm_threshold` (float) default: ``0.28``
+`confirm_threshold` (float) default: 0.28
   Increase this value to avoid false negatives, at the risk of increasing false
   positives (a value of 1.0 will report a match every time).
 

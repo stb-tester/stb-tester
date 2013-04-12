@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
-# Generates documentation from python docstrings. Read an input file $1 and
-# inserts the python at the right place in the output file specified in output
-# file $2.
+# Generates documentation from python docstrings, and inserts it at the right
+# place in the README file specified in $1.
+
+cd "$(dirname "$0")"
 
 doc() {
     # $ pydoc stbt.press
@@ -72,22 +73,29 @@ line() {
     grep -n "$1" $2 | awk -F: '{print $1}'
 }
 
-# substitutes templatematch params from stbt.conf
-templatematch_params()
-{
-    script=$(mktemp -t api-doc-XXXX.py)
-    cat > $script <<-EOF
-	from sys import stdin, stdout
-	import stbt
-	params = stbt.build_templatematch_params()
-	stdout.writelines(stdin.read().format(**params))
-	EOF
-    PYTHONPATH=. python $script
-    rm $script
+# Prints sed commands to apply,
+# to substitute default templatematch params from stbt.conf.
+templatematch_params() {
+    local param value
+    for param in \
+        match_method \
+        match_threshold \
+        confirm_method \
+        erode_passes \
+        confirm_threshold \
+    ; do
+        value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config $param)
+        # In:  `match_method` (str) default: <any value here>
+        # Out: `match_method` (str) default: <value from stbt.conf>
+        echo "s,^\(\`$param\`.* default:\) .*,\1 $value,"
+    done
+}
+get() {
+    STBT_CONFIG_FILE="$(dirname "$0")/stbt.conf" ./stbt-config $1
 }
 
-input=$1
-output=$2
+tmp=$1.$$
 
-python_docstrings $input |
-templatematch_params > $output
+python_docstrings $1 |
+sed -f <(templatematch_params) > $tmp
+mv $tmp $1
