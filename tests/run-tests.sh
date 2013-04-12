@@ -44,6 +44,7 @@ run() {
         rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
             "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
             "$scratchdir/stbt.conf" \
+            "$scratchdir/readme" "$scratchdir/expected" \
             "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests" \
             "$scratchdir/get-screenshot.py" "$scratchdir/match-screenshot.py" \
             "$scratchdir/gamut.png"
@@ -152,6 +153,10 @@ if [ $# -eq 0 ]; then
     run test_that_stbt_templatematch_finds_match &&
     run test_that_stbt_templatematch_doesnt_find_match &&
     run test_that_stbt_templatematch_applies_noise_threshold_parameter &&
+
+    echo "Testing 'make doc':" &&
+    run test_that_readme_default_templatematch_values_are_kept_up_to_date &&
+    run test_that_readme_python_api_docs_are_kept_up_to_date &&
 
     echo "All passed." || exit
 

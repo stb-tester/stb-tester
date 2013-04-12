@@ -44,12 +44,18 @@ doc() {
 }
 
 # Keeps the python API section in sync with the docstrings in the source code.
+substitute_python_docstrings() {
+    export -f python_docstrings doc
+    perl -lne '
+        if (/<end python docs>/) { $deleting_old_docs=0;
+                                   print `bash -c python_docstrings`; }
+        if ($deleting_old_docs) { next; }
+        if (/<start python docs>/) { $deleting_old_docs=1; }
+        print;
+    '
+}
 python_docstrings() {
-    local input=$1
-    local first_line=$(( $(line "<start python docs>" $input) + 1 ))
-    local last_line=$(( $(line "<end python docs>" $input) - 1 ))
-
-    sed "$first_line q" $input
+    echo ""
     doc press
     doc wait_for_match
     doc press_until_match
@@ -67,10 +73,6 @@ python_docstrings() {
     doc MotionTimeout
     doc UITestFailure
     doc UITestError
-    sed -n "$last_line,\$ p" $input
-}
-line() {
-    grep -n "$1" $2 | awk -F: '{print $1}'
 }
 
 # Prints sed commands to apply,
@@ -94,8 +96,8 @@ get() {
     STBT_CONFIG_FILE="$(dirname "$0")/stbt.conf" ./stbt-config $1
 }
 
-tmp=$1.$$
-
-python_docstrings $1 |
-sed -f <(templatematch_params) > $tmp
-mv $tmp $1
+cat $1 |
+substitute_python_docstrings |
+sed -f <(templatematch_params) \
+> $1.new &&
+mv $1.new $1
