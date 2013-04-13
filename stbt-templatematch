@@ -38,7 +38,7 @@ cat > $script <<-EOF
 	    print "Didn't find match for '$template'."
 	    sys.exit(1)
 	EOF
-    
+
 STBT_LIBEXEC="$(dirname "$0")"
 
 "$STBT_LIBEXEC/stbt-run" -v $v --source-pipeline="filesrc location=$videoframe \
