@@ -68,8 +68,7 @@ import glib
 
 
 warnings.filterwarnings(
-    action="always", message='stbt-templatematch',
-    category=DeprecationWarning, module='stbt')
+    action="always", category=DeprecationWarning, module='stbt')
 
 
 # Functions available to stbt scripts
@@ -1098,7 +1097,6 @@ def build_templatematch_params(**kwargs):
             "`noise_threshold` is marked for deprecation.")
     elif kwargs.get('noise_threshold'):
         warnings.warn(
-            "stbt-templatematch: "
             "`noise_threshold` is marked for deprecation. "
             "Please use `confirm_threshold` instead.",
             DeprecationWarning, stacklevel=2)
