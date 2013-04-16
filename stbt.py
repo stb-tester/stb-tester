@@ -79,7 +79,7 @@ def press(key):
     return control.press(key)
 
 @contextmanager
-def process_all_frames():
+def process_all_frames(last_image=None):
     """Force the pipeline to process all the frames for the duration of the
     call.
 
@@ -90,7 +90,7 @@ def process_all_frames():
     Use as a context manager in a 'with' statement.
     """
     with display.process_all_frames():
-        yield
+        yield FrameProcessor(last_image)
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -408,6 +408,40 @@ class ConfigurationError(UITestError):
     pass
 
 
+class FrameProcessor(object):
+    """
+    Class used inside process_all_frames context.
+    * When last_image matches, no more frames will be processed.
+    """
+    def __init__(self, last_image=None):
+        self.last_image = last_image
+        self.all_matches = []
+        self.timestamps = []
+
+    def perform_action(self, action):
+        """
+        Trigger the specified action and process all frames until the
+        conditions specified in the constructor have been met.
+        """
+        assert callable(action)
+
+        t_action_performed = 0
+        while not t_action_performed:
+            for match_result in detect_match(self.last_image):
+                if not t_action_performed:
+                    t_action_performed = get_live_stream_timestamp()
+                    self.timestamps.append(t_action_performed)
+                    action()
+
+                if match_result.match:
+                    self.all_matches.append(match_result)
+                    self.timestamps.append(match_result.timestamp)
+                    break
+
+    def get_elapsed_time(self):
+        return self.timestamps[-1] - self.timestamps[0]
+
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
@@ -651,7 +685,6 @@ class Display:
         For every frame processed, returns the message emitted by the named
         gstreamer element.
         """
-
         element = self.pipeline.get_by_name(element_name)
 
         params_backup = {}
