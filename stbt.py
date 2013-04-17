@@ -19,6 +19,7 @@ import re
 import socket
 import sys
 import time
+import math
 
 import irnetbox
 
@@ -79,7 +80,7 @@ def press(key):
     return control.press(key)
 
 @contextmanager
-def process_all_frames(last_image=None):
+def process_all_frames(last_image=None, initial_image=None):
     """Force the pipeline to process all the frames for the duration of the
     call.
 
@@ -90,7 +91,7 @@ def process_all_frames(last_image=None):
     Use as a context manager in a 'with' statement.
     """
     with display.process_all_frames():
-        yield FrameProcessor(last_image)
+        yield FrameProcessor(last_image, initial_image)
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -413,10 +414,40 @@ class FrameProcessor(object):
     Class used inside process_all_frames context.
     * When last_image matches, no more frames will be processed.
     """
-    def __init__(self, last_image=None):
+    def __init__(self, last_image=None, initial_image=None):
         self.last_image = last_image
+        self.initial_image = initial_image
         self.all_matches = []
         self.timestamps = []
+        self.distance_moved = 0
+        self.last_match_result = None
+        self.previos_config = {
+            'screenshot.emit_signals': display.screenshot.props.emit_signals
+        }
+        display.screenshot.props.emit_signals = True
+        self.buffer_handler = display.screenshot.connect('new-buffer',
+                                                         self.on_new_buffer)
+
+    def __del__(self):
+        display.screenshot.props.emit_signals = \
+                                self.previos_config['screenshot.emit_signals']
+        display.screenshot.disconnect(self.buffer_handler)
+
+    def on_new_buffer(self, data):
+        new_frame = get_frame()
+        self.timestamps.append(new_frame.timestamp)
+
+    def add_match(self, match_result):
+        self.all_matches.append(match_result)
+        if self.last_match_result:
+            match_x = match_result.position.x
+            match_y = match_result.position.y
+            last_x = self.last_match_result.position.x
+            last_y = self.last_match_result.position.y
+            new_distance = math.sqrt(
+                        (match_x - last_x) ** 2 + (match_y - last_y) ** 2)
+            self.distance_moved += new_distance
+        self.last_match_result = match_result
 
     def perform_action(self, action):
         """
@@ -427,19 +458,58 @@ class FrameProcessor(object):
 
         t_action_performed = 0
         while not t_action_performed:
-            for match_result in detect_match(self.last_image):
-                if not t_action_performed:
-                    t_action_performed = get_live_stream_timestamp()
-                    self.timestamps.append(t_action_performed)
-                    action()
+            if self.initial_image:
+                for match_result in detect_match(self.initial_image):
+                    if not t_action_performed:
+                        t_action_performed = get_live_stream_timestamp()
+                        self.timestamps.append(t_action_performed)
+                        action()
 
-                if match_result.match:
-                    self.all_matches.append(match_result)
-                    self.timestamps.append(match_result.timestamp)
-                    break
+                    if match_result.match:
+                        self.add_match(match_result)
+                        self.timestamps.append(match_result.timestamp)
+                        break
 
-    def get_elapsed_time(self):
-        return self.timestamps[-1] - self.timestamps[0]
+            if self.last_image:
+                for match_result in detect_match(self.last_image):
+                    if not t_action_performed:
+                        t_action_performed = get_live_stream_timestamp()
+                        self.timestamps.append(t_action_performed)
+                        action()
+
+                    if match_result.match:
+                        self.add_match(match_result)
+                        self.timestamps.append(match_result.timestamp)
+                        break
+
+    def get_elapsed_seconds(self):
+        """
+        Retrieve the time (in seconds) elapsed between the action being
+        triggered and the match with the last image, if specified.
+        """
+        microseconds = self.timestamps[-1] - self.timestamps[0]
+        seconds = float(microseconds) / (10 ** 9)
+        return seconds
+
+    def get_distance_moved(self):
+        """
+        Retrieve the distance (in pixels) that both the initial and the final
+        images have moved through the transition from the first to the latter.
+        """
+        error_msg = ('Not possible to calculate the distance if both initial'
+                    ' and end images are not specified.')
+        assert self.initial_image and self.last_image, error_msg
+        return self.distance_moved
+
+    def get_average_speed(self):
+        """
+        Retrieve average speed (in pixels/second) in which the transition from
+        one image to the other has taken place.
+        """
+        error_msg = ('Not possible to calculate the average speed if both'
+                    ' initial and end images are not specified.')
+        assert self.initial_image and self.last_image, error_msg
+        return self.get_distance_moved() / self.get_elapsed_seconds()
 
 
 # stbt-run initialisation and convenience functions
