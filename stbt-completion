@@ -116,13 +116,14 @@ _stbt_control() {
         --control=irnetbox:*:*:) _stbt_irnetbox_config;;
         --control=irnetbox:*:) _stbt_irnetbox_output;;
         --control=irnetbox:) _stbt_hostname;;
-        --control=lirc:*:) _stbt_lirc_name;;
-        --control=lirc:) _stbt_lirc_socket;;
+        --control=lirc:*:*:) _stbt_lirc_name;;
+        --control=lirc:*:) _stbt_lirc_port_or_name;;
+        --control=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
         --control=vr:*:) _stbt_vr_port;;
         --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc:: vr:
+                    _stbt_no_space irnetbox: lirc: vr:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac
@@ -153,19 +154,22 @@ _stbt_irnetbox_config() {
     compgen -f -- "$cur"
 }
 
-_stbt_lirc_socket() {
+_stbt_lirc_socket_or_port_or_hostname() {
     local cur="$_stbt_cur"
-    compgen -W ":" -- "$cur"
+    compgen -W "$(_stbt_no_space $(_lirc_tcp_ports))" -- "$cur"
     compgen -f -S ":" -- "$cur"
+    compgen -A hostname -S ":" -- "$cur"
+}
+
+_stbt_lirc_port_or_name() {
+    local cur="$_stbt_cur"
+    compgen -W "$(_stbt_no_space $(_lirc_tcp_ports))" -- "$cur"
+    compgen -W "$(_stbt_trailing_space $(_lirc_remote_names))" -- "$cur"
 }
 
 _stbt_lirc_name() {
     local cur="$_stbt_cur"
-    local names="$(
-        cat /etc/lirc/lircd.conf 2>/dev/null |
-        awk '/^begin remote/         { inremote = 1 }
-             inremote && /^ *name /  { print $2; inremote = 0 }')"
-    compgen -W "$(_stbt_trailing_space $names)" -- "$cur"
+    compgen -W "$(_stbt_trailing_space $(_lirc_remote_names))" -- "$cur"
 }
 
 _stbt_hostname() {
@@ -270,6 +274,17 @@ _stbt_no_space() {
 
 _stbt_camelcase() {
     echo "$*" | perl -pe 's/_([a-z])/\U$1/g'
+}
+
+_lirc_tcp_ports() {
+    ps ax | grep 'lircd' | \
+        perl -nle 'print $1 if (/--listen=(\d+)/ || /-l +(\d+)/)' | sort
+}
+
+_lirc_remote_names() {
+    cat /etc/lirc/lircd.conf 2>/dev/null |
+    awk '/^begin remote/         { inremote = 1 }
+         inremote && /^ *name /  { print $2; inremote = 0 }'
 }
 
 ## Unit tests

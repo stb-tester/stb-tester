@@ -53,11 +53,24 @@ Global options
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
 
-  lirc:<lircd_socket>:<remote_control_name>
+  lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
     A hardware infrared emitter controlled by the lirc (Linux Infrared Remote
-    Control) daemon. `lircd_socket` defaults to `/var/run/lirc/lircd`.
+    Control) daemon.
+
+    * If `lircd_socket` is specified, remote control commands are sent via a
+      lircd socket file. `lircd_socket` defaults to `/var/run/lirc/lircd`.
+    * If `port` is specified, remote control commands are sent via a lircd TCP
+      listener on localhost.
+    * If `hostname` and `port` are specified, remote control commands are sent
+      via a lircd TCP listener on a remote host.
+
     `remote_control_name` is the name of a remote-control specification in
     lircd.conf.
+
+    Examples:
+        | lirc:/var/run/lirc/lircd:myremote
+        | lirc:8700:myremote
+        | lirc:192.168.100.100:8700:myremote
 
   irnetbox:<hostname>:<output>:<config_file>
     RedRat irNetBox network-controlled infrared emitter hardware.
@@ -105,10 +118,9 @@ Additional options to stbt record
 --control-recorder=<uri>
   The source of remote control presses.  `uri` can be:
 
-  lirc:<lircd_socket>:<remote_control_name>
+  lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
     A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
-    Control) daemon. `lircd_socket` and `remote_control_name` are as for
-    `--control`.
+    Control) daemon. Parameters are as for `--control`.
 
   vr:<hostname>:<port>
     Listens on the socket <hostname>:<port> for a connection and reads a
@@ -207,9 +219,7 @@ Linux server
 ------------
 
 An 8-core machine will be able to drive 4 set-top boxes simultaneously with at
-least 1 frame per second per set-top box. (Note that `stbt` currently doesn't
-support multiple lirc-based emitters on the same PC, but this is relatively
-trivial to fix and will be addressed in the near future.)
+least 1 frame per second per set-top box.
 
 
 SOFTWARE REQUIREMENTS
