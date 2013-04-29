@@ -7,6 +7,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
 import sys
+import traceback
 
 import stbt
 
@@ -29,11 +30,15 @@ from stbt import (  # pylint: disable=W0611
     ConfigurationError)
 try:
     execfile(args.script)
-except Exception as e:
+except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))
     if hasattr(e, "screenshot") and e.screenshot:
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
-    raise
+    traceback.print_exc(file=sys.stderr)
+    if isinstance(e, stbt.UITestFailure):
+        sys.exit(1)  # Failure
+    else:
+        sys.exit(2)  # Error
 finally:
     stbt.teardown_run()
