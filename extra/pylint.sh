@@ -9,7 +9,8 @@
 pylintoptions() {
     # C0103: Invalid name for type <T>
     # W0142: Used * or ** magic
-    echo --disable=C0103,W0142
+    # I001[12]: Locally disabling/enabling W0123
+    echo --disable=C0103,W0142,I0011,I0012
 
     # C0111: Missing docstring
     # C0302: Too many lines in module
