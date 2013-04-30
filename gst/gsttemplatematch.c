@@ -71,8 +71,54 @@
 GST_DEBUG_CATEGORY_STATIC (gst_templatematch_debug);
 #define GST_CAT_DEFAULT gst_templatematch_debug
 
-#define DEFAULT_METHOD (3)
-#define DEFAULT_NOISE_THRESHOLD (0.16f)
+#define DEFAULT_MATCH_METHOD GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED
+#define DEFAULT_MATCH_THRESHOLD (0.80f)
+#define DEFAULT_CONFIRM_METHOD GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF
+#define DEFAULT_ERODE_PASSES (1)
+#define DEFAULT_CONFIRM_THRESHOLD (0.28f)
+
+#define GST_TM_MATCH_METHOD (gst_tm_match_method_get_type())
+static GType
+gst_tm_match_method_get_type (void)
+{
+  static GType gst_tm_match_method_type = 0;
+  static const GEnumValue match_method_types[] = {
+    {GST_TM_MATCH_METHOD_CV_TM_SQDIFF, "CV_TM_SQDIFF", "sqdiff"},
+    {GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED, "CV_TM_SQDIFF_NORMED",
+        "sqdiff-normed"},
+    {GST_TM_MATCH_METHOD_CV_TM_CCORR, "CV_TM_CCORR", "ccorr"},
+    {GST_TM_MATCH_METHOD_CV_TM_CCORR_NORMED, "CV_TM_CCORR_NORMED",
+        "ccorr-normed"},
+    {GST_TM_MATCH_METHOD_CV_TM_CCOEFF, "CV_TM_CCOEFF", "ccoeff"},
+    {GST_TM_MATCH_METHOD_CV_TM_CCOEFF_NORMED, "CV_TM_CCOEFF_NORMED",
+        "ccoeff-normed"},
+    {0, NULL, NULL}
+  };
+  if (!gst_tm_match_method_type) {
+    gst_tm_match_method_type =
+        g_enum_register_static ("GstTMMatchMethod", match_method_types);
+  }
+  return gst_tm_match_method_type;
+}
+
+#define GST_TM_CONFIRM_METHOD (gst_tm_confirm_method_get_type())
+static GType
+gst_tm_confirm_method_get_type (void)
+{
+  static GType gst_tm_confirm_method_type = 0;
+  static const GEnumValue confirm_method_types[] = {
+    {GST_TM_CONFIRM_METHOD_NONE, "Do not use confirm step", "none"},
+    {GST_TM_CONFIRM_METHOD_ABSDIFF, "Absolute difference", "absdiff"},
+    {GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF, "Normalised absolute difference",
+        "normed-absdiff"},
+    {0, NULL, NULL}
+  };
+  if (!gst_tm_confirm_method_type) {
+    gst_tm_confirm_method_type =
+        g_enum_register_static ("GstTMConfirmMethod", confirm_method_types);
+  }
+  return gst_tm_confirm_method_type;
+}
 
 /* Filter signals and args */
 enum
@@ -84,8 +130,11 @@ enum
 enum
 {
   PROP_0,
-  PROP_METHOD,
-  PROP_NOISE_THRESHOLD,
+  PROP_MATCH_METHOD,
+  PROP_MATCH_THRESHOLD,
+  PROP_CONFIRM_METHOD,
+  PROP_ERODE_PASSES,
+  PROP_CONFIRM_THRESHOLD,
   PROP_TEMPLATE,
   PROP_DEBUG_DIRECTORY,
   PROP_DISPLAY,
@@ -126,9 +175,21 @@ static void gst_templatematch_load_template (
     StbtTemplateMatch * filter, char * template);
 static void gst_templatematch_match (IplImage * input, IplImage * template,
     IplImage * dist_image, double *best_res, CvPoint * best_pos, int method);
+
+/* gst_templatematch_confirm methods */
 static gboolean gst_templatematch_confirm (IplImage * inputROIGray,
-    IplImage * input, const IplImage * templateGray, float noiseThreshold,
-    const CvPoint * bestPos, const char * debugDirectory);
+    IplImage * input, const IplImage * templateGray, float confirmThreshold,
+    const CvPoint * bestPos, const int method, const int erodePasses,
+    const char * debugDirectory);
+static gboolean gst_templatematch_confirm_absdiff (IplImage * inputROIGray,
+    IplImage * input, const IplImage * templateGray, float confirmThreshold,
+    const CvPoint * bestPos, const int erodePasses,
+    const char * debugDirectory);
+static gboolean gst_templatematch_confirm_normed_absdiff (IplImage * inputROIGray,
+    IplImage * input, const IplImage * templateGray, float confirmThreshold,
+    const CvPoint * bestPos, const int erodePasses,
+    const char * debugDirectory);
+
 static void gst_templatematch_rebuild_dist_image (StbtTemplateMatch * filter);
 static void gst_templatematch_rebuild_template_images (
     StbtTemplateMatch * filter);
@@ -164,14 +225,30 @@ gst_templatematch_class_init (StbtTemplateMatchClass * klass)
   gobject_class->set_property = gst_templatematch_set_property;
   gobject_class->get_property = gst_templatematch_get_property;
 
-  g_object_class_install_property (gobject_class, PROP_METHOD,
-      g_param_spec_int ("method", "Method",
-          "Specifies the way the template must be compared with image regions. 0=SQDIFF, 1=SQDIFF_NORMED, 2=CCOR, 3=CCOR_NORMED, 4=CCOEFF, 5=CCOEFF_NORMED.",
-          0, 5, DEFAULT_METHOD, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-  g_object_class_install_property (gobject_class, PROP_NOISE_THRESHOLD,
-      g_param_spec_float ("noiseThreshold", "Noise threshold",
-          "Specifies the threshold to use to confirm a match.",
-          0.0f, 1.0f, DEFAULT_NOISE_THRESHOLD,
+  g_object_class_install_property (gobject_class, PROP_MATCH_METHOD,
+      g_param_spec_enum ("matchMethod", "Match method",
+          "Specifies the way the template must be compared with image regions",
+          GST_TM_MATCH_METHOD, DEFAULT_MATCH_METHOD,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_MATCH_THRESHOLD,
+      g_param_spec_float ("matchThreshold", "Match threshold",
+          "Specifies the threshold to use to find a potential match",
+          0.0f, 1.0f, DEFAULT_MATCH_THRESHOLD,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_CONFIRM_METHOD,
+      g_param_spec_enum ("confirmMethod", "Match confirm method",
+          "Specifies how to confirm the match found within the source",
+          GST_TM_CONFIRM_METHOD, DEFAULT_CONFIRM_METHOD,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_ERODE_PASSES,
+      g_param_spec_int ("erodePasses", "Erode passes",
+          "Specifies the number of times to apply the erode step",
+          0, 10, DEFAULT_ERODE_PASSES,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_CONFIRM_THRESHOLD,
+      g_param_spec_float ("confirmThreshold", "Confirm threshold",
+          "Specifies the threshold to use to confirm a match",
+          0.0f, 1.0f, DEFAULT_CONFIRM_THRESHOLD,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_TEMPLATE,
       g_param_spec_string ("template", "Template", "Filename of template image",
@@ -217,8 +294,11 @@ gst_templatematch_init (StbtTemplateMatch * filter,
   filter->cvImage = NULL;
   filter->cvImageROIGray = NULL;
   filter->cvTemplateImageGray = NULL;
-  filter->method = DEFAULT_METHOD;
-  filter->noiseThreshold = DEFAULT_NOISE_THRESHOLD;
+  filter->matchMethod = DEFAULT_MATCH_METHOD;
+  filter->matchThreshold = DEFAULT_MATCH_THRESHOLD;
+  filter->confirmMethod = DEFAULT_CONFIRM_METHOD;
+  filter->erodePasses = DEFAULT_ERODE_PASSES;
+  filter->confirmThreshold = DEFAULT_CONFIRM_THRESHOLD;
   filter->debugDirectory = NULL;
 
   filter->templateImageAcquired = FALSE;
@@ -232,33 +312,54 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
   StbtTemplateMatch *filter = GST_TEMPLATEMATCH (object);
 
   switch (prop_id) {
-    case PROP_METHOD:
+    case PROP_MATCH_METHOD:
       GST_OBJECT_LOCK(filter);
-      switch (g_value_get_int (value)) {
-        case 0:
-          filter->method = CV_TM_SQDIFF;
+      switch (g_value_get_enum (value)) {
+        case GST_TM_MATCH_METHOD_CV_TM_SQDIFF:
+          filter->matchMethod = CV_TM_SQDIFF;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_SQDIFF_NORMED` instead of `CV_TM_SQDIFF`.");
           break;
-        case 1:
-          filter->method = CV_TM_SQDIFF_NORMED;
+        case GST_TM_MATCH_METHOD_CV_TM_SQDIFF_NORMED:
+          filter->matchMethod = CV_TM_SQDIFF_NORMED;
           break;
-        case 2:
-          filter->method = CV_TM_CCORR;
+        case GST_TM_MATCH_METHOD_CV_TM_CCORR:
+          filter->matchMethod = CV_TM_CCORR;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_CCORR_NORMED` instead of `CV_TM_CCORR`.");
           break;
-        case 3:
-          filter->method = CV_TM_CCORR_NORMED;
+        case GST_TM_MATCH_METHOD_CV_TM_CCORR_NORMED:
+          filter->matchMethod = CV_TM_CCORR_NORMED;
           break;
-        case 4:
-          filter->method = CV_TM_CCOEFF;
+        case GST_TM_MATCH_METHOD_CV_TM_CCOEFF:
+          filter->matchMethod = CV_TM_CCOEFF;
+          GST_WARNING ("It is *strongly* recommended to use \
+                  `CV_TM_CCOEFF_NORMED` instead of `CV_TM_CCOEFF`.");
           break;
-        case 5:
-          filter->method = CV_TM_CCOEFF_NORMED;
+        case GST_TM_MATCH_METHOD_CV_TM_CCOEFF_NORMED:
+          filter->matchMethod = CV_TM_CCOEFF_NORMED;
           break;
       }
       GST_OBJECT_UNLOCK(filter);
       break;
-    case PROP_NOISE_THRESHOLD:
+    case PROP_MATCH_THRESHOLD:
       GST_OBJECT_LOCK(filter);
-      filter->noiseThreshold = g_value_get_float (value);
+      filter->matchThreshold = g_value_get_float (value);
+      GST_OBJECT_UNLOCK(filter);
+      break;
+    case PROP_CONFIRM_METHOD:
+      GST_OBJECT_LOCK(filter);
+      filter->confirmMethod = g_value_get_enum (value);
+      GST_OBJECT_UNLOCK(filter);
+      break;
+    case PROP_ERODE_PASSES:
+      GST_OBJECT_LOCK(filter);
+      filter->erodePasses = g_value_get_int (value);
+      GST_OBJECT_UNLOCK(filter);
+      break;
+    case PROP_CONFIRM_THRESHOLD:
+      GST_OBJECT_LOCK(filter);
+      filter->confirmThreshold = g_value_get_float (value);
       GST_OBJECT_UNLOCK(filter);
       break;
     case PROP_DEBUG_DIRECTORY:
@@ -286,11 +387,20 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
   StbtTemplateMatch *filter = GST_TEMPLATEMATCH (object);
 
   switch (prop_id) {
-    case PROP_METHOD:
-      g_value_set_int (value, filter->method);
+    case PROP_MATCH_METHOD:
+      g_value_set_enum (value, filter->matchMethod);
       break;
-    case PROP_NOISE_THRESHOLD:
-      g_value_set_float (value, filter->noiseThreshold);
+    case PROP_MATCH_THRESHOLD:
+      g_value_set_float (value, filter->matchThreshold);
+      break;
+    case PROP_CONFIRM_METHOD:
+      g_value_set_enum (value, filter->confirmMethod);
+      break;
+    case PROP_ERODE_PASSES:
+      g_value_set_int (value, filter->erodePasses);
+      break;
+    case PROP_CONFIRM_THRESHOLD:
+      g_value_set_float (value, filter->confirmThreshold);
       break;
     case PROP_TEMPLATE:
       g_value_set_string (value, filter->template);
@@ -331,7 +441,7 @@ gst_templatematch_set_caps (GstPad * pad, GstCaps * caps)
       cvCreateImageHeader (cvSize (width, height), IPL_DEPTH_8U, 3);
   gst_templatematch_rebuild_dist_image (filter);
 
-  filter->capsInitialised = TRUE;
+  filter->capsInitialised = (filter->cvImage != NULL);
 
   otherpad = (pad == filter->srcpad) ? filter->sinkpad : filter->srcpad;
   gst_object_unref (filter);
@@ -391,7 +501,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
     filter->cvImage->imageData = (char *) GST_BUFFER_DATA (buf);
     gst_templatematch_match (filter->cvImage, filter->cvTemplateImage,
-        filter->cvDistImage, &best_res, &best_pos, filter->method);
+        filter->cvDistImage, &best_res, &best_pos, filter->matchMethod);
 
     gst_templatematch_log_image (filter->cvImage,
         filter->debugDirectory, "source.png");
@@ -400,10 +510,11 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     gst_templatematch_log_image (filter->cvDistImage, 
         filter->debugDirectory, "source_matchtemplate.png");
     
-    if (best_res >= 0.80) {
+    if (best_res >= filter->matchThreshold) {
       matched = gst_templatematch_confirm (
           filter->cvImageROIGray, filter->cvImage, filter->cvTemplateImageGray,
-          filter->noiseThreshold, &best_pos, filter->debugDirectory);
+          filter->confirmThreshold, &best_pos, filter->confirmMethod,
+          filter->erodePasses, filter->debugDirectory);
     } else {
       matched = FALSE;
     }
@@ -481,21 +592,53 @@ gst_templatematch_match (IplImage * input, IplImage * template,
   }
 }
 
-/* Confirm the match returned by template match.
- * 
- * The absolute difference between the template image and the source image
- * is computed. To account for the noise, the result is thresholded and
- * eroded. If the template is different enough, some white blobs will remain.
+/* Confirm the match returned by template match using specified method:
+ * none : Do not confirm the match, assume correct
+ * absdiff : Absolute difference between template and source
+ * normed-absdiff : Absolute difference between normalised template and source
+ * See specific confirm methods for more explanation
  */
 static gboolean
 gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
-    const IplImage * templateGray, float noiseThreshold, const CvPoint * bestPos,
-    const char * debugDirectory)
+    const IplImage * templateGray, float confirmThreshold,
+    const CvPoint * bestPos, const int method,
+    const int erodePasses, const char * debugDirectory)
+{
+  gboolean confirmed;
+  switch (method) {
+    case GST_TM_CONFIRM_METHOD_NONE:
+      confirmed = TRUE;
+      break;
+    case GST_TM_CONFIRM_METHOD_ABSDIFF:
+      confirmed = gst_templatematch_confirm_absdiff (
+              inputROIGray, input, templateGray, confirmThreshold,
+              bestPos, erodePasses, debugDirectory);
+      break;
+    case GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF:
+      confirmed = gst_templatematch_confirm_normed_absdiff (
+              inputROIGray, input, templateGray, confirmThreshold,
+              bestPos, erodePasses, debugDirectory);
+      break;
+    default:
+      g_assert_not_reached ();
+  }
+  return confirmed;
+}
+
+/* The absolute difference between the template image and the source image
+ * is computed. To account for the noise, the result is thresholded and
+ * eroded. If the template is different enough, some white blobs with remain.
+ */
+static gboolean
+gst_templatematch_confirm_absdiff (IplImage * inputROIGray, IplImage * input,
+        const IplImage * templateGray, float confirmThreshold,
+        const CvPoint * bestPos, const int erodePasses,
+        const char * debugDirectory)
 {
   IplImage *cvAbsDiffImage = inputROIGray;
   IplConvKernel *kernel = cvCreateStructuringElementEx (
       3, 3, 1, 1, CV_SHAPE_ELLIPSE, NULL );
-  int threshold = (int)(noiseThreshold * 255);
+  int threshold = (int)(confirmThreshold * 255);
 
   cvSetImageROI (input, cvRect (bestPos->x, bestPos->y, templateGray->width,
     templateGray->height));
@@ -507,7 +650,6 @@ gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
   gst_templatematch_log_image (templateGray, debugDirectory, 
       "template_gray.png");
 
-
   cvAbsDiff (inputROIGray, templateGray, cvAbsDiffImage);
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
       "absdiff.png");
@@ -517,8 +659,67 @@ gst_templatematch_confirm (IplImage * inputROIGray, IplImage * input,
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
       "absdiff_threshold.png");
   
-  cvErode (cvAbsDiffImage, cvAbsDiffImage, kernel, 1);
+  cvErode (cvAbsDiffImage, cvAbsDiffImage, kernel, erodePasses);
   gst_templatematch_log_image (cvAbsDiffImage, debugDirectory, 
+      "absdiff_threshold_erode.png");
+
+  cvResetImageROI (input);
+
+  cvReleaseStructuringElement (&kernel);
+
+  return cvCountNonZero (cvAbsDiffImage) == 0;
+}
+
+/* As with the regular absdiff confirm algorithm, except both template
+ * and source images are normalised before the absolute difference/
+ * threshold/erode is performed. This helps to accentuate differences
+ * between images with low brightness variation, and requires a slightly
+ * higher threshold value to eliminate the accentuated noise.
+ */
+static gboolean
+gst_templatematch_confirm_normed_absdiff (IplImage * inputROIGray,
+        IplImage * input, const IplImage * templateGray, float confirmThreshold,
+        const CvPoint * bestPos, const int erodePasses,
+        const char * debugDirectory)
+{
+  IplImage *templateGrayNormalized = cvCloneImage(templateGray);
+  IplImage *inputROIGrayNormalized = inputROIGray;
+  IplImage *cvAbsDiffImage = inputROIGray;
+  IplConvKernel *kernel = cvCreateStructuringElementEx (
+      3, 3, 1, 1, CV_SHAPE_ELLIPSE, NULL );
+  int threshold = (int)(confirmThreshold * 255);
+
+  cvSetImageROI (input, cvRect (bestPos->x, bestPos->y, templateGray->width,
+    templateGray->height));
+  gst_templatematch_log_image (input, debugDirectory, "source_roi.png");
+
+  cvCvtColor (input, inputROIGray, CV_BGR2GRAY);
+  gst_templatematch_log_image (inputROIGray, debugDirectory,
+      "source_roi_gray.png");
+  gst_templatematch_log_image (templateGray, debugDirectory,
+      "template_gray.png");
+
+  cvNormalize (inputROIGray, inputROIGrayNormalized,
+      0, 255, CV_MINMAX, CV_8UC1);
+  cvNormalize (templateGray, templateGrayNormalized,
+      0, 255, CV_MINMAX, CV_8UC1);
+  gst_templatematch_log_image(inputROIGrayNormalized,
+      debugDirectory, "source_roi_gray_normalized.png");
+  gst_templatematch_log_image(templateGrayNormalized,
+      debugDirectory, "template_gray_normalized.png");
+
+  cvAbsDiff (inputROIGrayNormalized, templateGrayNormalized,
+      cvAbsDiffImage);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
+      "absdiff.png");
+
+  cvThreshold (cvAbsDiffImage, cvAbsDiffImage, threshold, 255,
+      CV_THRESH_BINARY);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
+      "absdiff_threshold.png");
+
+  cvErode (cvAbsDiffImage, cvAbsDiffImage, kernel, erodePasses);
+  gst_templatematch_log_image (cvAbsDiffImage, debugDirectory,
       "absdiff_threshold_erode.png");
 
   cvResetImageROI (input);

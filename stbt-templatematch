@@ -10,7 +10,7 @@
 #/ Run stbt's templatematch algorithm against a single frame (which you can
 #/ capture using `stbt screenshot`).
 #/
-#/ e.g.: stbt templatematch full-frame.png button.png noise_threshold=0.20
+#/ e.g.: stbt templatematch full-frame.png button.png confirm_threshold=0.20
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
@@ -25,7 +25,12 @@ done
 [ $# -lt 2 ] && { usage >&2; exit 1; }
 videoframe="$1" template="$2"; shift 2
 args="timeout_secs=1"
-while [ $# -gt 0 ]; do args+=", $1"; shift; done
+while [ $# -gt 0 ]; do
+    a=$(echo "$1" |
+        perl -lpe '/^(match_method|confirm_method)=/ && s/=(.*)/="\1"/')
+    args+=", $a"
+    shift
+done
 
 script="stbt-templatematch.$$.py"
 trap "rm $script" EXIT

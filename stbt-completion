@@ -79,8 +79,9 @@ _stbt_config() {
 }
 
 _stbt_templatematch() {
-    local cur="${COMP_WORDS[COMP_CWORD]}"
-    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
     local v
     [[ $COMP_CWORD -gt 2 && ${COMP_WORDS[2]} == "-v" ]] && v="-v" || v=
     [[ ${COMP_WORDS[2]} == "--help" ]] && return
@@ -90,9 +91,18 @@ _stbt_templatematch() {
                 -f -W "$(_stbt_trailing_space --help -v)" \
                 -- "$cur"));;
         *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
-        ,4|*,*) COMPREPLY=($(compgen \
-            -W "$(_stbt_no_space noise_threshold= )" \
-            -- "$cur"));;
+        ,4|*,*)
+            case "$prev" in
+                match_method=|confirm_method=)
+                    COMPREPLY=($(_stbt_templatematch_enum));;
+                match_threshold=|erode_passes=|confirm_threshold=)
+                    COMPREPLY=();;
+                *) COMPREPLY=($(compgen \
+                    -W "$(_stbt_no_space \
+                            match_method= match_threshold= \
+                            confirm_method= erode_passes= confirm_threshold=)" \
+                    -- "$cur"));;
+            esac
     esac
 }
 
@@ -203,6 +213,16 @@ _stbt_config_file_contents() {
     done
 }
 
+_stbt_templatematch_enum() {
+    # Requires GStreamer bash-completion from
+    # https://bugzilla.gnome.org/show_bug.cgi?id=690515
+    type _gst_property_values &>/dev/null || return
+
+    local property="$(_stbt_camelcase ${_stbt_prev%=})"
+    local cur="$_stbt_cur"
+    compgen -W "$(_gst_property_values stbt-templatematch $property)" -- "$cur"
+}
+
 ## Helper functions
 ############################################################################
 
@@ -246,6 +266,10 @@ _stbt_trailing_space() {
 _stbt_no_space() {
     local c
     for c in $*; do printf -- "$c\n"; done
+}
+
+_stbt_camelcase() {
+    echo "$*" | perl -pe 's/_([a-z])/\U$1/g'
 }
 
 ## Unit tests
@@ -310,6 +334,15 @@ _stbt_test_get_prev() {
 
     COMP_WORDS=(stbt run --control = file : ///dev/stdin); COMP_CWORD=6; _stbt_get_prev
     _stbt_assert_get_prev --control=file: ///dev/stdin
+
+    # User types "match_method="
+    COMP_WORDS=(stbt templatematch frame.png template.png match_method = "");
+    COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev match_method= ""
+
+    COMP_WORDS=(stbt templatematch frame.png template.png match_method = sqdiff);
+    COMP_CWORD=6; _stbt_get_prev
+    _stbt_assert_get_prev match_method= sqdiff
 }
 
 _stbt_config_for_tests() {
@@ -344,4 +377,10 @@ _stbt_test_config_keys() {
         <(printf "key1\nkey2\nkey3\nkey4\n") ||
     _stbt_fail "_stbt_config_keys 'global' unexpected output"
     echo _stbt_config_keys: ok
+}
+
+_stbt_test_camelcase() {
+    diff <(echo matchMethod) <(_stbt_camelcase match_method) ||
+    _stbt_fail "_stbt_camelcase unexpected output"
+    echo _stbt_camelcase: ok
 }

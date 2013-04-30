@@ -28,6 +28,7 @@ shift $(($OPTIND-1))
 export PATH="$testdir/..:$PATH"
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
+rm -f ~/.gstreamer-0.10/registry.*
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
@@ -67,6 +68,8 @@ if [ $# -eq 0 ]; then
     echo "Testing gstreamer + OpenCV installation:" &&
     run test_gstreamer_core_elements &&
     run test_gstreamer_can_find_templatematch &&
+    run test_gsttemplatematch_has_all_element_properties &&
+    run test_gsttemplatematch_defaults_match_stbt_conf &&
     run test_gsttemplatematch_does_find_a_match &&
     run test_gsttemplatematch_bgr_fix &&
 
@@ -87,6 +90,14 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_no_match &&
     run test_wait_for_match_changing_template &&
     run test_wait_for_match_nonexistent_template &&
+    run test_wait_for_match_noise_threshold_raises_warning &&
+    run test_wait_for_match_noise_threshold_and_confirm_threshold_raises_error &&
+    run test_wait_for_match_match_method_param_affects_first_pass &&
+    run test_wait_for_match_match_threshold_param_affects_match &&
+    run test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_zero &&
+    run test_wait_for_match_confirm_methods_produce_different_results &&
+    run test_wait_for_match_erode_passes_affects_match &&
+    run test_wait_for_match_confirm_threshold_affects_match &&
     run test_detect_match_nonexistent_template &&
     run test_press_until_match &&
     run test_wait_for_match_searches_in_script_directory &&

@@ -398,7 +398,7 @@ get_config(key, tool=None)
     Raises `ConfigurationError` if the specified `tool` section or `key` is not
     found.
 
-debug(msg)
+debug(s)
     Print the given string to stderr if stbt run `--verbose` was given.
 
 class MatchResult
@@ -446,12 +446,12 @@ parameter values. This can be done in either `stbt.conf` or in a keyword
 argument to one of the functions `detect_match()`, `wait_for_match()`, and
 `press_until_match()`.
 
-`match_method` (str) default: sqdiff-normed
+`match_method` (str) default: {match_method}
   The method that is used by OpenCV's cvMatchTemplate algorithm to produce its
   "heat map" of template locations. See `OpenCV Tutorials: Template Matching
   <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
 
-`match_threshold` (float) default: 0.8
+`match_threshold` (float) default: {match_threshold}
   How strong a result from cvTemplateMatch must be before the potential match
   will be checked. A value of 0 will mean that every match will be passes to
   the confirmation stage, whilst a value of 1 means (theoretically) that only
@@ -460,7 +460,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   storage of floating point numbers in binary.  See
   http://docs.python.org/2/tutorial/floatingpoint.html.)
 
-`confirm_method` (str) default: normed-absdiff
+`confirm_method` (str) default: {confirm_method}
   The method to use for confirming the match found by cvMatchTemplate:
 
   (0) None
@@ -498,12 +498,12 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
       using `normed-absdiff`. In other words, the `confirm_threshold` is more
       sensitive and fine-tunable when using `normed-absdiff`.
 
-`erode_passes` (int) default: 1
+`erode_passes` (int) default: {erode_passes}
   The number of erode steps. Increasing the number of erode steps makes your
   test less sensitive to noise and small variances, at the cost of of being
   more likely to report a false positive.
 
-`confirm_threshold` (float) default: 0.28
+`confirm_threshold` (float) default: {confirm_threshold}
   Increase `confirm_threshold` to avoid false negatives, at the risk of
   increasing false positives (a value of 1.0 will report a match every time).
 
