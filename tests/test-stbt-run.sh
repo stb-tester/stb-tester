@@ -109,12 +109,14 @@ test_wait_for_match_confirm_methods_produce_different_results() {
     local source_pipeline='filesrc location="known-fail-source.png" ! \
         decodebin2 ! imagefreeze ! ffmpegcolorspace'
 
+    # Expect correct nomatch.
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("known-fail-template.png", confirm_method="normed-absdiff")
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=None \
-        "$scratchdir/test.py"
+        "$scratchdir/test.py" || return
 
+    # Expect false match.
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("known-fail-template.png", confirm_method="absdiff")
 	EOF
