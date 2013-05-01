@@ -224,27 +224,29 @@ gst_templatematch_class_init (StbtTemplateMatchClass * klass)
 
   g_object_class_install_property (gobject_class, PROP_MATCH_METHOD,
       g_param_spec_enum ("matchMethod", "Match method",
-          "Specifies the way the template must be compared with image regions",
+          "The algorithm for finding the template within the video frame. "
+          "For details see http://docs.opencv.org/modules/imgproc/doc/"
+          "object_detection.html#matchtemplate",
           GST_TM_MATCH_METHOD, DEFAULT_MATCH_METHOD,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_MATCH_THRESHOLD,
       g_param_spec_float ("matchThreshold", "Match threshold",
-          "Specifies the threshold to use to find a potential match",
+          "Threshold to use to find a potential match",
           0.0f, 1.0f, DEFAULT_MATCH_THRESHOLD,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_CONFIRM_METHOD,
       g_param_spec_enum ("confirmMethod", "Match confirm method",
-          "Specifies how to confirm the match found within the source",
+          "Algorithm to confirm the match found by \"matchMethod\"",
           GST_TM_CONFIRM_METHOD, DEFAULT_CONFIRM_METHOD,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_ERODE_PASSES,
       g_param_spec_int ("erodePasses", "Erode passes",
-          "Specifies the number of times to apply the erode step",
+          "Number of times to apply the erode step in the confirm algorithm",
           0, 10, DEFAULT_ERODE_PASSES,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_CONFIRM_THRESHOLD,
       g_param_spec_float ("confirmThreshold", "Confirm threshold",
-          "Specifies the threshold to use to confirm a match",
+          "Threshold to use in the confirm algorithm",
           0.0f, 1.0f, DEFAULT_CONFIRM_THRESHOLD,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_TEMPLATE,
@@ -257,7 +259,7 @@ gst_templatematch_class_init (StbtTemplateMatchClass * klass)
           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_DISPLAY,
       g_param_spec_boolean ("display", "Display",
-          "Sets whether the detected template should be highlighted in the output",
+          "Highlight the detected template in the output",
           TRUE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
