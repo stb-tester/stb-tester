@@ -9,8 +9,7 @@ test_wait_for_match() {
 
 test_wait_for_match_no_match() {
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", confirm_method="absdiff",
-	    confirm_threshold=0.16, timeout_secs=1)
+	wait_for_match("videotestsrc-bw-flipped.png", timeout_secs=1)
 	EOF
     rm -f screenshot.png
     ! stbt-run -v "$scratchdir/test.py" &&
@@ -150,13 +149,13 @@ test_wait_for_match_confirm_threshold_affects_match() {
         decodebin2 ! imagefreeze ! ffmpegcolorspace'
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.55, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", confirm_threshold=0.5, timeout_secs=1)
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.45, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", confirm_threshold=0.4, timeout_secs=1)
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py"
@@ -431,8 +430,7 @@ test_detect_match_changing_template_is_not_racy() {
 	    import time
 	    time.sleep(1.0) # make sure the test fail (0.1s also works)
 	    break
-	for match_result in detect_match("videotestsrc-bw-flipped.png",
-	    confirm_method="absdiff", confirm_threshold=0.16):
+	for match_result in detect_match("videotestsrc-bw-flipped.png"):
 	    # Not supposed to match
 	    if not match_result.match:
 	        import sys
