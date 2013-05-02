@@ -1203,6 +1203,7 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
                 received.append(k)
 
     t = threading.Thread()
+    t.daemon = True
     t.run = listener
     t.start()
     for k in keys:
@@ -1240,6 +1241,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
+    t.daemon = True
     t.run = lambda: fake_lircd(lircd_socket)
     t.start()
     time.sleep(0.01)  # Give it a chance to start listening (sorry)
