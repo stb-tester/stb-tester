@@ -472,7 +472,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   storage of floating point numbers in binary.  See
   http://docs.python.org/2/tutorial/floatingpoint.html.)
 
-`confirm_method` (str) default: normed-absdiff
+`confirm_method` (str) default: absdiff
   The method to use for confirming the match found by cvMatchTemplate:
 
   "``none``"
@@ -515,7 +515,7 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
   test less sensitive to noise and small variances, at the cost of of being
   more likely to report a false positive.
 
-`confirm_threshold` (float) default: 0.28
+`confirm_threshold` (float) default: 0.16
   Increase this value to avoid false negatives, at the risk of increasing false
   positives (a value of 1.0 will report a match every time).
 
