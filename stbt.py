@@ -62,7 +62,7 @@ def hide_stderr():
 
 import pygst  # gstreamer
 pygst.require("0.10")
-with hide_argv(), hide_stderr():  # pylint: disable=C0321
+with hide_argv(), hide_stderr():
     import gst
 import gobject
 import glib
@@ -74,7 +74,6 @@ warnings.filterwarnings(
 
 # Functions available to stbt scripts
 #===========================================================================
-# -- warn about missing docstrings # pylint: enable=C0111
 
 def press(key):
     """Send the specified key-press to the system under test.
@@ -442,11 +441,9 @@ class MotionTimeout(UITestFailure):
             self.timeout_secs)
 
 
-class ConfigurationError(UITestError):  # pylint: disable=C0111
+class ConfigurationError(UITestError):
     pass
 
-
-# -- don't warn about missing docstrings anymore # pylint: disable=C0111
 
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
@@ -524,7 +521,7 @@ def MessageIterator(bus, signal):
         bus.disconnect_by_func(sig)
 
 
-class Display:  # pylint: disable=R0902
+class Display:
     def __init__(self, source_pipeline_description, sink_pipeline_description):
         gobject.threads_init()
 
@@ -809,7 +806,6 @@ def uri_to_remote(uri, display):
 
 
 class NullRemote:
-    # pylint: disable=W0232,R0903
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
@@ -821,7 +817,6 @@ class VideoTestSrcControl:
     Changes the videotestsrc image to the specified pattern ("0" to "20").
     See `gst-inspect videotestsrc`.
     """
-    # pylint: disable=R0903
 
     def __init__(self, display):
         self.videosrc = display.pipeline.get_by_name("videotestsrc0")
@@ -843,7 +838,6 @@ class VirtualRemote:
         control = VirtualRemote("192.168.0.123")
         control.press("MENU")
     """
-    # pylint: disable=R0903
 
     def __init__(self, hostname, port):
         self.hostname = hostname
@@ -869,7 +863,6 @@ class LircRemote:
 
     See http://www.lirc.org/html/technical.html#applications
     """
-    # pylint: disable=R0903
 
     def __init__(self, lircd_socket, control_name):
         self.lircd_socket = lircd_socket
@@ -904,7 +897,6 @@ class TCPLircRemote:
         control = TCPLircRemote("localhost", "8765", "humax")
         control.press("MENU")
     """
-    # pylint: disable=R0903
 
     def __init__(self, hostname, port, control_name):
         self.hostname = hostname
@@ -930,7 +922,6 @@ class IRNetBoxRemote:
     See http://www.redrat.co.uk/products/irnetbox.html
 
     """
-    # pylint: disable=R0903
 
     def __init__(self, hostname, output, config_file):
         self.hostname = hostname
@@ -1243,7 +1234,6 @@ class FileToSocket:
     >>> s.recv(3)
     'lo'
     """
-    # pylint: disable=R0903
     def __init__(self, f):
         self.file = f
 

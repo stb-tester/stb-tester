@@ -179,7 +179,7 @@ def RemoteControlConfig(filename):
     return _parse_config(open(filename))
 
 
-class MessageTypes:  # pylint: disable=W0232,R0903
+class MessageTypes:
     """§5.2"""
     ERROR = 0x01
     POWER_ON = 0x05
@@ -193,7 +193,7 @@ class MessageTypes:  # pylint: disable=W0232,R0903
     IR_ASYNC_COMPLETE = 0x31
 
 
-class NetBoxTypes:  # pylint: disable=W0232,R0903
+class NetBoxTypes:
     """§5.2.6"""
     MK1 = 2
     MK2 = 7
@@ -324,7 +324,6 @@ class _FileToSocket:
     >>> s.recv(3)
     ''
     """
-    # pylint: disable=R0903
 
     def __init__(self, f):
         self.file = f
