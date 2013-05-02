@@ -104,7 +104,7 @@ README.rst: stbt.py api-doc.sh
 
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
-	    .stbt-prefix .stbt-cflags .stbt-ldflags README.rst
+	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
