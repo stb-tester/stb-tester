@@ -1,0 +1,16 @@
+language: c
+
+install:
+ - sudo apt-get update
+ - sudo apt-get install gstreamer0.10-plugins-bad gstreamer0.10-ffmpeg 
+                        libgstreamer0.10-dev python-gst0.10 python-docutils 
+                        libopencv-dev libgstreamer-plugins-base0.10-dev 
+                        libcv-dev libhighgui-dev python-nose xvfb 
+                        gstreamer0.10-tools gstreamer0.10-x 
+                        gstreamer0.10-plugins-good pylint pep8
+ - sudo ln -s /usr/bin/gst-inspect-0.10 /usr/bin/gst-inspect
+ - make
+
+script:
+ - xvfb-run -s "-screen 0 1024x768x24" make check
+
