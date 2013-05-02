@@ -10,6 +10,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 from collections import namedtuple, deque
 import argparse
 import ConfigParser
+import contextlib
 import Queue
 import errno
 import inspect
@@ -23,45 +24,45 @@ import warnings
 import irnetbox
 
 
-class ArgvHider:  # pylint: disable=W0232
-    """ For use with 'with' statement:  Unsets argv and resets it.
+@contextlib.contextmanager
+def hide_argv():
+    """ For use with 'with' statement: Provides a context with an empty
+    argument list.
 
     This is used because otherwise gst-python will exit if '-h', '--help', '-v'
     or '--version' command line arguments are given.
     """
+    old_argv = sys.argv[:]
+    sys.argv = [sys.argv[0]]
+    try:
+        yield
+    finally:
+        sys.argv = old_argv
 
-    def __enter__(self):
-        self.argv = sys.argv[:]  # pylint: disable=W0201
-        del sys.argv[1:]
 
-    def __exit__(self, ex_type, exc_value, traceback):
-        sys.argv = self.argv
-
-
-class StdErrHider:  # pylint: disable=W0232
+@contextlib.contextmanager
+def hide_stderr():
     """For use with 'with' statement: Hide stderr output.
 
     This is used because otherwise gst-python will print
     'pygobject_register_sinkfunc is deprecated'.
     """
-
-    def __enter__(self):
-        # pylint: disable=W0201
-        fd = sys.__stderr__.fileno()
-        self.saved_fd = os.dup(fd)
+    fd = sys.__stderr__.fileno()
+    saved_fd = os.dup(fd)
+    sys.__stderr__.flush()
+    null_stream = open(os.devnull, 'w', 0)
+    os.dup2(null_stream.fileno(), fd)
+    try:
+        yield
+    finally:
         sys.__stderr__.flush()
-        self.null_stream = open(os.devnull, 'w', 0)
-        os.dup2(self.null_stream.fileno(), fd)
-
-    def __exit__(self, ex_type, ex_value, traceback):
-        sys.__stderr__.flush()
-        os.dup2(self.saved_fd, sys.__stderr__.fileno())
-        self.null_stream.close()
+        os.dup2(saved_fd, sys.__stderr__.fileno())
+        null_stream.close()
 
 
 import pygst  # gstreamer
 pygst.require("0.10")
-with ArgvHider(), StdErrHider():  # pylint: disable=C0321
+with hide_argv(), hide_stderr():  # pylint: disable=C0321
     import gst
 import gobject
 import glib
@@ -92,7 +93,6 @@ class Position(namedtuple('Position', 'x y')):
     * `x` and `y`: Integer coordinates from the top left corner of the video
       frame.
     """
-    # pylint: disable=R0903,W0232
     pass
 
 
@@ -105,7 +105,6 @@ class MatchResult(namedtuple(
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     """
-    # pylint: disable=R0903,W0232
     pass
 
 
@@ -165,7 +164,6 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
     """
-    # pylint: disable=R0903,W0232
     pass
 
 
@@ -1205,12 +1203,13 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
                 received.append(k)
 
     t = threading.Thread()
+    t.daemon = True
     t.run = listener
     t.start()
     for k in keys:
-        time.sleep(0.01)  # Give listener a chance to start listening (sorry)
+        time.sleep(0.1)  # Give listener a chance to start listening (sorry)
         vr = VirtualRemote('localhost', 2033)
-        time.sleep(0.01)
+        time.sleep(0.1)
         vr.press(k)
     t.join()
     assert received == keys
@@ -1237,8 +1236,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                 m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
                 if m:
                     d = m.groupdict()
-                    listener.sendall(  # pylint: disable=E1101
-                        '00000000 0 %s %s\n' % (d['key'], d['control']))
+                    message = '00000000 0 %s %s\n' % (d['key'], d['control'])
+                    listener.sendall(message)  # pylint: disable=E1101
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()

@@ -10,14 +10,17 @@ pylintoptions() {
     # C0103: Invalid name for type <T>
     # W0142: Used * or ** magic
     # I001[12]: Locally disabling/enabling W0123
-    echo --disable=C0103,W0142,I0011,I0012
+    # R0903: Too few public methods
+    # W0232: Class has no __init__ method
+    echo --disable=C0103,W0142,I0011,I0012,R0903,W0232
 
     # C0111: Missing docstring
     # C0302: Too many lines in module
+    # E0012: Bad option value (pylint version compatibility)
     # W0603: Using the global statement
     case "$1" in
         irnetbox.py) echo --disable=C0111;;
-        stbt.py) echo --disable=C0302,W0603;;
+        stbt.py) echo --disable=C0302,W0603,E0012;;
         stbt-record) echo --disable=C0111;;
     esac
 }
