@@ -1229,7 +1229,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         s.bind(address)
         s.listen(5)
         listener, _ = s.accept()
-        # "* 1" is for LircRemote's __init__.
+        # "+ 1" is for LircRemote's __init__.
         for _ in range(len(keys) + 1):
             control, _ = s.accept()
             for cmd in control.makefile():
