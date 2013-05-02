@@ -47,4 +47,4 @@ source_pipeline=${*:-$("$STBT_LIBEXEC/stbt-config" run source_pipeline)}
         esac)}
 
 set -x
-gst-launch ${v:-} $source_pipeline ! ffmpegcolorspace ! $sink sync=false
+gst-launch-0.10 ${v:-} $source_pipeline ! ffmpegcolorspace ! $sink sync=false

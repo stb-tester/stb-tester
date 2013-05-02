@@ -12,7 +12,7 @@ DONT_EXPECT_MOTION=0
 # stbt-motiondetect element.
 #
 test_gstreamer_can_find_stbt_motiondetect() {
-    gst-inspect stbt-motiondetect >/dev/null
+    gst-inspect-0.10 stbt-motiondetect >/dev/null
 }
 
 # Test that stbt-motiondetect does not process the source by default.
@@ -110,7 +110,7 @@ run_motiondetect() {
     local parameters="$2"
     local log="$3"
 
-    timeout 2 gst-launch --messages \
+    timeout 2 gst-launch-0.10 --messages \
         $source_pipeline ! \
         ffmpegcolorspace ! \
         stbt-motiondetect $parameters ! \

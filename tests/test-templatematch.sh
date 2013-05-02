@@ -3,13 +3,13 @@
 
 # Test for a correct installation of gstreamer
 test_gstreamer_core_elements() {
-    timeout 5 gst-launch videotestsrc num-buffers=10 ! ximagesink
+    timeout 5 gst-launch-0.10 videotestsrc num-buffers=10 ! ximagesink
 }
 
 # Test for our libgst-stb-tester.so gstreamer plugin.
 #
 test_gstreamer_can_find_templatematch() {
-    gst-inspect stbt-templatematch >/dev/null
+    gst-inspect-0.10 stbt-templatematch >/dev/null
 }
 
 # Test stbt-templatematch element reports all properties it should have
@@ -74,7 +74,7 @@ run_templatematch() {
     local template="$1"
     local log="$2"
 
-    timeout 2 gst-launch --messages \
+    timeout 2 gst-launch-0.10 --messages \
         videotestsrc ! \
         ffmpegcolorspace ! \
         stbt-templatematch template="$template" matchMethod=1 ! \
