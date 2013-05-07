@@ -51,7 +51,8 @@ import time
 class IRNetBox:
     def __init__(self, hostname):
         port = 10001  # §5
-        for i in range(6):
+        maximum_retries = 7
+        for i in xrange(maximum_retries + 1):
             try:
                 self._socket = socket.socket()
                 self._socket.settimeout(10)
@@ -59,8 +60,8 @@ class IRNetBox:
                 self._socket.settimeout(None)
                 break
             except socket.error as e:
-                if e.errno == errno.ECONNREFUSED and i < 5:
-                    delay = 0.1 * (2 ** i)
+                if e.errno == errno.ECONNREFUSED and i < maximum_retries:
+                    delay = 0.1 * random.randint(0, 2 ** i)
                     sys.stderr.write(
                         "Connection to irNetBox '%s:%d' refused; "
                         "retrying in %.2fs.\n" %
