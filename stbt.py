@@ -789,6 +789,12 @@ def uri_to_remote(uri, display):
     if vr:
         d = vr.groupdict()
         return VirtualRemote(d['hostname'], int(d['port'] or 2033))
+    tcp_lirc = re.match(
+        r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
+    if tcp_lirc:
+        d = tcp_lirc.groupdict()
+        return TCPLircRemote(d['hostname'] or 'localhost',
+                             int(d['port']), d['control_name'])
     lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
     if lirc:
         d = lirc.groupdict()
@@ -855,16 +861,7 @@ class VirtualRemote:
         debug("Pressed " + key)
 
     def _connect(self):
-        try:
-            s = socket.socket()
-            s.settimeout(3)
-            s.connect((self.hostname, self.port))
-            return s
-        except socket.error as e:
-            e.args = (("Failed to connect to VirtualRemote at %s:%d: %s" % (
-                self.hostname, self.port, e)),)
-            e.strerror = e.args[0]
-            raise
+        return _connect_tcp_socket(self.hostname, self.port)
 
 
 class LircRemote:
@@ -884,7 +881,7 @@ class LircRemote:
         debug("LircRemote: Connected to %s" % lircd_socket)
 
     def press(self, key):
-        self._connect().sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
+        self._connect().sendall(_lirc_command(self.control_name, key))
         debug("Pressed " + key)
 
     def _connect(self):
@@ -899,6 +896,32 @@ class LircRemote:
                 self.lircd_socket, e)),)
             e.strerror = e.args[0]
             raise
+
+
+class TCPLircRemote:
+    """Send a key-press via a LIRC-enabled device through a LIRC TCP listener.
+
+        control = TCPLircRemote("localhost", "8765", "humax")
+        control.press("MENU")
+    """
+    # pylint: disable=R0903
+
+    def __init__(self, hostname, port, control_name):
+        self.hostname = hostname
+        self.port = port
+        self.control_name = control_name
+        # Connect once so that the test fails immediately if lircd isn't bound
+        # to the port (instead of failing at the first `press` in the script).
+        debug("TCPLircRemote: Connecting to %s:%d" % (hostname, port))
+        self._connect()
+        debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
+
+    def press(self, key):
+        self._connect().sendall(_lirc_command(self.control_name, key))
+        debug("Pressed " + key)
+
+    def _connect(self):
+        return _connect_tcp_socket(self.hostname, self.port)
 
 
 class IRNetBoxRemote:
@@ -943,6 +966,12 @@ def uri_to_remote_recorder(uri):
     if vr:
         d = vr.groupdict()
         return virtual_remote_listen(d['hostname'], int(d['port'] or 2033))
+    tcp_lirc = re.match(
+        r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
+    if tcp_lirc:
+        d = tcp_lirc.groupdict()
+        return lirc_remote_listen_tcp(d['hostname'] or 'localhost',
+                                      int(d['port']), d['control_name'])
     lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
     if lirc:
         d = lirc.groupdict()
@@ -1021,14 +1050,26 @@ def virtual_remote_listen(address, port):
 
 
 def lirc_remote_listen(lircd_socket, control_name):
-    """Returns an iterator yielding keypresses received from lircd.
+    """Returns an iterator yielding keypresses received from a lircd file
+    socket.
 
     See http://www.lirc.org/html/technical.html#applications
     """
     lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    debug("control-recorder connecting to lirc socket '%s'..." % lircd_socket)
+    debug("control-recorder connecting to lirc file socket '%s'..." %
+        lircd_socket)
     lircd.connect(lircd_socket)
-    debug("control-recorder connected to lirc socket")
+    debug("control-recorder connected to lirc file socket")
+    return lirc_key_reader(lircd.makefile(), control_name)
+
+
+def lirc_remote_listen_tcp(address, port, control_name):
+    """Returns an iterator yielding keypresses received from a lircd TCP
+    socket."""
+    debug("control-recorder connecting to lirc TCP socket %s:%s..." %
+        (address, port))
+    lircd = _connect_tcp_socket(address, port, timeout=None)
+    debug("control-recorder connected to lirc TCP socket")
     return lirc_key_reader(lircd.makefile(), control_name)
 
 
@@ -1123,6 +1164,26 @@ def build_templatematch_params(**kwargs):
         params[key] = val
 
     return params
+
+
+def _connect_tcp_socket(address, port, timeout=3):
+    """Connects to a TCP listener on 'address':'port'."""
+    try:
+        s = socket.socket()
+        if timeout:
+            s.settimeout(timeout)
+        s.connect((address, port))
+        return s
+    except socket.error as e:
+        e.args = (("Failed to connect to remote at %s:%d: %s" % (
+            address, port, e)),)
+        e.strerror = e.args[0]
+        raise
+
+
+def _lirc_command(control_name, key):
+    """Returns a LIRC send key command string."""
+    return "SEND_ONCE %s %s\n" % (control_name, key)
 
 
 def _find_path(image):
