@@ -96,6 +96,7 @@ doc: stbt.1
 # Requires python-docutils
 stbt.1: README.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
+	sed -e '/\.\. image::/,/^$$/ d' |\
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
