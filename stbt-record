@@ -88,14 +88,14 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
 
     @staticmethod
-    def on_error(bus, message):  # pylint: disable=W0613
+    def on_error(_bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
         sys.exit(1)
 
     @staticmethod
-    def on_warning(bus, message):  # pylint: disable=W0613
+    def on_warning(_bus, message):
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))

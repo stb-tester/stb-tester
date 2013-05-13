@@ -503,7 +503,7 @@ _control = None
 def MessageIterator(bus, signal):
     queue = Queue.Queue()
 
-    def sig(bus, message):  # pylint: disable=W0613
+    def sig(_bus, message):
         queue.put(message)
         _mainloop.quit()
     bus.connect(signal, sig)
@@ -664,21 +664,21 @@ class Display:
             for key in params.keys():
                 setattr(element.props, key, params_backup[key])
 
-    @staticmethod  # pylint: disable=W0613
-    def on_timeout(*args):
+    @staticmethod
+    def on_timeout(*_args):
         debug("Timed out")
         _mainloop.quit()
         return False  # stop the timeout from running again
 
     @staticmethod
-    def on_error(bus, message):  # pylint: disable=W0613
+    def on_error(_bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
         sys.exit(1)
 
     @staticmethod
-    def on_warning(bus, message):  # pylint: disable=W0613
+    def on_warning(_bus, message):
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
@@ -687,7 +687,7 @@ class Display:
             sys.stderr.write("Error: %s\n" % err.message)
             sys.exit(1)
 
-    def on_underrun(self, element):  # pylint: disable=W0613
+    def on_underrun(self, _element):
         # Cancel test_timeout as messages are obviously received on the bus.
         if self.test_timeout:
             self.test_timeout.cancel()
@@ -700,7 +700,7 @@ class Display:
             self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
             self.underrun_timeout.start()
 
-    def on_running(self, element):  # pylint: disable=W0613
+    def on_running(self, _element):
         # Cancel test_timeout as messages are obviously received on the bus.
         if self.test_timeout:
             self.test_timeout.cancel()
@@ -849,9 +849,8 @@ class VirtualRemote:
         debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
 
     def press(self, key):
-        # pylint: disable=W1401
         self._connect().sendall(
-            "D\t%s\n\0U\t%s\n\0" % (key, key))  # key Down, then Up
+            "D\t%s\n\x00U\t%s\n\x00" % (key, key))  # key Down, then Up
         debug("Pressed " + key)
 
     def _connect(self):
@@ -1036,8 +1035,7 @@ def virtual_remote_listen(address, port):
                      "on %s:%d...\n" % (address, port))
     (connection, address) = serversocket.accept()
     sys.stderr.write("Accepted connection from %s\n" % str(address))
-    # pylint: disable=W1401
-    return vr_key_reader(read_records(connection, '\n\0'))
+    return vr_key_reader(read_records(connection, '\n\x00'))
 
 
 def lirc_remote_listen(lircd_socket, control_name):
