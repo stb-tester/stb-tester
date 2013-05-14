@@ -2,12 +2,12 @@
 
 """
 A network proxy for RedRat irNetBox MK-III infra-red blaster modules.
-Based on the protocol document: 
+Based on the protocol document:
 
 http://www.redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf
 
 This script allows many clients to connect to the device, and use the ports
-concurrently.  **Note**, this only makes sense for the Asynchronous IO 
+concurrently.  **Note**, this only makes sense for the Asynchronous IO
 Output Commands, other commands will be run synchronously.
 
 Usage
@@ -23,7 +23,7 @@ OR
 $ irnetproxy --irnetbox-addresss <irNetBox address> --irnetbox-port 10001\
       --listen-port 10001 --listen-address 127.0.0.1 -vv
 
-> Listening for connections on 127.0.0.1:10001 
+> Listening for connections on 127.0.0.1:10001
 ```
 
 Features
@@ -38,7 +38,7 @@ Features
  - On/Off management: irnetproxy will silently accept the on and off messages
  (5 and 6).  A standard ACK response is returned to the client, but the command
  is never sent to the device. This allows multiple scripts to try to turn off
- the device while other devices use it.  irnetproxy issues the ON command when 
+ the device while other devices use it.  irnetproxy issues the ON command when
  it connects, and issues an OFF command when it is stopped.
 
 """
@@ -54,14 +54,14 @@ import traceback
 
 
 def safe_recv(sock, num):
-    buffer = StringIO.StringIO()
+    in_buffer = StringIO.StringIO()
     while num:
         packet = sock.recv(num)
         if packet == '':
             raise SocketClosed(sock)
-        buffer.write(packet)
+        in_buffer.write(packet)
         num -= len(packet)
-    return buffer.getvalue()
+    return in_buffer.getvalue()
 
 
 class SocketClosed(Exception):
@@ -90,7 +90,7 @@ class IRNetBoxProxy(object):
 
     USIZE_MAX = 65535
 
-    def __init__(self, irnet_address, irnet_port=10001, 
+    def __init__(self, irnet_address, irnet_port=10001,
                  listen_address="0.0.0.0", listen_port=10001,
                  verbosity=0):
         self.irnet_addr = (irnet_address, irnet_port)
@@ -126,7 +126,7 @@ class IRNetBoxProxy(object):
                 return
         elif response_type == self.ASYNC_COMMAND:
             new_id, = struct.unpack_from("<H", data)
-            sock, old_id = self.async_commands[new_id]
+            _, old_id = self.async_commands[new_id]
             data = self.replace_sequence_id(data, old_id)
             if not data[self.ACK_NACK_INDEX]:
                 # The async command request failed, remove record
@@ -142,7 +142,7 @@ class IRNetBoxProxy(object):
             sock, old_id = self.async_commands[new_id]
             data = self.replace_sequence_id(data, old_id)
             sock.sendall(header + data)
-        except Exception, e:
+        except Exception, e:  # pylint: disable=W0703
             self.error(e, "Error sending async complete command", fatal=False)
         if new_id in self.async_commands:
             del self.async_commands[new_id]
@@ -169,8 +169,9 @@ class IRNetBoxProxy(object):
         assert response_type == message_type
 
     def accept_client(self):
-        new_client, (addr, port) = self.listen_sock.accept()
+        new_client, (addr, _) = self.listen_sock.accept()
         self.info("Accepted connection from %s" % (addr,))
+        # pylint: disable=E1101
         self.read_sockets[new_client.fileno()] = new_client
 
     def read_client_command(self, sock):
@@ -183,7 +184,7 @@ class IRNetBoxProxy(object):
                 self.irnet_sock.sendall(header + message)
                 _, response_header, response = self.get_message_from_irnet(True)
             sock.sendall(response_header + response)
-        except Exception, e:
+        except Exception, e:  # pylint: disable=W0703
             del self.read_sockets[sock.fileno()]
             sock.close()
             if isinstance(e, SocketClosed) and e.socket is sock:
@@ -212,13 +213,13 @@ class IRNetBoxProxy(object):
             self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.listen_sock.bind(self.listen_addr)
             self.listen_sock.listen(5)
-        except Exception, e:
+        except Exception, e:  # pylint: disable=W0703
             self.error(e, "Could not bind to local address")
 
         try:
             self.irnet_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.irnet_sock.connect(self.irnet_addr)
-        except Exception, e:
+        except Exception, e:  # pylint: disable=W0703
             self.error(e, "Could not connect to irNetBox.")
         self.read_sockets = {
             self.listen_sock.fileno(): self.listen_sock,
@@ -229,7 +230,7 @@ class IRNetBoxProxy(object):
         self.connect()
         try:
             self.send_management_command(self.POWER_ON)
-        except Exception, e:
+        except Exception, e:  # pylint: disable=W0703
             self.error(
                 e, "Connected to irNetBox, but could not send power on command")
 
@@ -249,12 +250,12 @@ class IRNetBoxProxy(object):
         finally:
             try:
                 self.send_management_command(self.POWER_OFF)
-            except Exception, e:
+            except Exception, e:  # pylint: disable=W0703
                 self.error(e, "Could not turn irNetBox off", fatal=False)
             for sock in self.read_sockets.viewvalues():
                 try:
                     sock.close()
-                except:
+                except:  # pylint: disable=W0702
                     pass
 
 
@@ -264,14 +265,15 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument('-i', '--listen-address', dest='listen_address',
-                        help='IP address to listen on [%(default)s]', 
+                        help='IP address to listen on [%(default)s]',
                         default="0.0.0.0")
-    parser.add_argument('-p', '--listen-port', type=int, dest='listen_port', 
+    parser.add_argument('-p', '--listen-port', type=int, dest='listen_port',
                         help='Port to listen on [%(default)s]', default=10001)
     parser.add_argument('-r', '--irnetbox-address', dest='irnet_address',
                         help='IRNetBox address', required=True)
     parser.add_argument('--irnetbox-port', dest='irnet_port',
-                        help='IRNetBox port [%(default)s]', default=10001, type=int)
+                        help='IRNetBox port [%(default)s]', default=10001,
+                        type=int)
     parser.add_argument('-v', '--verbosity', action="count",
                         help='Increase verbosity', default=0)
 
@@ -282,10 +284,10 @@ def parse_args(args=None):
 
 def main():
     options = parse_args()
-    
+
     proxy = IRNetBoxProxy(irnet_address=options.irnet_address,
                           irnet_port=options.irnet_port,
-                          listen_address=options.listen_address, 
+                          listen_address=options.listen_address,
                           listen_port=options.listen_port,
                           verbosity=options.verbosity)
     try:

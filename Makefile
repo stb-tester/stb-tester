@@ -106,10 +106,9 @@ README.rst: stbt.py api-doc.sh
 clean:
 	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
-
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
-	nosetests --with-doctest -v stbt.py irnetbox.py
+	nosetests --with-doctest -v stbt.py irnetbox.py irnetproxy_test.py
 check-integrationtests: gst/libgst-stb-tester.so
 	tests/run-tests.sh
 	@echo "Checking for tests/test-* missing from tests/run-tests.sh...";\
@@ -117,7 +116,8 @@ check-integrationtests: gst/libgst-stb-tester.so
 	  grep -v -F -f <(grep -Ewo 'test_[a-zA-Z_]+' tests/run-tests.sh)" && \
 	echo "OK"
 check-pylint:
-	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record stbt-config
+	extra/pylint.sh stbt.py irnetbox.py irnetproxy.py stbt-run \
+	                stbt-record stbt-config irnetproxy_test.py
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \

@@ -21,7 +21,7 @@ class ProxyTest(unittest.TestCase):
 
     def setUp(self):
         self.socket = mock.Mock()
-        self.socket_patcher = mock.patch('socket.socket', 
+        self.socket_patcher = mock.patch('socket.socket',
                                          return_value=self.socket)
         self.my_socket = self.socket_patcher.start()
 
@@ -44,9 +44,9 @@ class ProxyTest(unittest.TestCase):
 
     def test_replace_sequence(self):
         proxy = irnetproxy.IRNetBoxProxy("no_address")
-        data = "XXXX"
-        self.assertEqual(proxy.replace_sequence_id(data, 1), "\x00\x01XX")
-        self.assertEqual(proxy.replace_sequence_id(data, 65535), "\xff\xffXX")
+        data = "YYYY"
+        self.assertEqual(proxy.replace_sequence_id(data, 1), "\x00\x01YY")
+        self.assertEqual(proxy.replace_sequence_id(data, 65535), "\xff\xffYY")
 
     def test_safe_recv(self):
         def recv(x):
@@ -62,7 +62,7 @@ class ProxyTest(unittest.TestCase):
         self.socket.recv = fake_recv(DATA_LENGTH + MESSAGE_TYPE + "HI")
 
         proxy.connect()
-        message_type, header, data = proxy.get_message_from_irnet()
+        message_type, _, data = proxy.get_message_from_irnet()
         self.assertEqual(message_type, 4)
         self.assertEqual(data, "HI")
 
