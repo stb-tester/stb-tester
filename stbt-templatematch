@@ -24,7 +24,7 @@ while [ $# -gt 0 ]; do
 done
 [ $# -lt 2 ] && { usage >&2; exit 1; }
 videoframe="$1" template="$2"; shift 2
-args="timeout_secs=1"
+args=""
 while [ $# -gt 0 ]; do
     a=$(echo "$1" |
         perl -lpe '/^(match_method|confirm_method)=/ && s/=(.*)/="\1"/')
@@ -37,9 +37,7 @@ trap "rm $script" EXIT
 
 cat > $script <<-EOF
 	import sys
-	try:
-	    wait_for_match("$template", $args)
-	except MatchTimeout:  # Stop stbt creating screenshot.png
+	if not stbt.detect_match("$template" $args).next().match:
 	    print "Didn't find match for '$template'."
 	    sys.exit(1)
 	EOF
