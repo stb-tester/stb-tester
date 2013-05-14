@@ -69,7 +69,8 @@ _stbt_config() {
     if [ $COMP_CWORD -eq 2 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
-                    --help $(_stbt_config_sections) $(_stbt_config_keys))" \
+                    --help $(_stbt_config_sections) \
+                    $(_stbt_config_keys global))" \
             -- "$cur"))
     elif [[ $COMP_CWORD -eq 3 && "$prev" != --help ]]; then
         COMPREPLY=($(compgen \

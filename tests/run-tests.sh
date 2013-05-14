@@ -142,8 +142,7 @@ if [ $# -eq 0 ]; then
 
     echo "Testing stbt-config:" &&
     run test_that_stbt_config_reads_from_STBT_CONFIG_FILE &&
-    run test_that_stbt_config_tool_section_overrides_global_section &&
-    run test_that_stbt_config_searches_global_section_if_key_not_in_tool_section &&
+    run test_that_stbt_config_searches_in_specified_section &&
     run test_that_stbt_config_returns_failure_on_key_not_found &&
 
     echo "Testing stbt-screenshot:" &&

@@ -154,7 +154,9 @@ These files are simple ini files with the form::
 
     [global]
     source_pipeline = videotestsrc
+    sink_pipeline = xvimagesink sync=false
     control = None
+    verbose = 0
     [run]
     script = test.py
     [record]
@@ -162,9 +164,7 @@ These files are simple ini files with the form::
     control_recorder = file:///dev/stdin
 
 Each key corresponds to a command line option with hyphens replaced with
-underscores.  Configuration items in the 'global' section will be passed to
-all tools; this can be overridden in the sections corresponding to each of the
-individual tools.
+underscores.
 
 
 HARDWARE REQUIREMENTS
@@ -402,13 +402,13 @@ save_frame(buf, filename)
 get_frame()
     Get a GStreamer buffer containing the current video frame.
 
-get_config(key, tool=None)
-    Read the value of `key` from the stbt config file.
+get_config(key, section='global')
+    Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
-    Raises `ConfigurationError` if the specified `tool` section or `key` is not
+    Raises `ConfigurationError` if the specified `section` or `key` is not
     found.
 
 debug(msg)

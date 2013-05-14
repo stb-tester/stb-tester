@@ -369,21 +369,21 @@ def get_frame():
     return _display.capture_screenshot()
 
 
-def get_config(key, tool=None):
-    """Read the value of `key` from the stbt config file.
+def get_config(key, section='global'):
+    """Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
-    Raises `ConfigurationError` if the specified `tool` section or `key` is not
+    Raises `ConfigurationError` if the specified `section` or `key` is not
     found.
     """
     try:
-        return load_config(tool)[key]
+        return load_config(section)[key]
     except KeyError:
         raise ConfigurationError("No such config key: '%s'" % key)
     except ConfigParser.NoSectionError:
-        raise ConfigurationError("No such config section: '%s'" % tool)
+        raise ConfigurationError("No such config section: '%s'" % section)
 
 
 def debug(msg):
@@ -453,13 +453,16 @@ def argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--control',
+        default=get_config('control', section='global'),
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument(
         '--source-pipeline',
+        default=get_config('source_pipeline', section='global'),
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
     parser.add_argument(
         '--sink-pipeline',
+        default=get_config('sink_pipeline', section='global'),
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
 
@@ -473,6 +476,7 @@ def argparser():
     _debug_level = 0
     parser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
+        default=get_config('verbose', section='global'),
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
@@ -1081,7 +1085,7 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-def load_config(tool):
+def load_config(section):
     global _config
     if not _config:
         _config = ConfigParser.SafeConfigParser()
@@ -1104,9 +1108,7 @@ def load_config(tool):
         ])
         assert(system_config in files_read)
 
-    return dict(
-        _config.items('global'),
-        **dict(_config.items(tool)) if tool else {})
+    return dict(_config.items(section))
 
 
 def build_templatematch_params(**kwargs):
@@ -1137,7 +1139,7 @@ def build_templatematch_params(**kwargs):
                 'erode_passes': int,
                 'confirm_threshold': float}
 
-    config = load_config(None)
+    config = load_config('global')
 
     params = {}
     for key, _type in key_type.items():
@@ -1306,7 +1308,7 @@ def test_build_templatematch_params_detects_undefined():
     global load_config  # pylint: disable=W0601
     _load_config = load_config
 
-    def mock_load_config(_tool):
+    def mock_load_config(_section):
         # missing 'confirm_threshold'
         return dict(match_method="sqdiff-normed",
                     match_threshold=0.80,
