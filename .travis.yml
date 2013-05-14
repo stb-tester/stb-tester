@@ -8,6 +8,7 @@ install:
        moreutils python-flask python-jinja2
        python-docutils python-nose pep8 pylint expect
        gstreamer0.10-x xvfb
+ - sudo pip install "mock>=1.0.1"
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make prefix=$HOME install
 
