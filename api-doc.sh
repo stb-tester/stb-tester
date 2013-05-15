@@ -92,9 +92,6 @@ templatematch_params() {
         echo "s,^\(\`$param\`.* default:\) .*,\1 $value,"
     done
 }
-get() {
-    STBT_CONFIG_FILE="$(dirname "$0")/stbt.conf" ./stbt-config $1
-}
 
 cat $1 |
 substitute_python_docstrings |
