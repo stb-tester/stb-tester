@@ -61,6 +61,11 @@ def record(display, remote_input, control, script_out):
             interrupt = True
         buf = display.screenshot.get_property('last-buffer')
         if not interrupt:
+            if not buf:
+                sys.stderr.write(
+                    "No frame in frame buffer. Unable to take screenshot.\n"
+                    "Key press event '%s' not being sent.\n" % key)
+                continue
             control.press(key)
         if old_key:
             filename = '%04d-%s-complete.png' % (count.next(), old_key)
