@@ -71,6 +71,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
@@ -83,6 +84,7 @@ uninstall:
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf

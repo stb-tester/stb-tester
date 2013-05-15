@@ -382,16 +382,11 @@ def get_config(section, key):
     global _config
     if not _config:
         _config = ConfigParser.SafeConfigParser()
-
-        # When run from the installed location (as `stbt run`), will read from
-        # $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
-        # directory (as `stbt-run`) will read config from the source directory.
-        system_config = os.environ.get(
-            'STBT_SYSTEM_CONFIG',
-            os.path.join(os.path.dirname(__file__), 'stbt.conf'))
-
+        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
         files_read = _config.read([
-            system_config,
+            defaults,
+            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
+            os.environ.get('STBT_SYSTEM_CONFIG', ''),
             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
             # directory specification:
             '%s/stbt/stbt.conf' % os.environ.get(
@@ -399,7 +394,7 @@ def get_config(section, key):
             # Config files specific to the test suite / test run:
             os.environ.get('STBT_CONFIG_FILE', ''),
         ])
-        assert(system_config in files_read)
+        assert(defaults in files_read)
 
     try:
         return str(_config.get(section, key))
