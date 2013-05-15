@@ -378,8 +378,31 @@ def get_config(key, section='global'):
     Raises `ConfigurationError` if the specified `section` or `key` is not
     found.
     """
+
+    global _config
+    if not _config:
+        _config = ConfigParser.SafeConfigParser()
+
+        # When run from the installed location (as `stbt run`), will read from
+        # $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
+        # directory (as `stbt-run`) will read config from the source directory.
+        system_config = os.environ.get(
+            'STBT_SYSTEM_CONFIG',
+            os.path.join(os.path.dirname(__file__), 'stbt.conf'))
+
+        files_read = _config.read([
+            system_config,
+            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+            # directory specification:
+            '%s/stbt/stbt.conf' % os.environ.get(
+                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
+            # Config files specific to the test suite / test run:
+            os.environ.get('STBT_CONFIG_FILE', ''),
+        ])
+        assert(system_config in files_read)
+
     try:
-        return load_config(section)[key]
+        return dict(_config.items(section))[key]
     except KeyError:
         raise ConfigurationError("No such config key: '%s'" % key)
     except ConfigParser.NoSectionError:
@@ -1085,32 +1108,6 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-def load_config(section):
-    global _config
-    if not _config:
-        _config = ConfigParser.SafeConfigParser()
-
-        # When run from the installed location (as `stbt run`), will read from
-        # $SYSCONFDIR/stbt/stbt.conf (see `stbt.in`); when run from the source
-        # directory (as `stbt-run`) will read config from the source directory.
-        system_config = os.environ.get(
-            'STBT_SYSTEM_CONFIG',
-            os.path.join(os.path.dirname(__file__), 'stbt.conf'))
-
-        files_read = _config.read([
-            system_config,
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % os.environ.get(
-                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
-        assert(system_config in files_read)
-
-    return dict(_config.items(section))
-
-
 def build_templatematch_params(**kwargs):
     """Build and return a dict of complete templatematch parameters.
 
@@ -1139,20 +1136,11 @@ def build_templatematch_params(**kwargs):
                 'erode_passes': int,
                 'confirm_threshold': float}
 
-    config = load_config('global')
-
     params = {}
     for key, _type in key_type.items():
-        val = None
-        if key in config:
-            # coerce configparser str to gst pipeline type
-            val = _type(config.get(key))
-        if kwargs.get(key) is not None:
-            val = kwargs.get(key, val)
-        if val is None:
-            raise ConfigurationError(
-                "templatematch parameter '%s' undefined" % key)
-        params[key] = val
+        params[key] = kwargs.get(
+            key,
+            _type(get_config(key, section='global')))
 
     return params
 
@@ -1305,17 +1293,21 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
 
 
 def test_build_templatematch_params_detects_undefined():
-    global load_config  # pylint: disable=W0601
-    _load_config = load_config
+    global get_config  # pylint: disable=W0601
+    _get_config = get_config
 
-    def mock_load_config(_section):
+    def mock_get_config(key, section='global'):
         # missing 'confirm_threshold'
-        return dict(match_method="sqdiff-normed",
-                    match_threshold=0.80,
-                    confirm_method="normed-absdiff",
-                    erode_passes=1)
+        try:
+            return dict(match_method="sqdiff-normed",
+                        match_threshold=0.80,
+                        confirm_method="normed-absdiff",
+                        erode_passes=1)[key]
+        except KeyError:
+            raise ConfigurationError(
+                "No option '%s' in section: '%s'" % (key, section))
 
-    load_config = mock_load_config
+    get_config = mock_get_config
     try:
         build_templatematch_params()
     except ConfigurationError:  # what we expect
@@ -1323,7 +1315,7 @@ def test_build_templatematch_params_detects_undefined():
     else:
         assert False            # fail test
     finally:
-        load_config = _load_config
+        get_config = _get_config
 
 
 def test_build_templatematch_params_uses_kwargs():
