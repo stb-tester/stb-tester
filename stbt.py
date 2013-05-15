@@ -402,11 +402,9 @@ def get_config(key, section='global'):
         assert(system_config in files_read)
 
     try:
-        return dict(_config.items(section))[key]
-    except KeyError:
-        raise ConfigurationError("No such config key: '%s'" % key)
-    except ConfigParser.NoSectionError:
-        raise ConfigurationError("No such config section: '%s'" % section)
+        return _config.get(section, key)
+    except ConfigParser.Error as e:
+        raise ConfigurationError(e.message)
 
 
 def debug(msg):
