@@ -624,12 +624,18 @@ test_get_config() {
 	    "not the global value"
 	try:
 	    stbt.get_config("no_such_key")
+	    assert False
+	except ConfigurationError:
+	    pass
+	try:
 	    stbt.get_config("test_key", section="no_such_section")
+	    assert False
+	except ConfigurationError:
+	    pass
+	try:
 	    stbt.get_config("not_special", section="special")
 	    assert False
-	except AssertionError:
-	    raise
-	except:
+	except ConfigurationError:
 	    pass
 	EOF
     stbt-run "$scratchdir/test.py"
