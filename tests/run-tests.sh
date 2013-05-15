@@ -152,7 +152,7 @@ if [ $# -eq 0 ]; then
     echo "Testing stbt-templatematch:" &&
     run test_that_stbt_templatematch_finds_match &&
     run test_that_stbt_templatematch_doesnt_find_match &&
-    run test_that_stbt_templatematch_applies_noise_threshold_parameter &&
+    run test_that_stbt_templatematch_applies_confirm_threshold_parameter &&
 
     echo "Testing 'make doc':" &&
     run test_that_readme_default_templatematch_values_are_kept_up_to_date &&
