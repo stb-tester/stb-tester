@@ -19,12 +19,12 @@ parser.description = """Prints the value of the specified key from the stbt
 parser.epilog = \
     "Returns non-zero exit status if the specified key or section isn't found."
 parser.add_argument(
-    "tool", nargs="?",
-    help="""Look in the <tool> config section, e.g. 'run' or 'record'
-        (defaults to the 'global' section if <tool> isn't specified or if
-        <key> isn't found in the <tool> section)""")
+    "section", nargs="?", default="global",
+    help="""Look in the specified <section> of the config file,
+        e.g. 'run' or 'record'
+        (defaults to the 'global' section if <section> isn't specified)""")
 parser.add_argument(
     "key", help="Configuration item to read")
 args = parser.parse_args(sys.argv[1:])
 
-print stbt.get_config(args.key, args.tool)
+print stbt.get_config(args.key, args.section)

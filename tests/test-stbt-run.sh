@@ -620,17 +620,22 @@ test_get_config() {
     cat > "$scratchdir/test.py" <<-EOF
 	import stbt
 	assert stbt.get_config("test_key") == "this is a test value"
-	assert stbt.get_config("test_key", tool="special") == \
-	    "overrides the global value"
-	assert stbt.get_config("not_special", tool="special") == \
-	    "this is a global value"
+	assert stbt.get_config("test_key", section="special") == \
+	    "not the global value"
 	try:
 	    stbt.get_config("no_such_key")
-	    stbt.get_config("test_key", tool="no_such_section")
 	    assert False
-	except AssertionError:
-	    raise
-	except:
+	except ConfigurationError:
+	    pass
+	try:
+	    stbt.get_config("test_key", section="no_such_section")
+	    assert False
+	except ConfigurationError:
+	    pass
+	try:
+	    stbt.get_config("not_special", section="special")
+	    assert False
+	except ConfigurationError:
 	    pass
 	EOF
     stbt-run "$scratchdir/test.py"
