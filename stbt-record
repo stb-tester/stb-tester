@@ -15,6 +15,7 @@ with stbt.hide_argv(), stbt.hide_stderr():
 
 import itertools
 import sys
+import time
 
 
 def main(argv):
@@ -73,7 +74,7 @@ def record(display, remote_input, control, script_out):
 
 class Display:
     def __init__(self, video_source, video_sink):
-        pipe = " ".join([
+        self.pipe = " ".join([
             video_source,
             " ! tee name=t",
             " t. ! queue leaky=2",
@@ -82,11 +83,34 @@ class Display:
             "sync=false caps=video/x-raw-rgb",
             " t. ! queue leaky=2 ! ffmpegcolorspace ! ", video_sink
         ])
-        self.pipeline = gst.parse_launch(pipe)
+        self.pipeline = gst.parse_launch(self.pipe)
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.pipeline.get_bus().connect("message::error", self.on_error)
         self.pipeline.get_bus().connect("message::warning", self.on_warning)
         self.pipeline.set_state(gst.STATE_PLAYING)
+
+        attempts = 0
+        while True:
+            time.sleep(1)  # minimum time needed for pipeline to start
+            if self.screenshot.get_property("last-buffer"):
+                break
+            elif attempts < 5:
+                attempts += 1
+                sys.stderr.write(
+                    "Unable to get frame buffer, attempt %d\n"
+                    "Retrying in 5 seconds...\n" % (attempts))
+                self.pipeline.set_state(gst.STATE_NULL)
+                time.sleep(5)
+                self.pipeline = gst.parse_launch(self.pipe)
+                self.screenshot = self.pipeline.get_by_name("screenshot")
+                self.pipeline.get_bus().connect(
+                        "message::error", self.on_error)
+                self.pipeline.get_bus().connect(
+                        "message::warning", self.on_warning)
+                self.pipeline.set_state(gst.STATE_PLAYING)
+                continue
+            sys.stdout.write("Unable to get frame buffer! Exiting...\n")
+            sys.exit(1)
 
     @staticmethod
     def on_error(_bus, message):
