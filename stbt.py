@@ -1298,9 +1298,9 @@ def test_build_templatematch_params_detects_undefined():
         # missing 'confirm_threshold'
         try:
             return dict(match_method="sqdiff-normed",
-                        match_threshold=0.80,
+                        match_threshold="0.80",
                         confirm_method="normed-absdiff",
-                        erode_passes=1)[key]
+                        erode_passes="1")[key]
         except KeyError:
             raise ConfigurationError(
                 "No option '%s' in section: '%s'" % (key, section))
