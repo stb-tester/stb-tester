@@ -131,7 +131,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
     templatematch_params = build_templatematch_params(
         noise_threshold=noise_threshold, **kwargs)
 
-    params = {
+    properties = {  # Properties of GStreamer element
         "template": _find_path(image),
         "matchMethod": templatematch_params['match_method'],
         "matchThreshold": templatematch_params['match_threshold'],
@@ -139,14 +139,14 @@ def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
         "erodePasses": templatematch_params['erode_passes'],
         "confirmThreshold": templatematch_params['confirm_threshold'],
     }
-    debug("Searching for " + params["template"])
-    if not os.path.isfile(params["template"]):
+    debug("Searching for " + properties["template"])
+    if not os.path.isfile(properties["template"]):
         raise UITestError("No such template file: %s" % image)
 
     for message, buf in _display.detect(
-            "template_match", params, timeout_secs):
+            "template_match", properties, timeout_secs):
         # Discard messages generated from previous call with different template
-        if message["template_path"] == params["template"]:
+        if message["template_path"] == properties["template"]:
             result = MatchResult(
                 timestamp=buf.timestamp,
                 match=message["match"],
@@ -184,20 +184,20 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
     """
 
     debug("Searching for motion")
-    params = {
+    properties = {  # Properties of GStreamer element
         "enabled": True,
         "noiseThreshold": noise_threshold,
     }
     if mask:
-        params["mask"] = _find_path(mask)
-        debug("Using mask %s" % (params["mask"]))
-        if not os.path.isfile(params["mask"]):
+        properties["mask"] = _find_path(mask)
+        debug("Using mask %s" % (properties["mask"]))
+        if not os.path.isfile(properties["mask"]):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in _display.detect("motiondetect", params, timeout_secs):
+    for msg, buf in _display.detect("motiondetect", properties, timeout_secs):
         # Discard messages generated from previous calls with a different mask
-        if ((mask and msg["masked"] and msg["mask_path"] == params["mask"])
+        if ((mask and msg["masked"] and msg["mask_path"] == properties["mask"])
                 or (not mask and not msg["masked"])):
             result = MotionResult(timestamp=buf.timestamp,
                                   motion=msg["has_motion"])
@@ -625,16 +625,17 @@ class Display:
     def capture_screenshot(self):
         return self.screenshot.get_property("last-buffer")
 
-    def detect(self, element_name, params, timeout_secs):
+    def detect(self, element_name, properties, timeout_secs):
         """Generator that yields the messages emitted by the named gstreamer
-        element configured with the parameters `params`.
+        element configured with the specified `properties`.
 
         "element_name" is the name of the gstreamer element as specified in the
         pipeline. The name must be the same in the pipeline and in the messages
         returned by gstreamer.
 
-        "params" is a dictionary of parameters to setup the element. The
-        original parameters will be restored at the end of the call.
+        "properties" is a dictionary of properties to set on the gstreamer
+        element. The original properties will be restored at the end of the
+        call.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
         you can also simply stop iterating over the sequence yielded by this
@@ -645,16 +646,16 @@ class Display:
 
         element = self.pipeline.get_by_name(element_name)
 
-        params_backup = {}
-        for key in params.keys():
-            params_backup[key] = getattr(element.props, key)
+        properties_backup = {}
+        for key in properties.keys():
+            properties_backup[key] = getattr(element.props, key)
 
         try:
-            for key in (set(params.keys()) - set(["template", "enabled"])):
-                setattr(element.props, key, params[key])
+            for key in (set(properties.keys()) - set(["template", "enabled"])):
+                setattr(element.props, key, properties[key])
             for key in ["template", "enabled"]:
-                if key in params:
-                    setattr(element.props, key, params[key])
+                if key in properties:
+                    setattr(element.props, key, properties[key])
 
             # Timeout after 10s in case no messages are received on the bus.
             # This happens when starting a new instance of stbt when the
@@ -684,8 +685,8 @@ class Display:
                         yield (st, buf)
 
         finally:
-            for key in params.keys():
-                setattr(element.props, key, params_backup[key])
+            for key in properties.keys():
+                setattr(element.props, key, properties_backup[key])
 
     @staticmethod
     def on_timeout(*_args):
