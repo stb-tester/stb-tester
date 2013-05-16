@@ -72,8 +72,44 @@ warnings.filterwarnings(
     action="always", category=DeprecationWarning, module='stbt')
 
 
+_config = None
+
+
 # Functions available to stbt scripts
 #===========================================================================
+
+def get_config(section, key):
+    """Read the value of `key` from `section` of the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `section` or `key` is not
+    found.
+    """
+
+    global _config
+    if not _config:
+        _config = ConfigParser.SafeConfigParser()
+        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
+        files_read = _config.read([
+            defaults,
+            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
+            os.environ.get('STBT_SYSTEM_CONFIG', ''),
+            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+            # directory specification:
+            '%s/stbt/stbt.conf' % os.environ.get(
+                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
+            # Config files specific to the test suite / test run:
+            os.environ.get('STBT_CONFIG_FILE', ''),
+        ])
+        assert(defaults in files_read)
+
+    try:
+        return str(_config.get(section, key))
+    except ConfigParser.Error as e:
+        raise ConfigurationError(e.message)
+
 
 def press(key):
     """Send the specified key-press to the system under test.
@@ -369,39 +405,6 @@ def get_frame():
     return _display.capture_screenshot()
 
 
-def get_config(section, key):
-    """Read the value of `key` from `section` of the stbt config file.
-
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
-
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
-    """
-
-    global _config
-    if not _config:
-        _config = ConfigParser.SafeConfigParser()
-        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
-        files_read = _config.read([
-            defaults,
-            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
-            os.environ.get('STBT_SYSTEM_CONFIG', ''),
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % os.environ.get(
-                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
-        assert(defaults in files_read)
-
-    try:
-        return str(_config.get(section, key))
-    except ConfigParser.Error as e:
-        raise ConfigurationError(e.message)
-
-
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -512,7 +515,6 @@ def teardown_run():
 # Internal
 #===========================================================================
 
-_config = None
 _debug_level = 0
 _mainloop = glib.MainLoop()
 
