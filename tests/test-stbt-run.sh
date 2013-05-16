@@ -107,14 +107,18 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 
     # Expect correct nomatch.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method="normed-absdiff")
+	wait_for_match(
+	    "known-fail-template.png",
+	    match_parameters=MatchParameters(confirm_method="normed-absdiff"))
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py" || return
 
     # Expect false match.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method="absdiff")
+	wait_for_match(
+	    "known-fail-template.png",
+	    match_parameters=MatchParameters(confirm_method="absdiff"))
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py"
