@@ -456,37 +456,35 @@ CUSTOMISING THE TEMPLATEMATCH ALGORITHM
 
 It is possible to customise the templatematch algorithm by overriding the default
 parameter values. This can be done in either `stbt.conf` or in a keyword
-argument to one of the functions `detect_match()`, `wait_for_match()`, and
-`press_until_match()`.
+argument to one of the functions `detect_match`, `wait_for_match`, and
+`press_until_match`.
 
 `match_method` (str) default: sqdiff-normed
-  The template comparison method that is used by the OpenCV `cvMatchTemplate()`
-  algorithm to produce its "heat map" of template locations:
+  The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
+  likely locations of the "template" image within the larger source image.
 
-  ================== ================
-  stb-tester value   OpenCV value
-  ================== ================
-  "``sqdiff``"       ``CV_TM_SQDIFF``
-  "``ccoeff``"       ``CV_TM_CCOEFF``
-  "``ccorr``"        ``CV_TM_CCORR``
-  ================== ================
+  Allowed values are ``"sqdiff-normed"``, ``"ccorr-normed"``, and
+  ``"ccoeff-normed"``. For the meaning of these parameters, see the OpenCV
+  `cvMatchTemplate` reference documentation and tutorial:
 
-  See also `OpenCV cvMatchTemplate()
-  <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`_ and
-  `OpenCV Tutorials: Template Matching
-  <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
+  * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
+  * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
 
 `match_threshold` (float) default: 0.80
-  How strong a result from cvTemplateMatch must be before the potential match
-  will be checked. A value of 0 will mean that every match will be passes to
-  the confirmation stage, whilst a value of 1 means (theoretically) that only
-  a perfect match will be confirmed. (In practice, a value of 1 is useless
-  because of the way cvTemplateMatch works, and due to limitations in the
-  storage of floating point numbers in binary.  See
-  http://docs.python.org/2/tutorial/floatingpoint.html.)
+  How strong a result from `cvMatchTemplate` must be, to be considered a match.
+  A value of 0 will mean that anything is considered to match, whilst a value
+  of 1 means that the match has to be pixel perfect. (In practice, a value of 1
+  is useless because of the way `cvMatchTemplate` works, and due to limitations
+  in the storage of floating point numbers in binary.)
 
 `confirm_method` (str) default: absdiff
-  The method to use for confirming the match found by cvMatchTemplate:
+  The result of the previous `cvMatchTemplate` algorithm often gives false
+  positives (it reports a "match" for an image that shouldn't match).
+  `confirm_method` specifies an algorithm to be run just on the region of the
+  source image that `cvMatchTemplate` identified as a match, to confirm or deny
+  the match.
+
+  The allowed values are:
 
   "``none``"
 
@@ -499,14 +497,6 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
       (ROI) is calculated; thresholded and eroded to account for potential
       noise; and if any white pixels remain then the match is deemed false.
 
-      When matching solid regions of colour, particularly where there are
-      regions of either black or white, ``absdiff`` is better than
-      ``normed-absdiff`` because is does not alter the luminance range, which
-      can lead to false matches. For example, an image which is half white and
-      half non-white, once normalised, will match a similar image which is half
-      white and half black because the half which is non-white becomes black so
-      that the maximum luminance range of [0..255] is occupied.
-
   "``normed-absdiff``" (normalized absolute difference)
 
       As with ``absdiff`` but both template and ROI are normalized before the
@@ -517,20 +507,28 @@ argument to one of the functions `detect_match()`, `wait_for_match()`, and
       This method is more accurate than ``absdiff`` at reporting true and false
       matches when there is noise involved, particularly aliased text. However
       it will, in general, require a greater confirm_threshold than the
-      equivalent match with absdiff. The important thing to remember is that an
-      increase of, say, 0.1 to the `confirm_threshold` when using ``absdiff``
-      is (very roughly) the equivalent of an increase of 0.05 when using
-      ``normed-absdiff``. In other words, the `confirm_threshold` is more
-      sensitive and fine-tunable when using ``normed-absdiff``.
+      equivalent match with absdiff.
 
-`erode_passes` (int) default: 1
-  The number of erode steps. Increasing the number of erode steps makes your
-  test less sensitive to noise and small variances, at the cost of of being
-  more likely to report a false positive.
+      When matching solid regions of colour, particularly where there are
+      regions of either black or white, ``absdiff`` is better than
+      ``normed-absdiff`` because it does not alter the luminance range, which
+      can lead to false matches. For example, an image which is half white and
+      half grey, once normalised, will match a similar image which is half
+      white and half black because the grey becomes normalised to black so that
+      the maximum luminance range of [0..255] is occupied. However, if the
+      images are dissimilar enough in luminance, they will have failed to match
+      the `cvMatchTemplate` algorithm and won't have reached the "confirm"
+      stage.
 
 `confirm_threshold` (float) default: 0.16
   Increase this value to avoid false negatives, at the risk of increasing false
   positives (a value of 1.0 will report a match every time).
+
+`erode_passes` (int) default: 1
+  The number of erode steps in the `absdiff` and `normed-absdiff` confirm
+  algorithms. Increasing the number of erode steps makes your test less
+  sensitive to noise and small variances, at the cost of being more likely to
+  report a false positive.
 
 Please let us know if you are having trouble with image matches so that we can
 further improve the matching algorithm.
