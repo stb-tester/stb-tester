@@ -124,6 +124,83 @@ def press(key):
 
 
 class MatchParameters:
+    """Parameters to customise the image processing algorithm used by
+    `wait_for_match`, `detect_match`, and `press_until_match`.
+
+    `match_method` (str) default: From stbt.conf
+      The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
+      likely locations of the "template" image within the larger source image.
+
+      Allowed values are ``"sqdiff-normed"``, ``"ccorr-normed"``, and
+      ``"ccoeff-normed"``. For the meaning of these parameters, see the OpenCV
+      `cvMatchTemplate` reference documentation and tutorial:
+
+      * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
+      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
+
+    `match_threshold` (float) default: From stbt.conf
+      How strong a result from `cvMatchTemplate` must be, to be considered a
+      match. A value of 0 will mean that anything is considered to match,
+      whilst a value of 1 means that the match has to be pixel perfect. (In
+      practice, a value of 1 is useless because of the way `cvMatchTemplate`
+      works, and due to limitations in the storage of floating point numbers in
+      binary.)
+
+    `confirm_method` (str) default: From stbt.conf
+      The result of the previous `cvMatchTemplate` algorithm often gives false
+      positives (it reports a "match" for an image that shouldn't match).
+      `confirm_method` specifies an algorithm to be run just on the region of
+      the source image that `cvMatchTemplate` identified as a match, to confirm
+      or deny the match.
+
+      The allowed values are:
+
+      "``none``"
+          Do not confirm the match. Assume that the potential match found is
+          correct.
+
+      "``absdiff``" (absolute difference)
+          The absolute difference between template and source Region of
+          Interest (ROI) is calculated; thresholded and eroded to account for
+          potential noise; and if any white pixels remain then the match is
+          deemed false.
+
+      "``normed-absdiff``" (normalized absolute difference)
+          As with ``absdiff`` but both template and ROI are normalized before
+          the absolute difference is calculated. This has the effect of
+          exaggerating small differences between images with similar, small
+          ranges of pixel brightnesses (luminance).
+
+          This method is more accurate than ``absdiff`` at reporting true and
+          false matches when there is noise involved, particularly aliased
+          text. However it will, in general, require a greater
+          confirm_threshold than the equivalent match with absdiff.
+
+          When matching solid regions of colour, particularly where there are
+          regions of either black or white, ``absdiff`` is better than
+          ``normed-absdiff`` because it does not alter the luminance range,
+          which can lead to false matches. For example, an image which is half
+          white and half grey, once normalised, will match a similar image
+          which is half white and half black because the grey becomes
+          normalised to black so that the maximum luminance range of [0..255]
+          is occupied. However, if the images are dissimilar enough in
+          luminance, they will have failed to match the `cvMatchTemplate`
+          algorithm and won't have reached the "confirm" stage.
+
+    `confirm_threshold` (float) default: From stbt.conf
+      Increase this value to avoid false negatives, at the risk of increasing
+      false positives (a value of 1.0 will report a match every time).
+
+    `erode_passes` (int) default: From stbt.conf
+      The number of erode steps in the `absdiff` and `normed-absdiff` confirm
+      algorithms. Increasing the number of erode steps makes your test less
+      sensitive to noise and small variances, at the cost of being more likely
+      to report a false positive.
+
+    Please let us know if you are having trouble with image matches so that we
+    can further improve the matching algorithm.
+    """
+
     def __init__(
             self,
             match_method=str(get_config('global', 'match_method')),
