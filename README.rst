@@ -289,7 +289,7 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, \*\*kwargs)
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=MatchParameters())
     Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -301,18 +301,13 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
-
-press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, \*\*kwargs)
+press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=MatchParameters())
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -323,16 +318,11 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
 wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, mask=None)
     Search for motion in the source video stream.
@@ -357,7 +347,7 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-detect_match(image, timeout_secs=10, noise_threshold=None, \*\*kwargs)
+detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=MatchParameters())
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -366,16 +356,11 @@ detect_match(image, timeout_secs=10, noise_threshold=None, \*\*kwargs)
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` intead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
 detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     Generator that yields a sequence of one `MotionResult` for each frame

@@ -123,6 +123,21 @@ def press(key):
     return _control.press(key)
 
 
+class MatchParameters:
+    def __init__(
+            self,
+            match_method=str(get_config('global', 'match_method')),
+            match_threshold=float(get_config('global', 'match_threshold')),
+            confirm_method=str(get_config('global', 'confirm_method')),
+            confirm_threshold=float(get_config('global', 'confirm_threshold')),
+            erode_passes=int(get_config('global', 'erode_passes'))):
+        self.match_method = match_method
+        self.match_threshold = match_threshold
+        self.confirm_method = confirm_method
+        self.confirm_threshold = confirm_threshold
+        self.erode_passes = erode_passes
+
+
 class Position(namedtuple('Position', 'x y')):
     """
     * `x` and `y`: Integer coordinates from the top left corner of the video
@@ -143,7 +158,8 @@ class MatchResult(namedtuple(
     pass
 
 
-def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
+def detect_match(image, timeout_secs=10, noise_threshold=None,
+                 match_parameters=MatchParameters()):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -152,28 +168,27 @@ def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` intead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
 
-    templatematch_params = build_templatematch_params(
-        noise_threshold=noise_threshold, **kwargs)
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
     properties = {  # Properties of GStreamer element
         "template": _find_path(image),
-        "matchMethod": templatematch_params['match_method'],
-        "matchThreshold": templatematch_params['match_threshold'],
-        "confirmMethod": templatematch_params['confirm_method'],
-        "erodePasses": templatematch_params['erode_passes'],
-        "confirmThreshold": templatematch_params['confirm_threshold'],
+        "matchMethod": match_parameters.match_method,
+        "matchThreshold": match_parameters.match_threshold,
+        "confirmMethod": match_parameters.confirm_method,
+        "erodePasses": match_parameters.erode_passes,
+        "confirmThreshold": match_parameters.confirm_threshold,
     }
     debug("Searching for " + properties["template"])
     if not os.path.isfile(properties["template"]):
@@ -244,7 +259,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   noise_threshold=None, **kwargs):
+                   noise_threshold=None, match_parameters=MatchParameters()):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -256,22 +271,24 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
     match_count = 0
     last_pos = Position(0, 0)
     for res in detect_match(
-            image, timeout_secs, noise_threshold=noise_threshold, **kwargs):
+            image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -286,7 +303,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=None,
-                      max_presses=10, **kwargs):
+                      max_presses=10, match_parameters=MatchParameters()):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -297,24 +314,26 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
     i = 0
 
     while True:
         try:
             return wait_for_match(image, timeout_secs=interval_secs,
-                                  noise_threshold=noise_threshold, **kwargs)
+                                  match_parameters=match_parameters)
         except MatchTimeout:
             if i < max_presses:
                 press(key)
@@ -1107,43 +1126,6 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-def build_templatematch_params(**kwargs):
-    """Build and return a dict of complete templatematch parameters.
-
-    Templatematch parameters are looked up in this sequence:
-    1. any templatematch params specified in stbt configuration files
-    2. any parameters passed in to this function overrides (1)
-    """
-
-    # warnings to be removed once noise_threshold is unsupported
-    if kwargs.get('noise_threshold') and kwargs.get('confirm_threshold'):
-        raise ConfigurationError(
-            "`noise_threshold` and `confirm_threshold` "
-            "cannot be used together. "
-            "`noise_threshold` is marked for deprecation.")
-    elif kwargs.get('noise_threshold'):
-        warnings.warn(
-            "`noise_threshold` is marked for deprecation. "
-            "Please use `confirm_threshold` instead.",
-            DeprecationWarning, stacklevel=2)
-        kwargs['confirm_threshold'] = kwargs.pop('noise_threshold')
-
-    # config-file value -> correctly typed gst pipeline value
-    key_type = {'match_method': str,
-                'match_threshold': float,
-                'confirm_method': str,
-                'erode_passes': int,
-                'confirm_threshold': float}
-
-    params = {}
-    for key, _type in key_type.items():
-        params[key] = kwargs.get(
-            key,
-            _type(get_config('global', key)))
-
-    return params
-
-
 def _connect_tcp_socket(address, port, timeout=3):
     """Connects to a TCP listener on 'address':'port'."""
     try:
@@ -1289,34 +1271,3 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
-
-
-def test_build_templatematch_params_detects_undefined():
-    global get_config  # pylint: disable=W0601
-    _get_config = get_config
-
-    def mock_get_config(section, key):
-        # missing 'confirm_threshold'
-        try:
-            return dict(match_method="sqdiff-normed",
-                        match_threshold="0.80",
-                        confirm_method="normed-absdiff",
-                        erode_passes="1")[key]
-        except KeyError:
-            raise ConfigurationError(
-                "No option '%s' in section: '%s'" % (key, section))
-
-    get_config = mock_get_config
-    try:
-        build_templatematch_params()
-    except ConfigurationError:  # what we expect
-        pass
-    else:
-        assert False            # fail test
-    finally:
-        get_config = _get_config
-
-
-def test_build_templatematch_params_uses_kwargs():
-    params = build_templatematch_params(erode_passes=-5)
-    assert params['erode_passes'] == -5
