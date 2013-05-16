@@ -47,14 +47,6 @@ test_wait_for_match_noise_threshold_raises_warning() {
     stbt-run -v "$scratchdir/test.py" 2>&1 | grep 'DeprecationWarning'
 }
 
-test_wait_for_match_noise_threshold_and_confirm_threshold_raises_error() {
-    cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-redblue.png", noise_threshold=0.2,
-	               confirm_threshold=0.2)
-	EOF
-    ! stbt-run -v "$scratchdir/test.py"
-}
-
 test_wait_for_match_match_method_param_affects_first_pass() {
     # This works on the fact that match_method="ccorr-normed" registers a
     # first_pass_result greater than 0.80 which is then falsely confirmed as
@@ -80,14 +72,18 @@ test_wait_for_match_match_threshold_param_affects_match() {
     # first_pass_result of this match, we can get one to pass and the other
     # to fail.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-checkers-8.png", timeout_secs=1,
-	               match_threshold=0.8, confirm_method="none")
+	wait_for_match(
+	    "videotestsrc-checkers-8.png", timeout_secs=1,
+	    match_parameters=MatchParameters(
+	        match_threshold=0.8, confirm_method="none"))
 	EOF
     ! stbt-run -v "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-checkers-8.png", timeout_secs=1,
-	               match_threshold=0.2, confirm_method="none")
+	wait_for_match(
+	    "videotestsrc-checkers-8.png", timeout_secs=1,
+	    match_parameters=MatchParameters(
+	        match_threshold=0.2, confirm_method="none"))
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
@@ -99,7 +95,8 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
     cat > "$scratchdir/test.py" <<-EOF
 	import glob
 	for img in glob.glob("*.png"):
-	     wait_for_match(img, match_threshold=0, confirm_method="none")
+	    wait_for_match(img, match_parameters=MatchParameters(
+	        match_threshold=0, confirm_method="none"))
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
@@ -110,14 +107,18 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 
     # Expect correct nomatch.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method="normed-absdiff")
+	wait_for_match(
+	    "known-fail-template.png",
+	    match_parameters=MatchParameters(confirm_method="normed-absdiff"))
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py" || return
 
     # Expect false match.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("known-fail-template.png", confirm_method="absdiff")
+	wait_for_match(
+	    "known-fail-template.png",
+	    match_parameters=MatchParameters(confirm_method="absdiff"))
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=None \
         "$scratchdir/test.py"
@@ -130,13 +131,15 @@ test_wait_for_match_erode_passes_affects_match() {
         imagefreeze ! ffmpegcolorspace'
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("circle-small.png", erode_passes=2)
+	wait_for_match("circle-small.png",
+	               match_parameters=MatchParameters(erode_passes=2))
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("circle-small.png", erode_passes=1)
+	wait_for_match("circle-small.png",
+	               match_parameters=MatchParameters(erode_passes=1))
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py"
@@ -149,13 +152,15 @@ test_wait_for_match_confirm_threshold_affects_match() {
         decodebin2 ! imagefreeze ! ffmpegcolorspace'
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.5, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", timeout_secs=1,
+	               match_parameters=MatchParameters(confirm_threshold=0.5))
 	EOF
     stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("slight-variation-2.png", confirm_threshold=0.4, timeout_secs=1)
+	wait_for_match("slight-variation-2.png", timeout_secs=1,
+	               match_parameters=MatchParameters(confirm_threshold=0.4))
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=none \
         "$scratchdir/test.py"
@@ -611,7 +616,8 @@ test_get_frame_and_save_frame() {
     cat > "$scratchdir/match-screenshot.py" <<-EOF
 	press("15")
 	# confirm_threshold accounts for match rectangle in the screenshot.
-	wait_for_match("$scratchdir/gamut.png", confirm_threshold=0.7)
+	wait_for_match("$scratchdir/gamut.png",
+	               match_parameters=MatchParameters(confirm_threshold=0.7))
 	EOF
     stbt-run -v "$scratchdir/match-screenshot.py"
 }

@@ -33,14 +33,16 @@ doc() {
     pydoc stbt.$1 |
     awk -v f=$1 '
         NR <= 2   { next; }
-        /^ \| *$/ { print ""; exit; }
         { sub("^stbt." f " = ", "");
           sub("class " f "\\(" f "\\)", "class " f);
           sub("exceptions.Exception", "Exception");
+          sub("<stbt.MatchParameters instance>", "MatchParameters()");
           sub(/\*\*kwargs/, "\\*\\*kwargs");
-          sub(/^ *$/, "");
           sub(/^ \|  /, "    ");
-          print; }'
+          sub(/^ *$/, "");
+        }
+        /^ *(Method resolution order:|Methods defined here:)$/ { exit; }
+        { print; }'
 }
 
 # Keeps the python API section in sync with the docstrings in the source code.
@@ -66,6 +68,7 @@ python_docstrings() {
     doc get_frame
     doc get_config
     doc debug
+    doc MatchParameters
     doc MatchResult
     doc Position
     doc MotionResult
@@ -89,7 +92,7 @@ templatematch_params() {
         value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config $param)
         # In:  `match_method` (str) default: <any value here>
         # Out: `match_method` (str) default: <value from stbt.conf>
-        echo "s,^\(\`$param\`.* default:\) .*,\1 $value,"
+        echo "s,^\( *\`$param\`.* default:\) .*,\1 $value,"
     done
 }
 

@@ -289,7 +289,7 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, \*\*kwargs)
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=MatchParameters())
     Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -301,18 +301,13 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
-
-press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, \*\*kwargs)
+press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=MatchParameters())
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -323,16 +318,11 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
 wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, mask=None)
     Search for motion in the source video stream.
@@ -357,7 +347,7 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-detect_match(image, timeout_secs=10, noise_threshold=None, \*\*kwargs)
+detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=MatchParameters())
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -366,16 +356,11 @@ detect_match(image, timeout_secs=10, noise_threshold=None, \*\*kwargs)
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` intead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
 
 detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     Generator that yields a sequence of one `MotionResult` for each frame
@@ -414,6 +399,83 @@ get_config(key, section='global')
 debug(msg)
     Print the given string to stderr if stbt run `--verbose` was given.
 
+class MatchParameters
+    Parameters to customise the image processing algorithm used by
+    `wait_for_match`, `detect_match`, and `press_until_match`.
+
+    `match_method` (str) default: sqdiff-normed
+      The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
+      likely locations of the "template" image within the larger source image.
+
+      Allowed values are ``"sqdiff-normed"``, ``"ccorr-normed"``, and
+      ``"ccoeff-normed"``. For the meaning of these parameters, see the OpenCV
+      `cvMatchTemplate` reference documentation and tutorial:
+
+      * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
+      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
+
+    `match_threshold` (float) default: 0.80
+      How strong a result from `cvMatchTemplate` must be, to be considered a
+      match. A value of 0 will mean that anything is considered to match,
+      whilst a value of 1 means that the match has to be pixel perfect. (In
+      practice, a value of 1 is useless because of the way `cvMatchTemplate`
+      works, and due to limitations in the storage of floating point numbers in
+      binary.)
+
+    `confirm_method` (str) default: absdiff
+      The result of the previous `cvMatchTemplate` algorithm often gives false
+      positives (it reports a "match" for an image that shouldn't match).
+      `confirm_method` specifies an algorithm to be run just on the region of
+      the source image that `cvMatchTemplate` identified as a match, to confirm
+      or deny the match.
+
+      The allowed values are:
+
+      "``none``"
+          Do not confirm the match. Assume that the potential match found is
+          correct.
+
+      "``absdiff``" (absolute difference)
+          The absolute difference between template and source Region of
+          Interest (ROI) is calculated; thresholded and eroded to account for
+          potential noise; and if any white pixels remain then the match is
+          deemed false.
+
+      "``normed-absdiff``" (normalized absolute difference)
+          As with ``absdiff`` but both template and ROI are normalized before
+          the absolute difference is calculated. This has the effect of
+          exaggerating small differences between images with similar, small
+          ranges of pixel brightnesses (luminance).
+
+          This method is more accurate than ``absdiff`` at reporting true and
+          false matches when there is noise involved, particularly aliased
+          text. However it will, in general, require a greater
+          confirm_threshold than the equivalent match with absdiff.
+
+          When matching solid regions of colour, particularly where there are
+          regions of either black or white, ``absdiff`` is better than
+          ``normed-absdiff`` because it does not alter the luminance range,
+          which can lead to false matches. For example, an image which is half
+          white and half grey, once normalised, will match a similar image
+          which is half white and half black because the grey becomes
+          normalised to black so that the maximum luminance range of [0..255]
+          is occupied. However, if the images are dissimilar enough in
+          luminance, they will have failed to match the `cvMatchTemplate`
+          algorithm and won't have reached the "confirm" stage.
+
+    `confirm_threshold` (float) default: 0.16
+      Increase this value to avoid false negatives, at the risk of increasing
+      false positives (a value of 1.0 will report a match every time).
+
+    `erode_passes` (int) default: 1
+      The number of erode steps in the `absdiff` and `normed-absdiff` confirm
+      algorithms. Increasing the number of erode steps makes your test less
+      sensitive to noise and small variances, at the cost of being more likely
+      to report a false positive.
+
+    Please let us know if you are having trouble with image matches so that we
+    can further improve the matching algorithm.
+
 class MatchResult
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
@@ -449,91 +511,6 @@ class UITestError(Exception)
 
 
 .. <end python docs>
-
-
-CUSTOMISING THE TEMPLATEMATCH ALGORITHM
----------------------------------------
-
-It is possible to customise the templatematch algorithm by overriding the default
-parameter values. This can be done in either `stbt.conf` or in a keyword
-argument to one of the functions `detect_match()`, `wait_for_match()`, and
-`press_until_match()`.
-
-`match_method` (str) default: sqdiff-normed
-  The template comparison method that is used by the OpenCV `cvMatchTemplate()`
-  algorithm to produce its "heat map" of template locations:
-
-  ================== ================
-  stb-tester value   OpenCV value
-  ================== ================
-  "``sqdiff``"       ``CV_TM_SQDIFF``
-  "``ccoeff``"       ``CV_TM_CCOEFF``
-  "``ccorr``"        ``CV_TM_CCORR``
-  ================== ================
-
-  See also `OpenCV cvMatchTemplate()
-  <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`_ and
-  `OpenCV Tutorials: Template Matching
-  <http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html>`_.
-
-`match_threshold` (float) default: 0.80
-  How strong a result from cvTemplateMatch must be before the potential match
-  will be checked. A value of 0 will mean that every match will be passes to
-  the confirmation stage, whilst a value of 1 means (theoretically) that only
-  a perfect match will be confirmed. (In practice, a value of 1 is useless
-  because of the way cvTemplateMatch works, and due to limitations in the
-  storage of floating point numbers in binary.  See
-  http://docs.python.org/2/tutorial/floatingpoint.html.)
-
-`confirm_method` (str) default: absdiff
-  The method to use for confirming the match found by cvMatchTemplate:
-
-  "``none``"
-
-      Do not confirm the match. Assume that the potential match found is
-      correct.
-
-  "``absdiff``" (absolute difference)
-
-      The absolute difference between template and source Region of Interest
-      (ROI) is calculated; thresholded and eroded to account for potential
-      noise; and if any white pixels remain then the match is deemed false.
-
-      When matching solid regions of colour, particularly where there are
-      regions of either black or white, ``absdiff`` is better than
-      ``normed-absdiff`` because is does not alter the luminance range, which
-      can lead to false matches. For example, an image which is half white and
-      half non-white, once normalised, will match a similar image which is half
-      white and half black because the half which is non-white becomes black so
-      that the maximum luminance range of [0..255] is occupied.
-
-  "``normed-absdiff``" (normalized absolute difference)
-
-      As with ``absdiff`` but both template and ROI are normalized before the
-      absolute difference is calculated. This has the effect of exaggerating
-      small differences between images with similar, small ranges of pixel
-      brightnesses (luminance).
-
-      This method is more accurate than ``absdiff`` at reporting true and false
-      matches when there is noise involved, particularly aliased text. However
-      it will, in general, require a greater confirm_threshold than the
-      equivalent match with absdiff. The important thing to remember is that an
-      increase of, say, 0.1 to the `confirm_threshold` when using ``absdiff``
-      is (very roughly) the equivalent of an increase of 0.05 when using
-      ``normed-absdiff``. In other words, the `confirm_threshold` is more
-      sensitive and fine-tunable when using ``normed-absdiff``.
-
-`erode_passes` (int) default: 1
-  The number of erode steps. Increasing the number of erode steps makes your
-  test less sensitive to noise and small variances, at the cost of of being
-  more likely to report a false positive.
-
-`confirm_threshold` (float) default: 0.16
-  Increase this value to avoid false negatives, at the risk of increasing false
-  positives (a value of 1.0 will report a match every time).
-
-Please let us know if you are having trouble with image matches so that we can
-further improve the matching algorithm.
 
 
 TEST SCRIPT BEST PRACTICES

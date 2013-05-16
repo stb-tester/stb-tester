@@ -92,7 +92,6 @@ if [ $# -eq 0 ]; then
     run test_wait_for_match_changing_template &&
     run test_wait_for_match_nonexistent_template &&
     run test_wait_for_match_noise_threshold_raises_warning &&
-    run test_wait_for_match_noise_threshold_and_confirm_threshold_raises_error &&
     run test_wait_for_match_match_method_param_affects_first_pass &&
     run test_wait_for_match_match_threshold_param_affects_match &&
     run test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_zero &&

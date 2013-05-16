@@ -3,14 +3,14 @@
 test_that_readme_default_templatematch_values_are_kept_up_to_date() {
     cat > "$scratchdir/readme" <<-'EOF'
 	unmodified line
-	`match_method` (str) default: old value
+	    `match_method` (str) default: old value
 	unmodified line
 	EOF
     "$testdir/../api-doc.sh" "$scratchdir/readme"
 
     cat > "$scratchdir/expected" <<-'EOF'
 	unmodified line
-	`match_method` (str) default: sqdiff-normed
+	    `match_method` (str) default: sqdiff-normed
 	unmodified line
 	EOF
 
