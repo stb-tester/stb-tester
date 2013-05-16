@@ -31,13 +31,16 @@ while [ $# -gt 0 ]; do
     args+=", $a"
     shift
 done
+args=${args#, }
 
 script="stbt-templatematch.$$.py"
 trap "rm $script" EXIT
 
 cat > $script <<-EOF
 	import sys
-	if not stbt.detect_match("$template" $args).next().match:
+	if not stbt.detect_match(
+	        "$template", match_parameters=MatchParameters($args)
+	        ).next().match:
 	    print "Didn't find match for '$template'."
 	    sys.exit(1)
 	EOF
