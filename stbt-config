@@ -12,6 +12,11 @@ import sys
 import stbt
 
 
+def error(s):
+    sys.stderr.write("stbt config: error: %s\n" % s)
+    sys.exit(1)
+
+
 parser = argparse.ArgumentParser()
 parser.prog = "stbt config"
 parser.description = """Prints the value of the specified key from the stbt
@@ -27,4 +32,7 @@ parser.add_argument(
     "key", help="Configuration item to read")
 args = parser.parse_args(sys.argv[1:])
 
-print stbt.get_config(args.section, args.key)
+try:
+    print stbt.get_config(args.section, args.key)
+except stbt.ConfigurationError as e:
+    error(e.message)
