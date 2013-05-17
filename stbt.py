@@ -402,7 +402,7 @@ def get_config(key, section='global'):
         assert(system_config in files_read)
 
     try:
-        return _config.get(section, key)
+        return str(_config.get(section, key))
     except ConfigParser.Error as e:
         raise ConfigurationError(e.message)
 
