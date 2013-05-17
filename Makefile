@@ -38,6 +38,7 @@ OBJS += gst/gsttemplatematch.o
 tools = stbt-run
 tools += stbt-record
 tools += stbt-config
+tools += stbt-control
 tools += stbt-screenshot
 tools += stbt-templatematch
 tools += stbt-tv
@@ -121,8 +122,8 @@ check-integrationtests: gst/libgst-stb-tester.so
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
 check-pylint:
-	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config |\
-	$(parallel) extra/pylint.sh
+	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config \
+	    stbt-control | $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
