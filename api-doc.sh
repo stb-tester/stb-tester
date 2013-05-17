@@ -86,7 +86,7 @@ templatematch_params() {
         erode_passes \
         confirm_threshold \
     ; do
-        value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config $param)
+        value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config global.$param)
         # In:  `match_method` (str) default: <any value here>
         # Out: `match_method` (str) default: <value from stbt.conf>
         echo "s,^\(\`$param\`.* default:\) .*,\1 $value,"

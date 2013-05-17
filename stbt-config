@@ -24,15 +24,17 @@ parser.description = """Prints the value of the specified key from the stbt
 parser.epilog = \
     "Returns non-zero exit status if the specified key or section isn't found."
 parser.add_argument(
-    "section", nargs="?", default="global",
-    help="""Look in the specified <section> of the config file,
-        e.g. 'run' or 'record'
-        (defaults to the 'global' section if <section> isn't specified)""")
-parser.add_argument(
-    "key", help="Configuration item to read")
+    "name", metavar="section.key",
+    help="e.g. 'global.source_pipeline' or 'record.control_recorder'")
 args = parser.parse_args(sys.argv[1:])
 
+if args.name.rfind(".") == -1:
+    error(
+        "'name' parameter must contain the section and key separated by a dot")
+
+section, key = args.name.rsplit(".", 1)
+
 try:
-    print stbt.get_config(args.section, args.key)
+    print stbt.get_config(section, key)
 except stbt.ConfigurationError as e:
     error(e.message)
