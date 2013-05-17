@@ -619,21 +619,21 @@ test_get_frame_and_save_frame() {
 test_get_config() {
     cat > "$scratchdir/test.py" <<-EOF
 	import stbt
-	assert stbt.get_config("test_key") == "this is a test value"
-	assert stbt.get_config("test_key", section="special") == \
+	assert stbt.get_config("global", "test_key") == "this is a test value"
+	assert stbt.get_config("special", "test_key") == \
 	    "not the global value"
 	try:
-	    stbt.get_config("no_such_key")
+	    stbt.get_config("global", "no_such_key")
 	    assert False
 	except ConfigurationError:
 	    pass
 	try:
-	    stbt.get_config("test_key", section="no_such_section")
+	    stbt.get_config("no_such_section", "test_key")
 	    assert False
 	except ConfigurationError:
 	    pass
 	try:
-	    stbt.get_config("not_special", section="special")
+	    stbt.get_config("special", "not_special")
 	    assert False
 	except ConfigurationError:
 	    pass

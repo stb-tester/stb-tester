@@ -23,11 +23,11 @@ def main(argv):
     parser.description = 'Create an stb-tester test script'
     parser.add_argument(
         '--control-recorder',
-        default=stbt.get_config('control_recorder', section='record'),
+        default=stbt.get_config('record', 'control_recorder'),
         help='The source of remote control keypresses (default: %(default)s)')
     parser.add_argument(
         '-o', '--output-file',
-        default=stbt.get_config('output_file', section='record'),
+        default=stbt.get_config('record', 'output_file'),
         help='The filename of the generated script (default: %(default)s)')
     args = parser.parse_args(argv[1:])
     stbt.debug("Arguments:\n" + "\n".join([

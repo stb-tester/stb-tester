@@ -402,7 +402,7 @@ save_frame(buf, filename)
 get_frame()
     Get a GStreamer buffer containing the current video frame.
 
-get_config(key, section='global')
+get_config(section, key)
     Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search

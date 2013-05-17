@@ -27,4 +27,4 @@ parser.add_argument(
     "key", help="Configuration item to read")
 args = parser.parse_args(sys.argv[1:])
 
-print stbt.get_config(args.key, args.section)
+print stbt.get_config(args.section, args.key)

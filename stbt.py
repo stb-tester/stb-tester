@@ -369,7 +369,7 @@ def get_frame():
     return _display.capture_screenshot()
 
 
-def get_config(key, section='global'):
+def get_config(section, key):
     """Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
@@ -474,16 +474,16 @@ def argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--control',
-        default=get_config('control', section='global'),
+        default=get_config('global', 'control'),
         help='The remote control to control the stb (default: %(default)s)')
     parser.add_argument(
         '--source-pipeline',
-        default=get_config('source_pipeline', section='global'),
+        default=get_config('global', 'source_pipeline'),
         help='A gstreamer pipeline to use for A/V input (default: '
              '%(default)s)')
     parser.add_argument(
         '--sink-pipeline',
-        default=get_config('sink_pipeline', section='global'),
+        default=get_config('global', 'sink_pipeline'),
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
 
@@ -497,7 +497,7 @@ def argparser():
     _debug_level = 0
     parser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
-        default=get_config('verbose', section='global'),
+        default=get_config('global', 'verbose'),
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
@@ -1141,7 +1141,7 @@ def build_templatematch_params(**kwargs):
     for key, _type in key_type.items():
         params[key] = kwargs.get(
             key,
-            _type(get_config(key, section='global')))
+            _type(get_config('global', key)))
 
     return params
 
@@ -1297,7 +1297,7 @@ def test_build_templatematch_params_detects_undefined():
     global get_config  # pylint: disable=W0601
     _get_config = get_config
 
-    def mock_get_config(key, section='global'):
+    def mock_get_config(section, key):
         # missing 'confirm_threshold'
         try:
             return dict(match_method="sqdiff-normed",
