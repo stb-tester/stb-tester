@@ -655,8 +655,11 @@ class Display:
             params_backup[key] = getattr(element.props, key)
 
         try:
-            for key in params.keys():
+            for key in (set(params.keys()) - set(["template", "enabled"])):
                 setattr(element.props, key, params[key])
+            for key in ["template", "enabled"]:
+                if key in params:
+                    setattr(element.props, key, params[key])
 
             # Timeout after 10s in case no messages are received on the bus.
             # This happens when starting a new instance of stbt when the
