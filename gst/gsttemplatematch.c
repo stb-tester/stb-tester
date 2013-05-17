@@ -48,7 +48,17 @@
 /**
  * SECTION:element-templatematch
  *
- * FIXME:Describe templatematch here.
+ * If the image specified by the path in property #StbtTemplateMatch:template
+ * is successfully read, searches for that image in each frame of video and
+ * sends a message named #template_match with the following fields:
+ *
+ * - #guint #template_match.x: The x coordinate of the match
+ * - #guint #template_match.y: The y coordinate of the match
+ * - #string #template_match.template_path: The value of the
+ *     #StbtTemplateMatch:template file matched.
+ * - #gboolean #template_match.match: Whether or not a match was found
+ *     (when %FALSE, the fields #template_match.x and #template_match.y
+ *     contain the coordinates of the best --but not good enough-- match).
  *
  * <refsect2>
  * <title>Example launch line</title>
