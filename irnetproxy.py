@@ -86,6 +86,7 @@ class IRNetBoxProxy(object):
     ACK_NACK_INDEX = 3
     POWER_ON = 0x05
     POWER_OFF = 0x06
+    POWER_OFF_TIMEOUT = 10
     IGNORED_COMMANDS = frozenset((POWER_ON, POWER_OFF))
 
     USIZE_MAX = 65535
@@ -101,6 +102,7 @@ class IRNetBoxProxy(object):
         self.listen_sock = None
         self.irnet_sock = None
         self.read_sockets = {}
+        self.is_on = False  # Assume that the irnet box is not on.
 
     def make_id(self):
         command_id = None
@@ -143,7 +145,8 @@ class IRNetBoxProxy(object):
             data = self.replace_sequence_id(data, old_id)
             sock.sendall(header + data)
         except Exception, e:  # pylint: disable=W0703
-            self.error(e, "Error sending async complete command", fatal=False)
+            self.error(e, "Error sending async complete command", fatal=False,
+                       level=2)
         if new_id in self.async_commands:
             del self.async_commands[new_id]
 
@@ -193,20 +196,26 @@ class IRNetBoxProxy(object):
                 self.error(e, "Error reading from client. Connection closed",
                            fatal=False)
 
-    def info(self, data):
-        if self.verbosity > 1:
+    def info(self, data, level=2):
+        if self.verbosity >= level:
             print data
 
-    def warn(self, data):
-        if self.verbosity > 0:
+    def warn(self, data, level=1):
+        if self.verbosity >= level:
             sys.stderr.write("Warning: %s\n" % (data, ))
 
-    def error(self, exception, data, fatal=True):
-        if self.verbosity > 0:
+    def error(self, exception, data, fatal=True, level=0):
+        if fatal or self.verbosity >= level + 1:
             traceback.print_exc(exception)
-        sys.stderr.write("%s\n" % (data, ))
+        if fatal or self.verbosity > level:
+            sys.stderr.write("%s\n" % (data, ))
         if fatal:
             sys.exit(1)
+
+    def set_power(self, on=True):
+        self.send_management_command(self.POWER_ON if on else self.POWER_OFF)
+        self.is_on = on
+        self.info("Turned irnetbox %s" % ("on" if on else "off"))
 
     def connect(self):
         try:
@@ -229,7 +238,7 @@ class IRNetBoxProxy(object):
     def run(self):
         self.connect()
         try:
-            self.send_management_command(self.POWER_ON)
+            self.set_power(on=True)
         except Exception, e:  # pylint: disable=W0703
             self.error(
                 e, "Connected to irNetBox, but could not send power on command")
@@ -238,7 +247,18 @@ class IRNetBoxProxy(object):
         try:
             while True:
                 to_read = self.read_sockets.keys()
-                ready_to_read, _, _ = select.select(to_read, [], [])
+                ready_to_read, _, _ = select.select(
+                    to_read, [], [], self.POWER_OFF_TIMEOUT)
+                # If the select timed out, and the box is on, and there are
+                # no connected clients, then power off...
+                if (len(ready_to_read) == 0
+                        and self.is_on
+                        and len(self.read_sockets) == 2):
+                    self.set_power(on=False)
+                else:
+                    # If something happens, and the box is off, then turn on:
+                    if not self.is_on:
+                        self.set_power(on=True)
                 for socket_fd in ready_to_read:
                     sock = self.read_sockets[socket_fd]
                     if sock is self.listen_sock:
@@ -249,7 +269,7 @@ class IRNetBoxProxy(object):
                         self.read_client_command(sock)
         finally:
             try:
-                self.send_management_command(self.POWER_OFF)
+                self.set_power(on=False)
             except Exception, e:  # pylint: disable=W0703
                 self.error(e, "Could not turn irNetBox off", fatal=False)
             for sock in self.read_sockets.viewvalues():
