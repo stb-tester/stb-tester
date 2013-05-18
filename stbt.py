@@ -72,8 +72,44 @@ warnings.filterwarnings(
     action="always", category=DeprecationWarning, module='stbt')
 
 
+_config = None
+
+
 # Functions available to stbt scripts
 #===========================================================================
+
+def get_config(section, key):
+    """Read the value of `key` from `section` of the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `section` or `key` is not
+    found.
+    """
+
+    global _config
+    if not _config:
+        _config = ConfigParser.SafeConfigParser()
+        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
+        files_read = _config.read([
+            defaults,
+            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
+            os.environ.get('STBT_SYSTEM_CONFIG', ''),
+            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+            # directory specification:
+            '%s/stbt/stbt.conf' % os.environ.get(
+                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
+            # Config files specific to the test suite / test run:
+            os.environ.get('STBT_CONFIG_FILE', ''),
+        ])
+        assert(defaults in files_read)
+
+    try:
+        return str(_config.get(section, key))
+    except ConfigParser.Error as e:
+        raise ConfigurationError(e.message)
+
 
 def press(key):
     """Send the specified key-press to the system under test.
@@ -85,6 +121,98 @@ def press(key):
     If that's lirc, then `key` is a key name from your lirc config file.
     """
     return _control.press(key)
+
+
+class MatchParameters:
+    """Parameters to customise the image processing algorithm used by
+    `wait_for_match`, `detect_match`, and `press_until_match`.
+
+    `match_method` (str) default: From stbt.conf
+      The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
+      likely locations of the "template" image within the larger source image.
+
+      Allowed values are ``"sqdiff-normed"``, ``"ccorr-normed"``, and
+      ``"ccoeff-normed"``. For the meaning of these parameters, see the OpenCV
+      `cvMatchTemplate` reference documentation and tutorial:
+
+      * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
+      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
+
+    `match_threshold` (float) default: From stbt.conf
+      How strong a result from `cvMatchTemplate` must be, to be considered a
+      match. A value of 0 will mean that anything is considered to match,
+      whilst a value of 1 means that the match has to be pixel perfect. (In
+      practice, a value of 1 is useless because of the way `cvMatchTemplate`
+      works, and due to limitations in the storage of floating point numbers in
+      binary.)
+
+    `confirm_method` (str) default: From stbt.conf
+      The result of the previous `cvMatchTemplate` algorithm often gives false
+      positives (it reports a "match" for an image that shouldn't match).
+      `confirm_method` specifies an algorithm to be run just on the region of
+      the source image that `cvMatchTemplate` identified as a match, to confirm
+      or deny the match.
+
+      The allowed values are:
+
+      "``none``"
+          Do not confirm the match. Assume that the potential match found is
+          correct.
+
+      "``absdiff``" (absolute difference)
+          The absolute difference between template and source Region of
+          Interest (ROI) is calculated; thresholded and eroded to account for
+          potential noise; and if any white pixels remain then the match is
+          deemed false.
+
+      "``normed-absdiff``" (normalized absolute difference)
+          As with ``absdiff`` but both template and ROI are normalized before
+          the absolute difference is calculated. This has the effect of
+          exaggerating small differences between images with similar, small
+          ranges of pixel brightnesses (luminance).
+
+          This method is more accurate than ``absdiff`` at reporting true and
+          false matches when there is noise involved, particularly aliased
+          text. However it will, in general, require a greater
+          confirm_threshold than the equivalent match with absdiff.
+
+          When matching solid regions of colour, particularly where there are
+          regions of either black or white, ``absdiff`` is better than
+          ``normed-absdiff`` because it does not alter the luminance range,
+          which can lead to false matches. For example, an image which is half
+          white and half grey, once normalised, will match a similar image
+          which is half white and half black because the grey becomes
+          normalised to black so that the maximum luminance range of [0..255]
+          is occupied. However, if the images are dissimilar enough in
+          luminance, they will have failed to match the `cvMatchTemplate`
+          algorithm and won't have reached the "confirm" stage.
+
+    `confirm_threshold` (float) default: From stbt.conf
+      Increase this value to avoid false negatives, at the risk of increasing
+      false positives (a value of 1.0 will report a match every time).
+
+    `erode_passes` (int) default: From stbt.conf
+      The number of erode steps in the `absdiff` and `normed-absdiff` confirm
+      algorithms. Increasing the number of erode steps makes your test less
+      sensitive to noise and small variances, at the cost of being more likely
+      to report a false positive.
+
+    Please let us know if you are having trouble with image matches so that we
+    can further improve the matching algorithm.
+    """
+
+    def __init__(
+            self,
+            match_method=str(get_config('global', 'match_method')),
+            match_threshold=float(get_config('global', 'match_threshold')),
+            confirm_method=str(get_config('global', 'confirm_method')),
+            confirm_threshold=float(get_config('global', 'confirm_threshold')),
+            erode_passes=int(get_config('global', 'erode_passes'))):
+        self.match_method = match_method
+        self.match_threshold = match_threshold
+        self.confirm_method = confirm_method
+        self.confirm_threshold = confirm_threshold
+        self.erode_passes = erode_passes
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -107,7 +235,8 @@ class MatchResult(namedtuple(
     pass
 
 
-def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
+def detect_match(image, timeout_secs=10, noise_threshold=None,
+                 match_parameters=MatchParameters()):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -116,37 +245,36 @@ def detect_match(image, timeout_secs=10, noise_threshold=None, **kwargs):
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` intead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
 
-    templatematch_params = build_templatematch_params(
-        noise_threshold=noise_threshold, **kwargs)
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
-    params = {
+    properties = {  # Properties of GStreamer element
         "template": _find_path(image),
-        "matchMethod": templatematch_params['match_method'],
-        "matchThreshold": templatematch_params['match_threshold'],
-        "confirmMethod": templatematch_params['confirm_method'],
-        "erodePasses": templatematch_params['erode_passes'],
-        "confirmThreshold": templatematch_params['confirm_threshold'],
+        "matchMethod": match_parameters.match_method,
+        "matchThreshold": match_parameters.match_threshold,
+        "confirmMethod": match_parameters.confirm_method,
+        "erodePasses": match_parameters.erode_passes,
+        "confirmThreshold": match_parameters.confirm_threshold,
     }
-    debug("Searching for " + params["template"])
-    if not os.path.isfile(params["template"]):
+    debug("Searching for " + properties["template"])
+    if not os.path.isfile(properties["template"]):
         raise UITestError("No such template file: %s" % image)
 
     for message, buf in _display.detect(
-            "template_match", params, timeout_secs):
+            "template_match", properties, timeout_secs):
         # Discard messages generated from previous call with different template
-        if message["template_path"] == params["template"]:
+        if message["template_path"] == properties["template"]:
             result = MatchResult(
                 timestamp=buf.timestamp,
                 match=message["match"],
@@ -184,20 +312,20 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
     """
 
     debug("Searching for motion")
-    params = {
+    properties = {  # Properties of GStreamer element
         "enabled": True,
         "noiseThreshold": noise_threshold,
     }
     if mask:
-        params["mask"] = _find_path(mask)
-        debug("Using mask %s" % (params["mask"]))
-        if not os.path.isfile(params["mask"]):
+        properties["mask"] = _find_path(mask)
+        debug("Using mask %s" % (properties["mask"]))
+        if not os.path.isfile(properties["mask"]):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in _display.detect("motiondetect", params, timeout_secs):
+    for msg, buf in _display.detect("motiondetect", properties, timeout_secs):
         # Discard messages generated from previous calls with a different mask
-        if ((mask and msg["masked"] and msg["mask_path"] == params["mask"])
+        if ((mask and msg["masked"] and msg["mask_path"] == properties["mask"])
                 or (not mask and not msg["masked"])):
             result = MotionResult(timestamp=buf.timestamp,
                                   motion=msg["has_motion"])
@@ -208,7 +336,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   noise_threshold=None, **kwargs):
+                   noise_threshold=None, match_parameters=MatchParameters()):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -220,22 +348,24 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
     match_count = 0
     last_pos = Position(0, 0)
     for res in detect_match(
-            image, timeout_secs, noise_threshold=noise_threshold, **kwargs):
+            image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -250,7 +380,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=None,
-                      max_presses=10, **kwargs):
+                      max_presses=10, match_parameters=MatchParameters()):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -261,24 +391,26 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
-    argument syntax. It is now a synonym for `confirm_threshold`. Please use
-    `confirm_threshold` from now on.
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
 
-    Any other keyword arguments passed to the function using `kwargs` will be
-    used to customise the templatematch algorithm parameters. If no
-    templatematch arguments are explicitly passed, then the default values
-    from `stbt.conf` will be used instead.
-
-    See the section `CUSTOMISING THE TEMPLATEMATCH ALGORITHM`_ (in the
-    README.rst or man page) for a description of all templatematch parameters.
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
     """
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "match_parameters.confirm_threshold instead.",
+            DeprecationWarning)
+        match_parameters.confirm_threshold = noise_threshold
 
     i = 0
 
     while True:
         try:
             return wait_for_match(image, timeout_secs=interval_secs,
-                                  noise_threshold=noise_threshold, **kwargs)
+                                  match_parameters=match_parameters)
         except MatchTimeout:
             if i < max_presses:
                 press(key)
@@ -367,39 +499,6 @@ def save_frame(buf, filename):
 def get_frame():
     """Get a GStreamer buffer containing the current video frame."""
     return _display.capture_screenshot()
-
-
-def get_config(section, key):
-    """Read the value of `key` from `section` of the stbt config file.
-
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
-
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
-    """
-
-    global _config
-    if not _config:
-        _config = ConfigParser.SafeConfigParser()
-        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
-        files_read = _config.read([
-            defaults,
-            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
-            os.environ.get('STBT_SYSTEM_CONFIG', ''),
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % os.environ.get(
-                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
-        assert(defaults in files_read)
-
-    try:
-        return str(_config.get(section, key))
-    except ConfigParser.Error as e:
-        raise ConfigurationError(e.message)
 
 
 def debug(msg):
@@ -512,7 +611,6 @@ def teardown_run():
 # Internal
 #===========================================================================
 
-_config = None
 _debug_level = 0
 _mainloop = glib.MainLoop()
 
@@ -625,16 +723,17 @@ class Display:
     def capture_screenshot(self):
         return self.screenshot.get_property("last-buffer")
 
-    def detect(self, element_name, params, timeout_secs):
+    def detect(self, element_name, properties, timeout_secs):
         """Generator that yields the messages emitted by the named gstreamer
-        element configured with the parameters `params`.
+        element configured with the specified `properties`.
 
         "element_name" is the name of the gstreamer element as specified in the
         pipeline. The name must be the same in the pipeline and in the messages
         returned by gstreamer.
 
-        "params" is a dictionary of parameters to setup the element. The
-        original parameters will be restored at the end of the call.
+        "properties" is a dictionary of properties to set on the gstreamer
+        element. The original properties will be restored at the end of the
+        call.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
         you can also simply stop iterating over the sequence yielded by this
@@ -645,16 +744,16 @@ class Display:
 
         element = self.pipeline.get_by_name(element_name)
 
-        params_backup = {}
-        for key in params.keys():
-            params_backup[key] = getattr(element.props, key)
+        properties_backup = {}
+        for key in properties.keys():
+            properties_backup[key] = getattr(element.props, key)
 
         try:
-            for key in (set(params.keys()) - set(["template", "enabled"])):
-                setattr(element.props, key, params[key])
+            for key in (set(properties.keys()) - set(["template", "enabled"])):
+                setattr(element.props, key, properties[key])
             for key in ["template", "enabled"]:
-                if key in params:
-                    setattr(element.props, key, params[key])
+                if key in properties:
+                    setattr(element.props, key, properties[key])
 
             # Timeout after 10s in case no messages are received on the bus.
             # This happens when starting a new instance of stbt when the
@@ -684,8 +783,8 @@ class Display:
                         yield (st, buf)
 
         finally:
-            for key in params.keys():
-                setattr(element.props, key, params_backup[key])
+            for key in properties.keys():
+                setattr(element.props, key, properties_backup[key])
 
     @staticmethod
     def on_timeout(*_args):
@@ -1104,43 +1203,6 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
-def build_templatematch_params(**kwargs):
-    """Build and return a dict of complete templatematch parameters.
-
-    Templatematch parameters are looked up in this sequence:
-    1. any templatematch params specified in stbt configuration files
-    2. any parameters passed in to this function overrides (1)
-    """
-
-    # warnings to be removed once noise_threshold is unsupported
-    if kwargs.get('noise_threshold') and kwargs.get('confirm_threshold'):
-        raise ConfigurationError(
-            "`noise_threshold` and `confirm_threshold` "
-            "cannot be used together. "
-            "`noise_threshold` is marked for deprecation.")
-    elif kwargs.get('noise_threshold'):
-        warnings.warn(
-            "`noise_threshold` is marked for deprecation. "
-            "Please use `confirm_threshold` instead.",
-            DeprecationWarning, stacklevel=2)
-        kwargs['confirm_threshold'] = kwargs.pop('noise_threshold')
-
-    # config-file value -> correctly typed gst pipeline value
-    key_type = {'match_method': str,
-                'match_threshold': float,
-                'confirm_method': str,
-                'erode_passes': int,
-                'confirm_threshold': float}
-
-    params = {}
-    for key, _type in key_type.items():
-        params[key] = kwargs.get(
-            key,
-            _type(get_config('global', key)))
-
-    return params
-
-
 def _connect_tcp_socket(address, port, timeout=3):
     """Connects to a TCP listener on 'address':'port'."""
     try:
@@ -1286,34 +1348,3 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
-
-
-def test_build_templatematch_params_detects_undefined():
-    global get_config  # pylint: disable=W0601
-    _get_config = get_config
-
-    def mock_get_config(section, key):
-        # missing 'confirm_threshold'
-        try:
-            return dict(match_method="sqdiff-normed",
-                        match_threshold="0.80",
-                        confirm_method="normed-absdiff",
-                        erode_passes="1")[key]
-        except KeyError:
-            raise ConfigurationError(
-                "No option '%s' in section: '%s'" % (key, section))
-
-    get_config = mock_get_config
-    try:
-        build_templatematch_params()
-    except ConfigurationError:  # what we expect
-        pass
-    else:
-        assert False            # fail test
-    finally:
-        get_config = _get_config
-
-
-def test_build_templatematch_params_uses_kwargs():
-    params = build_templatematch_params(erode_passes=-5)
-    assert params['erode_passes'] == -5
