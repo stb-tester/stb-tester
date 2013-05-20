@@ -167,6 +167,18 @@ Each key corresponds to a command line option with hyphens replaced with
 underscores.
 
 
+EXIT STATUS
+===========
+
+0 on success; 1 on test script failure; 2 on any other error.
+
+Test scripts indicate **failure** (the system under test didn't behave as
+expected) by raising an instance of `stbt.UITestFailure` (or a subclass
+thereof). Any other exception is considered a test **error** (a logic error in
+the test script, an error in the system under test's environment, or an error
+in the test framework itself).
+
+
 HARDWARE REQUIREMENTS
 =====================
 
