@@ -298,12 +298,12 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     if not os.path.isfile(properties["template"]):
         raise UITestError("No such template file: %s" % image)
 
-    for message, buf in _display.detect(
+    for message, _ in _display.detect(
             "template_match", properties, timeout_secs):
         # Discard messages generated from previous call with different template
         if message["template_path"] == properties["template"]:
             result = MatchResult(
-                timestamp=buf.timestamp,
+                timestamp=message["timestamp"],
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
@@ -350,11 +350,11 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in _display.detect("motiondetect", properties, timeout_secs):
+    for msg, _ in _display.detect("motiondetect", properties, timeout_secs):
         # Discard messages generated from previous calls with a different mask
         if ((mask and msg["masked"] and msg["mask_path"] == properties["mask"])
                 or (not mask and not msg["masked"])):
-            result = MotionResult(timestamp=buf.timestamp,
+            result = MotionResult(timestamp=msg["timestamp"],
                                   motion=msg["has_motion"])
             # pylint: disable=E1101
             debug("%s detected. Timestamp: %d." % (
