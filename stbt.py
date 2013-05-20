@@ -236,7 +236,7 @@ class MatchResult(namedtuple(
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
-                 match_parameters=MatchParameters()):
+                 match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
@@ -251,6 +251,9 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
+
+    if match_parameters is None:
+        match_parameters = MatchParameters()
 
     if noise_threshold is not None:
         warnings.warn(
@@ -336,7 +339,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   noise_threshold=None, match_parameters=MatchParameters()):
+                   noise_threshold=None, match_parameters=None):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -354,6 +357,9 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
+
+    if match_parameters is None:
+        match_parameters = MatchParameters()
 
     if noise_threshold is not None:
         warnings.warn(
@@ -380,7 +386,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
 
 def press_until_match(key, image, interval_secs=3, noise_threshold=None,
-                      max_presses=10, match_parameters=MatchParameters()):
+                      max_presses=10, match_parameters=None):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -397,6 +403,9 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
+
+    if match_parameters is None:
+        match_parameters = MatchParameters()
 
     if noise_threshold is not None:
         warnings.warn(
