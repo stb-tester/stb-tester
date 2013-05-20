@@ -192,12 +192,16 @@ _stbt_config_keys() {
 _stbt_config_file_contents() {
     [ -n "$in_unit_test" ] && { cat; return; }
 
+    local defaults=$(
+        awk '/stbt-"\$@"/ { print $NF }' "$(which stbt)" |
+        xargs dirname
+        )/stbt.conf
     local system_config=$(
         awk -F'[ =]+' '/STBT_SYSTEM_CONFIG/ {print $3}' "$(which stbt)")
     local user_config="$XDG_CONFIG_HOME"
     [ -n "$user_config" ] || user_config="$HOME/.config"
     user_config+="/stbt/stbt.conf"
-    for f in "$system_config" "$user_config" "$STBT_CONFIG_FILE"; do
+    for f in "$defaults" "$system_config" "$user_config" "$STBT_CONFIG_FILE"; do
         [ -r "$f" ] && cat "$f"
     done
 }
