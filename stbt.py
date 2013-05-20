@@ -9,6 +9,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 from collections import namedtuple, deque
 import argparse
+from contextlib import contextmanager
 import ConfigParser
 import contextlib
 import Queue
@@ -221,6 +222,20 @@ class MatchParameters:
         self.confirm_method = confirm_method
         self.confirm_threshold = confirm_threshold
         self.erode_passes = erode_passes
+
+@contextmanager
+def process_all_frames():
+    """Force the pipeline to process all the frames for the duration of the
+    call.
+
+    This will introduce a delay with the live stream but will not block the
+    pipeline. The delay will depend on which features are actually used in the
+    context of this call.
+
+    Use as a context manager in a 'with' statement.
+    """
+    with _display.process_all_frames():
+        yield
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -723,8 +738,10 @@ class Display:
         self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
-        self.queue.connect("underrun", self.on_underrun)
+        self.underrun_handler_id = self.queue.connect("underrun",
+                                                      self.on_underrun)
         self.queue.connect("running", self.on_running)
+        self.last_config = {}
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -739,6 +756,42 @@ class Display:
 
     def capture_screenshot(self):
         return self.screenshot.get_property("last-buffer")
+
+    def save_config(self):
+        self.last_config['queue.leaky'] = self.queue.props.leaky
+        self.last_config['queue.max_size_buffers'] = \
+            self.queue.props.max_size_buffers
+        self.last_config['queue.max_size_time'] = \
+            self.queue.props.max_size_time
+        self.last_config['queue.max_size_bytes'] = \
+            self.queue.props.max_size_bytes
+
+    def restore_last_saved_config(self):
+        self.queue.props.leaky = self.last_config['queue.leaky']
+        self.queue.props.max_size_buffers = \
+            self.last_config['queue.max_size_buffers']
+        self.queue.props.max_size_time = \
+            self.last_config['queue.max_size_time']
+        self.queue.props.max_size_bytes = \
+            self.last_config['queue.max_size_bytes']
+
+    @contextmanager
+    def process_all_frames(self):
+        """Temporarily set the pipeline to non leaky.
+        """
+        self.save_config()
+        self.queue.disconnect(self.underrun_handler_id)
+        self.queue.props.max_size_buffers = 0
+        self.queue.props.max_size_time = 0
+        self.queue.props.max_size_bytes = 0
+        self.queue.props.leaky = 0
+        if _display.underrun_timeout:
+            _display.underrun_timeout.cancel()
+        yield
+        self.restore_last_saved_config()
+        self.underrun_handler_id = self.queue.connect("underrun",
+                                                      self.on_underrun)
+        self.restart_source_bin()
 
     def detect(self, element_name, properties, timeout_secs):
         """Generator that yields the messages emitted by the named gstreamer
@@ -876,9 +929,15 @@ class Display:
         self.sink_bin.set_state(gst.STATE_PLAYING)
         self.pipeline.set_state(gst.STATE_PLAYING)
         self.start_timestamp = None
+
+        while self.sink_bin.get_state()[1] != gst.STATE_PLAYING or \
+                self.pipeline.get_state()[1] != gst.STATE_PLAYING:
+            time.sleep(0.01)
+
         debug("Restarted source pipeline")
 
-        self.underrun_timeout.start()
+        if self.underrun_timeout:
+            self.underrun_timeout.start()
 
         return False  # stop the timeout from running again
 
