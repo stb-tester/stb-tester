@@ -69,7 +69,7 @@ import glib
 
 
 warnings.filterwarnings(
-    action="always", category=DeprecationWarning, module='stbt')
+    action="always", category=DeprecationWarning, message='^noise_threshold')
 
 
 _config = None
@@ -256,7 +256,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
         warnings.warn(
             "noise_threshold is marked for deprecation. Please use "
             "match_parameters.confirm_threshold instead.",
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
     properties = {  # Properties of GStreamer element
@@ -359,7 +359,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
         warnings.warn(
             "noise_threshold is marked for deprecation. Please use "
             "match_parameters.confirm_threshold instead.",
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
     match_count = 0
@@ -402,7 +402,7 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
         warnings.warn(
             "noise_threshold is marked for deprecation. Please use "
             "match_parameters.confirm_threshold instead.",
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
     i = 0
