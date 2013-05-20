@@ -57,12 +57,14 @@ timeout() { perl -e \
     "$@"; }
 timedout=142
 
+
 # Run the tests ############################################################
 ret=0
 for t in ${*:-$(declare -F | awk '/ test_/ {print $3}')}; do
     run $t || ret=1
 done
 exit $ret
+
 
 
 # bash-completion script: Add the below to ~/.bash_completion

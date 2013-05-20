@@ -805,7 +805,8 @@ class Display:
         self.restore_last_saved_config()
         self.underrun_handler_id = self.queue.connect("underrun",
                                                       self.on_underrun)
-        self.restart_source_bin()
+        while self.queue.get_property('current-level-buffers') > 1:
+            time.sleep(0.01)
 
     def detect(self, element_name, properties, timeout_secs):
         """Generator that yields the messages emitted by the named gstreamer
