@@ -26,7 +26,7 @@ stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
 from stbt import (  # pylint: disable=W0611
     press, press_until_match, wait_for_match, wait_for_motion, detect_match,
     MatchResult, Position, detect_motion, MotionResult, save_frame, get_frame,
-    MatchParameters, process_all_frames,
+    MatchParameters, process_all_frames, get_live_stream_timestamp,
     debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
     ConfigurationError)
 try:

@@ -223,6 +223,7 @@ class MatchParameters:
         self.confirm_threshold = confirm_threshold
         self.erode_passes = erode_passes
 
+
 @contextmanager
 def process_all_frames():
     """Force the pipeline to process all the frames for the duration of the
@@ -404,7 +405,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.capture_down_stream_screenshot()
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
@@ -499,8 +500,12 @@ def wait_for_motion(
             debug("Motion detected.")
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.capture_down_stream_screenshot()
     raise MotionTimeout(screenshot, mask, timeout_secs)
+
+
+def get_live_stream_timestamp(retry=False):
+    return _display.get_live_stream_timestamp(retry)
 
 
 def save_frame(buf, filename):
@@ -530,7 +535,7 @@ def save_frame(buf, filename):
 
 def get_frame():
     """Get a GStreamer buffer containing the current video frame."""
-    return _display.capture_screenshot()
+    return _display.capture_down_stream_screenshot()
 
 
 def debug(msg):
@@ -694,6 +699,10 @@ class Display:
         screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
                       "sync=false")
         pipe = " ".join([
+            "tee name=up_t",
+            "up_t. ! appsink name=upstream_screenshot "
+            "max-buffers=1 drop=true sync=false",
+            "up_t. ! ",
             imageprocessing,
             "! tee name=t",
             "t. ! queue leaky=2 !", screenshot,
@@ -710,6 +719,8 @@ class Display:
 
         self.templatematch = self.pipeline.get_by_name("template_match")
         self.motiondetect = self.pipeline.get_by_name("motiondetect")
+        self.upstream_screenshot = \
+            self.pipeline.get_by_name("upstream_screenshot")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
         self.bus.connect("message::error", self.on_error)
@@ -754,7 +765,10 @@ class Display:
                 source_bin.get_by_name("padforcer").src_pads().next()))
         return source_bin
 
-    def capture_screenshot(self):
+    def capture_live_stream_screenshot(self):
+        return self.upstream_screenshot.get_property("last-buffer")
+
+    def capture_down_stream_screenshot(self):
         return self.screenshot.get_property("last-buffer")
 
     def save_config(self):
@@ -905,6 +919,15 @@ class Display:
             self.underrun_timeout = None
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
+
+    def get_live_stream_timestamp(self, retry=False):
+        buf = self.capture_live_stream_screenshot()
+        if not buf and not retry:
+            raise Exception("get_live_stream_timestamp: no buffer available.")
+        elif not buf:
+            while not buf:
+                buf = self.capture_live_stream_screenshot()
+        return buf.timestamp
 
     def restart_source_bin(self):
         self.successive_underruns += 1
