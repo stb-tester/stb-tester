@@ -128,8 +128,9 @@ _stbt_control_recorder() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
-        --control-recorder=lirc:*:) _stbt_lirc_name;;
-        --control-recorder=lirc:) _stbt_lirc_socket;;
+        --control-recorder=lirc:*:*:) _stbt_lirc_name;;
+        --control-recorder=lirc:*:) _stbt_lirc_port_or_name;;
+        --control-recorder=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
         --control-recorder=vr:*:) _stbt_vr_port;;
         --control-recorder=vr:) _stbt_hostname;;
         --control-recorder=file:) _stbt_control_file;;
