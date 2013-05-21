@@ -36,7 +36,7 @@ done
 
 STBT_LIBEXEC="$(dirname "$0")"
 
-source_pipeline=${*:-$("$STBT_LIBEXEC/stbt-config" run.source_pipeline)}
+source_pipeline=${*:-$("$STBT_LIBEXEC/stbt-config" global.source_pipeline)}
 
 : ${sink:=$(
         case "$(uname)" in
