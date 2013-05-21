@@ -24,8 +24,13 @@ while [ $# -gt 0 ]; do
 done
 [ $# -lt 2 ] && { usage >&2; exit 1; }
 videoframe="$1" template="$2"; shift 2
-args=""
+args="" noise_threshold=""
 while [ $# -gt 0 ]; do
+    if [[ "$1" =~ ^noise_threshold= ]]; then
+        noise_threshold="$1,"
+        shift
+        continue
+    fi
     a=$(echo "$1" |
         perl -lpe '/^(match_method|confirm_method)=/ && s/=(.*)/="\1"/')
     args+=", $a"
@@ -39,7 +44,8 @@ trap "rm $script" EXIT
 cat > $script <<-EOF
 	import sys
 	if not stbt.detect_match(
-	        "$template", match_parameters=MatchParameters($args)
+	        "$template", $noise_threshold
+	        match_parameters=MatchParameters($args)
 	        ).next().match:
 	    print "Didn't find match for '$template'."
 	    sys.exit(1)
