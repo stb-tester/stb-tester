@@ -127,6 +127,10 @@ class MatchParameters:
     """Parameters to customise the image processing algorithm used by
     `wait_for_match`, `detect_match`, and `press_until_match`.
 
+    You can change the default values for these parameters by setting
+    a key (with the same name as the corresponding python parameter)
+    in the `[match]` section of your stbt.conf configuration file.
+
     `match_method` (str) default: From stbt.conf
       The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
       likely locations of the "template" image within the larger source image.
