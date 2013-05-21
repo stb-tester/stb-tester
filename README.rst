@@ -301,7 +301,7 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=MatchParameters())
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
     Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
@@ -319,7 +319,7 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=MatchParameters())
+press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=None)
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -359,7 +359,7 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=MatchParameters())
+detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None)
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
