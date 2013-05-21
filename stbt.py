@@ -203,11 +203,11 @@ class MatchParameters:
 
     def __init__(
             self,
-            match_method=str(get_config('global', 'match_method')),
-            match_threshold=float(get_config('global', 'match_threshold')),
-            confirm_method=str(get_config('global', 'confirm_method')),
-            confirm_threshold=float(get_config('global', 'confirm_threshold')),
-            erode_passes=int(get_config('global', 'erode_passes'))):
+            match_method=str(get_config('match', 'match_method')),
+            match_threshold=float(get_config('match', 'match_threshold')),
+            confirm_method=str(get_config('match', 'confirm_method')),
+            confirm_threshold=float(get_config('match', 'confirm_threshold')),
+            erode_passes=int(get_config('match', 'erode_passes'))):
         self.match_method = match_method
         self.match_threshold = match_threshold
         self.confirm_method = confirm_method
