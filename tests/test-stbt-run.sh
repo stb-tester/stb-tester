@@ -645,14 +645,17 @@ test_get_config() {
     stbt-run "$scratchdir/test.py"
 }
 
-test_match_timed_frame() {
+test_match_consecutive_timed_frames() {
     cat > "$scratchdir/test.py" <<-EOF
 	with process_all_frames():
-	    wait_for_match('videotestsrc-timed-frame.png', timeout_secs=2)
+	    wait_for_match('videotestsrc-timed-frame.png')
+	    wait_for_match('videotestsrc-timed-frame-2.png')
+	    wait_for_match('videotestsrc-timed-frame-3.png')
 	EOF
     stbt-run --source-pipeline="videotestsrc is-live=true ! \
         videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
-           "$scratchdir/test.py"
+        --sink-pipeline="ximagesink" \
+        "$scratchdir/test.py"
 }
 
 test_live_stream_caught_up_after_process_all_frames() {
@@ -664,23 +667,5 @@ test_live_stream_caught_up_after_process_all_frames() {
 	EOF
     stbt-run --source-pipeline="videotestsrc is-live=true ! \
         videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
-        "$scratchdir/test.py"
-}
-
-test_match_consecutive_timed_frames_in_leaky_mode() {
-    cat > "$scratchdir/test.py" <<-EOF
-	try:
-	    wait_for_match('videotestsrc-timed-frame-200fps-1.png', timeout_secs=5)
-	    wait_for_match('videotestsrc-timed-frame-200fps-2.png', timeout_secs=1)
-	    wait_for_match('videotestsrc-timed-frame-200fps-3.png', timeout_secs=1)
-	except MatchTimeout:
-	    pass
-	else:
-	    assert False, ("All frames were processed without",
-	                   "stbt.process_all_frames")
-	EOF
-    stbt-run --source-pipeline="videotestsrc is-live=true ! \
-        videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
-        --sink-pipeline="ximagesink sync=false max-lateness=1000000" \
         "$scratchdir/test.py"
 }
