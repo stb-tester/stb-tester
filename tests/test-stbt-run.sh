@@ -648,9 +648,9 @@ test_get_config() {
 test_match_consecutive_timed_frames() {
     cat > "$scratchdir/test.py" <<-EOF
 	with process_all_frames():
-	    wait_for_match('videotestsrc-timed-frame.png', timeout_secs=15)
-	    wait_for_match('videotestsrc-timed-frame-2.png', timeout_secs=1)
-	    wait_for_match('videotestsrc-timed-frame-3.png', timeout_secs=1)
+	    wait_for_match('videotestsrc-timed-frame.png')
+	    wait_for_match('videotestsrc-timed-frame-2.png')
+	    wait_for_match('videotestsrc-timed-frame-3.png')
 	EOF
     stbt-run --source-pipeline="videotestsrc is-live=true ! \
         videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \

@@ -394,6 +394,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
+
     for res in detect_match(
             image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
@@ -654,6 +655,8 @@ _mainloop = glib.MainLoop()
 _display = None
 _control = None
 
+_processing_all_frames = False
+
 
 def MessageIterator(bus, signal):
     queue = Queue.Queue()
@@ -793,6 +796,9 @@ class Display:
     def process_all_frames(self):
         """Temporarily set the pipeline to non leaky.
         """
+        global _processing_all_frames
+        _processing_all_frames = True
+        self.templatematch.props.singleFrame = 1
         self.save_config()
         self.queue.disconnect(self.underrun_handler_id)
         self.queue.props.max_size_buffers = 0
@@ -802,6 +808,8 @@ class Display:
         if _display.underrun_timeout:
             _display.underrun_timeout.cancel()
         yield
+        _processing_all_frames = False
+        _display.templatematch.props.singleFrame = 0
         self.restore_last_saved_config()
         self.underrun_handler_id = self.queue.connect("underrun",
                                                       self.on_underrun)
@@ -826,7 +834,6 @@ class Display:
 
         For every frame processed, returns a tuple: (message, screenshot).
         """
-
         element = self.pipeline.get_by_name(element_name)
 
         properties_backup = {}
@@ -849,6 +856,9 @@ class Display:
                 self.start_timestamp = None
                 for message in MessageIterator(self.bus, "message::element"):
                     # Cancel test_timeout as messages are obviously received.
+                    if _processing_all_frames:
+                        self.templatematch.props.singleFrame = 1
+
                     if self.test_timeout:
                         self.test_timeout.cancel()
                         self.test_timeout = None

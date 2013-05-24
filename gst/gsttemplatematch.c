@@ -86,6 +86,8 @@ GST_DEBUG_CATEGORY_STATIC (gst_templatematch_debug);
 #define DEFAULT_CONFIRM_METHOD GST_TM_CONFIRM_METHOD_ABSDIFF
 #define DEFAULT_ERODE_PASSES (1)
 #define DEFAULT_CONFIRM_THRESHOLD (0.16f)
+#define DEFAULT_SINGLE_FRAME GST_TM_SINGLE_FRAME_TM_DISABLED
+
 
 #define GST_TM_MATCH_METHOD (gst_tm_match_method_get_type())
 static GType
@@ -106,6 +108,27 @@ gst_tm_match_method_get_type (void)
         g_enum_register_static ("GstTMMatchMethod", match_method_types);
   }
   return gst_tm_match_method_type;
+}
+
+#define GST_TM_SINGLE_FRAME (gst_tm_single_frame_get_type())
+static GType
+gst_tm_single_frame_get_type (void)
+{
+  static GType gst_tm_single_frame_type = 0;
+  static const GEnumValue single_frame_types[] = {
+    {GST_TM_SINGLE_FRAME_TM_DISABLED, "DISABLED",
+        "disabled"},
+    {GST_TM_SINGLE_FRAME_TM_SINGLE_FRAME, "SINGLE_FRAME",
+        "single-frame"},
+    {GST_TM_SINGLE_FRAME_TM_WAIT, "WAIT",
+        "wait"},
+    {0, NULL, NULL}
+  };
+  if (!gst_tm_single_frame_type) {
+	  gst_tm_single_frame_type =
+        g_enum_register_static ("GstTMSingleFrame", single_frame_types);
+  }
+  return gst_tm_single_frame_type;
 }
 
 #define GST_TM_CONFIRM_METHOD (gst_tm_confirm_method_get_type())
@@ -145,6 +168,7 @@ enum
   PROP_TEMPLATE,
   PROP_DEBUG_DIRECTORY,
   PROP_DISPLAY,
+  PROP_SINGLE_FRAME,
 };
 
 /* the capabilities of the inputs and outputs.
@@ -271,6 +295,11 @@ gst_templatematch_class_init (StbtTemplateMatchClass * klass)
       g_param_spec_boolean ("display", "Display",
           "Highlight the detected template in the output",
           TRUE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_SINGLE_FRAME,
+        g_param_spec_enum ("singleFrame", "Single frame",
+            "Single frame description",
+            GST_TM_SINGLE_FRAME, DEFAULT_MATCH_METHOD,
+            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 /* initialize the new element
@@ -308,6 +337,7 @@ gst_templatematch_init (StbtTemplateMatch * filter,
   filter->confirmMethod = DEFAULT_CONFIRM_METHOD;
   filter->erodePasses = DEFAULT_ERODE_PASSES;
   filter->confirmThreshold = DEFAULT_CONFIRM_THRESHOLD;
+  filter->singleFrame = DEFAULT_SINGLE_FRAME;
   filter->debugDirectory = NULL;
 
   filter->templateImageAcquired = FALSE;
@@ -368,6 +398,10 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       filter->display = g_value_get_boolean (value);
       GST_OBJECT_UNLOCK(filter);
       break;
+    case PROP_SINGLE_FRAME:
+      GST_OBJECT_LOCK(filter);
+      filter->singleFrame = g_value_get_enum (value);
+      GST_OBJECT_UNLOCK(filter);
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -404,6 +438,9 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
       break;
     case PROP_DISPLAY:
       g_value_set_boolean (value, filter->display);
+      break;
+    case PROP_SINGLE_FRAME:
+      g_value_set_enum (value, filter->singleFrame);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -481,6 +518,11 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
 
+  while (filter->singleFrame == GST_TM_SINGLE_FRAME_TM_WAIT) {
+    usleep(10000);
+    filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
+  }
+
   if ((!filter) || (!buf)) {
     return GST_FLOW_OK;
   }
@@ -538,6 +580,10 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
     }
 
   }
+
+  if (filter->singleFrame != GST_TM_SINGLE_FRAME_TM_DISABLED)
+    filter->singleFrame = GST_TM_SINGLE_FRAME_TM_WAIT;
+
   GST_OBJECT_UNLOCK (filter);
 
   if (m) {
