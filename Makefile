@@ -118,9 +118,11 @@ check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
 check-integrationtests: gst/libgst-stb-tester.so
-	tests/run-tests.sh
+	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
+	$(PARALLEL) tests/run-tests.sh
 check-pylint:
-	extra/pylint.sh stbt.py irnetbox.py stbt-run stbt-record stbt-config
+	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config |\
+	$(PARALLEL) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
@@ -129,6 +131,10 @@ check-bashcompletion:
 	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
 	        ($$t); \
 	    done'
+
+PARALLEL ?= $(shell \
+    parallel --version 2>/dev/null | grep -q GNU && \
+    echo parallel || echo xargs)
 
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
