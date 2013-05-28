@@ -119,10 +119,10 @@ check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
 check-integrationtests: gst/libgst-stb-tester.so
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
-	$(PARALLEL) tests/run-tests.sh
+	$(parallel) tests/run-tests.sh
 check-pylint:
 	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config |\
-	$(PARALLEL) extra/pylint.sh
+	$(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
@@ -132,7 +132,7 @@ check-bashcompletion:
 	        ($$t); \
 	    done'
 
-PARALLEL ?= $(shell \
+parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel || echo xargs)
 
