@@ -11,8 +11,9 @@ test_wait_for_match_no_match() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("videotestsrc-bw-flipped.png", timeout_secs=1)
 	EOF
-    rm -f screenshot.png
-    ! stbt-run -v "$scratchdir/test.py" &&
+    cp videotestsrc-bw-flipped.png "$scratchdir"
+    cd "$scratchdir"
+    ! stbt-run -v test.py
     [ -f screenshot.png ]
 }
 
