@@ -33,7 +33,6 @@ test_wait_for_match_nonexistent_template() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("idontexist.png")
 	EOF
-    rm -f screenshot.png
     timeout 4 stbt-run -v "$scratchdir/test.py"
     local ret=$?
     echo "return code: $ret"

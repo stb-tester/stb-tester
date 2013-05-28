@@ -32,6 +32,7 @@ rm -f ~/.gstreamer-0.10/registry.*
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
+    [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     printf "$1... "
     $1 > "$scratchdir/log" 2>&1
     local status=$?
@@ -41,14 +42,7 @@ run() {
         cat "$scratchdir/log"
     fi
     if [[ "$leave_scratch_dir" != "true" && $status -eq 0 ]]; then
-        rm -rf "$scratchdir/log" "$scratchdir/gst-launch.log" \
-            "$scratchdir/test.py" "$scratchdir/in-script-dir.png" \
-            "$scratchdir/stbt.conf" \
-            "$scratchdir/readme" "$scratchdir/expected" \
-            "$scratchdir/stbt_helpers" "$scratchdir/stbt_tests" \
-            "$scratchdir/get-screenshot.py" "$scratchdir/match-screenshot.py" \
-            "$scratchdir/gamut.png"
-        rmdir "$scratchdir"
+        rm -rf "$scratchdir"
     fi
     [ $status -eq 0 ]
 }
