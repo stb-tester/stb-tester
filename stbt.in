@@ -19,14 +19,18 @@
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
-[ $# -ge 1 ] || { usage >&2; exit 1; }
-case "$1" in
-    -h|--help)
-        usage; exit 0;;
-    -v|--version)
-        echo "stb-tester @VERSION@"; exit 0;;
-    run|record|config|screenshot|templatematch|tv)
-        @LIBEXECDIR@/stbt/stbt-"$@";;
-    *)
-        usage >&2; exit 1;;
-esac
+main() {
+    [ $# -ge 1 ] || { usage >&2; exit 1; }
+    case "$1" in
+        -h|--help)
+            usage; exit 0;;
+        -v|--version)
+            echo "stb-tester @VERSION@"; exit 0;;
+        run|record|config|screenshot|templatematch|tv)
+            @LIBEXECDIR@/stbt/stbt-"$@";;
+        *)
+            usage >&2; exit 1;;
+    esac
+}
+
+main "$@"
