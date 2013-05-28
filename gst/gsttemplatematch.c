@@ -401,7 +401,9 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK(filter);
       filter->singleFrame = g_value_get_enum (value);
+      g_cond_signal (&filter->singleFrameModified);
       GST_OBJECT_UNLOCK(filter);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -518,17 +520,16 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
 
-  while (filter->singleFrame == GST_TM_SINGLE_FRAME_TM_WAIT) {
-    usleep(10000);
-    filter = GST_TEMPLATEMATCH (GST_OBJECT_PARENT (pad));
-  }
-
   if ((!filter) || (!buf)) {
     return GST_FLOW_OK;
   }
   GST_DEBUG_OBJECT (filter, "Buffer size %u ", GST_BUFFER_SIZE (buf));
 
   GST_OBJECT_LOCK (filter);
+
+  if (filter->singleFrame == GST_TM_SINGLE_FRAME_TM_WAIT) {
+      g_cond_wait (&filter->singleFrameModified, GST_OBJECT_GET_LOCK (filter));
+    }
   if (filter->capsInitialised && filter->templateImageAcquired) {
     CvPoint best_pos;
     gboolean matched = FALSE;
@@ -581,8 +582,9 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   }
 
-  if (filter->singleFrame != GST_TM_SINGLE_FRAME_TM_DISABLED)
-    filter->singleFrame = GST_TM_SINGLE_FRAME_TM_WAIT;
+  if (filter->singleFrame != GST_TM_SINGLE_FRAME_TM_DISABLED){
+      filter->singleFrame = GST_TM_SINGLE_FRAME_TM_WAIT;
+    }
 
   GST_OBJECT_UNLOCK (filter);
 

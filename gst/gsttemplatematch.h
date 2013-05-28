@@ -109,6 +109,7 @@ struct _StbtTemplateMatch
   gfloat confirmThreshold;
   gboolean display;
   GstTMSingleFrame singleFrame;
+  GCond singleFrameModified;
 
   gchar *template;
   gchar *debugDirectory;
