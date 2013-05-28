@@ -185,6 +185,7 @@ _stbt_control_file() {
 
 _stbt_config_keys() {
     _stbt_config_file_contents |
+    grep -v ^__system_config |
     perl -lne '
         $section = $1 if /^\s*\[([a-zA-Z0-9_]+)\]\s*$/;
         print "$section.$1" if /^\s*([a-zA-Z0-9_]+)\s*=/;'
@@ -197,8 +198,7 @@ _stbt_config_file_contents() {
         awk '/stbt-"\$@"/ { print $NF }' "$(which stbt)" |
         xargs dirname
         )/stbt.conf
-    local system_config=$(
-        awk -F'[ =]+' '/STBT_SYSTEM_CONFIG/ {print $3}' "$(which stbt)")
+    local system_config=$(stbt config global.__system_config)
     local user_config="$XDG_CONFIG_HOME"
     [ -n "$user_config" ] || user_config="$HOME/.config"
     user_config+="/stbt/stbt.conf"

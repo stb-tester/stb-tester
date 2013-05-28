@@ -27,7 +27,7 @@ case "$1" in
     -v|--version)
         echo "stb-tester @VERSION@"; exit 0;;
     run|record|config|screenshot|templatematch|tv)
-        STBT_SYSTEM_CONFIG=@SYSCONFDIR@/stbt/stbt.conf @LIBEXECDIR@/stbt/stbt-"$@";;
+        @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;
 esac

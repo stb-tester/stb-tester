@@ -53,14 +53,19 @@ VERSION?=$(shell cat VERSION)
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 gst/libgst-stb-tester.so
+all: stbt stbt.1 defaults.conf gst/libgst-stb-tester.so
 
 stbt: stbt.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
 
-install: stbt stbt.1 gst/libgst-stb-tester.so
+defaults.conf: stbt.conf .stbt-prefix
+	perl -lpe \
+	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
+	    $< > $@
+
+install: stbt stbt.1 defaults.conf gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -71,7 +76,7 @@ install: stbt stbt.1 gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
@@ -106,7 +111,7 @@ README.rst: stbt.py api-doc.sh
 	./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt gst/*.o gst/libgst-stb-tester.so \
+	rm -f stbt.1 stbt defaults.conf gst/*.o gst/libgst-stb-tester.so \
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion

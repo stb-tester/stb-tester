@@ -91,11 +91,16 @@ def get_config(section, key):
     global _config
     if not _config:
         _config = ConfigParser.SafeConfigParser()
-        defaults = os.path.join(os.path.dirname(__file__), 'stbt.conf')
-        files_read = _config.read([
-            defaults,
-            # Site config, e.g. /etc/stbt/stbt.conf (see `stbt.in`):
-            os.environ.get('STBT_SYSTEM_CONFIG', ''),
+        _config.readfp(
+            open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
+        try:
+            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
+            system_config = _config.get('global', '__system_config')
+        except ConfigParser.NoOptionError:
+            # Running `stbt` from source (not installed) location.
+            system_config = ''
+        _config.read([
+            system_config,
             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
             # directory specification:
             '%s/stbt/stbt.conf' % os.environ.get(
@@ -103,7 +108,6 @@ def get_config(section, key):
             # Config files specific to the test suite / test run:
             os.environ.get('STBT_CONFIG_FILE', ''),
         ])
-        assert(defaults in files_read)
 
     try:
         return str(_config.get(section, key))
