@@ -29,7 +29,7 @@ main() {
         run|record|config|screenshot|templatematch|tv)
             @LIBEXECDIR@/stbt/stbt-"$@";;
         *)
-            usage >&2; exit 1;;
+            usage >&2; exit 2;;
     esac
 }
 
