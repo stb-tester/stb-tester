@@ -62,109 +62,12 @@ timeout() { perl -e \
     "$@"; }
 timedout=142
 
-############################################################################
-
-if [ $# -eq 0 ]; then
-
-    echo "Testing gstreamer + OpenCV installation:" &&
-    run test_gstreamer_core_elements &&
-    run test_gstreamer_can_find_templatematch &&
-    run test_gsttemplatematch_has_all_element_properties &&
-    run test_gsttemplatematch_defaults_match_stbt_conf &&
-    run test_gsttemplatematch_does_find_a_match &&
-    run test_gsttemplatematch_bgr_fix &&
-
-    echo "Testing gstreamer stbt-motiondetect element:" &&
-    run test_gstreamer_can_find_stbt_motiondetect &&
-    run test_stbt_motiondetect_is_not_active_by_default &&
-    run test_stbt_motiondetect_is_not_active_when_disabled &&
-    run test_stbt_motiondetect_reports_motion &&
-    run test_stbt_motiondetect_does_not_report_motion &&
-    run test_stbt_motiondetect_with_mask_reports_motion &&
-    run test_stbt_motiondetect_with_mask_does_not_report_motion &&
-    run test_stbt_motiondetect_with_high_noisethreshold_reports_motion &&
-    run test_stbt_motiondetect_with_low_noisethreshold_does_not_report_motion &&
-    run test_stbt_motiondetect_reports_motion_on_progress_dots &&
-
-    echo "Testing stbt-run:" &&
-    run test_wait_for_match &&
-    run test_wait_for_match_no_match &&
-    run test_wait_for_match_changing_template &&
-    run test_wait_for_match_nonexistent_template &&
-    run test_wait_for_match_noise_threshold_raises_warning &&
-    run test_wait_for_match_match_method_param_affects_first_pass &&
-    run test_wait_for_match_match_threshold_param_affects_match &&
-    run test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_zero &&
-    run test_wait_for_match_confirm_methods_produce_different_results &&
-    run test_wait_for_match_erode_passes_affects_match &&
-    run test_wait_for_match_confirm_threshold_affects_match &&
-    run test_detect_match_nonexistent_template &&
-    run test_press_until_match &&
-    run test_wait_for_match_searches_in_script_directory &&
-    run test_press_until_match_searches_in_script_directory &&
-    run test_detect_match_searches_in_script_directory &&
-    run test_detect_match_searches_in_library_directory &&
-    run test_detect_match_searches_in_caller_directory &&
-    run test_wait_for_motion_int &&
-    run test_wait_for_motion_str &&
-    run test_wait_for_motion_no_motion_int &&
-    run test_wait_for_motion_no_motion_str &&
-    run test_wait_for_motion_half_motion_str_2of4 &&
-    run test_wait_for_motion_half_motion_str_2of3 &&
-    run test_wait_for_motion_half_motion_str_3of4 &&
-    run test_wait_for_motion_half_motion_int &&
-    run test_wait_for_motion_nonexistent_mask &&
-    run test_changing_input_video_with_the_test_control &&
-    run test_detect_match_reports_match &&
-    run test_detect_match_reports_match_position &&
-    run test_detect_match_reports_valid_timestamp &&
-    run test_detect_match_reports_no_match &&
-    run test_detect_match_times_out &&
-    run test_detect_motion_with_debug_output_does_not_segfault_without_mask &&
-    run test_detect_match_times_out_during_yield &&
-    run test_detect_match_changing_template_is_not_racy &&
-    run test_detect_match_example_press_and_wait_for_match &&
-    run test_detect_motion_reports_motion &&
-    run test_detect_motion_reports_valid_timestamp &&
-    run test_detect_motion_reports_no_motion  &&
-    run test_detect_motion_times_out &&
-    run test_detect_motion_times_out_during_yield &&
-    run test_detect_motion_changing_mask &&
-    run test_detect_motion_changing_mask_is_not_racy &&
-    run test_detect_motion_example_press_and_wait_for_no_motion &&
-    run test_precondition_script &&
-    run test_get_frame_and_save_frame &&
-    run test_get_config &&
-
-    echo "Testing stbt-record:" &&
-    run test_record &&
-
-    echo "Testing stbt-config:" &&
-    run test_that_stbt_config_reads_from_STBT_CONFIG_FILE &&
-    run test_that_stbt_config_searches_in_specified_section &&
-    run test_that_stbt_config_returns_failure_on_key_not_found &&
-
-    echo "Testing stbt-screenshot:" &&
-    run test_that_stbt_screenshot_saves_file_to_disk &&
-
-    echo "Testing stbt-templatematch:" &&
-    run test_that_stbt_templatematch_finds_match &&
-    run test_that_stbt_templatematch_doesnt_find_match &&
-    run test_that_stbt_templatematch_applies_confirm_threshold_parameter &&
-
-    echo "Testing 'make doc':" &&
-    run test_that_readme_default_templatematch_values_are_kept_up_to_date &&
-    run test_that_readme_python_api_docs_are_kept_up_to_date &&
-
-    echo "All passed." || exit
-
-else
-    for t in $*; do
-        run $t || exit
-    done
-fi
-
-exit 0
+# Run the tests ############################################################
+ret=0
+for t in ${*:-$(declare -F | awk '/ test_/ {print $3}')}; do
+    run $t || ret=1
+done
+exit $ret
 
 
 # bash-completion script: Add the below to ~/.bash_completion
