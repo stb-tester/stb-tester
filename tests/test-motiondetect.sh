@@ -39,11 +39,11 @@ test_stbt_motiondetect_reports_motion() {
             $EXPECT_RESULT $EXPECT_MOTION "$scratchdir/gst-launch.log"
 }
 
-# Test that stbt-motiondetect does not report motion from a freezed videotestsrc.
+# Test that stbt-motiondetect does not report motion from a static pattern.
 #
 test_stbt_motiondetect_does_not_report_motion() {
     run_motiondetect \
-            "videotestsrc ! imagefreeze" "enabled=true" \
+            "videotestsrc pattern=gamut" "enabled=true" \
             "$scratchdir/gst-launch.log"
     check_expectations_from_log \
             $EXPECT_RESULT $DONT_EXPECT_MOTION "$scratchdir/gst-launch.log"
@@ -106,11 +106,11 @@ test_stbt_motiondetect_reports_motion_on_progress_dots() {
 # the GStreamer stbt-motiondetect element.
 #
 run_motiondetect() {
-    local source_pipeline="$1"
+    local source_pipeline="${1/#videotestsrc/videotestsrc num-buffers=5}"
     local parameters="$2"
     local log="$3"
 
-    timeout 2 gst-launch-0.10 --messages \
+    gst-launch-0.10 --messages \
         $source_pipeline ! \
         ffmpegcolorspace ! \
         stbt-motiondetect $parameters ! \
@@ -118,8 +118,7 @@ run_motiondetect() {
         ximagesink \
     > "$log" 2>&1
 
-    local ret=$?
-    if [[ $ret -ne 0 && $ret -ne $timedout ]]; then
+    if [[ $? -ne 0 ]]; then
         echo "Failed to launch gstreamer pipeline; see '$log'"
         return 1
     fi
