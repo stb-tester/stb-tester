@@ -4,8 +4,7 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-#/ usage: stbt [--help] [--version]
-#/             <command> [args]
+#/ usage: stbt [--help] [--version] <command> [args]
 #/
 #/ Available commands are:
 #/     run            Run a stbt script
