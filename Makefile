@@ -18,7 +18,7 @@ else
 endif
 
 INSTALL?=install
-TAR?=tar  # Must be GNU tar
+TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
 dependencies = gstreamer-0.10
 dependencies += gstreamer-base-0.10
