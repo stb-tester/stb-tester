@@ -44,7 +44,7 @@ test_gsttemplatematch_defaults_match_stbt_conf() {
 	assert c_param.erodePasses == py_param.erode_passes
 	assert abs(c_param.confirmThreshold - py_param.confirm_threshold) < tol
 	EOF
-    PYTHONPATH=$testdir/.. python $scratchdir/test.py
+    PYTHONPATH=$srcdir python $scratchdir/test.py
 }
 
 

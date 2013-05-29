@@ -6,7 +6,7 @@ test_that_readme_default_templatematch_values_are_kept_up_to_date() {
 	    `match_method` (str) default: old value
 	unmodified line
 	EOF
-    "$testdir/../api-doc.sh" "$scratchdir/readme"
+    "$srcdir/api-doc.sh" "$scratchdir/readme"
 
     cat > "$scratchdir/expected" <<-'EOF'
 	unmodified line
@@ -29,7 +29,7 @@ test_that_readme_python_api_docs_are_kept_up_to_date() {
 	
 	unmodified line
 	EOF
-    "$testdir/../api-doc.sh" "$scratchdir/readme"
+    "$srcdir/api-doc.sh" "$scratchdir/readme"
 
     cat > "$scratchdir/expected" <<-'EOF'
 	unmodified line
