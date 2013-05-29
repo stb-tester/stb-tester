@@ -34,10 +34,7 @@ test_wait_for_match_nonexistent_template() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("idontexist.png")
 	EOF
-    timeout 4 stbt-run -v "$scratchdir/test.py"
-    local ret=$?
-    echo "return code: $ret"
-    [ $ret -ne $timedout -a $ret -ne 0 ]
+    ! stbt-run -v "$scratchdir/test.py"
 }
 
 test_wait_for_match_noise_threshold_raises_warning() {
