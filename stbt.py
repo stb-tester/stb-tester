@@ -10,6 +10,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 from collections import namedtuple, deque
 import argparse
 from contextlib import contextmanager
+from threading import Thread
 import ConfigParser
 import contextlib
 import Queue
@@ -656,7 +657,7 @@ _display = None
 _control = None
 
 
-def MessageIterator(bus, signal, never_stop=False):
+def MessageIterator(bus, signal, never_stop=False, trigger=None):
     queue = Queue.Queue()
 
     def sig(_bus, message):
@@ -665,14 +666,19 @@ def MessageIterator(bus, signal, never_stop=False):
     bus.connect(signal, sig)
     try:
         stop = False
-        while not stop or never_stop:
-            _mainloop.run()
+        while not stop:
+            thread = Thread(target = _mainloop.run)
+            thread.start()
+            if trigger:
+                trigger()
+            thread.join()
             # Check what interrupted the main loop (new message, error thrown)
             try:
                 item = queue.get(block=False)
                 yield item
             except Queue.Empty:
-                stop = True
+                if not never_stop:
+                    stop = True
     finally:
         bus.disconnect_by_func(sig)
 
@@ -849,15 +855,23 @@ class Display:
             # This happens when starting a new instance of stbt when the
             # Hauppauge HDPVR video-capture device fails to run.
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
-                never_stop = True if self._processing_all_frames else False
                 self.test_timeout = t
 
+                def request_next_frame():
+                    self.templatematch.props.singleFrameMode = 1
+
                 self.start_timestamp = None
-                for message in MessageIterator(self.bus, "message::element",
-                                               never_stop):
+
+                if self._processing_all_frames:
+                    never_stop = True
+                    trigger = request_next_frame
+                else:
+                    never_stop = False
+                    trigger = None
+
+                for  message in MessageIterator(self.bus, "message::element",
+                                                never_stop, trigger):
                     # Cancel test_timeout as messages are obviously received.
-                    if self._processing_all_frames:
-                        self.templatematch.props.singleFrameMode = 1
 
                     if self.test_timeout:
                         self.test_timeout.cancel()
