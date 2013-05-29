@@ -25,9 +25,10 @@ while getopts "lv" option; do
 done
 shift $(($OPTIND-1))
 
-export PATH="$testdir/..:$PATH"
+srcdir="$testdir/.."
+export PATH="$srcdir:$PATH"
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
-export GST_PLUGIN_PATH="$testdir/../gst:$GST_PLUGIN_PATH"
+export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 rm -f ~/.gstreamer-0.10/registry.*
 
 run() {
