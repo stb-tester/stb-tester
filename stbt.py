@@ -655,8 +655,6 @@ _mainloop = glib.MainLoop()
 _display = None
 _control = None
 
-_processing_all_frames = False
-
 
 def MessageIterator(bus, signal, never_stop=False):
     queue = Queue.Queue()
@@ -756,6 +754,7 @@ class Display:
                                                       self.on_underrun)
         self.queue.connect("running", self.on_running)
         self.last_config = {}
+        self._processing_all_frames = False
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -796,9 +795,8 @@ class Display:
     def process_all_frames(self):
         """Temporarily set the pipeline to non leaky.
         """
-        global _processing_all_frames
-        _processing_all_frames = True
-        self.templatematch.props.singleFrame = 1
+        self._processing_all_frames = True
+        self.templatematch.props.singleFrameMode = 1
         self.save_config()
         self.queue.disconnect(self.underrun_handler_id)
         self.queue.props.max_size_buffers = 0
@@ -808,8 +806,8 @@ class Display:
         if _display.underrun_timeout:
             _display.underrun_timeout.cancel()
         yield
-        _processing_all_frames = False
-        _display.templatematch.props.singleFrame = 0
+        self._processing_all_frames = False
+        _display.templatematch.props.singleFrameMode = 0
         self.restore_last_saved_config()
         self.underrun_handler_id = self.queue.connect("underrun",
                                                       self.on_underrun)
@@ -851,15 +849,15 @@ class Display:
             # This happens when starting a new instance of stbt when the
             # Hauppauge HDPVR video-capture device fails to run.
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
-                never_stop = True if _processing_all_frames else False
+                never_stop = True if self._processing_all_frames else False
                 self.test_timeout = t
 
                 self.start_timestamp = None
                 for message in MessageIterator(self.bus, "message::element",
                                                never_stop):
                     # Cancel test_timeout as messages are obviously received.
-                    if _processing_all_frames:
-                        self.templatematch.props.singleFrame = 1
+                    if self._processing_all_frames:
+                        self.templatematch.props.singleFrameMode = 1
 
                     if self.test_timeout:
                         self.test_timeout.cancel()
