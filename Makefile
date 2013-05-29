@@ -42,13 +42,18 @@ tools += stbt-screenshot
 tools += stbt-templatematch
 tools += stbt-tv
 
+# Allow building in a directory different to the source directory.
+srcdir := $(dir $(lastword $(MAKEFILE_LIST)))
+VPATH := $(srcdir)
+
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
 generate_version := $(shell \
+	cd $(srcdir) && \
 	GIT_DIR=.git git describe --always --dirty > VERSION.now 2>/dev/null && \
 	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
 	rm -f VERSION.now)
-VERSION?=$(shell cat VERSION)
+VERSION?=$(shell cat $(srcdir)/VERSION)
 
 .DELETE_ON_ERROR:
 
@@ -102,32 +107,32 @@ doc: stbt.1
 
 # Requires python-docutils
 stbt.1: README.rst VERSION
-	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
+	sed -e 's/@VERSION@/$(VERSION)/g' $(srcdir)/README.rst |\
 	sed -e '/\.\. image::/,/^$$/ d' |\
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
 README.rst: stbt.py api-doc.sh
-	./api-doc.sh $@
+	$(srcdir)/api-doc.sh $@
 
 clean:
 	rm -f stbt.1 stbt defaults.conf gst/*.o gst/libgst-stb-tester.so \
 	    .stbt-prefix .stbt-cflags .stbt-ldflags
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
-check-nosetests:
-	nosetests --with-doctest -v stbt.py irnetbox.py
+check-nosetests: stbt.py irnetbox.py
+	nosetests --with-doctest -v $^
 check-integrationtests: gst/libgst-stb-tester.so
-	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
-	$(parallel) tests/run-tests.sh
-check-pylint:
-	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config |\
-	$(parallel) extra/pylint.sh
+	grep -hEo '^test_[a-zA-Z0-9_]+' $(srcdir)/tests/test-*.sh |\
+	builddir=`pwd` $(parallel) $(srcdir)/tests/run-tests.sh
+check-pylint: stbt.py irnetbox.py stbt-run stbt-record stbt-config
+	printf "%s\n" $^ |\
+	$(parallel) $(srcdir)/extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
 	    set -e; \
-	    . ./stbt-completion; \
+	    . $(srcdir)/stbt-completion; \
 	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
 	        ($$t); \
 	    done'
@@ -141,7 +146,7 @@ parallel := $(shell \
 # list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = $(shell git ls-files)
+DIST = $(shell cd $(srcdir) && git ls-files)
 DIST += VERSION
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
@@ -157,6 +162,7 @@ gst/libgst-stb-tester.so: $(OBJS) .stbt-ldflags
 	$(CC) -shared -o $@ $(OBJS) $(extra_ldflags) $(LDFLAGS)
 
 $(OBJS): %.o: %.c .stbt-cflags
+	@mkdir -p gst
 	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) \
 	    '-DVERSION="$(VERSION)"' $<
 # Header dependencies:
