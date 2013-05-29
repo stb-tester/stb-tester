@@ -658,7 +658,7 @@ _control = None
 _processing_all_frames = False
 
 
-def MessageIterator(bus, signal):
+def MessageIterator(bus, signal, never_stop=False):
     queue = Queue.Queue()
 
     def sig(_bus, message):
@@ -667,7 +667,7 @@ def MessageIterator(bus, signal):
     bus.connect(signal, sig)
     try:
         stop = False
-        while not stop:
+        while not stop or never_stop:
             _mainloop.run()
             # Check what interrupted the main loop (new message, error thrown)
             try:
@@ -851,10 +851,12 @@ class Display:
             # This happens when starting a new instance of stbt when the
             # Hauppauge HDPVR video-capture device fails to run.
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
+                never_stop = True if _processing_all_frames else False
                 self.test_timeout = t
 
                 self.start_timestamp = None
-                for message in MessageIterator(self.bus, "message::element"):
+                for message in MessageIterator(self.bus, "message::element",
+                                               never_stop):
                     # Cancel test_timeout as messages are obviously received.
                     if _processing_all_frames:
                         self.templatematch.props.singleFrame = 1

@@ -529,7 +529,8 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   if (filter->singleFrame == GST_TM_SINGLE_FRAME_TM_WAIT) {
       g_cond_wait (&filter->singleFrameModified, GST_OBJECT_GET_LOCK (filter));
-    }
+  }
+
   if (filter->capsInitialised && filter->templateImageAcquired) {
     CvPoint best_pos;
     gboolean matched = FALSE;
@@ -584,7 +585,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   if (filter->singleFrame != GST_TM_SINGLE_FRAME_TM_DISABLED){
       filter->singleFrame = GST_TM_SINGLE_FRAME_TM_WAIT;
-    }
+  }
 
   GST_OBJECT_UNLOCK (filter);
 
