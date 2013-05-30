@@ -667,7 +667,7 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
     try:
         stop = False
         while not stop:
-            thread = Thread(target = _mainloop.run)
+            thread = Thread(target=_mainloop.run)
             thread.start()
             if trigger:
                 trigger()
@@ -869,8 +869,8 @@ class Display:
                     never_stop = False
                     trigger = None
 
-                for  message in MessageIterator(self.bus, "message::element",
-                                                never_stop, trigger):
+                for message in MessageIterator(self.bus, "message::element",
+                                               never_stop, trigger):
                     # Cancel test_timeout as messages are obviously received.
 
                     if self.test_timeout:
