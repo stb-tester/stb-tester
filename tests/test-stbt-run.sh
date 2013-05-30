@@ -648,14 +648,17 @@ test_get_config() {
 test_match_consecutive_timed_frames() {
     cat > "$scratchdir/test.py" <<-EOF
 	with process_all_frames():
-	    wait_for_match('videotestsrc-timed-frame.png')
+	    wait_for_match('videotestsrc-timed-frame.png', timeout_secs=18)
 	    wait_for_match('videotestsrc-timed-frame-2.png')
 	    wait_for_match('videotestsrc-timed-frame-3.png')
 	EOF
-    stbt-run --source-pipeline="videotestsrc is-live=true ! \
-        videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
-        --sink-pipeline="ximagesink" \
-        "$scratchdir/test.py"
+    stbt-run \
+      --source-pipeline="filesrc location=../tests/timer.mpg \
+          ! decodebin2 ! ffmpegcolorspace" \
+      --sink-pipeline="videomixer name=mix ! \
+          ffmpegcolorspace ! ximagesink videotestsrc ! \
+          video/x-raw-yuv, framerate=10/1, width=640, height=360 ! mix." \
+      "$scratchdir/test.py"
 }
 
 test_live_stream_caught_up_after_process_all_frames() {
