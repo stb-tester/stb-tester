@@ -664,14 +664,30 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
         queue.put(message)
         _mainloop.quit()
     bus.connect(signal, sig)
+
+    global must_terminate
+    must_terminate = False
+
+    def check_termination():
+        global terminate
+        if must_terminate:
+            _mainloop.quit()
+            sys.exit(-1)
+
     try:
         stop = False
         while not stop:
             thread = Thread(target=_mainloop.run)
+            thread.daemon = True
             thread.start()
-            if trigger:
-                trigger()
-            thread.join()
+            try:
+                if trigger:
+                    trigger()
+                thread.join(0.5)
+            except:
+                must_terminate = True
+                glib.timeout_add(10, check_termination)
+
             # Check what interrupted the main loop (new message, error thrown)
             try:
                 item = queue.get(block=False)
