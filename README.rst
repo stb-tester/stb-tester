@@ -336,7 +336,7 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, mask=None)
+wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=0.84, mask=None)
     Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
@@ -344,8 +344,7 @@ wait_for_motion(timeout_secs=10, consecutive_frames=10, noise_threshold=0.84, ma
     seconds.
 
     Considers the video stream to have motion if there were diferences between
-    10 consecutive frames, or the number specified by `consecutive_frames`,
-    which can be:
+    the specified number of `consecutive_frames`, which can be:
 
     * a positive integer value, or
     * a string in the form "x/y", where `x` is the number of frames with motion

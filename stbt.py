@@ -437,7 +437,7 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
 
 def wait_for_motion(
-        timeout_secs=10, consecutive_frames=10,
+        timeout_secs=10, consecutive_frames='10/20',
         noise_threshold=0.84, mask=None):
     """Search for motion in the source video stream.
 
@@ -446,8 +446,7 @@ def wait_for_motion(
     seconds.
 
     Considers the video stream to have motion if there were diferences between
-    10 consecutive frames, or the number specified by `consecutive_frames`,
-    which can be:
+    the specified number of `consecutive_frames`, which can be:
 
     * a positive integer value, or
     * a string in the form "x/y", where `x` is the number of frames with motion
