@@ -665,11 +665,9 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
         _mainloop.quit()
     bus.connect(signal, sig)
 
-    global must_terminate
     must_terminate = False
 
     def check_termination():
-        global terminate
         if must_terminate:
             _mainloop.quit()
             sys.exit(-1)
@@ -684,7 +682,7 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
                 if trigger:
                     trigger()
                 thread.join(0.5)
-            except:
+            except RuntimeError:
                 must_terminate = True
                 glib.timeout_add(10, check_termination)
 
