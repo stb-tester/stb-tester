@@ -195,7 +195,7 @@ _stbt_config_file_contents() {
     [ -n "$in_unit_test" ] && { cat; return; }
 
     local defaults=$(
-        awk '/stbt-"\$@"/ { print $NF }' "$(which stbt)" |
+        awk '/stbt-"\$@"/ { print $NF; exit }' "$(which stbt)" |
         xargs dirname
         )/stbt.conf
     local system_config=$(stbt config global.__system_config)

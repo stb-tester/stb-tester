@@ -19,14 +19,40 @@
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
-[ $# -ge 1 ] || { usage >&2; exit 1; }
-case "$1" in
-    -h|--help)
-        usage; exit 0;;
-    -v|--version)
-        echo "stb-tester @VERSION@"; exit 0;;
-    run|record|config|screenshot|templatematch|tv)
-        @LIBEXECDIR@/stbt/stbt-"$@";;
-    *)
-        usage >&2; exit 1;;
-esac
+main() {
+    [ $# -ge 1 ] || { usage >&2; exit 1; }
+    case "$1" in
+        -h|--help)
+            usage; exit 0;;
+        -v|--version)
+            echo "stb-tester @VERSION@"; exit 0;;
+        run|record|screenshot|tv)
+            withlock @LIBEXECDIR@/stbt/stbt-"$@";;
+        config|templatematch)
+            @LIBEXECDIR@/stbt/stbt-"$@";;
+        *)
+            usage >&2; exit 2;;
+    esac
+}
+
+# Prevent 'stbt run' and 'stbt tv' etc. from running at the same time, because
+# they both require access to the video-capture hardware. This assumes that
+# each different $STBT_CONFIG_FILE has a different 'source_pipeline'.
+# If 'flock' isn't available on the system, no locking is done.
+withlock() {
+    local user_config="${XDG_CONFIG_HOME:-$HOME/.config}/stbt/stbt.conf"
+    local config="${STBT_CONFIG_FILE:-$user_config}"
+    if [ -r "$config" ] && which flock >/dev/null 2>&1; then
+        (
+            flock -n 9 || error \
+                "Failed to lock '$config'. (Is there another 'stbt' running?)"
+            "$@"
+        ) 9< "$config"
+    else
+        "$@"
+    fi
+}
+
+error() { echo "$*" >&2; exit 2; }
+
+main "$@"
