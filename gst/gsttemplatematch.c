@@ -588,7 +588,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   }
 
-  if (filter->singleFrameMode != GST_TM_SINGLE_FRAME_DISABLED){
+  if (filter->singleFrameMode != GST_TM_SINGLE_FRAME_DISABLED) {
       filter->singleFrameMode = GST_TM_SINGLE_FRAME_WAIT;
   }
 
