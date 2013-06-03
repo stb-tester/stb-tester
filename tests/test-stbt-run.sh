@@ -655,9 +655,7 @@ test_match_consecutive_timed_frames() {
     stbt-run \
       --source-pipeline="filesrc location=../tests/timer.mpg \
           ! decodebin2 ! ffmpegcolorspace" \
-      --sink-pipeline="videomixer name=mix ! \
-          ffmpegcolorspace ! ximagesink videotestsrc ! \
-          video/x-raw-yuv, width=640, height=360 ! mix." \
+      --control=none \
       "$scratchdir/test.py"
 }
 
