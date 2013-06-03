@@ -657,7 +657,7 @@ _display = None
 _control = None
 
 
-def MessageIterator(bus, signal, never_stop=False, trigger=None):
+def MessageIterator(bus, signal, trigger=None):
     queue = Queue.Queue()
 
     def sig(_bus, message):
@@ -673,8 +673,7 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
             sys.exit(-1)
 
     try:
-        stop = False
-        while not stop:
+        while True:
             thread = Thread(target=_mainloop.run)
             thread.daemon = True
             thread.start()
@@ -691,8 +690,7 @@ def MessageIterator(bus, signal, never_stop=False, trigger=None):
                 item = queue.get(block=False)
                 yield item
             except Queue.Empty:
-                if not never_stop:
-                    stop = True
+                pass
     finally:
         bus.disconnect_by_func(sig)
 
@@ -876,15 +874,11 @@ class Display:
 
                 self.start_timestamp = None
 
-                if self._processing_all_frames:
-                    never_stop = True
-                    trigger = request_next_frame
-                else:
-                    never_stop = False
-                    trigger = None
+                trigger = request_next_frame if self._processing_all_frames \
+                    else None
 
                 for message in MessageIterator(self.bus, "message::element",
-                                               never_stop, trigger):
+                                               trigger):
                     # Cancel test_timeout as messages are obviously received.
 
                     if self.test_timeout:
