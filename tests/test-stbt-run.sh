@@ -647,16 +647,25 @@ test_get_config() {
 
 test_match_consecutive_timed_frames() {
     cat > "$scratchdir/test.py" <<-EOF
+	img1 = 'videotestsrc-timed-frame.png'
+	img2 = 'videotestsrc-timed-frame-2.png'
+	img3 = 'videotestsrc-timed-frame-3.png'
 	with process_all_frames():
-	    wait_for_match('videotestsrc-timed-frame.png', timeout_secs=18)
-	    wait_for_match('videotestsrc-timed-frame-2.png')
-	    wait_for_match('videotestsrc-timed-frame-3.png')
+	    res = wait_for_match(img1, timeout_secs=18)
+	    t1 = res.timestamp
+	    res = wait_for_match(img2)
+	    t2 = res.timestamp
+	    res = wait_for_match(img3)
+	    t3 = res.timestamp
+	assert t2 - t1 == 40000000, ('%s and %s were did not match in '
+	                             'consecutive frames' % (img1, img2))
+	assert t3 - t2 == 40000000, ('%s and %s were did not match in '
+	                             'consecutive frames' % (img2, img3))
 	EOF
-    stbt-run \
-      --source-pipeline="filesrc location=../tests/timer.mpg \
-          ! decodebin2 ! ffmpegcolorspace" \
-      --control=none \
-      "$scratchdir/test.py"
+    stbt-run --source-pipeline="videotestsrc is-live=true ! \
+        videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
+        --sink-pipeline="ximagesink" \
+        "$scratchdir/test.py"
 }
 
 test_live_stream_caught_up_after_process_all_frames() {
