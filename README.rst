@@ -60,8 +60,9 @@ Global options
     A hardware infrared emitter controlled by the lirc (Linux Infrared Remote
     Control) daemon.
 
-    * If `lircd_socket` is specified, remote control commands are sent via a
-      lircd socket file. `lircd_socket` defaults to `/var/run/lirc/lircd`.
+    * If `lircd_socket` is specified (or none of `lircd_socket`, `hostname` and
+      `port` are specified) remote control commands are sent via a lircd socket
+      file. `lircd_socket` defaults to `/var/run/lirc/lircd`.
     * If `port` is specified, remote control commands are sent via a lircd TCP
       listener on localhost.
     * If `hostname` and `port` are specified, remote control commands are sent
@@ -71,6 +72,7 @@ Global options
     lircd.conf.
 
     Examples:
+        | lirc::myremote
         | lirc:/var/run/lirc/lircd:myremote
         | lirc:8700:myremote
         | lirc:192.168.100.100:8700:myremote
