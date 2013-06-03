@@ -655,9 +655,10 @@ _mainloop = glib.MainLoop()
 
 _display = None
 _control = None
+_processing_all_frames = False
 
 
-def MessageIterator(bus, signal, trigger=None):
+def MessageIterator(bus, signal):
     queue = Queue.Queue()
 
     def sig(_bus, message):
@@ -678,8 +679,8 @@ def MessageIterator(bus, signal, trigger=None):
             thread.daemon = True
             thread.start()
             try:
-                if trigger:
-                    trigger()
+                if _processing_all_frames:
+                    _display.templatematch.props.singleFrameMode = 1
                 thread.join(0.5)
             except RuntimeError:
                 must_terminate = True
@@ -772,7 +773,6 @@ class Display:
                                                       self.on_underrun)
         self.queue.connect("running", self.on_running)
         self.last_config = {}
-        self._processing_all_frames = False
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -813,8 +813,9 @@ class Display:
     def process_all_frames(self):
         """Temporarily set the pipeline to non leaky.
         """
-        self._processing_all_frames = True
-        self.templatematch.props.singleFrameMode = 1
+        global _processing_all_frames
+        _processing_all_frames = True
+        self.templatematch.props.singleFrameMode = 2
         self.save_config()
         self.queue.disconnect(self.underrun_handler_id)
         self.queue.props.max_size_buffers = 0
@@ -824,8 +825,8 @@ class Display:
         if _display.underrun_timeout:
             _display.underrun_timeout.cancel()
         yield
-        self._processing_all_frames = False
-        _display.templatematch.props.singleFrameMode = 0
+        _processing_all_frames = False
+        self.templatematch.props.singleFrameMode = 0
         self.restore_last_saved_config()
         self.underrun_handler_id = self.queue.connect("underrun",
                                                       self.on_underrun)
@@ -868,17 +869,9 @@ class Display:
             # Hauppauge HDPVR video-capture device fails to run.
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
                 self.test_timeout = t
-
-                def request_next_frame():
-                    self.templatematch.props.singleFrameMode = 1
-
                 self.start_timestamp = None
 
-                trigger = request_next_frame if self._processing_all_frames \
-                    else None
-
-                for message in MessageIterator(self.bus, "message::element",
-                                               trigger):
+                for message in MessageIterator(self.bus, "message::element"):
                     # Cancel test_timeout as messages are obviously received.
 
                     if self.test_timeout:
