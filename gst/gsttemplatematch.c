@@ -297,7 +297,7 @@ gst_templatematch_class_init (StbtTemplateMatchClass * klass)
   g_object_class_install_property (gobject_class, PROP_SINGLE_FRAME,
         g_param_spec_enum ("singleFrameMode", "Single frame mode",
             "Frame-by-frame operation mode",
-            GST_TM_SINGLE_FRAME, DEFAULT_MATCH_METHOD,
+            GST_TM_SINGLE_FRAME, 0,
             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
@@ -528,12 +528,11 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
 
   GST_OBJECT_LOCK (filter);
 
-  if (filter->singleFrameMode == GST_TM_SINGLE_FRAME_WAIT) {
+  if (filter->singleFrameMode != GST_TM_SINGLE_FRAME_DISABLED) {
     while(!filter->singleFrameData) {
       g_cond_wait (&filter->singleFrameModeModified,
                    GST_OBJECT_GET_LOCK (filter));
     }
-    filter->singleFrameData = NULL;
   }
 
   if (filter->capsInitialised && filter->templateImageAcquired) {
@@ -589,7 +588,8 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   }
 
   if (filter->singleFrameMode != GST_TM_SINGLE_FRAME_DISABLED) {
-      filter->singleFrameMode = GST_TM_SINGLE_FRAME_WAIT;
+    filter->singleFrameMode = GST_TM_SINGLE_FRAME_WAIT;
+    filter->singleFrameData = NULL;
   }
 
   GST_OBJECT_UNLOCK (filter);
