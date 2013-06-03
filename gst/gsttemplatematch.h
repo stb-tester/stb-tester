@@ -110,6 +110,7 @@ struct _StbtTemplateMatch
   gboolean display;
   GstTMSingleFrameMode singleFrameMode;
   GCond singleFrameModeModified;
+  gpointer singleFrameData;
 
   gchar *template;
   gchar *debugDirectory;
