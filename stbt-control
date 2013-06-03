@@ -1,0 +1,256 @@
+#!/usr/bin/env python
+"""Send remote control commands using the PC keyboard or from the command line.
+
+Usage: stbt control [--keymap <keymap file>] [--control <control uri>] \\
+            [<remote control key>]
+
+    --help, -h
+            Show this help message and exit.
+
+    --keymap <keymap file>
+            Load keymap from <keymap file>; defaults to
+            ~/.config/stbt/control.conf. See 'Keymap File' section.
+
+    --control <control uri>
+            Equivalent to the --control parameter of `stbt run`.
+            See `man stbt` for available remote types and configuration.
+
+    <remote control key>
+            The name of a remote control key as in the remote config file
+            (that is /etc/lirc/lircd.conf in case of a LIRC control device).
+            Specifying this argument sends <remote control key> and exits.
+
+Keymap File
+
+    A keymap file stores the mappings between keyboard keys and remote control
+    keys. One line of the file stores one key mapping in the following format:
+
+            <keyboard key> <remote control key> [<display name>]
+
+    <keyboard key> is an ASCII character or one of the following keywords:
+
+            Space, Enter, Tab, Up, Down, Left, Right, Backspace,
+            PageUp, PageDown, Home, End, Insert, Delete
+
+    Be careful that keywords are case sensitive.
+
+    <remote control key> is the same as in the command line arguments. It
+    cannot contain white spaces.
+
+    <display name> is an optional alias for <remote control key> to show in the
+    on-screen keymap; e.g. "m MENU Main Menu" displays "Main Menu" but sends
+    the "MENU" remote control key when "m" is pressed on the PC keyboard. It
+    may consist of multiple words but cannot be longer than 15 characters.
+
+    Comments start with '//' (double slash) and last until the end of line.
+
+    Example keymap:
+
+            m       MENU    Main Menu
+            Enter   OK
+            c       CLOSE   Close     // Go back to live TV
+"""
+import sys
+import os
+import curses
+import getopt
+import collections
+import contextlib
+import threading
+import math
+
+import stbt
+
+
+SPECIAL_CHARS = {
+    ord(" "): "Space",
+    ord("\n"): "Enter",
+    ord("\t"): "Tab",
+    curses.KEY_UP: "Up",
+    curses.KEY_DOWN: "Down",
+    curses.KEY_LEFT: "Left",
+    curses.KEY_RIGHT: "Right",
+    curses.KEY_BACKSPACE: "Backspace",
+    curses.KEY_PPAGE: "PageUp",
+    curses.KEY_NPAGE: "PageDown",
+    curses.KEY_HOME: "Home",
+    curses.KEY_END: "End",
+    curses.KEY_IC: "Insert",
+    curses.KEY_DC: "Delete",
+}
+
+
+def main():
+    keymap_file = default_keymap_file()
+    control_uri = None
+
+    opts, args = getopt.getopt(
+        sys.argv[1:], "h", ["help", "keymap=", "control="])
+    assert len(args) <= 1, "Too many positional arguments"
+
+    for option, value in opts:
+        if option in ("-h", "--help"):
+            print sys.modules[__name__].__doc__
+            sys.exit()
+        if option == "--keymap":
+            keymap_file = value
+        if option == "--control":
+            control_uri = value
+
+    if control_uri is None:
+        control_uri = stbt.get_config("global", "control")
+
+    if args:
+        send(control_uri, args[0])
+    else:
+        main_loop(control_uri, keymap_file)
+
+
+def test_main():
+    def main_loop_stub(control_uri, keymap_file):
+        assert control_uri == "mycontrol"
+        assert keymap_file == "mykeymap"
+
+    sys.modules[__name__].main_loop = main_loop_stub
+    sys.argv[1:] = ["--keymap", "mykeymap", "--control", "mycontrol"]
+    try:
+        main()
+    finally:
+        sys.modules[__name__] = reload(sys.modules[__name__])
+
+
+def send(control_uri, remote_key):
+    if control_uri == "none":
+        # Print key name to standard error
+        stbt._debug_level = 1  # pylint: disable=W0212
+    remote = stbt.uri_to_remote(control_uri, None)
+    remote.press(remote_key)
+
+
+def main_loop(control_uri, keymap_file):
+    remote = stbt.uri_to_remote(control_uri, None)
+    keymap = load_keymap(keymap_file)
+    timer = None
+
+    with terminal() as term:
+        term.addstr("Keymap: %s\nListener: %s\n\n%s\n\n" % (
+            keymap_file, control_uri, keymap_string(keymap)))
+        while True:  # Main loop
+            keycode = term.getch()
+            if keycode == ord('q'):  # 'q' for 'Quit' is pre-defined
+                sys.exit()
+
+            remote_key, _ = keymap.get(decoded(keycode), (None, None))
+            if timer:
+                timer.cancel()
+                clear_last_command(term)
+            if remote_key:
+                remote.press(remote_key)
+            term.addstr(str(remote_key))
+            timer = threading.Timer(1, clear_last_command, [term])
+            timer.start()
+
+
+def clear_last_command(term):
+    term.move(term.getyx()[0], 0)
+    term.clrtoeol()
+
+
+@contextlib.contextmanager
+def terminal():
+    term = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    term.keypad(1)
+    term.immedok(1)
+    try:
+        yield term
+    finally:
+        term.immedok(0)
+        term.keypad(0)
+        curses.nocbreak()
+        curses.echo()
+        curses.endwin()
+
+
+def keymap_string(keymap):
+    """
+    >>> print keymap_string({"m": ("MENU", "Main Menu")}).strip()
+    q - <Quit>                        m - Main Menu
+    """
+    keylist = ["%15s - %-15s" % (kb_key, mapping[1])
+               for kb_key, mapping in keymap.items()]
+    keylist.insert(0, "%15s - %-15s" % ("q", "<Quit>"))
+    middle = int(math.ceil(float(len(keylist)) / 2))
+    rows = ["%s %s" % (keylist[i], keylist[middle + i]
+        if middle + i < len(keylist) else "") for i in range(middle)]
+    return "\n".join(rows)
+
+
+def decoded(keycode):
+    """
+    >>> assert decoded(curses.KEY_BACKSPACE) == "Backspace"
+    >>> assert decoded(120) == "x"
+    >>> assert decoded(curses.KEY_F12) == None
+    """
+    if keycode in SPECIAL_CHARS.keys():
+        return SPECIAL_CHARS[keycode]
+    try:
+        return chr(keycode)
+    except ValueError:
+        return None
+
+
+def load_keymap(keymap_file):
+    keymap = collections.OrderedDict()
+    with open(keymap_file, "r") as f:
+        for line in f:
+            items = line.split("//")[0].split()
+            if len(items) < 2:
+                continue
+            elif len(items) == 2:
+                keymap[items[0]] = (items[1],) * 2
+            else:
+                keymap[items[0]] = (items[1], " ".join(items[2:]))
+            validate(items[0])
+    return keymap
+
+
+def test_load_keymap():
+    _, keymap_file = __import__("tempfile").mkstemp()
+    try:
+        open(keymap_file, "w").write(
+            "Backspace  BACK  Go back to previous\n"  # Test display name
+            "Enter  OK  //Move forward\n")  # Test comments
+        keymap = load_keymap(keymap_file)
+        assert keymap["Backspace"] == ("BACK", "Go back to previous")
+        assert keymap["Enter"] == ("OK", "OK")
+    finally:
+        os.remove(keymap_file)
+
+
+def validate(keyname):
+    if keyname in SPECIAL_CHARS.values():
+        return
+    try:
+        ord(keyname)
+    except TypeError:
+        raise ValueError("Invalid keyboard key in the keymap file: " + keyname)
+
+
+def test_validate():
+    try:
+        validate("Escape")
+        assert False
+    except ValueError:
+        pass
+
+
+def default_keymap_file():
+    config_dir = os.environ.get('XDG_CONFIG_HOME',
+        '%s/.config' % os.environ['HOME'])
+    return os.path.join(config_dir, "stbt", "control.conf")
+
+
+if __name__ == "__main__":
+    main()

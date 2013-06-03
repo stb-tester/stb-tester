@@ -15,13 +15,14 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config screenshot templatematch tv)" \
+                    run record config control screenshot templatematch tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
             run)      _stbt_run;;
             record)   _stbt_record;;
             config)   _stbt_config;;
+            control)  _stbt_control;;
             templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
         esac
@@ -33,7 +34,7 @@ _stbt_run() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
-        --control=*) COMPREPLY=($(_stbt_control));;
+        --control=*) COMPREPLY=($(_stbt_control_uri));;
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
         *) COMPREPLY=($(compgen \
@@ -49,10 +50,10 @@ _stbt_record() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
-        --control=*) COMPREPLY=($(_stbt_control));;
+        --control=*) COMPREPLY=($(_stbt_control_uri));;
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
-        --control-recorder=*) COMPREPLY=($(_stbt_control_recorder));;
+        --control-recorder=*) COMPREPLY=($(_stbt_control_recorder_uri));;
         -o=*|--output-file=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
@@ -71,6 +72,20 @@ _stbt_config() {
             -W "$(_stbt_trailing_space --help $(_stbt_config_keys))" \
             -- "$cur"))
     fi
+}
+
+_stbt_control() {
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+
+    case "$prev" in
+        --keymap=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        --control=*) COMPREPLY=($(_stbt_control_uri));;
+        *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
+                            --help -h --keymap --control)" \
+                        -- "$cur"));;
+    esac
 }
 
 _stbt_templatematch() {
@@ -104,7 +119,7 @@ _stbt_templatematch() {
 ## arguments to command-line options
 ############################################################################
 
-_stbt_control() {
+_stbt_control_uri() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
@@ -124,7 +139,7 @@ _stbt_control() {
     esac
 }
 
-_stbt_control_recorder() {
+_stbt_control_recorder_uri() {
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
     case "$prev" in
@@ -246,6 +261,7 @@ _stbt_takes_arg() {
     case "$1" in
         --control|--source-pipeline|--sink-pipeline) true;;
         --control-recorder|-o|--output-file) true;;
+        --keymap) true;;
         *) false;;
     esac
 }
