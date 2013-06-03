@@ -90,7 +90,6 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
     # confirm_method="none", any image with match any source.
     # (In use, this scenario is completely useless).
     cat > "$scratchdir/test.py" <<-EOF
-	import glob
 	for img in ['circle-big.png', 'videotestsrc-bw-flipped.png',
 	            'videotestsrc-checkers-8.png', 'videotestsrc-gamut.png']:
 	    wait_for_match(img, match_parameters=MatchParameters(
