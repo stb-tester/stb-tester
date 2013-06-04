@@ -657,10 +657,12 @@ test_match_consecutive_timed_frames() {
 	    t2 = res.timestamp
 	    res = wait_for_match(img3)
 	    t3 = res.timestamp
-	assert t2 - t1 == 40000000, ('%s and %s were did not match in '
-	                             'consecutive frames' % (img1, img2))
-	assert t3 - t2 == 40000000, ('%s and %s were did not match in '
-	                             'consecutive frames' % (img2, img3))
+	assert t2 - t1 == 40000000, ('%s and %s did not match in '
+	                             'consecutive frames, the time difference '
+	                             'is %s' % (img1, img2, str(t2 - t1)))
+	assert t3 - t2 == 40000000, ('%s and %s did not match in '
+	                             'consecutive frames, the time difference '
+	                             'is %s' % (img1, img2, str(t2 - t1)))
 	EOF
     stbt-run --source-pipeline="videotestsrc is-live=true ! \
         videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
