@@ -399,6 +399,10 @@ gst_templatematch_set_property (GObject * object, guint prop_id,
       break;
     case PROP_SINGLE_FRAME:
       GST_OBJECT_LOCK(filter);
+      while (filter->singleFrameData) {
+	g_cond_wait (&filter->singleFrameModeModified,
+		     GST_OBJECT_GET_LOCK (filter));
+      }
       filter->singleFrameMode = g_value_get_enum (value);
       filter->singleFrameData = &filter->singleFrameMode;
       g_cond_signal (&filter->singleFrameModeModified);
@@ -442,7 +446,9 @@ gst_templatematch_get_property (GObject * object, guint prop_id,
       g_value_set_boolean (value, filter->display);
       break;
     case PROP_SINGLE_FRAME:
+      GST_OBJECT_LOCK (filter);
       g_value_set_enum (value, filter->singleFrameMode);
+      GST_OBJECT_UNLOCK (filter);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -590,6 +596,7 @@ gst_templatematch_chain (GstPad * pad, GstBuffer * buf)
   if (filter->singleFrameMode != GST_TM_SINGLE_FRAME_DISABLED) {
     filter->singleFrameMode = GST_TM_SINGLE_FRAME_WAIT;
     filter->singleFrameData = NULL;
+    g_cond_signal (&filter->singleFrameModeModified);
   }
 
   GST_OBJECT_UNLOCK (filter);

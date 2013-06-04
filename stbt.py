@@ -680,6 +680,9 @@ def MessageIterator(bus, signal):
             thread.start()
             try:
                 if _processing_all_frames:
+                    while _display.templatematch.props.singleFrameMode != 2 \
+                        or _display.motiondetect.props.singleFrameMode != 2:
+                        time.sleep(0.01)
                     mydebug('MessageIterator: requesting next frame')
                     _display.templatematch.props.singleFrameMode = 1
                     _display.motiondetect.props.singleFrameMode = 1
