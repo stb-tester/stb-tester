@@ -48,6 +48,27 @@ GST_DEBUG_CATEGORY_STATIC (gst_motiondetect_debug);
 #define GST_CAT_DEFAULT gst_motiondetect_debug
 #define DEFAULT_NOISE_THRESHOLD (0.84f)
 
+#define MOTION_DETECT_SINGLE_FRAME (motion_detect_single_frame_get_type())
+static GType
+motion_detect_single_frame_get_type (void)
+{
+  static GType motion_detect_single_frame_type = 0;
+  static const GEnumValue single_frame_types[] = {
+    {MOTION_DETECT_SINGLE_FRAME_DISABLED, "Do not operate in frame-by-frame mode",
+        "disabled"},
+    {MOTION_DETECT_SINGLE_FRAME_NEXT, "Request the next frame",
+        "next"},
+    {MOTION_DETECT_SINGLE_FRAME_WAIT, "Wait until the next request is made",
+        "wait"},
+    {0, NULL, NULL}
+  };
+  if (!motion_detect_single_frame_type) {
+    motion_detect_single_frame_type =
+      g_enum_register_static ("MotionDetectSingleFrameMode", single_frame_types);
+  }
+  return motion_detect_single_frame_type;
+}
+
 enum
 {
     LAST_SIGNAL
@@ -61,6 +82,7 @@ enum
     PROP_NOISE_THRESHOLD,
     PROP_MASK,
     PROP_DISPLAY,
+    PROP_SINGLE_FRAME,
 };
 
 GST_BOILERPLATE (StbtMotionDetect, gst_motiondetect, GstBaseTransform,
@@ -137,6 +159,11 @@ gst_motiondetect_class_init (StbtMotionDetectClass * klass)
       g_param_spec_boolean ("display", "Display",
           "Sets whether detected motion should be highlighted in the output",
           TRUE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_SINGLE_FRAME,
+      g_param_spec_enum ("singleFrameMode", "Single frame mode",
+          "Frame-by-frame operation mode",
+          MOTION_DETECT_SINGLE_FRAME, 0,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   GST_DEBUG_CATEGORY_INIT (
       gst_motiondetect_debug, "stbt-motiondetect", 0, "Motion detection");
@@ -162,6 +189,8 @@ gst_motiondetect_init (StbtMotionDetect * filter,
   filter->debugDirectory = NULL;
   filter->noiseThreshold = DEFAULT_NOISE_THRESHOLD;
   filter->display = TRUE;
+  filter->singleFrameMode = MOTION_DETECT_SINGLE_FRAME_DISABLED;
+  filter->singleFrameData = NULL;
 
   gst_base_transform_set_gap_aware (GST_BASE_TRANSFORM_CAST (filter), TRUE);
 }
@@ -228,6 +257,17 @@ gst_motiondetect_set_property (GObject * object, guint prop_id,
       filter->display = g_value_get_boolean (value);
       GST_OBJECT_UNLOCK(filter);
       break;
+    case PROP_SINGLE_FRAME:
+      GST_OBJECT_LOCK (filter);
+      while (filter->singleFrameData) {
+	g_cond_wait (&filter->singleFrameModeModified,
+		     GST_OBJECT_GET_LOCK (filter));
+      }
+      filter->singleFrameMode = g_value_get_enum (value);
+      filter->singleFrameData = &filter->singleFrameMode;
+      g_cond_signal (&filter->singleFrameModeModified);
+      GST_OBJECT_UNLOCK (filter);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -255,6 +295,11 @@ gst_motiondetect_get_property (GObject * object, guint prop_id,
       break;
     case PROP_DISPLAY:
       g_value_set_boolean (value, filter->display);
+      break;
+    case PROP_SINGLE_FRAME:
+      GST_OBJECT_LOCK (filter);
+      g_value_set_enum (value, filter->singleFrameMode);
+      GST_OBJECT_UNLOCK (filter);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -355,6 +400,13 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
   }
 
   GST_OBJECT_LOCK(filter);
+  if (filter->singleFrameMode != MOTION_DETECT_SINGLE_FRAME_DISABLED) {
+    while(!filter->singleFrameData) {
+      g_cond_wait (&filter->singleFrameModeModified,
+                   GST_OBJECT_GET_LOCK (filter));
+    }
+  }
+
   if (filter->enabled && filter->state != MOTION_DETECT_STATE_INITIALISING) {
     IplImage *referenceImageGrayTmp = NULL;
     static int frameNo = 1;
@@ -413,6 +465,12 @@ gst_motiondetect_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
     filter->cvCurrentImageGray = referenceImageGrayTmp;
     filter->state = MOTION_DETECT_STATE_REFERENCE_IMAGE_ACQUIRED;
     ++frameNo;
+  }
+
+  if (filter->singleFrameMode != MOTION_DETECT_SINGLE_FRAME_DISABLED) {
+    filter->singleFrameMode = MOTION_DETECT_SINGLE_FRAME_WAIT;
+    filter->singleFrameData = NULL;
+    g_cond_signal (&filter->singleFrameModeModified);
   }
   GST_OBJECT_UNLOCK(filter);
 

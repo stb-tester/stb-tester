@@ -680,8 +680,10 @@ def MessageIterator(bus, signal):
             thread.start()
             try:
                 if _processing_all_frames:
+                    mydebug('MessageIterator: requesting next frame')
                     _display.templatematch.props.singleFrameMode = 1
-                thread.join(0.5)
+                    _display.motiondetect.props.singleFrameMode = 1
+                thread.join(2)
             except RuntimeError:
                 must_terminate = True
                 glib.timeout_add(10, check_termination)
@@ -816,6 +818,7 @@ class Display:
         global _processing_all_frames
         _processing_all_frames = True
         self.templatematch.props.singleFrameMode = 2
+        self.motiondetect.props.singleFrameMode = 2
         self.save_config()
         self.queue.disconnect(self.underrun_handler_id)
         self.queue.props.max_size_buffers = 0
@@ -827,6 +830,7 @@ class Display:
         yield
         _processing_all_frames = False
         self.templatematch.props.singleFrameMode = 0
+        self.motiondetect.props.singleFrameMode = 0
         self.restore_last_saved_config()
         self.underrun_handler_id = self.queue.connect("underrun",
                                                       self.on_underrun)

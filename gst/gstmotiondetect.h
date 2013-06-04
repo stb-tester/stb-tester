@@ -45,6 +45,15 @@ enum
     MOTION_DETECT_STATE_REFERENCE_IMAGE_ACQUIRED,
 };
 
+/*
+ * stbt's enums for specifying the "single frame" operating mode
+ */
+typedef enum {
+  MOTION_DETECT_SINGLE_FRAME_DISABLED,
+  MOTION_DETECT_SINGLE_FRAME_NEXT,
+  MOTION_DETECT_SINGLE_FRAME_WAIT
+} MotionDetectSingleFrameMode;
+
 /**
  * StbtMotionDetect:
  *
@@ -62,6 +71,9 @@ struct _StbtMotionDetect {
   char *debugDirectory;
   gfloat noiseThreshold;
   gboolean display;
+  MotionDetectSingleFrameMode singleFrameMode;
+  GCond singleFrameModeModified;
+  gpointer singleFrameData;
 };
 
 struct _StbtMotionDetectClass {
