@@ -83,6 +83,16 @@ typedef enum {
   GST_TM_CONFIRM_METHOD_NORMED_ABSDIFF
 } GstTMConfirmMethod;
 
+
+/*
+ * stbt's enums for specifying the "single frame" operating mode
+ */
+typedef enum {
+  GST_TM_SINGLE_FRAME_DISABLED,
+  GST_TM_SINGLE_FRAME_NEXT,
+  GST_TM_SINGLE_FRAME_WAIT
+} GstTMSingleFrameMode;
+
 typedef struct _StbtTemplateMatch StbtTemplateMatch;
 typedef struct _StbtTemplateMatchClass StbtTemplateMatchClass;
 
@@ -98,6 +108,9 @@ struct _StbtTemplateMatch
   gint erodePasses;
   gfloat confirmThreshold;
   gboolean display;
+  GstTMSingleFrameMode singleFrameMode;
+  GCond singleFrameModeModified;
+  gpointer singleFrameData;
 
   gchar *template;
   gchar *debugDirectory;

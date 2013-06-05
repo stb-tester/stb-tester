@@ -9,6 +9,8 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 from collections import namedtuple, deque
 import argparse
+from contextlib import contextmanager
+from threading import Thread
 import ConfigParser
 import contextlib
 import Queue
@@ -223,6 +225,21 @@ class MatchParameters:
         self.erode_passes = erode_passes
 
 
+@contextmanager
+def process_all_frames():
+    """Force the pipeline to process all the frames for the duration of the
+    call.
+
+    This will introduce a delay with the live stream but will not block the
+    pipeline. The delay will depend on which features are actually used in the
+    context of this call.
+
+    Use as a context manager in a 'with' statement.
+    """
+    with _display.process_all_frames():
+        yield
+
+
 class Position(namedtuple('Position', 'x y')):
     """
     * `x` and `y`: Integer coordinates from the top left corner of the video
@@ -282,12 +299,12 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     if not os.path.isfile(properties["template"]):
         raise UITestError("No such template file: %s" % image)
 
-    for message, buf in _display.detect(
+    for message, _ in _display.detect(
             "template_match", properties, timeout_secs):
         # Discard messages generated from previous call with different template
         if message["template_path"] == properties["template"]:
             result = MatchResult(
-                timestamp=buf.timestamp,
+                timestamp=message["timestamp"],
                 match=message["match"],
                 position=Position(message["x"], message["y"]),
                 first_pass_result=message["first_pass_result"])
@@ -334,11 +351,11 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             debug("No such mask file: %s" % mask)
             raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in _display.detect("motiondetect", properties, timeout_secs):
+    for msg, _ in _display.detect("motiondetect", properties, timeout_secs):
         # Discard messages generated from previous calls with a different mask
         if ((mask and msg["masked"] and msg["mask_path"] == properties["mask"])
                 or (not mask and not msg["masked"])):
-            result = MotionResult(timestamp=buf.timestamp,
+            result = MotionResult(timestamp=msg["timestamp"],
                                   motion=msg["has_motion"])
             # pylint: disable=E1101
             debug("%s detected. Timestamp: %d." % (
@@ -378,6 +395,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
+
     for res in detect_match(
             image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
@@ -389,7 +407,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.capture_down_stream_screenshot()
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
@@ -483,8 +501,12 @@ def wait_for_motion(
             debug("Motion detected.")
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.capture_down_stream_screenshot()
     raise MotionTimeout(screenshot, mask, timeout_secs)
+
+
+def get_live_stream_timestamp(retry=False):
+    return _display.get_live_stream_timestamp(retry)
 
 
 def save_frame(buf, filename):
@@ -514,7 +536,7 @@ def save_frame(buf, filename):
 
 def get_frame():
     """Get a GStreamer buffer containing the current video frame."""
-    return _display.capture_screenshot()
+    return _display.capture_down_stream_screenshot()
 
 
 def debug(msg):
@@ -632,6 +654,7 @@ _mainloop = glib.MainLoop()
 
 _display = None
 _control = None
+_processing_all_frames = False
 
 
 def MessageIterator(bus, signal):
@@ -641,16 +664,38 @@ def MessageIterator(bus, signal):
         queue.put(message)
         _mainloop.quit()
     bus.connect(signal, sig)
+
+    must_terminate = False
+
+    def check_termination():
+        if must_terminate:
+            _mainloop.quit()
+            sys.exit(-1)
+
     try:
-        stop = False
-        while not stop:
-            _mainloop.run()
+        while True:
+            thread = Thread(target=_mainloop.run)
+            thread.daemon = True
+            thread.start()
+            try:
+                if _processing_all_frames:
+                    while _display.templatematch.props.singleFrameMode != 2 \
+                        or _display.motiondetect.props.singleFrameMode != 2:
+                        time.sleep(0.01)
+                    mydebug('MessageIterator: requesting next frame')
+                    _display.templatematch.props.singleFrameMode = 1
+                    _display.motiondetect.props.singleFrameMode = 1
+                thread.join(2)
+            except RuntimeError:
+                must_terminate = True
+                glib.timeout_add(10, check_termination)
+
             # Check what interrupted the main loop (new message, error thrown)
             try:
                 item = queue.get(block=False)
                 yield item
             except Queue.Empty:
-                stop = True
+                pass
     finally:
         bus.disconnect_by_func(sig)
 
@@ -678,6 +723,10 @@ class Display:
         screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
                       "sync=false")
         pipe = " ".join([
+            "tee name=up_t",
+            "up_t. ! appsink name=upstream_screenshot "
+            "max-buffers=1 drop=true sync=false",
+            "up_t. ! ",
             imageprocessing,
             "! tee name=t",
             "t. ! queue leaky=2 !", screenshot,
@@ -694,6 +743,8 @@ class Display:
 
         self.templatematch = self.pipeline.get_by_name("template_match")
         self.motiondetect = self.pipeline.get_by_name("motiondetect")
+        self.upstream_screenshot = \
+            self.pipeline.get_by_name("upstream_screenshot")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
         self.bus.connect("message::error", self.on_error)
@@ -722,8 +773,10 @@ class Display:
         self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
-        self.queue.connect("underrun", self.on_underrun)
+        self.underrun_handler_id = self.queue.connect("underrun",
+                                                      self.on_underrun)
         self.queue.connect("running", self.on_running)
+        self.last_config = {}
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -736,8 +789,55 @@ class Display:
                 source_bin.get_by_name("padforcer").src_pads().next()))
         return source_bin
 
-    def capture_screenshot(self):
+    def capture_live_stream_screenshot(self):
+        return self.upstream_screenshot.get_property("last-buffer")
+
+    def capture_down_stream_screenshot(self):
         return self.screenshot.get_property("last-buffer")
+
+    def save_config(self):
+        self.last_config['queue.leaky'] = self.queue.props.leaky
+        self.last_config['queue.max_size_buffers'] = \
+            self.queue.props.max_size_buffers
+        self.last_config['queue.max_size_time'] = \
+            self.queue.props.max_size_time
+        self.last_config['queue.max_size_bytes'] = \
+            self.queue.props.max_size_bytes
+
+    def restore_last_saved_config(self):
+        self.queue.props.leaky = self.last_config['queue.leaky']
+        self.queue.props.max_size_buffers = \
+            self.last_config['queue.max_size_buffers']
+        self.queue.props.max_size_time = \
+            self.last_config['queue.max_size_time']
+        self.queue.props.max_size_bytes = \
+            self.last_config['queue.max_size_bytes']
+
+    @contextmanager
+    def process_all_frames(self):
+        """Temporarily set the pipeline to non leaky.
+        """
+        global _processing_all_frames
+        _processing_all_frames = True
+        self.templatematch.props.singleFrameMode = 2
+        self.motiondetect.props.singleFrameMode = 2
+        self.save_config()
+        self.queue.disconnect(self.underrun_handler_id)
+        self.queue.props.max_size_buffers = 0
+        self.queue.props.max_size_time = 0
+        self.queue.props.max_size_bytes = 0
+        self.queue.props.leaky = 0
+        if _display.underrun_timeout:
+            _display.underrun_timeout.cancel()
+        yield
+        _processing_all_frames = False
+        self.templatematch.props.singleFrameMode = 0
+        self.motiondetect.props.singleFrameMode = 0
+        self.restore_last_saved_config()
+        self.underrun_handler_id = self.queue.connect("underrun",
+                                                      self.on_underrun)
+        while self.queue.get_property('current-level-buffers') > 1:
+            time.sleep(0.01)
 
     def detect(self, element_name, properties, timeout_secs):
         """Generator that yields the messages emitted by the named gstreamer
@@ -757,7 +857,6 @@ class Display:
 
         For every frame processed, returns a tuple: (message, screenshot).
         """
-
         element = self.pipeline.get_by_name(element_name)
 
         properties_backup = {}
@@ -776,10 +875,11 @@ class Display:
             # Hauppauge HDPVR video-capture device fails to run.
             with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
                 self.test_timeout = t
-
                 self.start_timestamp = None
+
                 for message in MessageIterator(self.bus, "message::element"):
                     # Cancel test_timeout as messages are obviously received.
+
                     if self.test_timeout:
                         self.test_timeout.cancel()
                         self.test_timeout = None
@@ -852,6 +952,15 @@ class Display:
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
+    def get_live_stream_timestamp(self, retry=False):
+        buf = self.capture_live_stream_screenshot()
+        if not buf and not retry:
+            raise Exception("get_live_stream_timestamp: no buffer available.")
+        elif not buf:
+            while not buf:
+                buf = self.capture_live_stream_screenshot()
+        return buf.timestamp
+
     def restart_source_bin(self):
         self.successive_underruns += 1
         if self.successive_underruns > 3:
@@ -875,9 +984,15 @@ class Display:
         self.sink_bin.set_state(gst.STATE_PLAYING)
         self.pipeline.set_state(gst.STATE_PLAYING)
         self.start_timestamp = None
+
+        while self.sink_bin.get_state()[1] != gst.STATE_PLAYING or \
+                self.pipeline.get_state()[1] != gst.STATE_PLAYING:
+            time.sleep(0.01)
+
         debug("Restarted source pipeline")
 
-        self.underrun_timeout.start()
+        if self.underrun_timeout:
+            self.underrun_timeout.start()
 
         return False  # stop the timeout from running again
 
