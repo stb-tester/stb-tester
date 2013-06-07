@@ -21,6 +21,9 @@ import sys
 import time
 import warnings
 
+import cv2
+import numpy
+
 import irnetbox
 
 
@@ -216,7 +219,11 @@ class MatchParameters:
             confirm_method=str(get_config('match', 'confirm_method')),
             confirm_threshold=float(get_config('match', 'confirm_threshold')),
             erode_passes=int(get_config('match', 'erode_passes'))):
-        self.match_method = match_method
+        self.match_method = {
+            'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
+            'ccorr-normed': cv2.TM_CCORR_NORMED,
+            'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
+        }[match_method]
         self.match_threshold = match_threshold
         self.confirm_method = confirm_method
         self.confirm_threshold = confirm_threshold
@@ -270,31 +277,27 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    properties = {  # Properties of GStreamer element
-        "template": _find_path(image),
-        "matchMethod": match_parameters.match_method,
-        "matchThreshold": match_parameters.match_threshold,
-        "confirmMethod": match_parameters.confirm_method,
-        "erodePasses": match_parameters.erode_passes,
-        "confirmThreshold": match_parameters.confirm_threshold,
-    }
-    debug("Searching for " + properties["template"])
-    if not os.path.isfile(properties["template"]):
+    template_ = _find_path(image)
+    if not os.path.isfile(template_):
         raise UITestError("No such template file: %s" % image)
+    template = cv2.imread(template_, cv2.CV_LOAD_IMAGE_COLOR)
+    if template is None:
+        raise UITestError("Failed to load template file: %s" % template_)
 
-    for message, buf in _display.detect(
-            "template_match", properties, timeout_secs):
-        # Discard messages generated from previous call with different template
-        if message["template_path"] == properties["template"]:
-            result = MatchResult(
-                timestamp=buf.timestamp,
-                match=message["match"],
-                position=Position(message["x"], message["y"]),
-                first_pass_result=message["first_pass_result"])
-            # pylint: disable=E1101
-            debug("%s found: %s" % (
-                  "Match" if result.match else "Weak match", str(result)))
-            yield result
+    debug("Searching for " + template_)
+
+    for frame, timestamp in _display.frames(timeout_secs):
+        matched, position, first_pass_certainty = _match_template(
+            frame, template, match_parameters)
+
+        result = MatchResult(
+            timestamp=timestamp,
+            match=matched,
+            position=position,
+            first_pass_result=first_pass_certainty)
+        debug("%s found: %s" % (
+            "Match" if matched else "Weak match", str(result)))
+        yield result
 
 
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
@@ -323,27 +326,45 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
     """
 
     debug("Searching for motion")
-    properties = {  # Properties of GStreamer element
-        "enabled": True,
-        "noiseThreshold": noise_threshold,
-    }
-    if mask:
-        properties["mask"] = _find_path(mask)
-        debug("Using mask %s" % (properties["mask"]))
-        if not os.path.isfile(properties["mask"]):
-            debug("No such mask file: %s" % mask)
-            raise UITestError("No such mask file: %s" % mask)
 
-    for msg, buf in _display.detect("motiondetect", properties, timeout_secs):
-        # Discard messages generated from previous calls with a different mask
-        if ((mask and msg["masked"] and msg["mask_path"] == properties["mask"])
-                or (not mask and not msg["masked"])):
-            result = MotionResult(timestamp=buf.timestamp,
-                                  motion=msg["has_motion"])
-            # pylint: disable=E1101
-            debug("%s found: %s" % (
-                "Motion" if result.motion else "No motion", str(result)))
-            yield result
+    mask_image = None
+    if mask:
+        mask_ = _find_path(mask)
+        debug("Using mask %s" % mask_)
+        if not os.path.isfile(mask_):
+            raise UITestError("No such mask file: %s" % mask)
+        mask_image = cv2.imread(mask_, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+        if mask_image is None:
+            raise UITestError("Failed to load mask file: %s" % mask_)
+
+    previous_frame_gray = None
+    for frame, timestamp in _display.frames(timeout_secs):
+        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if previous_frame_gray is None:
+            if (mask_image is not None and
+                    mask_image.shape[:2] != frame.shape[:2]):
+                raise UITestError(
+                    "The dimensions of the mask '%s' %s don't match the video "
+                    "frame %s" % (mask_, mask_image.shape, frame.shape))
+            previous_frame_gray = frame_gray
+            continue
+
+        absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
+        previous_frame_gray = frame_gray
+
+        if mask_image is not None:
+            absdiff = cv2.bitwise_and(absdiff, 255, mask=mask_image)
+        _, thresholded = cv2.threshold(
+            absdiff, int((1 - noise_threshold) * 255), 255, cv2.THRESH_BINARY)
+        eroded = cv2.erode(
+            thresholded,
+            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+        motion = (cv2.countNonZero(eroded) > 0)
+
+        result = MotionResult(timestamp, motion)
+        debug("%s found: %s" % (
+            "Motion" if motion else "No motion", str(result)))
+        yield result
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
@@ -656,35 +677,20 @@ def MessageIterator(bus, signal):
 
 
 class Display:
-    def __init__(self, source_pipeline_description, sink_pipeline_description):
+    def __init__(self, source_pipeline, sink_pipeline):
         gobject.threads_init()
 
-        imageprocessing = " ! ".join([
-            # Buffer the video stream, dropping frames if downstream
-            # processors aren't fast enough:
-            "queue name=q leaky=2",
-            # Convert to a colorspace that templatematch can handle:
-            "ffmpegcolorspace",
-            # Detect motion when requested:
-            "stbt-motiondetect name=motiondetect enabled=false",
-            # OpenCV image-processing library:
-            "stbt-templatematch name=template_match",
-        ])
-        xvideo = " ! ".join([
-            # Convert to a colorspace that xvimagesink can handle:
-            "ffmpegcolorspace",
-            sink_pipeline_description,
-        ])
-        screenshot = ("appsink name=screenshot max-buffers=1 drop=true "
-                      "sync=false")
+        screenshot = (
+            "appsink name=screenshot max-buffers=1 drop=true sync=false "
+            "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
+            "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
         pipe = " ".join([
-            imageprocessing,
-            "! tee name=t",
-            "t. ! queue leaky=2 !", screenshot,
-            "t. ! queue leaky=2 !", xvideo
+            "tee name=t",
+            "t. ! queue leaky=2 name=q ! ffmpegcolorspace !", screenshot,
+            "t. ! queue leaky=2 ! ffmpegcolorspace !", sink_pipeline
         ])
 
-        self.source_pipeline_description = source_pipeline_description
+        self.source_pipeline = source_pipeline
         self.source_bin = self.create_source_bin()
         self.sink_bin = gst.parse_bin_from_description(pipe, True)
 
@@ -692,26 +698,11 @@ class Display:
         self.pipeline.add(self.source_bin, self.sink_bin)
         gst.element_link_many(self.source_bin, self.sink_bin)
 
-        self.templatematch = self.pipeline.get_by_name("template_match")
-        self.motiondetect = self.pipeline.get_by_name("motiondetect")
         self.screenshot = self.pipeline.get_by_name("screenshot")
         self.bus = self.pipeline.get_bus()
         self.bus.connect("message::error", self.on_error)
         self.bus.connect("message::warning", self.on_warning)
         self.bus.add_signal_watch()
-
-        if _debug_level > 1:
-            if _mkdir("stbt-debug/motiondetect") and _mkdir(
-                    "stbt-debug/templatematch"):
-                # Note that this will dump a *lot* of files -- several images
-                # per frame processed.
-                self.motiondetect.props.debugDirectory = (
-                    "stbt-debug/motiondetect")
-                self.templatematch.props.debugDirectory = (
-                    "stbt-debug/templatematch")
-            else:
-                warn("Failed to create directory 'stbt-debug'. "
-                     "Will not enable motiondetect/templatematch debug dump.")
 
         self.pipeline.set_state(gst.STATE_PLAYING)
 
@@ -728,7 +719,7 @@ class Display:
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
             "%s ! capsfilter name=padforcer caps=video/x-raw-yuv" % (
-                self.source_pipeline_description),
+                self.source_pipeline),
             False)
         source_bin.add_pad(
             gst.GhostPad(
@@ -739,68 +730,41 @@ class Display:
     def capture_screenshot(self):
         return self.screenshot.get_property("last-buffer")
 
-    def detect(self, element_name, properties, timeout_secs):
-        """Generator that yields the messages emitted by the named gstreamer
-        element configured with the specified `properties`.
-
-        "element_name" is the name of the gstreamer element as specified in the
-        pipeline. The name must be the same in the pipeline and in the messages
-        returned by gstreamer.
-
-        "properties" is a dictionary of properties to set on the gstreamer
-        element. The original properties will be restored at the end of the
-        call.
+    def frames(self, timeout_secs=10):
+        """Generator that yields frames captured from the GStreamer pipeline.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
         you can also simply stop iterating over the sequence yielded by this
         method.
 
-        For every frame processed, returns a tuple: (message, screenshot).
+        Returns a (Frame, timestamp) tuple For every frame captured.
         """
 
-        element = self.pipeline.get_by_name(element_name)
+        # Timeout after 10s in case no frames are received.
+        # This happens when starting a new instance of stbt when the
+        # Hauppauge HDPVR video-capture device fails to run.
+        with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
+            self.test_timeout = t
 
-        properties_backup = {}
-        for key in properties.keys():
-            properties_backup[key] = getattr(element.props, key)
+            self.start_timestamp = None
+            last_timestamp = None
 
-        try:
-            for key in (set(properties.keys()) - set(["template", "enabled"])):
-                setattr(element.props, key, properties[key])
-            for key in ["template", "enabled"]:
-                if key in properties:
-                    setattr(element.props, key, properties[key])
+            while True:
+                gst_buffer = self.screenshot.get_property("last-buffer")
+                if not gst_buffer:
+                    continue
 
-            # Timeout after 10s in case no messages are received on the bus.
-            # This happens when starting a new instance of stbt when the
-            # Hauppauge HDPVR video-capture device fails to run.
-            with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
-                self.test_timeout = t
+                if gst_buffer.timestamp == last_timestamp:
+                    continue
+                last_timestamp = gst_buffer.timestamp
 
-                self.start_timestamp = None
-                for message in MessageIterator(self.bus, "message::element"):
-                    # Cancel test_timeout as messages are obviously received.
-                    if self.test_timeout:
-                        self.test_timeout.cancel()
-                        self.test_timeout = None
+                if not self.start_timestamp:
+                    self.start_timestamp = gst_buffer.timestamp
+                if (gst_buffer.timestamp - self.start_timestamp >
+                        timeout_secs * 1000000000):
+                    return
 
-                    st = message.structure
-                    if st.get_name() == element_name:
-                        buf = self.screenshot.get_property("last-buffer")
-                        if not buf:
-                            continue
-
-                        if not self.start_timestamp:
-                            self.start_timestamp = buf.timestamp
-                        if (buf.timestamp - self.start_timestamp >
-                                timeout_secs * 1000000000):
-                            return
-
-                        yield (st, buf)
-
-        finally:
-            for key in properties.keys():
-                setattr(element.props, key, properties_backup[key])
+                yield (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
 
     @staticmethod
     def on_timeout(*_args):
@@ -820,10 +784,6 @@ class Display:
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
-        if (err.message == "OpenCV failed to load template image" or
-                err.message == "OpenCV failed to load mask image"):
-            sys.stderr.write("Error: %s\n" % err.message)
-            sys.exit(1)
 
     def on_underrun(self, _element):
         # Cancel test_timeout as messages are obviously received on the bus.
@@ -913,6 +873,59 @@ class GObjectTimeout:
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
         self.timeout_id = None
+
+
+def gst_to_opencv(gst_buffer):
+    return numpy.ndarray(
+        (gst_buffer.get_caps().get_structure(0)["height"],
+         gst_buffer.get_caps().get_structure(0)["width"],
+         3),
+        buffer=gst_buffer.data,
+        dtype=numpy.uint8)
+
+
+def _match_template(image, template, match_parameters):
+    matches_heatmap = cv2.matchTemplate(
+        image, template, match_parameters.match_method)
+    min_value, max_value, min_location, max_location = cv2.minMaxLoc(
+        matches_heatmap)
+    if match_parameters.match_method == cv2.TM_SQDIFF_NORMED:
+        first_pass_certainty = (1 - min_value)
+        position = Position(*min_location)
+    elif match_parameters.match_method in (
+            cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
+        first_pass_certainty = max_value
+        position = Position(*max_location)
+    else:
+        assert False, "Invalid matchTemplate method '%s'" % (
+            match_parameters.match_method)
+
+    matched = False
+    if first_pass_certainty >= match_parameters.match_threshold:
+        if match_parameters.confirm_method == "none":
+            matched = True
+        else:
+            # Set Region Of Interest to the "best match" location
+            image = image[
+                position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+                position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
+            image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            if match_parameters.confirm_method == "normed-absdiff":
+                cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
+                cv2.normalize(
+                    template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
+            absdiff = cv2.absdiff(image_gray, template_gray)
+            _, thresholded = cv2.threshold(
+                absdiff, int(match_parameters.confirm_threshold * 255),
+                255, cv2.THRESH_BINARY)
+            eroded = cv2.erode(
+                thresholded,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+                iterations=match_parameters.erode_passes)
+            matched = (cv2.countNonZero(eroded) == 0)
+
+    return matched, position, first_pass_certainty
 
 
 def uri_to_remote(uri, display):

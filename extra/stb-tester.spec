@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.13
+Version: 0.14
 Release: 1%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
@@ -18,6 +18,7 @@ Requires: gstreamer-python
 Requires: gstreamer
 Requires: gstreamer-plugins-base
 Requires: opencv
+Requires: opencv-python
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control
