@@ -12,6 +12,7 @@ from collections import namedtuple, deque
 import ConfigParser
 import contextlib
 import errno
+import functools
 import inspect
 import os
 import Queue
@@ -338,8 +339,12 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             raise UITestError("Failed to load mask file: %s" % mask_)
 
     previous_frame_gray = None
+    log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
+
     for frame, timestamp in _display.frames(timeout_secs):
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        log(frame_gray, "source")
+
         if previous_frame_gray is None:
             if (mask_image is not None and
                     mask_image.shape[:2] != frame.shape[:2]):
@@ -351,14 +356,21 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
         absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
         previous_frame_gray = frame_gray
+        log(absdiff, "absdiff")
 
         if mask_image is not None:
             absdiff = cv2.bitwise_and(absdiff, 255, mask=mask_image)
+            log(mask_image, "mask")
+            log(absdiff, "absdiff_masked")
+
         _, thresholded = cv2.threshold(
             absdiff, int((1 - noise_threshold) * 255), 255, cv2.THRESH_BINARY)
         eroded = cv2.erode(
             thresholded,
             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+        log(thresholded, "absdiff_threshold")
+        log(eroded, "absdiff_threshold_erode")
+
         motion = (cv2.countNonZero(eroded) > 0)
 
         result = MotionResult(timestamp, motion)
@@ -885,8 +897,14 @@ def gst_to_opencv(gst_buffer):
 
 
 def _match_template(image, template, match_parameters):
+    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
+
     matches_heatmap = cv2.matchTemplate(
         image, template, match_parameters.match_method)
+    log(image, "source")
+    log(template, "template")
+    log(matches_heatmap, "source_matchtemplate")
+
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
     if match_parameters.match_method == cv2.TM_SQDIFF_NORMED:
@@ -911,10 +929,17 @@ def _match_template(image, template, match_parameters):
                 position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
             image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            log(image, "source_roi")
+            log(image_gray, "source_roi_gray")
+            log(template_gray, "template_gray")
+
             if match_parameters.confirm_method == "normed-absdiff":
                 cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
                 cv2.normalize(
                     template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
+                log(image_gray, "source_roi_gray_normalized")
+                log(template_gray, "template_gray_normalized")
+
             absdiff = cv2.absdiff(image_gray, template_gray)
             _, thresholded = cv2.threshold(
                 absdiff, int(match_parameters.confirm_threshold * 255),
@@ -923,9 +948,29 @@ def _match_template(image, template, match_parameters):
                 thresholded,
                 cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
                 iterations=match_parameters.erode_passes)
+            log(absdiff, "absdiff")
+            log(thresholded, "absdiff_threshold")
+            log(eroded, "absdiff_threshold_erode")
+
             matched = (cv2.countNonZero(eroded) == 0)
 
     return matched, position, first_pass_certainty
+
+
+_frame_number = 0
+
+
+def _log_image(image, name, directory):
+    if _debug_level <= 1:
+        return
+    global _frame_number
+    if name == "source":
+        _frame_number += 1
+    d = os.path.join(directory, "%05d" % _frame_number)
+    if not _mkdir(d):
+        warn("Failed to create directory '%s'; won't save debug images." % d)
+        return
+    cv2.imwrite(os.path.join(d, name) + ".png", image)
 
 
 def uri_to_remote(uri, display):
