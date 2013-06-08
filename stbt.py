@@ -970,6 +970,8 @@ def _log_image(image, name, directory):
     if not _mkdir(d):
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
+    if image.dtype == numpy.float32:
+        image = cv2.convertScaleAbs(image, alpha=255)
     cv2.imwrite(os.path.join(d, name) + ".png", image)
 
 
