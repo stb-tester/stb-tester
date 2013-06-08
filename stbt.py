@@ -341,8 +341,8 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             result = MotionResult(timestamp=buf.timestamp,
                                   motion=msg["has_motion"])
             # pylint: disable=E1101
-            debug("%s detected. Timestamp: %d." % (
-                "Motion" if result.motion else "No motion", result.timestamp))
+            debug("%s found: %s" % (
+                "Motion" if result.motion else "No motion", str(result)))
             yield result
 
 
