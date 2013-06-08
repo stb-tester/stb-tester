@@ -7,14 +7,14 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
-from collections import namedtuple, deque
 import argparse
+from collections import namedtuple, deque
 import ConfigParser
 import contextlib
-import Queue
 import errno
 import inspect
 import os
+import Queue
 import re
 import socket
 import sys
