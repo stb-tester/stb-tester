@@ -33,7 +33,7 @@ try:
     execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))
-    if hasattr(e, "screenshot") and e.screenshot:
+    if hasattr(e, "screenshot") and e.screenshot is not None:
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     traceback.print_exc(file=sys.stderr)
