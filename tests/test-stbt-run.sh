@@ -609,6 +609,8 @@ test_get_frame_and_save_frame() {
 	save_frame(get_frame(), "$scratchdir/gamut.png")
 	EOF
     stbt-run -v "$scratchdir/get-screenshot.py"
+    [ -f "$scratchdir/gamut.png" ] ||
+        fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
     cat > "$scratchdir/match-screenshot.py" <<-EOF
 	press("15")

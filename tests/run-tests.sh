@@ -57,6 +57,9 @@ timeout() { perl -e \
     "$@"; }
 timedout=142
 
+fail() { echo "$*"; exit 1; }
+
+
 # Run the tests ############################################################
 ret=0
 for t in ${*:-$(declare -F | awk '/ test_/ {print $3}')}; do
