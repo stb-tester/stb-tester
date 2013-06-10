@@ -67,6 +67,20 @@ test_wait_for_motion_half_motion_int() {
         ffmpegcolorspace" "$scratchdir/test.py"
 }
 
+test_wait_for_motion_with_mask_reports_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(mask="videotestsrc-mask-video.png")
+	EOF
+    stbt-run -v "$scratchdir/test.py"
+}
+
+test_wait_for_motion_with_mask_does_not_report_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(mask="videotestsrc-mask-no-video.png", timeout_secs=1)
+	EOF
+    ! stbt-run -v "$scratchdir/test.py"
+}
+
 test_wait_for_motion_nonexistent_mask() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_motion(mask="idontexist.png")
@@ -77,6 +91,20 @@ test_wait_for_motion_nonexistent_mask() {
     local ret=$?
     echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]
+}
+
+test_wait_for_motion_with_high_noisethreshold_reports_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(noise_threshold=1.0)
+	EOF
+    stbt-run -v "$scratchdir/test.py"
+}
+
+test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
+    cat > "$scratchdir/test.py" <<-EOF
+	wait_for_motion(noise_threshold=0.0, timeout_secs=1)
+	EOF
+    ! stbt-run -v "$scratchdir/test.py"
 }
 
 test_detect_motion_reports_motion() {
