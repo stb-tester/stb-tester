@@ -360,7 +360,8 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
         log(absdiff, "absdiff")
 
         if mask_image is not None:
-            absdiff = cv2.bitwise_and(absdiff, 255, mask=mask_image)
+            absdiff = cv2.bitwise_and(
+                absdiff, numpy.array([255]), mask=mask_image)
             log(mask_image, "mask")
             log(absdiff, "absdiff_masked")
 
