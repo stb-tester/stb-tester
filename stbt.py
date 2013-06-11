@@ -656,14 +656,14 @@ class Display:
     def __init__(self, source_pipeline, sink_pipeline):
         gobject.threads_init()
 
-        screenshot = (
-            "appsink name=screenshot max-buffers=1 drop=true sync=false "
+        appsink = (
+            "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
         pipe = " ".join([
             "tee name=t",
-            "t. ! queue leaky=2 name=q ! ffmpegcolorspace !", screenshot,
+            "t. ! queue leaky=2 name=q ! ffmpegcolorspace !", appsink,
             "t. ! queue leaky=2 ! ffmpegcolorspace !", sink_pipeline
         ])
 
@@ -675,8 +675,8 @@ class Display:
         self.pipeline.add(self.source_bin, self.sink_bin)
         gst.element_link_many(self.source_bin, self.sink_bin)
 
-        self.screenshot = self.pipeline.get_by_name("screenshot")
-        self.screenshot.connect("new-buffer", self.on_new_buffer)
+        self.appsink = self.pipeline.get_by_name("appsink")
+        self.appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
 
         self.bus = self.pipeline.get_bus()
@@ -710,7 +710,7 @@ class Display:
         return source_bin
 
     def capture_screenshot(self):
-        return gst_to_opencv(self.screenshot.get_property("last-buffer"))
+        return gst_to_opencv(self.appsink.get_property("last-buffer"))
 
     def frames(self, timeout_secs=10):
         """Generator that yields frames captured from the GStreamer pipeline.
