@@ -679,24 +679,24 @@ class Display:
         self.appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
 
-        self.bus = self.pipeline.get_bus()
-        self.bus.connect("message::error", self.on_error)
-        self.bus.connect("message::warning", self.on_warning)
-        self.bus.add_signal_watch()
+        gst_bus = self.pipeline.get_bus()
+        gst_bus.connect("message::error", self.on_error)
+        gst_bus.connect("message::warning", self.on_warning)
+        gst_bus.add_signal_watch()
 
         self.pipeline.set_state(gst.STATE_PLAYING)
 
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
-        self.queue = self.pipeline.get_by_name("q")
+        gst_queue = self.pipeline.get_by_name("q")
         self.start_timestamp = None
         self.underrun_timeout = None
-        self.queue.connect("underrun", self.on_underrun)
-        self.queue.connect("running", self.on_running)
+        gst_queue.connect("underrun", self.on_underrun)
+        gst_queue.connect("running", self.on_running)
 
-        self.mainloop_thread = threading.Thread(target=_mainloop.run)
-        self.mainloop_thread.daemon = True
-        self.mainloop_thread.start()
+        mainloop_thread = threading.Thread(target=_mainloop.run)
+        mainloop_thread.daemon = True
+        mainloop_thread.start()
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
