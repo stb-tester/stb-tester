@@ -19,6 +19,7 @@ import Queue
 import re
 import socket
 import sys
+import threading
 import time
 import warnings
 
@@ -651,33 +652,13 @@ _display = None
 _control = None
 
 
-def MessageIterator(bus, signal):
-    queue = Queue.Queue()
-
-    def sig(_bus, message):
-        queue.put(message)
-        _mainloop.quit()
-    bus.connect(signal, sig)
-    try:
-        stop = False
-        while not stop:
-            _mainloop.run()
-            # Check what interrupted the main loop (new message, error thrown)
-            try:
-                item = queue.get(block=False)
-                yield item
-            except Queue.Empty:
-                stop = True
-    finally:
-        bus.disconnect_by_func(sig)
-
-
 class Display:
     def __init__(self, source_pipeline, sink_pipeline):
         gobject.threads_init()
 
         screenshot = (
             "appsink name=screenshot max-buffers=1 drop=true sync=false "
+            "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
         pipe = " ".join([
@@ -695,6 +676,9 @@ class Display:
         gst.element_link_many(self.source_bin, self.sink_bin)
 
         self.screenshot = self.pipeline.get_by_name("screenshot")
+        self.screenshot.connect("new-buffer", self.on_new_buffer)
+        self.last_buffer = Queue.Queue(maxsize=1)
+
         self.bus = self.pipeline.get_bus()
         self.bus.connect("message::error", self.on_error)
         self.bus.connect("message::warning", self.on_warning)
@@ -706,11 +690,14 @@ class Display:
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
         self.start_timestamp = None
-        self.test_timeout = None
         self.successive_underruns = 0
         self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
         self.queue.connect("running", self.on_running)
+
+        self.mainloop_thread = threading.Thread(target=_mainloop.run)
+        self.mainloop_thread.daemon = True
+        self.mainloop_thread.start()
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -736,44 +723,62 @@ class Display:
         Returns a (Frame, timestamp) tuple For every frame captured.
         """
 
-        # Timeout after 10s in case no frames are received.
-        # This happens when starting a new instance of stbt when the
-        # Hauppauge HDPVR video-capture device fails to run.
-        with GObjectTimeout(timeout_secs=10, handler=self.on_timeout) as t:
-            self.test_timeout = t
+        self.start_timestamp = None
 
-            self.start_timestamp = None
-            last_timestamp = None
+        while True:
+            # Timeout after 10s in case no frames are received.
+            # This happens when starting a new instance of stbt when the
+            # Hauppauge HDPVR video-capture device fails to run.
+            ddebug("user thread: Getting buffer at %s" % time.time())
+            gst_buffer = self.last_buffer.get(timeout=timeout_secs)
+            if isinstance(gst_buffer, Exception):
+                raise UITestError(str(gst_buffer))
+            ddebug("user thread: Got buffer at %s" % time.time())
 
-            while True:
-                gst_buffer = self.screenshot.get_property("last-buffer")
-                if not gst_buffer:
-                    continue
+            if not self.start_timestamp:
+                self.start_timestamp = gst_buffer.timestamp
+            if (gst_buffer.timestamp - self.start_timestamp >
+                    timeout_secs * 1000000000):
+                return
 
-                if gst_buffer.timestamp == last_timestamp:
-                    continue
-                last_timestamp = gst_buffer.timestamp
+            yield (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
 
-                if not self.start_timestamp:
-                    self.start_timestamp = gst_buffer.timestamp
-                if (gst_buffer.timestamp - self.start_timestamp >
-                        timeout_secs * 1000000000):
-                    return
+    def on_new_buffer(self, appsink):
+        buf = appsink.emit("pull-buffer")
+        self.tell_user_thread(buf)
 
-                yield (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
+    def tell_user_thread(self, buffer_or_exception):
+        # `self.last_buffer` (a synchronised Queue) is how we communicate from
+        # this thread (the GLib main loop) to the main application thread
+        # running the user's script. Note that only this thread writes to the
+        # Queue.
 
-    @staticmethod
-    def on_timeout(*_args):
-        debug("Timed out")
-        _mainloop.quit()
-        return False  # stop the timeout from running again
+        if isinstance(buffer_or_exception, Exception):
+            ddebug("glib thread: reporting exception to user thread: %s" %
+                   buffer_or_exception)
+        else:
+            ddebug("glib thread: new buffer (timestamp=%s). Queue.qsize: %d" %
+                   (buffer_or_exception.timestamp, self.last_buffer.qsize()))
 
-    @staticmethod
-    def on_error(_bus, message):
+        # Drop old frame
+        try:
+            last_value = self.last_buffer.get_nowait()
+            if isinstance(last_value, Exception):
+                ddebug("glib thread: ignoring new %s because there is an "
+                       "outstanding exception on the queue" %
+                       type(buffer_or_exception).__name__)
+                self.last_buffer.put_nowait(last_value)
+                return
+        except Queue.Empty:
+            pass
+
+        self.last_buffer.put_nowait(buffer_or_exception)
+
+    def on_error(self, _bus, message):
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
-        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
-        sys.exit(1)
+        self.tell_user_thread(
+            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
     @staticmethod
     def on_warning(_bus, message):
@@ -782,11 +787,6 @@ class Display:
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_underrun(self, _element):
-        # Cancel test_timeout as messages are obviously received on the bus.
-        if self.test_timeout:
-            self.test_timeout.cancel()
-            self.test_timeout = None
-
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
@@ -795,11 +795,6 @@ class Display:
             self.underrun_timeout.start()
 
     def on_running(self, _element):
-        # Cancel test_timeout as messages are obviously received on the bus.
-        if self.test_timeout:
-            self.test_timeout.cancel()
-            self.test_timeout = None
-
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
             self.successive_underruns = 0
@@ -811,8 +806,8 @@ class Display:
     def restart_source_bin(self):
         self.successive_underruns += 1
         if self.successive_underruns > 3:
-            sys.stderr.write("Error: Video loss. Too many underruns.\n")
-            sys.exit(1)
+            self.tell_user_thread(
+                UITestError("Video loss. Too many underruns."))
 
         gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_NULL)
@@ -844,22 +839,12 @@ class Display:
 
 
 class GObjectTimeout:
-    """Responsible for setting a timeout in the GTK main loop.
-
-    Can be used as a Context Manager in a 'with' statement.
-    """
+    """Responsible for setting a timeout in the GTK main loop."""
     def __init__(self, timeout_secs, handler, *args):
         self.timeout_secs = timeout_secs
         self.handler = handler
         self.args = args
         self.timeout_id = None
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, ex_type, ex_value, traceback):
-        self.cancel()
 
     def start(self):
         self.timeout_id = gobject.timeout_add(
@@ -1348,8 +1333,6 @@ class FileToSocket:
 
 
 def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
-    import threading
-
     received = []
     keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
 
@@ -1374,7 +1357,6 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     import tempfile
-    import threading
 
     keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
 
