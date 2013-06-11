@@ -8,6 +8,7 @@ install:
                         libcv-dev libhighgui-dev python-nose xvfb
                         gstreamer0.10-tools gstreamer0.10-x
                         gstreamer0.10-plugins-good pylint pep8
+                        python-numpy python-opencv
  - make
 
 script:
