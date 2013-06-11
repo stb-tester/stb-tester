@@ -1384,3 +1384,53 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
+
+
+def test_wait_for_motion_half_motion_str_2of4():
+    with _fake_frames_at_half_motion():
+        wait_for_motion(consecutive_frames='2/4')
+
+
+def test_wait_for_motion_half_motion_str_2of3():
+    with _fake_frames_at_half_motion():
+        wait_for_motion(consecutive_frames='2/3')
+
+
+def test_wait_for_motion_half_motion_str_3of4():
+    with _fake_frames_at_half_motion():
+        try:
+            wait_for_motion(consecutive_frames='3/4')
+            assert False, "wait_for_motion succeeded unexpectedly"
+        except MotionTimeout:
+            pass
+
+
+def test_wait_for_motion_half_motion_int():
+    with _fake_frames_at_half_motion():
+        try:
+            wait_for_motion(consecutive_frames=2)
+            assert False, "wait_for_motion succeeded unexpectedly"
+        except MotionTimeout:
+            pass
+
+
+@contextlib.contextmanager
+def _fake_frames_at_half_motion():
+    class FakeDisplay:
+        def frames(self, _timeout_secs=10):
+            for i in range(10):
+                yield (
+                    [
+                        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
+                    ][(i / 2) % 2],
+                    i * 1000000000)
+
+        def capture_screenshot(self):
+            return self.frames().next()[0]
+
+    global _display
+    orig = _display
+    _display = FakeDisplay()
+    yield
+    _display = orig

@@ -30,43 +30,6 @@ test_wait_for_motion_no_motion_str() {
         "$scratchdir/test.py"
 }
 
-test_wait_for_motion_half_motion_str_2of4() {
-    cat > "$scratchdir/test.py" <<-EOF
-	wait_for_motion(consecutive_frames='2/4', timeout_secs=1)
-	EOF
-    stbt-run -v --source-pipeline="videotestsrc is-live=true ! \
-        video/x-raw-yuv,framerate=12/1 ! videorate force-fps=25/1 ! \
-        ffmpegcolorspace" "$scratchdir/test.py"
-
-}
-
-test_wait_for_motion_half_motion_str_2of3() {
-    cat > "$scratchdir/test.py" <<-EOF
-	wait_for_motion(consecutive_frames='2/3', timeout_secs=1)
-	EOF
-    stbt-run -v --source-pipeline="videotestsrc is-live=true ! \
-        video/x-raw-yuv,framerate=12/1 ! videorate force-fps=25/1 ! \
-        ffmpegcolorspace" "$scratchdir/test.py"
-}
-
-test_wait_for_motion_half_motion_str_3of4() {
-    cat > "$scratchdir/test.py" <<-EOF
-	wait_for_motion(consecutive_frames='3/4', timeout_secs=1)
-	EOF
-    ! stbt-run -v --source-pipeline="videotestsrc is-live=true ! \
-        video/x-raw-yuv,framerate=12/1 ! videorate force-fps=25/1 ! \
-        ffmpegcolorspace" "$scratchdir/test.py"
-}
-
-test_wait_for_motion_half_motion_int() {
-    cat > "$scratchdir/test.py" <<-EOF
-	wait_for_motion(consecutive_frames=2, timeout_secs=1)
-	EOF
-    ! stbt-run -v --source-pipeline="videotestsrc is-live=true ! \
-        video/x-raw-yuv,framerate=12/1 ! videorate force-fps=25/1 ! \
-        ffmpegcolorspace" "$scratchdir/test.py"
-}
-
 test_wait_for_motion_with_mask_reports_motion() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_motion(mask="videotestsrc-mask-video.png")
