@@ -690,7 +690,6 @@ class Display:
         # Hauppauge HDPVR capture device.
         self.queue = self.pipeline.get_by_name("q")
         self.start_timestamp = None
-        self.successive_underruns = 0
         self.underrun_timeout = None
         self.queue.connect("underrun", self.on_underrun)
         self.queue.connect("running", self.on_running)
@@ -797,18 +796,12 @@ class Display:
     def on_running(self, _element):
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
-            self.successive_underruns = 0
             self.underrun_timeout.cancel()
             self.underrun_timeout = None
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source_bin(self):
-        self.successive_underruns += 1
-        if self.successive_underruns > 3:
-            self.tell_user_thread(
-                UITestError("Video loss. Too many underruns."))
-
         gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.source_bin.set_state(gst.STATE_NULL)
         self.sink_bin.set_state(gst.STATE_READY)
