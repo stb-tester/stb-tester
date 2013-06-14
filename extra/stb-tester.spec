@@ -8,9 +8,6 @@ License: LGPLv2.1+
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: python-docutils
-BuildRequires: gstreamer-devel
-BuildRequires: gstreamer-plugins-base-devel
-BuildRequires: opencv-devel
 
 Requires: python >= 2.4
 Requires: pygtk2
