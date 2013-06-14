@@ -252,7 +252,8 @@ SOFTWARE REQUIREMENTS
   install the python-argparse package) + pygst + docutils (for building
   the documentation) + nose (for the self-tests).
 
-* OpenCV (image processing library) version >= 2.0.0.
+* OpenCV (image processing library) version >= 2.0.0, and the OpenCV python
+  bindings.
 
 * For the Hauppauge video capture device you'll need the gstreamer-ffmpeg
   package (e.g. from the rpmfusion-free repository) for H.264 decoding.
@@ -269,10 +270,6 @@ for the required dependencies.
 
 SETUP TIPS
 ==========
-
-Use "gst-inspect stbt-templatematch" to check that gstreamer can find the
-templatematch element. You may need to set GST_PLUGIN_PATH to point
-where you installed libgst-stb-tester.so.
 
 Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
 working correctly.
@@ -576,10 +573,3 @@ AUTHORS
 * David Rothlisberger <david@rothlis.net>
 * Hubert Lacote <hubert.lacote@gmail.com>
 * and contributors
-
-Original templatematch GStreamer element written by:
-
-* Thomas Vander Stichele <thomas@apestaart.org>
-* Ronald S. Bultje <rbultje@ronald.bitfreak.net>
-* Michael Sheldon <mike@mikeasoft.com>
-* Noam Lewis <jones.noamle@gmail.com>
