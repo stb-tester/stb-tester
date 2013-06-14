@@ -391,14 +391,14 @@ detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-save_frame(buf, filename)
-    Save a GStreamer buffer to the specified file in png format.
+save_frame(image, filename)
+    Saves an OpenCV image to the specified file.
 
-    Takes a buffer `buf` obtained from `get_frame` or from the `screenshot`
+    Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
 
 get_frame()
-    Get a GStreamer buffer containing the current video frame.
+    Returns an OpenCV image of the current video frame.
 
 get_config(section, key)
     Read the value of `key` from `section` of the stbt config file.
