@@ -6,9 +6,6 @@
 A video-capture record/playback system for automated testing of set-top boxes
 -----------------------------------------------------------------------------
 
-.. image:: https://travis-ci.org/drothlis/stb-tester.png?branch=master
-   :target: https://travis-ci.org/drothlis/stb-tester
-
 :Copyright: Copyright (C) 2012-2013 YouView TV Ltd. and others
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
           the source distribution for details)
@@ -252,7 +249,8 @@ SOFTWARE REQUIREMENTS
   install the python-argparse package) + pygst + docutils (for building
   the documentation) + nose (for the self-tests).
 
-* OpenCV (image processing library) version >= 2.0.0.
+* OpenCV (image processing library) version >= 2.0.0, and the OpenCV python
+  bindings.
 
 * For the Hauppauge video capture device you'll need the gstreamer-ffmpeg
   package (e.g. from the rpmfusion-free repository) for H.264 decoding.
@@ -269,10 +267,6 @@ for the required dependencies.
 
 SETUP TIPS
 ==========
-
-Use "gst-inspect stbt-templatematch" to check that gstreamer can find the
-templatematch element. You may need to set GST_PLUGIN_PATH to point
-where you installed libgst-stb-tester.so.
 
 Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
 working correctly.
@@ -391,14 +385,14 @@ detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
-save_frame(buf, filename)
-    Save a GStreamer buffer to the specified file in png format.
+save_frame(image, filename)
+    Saves an OpenCV image to the specified file.
 
-    Takes a buffer `buf` obtained from `get_frame` or from the `screenshot`
+    Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
 
 get_frame()
-    Get a GStreamer buffer containing the current video frame.
+    Returns an OpenCV image of the current video frame.
 
 get_config(section, key)
     Read the value of `key` from `section` of the stbt config file.
@@ -576,10 +570,3 @@ AUTHORS
 * David Rothlisberger <david@rothlis.net>
 * Hubert Lacote <hubert.lacote@gmail.com>
 * and contributors
-
-Original templatematch GStreamer element written by:
-
-* Thomas Vander Stichele <thomas@apestaart.org>
-* Ronald S. Bultje <rbultje@ronald.bitfreak.net>
-* Michael Sheldon <mike@mikeasoft.com>
-* Noam Lewis <jones.noamle@gmail.com>

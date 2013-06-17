@@ -5,35 +5,13 @@ prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
 libexecdir?=$(exec_prefix)/libexec
-libdir?=$(exec_prefix)/lib
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
-ifeq ($(prefix),$(HOME))
-  plugindir?=$(HOME)/.gstreamer-0.10/plugins
-else
-  plugindir?=$(libdir)/gstreamer-0.10
-endif
-
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
-
-dependencies = gstreamer-0.10
-dependencies += gstreamer-base-0.10
-dependencies += gstreamer-video-0.10
-dependencies += opencv
-
-# CFLAGS and LDFLAGS are for the user to override from the command line.
-CFLAGS ?= -g -O2 -Werror
-extra_cflags = -fPIC '-DPACKAGE="stb-tester"'
-extra_cflags += $(shell pkg-config --cflags $(dependencies))
-extra_ldflags = $(shell pkg-config --libs $(dependencies))
-
-OBJS = gst/gst-stb-tester.o
-OBJS += gst/gstmotiondetect.o
-OBJS += gst/gsttemplatematch.o
 
 tools = stbt-run
 tools += stbt-record
@@ -54,7 +32,7 @@ VERSION?=$(shell cat VERSION)
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf gst/libgst-stb-tester.so
+all: stbt stbt.1 defaults.conf
 
 stbt: stbt.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
@@ -66,11 +44,10 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt stbt.1 defaults.conf gst/libgst-stb-tester.so
+install: stbt stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
-	    $(DESTDIR)$(plugindir) \
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
@@ -78,7 +55,6 @@ install: stbt stbt.1 defaults.conf gst/libgst-stb-tester.so
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0755 gst/libgst-stb-tester.so $(DESTDIR)$(plugindir)
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
@@ -91,7 +67,6 @@ uninstall:
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	rm -f $(DESTDIR)$(plugindir)/libgst-stb-tester.so
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -112,13 +87,12 @@ README.rst: stbt.py api-doc.sh
 	./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf gst/*.o gst/libgst-stb-tester.so \
-	    .stbt-prefix .stbt-cflags .stbt-ldflags
+	rm -f stbt.1 stbt defaults.conf .stbt-prefix
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py
-check-integrationtests: gst/libgst-stb-tester.so
+check-integrationtests:
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
 check-pylint:
@@ -154,30 +128,11 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
 
 
-# GStreamer plugin
-gst/libgst-stb-tester.so: $(OBJS) .stbt-ldflags
-	$(CC) -shared -o $@ $(OBJS) $(extra_ldflags) $(LDFLAGS)
-
-$(OBJS): %.o: %.c .stbt-cflags
-	$(CC) -o $@ -c $(extra_cflags) $(CPPFLAGS) $(CFLAGS) \
-	    '-DVERSION="$(VERSION)"' $<
-# Header dependencies:
-gst/gstmotiondetect.o: gst/gstmotiondetect.h
-gst/gsttemplatematch.o: gst/gsttemplatematch.h
-gst/gst-stb-tester.o: VERSION
-
-
-# Force rebuild if installation directories or compilation flags change
+# Force rebuild if installation directories change
 sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 .stbt-prefix: flags = libexecdir=$(call sq,$(libexecdir)):\
                       sysconfdir=$(call sq,$(sysconfdir))
-.stbt-cflags: flags = CC=$(call sq,$(CC)):\
-                      extra_cflags=$(call sq,$(extra_cflags)):\
-                      CPPFLAGS=$(call sq,$(CPPFLAGS)):\
-                      CFLAGS=$(call sq,$(CFLAGS))
-.stbt-ldflags: flags = extra_ldflags=$(call sq,$(extra_ldflags)):\
-                       LDFLAGS=$(call sq,$(LDFLAGS))
-.stbt-prefix .stbt-cflags .stbt-ldflags: FORCE
+.stbt-prefix: FORCE
 	@if [ '$(flags)' != "$$(cat $@ 2>/dev/null)" ]; then \
 	    [ -f $@ ] && echo "*** new $@" >&2; \
 	    echo '$(flags)' > $@; \

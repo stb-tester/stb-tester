@@ -33,8 +33,6 @@ def main(argv):
     stbt.debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-    display = Display(args.source_pipeline, args.sink_pipeline)
-
     try:
         script = open(args.output_file, 'w')
     except IOError as e:
@@ -42,13 +40,12 @@ def main(argv):
             args.output_file, e.strerror)
         raise
 
-    record(display,
-           stbt.uri_to_remote_recorder(args.control_recorder),
-           stbt.uri_to_remote(args.control, display),
-           script)
+    stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
+
+    record(stbt.uri_to_remote_recorder(args.control_recorder), script)
 
 
-def record(display, remote_input, control, script_out):
+def record(remote_input, script_out):
     count = itertools.count()
     old_key = None
     script_out.write("import stbt\n\n\n")
@@ -58,9 +55,9 @@ def record(display, remote_input, control, script_out):
             key = remote_input.next()
         except (KeyboardInterrupt, StopIteration):
             interrupt = True
-        buf = display.screenshot.get_property('last-buffer')
+        buf = stbt.get_frame()
         if not interrupt:
-            control.press(key)
+            stbt.press(key)
         if old_key:
             filename = '%04d-%s-complete.png' % (count.next(), old_key)
             stbt.save_frame(buf, filename)
@@ -69,37 +66,6 @@ def record(display, remote_input, control, script_out):
             return
         script_out.write("stbt.press('%s')\n" % key)
         old_key = key
-
-
-class Display:
-    def __init__(self, video_source, video_sink):
-        pipe = " ".join([
-            video_source,
-            " ! tee name=t",
-            " t. ! queue leaky=2",
-            "    ! ffmpegcolorspace",
-            "    ! appsink name=screenshot max-buffers=1 drop=true "
-            "sync=false caps=video/x-raw-rgb",
-            " t. ! queue leaky=2 ! ffmpegcolorspace ! ", video_sink
-        ])
-        self.pipeline = gst.parse_launch(pipe)
-        self.screenshot = self.pipeline.get_by_name("screenshot")
-        self.pipeline.get_bus().connect("message::error", self.on_error)
-        self.pipeline.get_bus().connect("message::warning", self.on_warning)
-        self.pipeline.set_state(gst.STATE_PLAYING)
-
-    @staticmethod
-    def on_error(_bus, message):
-        assert message.type == gst.MESSAGE_ERROR
-        err, dbg = message.parse_error()
-        sys.stderr.write("Error: %s: %s\n%s\n" % (err, err.message, dbg))
-        sys.exit(1)
-
-    @staticmethod
-    def on_warning(_bus, message):
-        assert message.type == gst.MESSAGE_WARNING
-        err, dbg = message.parse_warning()
-        sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
 
 if __name__ == "__main__":
