@@ -27,10 +27,10 @@ command.
 %setup
 
 %build
-make prefix=/usr libdir=%{_libdir} sysconfdir=/etc
+make prefix=/usr sysconfdir=/etc
 
 %install
-make install prefix=/usr libdir=%{_libdir} sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
+make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
 
 %clean
 rm -rf %{buildroot}
@@ -40,7 +40,6 @@ rm -rf %{buildroot}
 
 /usr/bin/stbt
 /usr/libexec/stbt
-%{_libdir}/gstreamer-0.10/libgst-stb-tester.so
 /usr/share/man/man1
 /etc/stbt
 /etc/bash_completion.d/stbt
