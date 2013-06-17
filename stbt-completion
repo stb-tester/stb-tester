@@ -39,7 +39,7 @@ _stbt_run() {
         --sink-pipeline=*) COMPREPLY=();;
         *) COMPREPLY=($(compgen \
             -f -W "$(_stbt_trailing_space \
-                        --help -v --verbose \
+                        --help --verbose \
                         --control --source-pipeline --sink-pipeline)" \
             -- "$cur"));;
     esac
@@ -57,9 +57,9 @@ _stbt_record() {
         -o=*|--output-file=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
-                    --help -v --verbose \
+                    --help --verbose \
                     --control --source-pipeline --sink-pipeline \
-                    --control-recorder -o --output-file)" \
+                    --control-recorder --output-file)" \
             -- "$cur"));;
     esac
 }
@@ -83,7 +83,7 @@ _stbt_control() {
         --keymap=*) COMPREPLY=($(compgen -f -- "$cur"));;
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
-                            --help -h --keymap --control)" \
+                            --help --keymap --control)" \
                         -- "$cur"));;
     esac
 }
