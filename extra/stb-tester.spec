@@ -14,8 +14,8 @@ Requires: pygtk2
 Requires: gstreamer-python
 Requires: gstreamer
 Requires: gstreamer-plugins-base
-Requires: opencv
-Requires: opencv-python
+Requires: opencv >= 2.4
+Requires: opencv-python >= 2.4
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control
