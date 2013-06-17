@@ -617,6 +617,18 @@ def process_all_frames():
         yield
 
 
+def get_live_stream_timestamp(retry=False):
+    """Returns the timestamp from the live stream.
+
+    Normally, this is the equivalent to get_frame().timestamp, but when the
+    test script is running within a "process_all_frames" context, this
+    function needs to be used instead.
+
+    If retry is True, this function will wait until there is video available.
+    """
+    return _display.get_live_stream_timestamp(retry)
+
+
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -798,8 +810,8 @@ class Display:
             "appsrc name=appsrc !",
             "tee name=t",
             video_pipeline,
-            "t. ! queue leaky=downstream ! ffmpegcolorspace !",
-            user_sink_pipeline
+            "t. ! queue leaky=downstream name=upstream_screenshot ! "
+            "ffmpegcolorspace !", user_sink_pipeline
         ])
 
         self.sink_pipeline = gst.parse_launch(sink_pipeline_description)
@@ -971,6 +983,17 @@ class Display:
     def catchup_live_stream(self):
         self.operation_mode = OperationMode.DROP_FRAMES
         self.restart_source()
+
+    def get_live_stream_timestamp(self, retry=False):
+        upstream_screenshot = \
+            self.sink_pipeline.get_by_name('upstream_screenshot')
+        buf = upstream_screenshot.get_property("last-buffer")
+        if not buf and not retry:
+            raise Exception("get_live_stream_timestamp: no buffer available.")
+        elif not buf:
+            while not buf:
+                buf = upstream_screenshot.get_property("last-buffer")
+        return buf.timestamp
 
     def on_error(self, _bus, message):
         assert message.type == gst.MESSAGE_ERROR

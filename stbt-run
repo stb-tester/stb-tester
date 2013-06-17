@@ -41,6 +41,7 @@ try:
         press, press_until_match, wait_for_match, wait_for_motion,
         detect_match, MatchResult, Position, detect_motion, MotionResult,
         save_frame, get_frame, process_all_frames, MatchParameters,
+        get_live_stream_timestamp,
         debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
         ConfigurationError)
     __file__ = args.script
