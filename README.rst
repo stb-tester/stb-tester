@@ -6,9 +6,6 @@
 A video-capture record/playback system for automated testing of set-top boxes
 -----------------------------------------------------------------------------
 
-.. image:: https://travis-ci.org/drothlis/stb-tester.png?branch=master
-   :target: https://travis-ci.org/drothlis/stb-tester
-
 :Copyright: Copyright (C) 2012-2013 YouView TV Ltd. and others
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
           the source distribution for details)
