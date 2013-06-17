@@ -8,11 +8,6 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 import stbt
 
-import pygst  # gstreamer
-pygst.require("0.10")
-with stbt.hide_argv(), stbt.hide_stderr():
-    import gst
-
 import itertools
 import sys
 
