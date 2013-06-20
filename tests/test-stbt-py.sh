@@ -92,3 +92,29 @@ test_that_frames_raises_NoVideo() {
     grep -q NoVideo "$scratchdir/stbt-run.log" ||
     fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
 }
+
+test_that_video_index_is_written_on_eos() {
+    which webminspector.py &>/dev/null || {
+        echo "webminspector.py not found; skipping this test." >&2
+        echo "See http://git.chromium.org/gitweb/?p=webm/webminspector.git" >&2
+        return 0
+    }
+
+    [ $(uname) = Darwin ] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cd "$scratchdir" &&
+    cat > test.py <<-EOF &&
+	import time
+	time.sleep(2)
+	EOF
+    stbt-run -v \
+        --sink-pipeline \
+            "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
+        test.py &&
+    webminspector.py video.webm &> webminspector.log &&
+    grep "Cue Point" webminspector.log ||
+    fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+}

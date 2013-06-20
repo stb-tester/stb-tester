@@ -684,6 +684,7 @@ class Display:
         gst_bus = self.pipeline.get_bus()
         gst_bus.connect("message::error", self.on_error)
         gst_bus.connect("message::warning", self.on_warning)
+        gst_bus.connect("message::eos", self.on_eos)
         gst_bus.add_signal_watch()
 
         self.pipeline.set_state(gst.STATE_PLAYING)
@@ -787,6 +788,10 @@ class Display:
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
+    def on_eos(self, _bus, _message):
+        debug("Got EOS")
+        _mainloop.quit()
+
     def on_underrun(self, _element):
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
@@ -829,9 +834,10 @@ class Display:
 
     def teardown(self):
         if self.pipeline:
-            self.pipeline.send_event(gst.event_new_eos())
-            self.pipeline.set_state(gst.STATE_NULL)
-            _mainloop.quit()
+            debug("teardown: Sending eos")
+            self.pipeline.get_by_name("t").sink_pads().next().send_event(
+                gst.event_new_eos())
+            self.source_bin.post_message(gst.message_new_eos(self.source_bin))
 
 
 class GObjectTimeout:
