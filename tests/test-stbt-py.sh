@@ -44,3 +44,12 @@ test_get_config() {
 	EOF
     stbt-run "$scratchdir/test.py"
 }
+
+test_that_frames_returns_at_least_one_frame() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt
+	stbt._display.frames(timeout_secs=0).next()
+	stbt._display.frames(timeout_secs=0).next()
+	EOF
+    stbt-run "$scratchdir/test.py"
+}

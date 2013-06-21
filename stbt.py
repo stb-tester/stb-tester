@@ -725,11 +725,14 @@ class Display:
         self.start_timestamp = None
 
         while True:
-            # Timeout after 10s in case no frames are received.
-            # This happens when starting a new instance of stbt when the
-            # Hauppauge HDPVR video-capture device fails to run.
             ddebug("user thread: Getting buffer at %s" % time.time())
-            gst_buffer = self.last_buffer.get(timeout=timeout_secs)
+            try:
+                # Timeout in case no frames are received. This happens when the
+                # Hauppauge HDPVR video-capture device loses video.
+                gst_buffer = self.last_buffer.get(
+                    timeout=max(10, timeout_secs))
+            except Queue.Empty:
+                return
             if isinstance(gst_buffer, Exception):
                 raise UITestError(str(gst_buffer))
             ddebug("user thread: Got buffer at %s" % time.time())
