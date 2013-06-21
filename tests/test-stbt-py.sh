@@ -53,3 +53,14 @@ test_that_frames_returns_at_least_one_frame() {
 	EOF
     stbt-run "$scratchdir/test.py"
 }
+
+test_that_frames_doesnt_time_out() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt
+	for _ in stbt._display.frames():
+	    pass
+	EOF
+    timeout 12 stbt-run "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
+}

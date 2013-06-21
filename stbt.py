@@ -712,7 +712,7 @@ class Display:
     def capture_screenshot(self):
         return gst_to_opencv(self.appsink.get_property("last-buffer"))
 
-    def frames(self, timeout_secs=10):
+    def frames(self, timeout_secs=None):
         """Generator that yields frames captured from the GStreamer pipeline.
 
         "timeout_secs" is in seconds elapsed, from the method call. Note that
@@ -738,11 +738,12 @@ class Display:
                 raise UITestError(str(gst_buffer))
             ddebug("user thread: Got buffer at %s" % time.time())
 
-            if not self.start_timestamp:
-                self.start_timestamp = gst_buffer.timestamp
-            if (gst_buffer.timestamp - self.start_timestamp >
-                    timeout_secs * 1000000000):
-                return
+            if timeout_secs is not None:
+                if not self.start_timestamp:
+                    self.start_timestamp = gst_buffer.timestamp
+                if (gst_buffer.timestamp - self.start_timestamp >
+                        timeout_secs * 1000000000):
+                    return
 
             yield (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
 
