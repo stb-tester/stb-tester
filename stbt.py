@@ -719,7 +719,8 @@ class Display:
         you can also simply stop iterating over the sequence yielded by this
         method.
 
-        Returns a (Frame, timestamp) tuple For every frame captured.
+        Returns an (image, timestamp) tuple for every frame captured, where
+        "image" is in OpenCV format.
         """
 
         self.start_timestamp = None
