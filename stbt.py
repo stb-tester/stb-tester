@@ -221,11 +221,7 @@ class MatchParameters:
             confirm_method=str(get_config('match', 'confirm_method')),
             confirm_threshold=float(get_config('match', 'confirm_threshold')),
             erode_passes=int(get_config('match', 'erode_passes'))):
-        self.match_method = {
-            'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
-            'ccorr-normed': cv2.TM_CCORR_NORMED,
-            'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
-        }[match_method]
+        self.match_method = match_method
         self.match_threshold = match_threshold
         self.confirm_method = confirm_method
         self.confirm_threshold = confirm_threshold
@@ -866,24 +862,29 @@ def gst_to_opencv(gst_buffer):
 def _match_template(image, template, match_parameters):
     log = functools.partial(_log_image, directory="stbt-debug/detect_match")
 
+    match_method_cv2 = {
+        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
+        'ccorr-normed': cv2.TM_CCORR_NORMED,
+        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
+    }[match_parameters.match_method]
     matches_heatmap = cv2.matchTemplate(
-        image, template, match_parameters.match_method)
+        image, template, match_method_cv2)
     log(image, "source")
     log(template, "template")
     log(matches_heatmap, "source_matchtemplate")
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
-    if match_parameters.match_method == cv2.TM_SQDIFF_NORMED:
+    if match_method_cv2 == cv2.TM_SQDIFF_NORMED:
         first_pass_certainty = (1 - min_value)
         position = Position(*min_location)
-    elif match_parameters.match_method in (
+    elif match_method_cv2 in (
             cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
         first_pass_certainty = max_value
         position = Position(*max_location)
     else:
         assert False, "Invalid matchTemplate method '%s'" % (
-            match_parameters.match_method)
+            match_method_cv2)
 
     matched = False
     if first_pass_certainty >= match_parameters.match_threshold:
