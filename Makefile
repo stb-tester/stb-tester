@@ -110,7 +110,7 @@ check-bashcompletion:
 
 parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
-    echo parallel || echo xargs)
+    echo parallel --gnu || echo xargs)
 
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
