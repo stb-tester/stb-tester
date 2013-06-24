@@ -252,7 +252,7 @@ SOFTWARE REQUIREMENTS
   install the python-argparse package) + pygst + docutils (for building
   the documentation) + nose (for the self-tests).
 
-* OpenCV (image processing library) version >= 2.4.0, and the OpenCV python
+* OpenCV (image processing library) version >= 2.0.0, and the OpenCV python
   bindings.
 
 * For the Hauppauge video capture device you'll need the gstreamer-ffmpeg
