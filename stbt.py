@@ -549,6 +549,11 @@ class UITestFailure(Exception):
     pass
 
 
+class NoVideo(UITestFailure):
+    """No video available from the source pipeline."""
+    pass
+
+
 class MatchTimeout(UITestFailure):
     """
     * `screenshot`: A GStreamer frame from the source video when the search
@@ -729,7 +734,7 @@ class Display:
                 gst_buffer = self.last_buffer.get(
                     timeout=max(10, timeout_secs))
             except Queue.Empty:
-                return
+                raise NoVideo()
             if isinstance(gst_buffer, Exception):
                 raise UITestError(str(gst_buffer))
             ddebug("user thread: Got buffer at %s" % time.time())

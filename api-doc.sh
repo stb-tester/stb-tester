@@ -74,6 +74,7 @@ python_docstrings() {
     doc MotionResult
     doc MatchTimeout
     doc MotionTimeout
+    doc NoVideo
     doc UITestFailure
     doc UITestError
 }

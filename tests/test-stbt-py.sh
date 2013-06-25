@@ -64,3 +64,14 @@ test_that_frames_doesnt_time_out() {
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
+
+test_that_frames_raises_NoVideo() {
+    cat > "$scratchdir/test.py" <<-EOF
+	import stbt
+	for _ in stbt._display.frames():
+	    pass
+	EOF
+    ! stbt-run --source-pipeline "videotestsrc num-buffers=1" \
+            "$scratchdir/test.py" &&
+    grep -q NoVideo "$scratchdir/log"
+}
