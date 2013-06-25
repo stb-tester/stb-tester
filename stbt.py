@@ -419,7 +419,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.get_frame()[0]
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
@@ -513,7 +513,7 @@ def wait_for_motion(
             debug("Motion detected.")
             return res
 
-    screenshot = _display.capture_screenshot()
+    screenshot = _display.get_frame()[0]
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
@@ -528,7 +528,7 @@ def save_frame(image, filename):
 
 def get_frame():
     """Returns an OpenCV image of the current video frame."""
-    return _display.capture_screenshot()
+    return _display.get_frame()[0]
 
 
 def debug(msg):
@@ -710,8 +710,17 @@ class Display:
                 source_bin.get_by_name("padforcer").src_pads().next()))
         return source_bin
 
-    def capture_screenshot(self):
-        return gst_to_opencv(self.appsink.get_property("last-buffer"))
+    def get_frame(self, timeout_secs=10):
+        try:
+            # Timeout in case no frames are received. This happens when the
+            # Hauppauge HDPVR video-capture device loses video.
+            gst_buffer = self.last_buffer.get(timeout=timeout_secs)
+        except Queue.Empty:
+            raise NoVideo()
+        if isinstance(gst_buffer, Exception):
+            raise UITestError(str(gst_buffer))
+
+        return (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
 
     def frames(self, timeout_secs=None):
         """Generator that yields frames captured from the GStreamer pipeline.
@@ -728,25 +737,17 @@ class Display:
 
         while True:
             ddebug("user thread: Getting buffer at %s" % time.time())
-            try:
-                # Timeout in case no frames are received. This happens when the
-                # Hauppauge HDPVR video-capture device loses video.
-                gst_buffer = self.last_buffer.get(
-                    timeout=max(10, timeout_secs))
-            except Queue.Empty:
-                raise NoVideo()
-            if isinstance(gst_buffer, Exception):
-                raise UITestError(str(gst_buffer))
+            image, timestamp = self.get_frame(max(10, timeout_secs))
             ddebug("user thread: Got buffer at %s" % time.time())
 
             if timeout_secs is not None:
                 if not self.start_timestamp:
-                    self.start_timestamp = gst_buffer.timestamp
-                if (gst_buffer.timestamp - self.start_timestamp >
+                    self.start_timestamp = timestamp
+                if (timestamp - self.start_timestamp >
                         timeout_secs * 1000000000):
                     return
 
-            yield (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
+            yield (image, timestamp)
 
     def on_new_buffer(self, appsink):
         buf = appsink.emit("pull-buffer")
@@ -1436,8 +1437,8 @@ def _fake_frames_at_half_motion():
                     ][(i / 2) % 2],
                     i * 1000000000)
 
-        def capture_screenshot(self):
-            return self.frames().next()[0]
+        def get_frame(self):
+            return self.frames().next()
 
     global _display
     orig = _display
