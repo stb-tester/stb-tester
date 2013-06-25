@@ -696,7 +696,6 @@ class Display:
         gst_queue.connect("running", self.on_running)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
-        mainloop_thread.daemon = True
         mainloop_thread.start()
 
     def create_source_bin(self):
@@ -768,13 +767,7 @@ class Display:
 
         # Drop old frame
         try:
-            last_value = self.last_buffer.get_nowait()
-            if isinstance(last_value, Exception):
-                ddebug("glib thread: ignoring new %s because there is an "
-                       "outstanding exception on the queue" %
-                       type(buffer_or_exception).__name__)
-                self.last_buffer.put_nowait(last_value)
-                return
+            self.last_buffer.get_nowait()
         except Queue.Empty:
             pass
 
@@ -785,6 +778,7 @@ class Display:
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+        _mainloop.quit()
 
     @staticmethod
     def on_warning(_bus, message):
@@ -836,6 +830,7 @@ class Display:
         if self.pipeline:
             self.pipeline.send_event(gst.event_new_eos())
             self.pipeline.set_state(gst.STATE_NULL)
+            _mainloop.quit()
 
 
 class GObjectTimeout:
