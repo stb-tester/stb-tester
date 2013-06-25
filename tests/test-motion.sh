@@ -138,14 +138,14 @@ test_detect_motion_with_debug_output_does_not_segfault_without_mask() {
 
 test_detect_motion_times_out_during_yield() {
     cat > "$scratchdir/test.py" <<-EOF
+	i = 0
 	for motion_result in detect_motion(timeout_secs=1):
 	    import time
-	    time.sleep(2.0)
+	    time.sleep(2)
+	    i += 1
+	assert i == 1
 	EOF
-    timeout 4 stbt-run -v "$scratchdir/test.py"
-    local ret=$?
-    echo "return code: $ret"
-    [ $ret -ne $timedout -a $ret -eq 0 ]
+    stbt-run -v "$scratchdir/test.py"
 }
 
 test_detect_motion_changing_mask() {
