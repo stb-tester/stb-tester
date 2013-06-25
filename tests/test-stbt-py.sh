@@ -72,6 +72,7 @@ test_that_frames_raises_NoVideo() {
 	    pass
 	EOF
     ! stbt-run --source-pipeline "videotestsrc num-buffers=1" \
-            "$scratchdir/test.py" &&
-    grep -q NoVideo "$scratchdir/log"
+            "$scratchdir/test.py" &> "$scratchdir/stbt-run.log" &&
+    grep -q NoVideo "$scratchdir/stbt-run.log" ||
+    fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
 }
