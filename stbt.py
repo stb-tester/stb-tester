@@ -1226,6 +1226,10 @@ def uri_to_remote_recorder(uri):
     f = re.match('file://(?P<filename>.+)', uri)
     if f:
         return file_remote_recorder(f.group('filename'))
+    stbt_control = re.match(r'stbt-control(:(?P<keymap_file>.+))?', uri)
+    if stbt_control:
+        d = stbt_control.groupdict()
+        return stbt_control_listen(d['keymap_file'])
     raise ConfigurationError('Invalid remote control recorder URI: "%s"' % uri)
 
 
@@ -1316,6 +1320,20 @@ def lirc_remote_listen_tcp(address, port, control_name):
     lircd = _connect_tcp_socket(address, port, timeout=None)
     debug("control-recorder connected to lirc TCP socket")
     return lirc_key_reader(lircd.makefile(), control_name)
+
+
+def stbt_control_listen(keymap_file):
+    """Returns an iterator yielding keypresses received from `stbt control`.
+    """
+    import imp
+    tool_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             'stbt-control')
+    stbt_control = imp.load_source('stbt_control', tool_path)
+
+    global _debug_level
+    _debug_level = 0  # Don't mess up printed keymap with debug messages
+    return stbt_control.main_loop(
+        'stbt record', keymap_file or stbt_control.default_keymap_file())
 
 
 def lirc_key_reader(cmd_iter, control_name):

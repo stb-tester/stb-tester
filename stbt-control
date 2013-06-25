@@ -101,35 +101,32 @@ def main(argv):
 
     if control_uri is None:
         control_uri = stbt.get_config("global", "control")
+    remote = stbt.uri_to_remote(control_uri, None)
 
-    if args:
-        send(control_uri, args[0])
-    else:
-        main_loop(control_uri, keymap_file)
+    if args:  # Send a single key and exit
+        if control_uri == "none":
+            # Print key name to standard error
+            stbt._debug_level = 1  # pylint: disable=W0212
+        remote.press(args[0])
+    else:  # Interactive
+        for key in main_loop(control_uri, keymap_file):
+            remote.press(key)
 
 
 def test_main():
     def main_loop_stub(control_uri, keymap_file):
-        assert control_uri == "mycontrol"
+        assert control_uri == "none"
         assert keymap_file == "mykeymap"
+        yield
 
     sys.modules[__name__].main_loop = main_loop_stub
     try:
-        main(["", "--keymap", "mykeymap", "--control", "mycontrol"])
+        main(["", "--keymap", "mykeymap", "--control", "none"])
     finally:
         sys.modules[__name__] = reload(sys.modules[__name__])
 
 
-def send(control_uri, remote_key):
-    if control_uri == "none":
-        # Print key name to standard error
-        stbt._debug_level = 1  # pylint: disable=W0212
-    remote = stbt.uri_to_remote(control_uri, None)
-    remote.press(remote_key)
-
-
 def main_loop(control_uri, keymap_file):
-    remote = stbt.uri_to_remote(control_uri, None)
     try:
         keymap = load_keymap(open(keymap_file, "r"))
     except IOError:
@@ -150,14 +147,14 @@ def main_loop(control_uri, keymap_file):
         while True:  # Main loop
             keycode = term.getch()
             if keycode == ord('q'):  # 'q' for 'Quit' is pre-defined
-                sys.exit()
+                return
 
             remote_key, _ = keymap.get(decoded(keycode), (None, None))
             if timer:
                 timer.cancel()
                 clear_last_command(term)
             if remote_key:
-                remote.press(remote_key)
+                yield remote_key
             term.addstr(str(remote_key))
             timer = threading.Timer(1, clear_last_command, [term])
             timer.start()
