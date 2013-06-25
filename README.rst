@@ -506,13 +506,13 @@ class MotionResult
     * `motion`: Boolean result.
 
 class MatchTimeout(UITestFailure)
-    * `screenshot`: A GStreamer frame from the source video when the search
+    * `screenshot`: An OpenCV image from the source video when the search
       for the expected image timed out.
     * `expected`: Filename of the image that was being searched for.
     * `timeout_secs`: Number of seconds that the image was searched for.
 
 class MotionTimeout(UITestFailure)
-    * `screenshot`: A GStreamer frame from the source video when the search
+    * `screenshot`: An OpenCV image from the source video when the search
       for motion timed out.
     * `mask`: Filename of the mask that was used (see `wait_for_motion`).
     * `timeout_secs`: Number of seconds that motion was searched for.
