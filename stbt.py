@@ -716,7 +716,7 @@ class Display:
             # Hauppauge HDPVR video-capture device loses video.
             gst_buffer = self.last_buffer.get(timeout=timeout_secs)
         except Queue.Empty:
-            raise NoVideo()
+            raise NoVideo("No video")
         if isinstance(gst_buffer, Exception):
             raise UITestError(str(gst_buffer))
 
