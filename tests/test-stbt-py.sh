@@ -1,5 +1,12 @@
 # Run with ./run-tests.sh
 
+test_that_invalid_control_doesnt_hang() {
+    touch "$scratchdir/test.py"
+    timeout 5 stbt-run --control asdf "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
+}
+
 test_get_frame_and_save_frame() {
     cat > "$scratchdir/get-screenshot.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)

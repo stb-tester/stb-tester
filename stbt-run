@@ -22,14 +22,14 @@ args = parser.parse_args(sys.argv[1:])
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
-from stbt import (  # pylint: disable=W0611
-    press, press_until_match, wait_for_match, wait_for_motion, detect_match,
-    MatchResult, Position, detect_motion, MotionResult, save_frame, get_frame,
-    MatchParameters,
-    debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
-    ConfigurationError)
 try:
+    stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
+    from stbt import (  # pylint: disable=W0611
+        press, press_until_match, wait_for_match, wait_for_motion,
+        detect_match, MatchResult, Position, detect_motion, MotionResult,
+        save_frame, get_frame, MatchParameters,
+        debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
+        ConfigurationError)
     execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))

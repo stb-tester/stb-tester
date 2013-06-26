@@ -35,8 +35,8 @@ def main(argv):
             args.output_file, e.strerror)
         raise
 
-    stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
     try:
+        stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
         record(stbt.uri_to_remote_recorder(args.control_recorder), script)
     finally:
         stbt.teardown_run()
