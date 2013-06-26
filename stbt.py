@@ -833,11 +833,10 @@ class Display:
         return False  # stop the timeout from running again
 
     def teardown(self):
-        if self.pipeline:
-            debug("teardown: Sending eos")
-            self.pipeline.get_by_name("t").sink_pads().next().send_event(
-                gst.event_new_eos())
-            self.source_bin.post_message(gst.message_new_eos(self.source_bin))
+        debug("teardown: Sending eos")
+        self.pipeline.get_by_name("t").sink_pads().next().send_event(
+            gst.event_new_eos())
+        self.source_bin.post_message(gst.message_new_eos(self.source_bin))
 
 
 class GObjectTimeout:
