@@ -661,25 +661,55 @@ class Display:
     def __init__(self, source_pipeline, sink_pipeline):
         gobject.threads_init()
 
+        if get_config("global", "restart_source", default="False") == "True":
+            # Handle loss of video (but without end-of-stream event) from the
+            # Hauppauge HDPVR capture device. Run the source element in a
+            # separate pipeline that gets restarted when video is lost. This
+            # "source pipeline" uses a localhost UDP socket to send GStreamer
+            # buffers to the application's main pipeline.
+            source_elements = source_pipeline.split("!")
+            source = " ! ".join([
+                source_elements[0],
+                "queue leaky=downstream name=q",
+                "udpsink host=localhost"
+            ])
+            self.source_pipeline = gst.parse_launch(source)
+            source_bus = self.source_pipeline.get_bus()
+            source_bus.add_signal_watch()
+            source_bus.connect("message::warning", self.on_warning)
+            source_bus.connect("message::error", self.restart_source)
+            source_bus.connect("message::eos", self.restart_source)
+            source_queue = self.source_pipeline.get_by_name("q")
+            self.start_timestamp = None
+            self.underrun_timeout = None
+            source_queue.connect("underrun", self.on_underrun)
+            source_queue.connect("running", self.on_running)
+
+            application_source = " ! ".join(["udpsrc"] + source_elements[1:])
+        else:
+            self.source_pipeline = None
+            application_source = source_pipeline
+
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
         pipe = " ".join([
+            application_source, "!",
             "tee name=t",
-            "t. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
+            "t. ! queue leaky=downstream ! ffmpegcolorspace !", appsink,
             "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
 
-        self.source_pipeline = source_pipeline
-        self.source_bin = self.create_source_bin()
-        self.sink_bin = gst.parse_bin_from_description(pipe, True)
+        if self.source_pipeline:
+            debug(
+                "restart_source == True\n"
+                "source pipeline: %s\n"
+                "application pipeline: %s"
+                % (self.source_pipeline, pipe))
 
-        self.pipeline = gst.Pipeline("stb-tester")
-        self.pipeline.add(self.source_bin, self.sink_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-
+        self.pipeline = gst.parse_launch(pipe)
         self.appsink = self.pipeline.get_by_name("appsink")
         self.appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
@@ -691,28 +721,11 @@ class Display:
         gst_bus.add_signal_watch()
 
         self.pipeline.set_state(gst.STATE_PLAYING)
-
-        # Handle loss of video (but without end-of-stream event) from the
-        # Hauppauge HDPVR capture device.
-        gst_queue = self.pipeline.get_by_name("q")
-        self.start_timestamp = None
-        self.underrun_timeout = None
-        gst_queue.connect("underrun", self.on_underrun)
-        gst_queue.connect("running", self.on_running)
+        if self.source_pipeline:
+            self.source_pipeline.set_state(gst.STATE_PLAYING)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
         mainloop_thread.start()
-
-    def create_source_bin(self):
-        source_bin = gst.parse_bin_from_description(
-            "%s ! capsfilter name=padforcer caps=video/x-raw-yuv" % (
-                self.source_pipeline),
-            False)
-        source_bin.add_pad(
-            gst.GhostPad(
-                "source",
-                source_bin.get_by_name("padforcer").src_pads().next()))
-        return source_bin
 
     def get_frame(self, timeout_secs=10):
         try:
@@ -799,8 +812,8 @@ class Display:
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
-            ddebug("underrun: scheduling 'restart_source_bin' in 2s")
-            self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
+            ddebug("underrun: scheduling 'restart_source' in 2s")
+            self.underrun_timeout = GObjectTimeout(2, self.restart_source)
             self.underrun_timeout.start()
 
     def on_running(self, _element):
@@ -811,35 +824,25 @@ class Display:
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
-    def restart_source_bin(self):
-        gst.element_unlink_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_NULL)
-        self.sink_bin.set_state(gst.STATE_READY)
-        self.pipeline.remove(self.source_bin)
-        self.source_bin = None
+    def restart_source(self, *_args):
         debug("Attempting to recover from video loss: "
               "Stopping source pipeline and waiting 5s...")
-        time.sleep(5)
+        self.source_pipeline.set_state(gst.STATE_NULL)
+        GObjectTimeout(5, self.start_source).start()
+        return False  # stop the timeout from running again
 
+    def start_source(self):
         debug("Restarting source pipeline...")
-        self.source_bin = self.create_source_bin()
-        self.pipeline.add(self.source_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_PLAYING)
-        self.sink_bin.set_state(gst.STATE_PLAYING)
-        self.pipeline.set_state(gst.STATE_PLAYING)
         self.start_timestamp = None
+        self.source_pipeline.set_state(gst.STATE_PLAYING)
         debug("Restarted source pipeline")
-
         self.underrun_timeout.start()
-
         return False  # stop the timeout from running again
 
     def teardown(self):
         debug("teardown: Sending eos")
         self.pipeline.get_by_name("t").sink_pads().next().send_event(
             gst.event_new_eos())
-        self.source_bin.post_message(gst.message_new_eos(self.source_bin))
 
 
 class GObjectTimeout:
