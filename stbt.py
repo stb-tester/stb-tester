@@ -79,7 +79,7 @@ warnings.filterwarnings(
 
 _config = None
 
-
+
 # Functions available to stbt scripts
 #===========================================================================
 
@@ -594,7 +594,7 @@ class MotionTimeout(UITestFailure):
 class ConfigurationError(UITestError):
     pass
 
-
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
@@ -642,7 +642,7 @@ def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
 def teardown_run():
     _display.teardown()
 
-
+
 # Internal
 #===========================================================================
 
@@ -1316,7 +1316,7 @@ def warn(s):
     sys.stderr.write("%s: warning: %s\n" % (
         os.path.basename(sys.argv[0]), str(s)))
 
-
+
 # Tests
 #===========================================================================
 
