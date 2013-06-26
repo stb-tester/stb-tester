@@ -640,7 +640,8 @@ def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
 
 
 def teardown_run():
-    _display.teardown()
+    if _display:
+        _display.teardown()
 
 
 # Internal

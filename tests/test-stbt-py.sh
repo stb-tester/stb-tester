@@ -7,6 +7,15 @@ test_that_invalid_control_doesnt_hang() {
     [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
 }
 
+test_invalid_source_pipeline() {
+    touch "$scratchdir/test.py"
+    stbt-run --source-pipeline viddily-boo "$scratchdir/test.py" \
+        &> "$scratchdir/stbt.log"
+    tail -n1 "$scratchdir/stbt.log" | grep -q 'no element "viddily-boo"' ||
+        fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
+            "expected 'no element \"viddily-boo\"'"
+}
+
 test_get_frame_and_save_frame() {
     cat > "$scratchdir/get-screenshot.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
