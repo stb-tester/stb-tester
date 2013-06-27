@@ -665,8 +665,8 @@ class Display:
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
         pipe = " ".join([
             "tee name=t",
-            "t. ! queue leaky=2 name=q ! ffmpegcolorspace !", appsink,
-            "t. ! queue leaky=2 ! ffmpegcolorspace !", sink_pipeline
+            "t. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
+            "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
 
         self.source_pipeline = source_pipeline
