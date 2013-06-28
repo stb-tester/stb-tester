@@ -117,6 +117,12 @@ Global options
   intended for debugging the image processing algorithm; it isn't intended for
   end users.
 
+Additional options to stbt run
+------------------------------
+
+--save-video=<file>
+  Record a video (in the HTML5-compatible WebM format) to the specified `file`.
+
 Additional options to stbt record
 ---------------------------------
 
@@ -160,6 +166,7 @@ These files are simple ini files with the form::
     control = None
     verbose = 0
     [run]
+    save_video = video.webm
     script = test.py
     [record]
     output_file = test.py

@@ -636,9 +636,10 @@ def argparser():
     return parser
 
 
-def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
+def init_run(
+        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False):
     global _display, _control
-    _display = Display(gst_source_pipeline, gst_sink_pipeline)
+    _display = Display(gst_source_pipeline, gst_sink_pipeline, save_video)
     _control = uri_to_remote(control_uri, _display)
 
 
@@ -658,7 +659,7 @@ _control = None
 
 
 class Display:
-    def __init__(self, source_pipeline, sink_pipeline):
+    def __init__(self, source_pipeline, sink_pipeline, save_video):
         gobject.threads_init()
 
         if get_config("global", "restart_source", default="False") == "True":
@@ -695,10 +696,22 @@ class Display:
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
+
+        if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
+            if not save_video.endswith(".webm"):
+                save_video += ".webm"
+            debug("Saving video to '%s'" % save_video)
+            video_pipeline = (
+                "t. ! queue leaky=downstream ! ffmpegcolorspace ! "
+                "vp8enc speed=7 ! webmmux ! filesink location=%s" % save_video)
+        else:
+            video_pipeline = ""
+
         pipe = " ".join([
             application_source, "!",
             "tee name=t",
             "t. ! queue leaky=downstream ! ffmpegcolorspace !", appsink,
+            video_pipeline,
             "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
 

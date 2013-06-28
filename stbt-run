@@ -16,6 +16,9 @@ parser = stbt.argparser()
 parser.prog = 'stbt run'
 parser.description = 'Run an stb-tester test script'
 parser.add_argument(
+    '--save-video', help='Record video to the specified file', metavar='FILE',
+    default=stbt.get_config('run', 'save_video'))
+parser.add_argument(
     'script', help='The test script to run (default: %(default)s)',
     default=stbt.get_config('run', 'script'))
 args = parser.parse_args(sys.argv[1:])
@@ -23,7 +26,9 @@ stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
 try:
-    stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
+    stbt.init_run(
+        args.source_pipeline, args.sink_pipeline, args.control,
+        args.save_video)
     from stbt import (  # pylint: disable=W0611
         press, press_until_match, wait_for_match, wait_for_motion,
         detect_match, MatchResult, Position, detect_motion, MotionResult,

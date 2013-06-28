@@ -118,3 +118,25 @@ test_that_video_index_is_written_on_eos() {
     grep "Cue Point" webminspector.log ||
     fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
 }
+
+test_save_video() {
+    [ $(uname) = Darwin ] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cd "$scratchdir" &&
+    cat > record.py <<-EOF &&
+	import time
+	time.sleep(2)
+	EOF
+    sed -e 's/save_video =.*/save_video = video.webm/' \
+        "$testdir/stbt.conf" > stbt.conf &&
+    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run -v record.py &&
+    cat > test.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        test.py
+}

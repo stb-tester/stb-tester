@@ -37,9 +37,10 @@ _stbt_run() {
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
+        --save-video=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -f -W "$(_stbt_trailing_space \
-                        --help --verbose \
+                        --help --verbose --save-video \
                         --control --source-pipeline --sink-pipeline)" \
             -- "$cur"));;
     esac
