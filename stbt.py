@@ -825,17 +825,17 @@ class Display:
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source(self, *_args):
-        debug("Attempting to recover from video loss: "
-              "Stopping source pipeline and waiting 5s...")
+        warn("Attempting to recover from video loss: "
+             "Stopping source pipeline and waiting 5s...")
         self.source_pipeline.set_state(gst.STATE_NULL)
         GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
 
     def start_source(self):
-        debug("Restarting source pipeline...")
+        warn("Restarting source pipeline...")
         self.start_timestamp = None
         self.source_pipeline.set_state(gst.STATE_PLAYING)
-        debug("Restarted source pipeline")
+        warn("Restarted source pipeline")
         self.underrun_timeout.start()
         return False  # stop the timeout from running again
 
