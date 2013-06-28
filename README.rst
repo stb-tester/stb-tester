@@ -397,14 +397,14 @@ save_frame(image, filename)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
-get_config(section, key)
+get_config(section, key, default=None)
     Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
     Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
+    found, unless `default` is specified (in which case `default` is returned).
 
 debug(msg)
     Print the given string to stderr if stbt run `--verbose` was given.

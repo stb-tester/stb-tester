@@ -83,14 +83,14 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
-def get_config(section, key):
+def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
     Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
+    found, unless `default` is specified (in which case `default` is returned).
     """
 
     global _config
@@ -117,7 +117,10 @@ def get_config(section, key):
     try:
         return str(_config.get(section, key))
     except ConfigParser.Error as e:
-        raise ConfigurationError(e.message)
+        if default is None:
+            raise ConfigurationError(e.message)
+        else:
+            return default
 
 
 def press(key):
