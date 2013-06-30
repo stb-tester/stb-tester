@@ -1,5 +1,21 @@
 # Run with ./run-tests.sh
 
+test_that_invalid_control_doesnt_hang() {
+    touch "$scratchdir/test.py"
+    timeout 5 stbt-run --control asdf "$scratchdir/test.py"
+    local ret=$?
+    [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
+}
+
+test_invalid_source_pipeline() {
+    touch "$scratchdir/test.py"
+    stbt-run --source-pipeline viddily-boo "$scratchdir/test.py" \
+        &> "$scratchdir/stbt.log"
+    tail -n1 "$scratchdir/stbt.log" | grep -q 'no element "viddily-boo"' ||
+        fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
+            "expected 'no element \"viddily-boo\"'"
+}
+
 test_get_frame_and_save_frame() {
     cat > "$scratchdir/get-screenshot.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
@@ -75,4 +91,52 @@ test_that_frames_raises_NoVideo() {
             "$scratchdir/test.py" &> "$scratchdir/stbt-run.log" &&
     grep -q NoVideo "$scratchdir/stbt-run.log" ||
     fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
+}
+
+test_that_video_index_is_written_on_eos() {
+    which webminspector.py &>/dev/null || {
+        echo "webminspector.py not found; skipping this test." >&2
+        echo "See http://git.chromium.org/gitweb/?p=webm/webminspector.git" >&2
+        return 0
+    }
+
+    [ $(uname) = Darwin ] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cd "$scratchdir" &&
+    cat > test.py <<-EOF &&
+	import time
+	time.sleep(2)
+	EOF
+    stbt-run -v \
+        --sink-pipeline \
+            "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
+        test.py &&
+    webminspector.py video.webm &> webminspector.log &&
+    grep "Cue Point" webminspector.log ||
+    fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+}
+
+test_save_video() {
+    [ $(uname) = Darwin ] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cd "$scratchdir" &&
+    cat > record.py <<-EOF &&
+	import time
+	time.sleep(2)
+	EOF
+    sed -e 's/save_video =.*/save_video = video.webm/' \
+        "$testdir/stbt.conf" > stbt.conf &&
+    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run -v record.py &&
+    cat > test.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        test.py
 }

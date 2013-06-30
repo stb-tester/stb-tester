@@ -83,14 +83,14 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
-def get_config(section, key):
+def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
     Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
+    found, unless `default` is specified (in which case `default` is returned).
     """
 
     global _config
@@ -117,7 +117,10 @@ def get_config(section, key):
     try:
         return str(_config.get(section, key))
     except ConfigParser.Error as e:
-        raise ConfigurationError(e.message)
+        if default is None:
+            raise ConfigurationError(e.message)
+        else:
+            return default
 
 
 def press(key):
@@ -633,14 +636,16 @@ def argparser():
     return parser
 
 
-def init_run(gst_source_pipeline, gst_sink_pipeline, control_uri):
+def init_run(
+        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False):
     global _display, _control
-    _display = Display(gst_source_pipeline, gst_sink_pipeline)
+    _display = Display(gst_source_pipeline, gst_sink_pipeline, save_video)
     _control = uri_to_remote(control_uri, _display)
 
 
 def teardown_run():
-    _display.teardown()
+    if _display:
+        _display.teardown()
 
 
 # Internal
@@ -654,28 +659,70 @@ _control = None
 
 
 class Display:
-    def __init__(self, source_pipeline, sink_pipeline):
+    def __init__(self, source_pipeline, sink_pipeline, save_video):
         gobject.threads_init()
+
+        if get_config("global", "restart_source", default="False") == "True":
+            # Handle loss of video (but without end-of-stream event) from the
+            # Hauppauge HDPVR capture device. Run the source element in a
+            # separate pipeline that gets restarted when video is lost. This
+            # "source pipeline" uses a localhost UDP socket to send GStreamer
+            # buffers to the application's main pipeline.
+            source_elements = source_pipeline.split("!")
+            source = " ! ".join([
+                source_elements[0],
+                "queue leaky=downstream name=q",
+                "udpsink host=localhost"
+            ])
+            self.source_pipeline = gst.parse_launch(source)
+            source_bus = self.source_pipeline.get_bus()
+            source_bus.add_signal_watch()
+            source_bus.connect("message::warning", self.on_warning)
+            source_bus.connect("message::error", self.restart_source)
+            source_bus.connect("message::eos", self.restart_source)
+            source_queue = self.source_pipeline.get_by_name("q")
+            self.start_timestamp = None
+            self.underrun_timeout = None
+            source_queue.connect("underrun", self.on_underrun)
+            source_queue.connect("running", self.on_running)
+
+            application_source = " ! ".join(["udpsrc"] + source_elements[1:])
+        else:
+            self.source_pipeline = None
+            application_source = source_pipeline
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
+
+        if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
+            if not save_video.endswith(".webm"):
+                save_video += ".webm"
+            debug("Saving video to '%s'" % save_video)
+            video_pipeline = (
+                "t. ! queue leaky=downstream ! ffmpegcolorspace ! "
+                "vp8enc speed=7 ! webmmux ! filesink location=%s" % save_video)
+        else:
+            video_pipeline = ""
+
         pipe = " ".join([
+            application_source, "!",
             "tee name=t",
-            "t. ! queue leaky=2 name=q ! ffmpegcolorspace !", appsink,
-            "t. ! queue leaky=2 ! ffmpegcolorspace !", sink_pipeline
+            "t. ! queue leaky=downstream ! ffmpegcolorspace !", appsink,
+            video_pipeline,
+            "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
 
-        self.source_pipeline = source_pipeline
-        self.source_bin = self.create_source_bin()
-        self.sink_bin = gst.parse_bin_from_description(pipe, True)
+        if self.source_pipeline:
+            debug(
+                "restart_source == True\n"
+                "source pipeline: %s\n"
+                "application pipeline: %s"
+                % (self.source_pipeline, pipe))
 
-        self.pipeline = gst.Pipeline("stb-tester")
-        self.pipeline.add(self.source_bin, self.sink_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-
+        self.pipeline = gst.parse_launch(pipe)
         self.appsink = self.pipeline.get_by_name("appsink")
         self.appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
@@ -683,32 +730,15 @@ class Display:
         gst_bus = self.pipeline.get_bus()
         gst_bus.connect("message::error", self.on_error)
         gst_bus.connect("message::warning", self.on_warning)
+        gst_bus.connect("message::eos", self.on_eos)
         gst_bus.add_signal_watch()
 
         self.pipeline.set_state(gst.STATE_PLAYING)
-
-        # Handle loss of video (but without end-of-stream event) from the
-        # Hauppauge HDPVR capture device.
-        gst_queue = self.pipeline.get_by_name("q")
-        self.start_timestamp = None
-        self.underrun_timeout = None
-        gst_queue.connect("underrun", self.on_underrun)
-        gst_queue.connect("running", self.on_running)
+        if self.source_pipeline:
+            self.source_pipeline.set_state(gst.STATE_PLAYING)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
-        mainloop_thread.daemon = True
         mainloop_thread.start()
-
-    def create_source_bin(self):
-        source_bin = gst.parse_bin_from_description(
-            "%s ! capsfilter name=padforcer caps=video/x-raw-yuv" % (
-                self.source_pipeline),
-            False)
-        source_bin.add_pad(
-            gst.GhostPad(
-                "source",
-                source_bin.get_by_name("padforcer").src_pads().next()))
-        return source_bin
 
     def get_frame(self, timeout_secs=10):
         try:
@@ -768,13 +798,7 @@ class Display:
 
         # Drop old frame
         try:
-            last_value = self.last_buffer.get_nowait()
-            if isinstance(last_value, Exception):
-                ddebug("glib thread: ignoring new %s because there is an "
-                       "outstanding exception on the queue" %
-                       type(buffer_or_exception).__name__)
-                self.last_buffer.put_nowait(last_value)
-                return
+            self.last_buffer.get_nowait()
         except Queue.Empty:
             pass
 
@@ -785,6 +809,7 @@ class Display:
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+        _mainloop.quit()
 
     @staticmethod
     def on_warning(_bus, message):
@@ -792,12 +817,16 @@ class Display:
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
+    def on_eos(self, _bus, _message):
+        debug("Got EOS")
+        _mainloop.quit()
+
     def on_underrun(self, _element):
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
-            ddebug("underrun: scheduling 'restart_source_bin' in 2s")
-            self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
+            ddebug("underrun: scheduling 'restart_source' in 2s")
+            self.underrun_timeout = GObjectTimeout(2, self.restart_source)
             self.underrun_timeout.start()
 
     def on_running(self, _element):
@@ -808,34 +837,25 @@ class Display:
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
-    def restart_source_bin(self):
-        gst.element_unlink_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_NULL)
-        self.sink_bin.set_state(gst.STATE_READY)
-        self.pipeline.remove(self.source_bin)
-        self.source_bin = None
-        debug("Attempting to recover from video loss: "
-              "Stopping source pipeline and waiting 5s...")
-        time.sleep(5)
+    def restart_source(self, *_args):
+        warn("Attempting to recover from video loss: "
+             "Stopping source pipeline and waiting 5s...")
+        self.source_pipeline.set_state(gst.STATE_NULL)
+        GObjectTimeout(5, self.start_source).start()
+        return False  # stop the timeout from running again
 
-        debug("Restarting source pipeline...")
-        self.source_bin = self.create_source_bin()
-        self.pipeline.add(self.source_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_PLAYING)
-        self.sink_bin.set_state(gst.STATE_PLAYING)
-        self.pipeline.set_state(gst.STATE_PLAYING)
+    def start_source(self):
+        warn("Restarting source pipeline...")
         self.start_timestamp = None
-        debug("Restarted source pipeline")
-
+        self.source_pipeline.set_state(gst.STATE_PLAYING)
+        warn("Restarted source pipeline")
         self.underrun_timeout.start()
-
         return False  # stop the timeout from running again
 
     def teardown(self):
-        if self.pipeline:
-            self.pipeline.send_event(gst.event_new_eos())
-            self.pipeline.set_state(gst.STATE_NULL)
+        debug("teardown: Sending eos")
+        self.pipeline.get_by_name("t").sink_pads().next().send_event(
+            gst.event_new_eos())
 
 
 class GObjectTimeout:

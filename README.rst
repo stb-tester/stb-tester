@@ -117,6 +117,12 @@ Global options
   intended for debugging the image processing algorithm; it isn't intended for
   end users.
 
+Additional options to stbt run
+------------------------------
+
+--save-video=<file>
+  Record a video (in the HTML5-compatible WebM format) to the specified `file`.
+
 Additional options to stbt record
 ---------------------------------
 
@@ -160,6 +166,7 @@ These files are simple ini files with the form::
     control = None
     verbose = 0
     [run]
+    save_video = video.webm
     script = test.py
     [record]
     output_file = test.py
@@ -397,14 +404,14 @@ save_frame(image, filename)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
-get_config(section, key)
+get_config(section, key, default=None)
     Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
     path.
 
     Raises `ConfigurationError` if the specified `section` or `key` is not
-    found.
+    found, unless `default` is specified (in which case `default` is returned).
 
 debug(msg)
     Print the given string to stderr if stbt run `--verbose` was given.

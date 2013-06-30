@@ -14,6 +14,8 @@ Requires: pygtk2
 Requires: gstreamer-python
 Requires: gstreamer
 Requires: gstreamer-plugins-base
+Requires: gstreamer-plugins-good
+Requires: gstreamer-plugins-bad-free
 Requires: opencv
 Requires: opencv-python
 
