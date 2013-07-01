@@ -720,7 +720,7 @@ class Display:
                 "restart_source == True\n"
                 "source pipeline: %s\n"
                 "application pipeline: %s"
-                % (self.source_pipeline, pipe))
+                % (source, pipe))
 
         self.pipeline = gst.parse_launch(pipe)
         self.appsink = self.pipeline.get_by_name("appsink")
