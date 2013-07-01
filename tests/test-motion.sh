@@ -50,7 +50,7 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    timeout 4 stbt-run -v "$scratchdir/test.py"
+    timeout 10 stbt-run -v "$scratchdir/test.py"
     local ret=$?
     echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]

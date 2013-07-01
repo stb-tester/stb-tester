@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch "$scratchdir/test.py"
-    timeout 5 stbt-run --control asdf "$scratchdir/test.py"
+    timeout 10 stbt-run --control asdf "$scratchdir/test.py"
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
 }

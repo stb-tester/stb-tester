@@ -17,7 +17,7 @@ test_record() {
 }
 
 test_that_invalid_control_doesnt_hang_stbt_record() {
-    timeout 5 stbt-record --control asdf
+    timeout 10 stbt-record --control asdf
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt-record --control asdf' timed out"
 }
