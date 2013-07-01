@@ -772,6 +772,10 @@ class Display:
             image, timestamp = self.get_frame(max(10, timeout_secs))
             ddebug("user thread: Got buffer at %s" % time.time())
 
+            if timestamp == (sys.maxsize * 2 + 1):
+                warn("Ignoring frame with timestamp of %d" % timestamp)
+                continue
+
             if timeout_secs is not None:
                 if not self.start_timestamp:
                     self.start_timestamp = timestamp
