@@ -669,26 +669,14 @@ class Display:
             # "source pipeline" uses a localhost UDP socket to send GStreamer
             # buffers to the application's main pipeline.
             source_elements = source_pipeline.split("!")
-            source = " ! ".join([
+            restartable_source = " ! ".join([
                 source_elements[0],
                 "queue leaky=downstream name=q",
                 "udpsink host=localhost"
             ])
-            self.source_pipeline = gst.parse_launch(source)
-            source_bus = self.source_pipeline.get_bus()
-            source_bus.add_signal_watch()
-            source_bus.connect("message::warning", self.on_warning)
-            source_bus.connect("message::error", self.restart_source)
-            source_bus.connect("message::eos", self.restart_source)
-            source_queue = self.source_pipeline.get_by_name("q")
-            self.start_timestamp = None
-            self.underrun_timeout = None
-            source_queue.connect("underrun", self.on_underrun)
-            source_queue.connect("running", self.on_running)
-
             application_source = " ! ".join(["udpsrc"] + source_elements[1:])
         else:
-            self.source_pipeline = None
+            restartable_source = None
             application_source = source_pipeline
 
         appsink = (
@@ -715,12 +703,12 @@ class Display:
             "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
 
-        if self.source_pipeline:
+        if restartable_source:
             debug(
                 "restart_source == True\n"
-                "source pipeline: %s\n"
+                "restartable source pipeline: %s\n"
                 "application pipeline: %s"
-                % (source, pipe))
+                % (restartable_source, pipe))
 
         self.pipeline = gst.parse_launch(pipe)
         self.appsink = self.pipeline.get_by_name("appsink")
@@ -734,7 +722,19 @@ class Display:
         gst_bus.add_signal_watch()
 
         self.pipeline.set_state(gst.STATE_PLAYING)
-        if self.source_pipeline:
+
+        if restartable_source:
+            self.source_pipeline = gst.parse_launch(restartable_source)
+            source_bus = self.source_pipeline.get_bus()
+            source_bus.add_signal_watch()
+            source_bus.connect("message::warning", self.on_warning)
+            source_bus.connect("message::error", self.restart_source)
+            source_bus.connect("message::eos", self.restart_source)
+            source_queue = self.source_pipeline.get_by_name("q")
+            self.start_timestamp = None
+            self.underrun_timeout = None
+            source_queue.connect("underrun", self.on_underrun)
+            source_queue.connect("running", self.on_running)
             self.source_pipeline.set_state(gst.STATE_PLAYING)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
