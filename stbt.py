@@ -672,9 +672,10 @@ class Display:
             restartable_source = " ! ".join([
                 source_elements[0],
                 "queue leaky=downstream name=q",
-                "udpsink host=localhost"
+                "udpsink host=localhost port=%(port)d"
             ])
-            application_source = " ! ".join(["udpsrc"] + source_elements[1:])
+            application_source = " ! ".join(
+                ["udpsrc name=udpsrc port=0"] + source_elements[1:])
         else:
             restartable_source = None
             application_source = source_pipeline
@@ -724,7 +725,9 @@ class Display:
         self.pipeline.set_state(gst.STATE_PLAYING)
 
         if restartable_source:
-            self.source_pipeline = gst.parse_launch(restartable_source)
+            port = self.pipeline.get_by_name("udpsrc").get_property("port")
+            self.source_pipeline = gst.parse_launch(
+                restartable_source % {"port": port})
             source_bus = self.source_pipeline.get_bus()
             source_bus.add_signal_watch()
             source_bus.connect("message::warning", self.on_warning)
