@@ -671,7 +671,6 @@ class Display:
             source_elements = source_pipeline.split("!")
             restartable_source = " ! ".join([
                 source_elements[0],
-                "queue leaky=downstream name=q",
                 "udpsink host=localhost port=%(port)d"
             ])
             application_source = " ! ".join(
@@ -699,7 +698,7 @@ class Display:
         pipe = " ".join([
             application_source, "!",
             "tee name=t",
-            "t. ! queue leaky=downstream ! ffmpegcolorspace !", appsink,
+            "t. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
             video_pipeline,
             "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
         ])
@@ -733,11 +732,11 @@ class Display:
             source_bus.connect("message::warning", self.on_warning)
             source_bus.connect("message::error", self.restart_source)
             source_bus.connect("message::eos", self.restart_source)
-            source_queue = self.source_pipeline.get_by_name("q")
+            queue = self.pipeline.get_by_name("q")
             self.start_timestamp = None
             self.underrun_timeout = None
-            source_queue.connect("underrun", self.on_underrun)
-            source_queue.connect("running", self.on_running)
+            queue.connect("underrun", self.on_underrun)
+            queue.connect("running", self.on_running)
             self.source_pipeline.set_state(gst.STATE_PLAYING)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
