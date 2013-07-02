@@ -764,6 +764,8 @@ class Display:
                 if not self.start_timestamp:
                     self.start_timestamp = timestamp
                 if (timestamp - self.start_timestamp > timeout_secs * 1e9):
+                    debug("timed out: %d - %d > %d" % (
+                        timestamp, self.start_timestamp, timeout_secs * 1e9))
                     return
 
             yield (image, timestamp)
