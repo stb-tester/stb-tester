@@ -763,8 +763,7 @@ class Display:
             if timeout_secs is not None:
                 if not self.start_timestamp:
                     self.start_timestamp = timestamp
-                if (timestamp - self.start_timestamp >
-                        timeout_secs * 1000000000):
+                if (timestamp - self.start_timestamp > timeout_secs * 1e9):
                     return
 
             yield (image, timestamp)
