@@ -705,13 +705,16 @@ class Display:
 
         self.pipeline.set_state(gst.STATE_PLAYING)
 
-        # Handle loss of video (but without end-of-stream event) from the
-        # Hauppauge HDPVR capture device.
-        gst_queue = self.pipeline.get_by_name("q")
-        self.start_timestamp = None
-        self.underrun_timeout = None
-        gst_queue.connect("underrun", self.on_underrun)
-        gst_queue.connect("running", self.on_running)
+        if get_config("global", "restart_source", default="false").lower() in (
+                "1", "yes", "true", "on"):
+            # Handle loss of video (but without end-of-stream event) from the
+            # Hauppauge HDPVR capture device.
+            debug("restart_source: true")
+            gst_queue = self.pipeline.get_by_name("q")
+            self.start_timestamp = None
+            self.underrun_timeout = None
+            gst_queue.connect("underrun", self.on_underrun)
+            gst_queue.connect("running", self.on_running)
 
         mainloop_thread = threading.Thread(target=_mainloop.run)
         mainloop_thread.start()
