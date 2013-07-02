@@ -261,6 +261,7 @@ _stbt_get_prev() {
 _stbt_takes_arg() {
     case "$1" in
         --control|--source-pipeline|--sink-pipeline) true;;
+        --save-video) true;;
         --control-recorder|-o|--output-file) true;;
         --keymap) true;;
         *) false;;
