@@ -716,8 +716,11 @@ class Display:
             gst_queue.connect("underrun", self.on_underrun)
             gst_queue.connect("running", self.on_running)
 
-        mainloop_thread = threading.Thread(target=_mainloop.run)
-        mainloop_thread.start()
+        self.novideo = False
+
+        self.mainloop_thread = threading.Thread(target=_mainloop.run)
+        self.mainloop_thread.daemon = True
+        self.mainloop_thread.start()
 
     def create_source_bin(self):
         source_bin = gst.parse_bin_from_description(
@@ -735,7 +738,9 @@ class Display:
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
             gst_buffer = self.last_buffer.get(timeout=timeout_secs)
+            self.novideo = False
         except Queue.Empty:
+            self.novideo = True
             raise NoVideo("No video")
         if isinstance(gst_buffer, Exception):
             raise UITestError(str(gst_buffer))
@@ -854,11 +859,13 @@ class Display:
         return False  # stop the timeout from running again
 
     def teardown(self):
-        debug("teardown: Sending eos")
-        gst.element_unlink_many(self.source_bin, self.sink_bin)
-        self.pipeline.get_by_name("t").sink_pads().next().send_event(
-            gst.event_new_eos())
-        self.source_bin.post_message(gst.message_new_eos(self.source_bin))
+        if not self.novideo:
+            debug("teardown: Sending eos")
+            gst.element_unlink_many(self.source_bin, self.sink_bin)
+            self.pipeline.get_by_name("t").sink_pads().next().send_event(
+                gst.event_new_eos())
+            self.source_bin.post_message(gst.message_new_eos(self.source_bin))
+            self.mainloop_thread.join(10)
 
 
 class GObjectTimeout:
