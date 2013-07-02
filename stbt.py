@@ -836,8 +836,10 @@ class Display:
         self.source_bin = None
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
-        time.sleep(5)
+        GObjectTimeout(5, self.start_source_bin).start()
+        return False  # stop the timeout from running again
 
+    def start_source_bin(self):
         warn("Restarting source pipeline...")
         self.source_bin = self.create_source_bin()
         self.pipeline.add(self.source_bin)
