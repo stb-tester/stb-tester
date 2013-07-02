@@ -855,6 +855,7 @@ class Display:
 
     def teardown(self):
         debug("teardown: Sending eos")
+        gst.element_unlink_many(self.source_bin, self.sink_bin)
         self.pipeline.get_by_name("t").sink_pads().next().send_event(
             gst.event_new_eos())
         self.source_bin.post_message(gst.message_new_eos(self.source_bin))
