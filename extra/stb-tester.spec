@@ -6,6 +6,7 @@ Group: Development/Tools
 URL: http://stb-tester.com
 License: LGPLv2.1+
 Source: %{name}-%{version}.tar.gz
+BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: python-docutils
 
