@@ -676,6 +676,9 @@ class Display:
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video):
         gobject.threads_init()
 
+        self.novideo = False
+        self.lock = threading.Lock()  # Held by whoever is consuming frames
+
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
@@ -740,9 +743,6 @@ class Display:
 
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         self.sink_pipeline.set_state(gst.STATE_PLAYING)
-
-        self.novideo = False
-        self.lock = threading.Lock()  # Held by whoever is consuming frames
 
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
