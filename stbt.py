@@ -373,6 +373,20 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
         motion = (cv2.countNonZero(eroded) > 0)
 
+        # Visualisation: Highlight in red the areas where we detected motion
+        if motion:
+            cv2.add(
+                frame,
+                numpy.multiply(
+                    numpy.ones(frame.shape, dtype=numpy.uint8),
+                    (0, 0, 255),  # bgr
+                    dtype=numpy.uint8),
+                mask=cv2.dilate(
+                    thresholded,
+                    cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+                    iterations=1),
+                dst=frame)
+
         result = MotionResult(timestamp, motion)
         debug("%s found: %s" % (
             "Motion" if motion else "No motion", str(result)))
@@ -777,8 +791,13 @@ class Display:
                             timeout_secs * 1e9))
                         return
 
-                yield (gst_to_opencv(buf), timestamp)
-                self.appsrc.emit("push-buffer", buf)
+                image = gst_to_opencv(buf)
+                yield (image, timestamp)
+
+                newbuf = gst.Buffer(image.data)
+                newbuf.set_caps(buf.get_caps())
+                newbuf.timestamp = buf.timestamp
+                self.appsrc.emit("push-buffer", newbuf)
 
     def on_new_buffer(self, appsink):
         buf = appsink.emit("pull-buffer")
@@ -925,12 +944,12 @@ def _match_template(image, template, match_parameters):
             matched = True
         else:
             # Set Region Of Interest to the "best match" location
-            image = image[
+            roi = image[
                 position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
                 position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
-            image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-            log(image, "source_roi")
+            log(roi, "source_roi")
             log(image_gray, "source_roi_gray")
             log(template_gray, "template_gray")
 
@@ -954,6 +973,13 @@ def _match_template(image, template, match_parameters):
             log(eroded, "absdiff_threshold_erode")
 
             matched = (cv2.countNonZero(eroded) == 0)
+
+    cv2.rectangle(
+        image,
+        (position.x, position.y),  # pylint: disable=E1101
+        (position.x + template.shape[1], position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+        (32, 0 if matched else 255, 255),  # bgr
+        thickness=3)
 
     return matched, position, first_pass_certainty
 

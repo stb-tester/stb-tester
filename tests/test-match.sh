@@ -391,3 +391,23 @@ test_precondition_script() {
 	EOF
     PYTHONPATH="$testdir:$PYTHONPATH" stbt-run -v "$scratchdir/test.py"
 }
+
+test_detect_match_visualisation() {
+    [ $(uname) = Darwin ] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cd "$scratchdir" &&
+    cat > match.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue.png",
+	               consecutive_matches=24)
+	EOF
+    stbt-run -v --save-video video.webm match.py &&
+    cat > verify.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue-with-border.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        verify.py
+}
