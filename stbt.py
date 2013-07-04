@@ -792,12 +792,13 @@ class Display:
                         return
 
                 image = gst_to_opencv(buf)
-                yield (image, timestamp)
-
-                newbuf = gst.Buffer(image.data)
-                newbuf.set_caps(buf.get_caps())
-                newbuf.timestamp = buf.timestamp
-                self.appsrc.emit("push-buffer", newbuf)
+                try:
+                    yield (image, timestamp)
+                finally:
+                    newbuf = gst.Buffer(image.data)
+                    newbuf.set_caps(buf.get_caps())
+                    newbuf.timestamp = buf.timestamp
+                    self.appsrc.emit("push-buffer", newbuf)
 
     def on_new_buffer(self, appsink):
         buf = appsink.emit("pull-buffer")
