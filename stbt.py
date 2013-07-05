@@ -878,6 +878,7 @@ class Display:
         return False  # stop the timeout from running again
 
     def teardown(self):
+        self.source_pipeline.set_state(gst.STATE_NULL)
         if not self.novideo:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
