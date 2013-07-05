@@ -694,7 +694,6 @@ class Display:
         source_bus = self.source_pipeline.get_bus()
         source_bus.connect("message::error", self.on_error)
         source_bus.connect("message::warning", self.on_warning)
-        source_bus.connect("message::eos", self.restart_source)
         source_bus.add_signal_watch()
 
         self.appsink = self.source_pipeline.get_by_name("appsink")
