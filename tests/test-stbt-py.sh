@@ -2,14 +2,14 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch "$scratchdir/test.py"
-    timeout 10 stbt-run --control asdf "$scratchdir/test.py"
+    timeout 10 stbt-run -v --control asdf "$scratchdir/test.py"
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
 }
 
 test_invalid_source_pipeline() {
     touch "$scratchdir/test.py"
-    stbt-run --source-pipeline viddily-boo "$scratchdir/test.py" \
+    stbt-run -v --source-pipeline viddily-boo "$scratchdir/test.py" \
         &> "$scratchdir/stbt.log"
     tail -n1 "$scratchdir/stbt.log" | grep -q 'no element "viddily-boo"' ||
         fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
@@ -58,7 +58,7 @@ test_get_config() {
 	except ConfigurationError:
 	    pass
 	EOF
-    stbt-run "$scratchdir/test.py"
+    stbt-run -v "$scratchdir/test.py"
 }
 
 test_that_frames_returns_at_least_one_frame() {
@@ -67,7 +67,7 @@ test_that_frames_returns_at_least_one_frame() {
 	stbt._display.frames(timeout_secs=0).next()
 	stbt._display.frames(timeout_secs=0).next()
 	EOF
-    stbt-run "$scratchdir/test.py"
+    stbt-run -v "$scratchdir/test.py"
 }
 
 test_that_frames_doesnt_time_out() {
@@ -76,7 +76,7 @@ test_that_frames_doesnt_time_out() {
 	for _ in stbt._display.frames():
 	    pass
 	EOF
-    timeout 12 stbt-run "$scratchdir/test.py"
+    timeout 12 stbt-run -v "$scratchdir/test.py"
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
@@ -87,7 +87,7 @@ test_that_frames_raises_NoVideo() {
 	for _ in stbt._display.frames():
 	    pass
 	EOF
-    ! stbt-run --source-pipeline "videotestsrc num-buffers=1" \
+    ! stbt-run -v --source-pipeline "videotestsrc num-buffers=1" \
             "$scratchdir/test.py" &> "$scratchdir/stbt-run.log" &&
     grep -q NoVideo "$scratchdir/stbt-run.log" ||
     fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
