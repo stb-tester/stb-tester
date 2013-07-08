@@ -7,7 +7,6 @@ URL: http://stb-tester.com
 License: LGPLv2.1+
 Source: %{name}-%{version}.tar.gz
 BuildArch: noarch
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: python-docutils
 
 Requires: python >= 2.4
@@ -34,9 +33,6 @@ make prefix=/usr sysconfdir=/etc
 
 %install
 make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
-
-%clean
-rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
