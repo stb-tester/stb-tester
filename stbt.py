@@ -809,8 +809,10 @@ class Display:
         sink_pipeline_description = " ".join([
             "appsrc name=appsrc !",
             "tee name=t",
+            "t. ! tee name=t2 t2. ! appsink name=upstream_screenshot "
+            "t2. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
             video_pipeline,
-            "t. ! queue leaky=downstream name=upstream_screenshot ! "
+            "t. ! queue leaky=downstream ! "
             "ffmpegcolorspace !", user_sink_pipeline
         ])
 
