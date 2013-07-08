@@ -373,6 +373,20 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
 
         motion = (cv2.countNonZero(eroded) > 0)
 
+        # Visualisation: Highlight in red the areas where we detected motion
+        if motion:
+            cv2.add(
+                frame,
+                numpy.multiply(
+                    numpy.ones(frame.shape, dtype=numpy.uint8),
+                    (0, 0, 255),  # bgr
+                    dtype=numpy.uint8),
+                mask=cv2.dilate(
+                    thresholded,
+                    cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+                    iterations=1),
+                dst=frame)
+
         result = MotionResult(timestamp, motion)
         debug("%s found: %s" % (
             "Motion" if motion else "No motion", str(result)))
@@ -422,7 +436,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = _display.get_frame()[0]
+    screenshot = get_frame()
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
@@ -516,7 +530,7 @@ def wait_for_motion(
             debug("Motion detected.")
             return res
 
-    screenshot = _display.get_frame()[0]
+    screenshot = get_frame()
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
@@ -531,7 +545,7 @@ def save_frame(image, filename):
 
 def get_frame():
     """Returns an OpenCV image of the current video frame."""
-    return _display.get_frame()[0]
+    return gst_to_opencv(_display.get_frame())
 
 
 def debug(msg):
@@ -659,14 +673,43 @@ _control = None
 
 
 class Display:
-    def __init__(self, source_pipeline, sink_pipeline, save_video):
+    def __init__(self, user_source_pipeline, user_sink_pipeline, save_video):
         gobject.threads_init()
+
+        self.novideo = False
+        self.lock = threading.Lock()  # Held by whoever is consuming frames
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
+        source_pipeline_description = " ! ".join([
+            user_source_pipeline,
+            "queue leaky=downstream name=q",
+            "ffmpegcolorspace",
+            appsink])
+        self.source_pipeline = gst.parse_launch(source_pipeline_description)
+
+        source_bus = self.source_pipeline.get_bus()
+        source_bus.connect("message::error", self.on_error)
+        source_bus.connect("message::warning", self.on_warning)
+        source_bus.add_signal_watch()
+
+        self.appsink = self.source_pipeline.get_by_name("appsink")
+        self.appsink.connect("new-buffer", self.on_new_buffer)
+        self.last_buffer = Queue.Queue(maxsize=1)
+
+        if get_config("global", "restart_source", default="false").lower() in (
+                "1", "yes", "true", "on"):
+            # Handle loss of video (but without end-of-stream event) from the
+            # Hauppauge HDPVR capture device.
+            debug("restart_source: true")
+            source_queue = self.source_pipeline.get_by_name("q")
+            self.start_timestamp = None
+            self.underrun_timeout = None
+            source_queue.connect("underrun", self.on_underrun)
+            source_queue.connect("running", self.on_running)
 
         if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
             if not save_video.endswith(".webm"):
@@ -678,60 +721,31 @@ class Display:
         else:
             video_pipeline = ""
 
-        pipe = " ".join([
+        sink_pipeline_description = " ".join([
+            "appsrc name=appsrc !",
             "tee name=t",
-            "t. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
             video_pipeline,
-            "t. ! queue leaky=downstream ! ffmpegcolorspace !", sink_pipeline
+            "t. ! queue leaky=downstream ! ffmpegcolorspace !",
+            user_sink_pipeline
         ])
 
-        self.source_pipeline = source_pipeline
-        self.source_bin = self.create_source_bin()
-        self.sink_bin = gst.parse_bin_from_description(pipe, True)
+        self.sink_pipeline = gst.parse_launch(sink_pipeline_description)
+        sink_bus = self.sink_pipeline.get_bus()
+        sink_bus.connect("message::error", self.on_error)
+        sink_bus.connect("message::warning", self.on_warning)
+        sink_bus.connect("message::eos", self.on_eos)
+        sink_bus.add_signal_watch()
+        self.appsrc = self.sink_pipeline.get_by_name("appsrc")
 
-        self.pipeline = gst.Pipeline("stb-tester")
-        self.pipeline.add(self.source_bin, self.sink_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
+        debug("source pipeline: %s" % source_pipeline_description)
+        debug("sink pipeline: %s" % sink_pipeline_description)
 
-        self.appsink = self.pipeline.get_by_name("appsink")
-        self.appsink.connect("new-buffer", self.on_new_buffer)
-        self.last_buffer = Queue.Queue(maxsize=1)
-
-        gst_bus = self.pipeline.get_bus()
-        gst_bus.connect("message::error", self.on_error)
-        gst_bus.connect("message::warning", self.on_warning)
-        gst_bus.connect("message::eos", self.on_eos)
-        gst_bus.add_signal_watch()
-
-        self.pipeline.set_state(gst.STATE_PLAYING)
-
-        if get_config("global", "restart_source", default="false").lower() in (
-                "1", "yes", "true", "on"):
-            # Handle loss of video (but without end-of-stream event) from the
-            # Hauppauge HDPVR capture device.
-            debug("restart_source: true")
-            gst_queue = self.pipeline.get_by_name("q")
-            self.start_timestamp = None
-            self.underrun_timeout = None
-            gst_queue.connect("underrun", self.on_underrun)
-            gst_queue.connect("running", self.on_running)
-
-        self.novideo = False
+        self.source_pipeline.set_state(gst.STATE_PLAYING)
+        self.sink_pipeline.set_state(gst.STATE_PLAYING)
 
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
         self.mainloop_thread.start()
-
-    def create_source_bin(self):
-        source_bin = gst.parse_bin_from_description(
-            "%s ! capsfilter name=padforcer caps=video/x-raw-yuv" % (
-                self.source_pipeline),
-            False)
-        source_bin.add_pad(
-            gst.GhostPad(
-                "source",
-                source_bin.get_by_name("padforcer").src_pads().next()))
-        return source_bin
 
     def get_frame(self, timeout_secs=10):
         try:
@@ -745,7 +759,7 @@ class Display:
         if isinstance(gst_buffer, Exception):
             raise UITestError(str(gst_buffer))
 
-        return (gst_to_opencv(gst_buffer), gst_buffer.timestamp)
+        return gst_buffer
 
     def frames(self, timeout_secs=None):
         """Generator that yields frames captured from the GStreamer pipeline.
@@ -760,24 +774,39 @@ class Display:
 
         self.start_timestamp = None
 
-        while True:
-            ddebug("user thread: Getting buffer at %s" % time.time())
-            image, timestamp = self.get_frame(max(10, timeout_secs))
-            ddebug("user thread: Got buffer at %s" % time.time())
+        with self.lock:
+            while True:
+                ddebug("user thread: Getting buffer at %s" % time.time())
+                buf = self.get_frame(max(10, timeout_secs))
+                ddebug("user thread: Got buffer at %s" % time.time())
+                timestamp = buf.timestamp
 
-            if timeout_secs is not None:
-                if not self.start_timestamp:
-                    self.start_timestamp = timestamp
-                if (timestamp - self.start_timestamp > timeout_secs * 1e9):
-                    debug("timed out: %d - %d > %d" % (
-                        timestamp, self.start_timestamp, timeout_secs * 1e9))
-                    return
+                if timeout_secs is not None:
+                    if not self.start_timestamp:
+                        self.start_timestamp = timestamp
+                    if (timestamp - self.start_timestamp > timeout_secs * 1e9):
+                        debug("timed out: %d - %d > %d" % (
+                            timestamp, self.start_timestamp,
+                            timeout_secs * 1e9))
+                        return
 
-            yield (image, timestamp)
+                image = gst_to_opencv(buf)
+                try:
+                    yield (image, timestamp)
+                finally:
+                    newbuf = gst.Buffer(image.data)
+                    newbuf.set_caps(buf.get_caps())
+                    newbuf.timestamp = buf.timestamp
+                    self.appsrc.emit("push-buffer", newbuf)
 
     def on_new_buffer(self, appsink):
         buf = appsink.emit("pull-buffer")
         self.tell_user_thread(buf)
+        if self.lock.acquire(False):  # non-blocking
+            try:
+                self.appsrc.emit("push-buffer", buf)
+            finally:
+                self.lock.release()
 
     def tell_user_thread(self, buffer_or_exception):
         # `self.last_buffer` (a synchronised Queue) is how we communicate from
@@ -821,8 +850,8 @@ class Display:
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
-            ddebug("underrun: scheduling 'restart_source_bin' in 2s")
-            self.underrun_timeout = GObjectTimeout(2, self.restart_source_bin)
+            ddebug("underrun: scheduling 'restart_source' in 2s")
+            self.underrun_timeout = GObjectTimeout(2, self.restart_source)
             self.underrun_timeout.start()
 
     def on_running(self, _element):
@@ -833,38 +862,26 @@ class Display:
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
-    def restart_source_bin(self):
-        gst.element_unlink_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_NULL)
-        self.sink_bin.set_state(gst.STATE_READY)
-        self.pipeline.remove(self.source_bin)
-        self.source_bin = None
+    def restart_source(self, *_args):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
-        GObjectTimeout(5, self.start_source_bin).start()
+        self.source_pipeline.set_state(gst.STATE_NULL)
+        GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
 
-    def start_source_bin(self):
+    def start_source(self):
         warn("Restarting source pipeline...")
-        self.source_bin = self.create_source_bin()
-        self.pipeline.add(self.source_bin)
-        gst.element_link_many(self.source_bin, self.sink_bin)
-        self.source_bin.set_state(gst.STATE_PLAYING)
-        self.sink_bin.set_state(gst.STATE_PLAYING)
-        self.pipeline.set_state(gst.STATE_PLAYING)
         self.start_timestamp = None
+        self.source_pipeline.set_state(gst.STATE_PLAYING)
         warn("Restarted source pipeline")
-
         self.underrun_timeout.start()
         return False  # stop the timeout from running again
 
     def teardown(self):
+        self.source_pipeline.set_state(gst.STATE_NULL)
         if not self.novideo:
             debug("teardown: Sending eos")
-            gst.element_unlink_many(self.source_bin, self.sink_bin)
-            self.pipeline.get_by_name("t").sink_pads().next().send_event(
-                gst.event_new_eos())
-            self.source_bin.post_message(gst.message_new_eos(self.source_bin))
+            self.appsrc.emit("end-of-stream")
             self.mainloop_thread.join(10)
 
 
@@ -928,12 +945,12 @@ def _match_template(image, template, match_parameters):
             matched = True
         else:
             # Set Region Of Interest to the "best match" location
-            image = image[
+            roi = image[
                 position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
                 position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
-            image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-            log(image, "source_roi")
+            log(roi, "source_roi")
             log(image_gray, "source_roi_gray")
             log(template_gray, "template_gray")
 
@@ -957,6 +974,13 @@ def _match_template(image, template, match_parameters):
             log(eroded, "absdiff_threshold_erode")
 
             matched = (cv2.countNonZero(eroded) == 0)
+
+    cv2.rectangle(
+        image,
+        (position.x, position.y),  # pylint: disable=E1101
+        (position.x + template.shape[1], position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+        (32, 0 if matched else 255, 255),  # bgr
+        thickness=3)
 
     return matched, position, first_pass_certainty
 
@@ -1021,7 +1045,7 @@ class VideoTestSrcControl:
     """
 
     def __init__(self, display):
-        self.videosrc = display.pipeline.get_by_name("videotestsrc0")
+        self.videosrc = display.source_pipeline.get_by_name("videotestsrc0")
         if not self.videosrc:
             raise ConfigurationError('The "test" control can only be used'
                                      'with source-pipeline = "videotestsrc"')
@@ -1467,11 +1491,11 @@ def _fake_frames_at_half_motion():
                     ][(i / 2) % 2],
                     i * 1000000000)
 
-        def get_frame(self):
-            return self.frames().next()
+    def _get_frame():
+        return None
 
-    global _display
-    orig = _display
-    _display = FakeDisplay()
+    global _display, get_frame  # pylint: disable=W0601
+    orig_display, orig_get_frame = _display, get_frame
+    _display, get_frame = FakeDisplay(), _get_frame
     yield
-    _display = orig
+    _display, get_frame = orig_display, orig_get_frame
