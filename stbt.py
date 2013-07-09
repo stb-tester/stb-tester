@@ -1053,11 +1053,33 @@ class VideoTestSrcControl:
                                      'with source-pipeline = "videotestsrc"')
 
     def press(self, key):
-        if key not in [str(x) for x in range(21)]:
-            raise UITestFailure('Key "%s" not valid for the "test" control'
-                                ' (only "0" to "20" allowed)' % key)
-        self.videosrc.props.pattern = int(key)
-        debug("Pressed " + key)
+        if key not in [
+                0, "smpte",
+                1, "snow",
+                2, "black",
+                3, "white",
+                4, "red",
+                5, "green",
+                6, "blue",
+                7, "checkers-1",
+                8, "checkers-2",
+                9, "checkers-4",
+                10, "checkers-8",
+                11, "circular",
+                12, "blink",
+                13, "smpte75",
+                14, "zone-plate",
+                15, "gamut",
+                16, "chroma-zone-plate",
+                17, "solid-color",
+                18, "ball",
+                19, "smpte100",
+                20, "bar",
+        ]:
+            raise UITestFailure(
+                'Key "%s" not valid for the "test" control' % key)
+        self.videosrc.props.pattern = key
+        debug("Pressed %s" % key)
 
 
 class VirtualRemote:

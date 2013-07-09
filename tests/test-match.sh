@@ -176,7 +176,7 @@ test_press_until_match() {
     # This doesn't test that press_until_match presses repeatedly, but at least
     # it tests that press_until_match doesn't blow up completely.
     cat > "$scratchdir/test.py" <<-EOF
-	press_until_match("10", "videotestsrc-checkers-8.png")
+	press_until_match("checkers-8", "videotestsrc-checkers-8.png")
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
@@ -191,7 +191,7 @@ test_wait_for_match_searches_in_script_directory() {
 
 test_press_until_match_searches_in_script_directory() {
     cat > "$scratchdir/test.py" <<-EOF
-	press_until_match("10", "in-script-dir.png")
+	press_until_match("checkers-8", "in-script-dir.png")
 	EOF
     cp videotestsrc-checkers-8.png "$scratchdir/in-script-dir.png"
     stbt-run -v "$scratchdir/test.py"
@@ -250,7 +250,7 @@ test_detect_match_searches_in_caller_directory() {
 test_changing_input_video_with_the_test_control() {
     cat > "$scratchdir/test.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
-	press("10")  # checkers 8px
+	press("checkers-8")
 	wait_for_match("videotestsrc-checkers-8.png", consecutive_matches=24)
 	EOF
     stbt-run -v "$scratchdir/test.py"
@@ -372,7 +372,7 @@ test_detect_match_example_press_and_wait_for_match() {
 	    if not key_sent:
 	        if match_result.match:
 	            raise Exception("Wrong match reported.")
-	        press("10")  # checkers 8px
+	        press("checkers-8")
 	        key_sent = True
 	    else:
 	        if match_result.match:

@@ -19,7 +19,7 @@ test_invalid_source_pipeline() {
 test_get_frame_and_save_frame() {
     cat > "$scratchdir/get-screenshot.py" <<-EOF
 	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
-	press("15")
+	press("gamut")
 	wait_for_match("videotestsrc-gamut.png", consecutive_matches=24)
 	save_frame(get_frame(), "$scratchdir/gamut.png")
 	EOF
@@ -28,7 +28,7 @@ test_get_frame_and_save_frame() {
         fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
     cat > "$scratchdir/match-screenshot.py" <<-EOF
-	press("15")
+	press("gamut")
 	# confirm_threshold accounts for match rectangle in the screenshot.
 	wait_for_match("$scratchdir/gamut.png",
 	               match_parameters=MatchParameters(confirm_threshold=0.7))

@@ -189,7 +189,7 @@ test_detect_motion_example_press_and_wait_for_no_motion() {
 	    if not key_sent:
 	        if not motion_result.motion:
 	            raise Exception("Motion not reported.")
-	        press("10")  # checkers 8px
+	        press("checkers-8")
 	        key_sent = True
 	    else:
 	        if not motion_result.motion:
