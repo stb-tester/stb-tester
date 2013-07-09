@@ -64,8 +64,8 @@ test_get_config() {
 test_that_frames_returns_at_least_one_frame() {
     cat > "$scratchdir/test.py" <<-EOF
 	import stbt
-	stbt._display.frames(timeout_secs=0).next()
-	stbt._display.frames(timeout_secs=0).next()
+	stbt.frames(timeout_secs=0).next()
+	stbt.frames(timeout_secs=0).next()
 	EOF
     stbt-run -v "$scratchdir/test.py"
 }
@@ -73,7 +73,7 @@ test_that_frames_returns_at_least_one_frame() {
 test_that_frames_doesnt_time_out() {
     cat > "$scratchdir/test.py" <<-EOF
 	import stbt
-	for _ in stbt._display.frames():
+	for _ in stbt.frames():
 	    pass
 	EOF
     timeout 12 stbt-run -v "$scratchdir/test.py"
@@ -84,13 +84,52 @@ test_that_frames_doesnt_time_out() {
 test_that_frames_raises_NoVideo() {
     cat > "$scratchdir/test.py" <<-EOF
 	import stbt
-	for _ in stbt._display.frames():
+	for _ in stbt.frames():
 	    pass
 	EOF
     ! stbt-run -v --source-pipeline "videotestsrc num-buffers=1" \
             "$scratchdir/test.py" &> "$scratchdir/stbt-run.log" &&
     grep -q NoVideo "$scratchdir/stbt-run.log" ||
     fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
+}
+
+test_using_frames_to_measure_black_screen() {
+    cd "$scratchdir" &&
+    cat > test.py <<-EOF &&
+	import cv2
+	import stbt
+	import threading
+	import time
+	
+	def presser():
+	    time.sleep(1)
+	    stbt.press("black")
+	    time.sleep(1)
+	    stbt.press("smpte")
+	
+	def is_black_screen(img):
+	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	    _, img = cv2.threshold(img, 10, 255, cv2.THRESH_BINARY)
+	    _, maxVal, _, _ = cv2.minMaxLoc(img)
+	    return maxVal == 0
+	
+	threading.Thread(target=presser).start()
+	
+	frames = stbt.frames(timeout_secs=10)
+	for frame, timestamp in frames:
+	    black = is_black_screen(frame)
+	    print "%s: %s" % (timestamp, black)
+	    if black:
+	        break
+	assert black, "Failed to find black screen"
+	for frame, timestamp in frames:
+	    black = is_black_screen(frame)
+	    print "%s: %s" % (timestamp, black)
+	    if not black:
+	        break
+	assert not black, "Failed to find non-black screen"
+	EOF
+    stbt-run -v test.py
 }
 
 test_that_video_index_is_written_on_eos() {

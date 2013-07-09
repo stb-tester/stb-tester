@@ -64,6 +64,7 @@ python_docstrings() {
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc frames
     doc save_frame
     doc get_frame
     doc get_config

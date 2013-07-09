@@ -287,7 +287,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
     debug("Searching for " + template_)
 
-    for frame, timestamp in _display.frames(timeout_secs):
+    for frame, timestamp in frames(timeout_secs):
         matched, position, first_pass_certainty = _match_template(
             frame, template, match_parameters)
 
@@ -341,7 +341,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
     previous_frame_gray = None
     log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
 
-    for frame, timestamp in _display.frames(timeout_secs):
+    for frame, timestamp in frames(timeout_secs):
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         log(frame_gray, "source")
 
@@ -532,6 +532,19 @@ def wait_for_motion(
 
     screenshot = get_frame()
     raise MotionTimeout(screenshot, mask, timeout_secs)
+
+
+def frames(timeout_secs=None):
+    """Generator that yields frames captured from the GStreamer pipeline.
+
+    "timeout_secs" is in seconds elapsed, from the method call. Note that
+    you can also simply stop iterating over the sequence yielded by this
+    method.
+
+    Returns an (image, timestamp) tuple for every frame captured, where
+    "image" is in OpenCV format.
+    """
+    return _display.frames(timeout_secs)
 
 
 def save_frame(image, filename):
@@ -761,17 +774,7 @@ class Display:
 
         return gst_buffer
 
-    def frames(self, timeout_secs=None):
-        """Generator that yields frames captured from the GStreamer pipeline.
-
-        "timeout_secs" is in seconds elapsed, from the method call. Note that
-        you can also simply stop iterating over the sequence yielded by this
-        method.
-
-        Returns an (image, timestamp) tuple for every frame captured, where
-        "image" is in OpenCV format.
-        """
-
+    def frames(self, timeout_secs):
         self.start_timestamp = None
 
         with self.lock:

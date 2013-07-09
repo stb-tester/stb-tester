@@ -395,6 +395,16 @@ detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
 
+frames(timeout_secs=None)
+    Generator that yields frames captured from the GStreamer pipeline.
+
+    "timeout_secs" is in seconds elapsed, from the method call. Note that
+    you can also simply stop iterating over the sequence yielded by this
+    method.
+
+    Returns an (image, timestamp) tuple for every frame captured, where
+    "image" is in OpenCV format.
+
 save_frame(image, filename)
     Saves an OpenCV image to the specified file.
 
