@@ -2,13 +2,11 @@ language: c
 
 install:
  - sudo apt-get update
- - sudo apt-get install gstreamer0.10-plugins-base
-                        gstreamer0.10-plugins-bad gstreamer0.10-plugins-good
-                        python-gst0.10 python-docutils
-                        python-nose xvfb
-                        gstreamer0.10-tools gstreamer0.10-x
-                        gstreamer0.10-plugins-good pylint pep8
-                        python-numpy python-opencv
+ - sudo apt-get install gstreamer0.10-tools gstreamer0.10-plugins-base
+       gstreamer0.10-plugins-good gstreamer0.10-plugins-bad
+       python-gst0.10 python-opencv python-numpy
+       python-docutils python-nose pep8 pylint
+       gstreamer0.10-x xvfb
  - make
 
 script:
