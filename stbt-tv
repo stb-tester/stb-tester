@@ -41,7 +41,7 @@ source_pipeline=${*:-$("$STBT_LIBEXEC/stbt-config" global.source_pipeline)}
 : ${sink:=$(
         case "$(uname)" in
             (Darwin) echo glimagesink;;
-            (Linux) lspci | grep -q VMware &&
+            (Linux) lspci | grep -Eq '(VMware|VirtualBox)' &&
                         echo ximagesink || echo xvimagesink;;
             (*) echo ximagesink;;
         esac)}
