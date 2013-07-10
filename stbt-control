@@ -60,6 +60,7 @@ import math
 import os
 import sys
 import threading
+import time
 
 import stbt
 
@@ -158,6 +159,8 @@ def main_loop(control_uri, keymap_file):
             term.addstr(str(remote_key))
             timer = threading.Timer(1, clear_last_command, [term])
             timer.start()
+            time.sleep(.2)
+            curses.flushinp()
 
 
 def clear_last_command(term):
