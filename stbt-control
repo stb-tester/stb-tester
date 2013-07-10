@@ -30,7 +30,7 @@ Keymap File
 
     <keyboard key> is an ASCII character or one of the following keywords:
 
-            Space, Enter, Tab, Up, Down, Left, Right, Backspace,
+            Space, Enter, Tab, Escape, Up, Down, Left, Right, Backspace,
             PageUp, PageDown, Home, End, Insert, Delete
 
     Be careful that keywords are case sensitive.
@@ -55,6 +55,7 @@ Keymap File
 import collections
 import contextlib
 import curses
+import curses.ascii
 import getopt
 import math
 import os
@@ -69,6 +70,7 @@ SPECIAL_CHARS = {
     ord(" "): "Space",
     ord("\n"): "Enter",
     ord("\t"): "Tab",
+    curses.ascii.ESC: "Escape",
     curses.KEY_UP: "Up",
     curses.KEY_DOWN: "Down",
     curses.KEY_LEFT: "Left",
@@ -258,7 +260,7 @@ def validate(keyname):
 
 def test_validate():
     try:
-        validate("Escape")
+        validate("Invalid")
         assert False
     except ValueError:
         pass
