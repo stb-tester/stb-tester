@@ -8,5 +8,3 @@ stbt.1
 stbt-debug
 defaults.conf
 VERSION
-gst/*.o
-gst/libgst-stb-tester.so
