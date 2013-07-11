@@ -132,6 +132,29 @@ test_using_frames_to_measure_black_screen() {
     stbt-run -v test.py
 }
 
+test_that_frames_doesnt_deadlock() {
+    cd "$scratchdir" &&
+    cat > test.py <<-EOF &&
+	import stbt
+	for frame, timestamp in stbt.frames():
+	    print timestamp
+	    break
+	for frame, timestamp in stbt.frames():
+	    print timestamp
+	    break
+	frames = stbt.frames()
+	frame1 = frames.next()
+	frames = stbt.frames()  # Drop reference to old `frames`; should be GCd.
+	frame2 = frames.next()
+	frames3 = stbt.frames()
+	frame3 = frames3.next()  # old `frames` still holds lock
+	EOF
+    timeout 10 stbt-run -v test.py &&
+
+    cat > test2.py <<-EOF
+EOF
+}
+
 test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null || {
         echo "webminspector.py not found; skipping this test." >&2

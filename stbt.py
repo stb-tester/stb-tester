@@ -690,7 +690,7 @@ class Display:
         gobject.threads_init()
 
         self.novideo = False
-        self.lock = threading.Lock()  # Held by whoever is consuming frames
+        self.lock = threading.RLock()  # Held by whoever is consuming frames
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
