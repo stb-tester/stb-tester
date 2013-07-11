@@ -886,8 +886,8 @@ class Display:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
             self.mainloop_thread.join(10)
-            debug("teardown: Exiting (GLib mainloop %s alive)" % (
-                "is" if self.mainloop_thread.isAlive() else "is not"))
+            debug("teardown: Exiting (GLib mainloop %s)" % (
+                "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
 class GObjectTimeout:
