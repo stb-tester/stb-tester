@@ -138,7 +138,9 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 	    echo '$(flags)' > $@; \
 	fi
 
+TAGS:
+	etags *.py
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
-.PHONY: FORCE
+.PHONY: FORCE TAGS
