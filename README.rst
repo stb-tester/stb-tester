@@ -271,19 +271,8 @@ INSTALLING FROM SOURCE
 
 Run "make install" from the stb-tester source directory.
 
-See http://stb-tester.com/getting-started.html#install-stb-tester-from-source
-for the required dependencies.
-
-
-SETUP TIPS
-==========
-
-Run tests/run-tests.sh to verify that your gstreamer + OpenCV installation is
-working correctly.
-
-If you plan to use real infrared emitters/receivers, use lirc's irsend(1) and
-ircat(1), respectively, to test your lirc setup before integrating with
-stb-tester.
+See http://stb-tester.com/getting-started.html for the required dependencies
+and configuration.
 
 
 TEST SCRIPT FORMAT
