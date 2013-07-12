@@ -9,3 +9,4 @@ stbt-debug
 defaults.conf
 TAGS
 VERSION
+extra/vm/.vagrant

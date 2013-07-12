@@ -1,0 +1,39 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrant configuration file to provision a VM with stb-tester installed.
+# For a reference of the config file options, see the online documentation at
+# vagrantup.com.
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "precise32"  # Ubuntu 12.04LTS, 32 bit
+  config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+
+  config.vm.provision :shell, :path => "setup.sh"
+
+  config.vm.provider :virtualbox do |v|
+    v.gui = true
+
+    # Connect video-capture and infrared devices to the guest. See:
+    # * http://vagrant.1086180.n5.nabble.com/Expose-USB-device-to-guest-td488.html
+    # * https://gist.github.com/dscape/7d829c0c116ef419f963
+    # * http://www.virtualbox.org/manual/ch08.html#idp14713648
+    v.customize ["modifyvm", :id, "--usb", "on"]
+    v.customize ["usbfilter", "add", "0", "--target", :id,
+      # Arbitrary name for this filter
+      "--name", "Hauppauge",
+      # Found this by running `VBoxManage list usbhost` on the host
+      "--vendorid", "0x2040"]
+    v.customize ["usbfilter", "add", "0", "--target", :id,
+      "--name", "RedRat",
+      "--vendorid", "0x112a"]
+  end
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  config.vm.synced_folder "../../", "/home/vagrant/stb-tester"
+
+end
