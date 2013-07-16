@@ -170,7 +170,7 @@ test_that_video_index_is_written_on_eos() {
     cd "$scratchdir" &&
     cat > test.py <<-EOF &&
 	import time
-	time.sleep(2)
+	time.sleep(5)
 	EOF
     stbt-run -v \
         --sink-pipeline \
