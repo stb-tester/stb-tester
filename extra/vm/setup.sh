@@ -20,6 +20,10 @@ install_packages || {
   /usr/share/debconf/fix_db.pl  # https://bugs.launchpad.net/ubuntu/+bug/873551
   install_packages
 }
+apt-get install -y linux-generic-lts-quantal
+# Conflicts with virtualbox-guest-x11:
+# https://bugs.launchpad.net/ubuntu/+source/virtualbox/+bug/1160401
+#apt-get install -y xserver-xorg-lts-quantal
 
 usermod -a -G video vagrant
 
