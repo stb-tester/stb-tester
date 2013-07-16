@@ -7,7 +7,8 @@ install:
        python-gst0.10 python-opencv python-numpy
        python-docutils python-nose pep8 pylint
        gstreamer0.10-x xvfb
+ - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make
 
 script:
- - xvfb-run -s "-screen 0 1024x768x24" make check
+ - PATH=~/webminspector:$PATH xvfb-run -s "-screen 0 1024x768x24" make check
