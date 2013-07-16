@@ -177,8 +177,10 @@ test_that_video_index_is_written_on_eos() {
             "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
         test.py &&
     webminspector.py video.webm &> webminspector.log &&
-    grep "Cue Point" webminspector.log ||
-    fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+    grep "Cue Point" webminspector.log || {
+      cat webminspector.log
+      fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+    }
 }
 
 test_save_video() {
