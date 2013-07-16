@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <title>{{run.timestamp}} {{run.test_name}} @{{run.git_commit}}</title>
+  <base target="_parent" />
+  <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <style>
+    .thumbnail p { word-wrap: break-word; text-align: center; }
+  </style>
+</head>
+
+<body>
+<div class="container-fluid">
+<div class="row-fluid">
+<div class="span4">
+
+<p><a href="">[Link to this result]</a>
+<p><b>Timestamp:</b> {{run.timestamp}}
+<p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
+<p><b>Exit status:</b> {{run.exit_status}}
+{% if run.exit_status > 0 %}
+  <p><b>Failure reason:</b> {{run.failure_reason}}
+{% endif %}
+<p><b>Duration:</b> {{run.duration}}
+<p><b>Logs:</b>
+{% for f in run.files %}
+  <p><a href="{{f}}">{{f}}</a>
+{% endfor %}
+<ul class="thumbnails">
+{% for image in run.images %}
+  <li class="span4">
+    <div class="thumbnail">
+      <a href="{{image}}"><img src="{{image}}" alt=""></a>
+      <p>{{image}}</p>
+    </div>
+  </li>
+{% endfor %}
+</ul>
+
+</div>
+</div>
+</div>
+</body>
+</html>

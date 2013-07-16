@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+#                                                    -*- sh-basic-offset: 2 -*-
+
+#/ Usage: run [options] test.py [test.py ...]
+#/
+#/ Options:
+#/   -1    Run once. The default behaviour is to run the test
+#/         repeatedly as long as it passes.
+#/   -k    Continue running after "uninteresting" failures.
+#/   -kk   Continue running after any failure (except those
+#/         that would prevent any further test from passing).
+#/
+#/   -d    Enable "stbt-debug" dump of intermediate images.
+#/   -v    Verbose. Print stbt standard output.
+#/   -vv   Extra verbose. Print stbt stdandard error output.
+#/
+#/   -t <tag>  Tag to add to test run directory names (useful
+#/         to differentiate directories when you intend to
+#/         merge test results from multiple machines).
+#/
+#/ Error classification for "-kk" isn't implemented yet.
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
+
+main() {
+  runner=$(dirname "$(abspath "$0")")
+
+  keep_going=0
+  run_once=false
+  stop=false
+  tag=
+  v=-v
+  verbose=0
+  while getopts ":1dhkt:v" option; do
+    case $option in
+      1) run_once=true;;
+      d) v=-vv;;
+      h) usage; exit 0;;
+      k) keep_going=$((keep_going + 1));;
+      t) tag=-$OPTARG;;
+      v) verbose=$((verbose + 1));;
+      *) die "Invalid option '-$OPTARG'. Use '-h' for help.";;
+    esac
+  done
+  shift $((OPTIND - 1))
+  [[ $# -gt 0 ]] || { usage >&2; exit 1; }
+
+  exec 3>/dev/null 4>/dev/null
+  [ $verbose -gt 0 ] && exec 3>&1
+  [ $verbose -gt 1 ] && exec 4>&1
+
+  while true; do
+    for test in "$@"; do
+      run "$test"
+      should_i_continue || break 2
+    done
+    $run_once && break
+  done
+}
+
+run() {
+  local _test rundir
+
+  _test=$(abspath "$1") &&  # absolute path to the test script
+  rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
+  mkdir "$rundir" &&
+  rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
+  cd "$rundir" &&
+  mkfifo rawout rawerr &&
+  echo "$_test" > test-name ||
+  die "Failed to set up test-run directory '$rundir'."
+
+  ( cd "$(dirname "$_test")" &&
+    git describe --always --dirty
+  ) > git-commit ||
+  die "Failed to determine the test script's git revision."
+
+  [ $verbose -gt 0 ] && printf "\n$test...\n" || printf "$test... "
+  PYTHONUNBUFFERED=x \
+    stbt run $v "$_test" --save-video "video.webm" >rawout 2>rawerr &
+  stbtpid=$!
+  local start_time=$(date +%s)
+  ts '[%Y-%m-%d %H:%M:%.S %z] ' < rawout | tee stdout.log >&3 &
+  ts '[%Y-%m-%d %H:%M:%.S %z] ' < rawerr | tee stderr.log >&4 &
+
+  while true; do
+    interrupted=false
+    wait $stbtpid
+    exit_status=$?
+    $interrupted || break
+  done
+  echo $(( $(date +%s) - $start_time )) > duration
+
+  echo $exit_status > exit-status
+  if [ $exit_status -eq 0 ]; then
+    echo OK
+  else
+    stbt screenshot screenshot-clean.png &>/dev/null  # Take screenshot asap
+    echo FAILED
+  fi
+
+  rm rawout rawerr
+  "$runner"/report . >/dev/null
+
+  cd ..
+  rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
+}
+
+trap on_kill1 sigint sigterm
+on_kill1() {
+  printf "\nReceived interrupt; waiting for current test to complete.\n" >&2
+  interrupted=true stop=true
+  trap on_kill2 sigint sigterm
+}
+on_kill2() {
+  echo "Received interrupt; exiting." >&2
+  interrupted=true stop=true
+  killtree $stbtpid
+}
+
+should_i_continue() {
+  $stop && return 1;
+  [[ $exit_status -eq 0 ]] ||
+  # "Uninteresting" failures due to the test infrastructure
+  [[ $keep_going -gt 0 && $exit_status -gt 1 ]] ||
+  # Failures due to the system under test (TODO: that are recoverable)
+  [[ $keep_going -gt 1 ]]
+}
+
+# http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes
+killtree() {
+  local parent=$1 child
+  for child in $(ps -o pid= --ppid $parent); do
+    killtree $child
+  done
+  kill $parent
+}
+
+# Portable implementation of GNU "readlink -f" to support BSD/OSX.
+abspath() {
+  python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
+}
+
+main "$@"

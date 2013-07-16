@@ -57,7 +57,7 @@ timeout() { perl -e \
     "$@"; }
 timedout=142
 
-fail() { echo "$*"; exit 1; }
+fail() { echo "error: $*"; exit 1; }
 
 
 # Run the tests ############################################################

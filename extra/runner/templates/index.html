@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <title>Test results {{runs[0].timestamp}} - {{runs[-1].timestamp}}</title>
+
+  <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <style>
+    table.sortable th { cursor: pointer; }
+  </style>
+</head>
+
+<body>
+
+<div class="container-fluid">
+
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <a class="brand" href="../">stb-tester results</a>
+      <ul class="nav">
+        <li class="active"><a>{{name}}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="row-fluid" style="padding-top: 40px">
+
+    <div class="span8" height="100%">
+      <table id="testruns" class="table table-condensed sortable">
+      <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Test</th>
+        <th>Commit</th>
+        <th>Exit status</th>
+        <th>Duration</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for run in runs %}
+      <tr class="{{run.css_class()}}">
+        <td>{{run.timestamp}}</td>
+        <td><a href="{{run.rundir}}/index.html" target="details">{{run.test_name}}</a></td>
+        <td>{{run.git_commit}}</td>
+        <td>
+          {{run.exit_status}}
+          {% if run.exit_status > 0 %}
+            — {{ run.failure_reason | truncate(30, True) }}
+          {% endif %}
+        </td>
+        <td>{{run.duration}}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+      </table>
+    </div>
+
+    <div class="span4">
+      <iframe data-spy="affix" id="details" name="details" seamless="true"
+        width="100%" style="border: none"></iframe>
+    </div>
+
+  </div>
+</div>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script src="http://cdn.jsdelivr.net/sorttable/2/sorttable.js"></script>
+<script>
+  $(document).ready(function() {
+    $("#details").css("height", $(window).height());
+    $("#testruns tbody tr").on("click", select_testrun);
+    $(document).on("keydown", navigate_testruns);
+
+    var selected_row = $();
+    function select_testrun() {
+      selected_row.removeClass("info");
+      selected_row = $(this).closest("tr");
+      $("#details").attr(
+        "src",
+        $("td:nth-child(2) a", selected_row).attr("href"));
+      selected_row.addClass("info");
+
+      // Scroll if navigated with keyboard outside of visible viewport.
+      if (selected_row.offset().top + selected_row.height() >
+          $(window).height() + $(window).scrollTop()) {
+        $(window).scrollTop(
+          selected_row.offset().top +
+          selected_row.height() -
+          $(window).height());
+      }
+      // 40px for the titlebar: http://stackoverflow.com/questions/11124777
+      if (selected_row.offset().top - 40 < $(window).scrollTop()) {
+        $(window).scrollTop(selected_row.offset().top - 40);
+      }
+    };
+    function navigate_testruns(event) {
+      if (event.keyCode == 38) { // up
+        var rows = $("#testruns tbody tr");
+        var prev = $(rows[ Math.max(0, rows.index(selected_row) - 1) ]);
+        if (prev.length) {
+          prev.click();
+        }
+        return false;
+      }
+      if (event.keyCode == 40) { // down
+        var rows = $("#testruns tbody tr");
+        var next = $(rows[
+          Math.min(rows.length - 1, rows.index(selected_row) + 1) ]);
+        if (next.length) {
+          next.click();
+        }
+        return false;
+      }
+    };
+  });
+</script>
+
+</body>
+</html>
