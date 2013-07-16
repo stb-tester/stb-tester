@@ -21,5 +21,13 @@ with ``vagrant ssh``.
 Status
 ------
 
-You still have to install & configure ``lirc`` yourself. In particular, you'll
-need to provide a ``lircd.conf`` file describing your remote control.
+The VM will recognise any of the following devices connected to your host PC:
+
+* Hauppauge HD PVR video-capture device
+* RedRat3 USB infrared transceiver
+
+To use the RedRat3 (or any other lirc-based infrared emitter) you still have to
+install & configure ``lirc`` yourself. In particular, you'll need to provide a
+``/etc/lirc/lircd.conf`` file describing your remote control; and edit
+``/etc/lirc/hardware.conf`` to set ``REMOTE_DEVICE`` (e.g. ``/dev/lirc0``) and
+``START_LIRCD=true``.
