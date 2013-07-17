@@ -17,6 +17,7 @@ tools = stbt-run
 tools += stbt-record
 tools += stbt-config
 tools += stbt-control
+tools += stbt-power
 tools += stbt-screenshot
 tools += stbt-templatematch
 tools += stbt-tv

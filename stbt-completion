@@ -15,7 +15,8 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config control screenshot templatematch tv)" \
+                    run record config control power \
+                    screenshot templatematch tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
@@ -23,6 +24,7 @@ _stbt() {
             record)   _stbt_record;;
             config)   _stbt_config;;
             control)  _stbt_control;;
+            power)    _stbt_power;;
             templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
         esac
@@ -85,6 +87,19 @@ _stbt_control() {
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
                             --help --keymap --control)" \
+                        -- "$cur"));;
+    esac
+}
+
+_stbt_power() {
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+
+    case "$prev" in
+        --power-outlet=*) COMPREPLY=($(_stbt_power_outlet_uri));;
+        *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
+                            --help --power-outlet on off status)" \
                         -- "$cur"));;
     esac
 }
@@ -221,6 +236,26 @@ _stbt_config_file_contents() {
     done
 }
 
+_stbt_power_outlet_uri() {
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --power-outlet=*:*:) _stbt_power_outlet_outlet;;
+        --power-outlet=*:) _stbt_hostname;;
+        *) compgen -W "$(_stbt_no_space ipp: pdu:)" -- "$cur";;
+    esac
+}
+
+_stbt_power_outlet_outlet() {
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --power-outlet=pdu:*)
+            compgen -W "$(_stbt_trailing_space \
+                    1-A1 1-A2 1-A3 1-A4 1-A5 1-A6 1-A7 1-A8)" \
+                -- "$cur";;
+    esac
+}
+
 _stbt_templatematch_enum() {
     # Requires GStreamer bash-completion from
     # https://bugzilla.gnome.org/show_bug.cgi?id=690515
@@ -264,6 +299,7 @@ _stbt_takes_arg() {
         --save-video) true;;
         --control-recorder|-o|--output-file) true;;
         --keymap) true;;
+        --power-outlet) true;;
         *) false;;
     esac
 }

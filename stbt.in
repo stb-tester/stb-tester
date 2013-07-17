@@ -11,6 +11,7 @@
 #/     record         Record a stbt script
 #/     config         Print configuration value
 #/     control        Send remote control signals
+#/     power          Control networked power switch
 #/     screenshot     Capture a single screenshot
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
@@ -26,7 +27,7 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester @VERSION@"; exit 0;;
-    run|record|config|control|screenshot|templatematch|tv)
+    run|record|config|control|power|screenshot|templatematch|tv)
         @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;
