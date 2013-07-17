@@ -118,6 +118,15 @@ pdu() {
     sed -En '/ON|OFF/ p' |
     tail -n +2 ||
     die "failed to connect to '$hostname'"
+
+    [[ $command == status ]] || {
+        sleep 2
+        local output=$(pdu status $hostname $outlet | grep -i "$outlet")
+        [[ -n "$output" ]] ||
+            die "invalid outlet '$outlet' (hint: use the 'status' command)"
+        echo "$output"
+        echo "$output" | grep -qi "$command" || exit 1
+    }
 }
 
 main "$@"
