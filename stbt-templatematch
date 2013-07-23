@@ -51,8 +51,6 @@ cat > $script <<-EOF
 	    sys.exit(1)
 	EOF
 
-STBT_LIBEXEC="$(dirname "$0")"
-
-"$STBT_LIBEXEC/stbt-run" -v $v --source-pipeline="filesrc location=$videoframe \
+"$(dirname "$0")/stbt-run" -v $v --source-pipeline="filesrc location=$videoframe \
         ! decodebin2 ! imagefreeze ! ffmpegcolorspace" \
     --control=none $script

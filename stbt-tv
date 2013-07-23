@@ -34,9 +34,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-STBT_LIBEXEC="$(dirname "$0")"
-
-source_pipeline=${*:-$("$STBT_LIBEXEC/stbt-config" global.source_pipeline)}
+source_pipeline=${*:-$("$(dirname "$0")/stbt-config" global.source_pipeline)}
 
 : ${sink:=$(
         case "$(uname)" in
