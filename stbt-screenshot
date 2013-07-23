@@ -18,7 +18,7 @@
 filename=${1:-screenshot.png}
 STBT_LIBEXEC="$(dirname "$0")"
 
-"$STBT_LIBEXEC/stbt-run" -v --control=none <(cat <<-EOF
+"$STBT_LIBEXEC/stbt-run" -v --control=none --save-video= <(cat <<-EOF
 	save_frame(get_frame(), "$filename")
 	print "Screenshot saved to '$filename'"
 	EOF
