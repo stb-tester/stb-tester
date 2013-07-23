@@ -144,9 +144,9 @@ def main_loop(control_uri, keymap_file):
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
         else:
-            term.addstr("Unable to print keymap because the terminal is too "
-                        "small. Use without printed keymap or press 'q' to "
-                        "quit.\n")
+            raise EnvironmentError(
+                "Unable to print keymap because the terminal is too small. "
+                "Please resize the terminal window.")
         while True:  # Main loop
             keycode = term.getch()
             if keycode == ord('q'):  # 'q' for 'Quit' is pre-defined
