@@ -4,16 +4,18 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-#/ usage: stbt screenshot [-h]
+#/ usage: stbt screenshot [-h] [filename]
 #/
-#/ Capture a screenshot from the system-under-test to 'screenshot.png', using
-#/ the GStreamer source pipeline specified in your stbt config file.
+#/ Capture a screenshot from the system-under-test to the specified filename
+#/ (defaults to 'screenshot.png'), using the GStreamer source pipeline
+#/ specified in your stbt config file.
 #/
 #/ Options:
 #/   -h, --help     Show this help message and exit.
 
 [[ "$1" == -h || "$1" == --help ]] && { grep '^#/' "$0" | cut -c4-; exit 0; }
 
+filename=${1:-screenshot.png}
 STBT_LIBEXEC="$(dirname "$0")"
 
 "$STBT_LIBEXEC/stbt-run" -v --control=none <(cat <<-EOF
@@ -23,7 +25,7 @@ STBT_LIBEXEC="$(dirname "$0")"
 	except MotionTimeout:
 	    pass
 	time.sleep(1)  # Avoid red wait_for_motion artifacts in screenshot
-	save_frame(get_frame(), "screenshot.png")
-	print "Screenshot saved to 'screenshot.png'"
+	save_frame(get_frame(), "$filename")
+	print "Screenshot saved to '$filename'"
 	EOF
     )
