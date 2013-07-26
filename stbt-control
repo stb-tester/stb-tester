@@ -1,62 +1,12 @@
 #!/usr/bin/env python
-
 """Send remote control signals using the PC keyboard or from the command line.
-
-Usage: stbt control [--keymap <keymap file>] [--control <control uri>] \\
-            [<remote control key>]
-
-    --help, -h
-            Show this help message and exit.
-
-    --keymap <keymap file>
-            Load keymap from <keymap file>; defaults to
-            ~/.config/stbt/control.conf. See 'Keymap File' section.
-
-    --control <control uri>
-            Equivalent to the --control parameter of `stbt run`.
-            See `man stbt` for available remote types and configuration.
-
-    <remote control key>
-            The name of a remote control key as in the remote config file
-            (that is /etc/lirc/lircd.conf in case of a LIRC control device).
-            Specifying this argument sends <remote control key> and exits.
-
-Keymap File
-
-    A keymap file stores the mappings between keyboard keys and remote control
-    keys. One line of the file stores one key mapping in the following format:
-
-            <keyboard key> <remote control key> [<display name>]
-
-    <keyboard key> is an ASCII character or one of the following keywords:
-
-            Space, Enter, Tab, Escape, Up, Down, Left, Right, Backspace,
-            PageUp, PageDown, Home, End, Insert, Delete
-
-    Be careful that keywords are case sensitive.
-
-    <remote control key> is the same as in the command line arguments. It
-    cannot contain white spaces.
-
-    <display name> is an optional alias for <remote control key> to show in the
-    on-screen keymap; e.g. "m MENU Main Menu" displays "Main Menu" but sends
-    the "MENU" remote control key when "m" is pressed on the PC keyboard. It
-    may consist of multiple words but cannot be longer than 15 characters.
-
-    Comments start with '//' (double slash) and last until the end of line.
-
-    Example keymap:
-
-            m       MENU    Main Menu
-            Enter   OK
-            c       CLOSE   Close     // Go back to live TV
 """
 
+import argparse
 import collections
 import contextlib
 import curses
 import curses.ascii
-import getopt
 import math
 import os
 import sys
@@ -86,33 +36,20 @@ SPECIAL_CHARS = {
 
 
 def main(argv):
-    keymap_file = default_keymap_file()
-    control_uri = None
+    args = argparser().parse_args(argv[1:])
 
-    opts, args = getopt.getopt(
-        argv[1:], "h", ["help", "keymap=", "control="])
-    assert len(args) <= 1, "Too many positional arguments"
+    if args.help_keymap:
+        sys.exit(show_help_keymap())
 
-    for option, value in opts:
-        if option in ("-h", "--help"):
-            print sys.modules[__name__].__doc__
-            sys.exit()
-        if option == "--keymap":
-            keymap_file = value
-        if option == "--control":
-            control_uri = value
+    remote = stbt.uri_to_remote(args.control, None)
 
-    if control_uri is None:
-        control_uri = stbt.get_config("global", "control")
-    remote = stbt.uri_to_remote(control_uri, None)
-
-    if args:  # Send a single key and exit
-        if control_uri == "none":
+    if args.remote_control_key:  # Send a single key and exit
+        if args.control == "none":
             # Print key name to standard error
             stbt._debug_level = 1  # pylint: disable=W0212
-        remote.press(args[0])
+        remote.press(args.remote_control_key)
     else:  # Interactive
-        for key in main_loop(control_uri, keymap_file):
+        for key in main_loop(args.control, args.keymap):
             remote.press(key)
 
 
@@ -127,6 +64,66 @@ def test_main():
         main(["", "--keymap", "mykeymap", "--control", "none"])
     finally:
         sys.modules[__name__] = reload(sys.modules[__name__])
+
+
+def argparser():
+    parser = argparse.ArgumentParser()
+    parser.prog = "stbt control"
+    parser.description = ("Send remote control signals using the PC keyboard "
+                          "or from the command line.")
+    parser.add_argument(
+        "--help-keymap", action='store_true', default=False,
+        help="Show description of the keymap file format and exit.")
+    parser.add_argument(
+        "--keymap", default=default_keymap_file(),
+        help="Load keymap from KEYMAP file; defaults to %(default)s. "
+             "See `%(prog)s --help-keymap` for details.")
+    parser.add_argument(
+        "--control", default=stbt.get_config("global", "control"),
+        help="Equivalent to the --control parameter of `stbt run`. "
+             "See `man stbt` for available remote types and configuration.")
+    parser.add_argument(
+        "remote_control_key", default=None, nargs='?',
+        help=(
+            "The name of a remote control key as in the remote config file "
+            "(that is /etc/lirc/lircd.conf in case of a LIRC control device). "
+            "Specifying this argument sends remote_control_key and exits. "
+            "Omitting this argument brings up the printed keymap."))
+    return parser
+
+
+def show_help_keymap():
+    """Keymap File
+
+    A keymap file stores the mappings between keyboard keys and remote control
+    keys. One line of the file stores one key mapping in the following format:
+
+            <keyboard key> <remote control key> [<display name>]
+
+    <keyboard key> is an ASCII character or one of the following keywords:
+
+            Space, Enter, Tab, Escape, Up, Down, Left, Right, Backspace,
+            PageUp, PageDown, Home, End, Insert, Delete
+
+    Be careful that keywords are case sensitive.
+
+    <remote control key> is the same as in the command line arguments. It
+    cannot contain white spaces.
+
+    <display name> is an optional alias for <remote control key> to show in the
+    on-screen keymap; e.g. "m MENU Main Menu" displays "Main Menu" but sends
+    the "MENU" remote control key when "m" is pressed on the PC keyboard. It
+    may consist of multiple words but cannot be longer than 15 characters.
+
+    Comments start with '//' (double slash) and last until the end of line.
+
+    Example keymap:
+
+            m       MENU    Main Menu
+            Enter   OK
+            c       CLOSE   Close     // Go back to live TV
+    """
+    print globals()["show_help_keymap"].__doc__
 
 
 def main_loop(control_uri, keymap_file):

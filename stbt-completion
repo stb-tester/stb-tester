@@ -86,7 +86,7 @@ _stbt_control() {
         --keymap=*) COMPREPLY=($(compgen -f -- "$cur"));;
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
-                            --help --keymap --control)" \
+                            --help --help-keymap --keymap --control)" \
                         -- "$cur"));;
     esac
 }
