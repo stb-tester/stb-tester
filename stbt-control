@@ -17,9 +17,9 @@ import stbt
 
 
 SPECIAL_CHARS = {
-    ord(" "): "Space",
-    ord("\n"): "Enter",
-    ord("\t"): "Tab",
+    curses.ascii.SP: "Space",
+    curses.ascii.NL: "Enter",
+    curses.ascii.TAB: "Tab",
     curses.ascii.ESC: "Escape",
     curses.KEY_UP: "Up",
     curses.KEY_DOWN: "Down",
