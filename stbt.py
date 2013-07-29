@@ -1008,14 +1008,12 @@ def _log_image(image, name, directory):
     cv2.imwrite(os.path.join(d, name) + ".png", image)
 
 
-
-def _cv2_imread(path):
+def _cv2_imread(path, flags):
     while True:
-        img = cv2.imread(path)
+        img = cv2.imread(path, flags)
         if img is not None:
             break
     return img
-
 
 
 def uri_to_remote(uri, display):
