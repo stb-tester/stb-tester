@@ -204,3 +204,25 @@ test_save_video() {
         --source-pipeline 'filesrc location=video.webm ! decodebin' \
         test.py
 }
+
+test_that_verbosity_level_is_read_from_config_file() {
+    cd "$scratchdir" &&
+    cat > stbt.conf <<-EOF &&
+	[global]
+	verbose = 2
+	EOF
+    touch test.py &&
+    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run test.py &&
+    cat log | grep "verbose: 2"
+}
+
+test_that_verbose_command_line_argument_overrides_config_file() {
+    cd "$scratchdir" &&
+    cat > stbt.conf <<-EOF &&
+	[global]
+	verbose = 2
+	EOF
+    touch test.py &&
+    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run -v test.py &&
+    cat log | grep "verbose: 1"
+}

@@ -647,13 +647,16 @@ def argparser():
              '(default: %(default)s)')
 
     class IncreaseDebugLevel(argparse.Action):
+        num_calls = 0
+
         def __call__(self, parser, namespace, values, option_string=None):
+            self.num_calls += 1
             global _debug_level
-            _debug_level += 1
+            _debug_level = self.num_calls
             setattr(namespace, self.dest, _debug_level)
 
     global _debug_level
-    _debug_level = 0
+    _debug_level = int(get_config('global', 'verbose'))
     parser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         default=get_config('global', 'verbose'),
