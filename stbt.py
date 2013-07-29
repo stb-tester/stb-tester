@@ -281,7 +281,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     template_ = _find_path(image)
     if not os.path.isfile(template_):
         raise UITestError("No such template file: %s" % image)
-    template = cv2.imread(template_, cv2.CV_LOAD_IMAGE_COLOR)
+    template = _cv2_imread(template_, cv2.CV_LOAD_IMAGE_COLOR)
     if template is None:
         raise UITestError("Failed to load template file: %s" % template_)
 
@@ -334,7 +334,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
         debug("Using mask %s" % mask_)
         if not os.path.isfile(mask_):
             raise UITestError("No such mask file: %s" % mask)
-        mask_image = cv2.imread(mask_, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+        mask_image = _cv2_imread(mask_, cv2.CV_LOAD_IMAGE_GRAYSCALE)
         if mask_image is None:
             raise UITestError("Failed to load mask file: %s" % mask_)
 
@@ -1006,6 +1006,14 @@ def _log_image(image, name, directory):
     if image.dtype == numpy.float32:
         image = cv2.convertScaleAbs(image, alpha=255)
     cv2.imwrite(os.path.join(d, name) + ".png", image)
+
+
+def _cv2_imread(path, flags):
+    while True:
+        img = cv2.imread(path, flags)
+        if img is not None:
+            break
+    return img
 
 
 def uri_to_remote(uri, display):
