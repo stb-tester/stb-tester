@@ -47,25 +47,26 @@ def record(remote_input, script_out):
     old_key = None
     script_out.write("import stbt\n\n\n")
     try:
-        while True:
-            interrupt = False
-            try:
-                key = remote_input.next()
-            except (KeyboardInterrupt, StopIteration):
-                interrupt = True
-            buf = stbt.get_frame()
-            if not interrupt:
+        try:
+            for key in remote_input:
+                write_wait_for_match(script_out, count.next(), old_key)
+                script_out.write("stbt.press('%s')\n" % key)
                 stbt.press(key)
-            if old_key:
-                filename = '%04d-%s-complete.png' % (count.next(), old_key)
-                stbt.save_frame(buf, filename)
-                script_out.write("stbt.wait_for_match('%s')\n" % filename)
-            if interrupt:
-                return
-            script_out.write("stbt.press('%s')\n" % key)
-            old_key = key
+                old_key = key
+        except KeyboardInterrupt:
+            write_wait_for_match(script_out, count.next(), old_key)
+            return
+        write_wait_for_match(script_out, count.next(), old_key)
     finally:
         del remote_input
+
+
+def write_wait_for_match(script_out, i, old_key):
+    if old_key is None:
+        return
+    filename = "%04d-%s-complete.png" % (i, old_key)
+    stbt.save_frame(stbt.get_frame(), filename)
+    script_out.write("stbt.wait_for_match('%s')\n" % filename)
 
 
 if __name__ == "__main__":

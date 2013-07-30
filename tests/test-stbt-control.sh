@@ -33,11 +33,11 @@ test_stbt_control_as_stbt_record_control_recorder() {
 	
 	
 	stbt.press('gamut')
-	stbt.wait_for_match('0000-gamut-complete.png')
+	stbt.wait_for_match('0001-gamut-complete.png')
 	stbt.press('checkers-8')
-	stbt.wait_for_match('0001-checkers-8-complete.png')
+	stbt.wait_for_match('0002-checkers-8-complete.png')
 	stbt.press('smpte')
-	stbt.wait_for_match('0002-smpte-complete.png')
+	stbt.wait_for_match('0003-smpte-complete.png')
 	EOF
     diff -u expected test.py
 }
