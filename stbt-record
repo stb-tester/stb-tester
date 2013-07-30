@@ -37,28 +37,25 @@ def main(argv):
 
     try:
         stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
-        record(stbt.uri_to_remote_recorder(args.control_recorder), script)
+        record(args.control_recorder, script)
     finally:
         stbt.teardown_run()
 
 
-def record(remote_input, script_out):
+def record(control_recorder, script_out):
     count = itertools.count()
     old_key = None
     script_out.write("import stbt\n\n\n")
     try:
-        try:
-            for key in remote_input:
-                write_wait_for_match(script_out, count.next(), old_key)
-                script_out.write("stbt.press('%s')\n" % key)
-                stbt.press(key)
-                old_key = key
-        except KeyboardInterrupt:
+        for key in stbt.uri_to_remote_recorder(control_recorder):
             write_wait_for_match(script_out, count.next(), old_key)
-            return
+            script_out.write("stbt.press('%s')\n" % key)
+            stbt.press(key)
+            old_key = key
+    except KeyboardInterrupt:
         write_wait_for_match(script_out, count.next(), old_key)
-    finally:
-        del remote_input
+        return
+    write_wait_for_match(script_out, count.next(), old_key)
 
 
 def write_wait_for_match(script_out, i, old_key):
