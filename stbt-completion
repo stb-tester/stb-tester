@@ -86,7 +86,7 @@ _stbt_control() {
         --keymap=*) COMPREPLY=($(compgen -f -- "$cur"));;
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
-                            --help --keymap --control)" \
+                            --help --help-keymap --keymap --control)" \
                         -- "$cur"));;
     esac
 }
@@ -164,8 +164,12 @@ _stbt_control_recorder_uri() {
         --control-recorder=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
         --control-recorder=vr:*:) _stbt_vr_port;;
         --control-recorder=vr:) _stbt_hostname;;
-        --control-recorder=file:) _stbt_control_file;;
-        *) compgen -W "$(_stbt_no_space lirc: vr: file://)" -- "$cur";;
+        --control-recorder=file:) _stbt_control_recorder_file;;
+        --control-recorder=stbt-control:) compgen -f -- "$cur";;
+        *) compgen -W "$( \
+                    _stbt_no_space lirc: vr: file://
+                    _stbt_trailing_space stbt-control)" \
+                -- "$cur";;
     esac
 }
 
@@ -209,7 +213,7 @@ _stbt_vr_port() {
     compgen -W "$(_stbt_trailing_space 2033)" -- "$cur"
 }
 
-_stbt_control_file() {
+_stbt_control_recorder_file() {
     local cur="$_stbt_cur"
     compgen -f -P "//" -- "${cur#//}"
 }

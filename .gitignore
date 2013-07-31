@@ -4,6 +4,7 @@
 .stbt-prefix
 stbt
 *.pyc
+stbt-controlc
 stbt.1
 stbt-debug
 defaults.conf

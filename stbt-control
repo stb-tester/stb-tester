@@ -1,27 +1,99 @@
 #!/usr/bin/env python
-
 """Send remote control signals using the PC keyboard or from the command line.
+"""
 
-Usage: stbt control [--keymap <keymap file>] [--control <control uri>] \\
-            [<remote control key>]
+import argparse
+import collections
+import contextlib
+import curses
+import curses.ascii
+import math
+import os
+import sys
+import threading
+import time
 
-    --help, -h
-            Show this help message and exit.
+import stbt
 
-    --keymap <keymap file>
-            Load keymap from <keymap file>; defaults to
-            ~/.config/stbt/control.conf. See 'Keymap File' section.
 
-    --control <control uri>
-            Equivalent to the --control parameter of `stbt run`.
-            See `man stbt` for available remote types and configuration.
+SPECIAL_CHARS = {
+    curses.ascii.SP: "Space",
+    curses.ascii.NL: "Enter",
+    curses.ascii.TAB: "Tab",
+    curses.ascii.ESC: "Escape",
+    curses.KEY_UP: "Up",
+    curses.KEY_DOWN: "Down",
+    curses.KEY_LEFT: "Left",
+    curses.KEY_RIGHT: "Right",
+    curses.KEY_BACKSPACE: "Backspace",
+    curses.KEY_PPAGE: "PageUp",
+    curses.KEY_NPAGE: "PageDown",
+    curses.KEY_HOME: "Home",
+    curses.KEY_END: "End",
+    curses.KEY_IC: "Insert",
+    curses.KEY_DC: "Delete",
+}
 
-    <remote control key>
-            The name of a remote control key as in the remote config file
-            (that is /etc/lirc/lircd.conf in case of a LIRC control device).
-            Specifying this argument sends <remote control key> and exits.
 
-Keymap File
+def main(argv):
+    args = argparser().parse_args(argv[1:])
+
+    if args.help_keymap:
+        sys.exit(show_help_keymap())
+
+    remote = stbt.uri_to_remote(args.control, None)
+
+    if args.remote_control_key:  # Send a single key and exit
+        if args.control == "none":
+            # Print key name to standard error
+            stbt._debug_level = 1  # pylint: disable=W0212
+        remote.press(args.remote_control_key)
+    else:  # Interactive
+        for key in main_loop(args.control, args.keymap):
+            remote.press(key)
+
+
+def test_main():
+    def main_loop_stub(control_uri, keymap_file):
+        assert control_uri == "none"
+        assert keymap_file == "mykeymap"
+        yield
+
+    sys.modules[__name__].main_loop = main_loop_stub
+    try:
+        main(["", "--keymap", "mykeymap", "--control", "none"])
+    finally:
+        sys.modules[__name__] = reload(sys.modules[__name__])
+
+
+def argparser():
+    parser = argparse.ArgumentParser()
+    parser.prog = "stbt control"
+    parser.description = ("Send remote control signals using the PC keyboard "
+                          "or from the command line.")
+    parser.add_argument(
+        "--help-keymap", action='store_true', default=False,
+        help="Show description of the keymap file format and exit.")
+    parser.add_argument(
+        "--keymap", default=default_keymap_file(),
+        help="Load keymap from KEYMAP file; defaults to %(default)s. "
+             "See `%(prog)s --help-keymap` for details.")
+    parser.add_argument(
+        "--control", default=stbt.get_config("global", "control"),
+        help="Equivalent to the --control parameter of `stbt run`. "
+             "See `man stbt` for available remote types and configuration.")
+    parser.add_argument(
+        "remote_control_key", default=None, nargs='?',
+        help=(
+            "The name of a remote control key as in the remote config file "
+            "(that is /etc/lirc/lircd.conf in case of a LIRC control device). "
+            "Specifying this argument sends remote_control_key and exits. "
+            "Omitting this argument brings up the printed keymap."))
+    return parser
+
+
+def show_help_keymap():
+    """Keymap File
 
     A keymap file stores the mappings between keyboard keys and remote control
     keys. One line of the file stores one key mapping in the following format:
@@ -30,7 +102,7 @@ Keymap File
 
     <keyboard key> is an ASCII character or one of the following keywords:
 
-            Space, Enter, Tab, Up, Down, Left, Right, Backspace,
+            Space, Enter, Tab, Escape, Up, Down, Left, Right, Backspace,
             PageUp, PageDown, Home, End, Insert, Delete
 
     Be careful that keywords are case sensitive.
@@ -50,86 +122,11 @@ Keymap File
             m       MENU    Main Menu
             Enter   OK
             c       CLOSE   Close     // Go back to live TV
-"""
-
-import collections
-import contextlib
-import curses
-import getopt
-import math
-import os
-import sys
-import threading
-
-import stbt
-
-
-SPECIAL_CHARS = {
-    ord(" "): "Space",
-    ord("\n"): "Enter",
-    ord("\t"): "Tab",
-    curses.KEY_UP: "Up",
-    curses.KEY_DOWN: "Down",
-    curses.KEY_LEFT: "Left",
-    curses.KEY_RIGHT: "Right",
-    curses.KEY_BACKSPACE: "Backspace",
-    curses.KEY_PPAGE: "PageUp",
-    curses.KEY_NPAGE: "PageDown",
-    curses.KEY_HOME: "Home",
-    curses.KEY_END: "End",
-    curses.KEY_IC: "Insert",
-    curses.KEY_DC: "Delete",
-}
-
-
-def main(argv):
-    keymap_file = default_keymap_file()
-    control_uri = None
-
-    opts, args = getopt.getopt(
-        argv[1:], "h", ["help", "keymap=", "control="])
-    assert len(args) <= 1, "Too many positional arguments"
-
-    for option, value in opts:
-        if option in ("-h", "--help"):
-            print sys.modules[__name__].__doc__
-            sys.exit()
-        if option == "--keymap":
-            keymap_file = value
-        if option == "--control":
-            control_uri = value
-
-    if control_uri is None:
-        control_uri = stbt.get_config("global", "control")
-
-    if args:
-        send(control_uri, args[0])
-    else:
-        main_loop(control_uri, keymap_file)
-
-
-def test_main():
-    def main_loop_stub(control_uri, keymap_file):
-        assert control_uri == "mycontrol"
-        assert keymap_file == "mykeymap"
-
-    sys.modules[__name__].main_loop = main_loop_stub
-    try:
-        main(["", "--keymap", "mykeymap", "--control", "mycontrol"])
-    finally:
-        sys.modules[__name__] = reload(sys.modules[__name__])
-
-
-def send(control_uri, remote_key):
-    if control_uri == "none":
-        # Print key name to standard error
-        stbt._debug_level = 1  # pylint: disable=W0212
-    remote = stbt.uri_to_remote(control_uri, None)
-    remote.press(remote_key)
+    """
+    print globals()["show_help_keymap"].__doc__
 
 
 def main_loop(control_uri, keymap_file):
-    remote = stbt.uri_to_remote(control_uri, None)
     try:
         keymap = load_keymap(open(keymap_file, "r"))
     except IOError:
@@ -144,23 +141,25 @@ def main_loop(control_uri, keymap_file):
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
         else:
-            term.addstr("Unable to print keymap because the terminal is too "
-                        "small. Use without printed keymap or press 'q' to "
-                        "quit.\n")
+            raise EnvironmentError(
+                "Unable to print keymap because the terminal is too small. "
+                "Please resize the terminal window.")
         while True:  # Main loop
             keycode = term.getch()
             if keycode == ord('q'):  # 'q' for 'Quit' is pre-defined
-                sys.exit()
+                return
 
             remote_key, _ = keymap.get(decoded(keycode), (None, None))
             if timer:
                 timer.cancel()
                 clear_last_command(term)
             if remote_key:
-                remote.press(remote_key)
+                yield remote_key
             term.addstr(str(remote_key))
             timer = threading.Timer(1, clear_last_command, [term])
             timer.start()
+            time.sleep(.2)
+            curses.flushinp()
 
 
 def clear_last_command(term):
@@ -258,7 +257,7 @@ def validate(keyname):
 
 def test_validate():
     try:
-        validate("Escape")
+        validate("Invalid")
         assert False
     except ValueError:
         pass

@@ -67,6 +67,7 @@ uninstall:
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-controlc
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf

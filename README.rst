@@ -143,6 +143,11 @@ Additional options to stbt record
     For example, `file:///dev/stdin` to use the keyboard as the remote control
     input.
 
+  stbt-control[:<keymap_file>]
+    Launches **stbt control** to record remote control keypresses using the PC
+    keyboard. See `stbt control --help` for details. Disables `--verbose`
+    parameter.
+
 -o <filename>, --output-filename=<filename>
   The file to write the generated test script to.
 

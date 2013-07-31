@@ -5,7 +5,7 @@ install:
  - sudo apt-get install gstreamer0.10-tools gstreamer0.10-plugins-base
        gstreamer0.10-plugins-good gstreamer0.10-plugins-bad
        python-gst0.10 python-opencv python-numpy
-       python-docutils python-nose pep8 pylint
+       python-docutils python-nose pep8 pylint expect
        gstreamer0.10-x xvfb
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make
