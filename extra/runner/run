@@ -131,7 +131,7 @@ should_i_continue() {
 # http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes
 killtree() {
   local parent=$1 child
-  for child in $(ps -o pid= --ppid $parent); do
+  for child in $(ps -o ppid=,pid= | awk "\$1==$parent {print \$2}"); do
     killtree $child
   done
   kill $parent
