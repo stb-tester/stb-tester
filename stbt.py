@@ -492,7 +492,7 @@ def wait_for_motion(
     Raises `MotionTimeout` if no motion is detected after `timeout_secs`
     seconds.
 
-    Considers the video stream to have motion if there were diferences between
+    Considers the video stream to have motion if there were differences between
     the specified number of `consecutive_frames`, which can be:
 
     * a positive integer value, or
