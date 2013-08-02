@@ -1,9 +1,11 @@
 # Run with ./run-tests.sh
 
 test_runner_once() {
-    { "$srcdir"/extra/runner/run -1 "$testdir"/test.py || fail "runner/run failed"
+    { "$srcdir"/extra/runner/run -1 -t my-label "$testdir"/test.py ||
+        fail "runner/run failed"
     } | sed 's/^/runner: /'
 
+    mv latest-my-label latest
     [[ -f latest/combined.log ]] || fail "latest/combined.log not created"
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
     [[ -f latest/git-commit ]] || fail "latest/git-commit not created"
@@ -13,6 +15,8 @@ test_runner_once() {
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
     grep -q test.py index.html || fail "test name not in index.html"
+    grep -q my-label latest/index.html || fail "extra column not in latest/index.html"
+    grep -q my-label index.html || fail "extra column not in index.html"
 }
 
 test_runner_runs_until_failure() {

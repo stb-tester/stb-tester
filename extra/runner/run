@@ -71,6 +71,8 @@ run() {
   echo "$_test" > test-name ||
   die "Failed to set up test-run directory '$rundir'."
 
+  [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
+
   ( cd "$(dirname "$_test")" &&
     git describe --always --dirty
   ) > git-commit ||

@@ -2,8 +2,10 @@
 
 """Generates reports from logs of stb-tester test runs created by 'run'."""
 
+import collections
 from datetime import datetime
 import glob
+import itertools
 import os
 from os.path import abspath, basename, dirname, isdir
 import re
@@ -45,6 +47,8 @@ def index(parentdir):
     print templates.get_template("index.html").render(
         name=basename(abspath(parentdir)).replace("_", " "),
         runs=runs,
+        extra_columns=set(
+            itertools.chain(*[x.extra_columns.keys() for x in runs])),
     ).encode('utf-8')
 
 
@@ -63,6 +67,7 @@ class Run:
             if basename(x) not in [
                 "duration",
                 "exit-status",
+                "extra-columns",
                 "failure-reason",
                 "git-commit",
                 "test-name",
@@ -78,6 +83,11 @@ class Run:
         self.failure_reason = self.read("failure-reason").strip()
         self.git_commit = self.read("git-commit").strip()
         self.test_name = self.read("test-name").strip()
+
+        self.extra_columns = collections.defaultdict(list)
+        for line in self.read("extra-columns").splitlines():
+            column, value = line.split("\t", 1)
+            self.extra_columns[column.strip()].append(value.strip())
 
         t = re.match(
             r"\d{4}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2}", basename(rundir))

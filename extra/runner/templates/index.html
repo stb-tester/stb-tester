@@ -33,6 +33,9 @@
         <th>Commit</th>
         <th>Exit status</th>
         <th>Duration</th>
+        {% for column in extra_columns %}
+          <th>{{column}}</th>
+        {% endfor %}
       </tr>
       </thead>
       <tbody>
@@ -48,6 +51,11 @@
           {% endif %}
         </td>
         <td>{{run.duration}}</td>
+        {% for column in extra_columns %}
+          <td style="white-space: pre">{{
+            "\n".join(run.extra_columns.get(column, ""))
+          }}</td>
+        {% endfor %}
       </tr>
       {% endfor %}
       </tbody>

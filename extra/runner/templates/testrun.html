@@ -23,6 +23,11 @@
   <p><b>Failure reason:</b> {{run.failure_reason}}
 {% endif %}
 <p><b>Duration:</b> {{run.duration}}
+{% for key in run.extra_columns %}
+  <p style="white-space: pre"><b>{{key}}:</b> {{
+    "\n".join(run.extra_columns[key])
+  }}</p>
+{% endfor %}
 <p><b>Logs:</b>
 {% for f in run.files %}
   <p><a href="{{f}}">{{f}}</a>
