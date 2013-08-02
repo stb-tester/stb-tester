@@ -43,6 +43,7 @@ def main(argv):
 
 
 def record(control_recorder, script_out):
+    stbt.get_frame()  # Fail early if no video
     count = itertools.count()
     old_key = None
     script_out.write("import stbt\n\n\n")
