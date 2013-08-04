@@ -8,9 +8,9 @@ This::
 
     run path/to/test.py another/test.py
 
-will run the given tests until one of them fails. You can run the tests once,
-or keep going after uninteresting failures, or keep going no matter what; see
-``run -h`` for help.
+will run the given stb-tester scripts until one of them fails. You can run the
+tests once, or keep going after uninteresting failures, or keep going no matter
+what; see ``run -h`` for help.
 
 ``run`` creates a separate timestamped directory for each test run, containing
 the logs from that run.
