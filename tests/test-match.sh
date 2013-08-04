@@ -48,14 +48,20 @@ test_wait_for_match_match_method_param_affects_first_pass() {
     # a match, whereas match_method="sqdiff-normed" does not produce a
     # first_pass_result above 0.80 and so the match fails.
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", match_method="ccorr-normed",
-	               timeout_secs=1)
+	wait_for_match(
+	    "videotestsrc-bw-flipped.png",
+	    match_parameters=MatchParameters(
+	        match_method="ccorr-normed", confirm_method="none"),
+	    timeout_secs=1)
 	EOF
-    stbt-run -v "$scratchdir/test.py"
+    stbt-run -v "$scratchdir/test.py" || return
 
     cat > "$scratchdir/test.py" <<-EOF
-	wait_for_match("videotestsrc-bw-flipped.png", match_method="sqdiff-normed",
-	               timeout_secs=1)
+	wait_for_match(
+	    "videotestsrc-bw-flipped.png",
+	    match_parameters=MatchParameters(
+	        match_method="sqdiff-normed", confirm_method="none"),
+	    timeout_secs=1)
 	EOF
     ! stbt-run -v "$scratchdir/test.py"
 }
