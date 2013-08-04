@@ -281,8 +281,9 @@ test_detect_match_reports_match_position() {
 	        import sys
 	        sys.exit(0)
 	    else:
-	        raise Exception("Wrong match position reported, expected: (228,0),"
-                            " got %s." % str(match_result.position))
+	        raise Exception(
+	            "Wrong match position reported, expected: (228,0), "
+	            "got %s." % str(match_result.position))
 	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt-run -v "$scratchdir/test.py"
