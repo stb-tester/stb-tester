@@ -1,24 +1,24 @@
 # Run with ./run-tests.sh
 
 test_that_readme_default_templatematch_values_are_kept_up_to_date() {
-    cat > "$scratchdir/readme" <<-'EOF'
+    cat > readme <<-'EOF'
 	unmodified line
 	    `match_method` (str) default: old value
 	unmodified line
 	EOF
-    "$srcdir/api-doc.sh" "$scratchdir/readme"
+    "$srcdir"/api-doc.sh "$PWD"/readme
 
-    cat > "$scratchdir/expected" <<-'EOF'
+    cat > expected <<-'EOF'
 	unmodified line
 	    `match_method` (str) default: sqdiff-normed
 	unmodified line
 	EOF
 
-    diff -u "$scratchdir/expected" "$scratchdir/readme"
+    diff -u expected readme
 }
 
 test_that_readme_python_api_docs_are_kept_up_to_date() {
-    cat > "$scratchdir/readme" <<-'EOF'
+    cat > readme <<-'EOF'
 	unmodified line
 	
 	.. <start python docs>
@@ -29,9 +29,9 @@ test_that_readme_python_api_docs_are_kept_up_to_date() {
 	
 	unmodified line
 	EOF
-    "$srcdir/api-doc.sh" "$scratchdir/readme"
+    "$srcdir"/api-doc.sh "$PWD"/readme
 
-    cat > "$scratchdir/expected" <<-'EOF'
+    cat > expected <<-'EOF'
 	unmodified line
 	
 	.. <start python docs>
@@ -44,6 +44,6 @@ test_that_readme_python_api_docs_are_kept_up_to_date() {
 	unmodified line
 	EOF
 
-    diff -u <(head -6 "$scratchdir/expected") <(head -6 "$scratchdir/readme") &&
-    diff -u <(tail -4 "$scratchdir/expected") <(tail -4 "$scratchdir/readme")
+    diff -u <(head -6 expected) <(head -6 readme) &&
+    diff -u <(tail -4 expected) <(tail -4 readme)
 }

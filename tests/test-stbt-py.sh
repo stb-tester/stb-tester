@@ -1,43 +1,44 @@
 # Run with ./run-tests.sh
 
 test_that_invalid_control_doesnt_hang() {
-    touch "$scratchdir/test.py"
-    timeout 10 stbt-run -v --control asdf "$scratchdir/test.py"
+    touch test.py
+    timeout 10 stbt-run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
 }
 
 test_invalid_source_pipeline() {
-    touch "$scratchdir/test.py"
-    stbt-run -v --source-pipeline viddily-boo "$scratchdir/test.py" \
-        &> "$scratchdir/stbt.log"
-    tail -n1 "$scratchdir/stbt.log" | grep -q 'no element "viddily-boo"' ||
+    touch test.py
+    stbt-run -v --source-pipeline viddily-boo test.py &> stbt.log
+    tail -n1 stbt.log | grep -q 'no element "viddily-boo"' ||
         fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
             "expected 'no element \"viddily-boo\"'"
 }
 
 test_get_frame_and_save_frame() {
-    cat > "$scratchdir/get-screenshot.py" <<-EOF
-	wait_for_match("videotestsrc-redblue.png", consecutive_matches=24)
+    cat > get-screenshot.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
 	press("gamut")
-	wait_for_match("videotestsrc-gamut.png", consecutive_matches=24)
-	save_frame(get_frame(), "$scratchdir/gamut.png")
+	wait_for_match(
+	    "$testdir/videotestsrc-gamut.png", consecutive_matches=24)
+	save_frame(get_frame(), "gamut.png")
 	EOF
-    stbt-run -v "$scratchdir/get-screenshot.py"
-    [ -f "$scratchdir/gamut.png" ] ||
+    stbt-run -v get-screenshot.py
+    [ -f gamut.png ] ||
         fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
-    cat > "$scratchdir/match-screenshot.py" <<-EOF
+    cat > match-screenshot.py <<-EOF
 	press("gamut")
 	# confirm_threshold accounts for match rectangle in the screenshot.
-	wait_for_match("$scratchdir/gamut.png",
+	wait_for_match("gamut.png",
 	               match_parameters=MatchParameters(confirm_threshold=0.7))
 	EOF
-    stbt-run -v "$scratchdir/match-screenshot.py"
+    stbt-run -v match-screenshot.py
 }
 
 test_get_config() {
-    cat > "$scratchdir/test.py" <<-EOF
+    cat > test.py <<-EOF
 	import stbt
 	assert stbt.get_config("global", "test_key") == "this is a test value"
 	assert stbt.get_config("special", "test_key") == \
@@ -58,43 +59,42 @@ test_get_config() {
 	except ConfigurationError:
 	    pass
 	EOF
-    stbt-run -v "$scratchdir/test.py"
+    stbt-run -v test.py
 }
 
 test_that_frames_returns_at_least_one_frame() {
-    cat > "$scratchdir/test.py" <<-EOF
+    cat > test.py <<-EOF
 	import stbt
 	stbt.frames(timeout_secs=0).next()
 	stbt.frames(timeout_secs=0).next()
 	EOF
-    stbt-run -v "$scratchdir/test.py"
+    stbt-run -v test.py
 }
 
 test_that_frames_doesnt_time_out() {
-    cat > "$scratchdir/test.py" <<-EOF
+    cat > test.py <<-EOF
 	import stbt
 	for _ in stbt.frames():
 	    pass
 	EOF
-    timeout 12 stbt-run -v "$scratchdir/test.py"
+    timeout 12 stbt-run -v test.py
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
 
 test_that_frames_raises_NoVideo() {
-    cat > "$scratchdir/test.py" <<-EOF
+    cat > test.py <<-EOF
 	import stbt
 	for _ in stbt.frames():
 	    pass
 	EOF
     ! stbt-run -v --source-pipeline "videotestsrc num-buffers=1" \
-            "$scratchdir/test.py" &> "$scratchdir/stbt-run.log" &&
-    grep -q NoVideo "$scratchdir/stbt-run.log" ||
+        test.py &> stbt-run.log &&
+    grep -q NoVideo stbt-run.log ||
     fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
 }
 
 test_using_frames_to_measure_black_screen() {
-    cd "$scratchdir" &&
     cat > test.py <<-EOF &&
 	import cv2
 	import stbt
@@ -133,7 +133,6 @@ test_using_frames_to_measure_black_screen() {
 }
 
 test_that_frames_doesnt_deadlock() {
-    cd "$scratchdir" &&
     cat > test.py <<-EOF &&
 	import stbt
 	for frame, timestamp in stbt.frames():
@@ -167,7 +166,6 @@ test_that_video_index_is_written_on_eos() {
         return 0
     }
 
-    cd "$scratchdir" &&
     cat > test.py <<-EOF &&
 	import time
 	time.sleep(5)
@@ -189,7 +187,6 @@ test_save_video() {
         return 0
     }
 
-    cd "$scratchdir" &&
     cat > record.py <<-EOF &&
 	import time
 	time.sleep(2)
@@ -206,23 +203,21 @@ test_save_video() {
 }
 
 test_that_verbosity_level_is_read_from_config_file() {
-    cd "$scratchdir" &&
     cat > stbt.conf <<-EOF &&
 	[global]
 	verbose = 2
 	EOF
     touch test.py &&
-    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run test.py &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run test.py &&
     cat log | grep "verbose: 2"
 }
 
 test_that_verbose_command_line_argument_overrides_config_file() {
-    cd "$scratchdir" &&
     cat > stbt.conf <<-EOF &&
 	[global]
 	verbose = 2
 	EOF
     touch test.py &&
-    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run -v test.py &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v test.py &&
     cat log | grep "verbose: 1"
 }

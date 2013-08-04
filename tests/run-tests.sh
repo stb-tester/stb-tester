@@ -35,7 +35,7 @@ run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     printf "$1... "
-    ( $1 ) > "$scratchdir/log" 2>&1
+    ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
     local status=$?
     [ $status -eq 0 ] && echo "OK" || echo "FAIL"
     if [[ "$verbose" = "true" || $status -ne 0 ]]; then

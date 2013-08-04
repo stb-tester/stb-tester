@@ -1,7 +1,6 @@
 # Run with ./run-tests.sh
 
 test_record() {
-    cd "$scratchdir" &&
     stbt-record -v -o test.py --control-recorder=file://<(
         sleep 1; echo gamut;
         sleep 1; echo checkers-8;
