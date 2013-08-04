@@ -14,7 +14,7 @@ test_runner_once() {
     [[ -f latest/index.html ]] || fail "latest/index.html not created"
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
-    grep -q test.py index.html || fail "test name not in index.html"
+    grep -q '>tests/test.py</a>' index.html || fail "test name not in index.html"
     grep -q my-label latest/index.html || fail "extra column not in latest/index.html"
     grep -q my-label index.html || fail "extra column not in index.html"
 }

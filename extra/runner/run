@@ -67,8 +67,7 @@ run() {
   mkdir "$rundir" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
   cd "$rundir" &&
-  mkfifo rawout rawerr &&
-  echo "$_test" > test-name ||
+  mkfifo rawout rawerr ||
   die "Failed to set up test-run directory '$rundir'."
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
@@ -77,6 +76,12 @@ run() {
     git describe --always --dirty
   ) > git-commit ||
   die "Failed to determine the test script's git revision."
+
+  ( cd "$(dirname "$_test")" &&
+    gitdir=$(dirname "$(abspath "$(git rev-parse --git-dir)")") &&
+    echo "${_test#$gitdir/}"
+  ) > test-name ||
+  die "Failed to determine the test script's path relative to its git repo."
 
   [ $verbose -gt 0 ] && printf "\n$test...\n" || printf "$test... "
   PYTHONUNBUFFERED=x \
