@@ -141,7 +141,7 @@ test_wait_for_match_erode_passes_affects_match() {
     stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py \
         || return
 
-    cat > "$scratchdir/test.py" <<-EOF
+    cat > test.py <<-EOF
 	wait_for_match("$testdir/circle-small.png",
 	               match_parameters=MatchParameters(erode_passes=1))
 	EOF
