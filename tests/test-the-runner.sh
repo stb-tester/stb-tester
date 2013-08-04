@@ -44,14 +44,14 @@ test_killtree() {
 	sleep 60
 	EOF
 
-    waitfor() { while ! ps | grep -v grep | grep "$1"; do sleep 0.1; done; }
+    waitfor() { while ! ps -f | grep -v grep | grep "$1"; do sleep 0.1; done; }
 
     sh killtree-test1.sh &
     pid=$!
     waitfor killtree-test3.sh
     killtree $!
-    ps
-    ! ps | grep -v grep | grep -q killtree-test3.sh ||
+    ps -f
+    ! ps -f | grep -v grep | grep -q killtree-test3.sh ||
     fail "child process 'killtree-test3.sh' still running"
 }
 
