@@ -9,7 +9,8 @@ install:
        python-docutils python-nose pep8 pylint expect
        gstreamer0.10-x xvfb
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
- - make
+ - make prefix=$HOME install
 
 script:
- - PATH=~/webminspector:$PATH xvfb-run -s "-screen 0 1024x768x24" make check
+ - PATH=~/bin:~/webminspector:$PATH
+       xvfb-run -s "-screen 0 1024x768x24" make check
