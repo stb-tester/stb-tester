@@ -114,6 +114,7 @@ run() {
   fi
 
   rm rawout rawerr
+  which sensors &>/dev/null && sensors > sensors.log
   "$runner"/report . >/dev/null
 
   cd ..
