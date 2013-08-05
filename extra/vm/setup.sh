@@ -12,8 +12,9 @@ install_packages() {
     gstreamer0.10-tools gstreamer0.10-plugins-base \
     gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
     python-gst0.10 python-opencv python-numpy \
+    moreutils python-jinja2 \
     python-docutils python-nose pep8 pylint expect \
-    gstreamer0.10-ffmpeg git moreutils v4l-utils
+    gstreamer0.10-ffmpeg git v4l-utils
 }
 apt-get update
 install_packages || {
