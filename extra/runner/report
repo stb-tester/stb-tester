@@ -33,6 +33,9 @@ main() {
         die "No exit status (test still in progress); skipping"
       classify
       sort --merge stdout.log stderr.log > combined.log
+      user_command classify
+      debug "$(cat failure-reason)"
+
       python "$runner"/report.py . > index.html.$$ && mv index.html.$$ index.html
     )
   done
@@ -69,7 +72,6 @@ classify() {
 
 reason() {
   echo "$*" > failure-reason
-  debug "$*"
 }
 
 signalname() {
@@ -78,6 +80,12 @@ signalname() {
     kill -l | grep -Eo "\b$num\) SIG\S+" | awk '{print tolower($2)}' ||
       echo $num
   )
+}
+
+user_command() {
+  local c=$(stbt config runner.$1 2>/dev/null)
+  [[ -z "$c" ]] && return
+  "$c"
 }
 
 debug() { echo "$rundir: $*"; }

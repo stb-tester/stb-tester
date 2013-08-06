@@ -21,8 +21,6 @@
 #/   -t <tag>  Tag to add to test run directory names (useful
 #/         to differentiate directories when you intend to
 #/         merge test results from multiple machines).
-#/
-#/ Error classification for "-kk" isn't implemented yet.
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
@@ -87,6 +85,8 @@ run() {
   ) > test-name ||
   die "Failed to determine the test script's path relative to its git repo."
 
+  user_command pre_run start
+
   [ $verbose -gt 0 ] && printf "\n$test...\n" || printf "$test... "
   PYTHONUNBUFFERED=x \
     stbt run $v "$_test" --save-video "video.webm" >rawout 2>rawerr &
@@ -101,21 +101,25 @@ run() {
     exit_status=$?
     $interrupted || break
   done
-  echo $(( $(date +%s) - $start_time )) > duration
 
-  echo $exit_status > exit-status
-  if [ $exit_status -eq 0 ]; then
-    echo OK
-  else
-    echo FAILED
-    stbt screenshot screenshot-clean.png &>/dev/null  # Take screenshot asap
-    grep -q "FAIL: .*: Didn't find match" stdout.log && template
-    [ -f core* ] && backtrace core*
-  fi
+  [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
+
+  # Data that must be collected ASAP
+  echo $(( $(date +%s) - $start_time )) > duration
+  which sensors &>/dev/null && sensors > sensors.log
+  [[ $exit_status -ne 1 ]] && stbt screenshot screenshot-clean.png &>/dev/null
+  user_command post_run stop
 
   rm rawout rawerr
-  which sensors &>/dev/null && sensors > sensors.log
+  echo $exit_status > exit-status
+  grep -q "FAIL: .*: Didn't find match" stdout.log && template
+  [ -f core* ] && backtrace core*
   "$runner"/report . >/dev/null
+
+  if [[ $exit_status -ne 0 ]]; then
+    user_command recover || stop=true
+    "$runner"/report . >/dev/null
+  fi
 
   cd ..
   rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
@@ -138,7 +142,7 @@ should_i_continue() {
   [[ $exit_status -eq 0 ]] ||
   # "Uninteresting" failures due to the test infrastructure
   [[ $keep_going -gt 0 && $exit_status -gt 1 ]] ||
-  # Failures due to the system under test (TODO: that are recoverable)
+  # Failures due to the system under test
   [[ $keep_going -gt 1 ]]
 }
 
@@ -155,6 +159,12 @@ backtrace() {
   echo "thread apply all bt" > $gdbcommand
   gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
   rm -f $gdbcommand
+}
+
+user_command() {
+  local c=$(stbt config runner.$1 2>/dev/null)
+  [[ -z "$c" ]] && return
+  "$c" $2
 }
 
 # http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes
