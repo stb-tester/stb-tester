@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
 """Generates reports from logs of stb-tester test runs created by 'run'."""
 
 import collections

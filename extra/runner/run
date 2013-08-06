@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #                                                    -*- sh-basic-offset: 2 -*-
 
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
 #/ Usage: run [options] test.py [test.py ...]
 #/
 #/ Options:
