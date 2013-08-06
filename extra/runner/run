@@ -107,8 +107,10 @@ run() {
   if [ $exit_status -eq 0 ]; then
     echo OK
   else
-    stbt screenshot screenshot-clean.png &>/dev/null  # Take screenshot asap
     echo FAILED
+    stbt screenshot screenshot-clean.png &>/dev/null  # Take screenshot asap
+    grep -q "FAIL: .*: Didn't find match" stdout.log && template
+    [ -f core* ] && backtrace core*
   fi
 
   rm rawout rawerr
@@ -137,6 +139,21 @@ should_i_continue() {
   [[ $keep_going -gt 0 && $exit_status -gt 1 ]] ||
   # Failures due to the system under test (TODO: that are recoverable)
   [[ $keep_going -gt 1 ]]
+}
+
+template() {
+  local template=$(
+    sed -n 's,^.*stbt-run: Searching for \(.*\.png\)$,\1,p' stderr.log |
+    tail -1)
+  [ -f "$template" ] && cp "$template" template.png
+}
+
+backtrace() {
+  local gdbcommand corefile=$1
+  gdbcommand=$(mktemp -t report.XXX) || die "Failed to create temp file"
+  echo "thread apply all bt" > $gdbcommand
+  gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
+  rm -f $gdbcommand
 }
 
 # http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes

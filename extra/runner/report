@@ -33,8 +33,6 @@ main() {
         die "No exit status (test still in progress); skipping"
       classify
       sort --merge stdout.log stderr.log > combined.log
-      grep -q "Didn't find match" failure-reason && template
-      [ -f core* ] && backtrace core*
       python "$runner"/report.py . > index.html.$$ && mv index.html.$$ index.html
     )
   done
@@ -80,23 +78,6 @@ signalname() {
     kill -l | grep -Eo "\b$num\) SIG\S+" | awk '{print tolower($2)}' ||
       echo $num
   )
-}
-
-template() {
-  [ -f template.png ] && return  # Don't overwrite if `report` is re-run later
-  local template=$(
-    sed -n 's,^.*stbt-run: Searching for \(.*\.png\)$,\1,p' stderr.log |
-    tail -1)
-  [ -f "$template" ] && cp "$template" template.png
-}
-
-backtrace() {
-  [ -f backtrace.log ] && return  # Don't overwrite if `report` is re-run later
-  local gdbcommand corefile=$1
-  gdbcommand=$(mktemp -t report.XXX) || die "Failed to create temp file"
-  echo "thread apply all bt" > $gdbcommand
-  gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
-  rm -f $gdbcommand
 }
 
 debug() { echo "$rundir: $*"; }
