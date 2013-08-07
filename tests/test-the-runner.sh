@@ -21,11 +21,12 @@ test_runner_once() {
 
 test_runner_runs_until_failure() {
     timeout 20 "$srcdir"/extra/runner/run "$testdir"/test.py
-    testruns=$(ls -d ????-??-??_??.??.??*)
-    [[ $(echo "$testruns" | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
-    cat $(echo "$testruns" | head -1)/failure-reason | grep -q success ||
+
+    ls -d ????-??-??_??.??.??* > testruns
+    [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
+    grep -q success $(head -1 testruns)/failure-reason ||
         fail "Expected 1st testrun to succeed"
-    cat latest/failure-reason | grep -q "Didn't find match" ||
+    grep -q "Didn't find match" latest/failure-reason ||
         fail "Expected 2nd testrun to fail with 'Didn't find match'"
 }
 
