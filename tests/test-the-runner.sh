@@ -21,13 +21,28 @@ test_runner_once() {
 
 test_runner_runs_until_failure() {
     timeout 20 "$srcdir"/extra/runner/run "$testdir"/test.py
+    [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
     grep -q success $(head -1 testruns)/failure-reason ||
         fail "Expected 1st testrun to succeed"
+    grep -q UITestError latest/failure-reason ||
+        fail "Expected 2nd testrun to fail with 'UITestError'"
+}
+
+test_runner_continues_after_uninteresting_failure() {
+    timeout 20 "$srcdir"/extra/runner/run -k "$testdir"/test.py
+    [[ $? -eq $timedout ]] && fail "'run' timed out"
+
+    ls -d ????-??-??_??.??.??* > testruns
+    [[ $(cat testruns | wc -l) -eq 3 ]] || fail "Expected 3 test runs"
+    grep -q success $(head -1 testruns)/failure-reason ||
+        fail "Expected 1st testrun to succeed"
+    grep -q UITestError $(sed -n 2p testruns)/failure-reason ||
+        fail "Expected 2nd testrun to fail with 'UITestError'"
     grep -q "Didn't find match" latest/failure-reason ||
-        fail "Expected 2nd testrun to fail with 'Didn't find match'"
+        fail "Expected 3rd testrun to fail with 'Didn't find match'"
 }
 
 test_killtree() {
