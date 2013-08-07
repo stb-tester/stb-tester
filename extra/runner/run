@@ -114,12 +114,13 @@ run() {
   echo $exit_status > exit-status
   grep -q "FAIL: .*: Didn't find match" stdout.log && template
   [ -f core* ] && backtrace core*
-  "$runner"/report . >/dev/null
+  "$runner"/report --classify-only . >/dev/null
 
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || stop=true
-    "$runner"/report . >/dev/null
   fi
+
+  "$runner"/report --html-only . >/dev/null
 
   cd ..
   rm -f latest"$tag"; ln -s "$rundir" latest"$tag"

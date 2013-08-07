@@ -17,9 +17,13 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 main() {
   runner=$(dirname "$(abspath "$0")")
 
+  do_classify=true
+  do_html=true
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h|--help) usage; exit 0;;
+      --classify-only) do_html=false; shift;;
+      --html-only) do_classify=false; shift;;
       *) break;;
     esac
   done
@@ -30,25 +34,33 @@ main() {
       cd "$rundir" || die "Invalid directory '$rundir'"
       [ -r exit-status ] ||
         die "No exit status (test still in progress); skipping"
-      classify
-      sort --merge stdout.log stderr.log > combined.log
-      user_command classify
-      debug "$(cat failure-reason)"
 
-      python "$runner"/report.py . > index.html.$$ && mv index.html.$$ index.html
+      if $do_classify; then
+        classify
+        sort --merge stdout.log stderr.log > combined.log
+        user_command classify
+        debug "$(cat failure-reason)"
+      fi
+
+      if $do_html; then
+        python "$runner"/report.py . > index.html.$$ &&
+        mv index.html.$$ index.html
+      fi
     )
   done
 
   # Generate summary report
-  for resultsdir in $(
-    for rundir in "$@"; do dirname $(abspath $rundir); done | sort | uniq)
-  do
-    (
-      cd "$resultsdir" || die "Invalid directory '$resultsdir'"
-      python "$runner"/report.py index.html > index.html.$$ &&
-      mv index.html.$$ index.html
-    )
-  done
+  if $do_html; then
+    for resultsdir in $(
+      for rundir in "$@"; do dirname $(abspath $rundir); done | sort | uniq)
+    do
+      (
+        cd "$resultsdir" || die "Invalid directory '$resultsdir'"
+        python "$runner"/report.py index.html > index.html.$$ &&
+        mv index.html.$$ index.html
+      )
+    done
+  fi
 }
 
 classify() {
