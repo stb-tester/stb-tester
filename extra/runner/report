@@ -36,7 +36,7 @@ main() {
         die "No exit status (test still in progress); skipping"
 
       if $do_classify; then
-        classify
+        classify > failure-reason
         sort --merge stdout.log stderr.log > combined.log
         user_command classify
         debug "$(cat failure-reason)"
@@ -68,21 +68,17 @@ classify() {
   local testname=$(cat test-name)
 
   if [ $status -eq 0 ]; then
-    reason success
+    echo success
 
   elif [ $status -gt 128 ]; then
-    reason killed "($(signalname $((status - 128))))"
+    echo killed "($(signalname $((status - 128))))"
 
   elif grep -q "FAIL: .*$(basename "$testname"): " stdout.log; then
-    reason "$(sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log)"
+    echo "$(sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log)"
 
   else
-    reason unknown
+    echo unknown
   fi
-}
-
-reason() {
-  echo "$*" > failure-reason
 }
 
 signalname() {
