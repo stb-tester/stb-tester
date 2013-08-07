@@ -72,15 +72,15 @@ test_killtree() {
 }
 
 expect_runner_to_say() {
-    for i in {1..10}; do
+    for i in {1..20}; do
         cat log | grep -qF "$1" && return
         sleep 0.1
     done
-    fail "Didn't find '$1' after 1 second"
+    fail "Didn't find '$1' after 2 seconds"
 }
 
 test_runner_sigint_once() {
-    sleep=2 "$srcdir"/extra/runner/run "$testdir"/test.py &
+    sleep=4 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py..."
     kill $runner
@@ -90,7 +90,7 @@ test_runner_sigint_once() {
 }
 
 test_runner_sigint_twice() {
-    sleep=2 "$srcdir"/extra/runner/run "$testdir"/test.py &
+    sleep=10 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py..."
     kill $runner
