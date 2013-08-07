@@ -17,13 +17,12 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 main() {
   runner=$(dirname "$(abspath "$0")")
 
-  while getopts "h" option; do
-    case $option in
-      h) usage; exit 0;;
-      *) die "Invalid option '-$option'. Use '-h' for help.";;
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) usage; exit 0;;
+      *) break;;
     esac
   done
-  shift $((OPTIND - 1))
   [[ $# -gt 0 ]] || { usage >&2; exit 1; }
 
   for rundir in "$@"; do
