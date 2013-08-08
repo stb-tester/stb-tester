@@ -71,6 +71,20 @@ test_killtree() {
     fail "child process 'killtree-test3.sh' still running"
 }
 
+test_signalname() {
+    sed -n '/^signalname()/,/^}/ p' "$srcdir"/extra/runner/report \
+        > signalname.sh &&
+    . signalname.sh &&
+    declare -f signalname || fail "'signalname' not defined"
+
+    sleep 10 &
+    pid=$!
+    ( sleep 1; kill $pid ) &
+    wait $pid
+    ret=$?
+    diff -u <(echo sigterm) <(signalname $((ret - 128)))
+}
+
 expect_runner_to_say() {
     for i in {1..20}; do
         cat log | grep -qF "$1" && return
