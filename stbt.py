@@ -694,6 +694,8 @@ class Display:
 
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
+        self.last_buffer = Queue.Queue(maxsize=1)
+        self.underrun_timeout = None
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
@@ -706,9 +708,6 @@ class Display:
             "ffmpegcolorspace",
             appsink])
         self.create_source_pipeline()
-
-        self.last_buffer = Queue.Queue(maxsize=1)
-        self.underrun_timeout = None
 
         if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
             if not save_video.endswith(".webm"):
