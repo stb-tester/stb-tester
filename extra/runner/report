@@ -73,8 +73,11 @@ classify() {
   elif [ $status -gt 128 ]; then
     echo killed "($(signalname $((status - 128))))"
 
-  elif grep -q "FAIL: .*$(basename "$testname"): " stdout.log; then
-    echo "$(sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log)"
+  elif local exception=$(
+      sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log);
+    [[ -n "$exception" ]];
+  then
+    echo "$exception"
 
   else
     echo unknown
