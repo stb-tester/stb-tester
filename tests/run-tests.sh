@@ -49,12 +49,7 @@ run() {
 }
 
 # Portable timeout command. Usage: timeout <secs> <command> [<args>...]
-timeout() { perl -e \
-    'alarm shift @ARGV;
-     exec @ARGV;
-     print "timeout: command not found: @ARGV\n";
-     exit 1;' \
-    "$@"; }
+timeout() { "$testdir"/timeout.pl "$@"; }
 timedout=142
 
 fail() { echo "error: $*"; exit 1; }
