@@ -700,32 +700,15 @@ class Display:
             "emit-signals=true "
             "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
             "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
-        source_pipeline_description = " ! ".join([
+        self.source_pipeline_description = " ! ".join([
             user_source_pipeline,
             "queue leaky=downstream name=q",
             "ffmpegcolorspace",
             appsink])
-        self.source_pipeline = gst.parse_launch(source_pipeline_description)
+        self.create_source_pipeline()
 
-        source_bus = self.source_pipeline.get_bus()
-        source_bus.connect("message::error", self.on_error)
-        source_bus.connect("message::warning", self.on_warning)
-        source_bus.add_signal_watch()
-
-        appsink = self.source_pipeline.get_by_name("appsink")
-        appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
-
-        if get_config("global", "restart_source", default="false").lower() in (
-                "1", "yes", "true", "on"):
-            # Handle loss of video (but without end-of-stream event) from the
-            # Hauppauge HDPVR capture device.
-            debug("restart_source: true")
-            source_queue = self.source_pipeline.get_by_name("q")
-            self.start_timestamp = None
-            self.underrun_timeout = None
-            source_queue.connect("underrun", self.on_underrun)
-            source_queue.connect("running", self.on_running)
+        self.underrun_timeout = None
 
         if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
             if not save_video.endswith(".webm"):
@@ -753,7 +736,7 @@ class Display:
         sink_bus.add_signal_watch()
         self.appsrc = self.sink_pipeline.get_by_name("appsrc")
 
-        debug("source pipeline: %s" % source_pipeline_description)
+        debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
 
         self.source_pipeline.set_state(gst.STATE_PLAYING)
@@ -762,6 +745,26 @@ class Display:
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
         self.mainloop_thread.start()
+
+    def create_source_pipeline(self):
+        self.source_pipeline = gst.parse_launch(
+            self.source_pipeline_description)
+        source_bus = self.source_pipeline.get_bus()
+        source_bus.connect("message::error", self.on_error)
+        source_bus.connect("message::warning", self.on_warning)
+        source_bus.add_signal_watch()
+        appsink = self.source_pipeline.get_by_name("appsink")
+        appsink.connect("new-buffer", self.on_new_buffer)
+
+        if get_config("global", "restart_source", default="false").lower() in (
+                "1", "yes", "true", "on"):
+            # Handle loss of video (but without end-of-stream event) from the
+            # Hauppauge HDPVR capture device.
+            debug("restart_source: true")
+            source_queue = self.source_pipeline.get_by_name("q")
+            self.start_timestamp = None
+            source_queue.connect("underrun", self.on_underrun)
+            source_queue.connect("running", self.on_running)
 
     def get_frame(self, timeout_secs=10):
         try:
@@ -872,12 +875,13 @@ class Display:
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
         self.source_pipeline.set_state(gst.STATE_NULL)
+        self.source_pipeline = None
         GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
 
     def start_source(self):
         warn("Restarting source pipeline...")
-        self.start_timestamp = None
+        self.create_source_pipeline()
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         warn("Restarted source pipeline")
         self.underrun_timeout.start()
