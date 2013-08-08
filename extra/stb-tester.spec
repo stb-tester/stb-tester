@@ -18,6 +18,9 @@ Requires: gstreamer-plugins-good
 Requires: gstreamer-plugins-bad-free
 Requires: opencv
 Requires: opencv-python
+Requires: curl
+Requires: expect
+Requires: openssh-clients
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control
