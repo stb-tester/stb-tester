@@ -32,7 +32,7 @@ test_runner_runs_until_failure() {
 }
 
 test_runner_continues_after_uninteresting_failure() {
-    timeout 20 "$srcdir"/extra/runner/run -k "$testdir"/test.py
+    timeout 30 "$srcdir"/extra/runner/run -k "$testdir"/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
