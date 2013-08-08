@@ -112,7 +112,7 @@ run() {
 
   rm rawout rawerr
   echo $exit_status > exit-status
-  grep -q "FAIL: .*: Didn't find match" stdout.log && template
+  grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
   "$runner"/report --classify-only . >/dev/null
 

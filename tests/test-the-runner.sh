@@ -41,8 +41,8 @@ test_runner_continues_after_uninteresting_failure() {
         fail "Expected 1st testrun to succeed"
     grep -q UITestError $(sed -n 2p testruns)/failure-reason ||
         fail "Expected 2nd testrun to fail with 'UITestError'"
-    grep -q "Didn't find match" latest/failure-reason ||
-        fail "Expected 3rd testrun to fail with 'Didn't find match'"
+    grep -q MatchTimeout latest/failure-reason ||
+        fail "Expected 3rd testrun to fail with 'MatchTimeout'"
 }
 
 test_killtree() {
