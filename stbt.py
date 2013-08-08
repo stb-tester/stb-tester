@@ -712,8 +712,8 @@ class Display:
         source_bus.connect("message::warning", self.on_warning)
         source_bus.add_signal_watch()
 
-        self.appsink = self.source_pipeline.get_by_name("appsink")
-        self.appsink.connect("new-buffer", self.on_new_buffer)
+        appsink = self.source_pipeline.get_by_name("appsink")
+        appsink.connect("new-buffer", self.on_new_buffer)
         self.last_buffer = Queue.Queue(maxsize=1)
 
         if get_config("global", "restart_source", default="false").lower() in (
