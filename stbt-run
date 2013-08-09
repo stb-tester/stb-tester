@@ -20,7 +20,7 @@ parser.add_argument(
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
     'script', help='The test script to run (default: %(default)s)',
-    default=stbt.get_config('run', 'script'))
+    metavar='SCRIPT', default=stbt.get_config('run', 'script'))
 args = parser.parse_args(sys.argv[1:])
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
