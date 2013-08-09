@@ -20,7 +20,12 @@ parser.add_argument(
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
     'script', help='The test script to run', metavar='SCRIPT')
+parser.add_argument(
+    'args', nargs='*', metavar='ARG',
+    help='Additional arguments passed on to the SCRIPT')
+
 args = parser.parse_args(sys.argv[1:])
+sys.argv[1:] = args.args
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
