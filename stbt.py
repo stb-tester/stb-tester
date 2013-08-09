@@ -695,6 +695,8 @@ class Display:
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_buffer = Queue.Queue(maxsize=1)
+        self.source_pipeline = None
+        self.start_timestamp = None
         self.underrun_timeout = None
 
         appsink = (
