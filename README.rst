@@ -172,7 +172,6 @@ These files are simple ini files with the form::
     verbose = 0
     [run]
     save_video = video.webm
-    script = test.py
     [record]
     output_file = test.py
     control_recorder = file:///dev/stdin
