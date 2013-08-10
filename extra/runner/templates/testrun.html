@@ -20,7 +20,7 @@
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
 <p><b>Exit status:</b> {{run.exit_status}}
 {% if run.exit_status > 0 %}
-  <p><b>Failure reason:</b> {{run.failure_reason}}
+  <p style="white-space: pre"><b>Failure reason:</b> {{run.failure_reason}}</p>
 {% endif %}
 <p><b>Duration:</b> {{run.duration}}
 {% for key in run.extra_columns %}

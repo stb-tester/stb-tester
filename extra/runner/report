@@ -17,13 +17,16 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 main() {
   runner=$(dirname "$(abspath "$0")")
 
-  while getopts "h" option; do
-    case $option in
-      h) usage; exit 0;;
-      *) die "Invalid option '-$option'. Use '-h' for help.";;
+  do_classify=true
+  do_html=true
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) usage; exit 0;;
+      --classify-only) do_html=false; shift;;
+      --html-only) do_classify=false; shift;;
+      *) break;;
     esac
   done
-  shift $((OPTIND - 1))
   [[ $# -gt 0 ]] || { usage >&2; exit 1; }
 
   for rundir in "$@"; do
@@ -31,24 +34,33 @@ main() {
       cd "$rundir" || die "Invalid directory '$rundir'"
       [ -r exit-status ] ||
         die "No exit status (test still in progress); skipping"
-      classify
-      sort --merge stdout.log stderr.log > combined.log
-      grep -q "Didn't find match" failure-reason && template
-      [ -f core* ] && backtrace core*
-      python "$runner"/report.py . > index.html.$$ && mv index.html.$$ index.html
+
+      if $do_classify; then
+        classify > failure-reason
+        sort --merge stdout.log stderr.log > combined.log
+        user_command classify
+        debug "$(cat failure-reason)"
+      fi
+
+      if $do_html; then
+        python "$runner"/report.py . > index.html.$$ &&
+        mv index.html.$$ index.html
+      fi
     )
   done
 
   # Generate summary report
-  for resultsdir in $(
-    for rundir in "$@"; do dirname $(abspath $rundir); done | sort | uniq)
-  do
-    (
-      cd "$resultsdir" || die "Invalid directory '$resultsdir'"
-      python "$runner"/report.py index.html > index.html.$$ &&
-      mv index.html.$$ index.html
-    )
-  done
+  if $do_html; then
+    for resultsdir in $(
+      for rundir in "$@"; do dirname $(abspath $rundir); done | sort | uniq)
+    do
+      (
+        cd "$resultsdir" || die "Invalid directory '$resultsdir'"
+        python "$runner"/report.py index.html > index.html.$$ &&
+        mv index.html.$$ index.html
+      )
+    done
+  fi
 }
 
 classify() {
@@ -56,22 +68,20 @@ classify() {
   local testname=$(cat test-name)
 
   if [ $status -eq 0 ]; then
-    reason success
+    echo success
 
   elif [ $status -gt 128 ]; then
-    reason killed "($(signalname $((status - 128))))"
+    echo killed "($(signalname $((status - 128))))"
 
-  elif grep -q "FAIL: .*$(basename "$testname"): " stdout.log; then
-    reason "$(sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log)"
+  elif local exception=$(
+      sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log);
+    [[ -n "$exception" ]];
+  then
+    echo "$exception"
 
   else
-    reason unknown
+    echo unknown
   fi
-}
-
-reason() {
-  echo "$*" > failure-reason
-  debug "$*"
 }
 
 signalname() {
@@ -82,21 +92,10 @@ signalname() {
   )
 }
 
-template() {
-  [ -f template.png ] && return  # Don't overwrite if `report` is re-run later
-  local template=$(
-    sed -n 's,^.*stbt-run: Searching for \(.*\.png\)$,\1,p' stderr.log |
-    tail -1)
-  [ -f "$template" ] && cp "$template" template.png
-}
-
-backtrace() {
-  [ -f backtrace.log ] && return  # Don't overwrite if `report` is re-run later
-  local gdbcommand corefile=$1
-  gdbcommand=$(mktemp -t report.XXX) || die "Failed to create temp file"
-  echo "thread apply all bt" > $gdbcommand
-  gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
-  rm -f $gdbcommand
+user_command() {
+  local c=$(stbt config runner.$1 2>/dev/null)
+  [[ -z "$c" ]] && return
+  "$c"
 }
 
 debug() { echo "$rundir: $*"; }

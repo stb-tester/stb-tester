@@ -41,7 +41,7 @@ try:
         ConfigurationError)
     execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
-    sys.stdout.write("FAIL: %s: %s\n" % (args.script, e))
+    sys.stdout.write("FAIL: %s: %s: %s\n" % (args.script, type(e).__name__, e))
     if hasattr(e, "screenshot") and e.screenshot is not None:
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))

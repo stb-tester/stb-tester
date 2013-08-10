@@ -41,8 +41,8 @@ test_runner_continues_after_uninteresting_failure() {
         fail "Expected 1st testrun to succeed"
     grep -q UITestError $(sed -n 2p testruns)/failure-reason ||
         fail "Expected 2nd testrun to fail with 'UITestError'"
-    grep -q "Didn't find match" latest/failure-reason ||
-        fail "Expected 3rd testrun to fail with 'Didn't find match'"
+    grep -q MatchTimeout latest/failure-reason ||
+        fail "Expected 3rd testrun to fail with 'MatchTimeout'"
 }
 
 test_killtree() {
@@ -114,4 +114,78 @@ test_runner_sigint_twice() {
     wait $runner
     diff -u <(echo "killed (sigterm)") latest/failure-reason ||
         fail "Bad failure-reason"
+}
+
+test_runner_custom_logging() {
+    cat "$testdir"/stbt.conf |
+    sed -e "s,pre_run =,& $PWD/my-logger," \
+        -e "s,post_run =,& $PWD/my-logger," > stbt.conf
+
+    cat > my-logger <<-'EOF'
+	#!/bin/sh
+	printf "%s time\t%s\n" $1 "$(date)" >> extra-columns
+	EOF
+    chmod u+x my-logger
+
+    export STBT_CONFIG_FILE="$PWD"/stbt.conf
+    "$srcdir"/extra/runner/run -1 "$testdir"/test.py
+
+    grep -q '<th>start time</th>' index.html ||
+        fail "'start time' missing from report"
+    grep -q '<th>stop time</th>' index.html ||
+        fail "'stop time' missing from report"
+}
+
+test_runner_custom_classifier() {
+    cat "$testdir"/stbt.conf |
+    sed -e "s,classify =,& $PWD/my-classifier," > stbt.conf
+
+    cat > my-classifier <<-'EOF'
+	#!/bin/bash
+	if [[ $(cat exit-status) -ne 0 && $(cat test-name) =~ tests/test.py ]];
+	then
+	    echo 'Intentional failure' > failure-reason
+	fi
+	EOF
+    chmod u+x my-classifier
+
+    export STBT_CONFIG_FILE="$PWD"/stbt.conf
+    "$srcdir"/extra/runner/run "$testdir"/test.py
+
+    grep -q 'Intentional failure' index.html ||
+        fail "Custom failure reason missing from report"
+}
+
+test_runner_custom_recovery_script() {
+    cat "$testdir"/stbt.conf |
+    sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
+
+    cat > my-recover <<-'EOF'
+	#!/bin/sh
+	touch powercycle.log
+	EOF
+    chmod u+x my-recover
+
+    export STBT_CONFIG_FILE="$PWD"/stbt.conf
+    "$srcdir"/extra/runner/run "$testdir"/test.py
+
+    grep -q '>powercycle.log</a>' latest/index.html ||
+        fail "Custom recovery script's log missing from report"
+}
+
+test_runner_recovery_exit_status() {
+    cat "$testdir"/stbt.conf |
+    sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
+
+    cat > my-recover <<-'EOF'
+	#!/bin/sh
+	exit 1
+	EOF
+    chmod u+x my-recover
+
+    export STBT_CONFIG_FILE="$PWD"/stbt.conf
+    "$srcdir"/extra/runner/run -k "$testdir"/test.py
+
+    ls -d ????-??-??_??.??.??* > testruns
+    [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
 }

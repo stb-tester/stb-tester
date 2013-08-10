@@ -8,7 +8,7 @@ import stbt
 # Fail if this script is run more than once from the same $scratchdir
 n_runs = len(glob.glob("../????-??-??_??.??.??*"))  # includes current run
 if n_runs == 2:
-    raise stbt.UITestError("UITestError: not the system-under-test's fault")
+    raise stbt.UITestError("Not the system-under-test's fault")
 elif n_runs > 2:  # UITestFailure
     stbt.wait_for_match("videotestsrc-checkers-8.png", timeout_secs=1)
 
