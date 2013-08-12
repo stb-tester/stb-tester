@@ -108,3 +108,22 @@ directory set to the directory containing the test run logs:
   followed by a tab, followed by a value (arbitrary text). Multiple lines with
   the same key will have their values merged into a single column. The program
   should append to the ``extra-columns`` file, not overwrite it.
+
+server
+------
+
+The generated report is a set of static html files, which you can view locally
+(using a `file:///...` url), or you can serve them with a web server like
+apache. But if you want to interactively *edit* the report, you can run our
+``server``. By default, ``server`` serves on ``localhost:5000``. To serve on
+all public network interfaces, run it like this:
+
+    server 0.0.0.0:5000
+
+Run ``server`` from the directory containing the test results (for example
+``my-test-session`` in the "report" section above).
+
+``server`` probably can't handle high loads or many concurrent users. For such
+cases you should proxy ``server`` behind Apache or Nginx. ``server`` uses
+"Flask", a python web micro-framework; for deployment options see
+http://flask.pocoo.org/docs/deploying/

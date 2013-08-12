@@ -5,8 +5,10 @@
   <title>{{run.timestamp}} {{run.test_name}} @{{run.git_commit}}</title>
   <base target="_parent" />
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <link href="http://cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.5/bootstrap-editable/css/bootstrap-editable.css" rel="stylesheet"/>
   <style>
     .thumbnail p { word-wrap: break-word; text-align: center; }
+    .editable-click { border-bottom: none; }
   </style>
 </head>
 
@@ -22,7 +24,8 @@
 <p><b>Exit status:</b> {{run.exit_status}}
 
 {% if run.exit_status > 0 %}
-  <p style="white-space: pre"><b>Failure reason:</b> {{run.failure_reason}}</p>
+  <p><b>Failure reason:</b></p>
+  <p id="failure-reason" style="white-space: pre">{{run.failure_reason}}</p>
 {% endif %}
 
 {% for key in run.extra_columns %}
@@ -50,5 +53,12 @@
 </div>
 </div>
 </div>
+
+<!-- Failure reason etc are editable if the optional server is running. -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.5/bootstrap-editable/js/bootstrap-editable.min.js"></script>
+<script src="http://localhost:5000/static/edit-testrun.js"></script>
+
 </body>
 </html>

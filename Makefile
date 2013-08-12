@@ -99,7 +99,7 @@ check-integrationtests:
 	$(parallel) tests/run-tests.sh
 check-pylint:
 	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config \
-	    stbt-control |\
+	    stbt-control extra/runner/report.py extra/runner/server |\
 	$(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests

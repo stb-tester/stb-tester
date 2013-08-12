@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+# HTTP server that serves HTML reports on the results from tests run with
+# `./run`. Allows interactive editing of testrun "failure reason".
+# Uses Flask, a python web micro-framework: http://flask.pocoo.org
+# Run with `cd results-directory; path/to/server 0.0.0.0:8080`
+
+import argparse
+import os
+from os.path import abspath, dirname, isfile, normpath
+import subprocess
+import sys
+
+from flask import Flask, abort, redirect, request, send_from_directory
+
+
+app = Flask(__name__, instance_path=os.getcwd())
+
+
+@app.route("/")
+def index():
+    return redirect("/index.html")
+
+
+@app.route("/<path:path>")
+def default(path):
+    return send_from_directory(app.instance_path, path)
+
+
+@app.route("/<path:testrun>/failure-reason", methods=["POST"])
+def failure_reason(testrun):
+    f = normpath(os.path.join(app.instance_path, testrun, "failure-reason"))
+    if not f.startswith(app.instance_path) or not isfile(f):
+        abort(404)
+    manual_reason = request.form["value"].strip()
+    automatic_reason = open(f).read().strip()
+    if len(manual_reason) == 0 or manual_reason == automatic_reason:
+        try:
+            os.remove(f + ".manual")
+        except OSError:
+            pass
+    else:
+        with open(f + ".manual", "w") as ff:
+            ff.write(manual_reason)
+    subprocess.Popen([
+        os.path.join(dirname(abspath(__file__)), "report"),
+        "--html-only",
+        testrun])
+    return ""
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument(
+        "--debug", action="store_true",
+        help="Enable python backtraces and application reloading")
+    p.add_argument(
+        "listen", metavar="address:port", default="localhost:5000", nargs="?",
+        help="The address and port to listen on (default: %(default)s)")
+    args = p.parse_args(sys.argv[1:])
+    host, port = args.listen.split(":")
+    app.run(host=host, port=int(port), debug=args.debug)

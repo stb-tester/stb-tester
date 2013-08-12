@@ -14,7 +14,6 @@ import os
 from os.path import abspath, basename, dirname, isdir
 import re
 import sys
-import tempfile
 
 import jinja2
 
@@ -72,19 +71,21 @@ class Run:
                 "duration",
                 "exit-status",
                 "extra-columns",
-                "failure-reason",
                 "git-commit",
                 "test-name",
             ]
             and not x.endswith(".png")
             and not basename(x).startswith("index.html")
+            and not basename(x).startswith("failure-reason")
         ])
         self.images = sorted([
             basename(x) for x in glob.glob(rundir + "/*.png")])
 
         self.duration = self.read_seconds("duration")
         self.exit_status = int(self.read("exit-status"))
-        self.failure_reason = self.read("failure-reason").strip()
+        self.failure_reason = (
+            self.read("failure-reason.manual").strip() or
+            self.read("failure-reason").strip())
         self.git_commit = self.read("git-commit").strip()
         self.test_name = self.read("test-name").strip()
 
