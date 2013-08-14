@@ -10,6 +10,7 @@
 # Run with `cd results-directory; path/to/server 0.0.0.0:8080`
 
 import argparse
+import mimetypes
 import os
 from os.path import abspath, dirname, isdir, isfile, normpath
 import subprocess
@@ -20,6 +21,10 @@ from flask import \
 
 
 app = Flask(__name__, instance_path=os.getcwd())
+
+mimetypes.init()
+mimetypes.types_map[".log"] = "text/plain"
+mimetypes.types_map[".webm"] = "video/webm"
 
 
 @app.route("/", defaults={"path": ""})
