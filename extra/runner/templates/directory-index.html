@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <title>{{dir}}</title>
+  <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container-fluid">
+<h4>{{dir}}</h4>
+<ul>
+{% for f in entries %}
+  <li><a href="{{f}}">{{f}}</a></li>
+{% endfor %}
+</ul>
+</div>
+</body>
+</html>

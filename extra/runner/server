@@ -11,24 +11,41 @@
 
 import argparse
 import os
-from os.path import abspath, dirname, isfile, normpath
+from os.path import abspath, dirname, isdir, isfile, normpath
 import subprocess
 import sys
 
-from flask import Flask, abort, redirect, request, send_from_directory
+from flask import \
+    Flask, abort, redirect, render_template, request, send_from_directory
 
 
 app = Flask(__name__, instance_path=os.getcwd())
 
 
-@app.route("/")
-def index():
-    return redirect("/index.html")
-
-
+@app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def default(path):
-    return send_from_directory(app.instance_path, path)
+def catch_all(path):
+    f = normpath(os.path.join(app.instance_path, path))
+    if not f.startswith(app.instance_path):
+        abort(404)
+
+    if isfile(f):
+        return send_from_directory(app.instance_path, path)
+    if isdir(f):
+        if not path.endswith("/") and path != "":
+            return redirect(path + "/")
+        index = os.path.join(path, "index.html")
+        if isfile(index):
+            return send_from_directory(app.instance_path, index)
+        else:
+            return render_template(
+                "directory-index.html",
+                dir=(path or "/"),
+                entries=[
+                    x + "/" if isdir(os.path.join(f, x)) else x
+                    for x in os.listdir(f)])
+
+    abort(404)
 
 
 @app.route("/<path:testrun>/failure-reason", methods=["POST"])

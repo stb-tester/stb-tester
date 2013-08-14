@@ -226,3 +226,23 @@ test_runner_results_server_updates_failure_reason() {
     assert ! grep -q "manual failure reason" index.html
     assert ! grep -q "manual failure reason" $rundir/index.html
 }
+
+test_runner_results_server_shows_directory_listing() {
+    mkdir my-test-session
+    echo hi > my-test-session/index.html
+
+    "$srcdir"/extra/runner/server --debug localhost:5788 &
+    server=$!
+    trap "killtree $server; wait $server" EXIT
+    expect_runner_to_say 'Running on http://localhost:5788/'
+    sleep 1
+
+    curl http://localhost:5788/ | grep my-test-session ||
+        fail "Didn't find directory listing at '/'"
+    diff -u my-test-session/index.html \
+        <(curl -L http://localhost:5788/my-test-session) ||
+        fail "Didn't find index.html at '/my-test-session'"
+    diff -u my-test-session/index.html \
+        <(curl http://localhost:5788/my-test-session/) ||
+        fail "Didn't find index.html at '/my-test-session/'"
+}
