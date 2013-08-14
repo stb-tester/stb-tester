@@ -203,20 +203,14 @@ test_save_video() {
 }
 
 test_that_verbosity_level_is_read_from_config_file() {
-    cat > stbt.conf <<-EOF &&
-	[global]
-	verbose = 2
-	EOF
+    sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
     touch test.py &&
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run test.py &&
     cat log | grep "verbose: 2"
 }
 
 test_that_verbose_command_line_argument_overrides_config_file() {
-    cat > stbt.conf <<-EOF &&
-	[global]
-	verbose = 2
-	EOF
+    sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
     touch test.py &&
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v test.py &&
     cat log | grep "verbose: 1"
