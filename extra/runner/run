@@ -108,10 +108,10 @@ run() {
   echo $(( $(date +%s) - $start_time )) > duration
   which sensors &>/dev/null && sensors > sensors.log
   [[ $exit_status -ne 0 ]] && stbt screenshot screenshot-clean.png &>/dev/null
+  echo $exit_status > exit-status
   user_command post_run stop
 
   rm rawout rawerr
-  echo $exit_status > exit-status
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
   "$runner"/report --classify-only . >/dev/null
