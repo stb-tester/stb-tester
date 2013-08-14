@@ -112,6 +112,7 @@ run() {
   user_command post_run stop
 
   rm rawout rawerr
+  stbt --version > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
   "$runner"/report --classify-only . >/dev/null
