@@ -6,7 +6,16 @@ $(document).ready(function() {
         url: "failure-reason",
         send: "always",
         toggle: "dblclick",
-    }).tooltip({  // http://getbootstrap.com/2.3.2/javascript.html#tooltips
+    });
+    $("#notes").editable({
+        type: "textarea",
+        url: "notes",
+        send: "always",
+        toggle: "dblclick",
+    });
+
+    // http://getbootstrap.com/2.3.2/javascript.html#tooltips
+    $("#failure-reason, #notes").tooltip({
         title: "Double-click to edit",
     });
 });

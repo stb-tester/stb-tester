@@ -8,7 +8,8 @@
   <link href="http://cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.5/bootstrap-editable/css/bootstrap-editable.css" rel="stylesheet"/>
   <style>
     #failure-reason,
-    .extra_columns { white-space: pre; }
+    .extra_columns,
+    #notes { white-space: pre; }
     .thumbnail p { word-wrap: break-word; text-align: center; }
     .editable-click { border-bottom: none; }
   </style>
@@ -35,6 +36,9 @@
     "\n".join(run.extra_columns[key])
   }}</p>
 {% endfor %}
+
+<p><b>Notes:</b></p>
+<p id="notes">{{run.notes or "&nbsp;"}}</p>
 
 <p><b>Logs:</b>
 {% for f in run.files %}

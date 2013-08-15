@@ -5,7 +5,7 @@
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 # HTTP server that serves HTML reports on the results from tests run with
-# `./run`. Allows interactive editing of testrun "failure reason".
+# `./run`. Allows interactive editing of testrun failure-reason and notes.
 # Uses Flask, a python web micro-framework: http://flask.pocoo.org
 # Run with `cd results-directory; path/to/server 0.0.0.0:8080`
 
@@ -53,21 +53,27 @@ def catch_all(path):
     abort(404)
 
 
-@app.route("/<path:testrun>/failure-reason", methods=["POST"])
-def failure_reason(testrun):
-    f = normpath(os.path.join(app.instance_path, testrun, "failure-reason"))
-    if not f.startswith(app.instance_path) or not isfile(f):
+@app.route(
+    "/<path:testrun>/failure-reason", methods=["POST"],
+    defaults={"filename": "failure-reason"})
+@app.route(
+    "/<path:testrun>/notes", methods=["POST"], defaults={"filename": "notes"})
+def update_file(testrun, filename):
+    d = normpath(os.path.join(app.instance_path, testrun))
+    if (not d.startswith(app.instance_path) or not isdir(d) or
+            not isfile(os.path.join(d, "test-name"))):
         abort(404)
-    manual_reason = request.form["value"].strip()
-    automatic_reason = open(f).read().strip()
-    if len(manual_reason) == 0 or manual_reason == automatic_reason:
+    manual_text = request.form["value"].strip()
+    f = os.path.join(d, filename)
+    automatic_text = open(f).read().strip() if isfile(f) else None
+    if len(manual_text) == 0 or manual_text == automatic_text:
         try:
             os.remove(f + ".manual")
         except OSError:
             pass
     else:
         with open(f + ".manual", "w") as ff:
-            ff.write(manual_reason)
+            ff.write(manual_text)
     subprocess.Popen([
         os.path.join(dirname(abspath(__file__)), "report"),
         "--html-only",

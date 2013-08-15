@@ -172,7 +172,7 @@ test_runner_recovery_exit_status() {
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
 }
 
-test_runner_results_server_updates_failure_reason() {
+test_runner_results_server_updates_failure_reason_and_notes() {
     wait_for_report() {
         local parent=$1 children pid
         children=$(ps -o ppid= -o pid= | awk "\$1 == $parent {print \$2}")
@@ -210,7 +210,6 @@ test_runner_results_server_updates_failure_reason() {
         http://localhost:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server
-
     assert grep -q "manual failure reason" $rundir/failure-reason.manual
     assert grep -q "manual failure reason" $rundir/index.html
     assert grep -q "manual failure reason" index.html
@@ -220,11 +219,19 @@ test_runner_results_server_updates_failure_reason() {
         http://localhost:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server
-
     ! [[ -f $rundir/failure-reason.manual ]] ||
         fail "server didn't delete '$rundir/failure-reason.manual'"
     assert ! grep -q "manual failure reason" index.html
     assert ! grep -q "manual failure reason" $rundir/index.html
+
+    curl --silent --show-error \
+        -F 'value=Hi there' \
+        http://localhost:5787/$rundir/notes || fail 'Got HTTP failure'
+    expect_runner_to_say "POST /$rundir/notes"
+    wait_for_report $server
+    assert grep -q 'Hi there' $rundir/notes.manual
+    assert grep -q 'Hi there' $rundir/index.html
+    assert grep -q 'Hi there' index.html
 }
 
 test_runner_results_server_shows_directory_listing() {

@@ -32,6 +32,7 @@
         <th>Test</th>
         <th>Commit</th>
         <th>Exit status</th>
+        <th>Notes</th>
         <th>Duration</th>
         {% for column in extra_columns %}
           <th>{{column}}</th>
@@ -50,6 +51,7 @@
             — {{ run.failure_reason | truncate(30, True) }}
           {% endif %}
         </td>
+        <td>{{ run.notes | truncate(30, True) }}</td>
         <td>{{run.duration}}</td>
         {% for column in extra_columns %}
           <td style="white-space: pre">{{
