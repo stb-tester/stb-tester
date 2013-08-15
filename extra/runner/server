@@ -48,7 +48,7 @@ def catch_all(path):
                 dir=(path or "/"),
                 entries=[
                     x + "/" if isdir(os.path.join(f, x)) else x
-                    for x in os.listdir(f)])
+                    for x in sorted(os.listdir(f))])
 
     abort(404)
 
