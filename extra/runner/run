@@ -27,6 +27,7 @@ die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
 
 main() {
   runner=$(dirname "$(abspath "$0")")
+  export PYTHONUNBUFFERED=x
 
   keep_going=0
   run_once=false
@@ -88,8 +89,7 @@ run() {
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test...\n" || printf "$test... "
-  PYTHONUNBUFFERED=x \
-    stbt run $v "$_test" --save-video "video.webm" >rawout 2>rawerr &
+  stbt run $v "$_test" --save-video "video.webm" >rawout 2>rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < rawout | tee stdout.log >&3 &
