@@ -225,13 +225,13 @@ test_runner_results_server_updates_failure_reason_and_notes() {
     assert ! grep -q "manual failure reason" $rundir/index.html
 
     curl --silent --show-error \
-        -F 'value=Hi there' \
+        -F 'value=Hi there £€' \
         http://localhost:5787/$rundir/notes || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/notes"
     wait_for_report $server
-    assert grep -q 'Hi there' $rundir/notes.manual
-    assert grep -q 'Hi there' $rundir/index.html
-    assert grep -q 'Hi there' index.html
+    assert grep -q 'Hi there £€' $rundir/notes.manual
+    assert grep -q 'Hi there £€' $rundir/index.html
+    assert grep -q 'Hi there £€' index.html
 }
 
 test_runner_results_server_shows_directory_listing() {

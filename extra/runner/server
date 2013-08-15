@@ -63,7 +63,7 @@ def update_file(testrun, filename):
     if (not d.startswith(app.instance_path) or not isdir(d) or
             not isfile(os.path.join(d, "test-name"))):
         abort(404)
-    manual_text = request.form["value"].strip()
+    manual_text = request.form["value"].encode('utf-8', errors="ignore").strip()
     f = os.path.join(d, filename)
     automatic_text = open(f).read().strip() if isfile(f) else None
     if len(manual_text) == 0 or manual_text == automatic_text:

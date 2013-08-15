@@ -110,9 +110,9 @@ class Run:
     def read(self, f):
         f = os.path.join(self.rundir, f)
         if os.path.exists(f + ".manual"):
-            return open(f + ".manual").read().strip()
+            return open(f + ".manual").read().decode('utf-8').strip()
         elif os.path.exists(f):
-            return open(f).read().strip()
+            return open(f).read().decode('utf-8').strip()
         else:
             return ""
 
