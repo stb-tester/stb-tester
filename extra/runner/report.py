@@ -84,10 +84,10 @@ class Run:
 
         self.duration = self.read_seconds("duration")
         self.exit_status = int(self.read("exit-status"))
-        self.failure_reason = self.read("failure-reason").strip()
-        self.git_commit = self.read("git-commit").strip()
-        self.notes = self.read("notes").strip()
-        self.test_name = self.read("test-name").strip()
+        self.failure_reason = self.read("failure-reason")
+        self.git_commit = self.read("git-commit")
+        self.notes = self.read("notes")
+        self.test_name = self.read("test-name")
 
         self.extra_columns = collections.defaultdict(list)
         for line in self.read("extra-columns").splitlines():
@@ -110,9 +110,9 @@ class Run:
     def read(self, f):
         f = os.path.join(self.rundir, f)
         if os.path.exists(f + ".manual"):
-            return open(f + ".manual").read()
+            return open(f + ".manual").read().strip()
         elif os.path.exists(f):
-            return open(f).read()
+            return open(f).read().strip()
         else:
             return ""
 
