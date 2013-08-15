@@ -33,7 +33,7 @@ main() {
     (
       cd "$rundir" || die "Invalid directory '$rundir'"
       [ -r exit-status ] ||
-        die "No exit status (test still in progress); skipping"
+        { echo "No exit status (test still in progress); skipping"; return 0; }
 
       if $do_classify; then
         classify > failure-reason
@@ -46,7 +46,7 @@ main() {
         python "$runner"/report.py . > index.html.$$ &&
         mv index.html.$$ index.html
       fi
-    )
+    ) || return
   done
 
   # Generate summary report
