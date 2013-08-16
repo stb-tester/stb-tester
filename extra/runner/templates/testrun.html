@@ -12,6 +12,8 @@
     #notes { white-space: pre; }
     .thumbnail p { word-wrap: break-word; text-align: center; }
     .editable-click { border-bottom: none; }
+    #delete,
+    #deleted { margin-left: 1em; }
   </style>
 </head>
 
@@ -20,7 +22,7 @@
 <div class="row-fluid">
 <div class="span4">
 
-<p><a href="">[Link to this result]</a>
+<p><a id="permalink" href="">[Link to this result]</a>
 <p><b>Timestamp:</b> {{run.timestamp}}
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
 <p><b>Duration:</b> {{run.duration}}

@@ -47,6 +47,8 @@ def index(parentdir):
         dirname(x) for x in glob.glob(
             os.path.join(parentdir, "????-??-??_??.??.??*/exit-status"))]
     runs = [Run(d) for d in sorted(rundirs, reverse=True)]
+    if len(runs) == 0:
+        die("Directory '%s' doesn't contain any testruns" % parentdir)
     print templates.get_template("index.html").render(
         name=basename(abspath(parentdir)).replace("_", " "),
         runs=runs,

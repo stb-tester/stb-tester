@@ -31,6 +31,7 @@ main() {
 
   for rundir in "$@"; do
     (
+      [[ "$rundir" =~ index.html$ ]] && return 0  # Summary report only
       cd "$rundir" || die "Invalid directory '$rundir'"
       [ -r exit-status ] ||
         { echo "No exit status (test still in progress); skipping"; return 0; }

@@ -172,7 +172,7 @@ test_runner_recovery_exit_status() {
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
 }
 
-test_runner_results_server_updates_failure_reason_and_notes() {
+test_runner_results_server() {
     wait_for_report() {
         local parent=$1 children pid
         children=$(ps -o ppid= -o pid= | awk "\$1 == $parent {print \$2}")
@@ -232,6 +232,13 @@ test_runner_results_server_updates_failure_reason_and_notes() {
     assert grep -q 'Hi there £€' $rundir/notes.manual
     assert grep -q 'Hi there £€' $rundir/index.html
     assert grep -q 'Hi there £€' index.html
+
+    curl --silent --show-error -X POST \
+        http://localhost:5787/$rundir/delete || fail 'Got HTTP failure'
+    expect_runner_to_say "POST /$rundir/delete"
+    wait_for_report $server
+    ! [[ -f $rundir ]] || fail "server didn't hide '$rundir'"
+    assert ! grep -q 'Hi there £€' index.html
 }
 
 test_runner_results_server_shows_directory_listing() {

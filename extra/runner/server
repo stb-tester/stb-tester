@@ -12,7 +12,7 @@
 import argparse
 import mimetypes
 import os
-from os.path import abspath, dirname, isdir, isfile, normpath
+from os.path import abspath, basename, dirname, isdir, isfile, normpath
 import subprocess
 import sys
 
@@ -59,10 +59,7 @@ def catch_all(path):
 @app.route(
     "/<path:testrun>/notes", methods=["POST"], defaults={"filename": "notes"})
 def update_file(testrun, filename):
-    d = normpath(os.path.join(app.instance_path, testrun))
-    if (not d.startswith(app.instance_path) or not isdir(d) or
-            not isfile(os.path.join(d, "test-name"))):
-        abort(404)
+    d = testrun_directory(testrun)
     manual_text = request.form["value"].encode('utf-8', errors="ignore").strip()
     f = os.path.join(d, filename)
     automatic_text = open(f).read().strip() if isfile(f) else None
@@ -79,6 +76,25 @@ def update_file(testrun, filename):
         "--html-only",
         testrun])
     return ""
+
+
+@app.route("/<path:testrun>/delete", methods=["POST"])
+def hide_testrun(testrun):
+    d = testrun_directory(testrun)
+    os.rename(d, os.path.join(dirname(d), "." + basename(d)))
+    subprocess.Popen([
+        os.path.join(dirname(abspath(__file__)), "report"),
+        "--html-only",
+        os.path.join(dirname(d), "index.html")])
+    return ""
+
+
+def testrun_directory(path):
+    d = normpath(os.path.join(app.instance_path, path))
+    if (not d.startswith(app.instance_path) or not isdir(d) or
+            not isfile(os.path.join(d, "test-name"))):
+        abort(404)
+    return d
 
 
 if __name__ == "__main__":
