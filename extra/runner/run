@@ -120,6 +120,9 @@ run() {
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || stop=true
   fi
+  if [[ "$(cat failure-reason)" =~ NoVideo ]]; then
+    check_capture_hardware || stop=true
+  fi
 
   "$runner"/report --html-only . >/dev/null
 
@@ -167,6 +170,41 @@ user_command() {
   local c=$(stbt config runner.$1 2>/dev/null)
   [[ -z "$c" ]] && return
   "$c" $2
+}
+
+check_capture_hardware() {
+  case "$(stbt config global.source_pipeline | awk '{print $1}')" in
+    decklinksrc)
+      ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
+        GST_DEBUG=decklinksrc:4 GST_DEBUG_NO_COLOR=1 \
+        stbt run --sink-pipeline='fakesink sync=false' \
+          <(echo "import time; time.sleep(1)") 2>&1
+      ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
+
+      if grep -q "enable video input failed" decklinksrc.log; then
+        local subdevice=$(
+          stbt config global.source_pipeline |
+          grep -o subdevice=. | awk -F= '{print $2}')
+        local users=$(
+          lsof -F Lnc /dev/blackmagic${subdevice:-0} 2>/dev/null |
+          # Example `lsof` output:
+          # p70752
+          # cgst-launch-0.10
+          # Lstb-tester
+          # n/dev/blackmagic0
+          awk '/^p/ { printf "\n" }
+                    { sub(/^./, ""); printf $0 " " }')
+        echo "Blackmagic card in use: $users" > failure-reason.manual
+        return 1
+
+      # Even if the card has no video connected to its input you see
+      # "VideoInputFrameArrived: Frame received - No input signal detected"
+      elif ! grep -q VideoInputFrameArrived decklinksrc.log; then
+        echo "Blackmagic card froze" > failure-reason.manual
+        return 1
+      fi
+      ;;
+  esac
 }
 
 # http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes
