@@ -13,7 +13,7 @@ install_packages() {
     gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
     python-gst0.10 python-opencv python-numpy \
     curl expect openssh-client \
-    moreutils python-flask python-jinja2 \
+    lsof moreutils python-flask python-jinja2 \
     python-docutils python-nose pep8 pylint \
     gstreamer0.10-ffmpeg git v4l-utils
 }
