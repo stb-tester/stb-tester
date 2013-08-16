@@ -115,13 +115,12 @@ run() {
   stbt --version > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
+  grep -q "FAIL: .*: NoVideo" stdout.log && {
+    check_capture_hardware || stop=true; }
   "$runner"/report --classify-only . >/dev/null
 
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || stop=true
-  fi
-  if [[ "$(cat failure-reason)" =~ NoVideo ]]; then
-    check_capture_hardware || stop=true
   fi
 
   "$runner"/report --html-only . >/dev/null
@@ -194,13 +193,17 @@ check_capture_hardware() {
           # n/dev/blackmagic0
           awk '/^p/ { printf "\n" }
                     { sub(/^./, ""); printf $0 " " }')
-        echo "Blackmagic card in use: $users" > failure-reason.manual
+        echo "Blackmagic card in use: $users" > failure-reason
+        cp failure-reason failure-reason.manual
+        echo "Blackmagic card in use; exiting."
         return 1
 
       # Even if the card has no video connected to its input you see
       # "VideoInputFrameArrived: Frame received - No input signal detected"
       elif ! grep -q VideoInputFrameArrived decklinksrc.log; then
-        echo "Blackmagic card froze" > failure-reason.manual
+        echo "Blackmagic card froze" > failure-reason
+        cp failure-reason failure-reason.manual
+        echo "Blackmagic card froze; exiting."
         return 1
       fi
       ;;
