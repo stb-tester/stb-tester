@@ -74,7 +74,7 @@ def update_file(testrun, filename):
     subprocess.Popen([
         os.path.join(dirname(abspath(__file__)), "report"),
         "--html-only",
-        testrun])
+        d])
     return ""
 
 
