@@ -6,26 +6,37 @@
 set -e
 
 install_packages() {
-  apt-get install -y \
-    lubuntu-desktop \
-    virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11 \
-    gstreamer0.10-tools gstreamer0.10-plugins-base \
-    gstreamer0.10-plugins-good gstreamer0.10-plugins-bad \
-    python-gst0.10 python-opencv python-numpy \
-    curl expect openssh-client \
-    lsof moreutils python-flask python-jinja2 \
-    python-docutils python-nose pep8 pylint \
-    gstreamer0.10-ffmpeg git v4l-utils
+  local packages
+  # X11 environment so that you can use `ximagesink`
+  packages=lubuntu-desktop
+  # VirtualBox guest additions for shared folders, USB, window resizing, etc.
+  packages+=" virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11"
+  # Core stbt dependencies
+  packages+=" gstreamer0.10-tools gstreamer0.10-plugins-base"
+  packages+=" gstreamer0.10-plugins-good gstreamer0.10-plugins-bad"
+  packages+=" python-gst0.10 python-opencv python-numpy"
+  # For `stbt power`
+  packages+=" curl expect openssh-client"
+  # For `extra/runner`
+  packages+=" lsof moreutils python-flask python-jinja2"
+  # For building stbt and running the self-tests
+  packages+=" git pep8 pylint python-docutils python-nose"
+  # For the Hauppauge HDPVR
+  packages+=" gstreamer0.10-ffmpeg v4l-utils"
+
+  apt-get install -y $packages
 }
+
 apt-get update
 install_packages || {
   /usr/share/debconf/fix_db.pl  # https://bugs.launchpad.net/ubuntu/+bug/873551
   install_packages
 }
-apt-get install -y linux-generic-lts-quantal
-# Conflicts with virtualbox-guest-x11:
+
+# Kernel >= 3.3 for the RedRat3 USB infrared emitter
+# Note that xserver-xorg-lts-quantal conflicts with virtualbox-guest-x11:
 # https://bugs.launchpad.net/ubuntu/+source/virtualbox/+bug/1160401
-#apt-get install -y xserver-xorg-lts-quantal
+apt-get install -y linux-generic-lts-quantal
 
 usermod -a -G video vagrant
 
