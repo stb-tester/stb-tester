@@ -116,7 +116,7 @@ The generated report is a set of static html files, which you can view locally
 (using a `file:///...` url), or you can serve them with a web server like
 apache. But if you want to interactively *edit* the report, you can run our
 ``server``. By default, ``server`` serves on ``localhost:5000``. To serve on
-all public network interfaces, run it like this:
+all public network interfaces, run it like this::
 
     server 0.0.0.0:5000
 
