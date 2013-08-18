@@ -166,7 +166,7 @@ test_runner_recovery_exit_status() {
     chmod u+x my-recover
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run -k "$testdir"/test.py
+    "$srcdir"/extra/runner/run -kk "$testdir"/test.py
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
