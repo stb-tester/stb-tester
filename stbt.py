@@ -482,7 +482,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     match_count = 0
     last_pos = Position(0, 0)
     for res in detect_match(
-            image, timeout_secs, match_parameters=match_parameters):
+            image, timeout_secs=timeout_secs,
+            match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -590,7 +591,8 @@ def wait_for_motion(
 
     matches = deque(maxlen=considered_frames)
     for res in detect_motion(
-            timeout_secs, mask, motion_parameters=motion_parameters):
+            timeout_secs=timeout_secs, mask=mask,
+            motion_parameters=motion_parameters):
         matches.append(res.motion)
         if matches.count(True) >= motion_frames:
             debug("Motion detected.")
