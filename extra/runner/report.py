@@ -16,6 +16,7 @@ import re
 import sys
 
 import jinja2
+escape = jinja2.Markup.escape
 
 
 templates = jinja2.Environment(loader=jinja2.FileSystemLoader(
@@ -114,7 +115,7 @@ class Run:
     def read(self, f):
         f = os.path.join(self.rundir, f)
         if os.path.exists(f + ".manual"):
-            return open(f + ".manual").read().decode('utf-8').strip()
+            return escape(open(f + ".manual").read().decode('utf-8').strip())
         elif os.path.exists(f):
             return open(f).read().decode('utf-8').strip()
         else:
