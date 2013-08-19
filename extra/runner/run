@@ -56,11 +56,10 @@ main() {
   [ $verbose -gt 1 ] && exec 4>&1
 
   while true; do
-    parse_test_args "$@" |
     while IFS=$'\t' read -a test; do
       run "${test[@]}"
       should_i_continue || break 2
-    done
+    done < <(parse_test_args "$@")
     $run_once && break
   done
 }
