@@ -14,7 +14,7 @@ test_runner_once() {
     [[ -f latest/index.html ]] || fail "latest/index.html not created"
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
-    grep -q '>tests/test.py</a>' index.html || fail "test name not in index.html"
+    grep -q 'tests/test.py' index.html || fail "test name not in index.html"
     grep -q my-label latest/index.html || fail "extra column not in latest/index.html"
     grep -q my-label index.html || fail "extra column not in index.html"
 }
@@ -43,6 +43,37 @@ test_runner_continues_after_uninteresting_failure() {
         fail "Expected 2nd testrun to fail with 'UITestError'"
     grep -q MatchTimeout latest/failure-reason ||
         fail "Expected 3rd testrun to fail with 'MatchTimeout'"
+}
+
+test_runner_parse_test_args() {
+    sed -n '/^parse_test_args() {/,/^}/ p' "$srcdir"/extra/runner/run \
+        > parse_test_args.sh &&
+    . parse_test_args.sh &&
+    declare -f parse_test_args || fail "'parse_test_args' not defined"
+
+    parse_test_args "test 1.py" test2.py test3.py |
+    tee /dev/stderr |  # print to log
+    while IFS=$'\t' read -a test; do echo "$test"; done > output1.log
+    cat > expected1.log <<-EOF
+	test 1.py
+	test2.py
+	test3.py
+	EOF
+    diff -u expected1.log output1.log ||
+    fail "Unexpected output from 'parse_test_args' without '--'"
+
+    parse_test_args test1.py "arg 1" arg2 -- test2.py arg -- test3.py |
+    tee /dev/stderr |  # print to log
+    while IFS=$'\t' read -a test; do
+        for x in "${test[@]}"; do printf "'$x' "; done; printf "\n"
+    done > output2.log
+    cat > expected2.log <<-EOF
+	'test1.py' 'arg 1' 'arg2' 
+	'test2.py' 'arg' 
+	'test3.py' 
+	EOF
+    diff -u expected2.log output2.log ||
+    fail "Unexpected output from 'parse_test_args' with '--'"
 }
 
 test_runner_killtree() {
@@ -78,7 +109,7 @@ expect_runner_to_say() {
 test_runner_sigint_once() {
     sleep=4 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
-    expect_runner_to_say "test.py..."
+    expect_runner_to_say "test.py ..."
     kill $runner
     expect_runner_to_say "waiting for current test to complete"
     wait $runner
@@ -88,7 +119,7 @@ test_runner_sigint_once() {
 test_runner_sigint_twice() {
     sleep=10 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
-    expect_runner_to_say "test.py..."
+    expect_runner_to_say "test.py ..."
     kill $runner
     expect_runner_to_say "waiting for current test to complete"
     kill $runner
@@ -96,6 +127,23 @@ test_runner_sigint_twice() {
     wait $runner
     diff -u <(echo "killed (sigterm)") latest/failure-reason ||
         fail "Bad failure-reason"
+}
+
+test_runner_passes_arguments_to_script() {
+    "$srcdir"/extra/runner/run \
+        "$testdir"/test.py "a b" c d -- \
+        "$testdir"/test.py efg hij
+
+    ls -d ????-??-??_??.??.??* > testruns
+    assert grep 'Command-line argument: a b$' $(head -1 testruns)/stdout.log
+    assert grep 'Command-line argument: c$' $(head -1 testruns)/stdout.log
+    assert grep 'Command-line argument: d$' $(head -1 testruns)/stdout.log
+    assert grep 'Command-line argument: efg$' latest/stdout.log
+    assert grep 'Command-line argument: hij$' latest/stdout.log
+    assert grep 'efg' index.html
+    assert grep 'hij' index.html
+    assert grep 'efg' latest/index.html
+    assert grep 'hij' latest/index.html
 }
 
 test_runner_custom_logging() {

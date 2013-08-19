@@ -43,7 +43,11 @@
       {% for run in runs %}
       <tr class="{{run.css_class()}}">
         <td>{{run.timestamp}}</td>
-        <td><a href="{{run.rundir}}/index.html" target="details">{{run.test_name}}</a></td>
+        <td>
+          <a href="{{run.rundir}}/index.html" target="details">
+            {{run.test_name}} {{run.test_args}}
+          </a>
+        </td>
         <td>{{run.git_commit}}</td>
         <td>
           {{run.exit_status}}

@@ -7,6 +7,7 @@
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
   <link href="http://cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.6/bootstrap-editable/css/bootstrap-editable.css" rel="stylesheet"/>
   <style>
+    #args,
     #failure-reason,
     .extra_columns,
     #notes { white-space: pre; }
@@ -24,7 +25,13 @@
 
 <p><a id="permalink" href="">[Link to this result]</a>
 <p><b>Timestamp:</b> {{run.timestamp}}
+
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
+{% if run.test_args %}
+  <p><b>Command-line arguments:</b></p>
+  <p id="args">{{run.test_args}}</p>
+{% endif %}
+
 <p><b>Duration:</b> {{run.duration}}
 <p><b>Exit status:</b> {{run.exit_status}}
 

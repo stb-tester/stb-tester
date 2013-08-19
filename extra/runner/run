@@ -5,7 +5,9 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-#/ Usage: run [options] test.py [test.py ...]
+#/ Usage:
+#/   run [options] test.py [test.py ...]
+#/   run [options] test.py arg [arg ...] -- test.py arg [arg ...] [-- ...]
 #/
 #/ Options:
 #/   -1    Run once. The default behaviour is to run the test
@@ -54,8 +56,9 @@ main() {
   [ $verbose -gt 1 ] && exec 4>&1
 
   while true; do
-    for test in "$@"; do
-      run "$test"
+    parse_test_args "$@" |
+    while IFS=$'\t' read -a test; do
+      run "${test[@]}"
       should_i_continue || break 2
     done
     $run_once && break
@@ -63,9 +66,10 @@ main() {
 }
 
 run() {
-  local _test rundir
+  local test _test rundir
 
-  _test=$(abspath "$1") &&  # absolute path to the test script
+  test="$1" && shift &&
+  _test=$(abspath "$test") &&  # absolute path to the test script
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
   mkdir "$rundir" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
@@ -86,10 +90,12 @@ run() {
   ) > test-name ||
   die "Failed to determine the test script's path relative to its git repo."
 
+  printf "%s\n" "$@" > test-args
+
   user_command pre_run start
 
-  [ $verbose -gt 0 ] && printf "\n$test...\n" || printf "$test... "
-  stbt run $v "$_test" --save-video "video.webm" >rawout 2>rawerr &
+  [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
+  stbt run $v --save-video "video.webm" "$_test" "$@" >rawout 2>rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < rawout | tee stdout.log >&3 &
@@ -208,6 +214,26 @@ check_capture_hardware() {
       fi
       ;;
   esac
+}
+
+# Input:
+#   test1.py arg1 arg2 -- test2.py arg -- test3.py
+# Output (suitable as input to `IFS=$'\t' read -a`):
+#   test1.py\targ1\targ2
+#   test2.py\targ
+#   test3.py
+parse_test_args() {
+  if [[ "$*" =~ -- ]]; then
+    [[ "$1" == -- ]] && shift
+    while [[ $# -gt 0 ]]; do
+      printf "%s" "$1"; shift
+      while [[ $# -gt 0 && "$1" != -- ]]; do printf "\t%s" "$1"; shift; done
+      printf "\n"
+      [[ "$1" == -- ]] && shift
+    done
+  else  # No "--": Each command-line argument is a test script.
+    printf "%s\n" "$@"
+  fi
 }
 
 # http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes

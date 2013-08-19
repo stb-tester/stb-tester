@@ -1,9 +1,13 @@
 import glob
 import os
+import sys
 import time
 
 import stbt
 
+
+for arg in sys.argv[1:]:
+    print("Command-line argument: %s\n" % arg)
 
 # Fail if this script is run more than once from the same $scratchdir
 n_runs = len(glob.glob("../????-??-??_??.??.??*"))  # includes current run

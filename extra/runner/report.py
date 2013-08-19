@@ -75,6 +75,7 @@ class Run:
                 "extra-columns",
                 "failure-reason",
                 "git-commit",
+                "test-args",
                 "test-name",
             ]
             and not x.endswith(".png")
@@ -89,6 +90,7 @@ class Run:
         self.failure_reason = self.read("failure-reason")
         self.git_commit = self.read("git-commit")
         self.notes = self.read("notes")
+        self.test_args = self.read("test-args")
         self.test_name = self.read("test-name")
 
         self.extra_columns = collections.defaultdict(list)
