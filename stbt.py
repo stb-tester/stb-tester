@@ -83,6 +83,15 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
+class UITestError(Exception):
+    """The test script had an unrecoverable error."""
+    pass
+
+
+class ConfigurationError(UITestError):
+    pass
+
+
 def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
@@ -625,11 +634,6 @@ def debug(msg):
             "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
-class UITestError(Exception):
-    """The test script had an unrecoverable error."""
-    pass
-
-
 class UITestFailure(Exception):
     """The test failed because the system under test didn't behave as expected.
     """
@@ -676,10 +680,6 @@ class MotionTimeout(UITestFailure):
         return "Didn't find motion%s within %d seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
-
-
-class ConfigurationError(UITestError):
-    pass
 
 
 # stbt-run initialisation and convenience functions
