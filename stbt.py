@@ -132,6 +132,7 @@ def press(key):
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
     """
+    _display.draw_text(key, duration_secs=3)
     return _control.press(key)
 
 
@@ -698,6 +699,7 @@ class Display:
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
+        self.video_debug = []
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
@@ -804,17 +806,14 @@ class Display:
                 try:
                     yield (image, timestamp)
                 finally:
-                    newbuf = gst.Buffer(image.data)
-                    newbuf.set_caps(buf.get_caps())
-                    newbuf.timestamp = buf.timestamp
-                    self.appsrc.emit("push-buffer", newbuf)
+                    self.push_buffer(buf, image)
 
     def on_new_buffer(self, appsink):
         buf = appsink.emit("pull-buffer")
         self.tell_user_thread(buf)
         if self.lock.acquire(False):  # non-blocking
             try:
-                self.appsrc.emit("push-buffer", buf)
+                self.push_buffer(buf)
             finally:
                 self.lock.release()
 
@@ -838,6 +837,35 @@ class Display:
             pass
 
         self.last_buffer.put_nowait(buffer_or_exception)
+
+    def draw_text(self, text, duration_secs):
+        """Draw the specified text on the output video."""
+        self.video_debug.append((text, duration_secs, None))
+
+    def push_buffer(self, gst_buffer, opencv_image=None):
+        for text, duration, timeout in list(self.video_debug):
+            if timeout is None:
+                timeout = gst_buffer.timestamp + (duration * 1e9)
+                self.video_debug.remove((text, duration, None))
+                self.video_debug.append((text, duration, timeout))
+            if (gst_buffer.timestamp > timeout):
+                self.video_debug.remove((text, duration, timeout))
+
+        if opencv_image is None and len(self.video_debug) == 0:
+            self.appsrc.emit("push-buffer", gst_buffer)
+        else:
+            if opencv_image is None:
+                opencv_image = gst_to_opencv(gst_buffer)
+            for i in range(len(self.video_debug)):
+                text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
+                cv2.putText(
+                    opencv_image, text, (10, (i + 1) * 30),
+                    cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+                    color=(255, 255, 255))
+            newbuf = gst.Buffer(opencv_image.data)
+            newbuf.set_caps(gst_buffer.get_caps())
+            newbuf.timestamp = gst_buffer.timestamp
+            self.appsrc.emit("push-buffer", newbuf)
 
     def on_error(self, _bus, message):
         assert message.type == gst.MESSAGE_ERROR

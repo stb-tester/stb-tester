@@ -215,3 +215,39 @@ test_that_verbose_command_line_argument_overrides_config_file() {
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v test.py &&
     cat log | grep "verbose: 1"
 }
+
+test_press_visualisation() {
+    [[ $(uname) == Darwin ]] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cat > press1.py <<-EOF &&
+	from time import sleep
+	press("black")
+	sleep(2)
+	EOF
+    stbt-run -v --save-video video1.webm press1.py &&
+    cat > verify1.py <<-EOF &&
+	wait_for_match("$testdir/black.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline "filesrc location=video1.webm ! decodebin" \
+        verify1.py ||
+    fail "Didn't find single keypress in output video"
+
+    cat > press2.py <<-EOF &&
+	from time import sleep
+	press("black")
+	press("red")
+	sleep(2)
+	EOF
+    stbt-run -v --save-video video2.webm press2.py &&
+    cat > verify2.py <<-EOF &&
+	wait_for_match("$testdir/red-black.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline "filesrc location=video2.webm ! decodebin" \
+        verify2.py ||
+    fail "Didn't find double keypress in output video"
+}
