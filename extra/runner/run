@@ -65,10 +65,10 @@ main() {
 }
 
 run() {
-  local test _test rundir
+  local test testpath rundir
 
   test="$1" && shift &&
-  _test=$(abspath "$test") &&  # absolute path to the test script
+  testpath=$(abspath "$test") &&
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
   mkdir "$rundir" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
@@ -78,14 +78,14 @@ run() {
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
-  ( cd "$(dirname "$_test")" &&
+  ( cd "$(dirname "$testpath")" &&
     git describe --always --dirty
   ) > git-commit ||
   die "Failed to determine the test script's git revision."
 
-  ( cd "$(dirname "$_test")" &&
+  ( cd "$(dirname "$testpath")" &&
     gitdir=$(dirname "$(abspath "$(git rev-parse --git-dir)")") &&
-    echo "${_test#$gitdir/}"
+    echo "${testpath#$gitdir/}"
   ) > test-name ||
   die "Failed to determine the test script's path relative to its git repo."
 
@@ -94,7 +94,7 @@ run() {
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
-  stbt run $v --save-video "video.webm" "$_test" "$@" >rawout 2>rawerr &
+  stbt run $v --save-video "video.webm" "$testpath" "$@" >rawout 2>rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < rawout | tee stdout.log >&3 &
