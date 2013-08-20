@@ -37,6 +37,7 @@ doc() {
           sub("class " f "\\(" f "\\)", "class " f);
           sub("exceptions.Exception", "Exception");
           sub("<stbt.MatchParameters instance>", "MatchParameters()");
+          sub("<stbt.MotionParameters instance>", "MotionParameters()");
           sub(/\*\*kwargs/, "\\*\\*kwargs");
           sub(/^ \|  /, "    ");
           sub(/^ *$/, "");
@@ -72,6 +73,7 @@ python_docstrings() {
     doc MatchParameters
     doc MatchResult
     doc Position
+    doc MotionParameters
     doc MotionResult
     doc MatchTimeout
     doc MotionTimeout

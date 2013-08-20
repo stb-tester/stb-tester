@@ -83,6 +83,15 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
+class UITestError(Exception):
+    """The test script had an unrecoverable error."""
+    pass
+
+
+class ConfigurationError(UITestError):
+    pass
+
+
 def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
@@ -302,6 +311,43 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
         yield result
 
 
+class MotionParameters:
+    """Parameters to customise the motion detection algorithm used by
+    `wait_for_motion` and `detect_motion`.
+
+    You can change the default values for these parameters by setting
+    a key (with the same name as the corresponding python parameter)
+    in the `[motion]` section of your stbt.conf configuration file.
+
+    `motion_threshold` (float) default: From stbt.conf
+      Increase `motion_threshold` to avoid false negatives, at the risk of
+      increasing false positives (a value of 0.0 will never report motion).
+      This is particularly useful with noisy analogue video sources, but
+      generally it is better to keep this value as low as possible to
+      maintain sensitivity to genuine motion.
+
+    `erode_passes` (int) default: From stbt.conf
+      The number of erode steps in the motion detect algorithm. Increasing
+      the number of erode steps makes your test less sensitive to motion, and
+      so a greater visual change per frame is required for the motion test to
+      return True. Therefore, increasing the number of erode steps is more
+      likely to report a false negative.
+
+    Please let us know if you are having trouble with detecting motion  so
+    that we can further improve the motion detect algorithm.
+    """
+
+    def __init__(
+            self,
+            motion_threshold=float(get_config('motion', 'motion_threshold')),
+            erode_passes=int(get_config('motion', 'erode_passes')),
+            motion_colour=tuple(int(ch.strip('()')) for ch in
+                get_config('motion', 'motion_colour').split(','))):
+        self.motion_threshold = motion_threshold
+        self.erode_passes = erode_passes
+        self.motion_colour = motion_colour
+
+
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     """
     * `timestamp`: Video stream timestamp.
@@ -310,22 +356,32 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     pass
 
 
-def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
+def detect_motion(
+        timeout_secs=10, noise_threshold=None, mask=None,
+        motion_parameters=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
-    `noise_threshold` is a parameter used by the motiondetect algorithm.
-    Increase `noise_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 0.0 will never report motion).
-    This is particularly useful with noisy analogue video sources.
-
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
+
+    Specify `motion_parameters` to customise the motion detection algorithm.
+    See the documentation for `MotionParameters` for details.
     """
+
+    if motion_parameters is None:
+        motion_parameters = MotionParameters()
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "motion_parameters.motion_threshold instead.",
+            DeprecationWarning, stacklevel=2)
+        motion_parameters.motion_threshold = noise_threshold
 
     debug("Searching for motion")
 
@@ -365,10 +421,12 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
             log(absdiff, "absdiff_masked")
 
         _, thresholded = cv2.threshold(
-            absdiff, int((1 - noise_threshold) * 255), 255, cv2.THRESH_BINARY)
+            absdiff, int((1 - motion_parameters.motion_threshold) * 255),
+            255, cv2.THRESH_BINARY)
         eroded = cv2.erode(
             thresholded,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+            iterations=motion_parameters.erode_passes)
         log(thresholded, "absdiff_threshold")
         log(eroded, "absdiff_threshold_erode")
 
@@ -380,7 +438,7 @@ def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
                 frame,
                 numpy.multiply(
                     numpy.ones(frame.shape, dtype=numpy.uint8),
-                    (0, 0, 255),  # bgr
+                    motion_parameters.motion_colour,  # bgr
                     dtype=numpy.uint8),
                 mask=cv2.dilate(
                     thresholded,
@@ -427,7 +485,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     match_count = 0
     last_pos = Position(0, 0)
     for res in detect_match(
-            image, timeout_secs, match_parameters=match_parameters):
+            image, timeout_secs=timeout_secs,
+            match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:
@@ -486,7 +545,7 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
 def wait_for_motion(
         timeout_secs=10, consecutive_frames='10/20',
-        noise_threshold=0.84, mask=None):
+        noise_threshold=None, mask=None, motion_parameters=None):
     """Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
@@ -500,14 +559,23 @@ def wait_for_motion(
     * a string in the form "x/y", where `x` is the number of frames with motion
       detected out of a sliding window of `y` frames.
 
-    Increase `noise_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 0.0 will never report motion).
-    This is particularly useful with noisy analogue video sources.
-
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
+
+    Specify `motion_parameters` to customise the motion detection algorithm.
+    See the documentation for `MotionParameters` for details.
     """
+
+    if motion_parameters is None:
+        motion_parameters = MotionParameters()
+
+    if noise_threshold is not None:
+        warnings.warn(
+            "noise_threshold is marked for deprecation. Please use "
+            "motion_parameters.motion_threshold instead.",
+            DeprecationWarning, stacklevel=2)
+        motion_parameters.motion_threshold = noise_threshold
 
     consecutive_frames = str(consecutive_frames)
     if '/' in consecutive_frames:
@@ -525,7 +593,9 @@ def wait_for_motion(
         motion_frames, considered_frames))
 
     matches = deque(maxlen=considered_frames)
-    for res in detect_motion(timeout_secs, noise_threshold, mask):
+    for res in detect_motion(
+            timeout_secs=timeout_secs, mask=mask,
+            motion_parameters=motion_parameters):
         matches.append(res.motion)
         if matches.count(True) >= motion_frames:
             debug("Motion detected.")
@@ -567,11 +637,6 @@ def debug(msg):
     if _debug_level > 0:
         sys.stderr.write(
             "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
-
-
-class UITestError(Exception):
-    """The test script had an unrecoverable error."""
-    pass
 
 
 class UITestFailure(Exception):
@@ -620,10 +685,6 @@ class MotionTimeout(UITestFailure):
         return "Didn't find motion%s within %d seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
-
-
-class ConfigurationError(UITestError):
-    pass
 
 
 # stbt-run initialisation and convenience functions
