@@ -340,9 +340,12 @@ class MotionParameters:
     def __init__(
             self,
             motion_threshold=float(get_config('motion', 'motion_threshold')),
-            erode_passes=int(get_config('motion', 'erode_passes'))):
+            erode_passes=int(get_config('motion', 'erode_passes')),
+            motion_colour=tuple(int(ch.strip('()')) for ch in
+                get_config('motion', 'motion_colour').split(','))):
         self.motion_threshold = motion_threshold
         self.erode_passes = erode_passes
+        self.motion_colour = motion_colour
 
 
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
@@ -435,7 +438,7 @@ def detect_motion(
                 frame,
                 numpy.multiply(
                     numpy.ones(frame.shape, dtype=numpy.uint8),
-                    (0, 0, 255),  # bgr
+                    motion_parameters.motion_colour,  # bgr
                     dtype=numpy.uint8),
                 mask=cv2.dilate(
                     thresholded,
