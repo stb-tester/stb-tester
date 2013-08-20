@@ -83,6 +83,63 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
+class UITestError(Exception):
+    """The test script had an unrecoverable error."""
+    pass
+
+
+class UITestFailure(Exception):
+    """The test failed because the system under test didn't behave as expected.
+    """
+    pass
+
+
+class NoVideo(UITestFailure):
+    """No video available from the source pipeline."""
+    pass
+
+
+class ConfigurationError(UITestError):
+    pass
+
+
+class MatchTimeout(UITestFailure):
+    """
+    * `screenshot`: An OpenCV image from the source video when the search
+      for the expected image timed out.
+    * `expected`: Filename of the image that was being searched for.
+    * `timeout_secs`: Number of seconds that the image was searched for.
+    """
+    def __init__(self, screenshot, expected, timeout_secs):
+        super(MatchTimeout, self).__init__()
+        self.screenshot = screenshot
+        self.expected = expected
+        self.timeout_secs = timeout_secs
+
+    def __str__(self):
+        return "Didn't find match for '%s' within %d seconds." % (
+            self.expected, self.timeout_secs)
+
+
+class MotionTimeout(UITestFailure):
+    """
+    * `screenshot`: An OpenCV image from the source video when the search
+      for motion timed out.
+    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
+    * `timeout_secs`: Number of seconds that motion was searched for.
+    """
+    def __init__(self, screenshot, mask, timeout_secs):
+        super(MotionTimeout, self).__init__()
+        self.screenshot = screenshot
+        self.mask = mask
+        self.timeout_secs = timeout_secs
+
+    def __str__(self):
+        return "Didn't find motion%s within %d seconds." % (
+            " (with mask '%s')" % self.mask if self.mask else "",
+            self.timeout_secs)
+
+
 def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
@@ -624,63 +681,6 @@ def debug(msg):
     if _debug_level > 0:
         sys.stderr.write(
             "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
-
-
-class UITestError(Exception):
-    """The test script had an unrecoverable error."""
-    pass
-
-
-class UITestFailure(Exception):
-    """The test failed because the system under test didn't behave as expected.
-    """
-    pass
-
-
-class NoVideo(UITestFailure):
-    """No video available from the source pipeline."""
-    pass
-
-
-class MatchTimeout(UITestFailure):
-    """
-    * `screenshot`: An OpenCV image from the source video when the search
-      for the expected image timed out.
-    * `expected`: Filename of the image that was being searched for.
-    * `timeout_secs`: Number of seconds that the image was searched for.
-    """
-    def __init__(self, screenshot, expected, timeout_secs):
-        super(MatchTimeout, self).__init__()
-        self.screenshot = screenshot
-        self.expected = expected
-        self.timeout_secs = timeout_secs
-
-    def __str__(self):
-        return "Didn't find match for '%s' within %d seconds." % (
-            self.expected, self.timeout_secs)
-
-
-class MotionTimeout(UITestFailure):
-    """
-    * `screenshot`: An OpenCV image from the source video when the search
-      for motion timed out.
-    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
-    * `timeout_secs`: Number of seconds that motion was searched for.
-    """
-    def __init__(self, screenshot, mask, timeout_secs):
-        super(MotionTimeout, self).__init__()
-        self.screenshot = screenshot
-        self.mask = mask
-        self.timeout_secs = timeout_secs
-
-    def __str__(self):
-        return "Didn't find motion%s within %d seconds." % (
-            " (with mask '%s')" % self.mask if self.mask else "",
-            self.timeout_secs)
-
-
-class ConfigurationError(UITestError):
-    pass
 
 
 # stbt-run initialisation and convenience functions
