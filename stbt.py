@@ -713,7 +713,7 @@ class Display:
             appsink])
         self.create_source_pipeline()
 
-        if save_video and os.path.basename(sys.argv[0]) == "stbt-run":
+        if save_video:
             if not save_video.endswith(".webm"):
                 save_video += ".webm"
             debug("Saving video to '%s'" % save_video)
