@@ -55,17 +55,17 @@ test_wait_for_motion_nonexistent_mask() {
     [ $ret -ne $timedout -a $ret -ne 0 ]
 }
 
-test_wait_for_motion_with_high_noisethreshold_reports_motion() {
+test_wait_for_motion_with_high_motion_threshold_reports_motion() {
     cat > test.py <<-EOF
-	wait_for_motion(motion_parameters=MotionParameters(noise_threshold=1.0))
+	wait_for_motion(motion_parameters=MotionParameters(motion_threshold=1.0))
 	EOF
     stbt-run -v test.py
 }
 
-test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
+test_wait_for_motion_with_low_motion_threshold_does_not_report_motion() {
     cat > test.py <<-EOF
 	wait_for_motion(timeout_secs=1,
-		motion_parameters=MotionParameters(noise_threshold=0.0))
+		motion_parameters=MotionParameters(motion_threshold=0.0))
 	EOF
     ! stbt-run -v test.py
 }

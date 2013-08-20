@@ -367,8 +367,8 @@ class MotionParameters:
     a key (with the same name as the corresponding python parameter)
     in the `[motion]` section of your stbt.conf configuration file.
 
-    `noise_threshold` (float) default: From stbt.conf
-      Increase `noise_threshold` to avoid false negatives, at the risk of
+    `motion_threshold` (float) default: From stbt.conf
+      Increase `motion_threshold` to avoid false negatives, at the risk of
       increasing false positives (a value of 0.0 will never report motion).
       This is particularly useful with noisy analogue video sources, but
       generally it is better to keep this value as low as possible to
@@ -387,9 +387,9 @@ class MotionParameters:
 
     def __init__(
             self,
-            noise_threshold=float(get_config('motion', 'noise_threshold')),
+            motion_threshold=float(get_config('motion', 'motion_threshold')),
             erode_passes=int(get_config('motion', 'erode_passes'))):
-        self.noise_threshold = noise_threshold
+        self.motion_threshold = motion_threshold
         self.erode_passes = erode_passes
 
 
@@ -424,9 +424,9 @@ def detect_motion(
     if noise_threshold is not None:
         warnings.warn(
             "noise_threshold is marked for deprecation. Please use "
-            "motion_parameters.noise_threshold instead.",
+            "motion_parameters.motion_threshold instead.",
             DeprecationWarning, stacklevel=2)
-        motion_parameters.noise_threshold = noise_threshold
+        motion_parameters.motion_threshold = noise_threshold
 
     debug("Searching for motion")
 
@@ -466,7 +466,7 @@ def detect_motion(
             log(absdiff, "absdiff_masked")
 
         _, thresholded = cv2.threshold(
-            absdiff, int((1 - motion_parameters.noise_threshold) * 255),
+            absdiff, int((1 - motion_parameters.motion_threshold) * 255),
             255, cv2.THRESH_BINARY)
         eroded = cv2.erode(
             thresholded,
@@ -617,9 +617,9 @@ def wait_for_motion(
     if noise_threshold is not None:
         warnings.warn(
             "noise_threshold is marked for deprecation. Please use "
-            "motion_parameters.noise_threshold instead.",
+            "motion_parameters.motion_threshold instead.",
             DeprecationWarning, stacklevel=2)
-        motion_parameters.noise_threshold = noise_threshold
+        motion_parameters.motion_threshold = noise_threshold
 
     consecutive_frames = str(consecutive_frames)
     if '/' in consecutive_frames:

@@ -516,8 +516,8 @@ class MotionParameters
     a key (with the same name as the corresponding python parameter)
     in the `[motion]` section of your stbt.conf configuration file.
 
-    `noise_threshold` (float) default: From stbt.conf
-      Increase `noise_threshold` to avoid false negatives, at the risk of
+    `motion_threshold` (float) default: From stbt.conf
+      Increase `motion_threshold` to avoid false negatives, at the risk of
       increasing false positives (a value of 0.0 will never report motion).
       This is particularly useful with noisy analogue video sources, but
       generally it is better to keep this value as low as possible to
