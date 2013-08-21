@@ -98,9 +98,9 @@ check-integrationtests:
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
 check-pylint:
-	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config \
-	    tests/fake-irnetbox irnetproxy.py irnetproxy_test.py \
-	    stbt-control extra/runner/report.py extra/runner/server |\
+	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
+	    irnetbox.py irnetproxy.py irnetproxy_test.py tests/fake-irnetbox \
+	    extra/runner/report.py extra/runner/server |\
 	$(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
