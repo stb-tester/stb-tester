@@ -1,14 +1,16 @@
 #!/usr/bin/env python2.7
 
 """
-A network proxy for RedRat irNetBox MK-III infra-red blaster modules.
+A network proxy for the RedRat irNetBox MK-III infra-red emitter.
+
+Unlike the real irNetBox hardware, this proxy accepts multiple simultaneous
+TCP connections from different clients. This proxy maintains a single TCP
+connection to the irNetBox, and multiplexes incoming client connections onto
+this single connection.
+
 Based on the protocol document:
 
 http://www.redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf
-
-This script allows many clients to connect to the device, and use the ports
-concurrently.  **Note**, this only makes sense for the Asynchronous IO
-Output Commands, other commands will be run synchronously.
 
 Usage
 -----
@@ -265,8 +267,14 @@ class IRNetBoxProxy(object):
 def parse_args(args=None):
     if args is None:
         args = sys.argv[1:]
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="""
+        Network proxy for the RedRat irNetBox MK-III infra-red emitter.
+        Unlike the real irNetBox hardware, this proxy accepts multiple
+        simultaneous TCP connections from different clients (and forwards
+        the client requests on to the irNetBox over a single connection).""")
 
+    parser.add_argument('-v', '--verbosity', action="count",
+                        help='Increase verbosity', default=0)
     parser.add_argument('-i', '--listen-address', dest='listen_address',
                         help='IP address to listen on [%(default)s]',
                         default="0.0.0.0")
@@ -277,8 +285,6 @@ def parse_args(args=None):
     parser.add_argument('--irnetbox-port', dest='irnet_port',
                         help='IRNetBox port [%(default)s]', default=10001,
                         type=int)
-    parser.add_argument('-v', '--verbosity', action="count",
-                        help='Increase verbosity', default=0)
 
     options = parser.parse_args(args)
     options.error = parser.error
