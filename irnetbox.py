@@ -31,6 +31,9 @@ IRNetBox
         ir.power_on()
         ir.irsend_raw(port=1, power=100, data=binascii.unhexlify("000174F..."))
 
+  Or run './irnetproxy.py', which accepts multiple connections and forwards
+  requests on to a real irNetBox.
+
 RemoteControlConfig
   Holds infrared signal data from a config file produced by RedRat's "IR Signal
   Database Utility". Example usage (where "POWER" is a signal defined in the
