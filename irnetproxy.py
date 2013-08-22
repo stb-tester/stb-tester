@@ -16,14 +16,15 @@ Usage
 -----
 
 ```
-$ irnetproxy -r <irNetBox address>
+$ irnetproxy.py <irNetBox address>
 ```
 
 OR
 
 ```
-$ irnetproxy --irnetbox-addresss <irNetBox address> --irnetbox-port 10001\
-      --listen-port 10001 --listen-address 127.0.0.1 -vv
+$ irnetproxy.py -vv \
+      --listen-port 10001 --listen-address 127.0.0.1 \
+      <irNetBox address> 10001
 
 > Listening for connections on 127.0.0.1:10001
 ```
@@ -281,11 +282,9 @@ def parse_args(args=None):
                         default="0.0.0.0")
     parser.add_argument('-p', '--listen-port', type=int,
                         help='Port to listen on [%(default)s]', default=10001)
-    parser.add_argument('-r', '--irnetbox-address',
-                        help='IRNetBox address', required=True)
-    parser.add_argument('--irnetbox-port',
-                        help='IRNetBox port [%(default)s]', default=10001,
-                        type=int)
+    parser.add_argument('irnetbox_address', help='IRNetBox address')
+    parser.add_argument('irnetbox_port', type=int, default=10001, nargs='?',
+                        help='IRNetBox port [%(default)s]')
 
     options = parser.parse_args(args)
     options.error = parser.error
