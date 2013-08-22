@@ -277,7 +277,7 @@ def parse_args(args=None):
     parser.add_argument('-v', '--verbose', action="count", default=0,
                         help='Specify once to enable warnings, twice for'
                         'informational messages')
-    parser.add_argument('-i', '--listen-address',
+    parser.add_argument('-l', '--listen-address',
                         help='IP address to listen on [%(default)s]',
                         default="0.0.0.0")
     parser.add_argument('-p', '--listen-port', type=int,

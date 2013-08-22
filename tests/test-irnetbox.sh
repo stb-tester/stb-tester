@@ -51,7 +51,7 @@ test_irnetbox_proxy() {
     start_fake_irnetbox
     proxy_port=5887
     "$srcdir"/irnetproxy.py -vv \
-        -i localhost -p $proxy_port \
+        -l localhost -p $proxy_port \
         localhost $irnetbox_port &
     proxy=$!
     trap "kill $fake_irnetbox $proxy" EXIT
