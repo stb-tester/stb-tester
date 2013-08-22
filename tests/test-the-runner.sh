@@ -99,11 +99,11 @@ test_signalname() {
 }
 
 expect_runner_to_say() {
-    for i in {1..50}; do
+    for i in {1..100}; do
         cat log | grep -qF "$1" && return
         sleep 0.1
     done
-    fail "Didn't find '$1' after 5 seconds"
+    fail "Didn't find '$1' after 10 seconds"
 }
 
 test_runner_sigint_once() {
