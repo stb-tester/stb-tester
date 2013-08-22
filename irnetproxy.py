@@ -275,14 +275,14 @@ def parse_args(args=None):
 
     parser.add_argument('-v', '--verbosity', action="count",
                         help='Increase verbosity', default=0)
-    parser.add_argument('-i', '--listen-address', dest='listen_address',
+    parser.add_argument('-i', '--listen-address',
                         help='IP address to listen on [%(default)s]',
                         default="0.0.0.0")
-    parser.add_argument('-p', '--listen-port', type=int, dest='listen_port',
+    parser.add_argument('-p', '--listen-port', type=int,
                         help='Port to listen on [%(default)s]', default=10001)
-    parser.add_argument('-r', '--irnetbox-address', dest='irnet_address',
+    parser.add_argument('-r', '--irnetbox-address',
                         help='IRNetBox address', required=True)
-    parser.add_argument('--irnetbox-port', dest='irnet_port',
+    parser.add_argument('--irnetbox-port',
                         help='IRNetBox port [%(default)s]', default=10001,
                         type=int)
 
@@ -294,8 +294,8 @@ def parse_args(args=None):
 def main():
     options = parse_args()
 
-    proxy = IRNetBoxProxy(irnet_address=options.irnet_address,
-                          irnet_port=options.irnet_port,
+    proxy = IRNetBoxProxy(irnet_address=options.irnetbox_address,
+                          irnet_port=options.irnetbox_port,
                           listen_address=options.listen_address,
                           listen_port=options.listen_port,
                           verbosity=options.verbosity)
