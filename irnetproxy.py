@@ -273,8 +273,9 @@ def parse_args(args=None):
         simultaneous TCP connections from different clients (and forwards
         the client requests on to the irNetBox over a single connection).""")
 
-    parser.add_argument('-v', '--verbosity', action="count",
-                        help='Increase verbosity', default=0)
+    parser.add_argument('-v', '--verbose', action="count", default=0,
+                        help='Specify once to enable warnings, twice for'
+                        'informational messages')
     parser.add_argument('-i', '--listen-address',
                         help='IP address to listen on [%(default)s]',
                         default="0.0.0.0")
@@ -298,7 +299,7 @@ def main():
                           irnet_port=options.irnetbox_port,
                           listen_address=options.listen_address,
                           listen_port=options.listen_port,
-                          verbosity=options.verbosity)
+                          verbosity=options.verbose)
     try:
         proxy.run()
     except (KeyboardInterrupt, StopRunning), e:
