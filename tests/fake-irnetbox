@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+"""Fake irNetBox server for unit tests.
+
+Just ACKs all requests. See ../irnetbox.py for information on the irNetBox.
+"""
+
+import socket
+import SocketServer
+import struct
+import time
+
+from irnetbox import MessageTypes
+
+
+class FakeIRNetBox(SocketServer.BaseRequestHandler):
+    def handle(self):
+        x = None
+        while x != "#":
+            try:
+                x = self.recv(1)
+            except socket.error as e:
+                if e.errno == socket.errno.ECONNRESET:
+                    print "fake-irnetbox: Client closed connection"
+                    return
+                raise
+        _data_length = struct.unpack(">H", self.recv(2))
+        message_type = ord(self.recv(1))
+        print "fake-irnetbox: Received message %s" % name(message_type)
+        if message_type in [
+            MessageTypes.POWER_ON,
+            MessageTypes.POWER_OFF,
+            MessageTypes.CPLD_INSTRUCTION,
+        ]:
+            self.send(message_type)
+        if message_type == MessageTypes.DEVICE_VERSION:
+            self.send(
+                message_type,
+                # Product ID 8 == irNetBox mk-III
+                struct.pack("<BB8H", 18, 1, 0, 0, 0, 0, 8, 0, 0, 0))
+        if message_type == MessageTypes.OUTPUT_IR_ASYNC:
+            sequence_number, = struct.unpack(">H", self.recv(2))
+            self.send(
+                MessageTypes.OUTPUT_IR_ASYNC,
+                struct.pack(">HBB", sequence_number, 0, 1))  # ACK
+            time.sleep(0.2)
+            self.send(
+                MessageTypes.IR_ASYNC_COMPLETE,
+                struct.pack(">H", sequence_number))
+        self.handle()
+
+    def recv(self, bufsize):
+        data = self.request.recv(bufsize)
+        if data:
+            print("fake-irnetbox: recv %s" % hexstring(data))
+        else:  # Apparently SocketServer gives me a non-blocking socket
+            time.sleep(0.1)
+        return data
+
+    def send(self, message_type, data=""):
+        m = struct.pack(
+            ">HB%ds" % len(data),
+            len(data),
+            message_type,
+            data)
+        self.request.sendall(m)
+        print "fake-irnetbox: Sent response %s: %s" % (
+            name(message_type), hexstring(m))
+
+
+def hexstring(s):
+    return " ".join(["%02x" % ord(x) for x in s])
+
+
+def name(message_type):
+    return {
+        MessageTypes.ERROR: "ERROR",
+        MessageTypes.POWER_ON: "POWER_ON",
+        MessageTypes.POWER_OFF: "POWER_OFF",
+        MessageTypes.CPLD_INSTRUCTION: "CPLD_INSTRUCTION",
+        MessageTypes.DEVICE_VERSION: "DEVICE_VERSION",
+        MessageTypes.SET_MEMORY: "SET_MEMORY",
+        MessageTypes.DOWNLOAD_SIGNAL: "DOWNLOAD_SIGNAL",
+        MessageTypes.OUTPUT_IR_SIGNAL: "OUTPUT_IR_SIGNAL",
+        MessageTypes.OUTPUT_IR_ASYNC: "OUTPUT_IR_ASYNC",
+        MessageTypes.IR_ASYNC_COMPLETE: "IR_ASYNC_COMPLETE",
+    }.get(message_type, message_type)
+
+
+class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    daemon_threads = True
+
+
+if __name__ == "__main__":
+    server = Server(("localhost", 0), FakeIRNetBox)
+    print "PORT=%s" % server.socket.getsockname()[1]
+    server.serve_forever()

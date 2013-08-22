@@ -1065,10 +1065,17 @@ def uri_to_remote(uri, display):
         return LircRemote(d['lircd_socket'] or '/var/run/lirc/lircd',
                           d['control_name'])
     irnb = re.match(
-        r'irnetbox:(?P<hostname>[^:]+):(?P<output>\d+):(?P<config>.+)', uri)
+        r'''irnetbox:
+            (?P<hostname>[^:]+)
+            (:(?P<port>\d+))?
+            :(?P<output>\d+)
+            :(?P<config>[^:]+)''',
+        uri,
+        re.VERBOSE)
     if irnb:
         d = irnb.groupdict()
-        return IRNetBoxRemote(d['hostname'], d['output'], d['config'])
+        return IRNetBoxRemote(
+            d['hostname'], int(d['port'] or 10001), d['output'], d['config'])
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
@@ -1211,8 +1218,9 @@ class IRNetBoxRemote:
 
     """
 
-    def __init__(self, hostname, output, config_file):
+    def __init__(self, hostname, port, output, config_file):
         self.hostname = hostname
+        self.port = port
         self.output = int(output)
         self.config = irnetbox.RemoteControlConfig(config_file)
         # Connect once so that the test fails immediately if irNetBox not found
@@ -1232,7 +1240,7 @@ class IRNetBoxRemote:
 
     def _connect(self):
         try:
-            return irnetbox.IRNetBox(self.hostname)
+            return irnetbox.IRNetBox(self.hostname, self.port)
         except socket.error as e:
             e.args = (("Failed to connect to IRNetBox %s: %s" % (
                 self.hostname, e)),)
@@ -1530,6 +1538,26 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
+
+
+def test_uri_to_remote():
+    global IRNetBoxRemote  # pylint: disable=W0601
+    orig_IRNetBoxRemote = IRNetBoxRemote
+    try:
+        IRNetBoxRemote = lambda *args: ":".join([str(x) for x in args])
+        out = uri_to_remote("irnetbox:localhost:1234:1:conf", None)
+        assert out == "localhost:1234:1:conf", (
+            "Failed to parse uri with irnetbox port. Output was '%s'" % out)
+        out = uri_to_remote("irnetbox:localhost:1:conf", None)
+        assert out == "localhost:10001:1:conf", (
+            "Failed to parse uri without irnetbox port. Output was '%s'" % out)
+        try:
+            uri_to_remote("irnetbox:localhost::1:conf", None)
+            assert False, "Uri with empty field should have raised"
+        except ConfigurationError:
+            pass
+    finally:
+        IRNetBoxRemote = orig_IRNetBoxRemote
 
 
 def test_wait_for_motion_half_motion_str_2of4():

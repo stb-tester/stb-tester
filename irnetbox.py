@@ -49,8 +49,7 @@ import time
 
 
 class IRNetBox:
-    def __init__(self, hostname):
-        port = 10001  # §5
+    def __init__(self, hostname, port=10001):  # §5
         for i in range(6):
             try:
                 self._socket = socket.socket()
