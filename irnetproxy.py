@@ -277,11 +277,10 @@ def parse_args(args=None):
     parser.add_argument('-v', '--verbose', action="count", default=0,
                         help='Specify once to enable warnings, twice for'
                         'informational messages')
-    parser.add_argument('-l', '--listen-address',
-                        help='IP address to listen on [%(default)s]',
-                        default="0.0.0.0")
-    parser.add_argument('-p', '--listen-port', type=int,
-                        help='Port to listen on [%(default)s]', default=10001)
+    parser.add_argument('-l', '--listen-address', default="0.0.0.0",
+                        help='IP address to listen on [%(default)s]')
+    parser.add_argument('-p', '--listen-port', type=int, default=10001,
+                        help='Port to listen on [%(default)s]')
     parser.add_argument('irnetbox_address', help='IRNetBox address')
     parser.add_argument('irnetbox_port', type=int, default=10001, nargs='?',
                         help='IRNetBox port [%(default)s]')
