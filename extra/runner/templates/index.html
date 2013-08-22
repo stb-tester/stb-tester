@@ -5,6 +5,7 @@
   <title>Test results {{runs[0].timestamp}} - {{runs[-1].timestamp}}</title>
 
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <link href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.min.css" rel="stylesheet">
   <style>
     table.sortable th { cursor: pointer; }
   </style>
@@ -25,6 +26,8 @@
   <div class="row-fluid" style="padding-top: 40px">
 
     <div class="span8" height="100%">
+      <input id="testruns_search_text" class="input-block-level" type="text"
+        placeholder="Specify filter. For example: 'exit status' ILIKE motiontimeout">
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -79,11 +82,15 @@
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
 <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 <script src="http://cdn.jsdelivr.net/sorttable/2/sorttable.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.3/tablequery.min.js"></script>
 <script>
   $(document).ready(function() {
     $("#details").css("height", $(window).height());
     $("#testruns tbody tr").on("click", select_testrun);
     $(document).on("keydown", navigate_testruns);
+    tablequery.set_table("#testruns");
+    tablequery.set_table_search_text("#testruns_search_text");
 
     var selected_row = $();
     function select_testrun() {
@@ -109,7 +116,7 @@
     };
     function navigate_testruns(event) {
       if (event.keyCode == 38) { // up
-        var rows = $("#testruns tbody tr");
+        var rows = $("#testruns tbody tr").filter(":visible");
         var prev = $(rows[ Math.max(0, rows.index(selected_row) - 1) ]);
         if (prev.length) {
           prev.click();
@@ -117,7 +124,7 @@
         return false;
       }
       if (event.keyCode == 40) { // down
-        var rows = $("#testruns tbody tr");
+        var rows = $("#testruns tbody tr").filter(":visible");
         var next = $(rows[
           Math.min(rows.length - 1, rows.index(selected_row) + 1) ]);
         if (next.length) {
