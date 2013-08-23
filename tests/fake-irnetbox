@@ -44,7 +44,11 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
             print "fake-irnetbox: ...with sequence number %d" % sequence_number
             self.send(
                 MessageTypes.OUTPUT_IR_ASYNC,
-                struct.pack(">HBB", sequence_number, 0, 1))  # ACK
+                # Sequence number in the ACK message is defined as big-endian
+                # in sections 5.1 and 6.1.2 of
+                # http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
+                # but experimentation shows it to be little-endian.
+                struct.pack("<HBB", sequence_number, 0, 1))  # ACK
             time.sleep(0.2)
             self.send(
                 MessageTypes.IR_ASYNC_COMPLETE,
