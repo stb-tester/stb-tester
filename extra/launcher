@@ -28,6 +28,7 @@ main() {
                     "unless overridden in the configuration file.")" \
                 --ok-label="Execute" --cancel-label="Quit" \
                 --column="Command" --column="Description" \
+                "runner"         "Test runner and reporting system" \
                 "run"            "Run a stbt script" \
                 "record"         "Record a stbt script" \
                 "config"         "Edit the configuration file" \
@@ -48,6 +49,45 @@ main() {
 }
 
 ### stbt commands ###
+
+runner() {
+    local cmd="$(
+        $ZENITY --list --separator="," --width=480 --height=220 \
+            --title="Select mode" --text="Select when to stop executions." \
+            --ok-label="Next" --cancel-label="Cancel" \
+            --column="#" --column="Description" \
+            0 "Run an stb-tester script until it fails" \
+            1 "Keep going after uninteresting failures" \
+            2 "Keep going no matter what" \
+        )"
+    [[ -z "$cmd" ]] && return
+    cmd="$(echo "$cmd" | sed s/,.*//)"  # Remove duplicate commands
+    local arg=
+    case $cmd in
+        1) arg=-k;;
+        2) arg=-kk;;
+    esac
+
+    test="$($ZENITY --file-selection --file-filter=*.py \
+                --filename="${test:-}" --title="Select test script")"
+    [[ -z "$test" ]] && return
+
+    workspace="$($ZENITY --file-selection --directory \
+        --filename="${workspace:-$(dirname "$test")}" \
+        --title="Select workspace directory")"
+    [[ -z "$workspace" ]] && return
+
+    cd "$workspace"
+    echo_command runner/run $arg $test
+    "$STBT_DIR/extra/runner/run" $arg "$test"
+
+    echo_command runner/server
+    "$STBT_DIR/extra/runner/server" &
+    local pid=$!
+    open_default http://localhost:5000/
+    trap "kill $pid" SIGINT SIGTERM
+    wait $pid
+}
 
 run() {
     test="$($ZENITY --file-selection --file-filter=*.py \
@@ -200,6 +240,10 @@ check_dependency() {
              "sudo <package-manager> install $1" >&2
         exit 1
     }
+}
+
+open_default() {
+    which xdg-open &>/dev/null && xdg-open $@ || echo open $@
 }
 
 main
