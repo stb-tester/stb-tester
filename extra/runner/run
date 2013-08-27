@@ -28,7 +28,7 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
 
 main() {
-  runner=$(dirname "$(abspath "$0")")
+  runner=$(dirname "$(realpath "$0")")
   export PYTHONUNBUFFERED=x
 
   keep_going=0
@@ -68,7 +68,7 @@ run() {
   local test testpath rundir
 
   test="$1" && shift &&
-  testpath=$(abspath "$test") &&
+  testpath=$(realpath "$test") &&
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
   mkdir "$rundir" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
@@ -84,7 +84,7 @@ run() {
   die "Failed to determine the test script's git revision."
 
   ( cd "$(dirname "$testpath")" &&
-    gitdir=$(dirname "$(abspath "$(git rev-parse --git-dir)")") &&
+    gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir)")") &&
     echo "${testpath#$gitdir/}"
   ) > test-name ||
   die "Failed to determine the test script's path relative to its git repo."
@@ -245,7 +245,7 @@ killtree() {
 }
 
 # Portable implementation of GNU "readlink -f" to support BSD/OSX.
-abspath() {
+realpath() {
   python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
 }
 

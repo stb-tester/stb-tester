@@ -15,7 +15,7 @@
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 main() {
-  runner=$(dirname "$(abspath "$0")")
+  runner=$(dirname "$(realpath "$0")")
 
   do_classify=true
   do_html=true
@@ -104,8 +104,12 @@ user_command() {
 die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
 
 # Portable implementation of GNU "readlink -f" to support BSD/OSX.
-abspath() {
+realpath() {
   python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
+}
+
+abspath() {
+  python -c 'import os, sys; print os.path.abspath(sys.argv[1])' "$1"
 }
 
 main "$@"

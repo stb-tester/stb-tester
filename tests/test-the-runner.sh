@@ -146,6 +146,20 @@ test_runner_passes_arguments_to_script() {
     assert grep 'hij' latest/index.html
 }
 
+test_runner_report_with_symlinks_for_each_testrun() {
+    # Use case: After you've run `runner/run` several times from different
+    # directories, you gather all results into a single report by symlinking
+    # each testrun into a single directory.
+
+    "$srcdir"/extra/runner/run -1 "$testdir"/test.py &&
+    mkdir new-report &&
+    ( cd new-report; ln -s ../2* . ) ||
+    fail "report directory structure setup failed"
+
+    "$srcdir"/extra/runner/report --html-only new-report/2* || return
+    [[ -f new-report/index.html ]] || fail "new-report/index.html not created"
+}
+
 test_runner_custom_logging() {
     cat "$testdir"/stbt.conf |
     sed -e "s,pre_run =,& $PWD/my-logger," \
