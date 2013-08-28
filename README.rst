@@ -335,7 +335,7 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=0.84, mask=None)
+wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=None, mask=None, motion_parameters=None)
     Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
@@ -349,13 +349,12 @@ wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=0.8
     * a string in the form "x/y", where `x` is the number of frames with motion
       detected out of a sliding window of `y` frames.
 
-    Increase `noise_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 0.0 will never report motion).
-    This is particularly useful with noisy analogue video sources.
-
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
+
+    Specify `motion_parameters` to customise the motion detection algorithm.
+    See the documentation for `MotionParameters` for details.
 
 detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None)
     Generator that yields a sequence of one `MatchResult` for each frame
@@ -372,21 +371,19 @@ detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
+detect_motion(timeout_secs=10, noise_threshold=None, mask=None, motion_parameters=None)
     Generator that yields a sequence of one `MotionResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
-    `noise_threshold` is a parameter used by the motiondetect algorithm.
-    Increase `noise_threshold` to avoid false negatives, at the risk of
-    increasing false positives (a value of 0.0 will never report motion).
-    This is particularly useful with noisy analogue video sources.
-
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
+
+    Specify `motion_parameters` to customise the motion detection algorithm.
+    See the documentation for `MotionParameters` for details.
 
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
@@ -510,6 +507,31 @@ class MatchResult
 class Position
     * `x` and `y`: Integer coordinates from the top left corner of the video
       frame.
+
+class MotionParameters
+    Parameters to customise the motion detection algorithm used by
+    `wait_for_motion` and `detect_motion`.
+
+    You can change the default values for these parameters by setting
+    a key (with the same name as the corresponding python parameter)
+    in the `[motion]` section of your stbt.conf configuration file.
+
+    `motion_threshold` (float) default: From stbt.conf
+      Increase `motion_threshold` to avoid false negatives, at the risk of
+      increasing false positives (a value of 0.0 will never report motion).
+      This is particularly useful with noisy analogue video sources, but
+      generally it is better to keep this value as low as possible to
+      maintain sensitivity to genuine motion.
+
+    `erode_passes` (int) default: 1
+      The number of erode steps in the motion detect algorithm. Increasing
+      the number of erode steps makes your test less sensitive to motion, and
+      so a greater visual change per frame is required for the motion test to
+      return True. Therefore, increasing the number of erode steps is more
+      likely to report a false negative.
+
+    Please let us know if you are having trouble with detecting motion  so
+    that we can further improve the motion detect algorithm.
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
