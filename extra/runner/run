@@ -178,6 +178,13 @@ user_command() {
 
 check_capture_hardware() {
   case "$(stbt config global.source_pipeline | awk '{print $1}')" in
+    v4l2src)
+      if grep -q "Cannot identify device '/dev/v" failure-reason; then
+        echo "v4l2 device not found; exiting."
+        return 1
+      fi
+      ;;
+
     decklinksrc)
       ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
         GST_DEBUG=decklinksrc:4 GST_DEBUG_NO_COLOR=1 \
