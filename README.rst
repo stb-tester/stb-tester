@@ -344,13 +344,14 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=0.84, mask=None)
+wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, mask=None)
     Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
     Raises `MotionTimeout` if no motion is detected after `timeout_secs`
     seconds.
 
+    `consecutive_frames` (str) default: 10/20
     Considers the video stream to have motion if there were differences between
     the specified number of `consecutive_frames`, which can be:
 
@@ -358,9 +359,13 @@ wait_for_motion(timeout_secs=10, consecutive_frames='10/20', noise_threshold=0.8
     * a string in the form "x/y", where `x` is the number of frames with motion
       detected out of a sliding window of `y` frames.
 
+    The default `consecutive_frames` value is read from stbt.conf.
+
+    `noise_threshold` (float) default: 0.84
     Increase `noise_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 0.0 will never report motion).
     This is particularly useful with noisy analogue video sources.
+    The default `noise_threshold` value is read from stbt.conf.
 
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
@@ -381,17 +386,19 @@ detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None)
+detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
     Generator that yields a sequence of one `MotionResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
+    `noise_threshold` (float) default: 0.84
     `noise_threshold` is a parameter used by the motiondetect algorithm.
     Increase `noise_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 0.0 will never report motion).
     This is particularly useful with noisy analogue video sources.
+    The default `noise_threshold` value is read from stbt.conf.
 
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels

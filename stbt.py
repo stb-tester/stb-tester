@@ -319,22 +319,27 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     pass
 
 
-def detect_motion(timeout_secs=10, noise_threshold=0.84, mask=None):
+def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the source video stream.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
+    `noise_threshold` (float) default: From stbt.conf
     `noise_threshold` is a parameter used by the motiondetect algorithm.
     Increase `noise_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 0.0 will never report motion).
     This is particularly useful with noisy analogue video sources.
+    The default `noise_threshold` value is read from stbt.conf.
 
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
     """
+
+    if noise_threshold is None:
+        noise_threshold = float(get_config('motion', 'noise_threshold'))
 
     debug("Searching for motion")
 
@@ -494,14 +499,15 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
 
 def wait_for_motion(
-        timeout_secs=10, consecutive_frames='10/20',
-        noise_threshold=0.84, mask=None):
+        timeout_secs=10, consecutive_frames=None,
+        noise_threshold=None, mask=None):
     """Search for motion in the source video stream.
 
     Returns `MotionResult` when motion is detected.
     Raises `MotionTimeout` if no motion is detected after `timeout_secs`
     seconds.
 
+    `consecutive_frames` (str) default: From stbt.conf
     Considers the video stream to have motion if there were differences between
     the specified number of `consecutive_frames`, which can be:
 
@@ -509,14 +515,23 @@ def wait_for_motion(
     * a string in the form "x/y", where `x` is the number of frames with motion
       detected out of a sliding window of `y` frames.
 
+    The default `consecutive_frames` value is read from stbt.conf.
+
+    `noise_threshold` (float) default: From stbt.conf
     Increase `noise_threshold` to avoid false negatives, at the risk of
     increasing false positives (a value of 0.0 will never report motion).
     This is particularly useful with noisy analogue video sources.
+    The default `noise_threshold` value is read from stbt.conf.
 
     `mask` is a black and white image that specifies which part of the image
     to search for motion. White pixels select the area to search; black pixels
     the area to ignore.
     """
+
+    if noise_threshold is None:
+        noise_threshold = float(get_config('motion', 'noise_threshold'))
+    if consecutive_frames is None:
+        consecutive_frames = str(get_config('motion', 'consecutive_frames'))
 
     consecutive_frames = str(consecutive_frames)
     if '/' in consecutive_frames:
