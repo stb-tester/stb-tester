@@ -82,25 +82,27 @@ python_docstrings() {
 }
 
 # Prints sed commands to apply,
-# to substitute default templatematch params from stbt.conf.
-templatematch_params() {
+# to substitute default templatematch/motiondetect params from stbt.conf.
+sub_default_params() {
     local param value
     for param in \
-        match_method \
-        match_threshold \
-        confirm_method \
-        erode_passes \
-        confirm_threshold \
+        match.match_method \
+        match.match_threshold \
+        match.confirm_method \
+        match.erode_passes \
+        match.confirm_threshold \
+        motion.noise_threshold \
+        motion.consecutive_frames \
     ; do
-        value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config match.$param)
+        value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config $param)
         # In:  `match_method` (str) default: <any value here>
         # Out: `match_method` (str) default: <value from stbt.conf>
-        echo "s,^\( *\`$param\`.* default:\) .*,\1 $value,"
+        echo "s,^\( *\`${param#*.}\`.* default:\) .*,\1 $value,"
     done
 }
 
 cat $1 |
 substitute_python_docstrings |
-sed -f <(templatematch_params) \
+sed -f <(sub_default_params) \
 > $1.new &&
 mv $1.new $1
