@@ -45,26 +45,42 @@ def main(argv):
 def record(control_recorder, script_out):
     stbt.get_frame()  # Fail early if no video
     count = itertools.count()
+    write = write_wait_for_match
     old_key = None
     script_out.write("import stbt\n\n\n")
     try:
         for key in stbt.uri_to_remote_recorder(control_recorder):
-            write_wait_for_match(script_out, count.next(), old_key)
-            script_out.write("stbt.press('%s')\n" % key)
+            if old_key and key == old_key:
+                write = write_press_until_match
+            else:
+                write(script_out, count.next(), old_key)
+                write = write_wait_for_match
             stbt.press(key)
             old_key = key
     except KeyboardInterrupt:
-        write_wait_for_match(script_out, count.next(), old_key)
+        write(script_out, count.next(), old_key)
         return
-    write_wait_for_match(script_out, count.next(), old_key)
+    write(script_out, count.next(), old_key)
 
 
 def write_wait_for_match(script_out, i, old_key):
     if old_key is None:
         return
-    filename = "%04d-%s-complete.png" % (i, old_key)
-    stbt.save_frame(stbt.get_frame(), filename)
-    script_out.write("stbt.wait_for_match('%s')\n" % filename)
+    stbt.save_frame(stbt.get_frame(), filename(i, old_key))
+    script_out.write("stbt.press('%s')\n" % old_key)
+    script_out.write("stbt.wait_for_match('%s')\n" % (filename(i, old_key)))
+
+
+def write_press_until_match(script_out, i, old_key):
+    if old_key is None:
+        return
+    stbt.save_frame(stbt.get_frame(), filename(i, old_key))
+    script_out.write("stbt.press_until_match('%s', '%s')\n" % (
+                     old_key, filename(i, old_key)))
+
+
+def filename(i, old_key):
+    return "%04d-%s-complete.png" % (i, old_key)
 
 
 if __name__ == "__main__":
