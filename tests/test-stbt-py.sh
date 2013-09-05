@@ -216,6 +216,24 @@ test_that_verbose_command_line_argument_overrides_config_file() {
     cat log | grep "verbose: 1"
 }
 
+test_that_restart_source_option_is_read() {
+    cat > test.py <<-EOF &&
+	import stbt
+	print "value: %s" % stbt._display.restart_source_enabled
+	EOF
+    # Read from the command line
+    stbt-run -v --restart-source --control none test.py &&
+    cat log | grep "restart_source: True" &&
+    cat log | grep "value: True" &&
+    echo > log &&
+    # Read from the config file
+    sed 's/restart_source = .*/restart_source = True/' \
+        "$testdir/stbt.conf" > stbt.conf &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none test.py &&
+    cat log | grep "restart_source: True" &&
+    cat log | grep "value: True"
+}
+
 test_press_visualisation() {
     [[ $(uname) == Darwin ]] && {
         echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
