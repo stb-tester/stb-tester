@@ -111,6 +111,10 @@ Global options
 --sink-pipeline=<pipeline>
   A gstreamer pipeline to use for video output, like `xvimagesink`.
 
+--restart-source
+  Restart the GStreamer source pipeline when video loss is detected, to work
+  around the behaviour of the Hauppauge HD PVR video-capture device.
+
 -v, --verbose
   Enable debug output.
 

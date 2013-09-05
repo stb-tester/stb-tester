@@ -646,6 +646,12 @@ def argparser():
         default=get_config('global', 'sink_pipeline'),
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
+    parser.add_argument(
+        '--restart-source', action='store_true',
+        default=(get_config('global', 'restart_source').lower() in
+                 ("1", "yes", "true", "on")),
+        help='Restart the GStreamer source pipeline when video loss is '
+             'detected')
 
     class IncreaseDebugLevel(argparse.Action):
         num_calls = 0
@@ -668,9 +674,11 @@ def argparser():
 
 
 def init_run(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False):
+        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
+        restart_source=False):
     global _display, _control
-    _display = Display(gst_source_pipeline, gst_sink_pipeline, save_video)
+    _display = Display(
+        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source)
     _control = uri_to_remote(control_uri, _display)
 
 
@@ -690,7 +698,8 @@ _control = None
 
 
 class Display:
-    def __init__(self, user_source_pipeline, user_sink_pipeline, save_video):
+    def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
+                 restart_source=False):
         gobject.threads_init()
 
         self.novideo = False
@@ -700,6 +709,8 @@ class Display:
         self.start_timestamp = None
         self.underrun_timeout = None
         self.video_debug = []
+
+        self.restart_source_enabled = restart_source
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
@@ -759,11 +770,9 @@ class Display:
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-buffer", self.on_new_buffer)
 
-        if get_config("global", "restart_source", default="false").lower() in (
-                "1", "yes", "true", "on"):
+        if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
             # Hauppauge HDPVR capture device.
-            debug("restart_source: true")
             source_queue = self.source_pipeline.get_by_name("q")
             self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)

@@ -36,7 +36,9 @@ def main(argv):
         raise
 
     try:
-        stbt.init_run(args.source_pipeline, args.sink_pipeline, args.control)
+        stbt.init_run(
+            args.source_pipeline, args.sink_pipeline, args.control,
+            restart_source=args.restart_source)
         record(args.control_recorder, script)
     finally:
         stbt.teardown_run()

@@ -32,7 +32,7 @@ stbt.debug("Arguments:\n" + "\n".join([
 try:
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
-        args.save_video)
+        args.save_video, args.restart_source)
     from stbt import (  # pylint: disable=W0611
         press, press_until_match, wait_for_match, wait_for_motion,
         detect_match, MatchResult, Position, detect_motion, MotionResult,
