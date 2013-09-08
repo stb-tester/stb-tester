@@ -79,10 +79,10 @@ run() {
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
   ( cd "$(dirname "$testpath")" &&
-    git describe --always --dirty
-  ) > git-commit ||
-  die "Failed to determine the test script's git revision."
+    git describe --always --dirty 2>/dev/null || echo untracked
+  ) > git-commit
 
+  grep -q untracked git-commit && echo $testpath > test-name ||
   ( cd "$(dirname "$testpath")" &&
     gitdir=$(dirname "$(abspath "$(git rev-parse --git-dir)")") &&
     echo "${testpath#$gitdir/}"

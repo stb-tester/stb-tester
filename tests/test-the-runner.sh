@@ -308,3 +308,14 @@ test_runner_results_server_shows_directory_listing() {
         <(curl http://localhost:5788/my-test-session/) ||
         fail "Didn't find index.html at '/my-test-session/'"
 }
+
+test_runner_reads_git_parameters() {
+    "$srcdir"/extra/runner/run -1 "$testdir"/test.py &&
+    grep -v untracked latest/git-commit &&
+    grep -E '^tests/test.py$' latest/test-name &&
+
+    cp "$testdir/test.py" ./test.py &&
+    "$srcdir"/extra/runner/run -1 test.py &&
+    grep untracked latest/git-commit &&
+    grep -E '^/tmp/.+/test.py$' latest/test-name
+}
