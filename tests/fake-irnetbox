@@ -26,7 +26,8 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                 raise
         _data_length = struct.unpack(">H", self.recv(2))
         message_type = ord(self.recv(1))
-        print "fake-irnetbox: Received message %s" % name(message_type)
+        print "fake-irnetbox: Received message %s (0x%02x)" % (
+            name(message_type), message_type)
         if message_type in [
             MessageTypes.POWER_ON,
             MessageTypes.POWER_OFF,
@@ -40,6 +41,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                 struct.pack("<BB8H", 18, 1, 0, 0, 0, 0, 8, 0, 0, 0))
         if message_type == MessageTypes.OUTPUT_IR_ASYNC:
             sequence_number, = struct.unpack(">H", self.recv(2))
+            print "fake-irnetbox: ...with sequence number %d" % sequence_number
             self.send(
                 MessageTypes.OUTPUT_IR_ASYNC,
                 struct.pack(">HBB", sequence_number, 0, 1))  # ACK
