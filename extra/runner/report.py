@@ -131,7 +131,7 @@ class Run:
 
 
 def die(message):
-    sys.stderr.write("report: %s\n" % message)
+    sys.stderr.write("report.py: %s\n" % message)
     sys.exit(1)
 
 
