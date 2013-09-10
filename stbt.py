@@ -602,6 +602,17 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
+def get_frame_timestamp():
+    """Returns the timestamp of the last frame processed.
+
+    This is intended to be used when the test script is running within a
+    "process_all_frames" context, where the last frame processed
+    would be where the last frame processed, i.e, where the last  match/motion
+    was detected.
+    """
+    return _display.get_frame().timestamp
+
+
 @contextlib.contextmanager
 def process_all_frames():
     """Force the pipeline to process all the frames for the duration of the
