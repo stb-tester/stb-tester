@@ -822,7 +822,7 @@ class Display:
             "tee name=t",
             "t. ! tee name=t2 "
             "t2. ! max-buffers=1 drop=true  appsink name=upstream_screenshot "
-            "t2. ! queue leaky=downstream name=q ! ffmpegcolorspace !", appsink,
+            "t2. ! ffmpegcolorspace ! queue leaky=downstream name=q !", appsink,
             video_pipeline,
             "t. ! queue leaky=downstream ! "
             "ffmpegcolorspace !", user_sink_pipeline
