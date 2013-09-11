@@ -8,6 +8,7 @@ stbt-controlc
 stbt.1
 stbt-debug
 defaults.conf
+irnetbox-proxyc
 TAGS
 VERSION
 extra/vm/.vagrant

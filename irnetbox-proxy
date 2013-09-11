@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
+#                                                               -*- python -*-
 
-"""
-A network proxy for the RedRat irNetBox MK-III infra-red emitter.
+"""A network proxy for the RedRat irNetBox MK-III infra-red emitter.
 
 Unlike the real irNetBox hardware, this proxy accepts multiple simultaneous
 TCP connections from different clients. This proxy maintains a single TCP
@@ -16,13 +16,13 @@ Usage
 -----
 
 ```
-$ irnetproxy.py <irNetBox address>
+$ irnetbox-proxy <irNetBox address>
 ```
 
 OR
 
 ```
-$ irnetproxy.py -vv \
+$ irnetbox-proxy -vv \
       --listen-port 10001 --listen-address 127.0.0.1 \
       <irNetBox address> 10001
 
@@ -32,17 +32,17 @@ $ irnetproxy.py -vv \
 Features
 --------
 
- - Session multiplexing: irnetproxy dynamically maps Asyncronous Sequence IDs
- on the fly, meaning that multiple clients can use the same Sequence ID
+ - Session multiplexing: irnetbox-proxy dynamically maps Asyncronous Sequence
+ IDs on the fly, meaning that multiple clients can use the same Sequence ID
  concurrently, and the irnet box will continue to work.  Both the command
  acknowledgement, and the subsequent Async complete message are always routed
  to the correct client.
 
- - On/Off management: irnetproxy will silently accept the on and off messages
- (5 and 6).  A standard ACK response is returned to the client, but the command
- is never sent to the device. This allows multiple scripts to try to turn off
- the device while other devices use it.  irnetproxy issues the ON command when
- it connects, and issues an OFF command when it is stopped.
+ - On/Off management: irnetbox-proxy will silently accept the on and off
+ messages (5 and 6). A standard ACK response is returned to the client, but the
+ command is never sent to the device. This allows multiple scripts to try to
+ turn off the device while other devices use it. irnetbox-proxy issues the ON
+ command when it connects, and issues an OFF command when it is stopped.
 
 """
 

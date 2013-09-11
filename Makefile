@@ -99,7 +99,7 @@ check-integrationtests:
 	$(parallel) tests/run-tests.sh
 check-pylint:
 	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
-	    irnetbox.py irnetproxy.py irnetproxy_test.py tests/fake-irnetbox \
+	    irnetbox.py irnetbox-proxy irnetproxy_test.py tests/fake-irnetbox \
 	    extra/runner/report.py extra/runner/server |\
 	$(parallel) extra/pylint.sh
 check-bashcompletion:

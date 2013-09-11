@@ -50,7 +50,7 @@ test_stbt_run_irnetbox_control() {
 test_irnetbox_proxy() {
     start_fake_irnetbox
     proxy_port=5887
-    "$srcdir"/irnetproxy.py -vv \
+    "$srcdir"/irnetbox-proxy -vv \
         -l localhost -p $proxy_port \
         localhost $irnetbox_port &
     proxy=$!
