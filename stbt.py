@@ -985,6 +985,9 @@ class Display:
         self.queue.props.max_size_bytes = 0
         self.queue.props.leaky = 0
         self.last_buffer = Queue.Queue(maxsize=0)
+        self.last_buffer.not_empty.acquire()
+        self.last_buffer.not_empty.wait()
+        self.last_buffer.not_empty.release()
         yield
         self.queue.props.max_size_buffers = prev_max_values['max_size_buffers']
         self.queue.props.max_size_time = prev_max_values['max_size_time']
