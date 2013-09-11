@@ -21,17 +21,23 @@ questions, and to Emmett Kelly for the mk-II implementation.
 
 Classes:
 
-IRNetBox -- An instance of IRNetBox holds a TCP connection to the device.
-Note that the device only accepts one TCP connection at a time, so keep this
-as short-lived as possible. For example:
+IRNetBox
+  An instance of IRNetBox holds a TCP connection to the device.
+
+  Note that the device only accepts one TCP connection at a time, so keep this
+  as short-lived as possible. For example::
 
     with irnetbox.IRNetBox("192.168.0.10") as ir:
         ir.power_on()
         ir.irsend_raw(port=1, power=100, data=binascii.unhexlify("000174F..."))
 
-RemoteControlConfig -- Holds infrared signal data from a config file produced
-by RedRat's "IR Signal Database Utility". Example usage (where "POWER" is a
-signal defined in the config file):
+  Or run './irnetbox-proxy', which accepts multiple connections and forwards
+  requests on to a real irNetBox.
+
+RemoteControlConfig
+  Holds infrared signal data from a config file produced by RedRat's "IR Signal
+  Database Utility". Example usage (where "POWER" is a signal defined in the
+  config file)::
 
     rcu = irnetbox.RemoteControlConfig("my-rcu.irnetbox.config")
     ir.irsend_raw(port=1, power=100, data=rcu["POWER"])

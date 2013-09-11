@@ -77,9 +77,12 @@ Global options
         | lirc:8700:myremote
         | lirc:192.168.100.100:8700:myremote
 
-  irnetbox:<hostname>:<output>:<config_file>
+  irnetbox:<hostname>[:<port>]:<output>:<config_file>
     RedRat irNetBox network-controlled infrared emitter hardware.
     `hostname` is the hostname or IP address of the irNetBox device.
+    `port` is the TCP port of the irNetBox device. It defaults to 10001, which
+    is the port used by real irNetBox devices; override if using an irNetBox
+    proxy that listens on a different port.
     `output` is the infrared output to use, a number between 1 and 16
     (inclusive). `config_file` is the configuration file that describes the
     infrared protocol to use; it can be created with RedRat's (Windows-only)

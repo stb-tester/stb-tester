@@ -93,14 +93,16 @@ clean:
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
-	nosetests --with-doctest -v stbt.py irnetbox.py
+	nosetests --with-doctest -v stbt.py irnetbox.py \
+	    tests/test_irnetbox_proxy.py
 check-integrationtests:
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
 check-pylint:
-	printf "%s\n" stbt.py irnetbox.py stbt-run stbt-record stbt-config \
-	    tests/fake-irnetbox \
-	    stbt-control extra/runner/report.py extra/runner/server |\
+	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
+	    irnetbox.py irnetbox-proxy \
+	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
+	    extra/runner/report.py extra/runner/server |\
 	$(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
