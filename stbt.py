@@ -653,6 +653,13 @@ def argparser():
         help='Restart the GStreamer source pipeline when video loss is '
              'detected')
 
+    parser.add_argument(
+        '--restart-source', action='store_true',
+        default=(get_config('global', 'restart_source').lower() in
+                 ("1", "yes", "true", "on")),
+        help='Restart the GStreamer source pipeline when video loss is '
+             'detected')
+
     class IncreaseDebugLevel(argparse.Action):
         num_calls = 0
 
