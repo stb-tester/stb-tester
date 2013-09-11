@@ -42,7 +42,7 @@ _stbt_run() {
         --save-video=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -f -W "$(_stbt_trailing_space \
-                        --help --verbose --save-video \
+                        --help --verbose --restart-source --save-video \
                         --control --source-pipeline --sink-pipeline)" \
             -- "$cur"));;
     esac
@@ -60,7 +60,7 @@ _stbt_record() {
         -o=*|--output-file=*) COMPREPLY=($(compgen -f -- "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
-                    --help --verbose \
+                    --help --verbose --restart-source \
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder --output-file)" \
             -- "$cur"));;
