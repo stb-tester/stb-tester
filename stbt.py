@@ -602,6 +602,21 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
+@contextlib.contextmanager
+def process_all_frames():
+    """Force the pipeline to process all the frames for the duration of the
+    call.
+
+    This will introduce a delay with the live stream but will not block the
+    pipeline. The delay will depend on which features are actually used in the
+    context of this call.
+
+    Use as a context manager in a 'with' statement.
+    """
+    with _display.process_all_frames():
+        yield
+
+
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -737,6 +752,11 @@ _display = None
 _control = None
 
 
+class OperationMode:
+    DROP_FRAMES = 0
+    PROCESS_ALL_FRAMES = 1
+
+
 class Display:
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
@@ -795,6 +815,10 @@ class Display:
 
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         self.sink_pipeline.set_state(gst.STATE_PLAYING)
+
+        self.queue = self.sink_pipeline.get_by_name('q')
+        self.operation_mode = OperationMode.DROP_FRAMES
+        self.underrun_timeout = None
 
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
@@ -881,10 +905,11 @@ class Display:
                    (buffer_or_exception.timestamp, self.last_buffer.qsize()))
 
         # Drop old frame
-        try:
-            self.last_buffer.get_nowait()
-        except Queue.Empty:
-            pass
+        if self.operation_mode == OperationMode.DROP_FRAMES:
+            try:
+                self.last_buffer.get_nowait()
+            except Queue.Empty:
+                pass
 
         self.last_buffer.put_nowait(buffer_or_exception)
 
@@ -916,6 +941,36 @@ class Display:
             newbuf.set_caps(gst_buffer.get_caps())
             newbuf.timestamp = gst_buffer.timestamp
             self.appsrc.emit("push-buffer", newbuf)
+
+    @contextlib.contextmanager
+    def process_all_frames(self):
+        """Temporarily set the pipeline to non leaky.
+        """
+        self.operation_mode = OperationMode.PROCESS_ALL_FRAMES
+        prev_max_values = {
+            'max_size_buffers': self.queue.props.max_size_buffers,
+            'max_size_time': self.queue.props.max_size_time,
+            'max_size_bytes': self.queue.props.max_size_bytes,
+            'queue_max_size': self.last_buffer.maxsize,
+            'leaky': self.queue.props.leaky,
+        }
+        self.queue.props.max_size_buffers = 0
+        self.queue.props.max_size_time = 0
+        self.queue.props.max_size_bytes = 0
+        self.queue.props.leaky = 0
+        self.last_buffer = Queue.Queue(maxsize=0)
+        yield
+        self.queue.props.max_size_buffers = prev_max_values['max_size_buffers']
+        self.queue.props.max_size_time = prev_max_values['max_size_time']
+        self.queue.props.max_size_bytes = prev_max_values['max_size_bytes']
+        self.queue.props.leaky = prev_max_values['leaky']
+        self.last_buffer = Queue.Queue(
+            maxsize=prev_max_values['queue_max_size'])
+        self.catchup_live_stream()
+
+    def catchup_live_stream(self):
+        self.operation_mode = OperationMode.DROP_FRAMES
+        self.restart_source()
 
     def on_error(self, _bus, message):
         assert message.type == gst.MESSAGE_ERROR
@@ -967,7 +1022,7 @@ class Display:
         self.create_source_pipeline()
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         warn("Restarted source pipeline")
-        if self.restart_source_enabled:
+        if self.restart_source_enabled or self.underrun_timeout:
             self.underrun_timeout.start()
         return False  # stop the timeout from running again
 

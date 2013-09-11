@@ -40,7 +40,7 @@ try:
         # explicitly import stbt in their scripts, so don't add new APIs here.
         press, press_until_match, wait_for_match, wait_for_motion,
         detect_match, MatchResult, Position, detect_motion, MotionResult,
-        save_frame, get_frame, MatchParameters,
+        save_frame, get_frame, process_all_frames, MatchParameters,
         debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
         ConfigurationError)
     __file__ = args.script
