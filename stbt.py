@@ -132,8 +132,8 @@ def press(key):
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
     """
-    _display.draw_text(key, duration_secs=3)
     _control.press(key)
+    _display.draw_text(key, duration_secs=3)
 
 
 class MatchParameters:
