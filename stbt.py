@@ -133,7 +133,7 @@ def press(key):
     If that's lirc, then `key` is a key name from your lirc config file.
     """
     _display.draw_text(key, duration_secs=3)
-    return _control.press(key)
+    _control.press(key)
 
 
 class MatchParameters:
