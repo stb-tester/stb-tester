@@ -172,6 +172,10 @@ class IRNetBox:
         response_type, response_data = self._responses.next()
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
+        if response_type != message_type:
+            raise Exception(
+                "IRNetBox returned unexpected response type %d to request %d" %
+                (response_type, message_type))
         if response_type == MessageTypes.OUTPUT_IR_ASYNC:
             sequence_number, error_code, ack = struct.unpack(
                 # Sequence number in the ACK message is defined as big-endian
