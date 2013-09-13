@@ -173,12 +173,23 @@ class IRNetBox:
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
         if response_type == MessageTypes.OUTPUT_IR_ASYNC:
-            _, error_code, ack = struct.unpack(
+            sequence_number, error_code, ack = struct.unpack(
                 # Sequence number in the ACK message is defined as big-endian
                 # in §5.1 and §6.1.2, but experimentation shows it to be
                 # little-endian.
                 '<HBB', response_data)
-            if ack != 1:
+            if ack == 1:
+                async_type, async_data = self._responses.next()
+                if async_type != MessageTypes.IR_ASYNC_COMPLETE:
+                    raise Exception(
+                        "IRNetBox returned unexpected message %d" % async_type)
+                (async_sequence_number,) = struct.unpack(">H", async_data)
+                if async_sequence_number != sequence_number:
+                    raise Exception(
+                        "IRNetBox returned message IR_ASYNC_COMPLETE "
+                        "with unexpected sequence number %d (expected %d)" %
+                        (async_sequence_number, sequence_number))
+            else:
                 raise Exception(
                     "IRNetBox returned NACK (error code: %d)" % error_code)
         if response_type == MessageTypes.DEVICE_VERSION:
@@ -258,8 +269,7 @@ def _read_responses(stream):
             response_type, response_data = struct.unpack(
                 ">B%ds" % data_len,
                 buf[2:(3 + data_len)])
-            if response_type != MessageTypes.IR_ASYNC_COMPLETE:
-                yield response_type, response_data
+            yield response_type, response_data
             buf = buf[(3 + data_len):]
 
 

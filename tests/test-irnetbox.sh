@@ -73,6 +73,25 @@ test_that_press_fails_on_irnetbox_nack() {
         fail "Didn't receive IRNetBox NACK"
 }
 
+test_that_press_waits_for_irnetbox_async_complete() {
+    start_fake_irnetbox wait
+
+    cat > test.py <<-EOF
+	import time
+	print "Before press: %d" % time.time()
+	press("MENU")
+	print "After press: %d" % time.time()
+	EOF
+    stbt-run -v \
+        --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
+        test.py || return
+
+    before=$(cat log | awk '/Before press/ {print $3}')
+    after=$(cat log | awk '/After press/ {print $3}')
+    [[ $((after - before)) -gt 1 ]] ||
+        fail "'press' returned too quickly (before: $before; after: $after)"
+}
+
 test_irnetbox_proxy() {
     start_fake_irnetbox
     proxy_port=5887

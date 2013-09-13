@@ -1245,7 +1245,6 @@ class IRNetBoxRemote:
         with self._connect() as irnb:
             irnb.irsend_raw(
                 port=self.output, power=100, data=self.config[key])
-        time.sleep(0.5)
         debug("Pressed " + key)
 
     def _connect(self):

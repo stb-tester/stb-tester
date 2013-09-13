@@ -51,7 +51,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                     MessageTypes.ERROR,
                     struct.pack("B", 40))  # error code = not enough memory
             else:
-                ack = self.server.response == "ack"
+                ack = self.server.response in ["ack", "wait"]
                 self.send(
                     MessageTypes.OUTPUT_IR_ASYNC,
                     # Sequence number in the ACK message is defined as
@@ -64,7 +64,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                         1 if ack else 0))
                 print "fake-irnetbox: ...(%s)" % ("ack" if ack else "nack")
                 if ack:
-                    time.sleep(0.2)
+                    time.sleep(2 if self.server.response == "wait" else 0.2)
                     self.send(
                         MessageTypes.IR_ASYNC_COMPLETE,
                         struct.pack(">H", sequence_number))
