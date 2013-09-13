@@ -50,6 +50,8 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                 self.send(
                     MessageTypes.ERROR,
                     struct.pack("B", 40))  # error code = not enough memory
+            elif self.server.response == "noreply":
+                pass
             else:
                 ack = self.server.response in ["ack", "wait"]
                 self.send(

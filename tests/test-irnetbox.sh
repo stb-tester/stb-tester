@@ -92,6 +92,18 @@ test_that_press_waits_for_irnetbox_async_complete() {
         fail "'press' returned too quickly (before: $before; after: $after)"
 }
 
+test_that_press_times_out_when_irnetbox_doesnt_reply() {
+    start_fake_irnetbox noreply
+
+    cat > test.py <<-EOF
+	press("MENU")
+	EOF
+    ! stbt-run -v \
+        --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
+        test.py || fail "Expected 'press' to raise exception"
+    cat log | grep -q timeout || fail "Didn't raise timeout"
+}
+
 test_irnetbox_proxy() {
     start_fake_irnetbox
     proxy_port=5887

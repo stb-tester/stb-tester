@@ -61,7 +61,6 @@ class IRNetBox:
                 self._socket = socket.socket()
                 self._socket.settimeout(10)
                 self._socket.connect((hostname, port))
-                self._socket.settimeout(None)
                 break
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED and i < 5:
