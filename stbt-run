@@ -6,6 +6,7 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
+import os
 import sys
 import traceback
 
@@ -39,6 +40,8 @@ try:
         save_frame, get_frame, MatchParameters,
         debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
         ConfigurationError)
+    __file__ = args.script
+    sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
     execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s: %s\n" % (args.script, type(e).__name__, e))
