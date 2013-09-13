@@ -172,6 +172,15 @@ class IRNetBox:
         response_type, response_data = self._responses.next()
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
+        if response_type == MessageTypes.OUTPUT_IR_ASYNC:
+            _, error_code, ack = struct.unpack(
+                # Sequence number in the ACK message is defined as big-endian
+                # in §5.1 and §6.1.2, but experimentation shows it to be
+                # little-endian.
+                '<HBB', response_data)
+            if ack != 1:
+                raise Exception(
+                    "IRNetBox returned NACK (error code: %d)" % error_code)
         if response_type == MessageTypes.DEVICE_VERSION:
             self.irnetbox_model, = struct.unpack(
                 '<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
