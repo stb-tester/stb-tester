@@ -130,9 +130,9 @@ class IRNetBoxProxy(object):
             else:
                 return
         elif response_type == self.ASYNC_COMMAND:
-            # Sequence number in the ACK message is defined as big-endian
-            # in sections 5.1 and 6.1.2 of the protocol specification,
-            # but experimentation shows it to be little-endian.
+            # Sequence number in the response message is defined as big-endian
+            # in sections 5.1 and 6.1.2 of the protocol specification v3.0,
+            # but due to a known bug it is little-endian.
             new_id, = struct.unpack_from("<H", data)
             _, old_id = self.async_commands[new_id]
             data = self.replace_sequence_id(data, old_id, little_endian=True)

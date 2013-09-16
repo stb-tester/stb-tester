@@ -59,7 +59,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                     # Sequence number in the ACK message is defined as
                     # big-endian in sections 5.1 and 6.1.2 of
                     # http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
-                    # but experimentation shows it to be little-endian.
+                    # but due to a known bug it is little-endian.
                     struct.pack(
                         "<HBB", sequence_number,
                         0 if ack else 49,  # error code = busy

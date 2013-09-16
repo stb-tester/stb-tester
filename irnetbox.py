@@ -178,7 +178,7 @@ class IRNetBox:
         if response_type == MessageTypes.OUTPUT_IR_ASYNC:
             sequence_number, error_code, ack = struct.unpack(
                 # Sequence number in the ACK message is defined as big-endian
-                # in §5.1 and §6.1.2, but experimentation shows it to be
+                # in §5.1 and §6.1.2, but due to a known bug it is
                 # little-endian.
                 '<HBB', response_data)
             if ack == 1:
