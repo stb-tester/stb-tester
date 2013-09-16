@@ -114,8 +114,10 @@ class IRNetBoxProxy(object):
             return self.make_id()
         return command_id
 
-    def replace_sequence_id(self, data, new_id):
-        return self.SEQUENCE_ID.pack(new_id) + data[self.SEQUENCE_ID.size:]
+    def replace_sequence_id(self, data, new_id, little_endian=False):
+        sequence_id_format = struct.Struct(
+            ("<" if little_endian else ">") + "H")
+        return sequence_id_format.pack(new_id) + data[sequence_id_format.size:]
 
     def get_message_from_irnet(self, expect_sync_response=True):
         header_data = safe_recv(self.irnet_sock, self.RESPONSE_HEADER.size)
@@ -133,7 +135,7 @@ class IRNetBoxProxy(object):
             # but experimentation shows it to be little-endian.
             new_id, = struct.unpack_from("<H", data)
             _, old_id = self.async_commands[new_id]
-            data = self.replace_sequence_id(data, old_id)
+            data = self.replace_sequence_id(data, old_id, little_endian=True)
             if not data[self.ACK_NACK_INDEX]:
                 # The async command request failed, remove record
                 del self.async_commands[new_id]
