@@ -61,7 +61,6 @@ class IRNetBox:
                 self._socket = socket.socket()
                 self._socket.settimeout(10)
                 self._socket.connect((hostname, port))
-                self._socket.settimeout(None)
                 break
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED and i < 5:
@@ -172,6 +171,30 @@ class IRNetBox:
         response_type, response_data = self._responses.next()
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
+        if response_type != message_type:
+            raise Exception(
+                "IRNetBox returned unexpected response type %d to request %d" %
+                (response_type, message_type))
+        if response_type == MessageTypes.OUTPUT_IR_ASYNC:
+            sequence_number, error_code, ack = struct.unpack(
+                # Sequence number in the ACK message is defined as big-endian
+                # in §5.1 and §6.1.2, but due to a known bug it is
+                # little-endian.
+                '<HBB', response_data)
+            if ack == 1:
+                async_type, async_data = self._responses.next()
+                if async_type != MessageTypes.IR_ASYNC_COMPLETE:
+                    raise Exception(
+                        "IRNetBox returned unexpected message %d" % async_type)
+                (async_sequence_number,) = struct.unpack(">H", async_data[:2])
+                if async_sequence_number != sequence_number:
+                    raise Exception(
+                        "IRNetBox returned message IR_ASYNC_COMPLETE "
+                        "with unexpected sequence number %d (expected %d)" %
+                        (async_sequence_number, sequence_number))
+            else:
+                raise Exception(
+                    "IRNetBox returned NACK (error code: %d)" % error_code)
         if response_type == MessageTypes.DEVICE_VERSION:
             self.irnetbox_model, = struct.unpack(
                 '<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
@@ -249,8 +272,7 @@ def _read_responses(stream):
             response_type, response_data = struct.unpack(
                 ">B%ds" % data_len,
                 buf[2:(3 + data_len)])
-            if response_type != MessageTypes.IR_ASYNC_COMPLETE:
-                yield response_type, response_data
+            yield response_type, response_data
             buf = buf[(3 + data_len):]
 
 

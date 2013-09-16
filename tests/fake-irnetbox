@@ -8,6 +8,7 @@ Just ACKs all requests. See ../irnetbox.py for information on the irNetBox.
 import socket
 import SocketServer
 import struct
+import sys
 import time
 
 from irnetbox import MessageTypes
@@ -28,31 +29,48 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
         message_type = ord(self.recv(1))
         print "fake-irnetbox: Received message %s (0x%02x)" % (
             name(message_type), message_type)
+
         if message_type in [
             MessageTypes.POWER_ON,
             MessageTypes.POWER_OFF,
             MessageTypes.CPLD_INSTRUCTION,
         ]:
             self.send(message_type)
+
         if message_type == MessageTypes.DEVICE_VERSION:
             self.send(
                 message_type,
                 # Product ID 8 == irNetBox mk-III
                 struct.pack("<BB8H", 18, 1, 0, 0, 0, 0, 8, 0, 0, 0))
+
         if message_type == MessageTypes.OUTPUT_IR_ASYNC:
             sequence_number, = struct.unpack(">H", self.recv(2))
             print "fake-irnetbox: ...with sequence number %d" % sequence_number
-            self.send(
-                MessageTypes.OUTPUT_IR_ASYNC,
-                # Sequence number in the ACK message is defined as big-endian
-                # in sections 5.1 and 6.1.2 of
-                # http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
-                # but experimentation shows it to be little-endian.
-                struct.pack("<HBB", sequence_number, 0, 1))  # ACK
-            time.sleep(0.2)
-            self.send(
-                MessageTypes.IR_ASYNC_COMPLETE,
-                struct.pack(">H", sequence_number))
+            if self.server.response == "error":
+                self.send(
+                    MessageTypes.ERROR,
+                    struct.pack("B", 40))  # error code = not enough memory
+            elif self.server.response == "noreply":
+                pass
+            else:
+                ack = self.server.response in ["ack", "wait"]
+                self.send(
+                    MessageTypes.OUTPUT_IR_ASYNC,
+                    # Sequence number in the ACK message is defined as
+                    # big-endian in sections 5.1 and 6.1.2 of
+                    # http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
+                    # but due to a known bug it is little-endian.
+                    struct.pack(
+                        "<HBB", sequence_number,
+                        0 if ack else 49,  # error code = busy
+                        1 if ack else 0))
+                print "fake-irnetbox: ...(%s)" % ("ack" if ack else "nack")
+                if ack:
+                    time.sleep(2 if self.server.response == "wait" else 0.2)
+                    self.send(
+                        MessageTypes.IR_ASYNC_COMPLETE,
+                        struct.pack(">HBB", sequence_number, 0, 0))
+
         self.handle()
 
     def recv(self, bufsize):
@@ -93,11 +111,18 @@ def name(message_type):
     }.get(message_type, message_type)
 
 
-class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class Server(SocketServer.ThreadingTCPServer):
     daemon_threads = True
+
+    def __init__(self, address, handler, response):
+        SocketServer.ThreadingTCPServer.__init__(self, address, handler)
+        self.response = response
 
 
 if __name__ == "__main__":
-    server = Server(("localhost", 0), FakeIRNetBox)
+    server = Server(
+        ("localhost", 0),
+        FakeIRNetBox,
+        sys.argv[1] if len(sys.argv) > 1 else "ack")
     print "PORT=%s" % server.socket.getsockname()[1]
     server.serve_forever()

@@ -132,8 +132,8 @@ def press(key):
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
     """
+    _control.press(key)
     _display.draw_text(key, duration_secs=3)
-    return _control.press(key)
 
 
 class MatchParameters:
@@ -1245,7 +1245,6 @@ class IRNetBoxRemote:
         with self._connect() as irnb:
             irnb.irsend_raw(
                 port=self.output, power=100, data=self.config[key])
-        time.sleep(0.5)
         debug("Pressed " + key)
 
     def _connect(self):
