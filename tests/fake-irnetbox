@@ -69,7 +69,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                     time.sleep(2 if self.server.response == "wait" else 0.2)
                     self.send(
                         MessageTypes.IR_ASYNC_COMPLETE,
-                        struct.pack(">H", sequence_number))
+                        struct.pack(">HBB", sequence_number, 0, 0))
 
         self.handle()
 

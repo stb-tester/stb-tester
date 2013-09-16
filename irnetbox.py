@@ -186,7 +186,7 @@ class IRNetBox:
                 if async_type != MessageTypes.IR_ASYNC_COMPLETE:
                     raise Exception(
                         "IRNetBox returned unexpected message %d" % async_type)
-                (async_sequence_number,) = struct.unpack(">H", async_data)
+                (async_sequence_number,) = struct.unpack(">H", async_data[:2])
                 if async_sequence_number != sequence_number:
                     raise Exception(
                         "IRNetBox returned message IR_ASYNC_COMPLETE "
