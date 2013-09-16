@@ -52,7 +52,7 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL) -m 0755 stbt $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 stbt irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
@@ -63,6 +63,7 @@ install: stbt stbt.1 defaults.conf
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
+	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
 	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py

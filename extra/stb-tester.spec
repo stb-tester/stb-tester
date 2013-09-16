@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.15
+Version: 0.16
 Release: 1%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
@@ -41,6 +41,7 @@ make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
 %defattr(-,root,root,-)
 
 /usr/bin/stbt
+/usr/bin/irnetbox-proxy
 /usr/libexec/stbt
 /usr/share/man/man1
 /etc/stbt
