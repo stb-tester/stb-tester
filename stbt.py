@@ -133,8 +133,14 @@ def press(key):
     If that's lirc, then `key` is a key name from your lirc config file.
     """
     _control.press(key)
-    _display.draw_text(key, duration_secs=3)
+    draw_text(key, duration_secs=3)
 
+def draw_text(text, duration_secs=3):
+    """Write the specified text to the video output.
+    * text : Text to write to screen
+    * duration_secs : Amount of seconds that the message should remain on display
+    """
+    _display.draw_text(text, duration_secs)
 
 class MatchParameters:
     """Parameters to customise the image processing algorithm used by
