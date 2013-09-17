@@ -12,7 +12,7 @@ Copyright 2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-Based on the protocol document:
+Based on the irNetBox protocol specification:
 http://www.redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf
 
 Usage
