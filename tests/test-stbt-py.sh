@@ -271,6 +271,11 @@ test_press_visualisation() {
 }
 
 test_draw_text() {
+    [[ $(uname) == Darwin ]] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
     cat > draw-text.py <<-EOF
 	import stbt
 	from time import sleep
