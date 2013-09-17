@@ -279,11 +279,11 @@ test_draw_text() {
     cat > draw-text.py <<-EOF &&
 	import stbt
 	from time import sleep
-	stbt.draw_text("Test", duration_secs=3000)
+	stbt.draw_text("Test", duration_secs=3)
 	sleep(3)
 	EOF
     stbt-run -v --control none --save-video video.webm \
-        --source-pipeline 'videotestsrc pattern=black' \
+        --source-pipeline 'videotestsrc is-live=true pattern=black' \
         draw-text.py &&
     cat > check-draw-text.py <<-EOF &&
 	import stbt
