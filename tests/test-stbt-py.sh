@@ -269,3 +269,27 @@ test_press_visualisation() {
         verify2.py ||
     fail "Didn't find double keypress in output video"
 }
+
+test_draw_text() {
+    [[ $(uname) == Darwin ]] && {
+        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
+        return 0
+    }
+
+    cat > draw-text.py <<-EOF &&
+	import stbt
+	from time import sleep
+	stbt.draw_text("Test", duration_secs=3)
+	sleep(3)
+	EOF
+    stbt-run -v --control none --save-video video.webm \
+        --source-pipeline 'videotestsrc is-live=true pattern=black' \
+        draw-text.py &&
+    cat > check-draw-text.py <<-EOF &&
+	import stbt
+	wait_for_match("$testdir/draw-text.png")
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        check-draw-text.py
+}

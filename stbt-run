@@ -35,6 +35,8 @@ try:
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source)
     from stbt import (  # pylint: disable=W0611
+        # For backwards compatibility. We want to encourage people to
+        # explicitly import stbt in their scripts, so don't add new APIs here.
         press, press_until_match, wait_for_match, wait_for_motion,
         detect_match, MatchResult, Position, detect_motion, MotionResult,
         save_frame, get_frame, MatchParameters,
