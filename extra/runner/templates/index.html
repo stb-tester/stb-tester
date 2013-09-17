@@ -28,6 +28,7 @@
     <div class="span8" height="100%">
       <input id="testruns_search_text" class="input-block-level" type="text"
         placeholder="Specify filter. For example: 'exit status' ILIKE motiontimeout">
+      <p id="totals"></p>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -91,6 +92,7 @@
     $(document).on("keydown", navigate_testruns);
     tablequery.set_table("#testruns");
     tablequery.set_table_search_text("#testruns_search_text");
+    update_totals();
 
     var selected_row = $();
     function select_testrun() {
@@ -132,6 +134,23 @@
         }
         return false;
       }
+    };
+
+    function update_totals() {
+      var num_success = $(".success:visible").length;
+      var num_errors = $(".error:visible").length;
+      var num_warnings = $(".warning:visible").length;
+      var num_total = num_success + num_errors + num_warnings;
+      var percent_success = 0;
+      if (num_total > 0) {
+        percent_success = parseInt(num_success / num_total * 100);
+      }
+
+      $("#totals").html(
+        "<b>Success rate:</b> " + percent_success + "% (" +
+        num_success + " out of " + num_total + " tests passed, " +
+        num_errors + " UITestFailures, " + num_warnings + " other failures)"
+      );
     };
   });
 </script>
