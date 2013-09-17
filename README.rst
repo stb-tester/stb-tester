@@ -414,6 +414,11 @@ save_frame(image, filename)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
+draw_text(text, duration_secs=3)
+    Write the specified `text` to the video output.
+
+    `duration_secs` is the number of seconds that the text should be displayed.
+
 get_config(section, key, default=None)
     Read the value of `key` from `section` of the stbt config file.
 

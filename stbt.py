@@ -137,9 +137,9 @@ def press(key):
 
 
 def draw_text(text, duration_secs=3):
-    """Write the specified text to the video output.
-    * text : Text to write to screen
-    * duration_secs : Amount of seconds that the message should remain on display
+    """Write the specified `text` to the video output.
+
+    `duration_secs` is the number of seconds that the text should be displayed.
     """
     _display.draw_text(text, duration_secs)
 
