@@ -276,7 +276,7 @@ test_draw_text() {
         return 0
     }
 
-    cat > draw-text.py <<-EOF
+    cat > draw-text.py <<-EOF &&
 	import stbt
 	from time import sleep
 	stbt.draw_text("Test", duration_secs=3000)
@@ -284,8 +284,8 @@ test_draw_text() {
 	EOF
     stbt-run -v --control none --save-video video.webm \
         --source-pipeline 'videotestsrc pattern=black' \
-        draw-text.py
-    cat > check-draw-text.py <<-EOF
+        draw-text.py &&
+    cat > check-draw-text.py <<-EOF &&
 	import stbt
 	wait_for_match("$testdir/draw-text.png")
 	EOF
