@@ -39,7 +39,7 @@ try:
         detect_match, MatchResult, Position, detect_motion, MotionResult,
         save_frame, get_frame, MatchParameters,
         debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
-        ConfigurationError)
+        ConfigurationError, draw_text)
     __file__ = args.script
     sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
     execfile(args.script)
