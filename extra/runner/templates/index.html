@@ -6,6 +6,7 @@
 
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
   <style>
+    #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
   </style>
 </head>
@@ -27,6 +28,7 @@
     <div class="span8" height="100%">
       <input id="testruns_search_text" class="input-block-level" type="text"
         placeholder="Specify filter. For example: 'exit status' ILIKE motiontimeout">
+      <p id="totals"></p>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -89,6 +91,8 @@
     $(document).on("keydown", navigate_testruns);
     tablequery.set_table("#testruns");
     tablequery.set_table_search_text("#testruns_search_text");
+    tablequery.on("search", update_totals);
+    update_totals();
 
     var selected_row = $();
     function select_testrun() {
@@ -130,6 +134,23 @@
         }
         return false;
       }
+    };
+
+    function update_totals() {
+      var num_success = $(".success:visible").length;
+      var num_failed = $(".error:visible").length;  // red
+      var num_warnings = $(".warning:visible").length;  // yellow
+      var num_total = num_success + num_failed + num_warnings;
+      var percent_success = 0;
+      if (num_total > 0) {
+        percent_success = parseInt(num_success / num_total * 100);
+      }
+
+      $("#totals").html(
+        "<span class='text-success'>Passed: " + num_success + "/" + num_total +
+        " (" + percent_success + "%).</span> " +
+        "<span class='text-error'>Failed: " + num_failed + ".</span> " +
+        "<span class='text-warning'>Errors: " + num_warnings + ".</span>");
     };
   });
 </script>
