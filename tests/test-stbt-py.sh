@@ -282,10 +282,15 @@ test_draw_text() {
 	stbt.draw_text("Test", duration_secs=3000)
 	sleep(3)
 	EOF
-    stbt-run -v draw-text.py --source-pipeline 'videotestsrc pattern=black' --control none --sink-pipeline 'vp8enc speed=7 ! webmmux ! filesink location=video.webm'
+    stbt-run -v --control none \
+        --source-pipeline 'videotestsrc pattern=black' \
+        --sink-pipeline 'vp8enc speed=7 ! webmmux ! filesink location=video.webm' \
+        draw-text.py
     cat > check-draw-text.py <<-EOF
 	import stbt
 	wait_for_match("$testdir/draw-text.png")
 	EOF
-    stbt-run -v check-draw-text.py --source-pipeline 'filesrc location=video.webm ! decodebin'  --control none
+    stbt-run -v --control none \
+        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        check-draw-text.py
 }
