@@ -8,8 +8,11 @@ TCP connections from different clients. This proxy maintains a single TCP
 connection to the irNetBox, and multiplexes incoming client connections onto
 this single connection.
 
-Based on the protocol document:
+Copyright 2013 YouView TV Ltd.
+License: LGPL v2.1 or (at your option) any later version (see
+https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
+Based on the protocol document:
 http://www.redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf
 
 Usage
