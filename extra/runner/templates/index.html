@@ -178,13 +178,21 @@
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 <script>
   $(document).ready(function() {
-    var plotSeries = [[]];
+    var plotSeries = [[], [], []];
     $($('#testruns > tbody > tr').get().reverse()).each(
       function(index, element) {
         var timestamp = element.cells.item(0).textContent;
         var hms = element.cells.item(5).textContent.split(':');
         var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
-        plotSeries[0].push([index, duration_sec, timestamp]);
+        var seriesIndex;
+        if (element.className == 'success') {
+          seriesIndex = 0;
+        } else if (element.className == 'warning') {
+          seriesIndex = 1;
+        } else if (element.className == 'error') {
+          seriesIndex = 2;
+        }
+        plotSeries[seriesIndex].push([index, duration_sec, timestamp]);
     });
     var plotOptions = {
       seriesDefaults: {
@@ -192,6 +200,23 @@
         showMarker: true,
         markerOptions: { size: 5 }
       },
+      series: [{
+          label: 'success',
+          color: 'gray',
+        }, {
+          label: 'warning',
+          color: 'orange',
+          markerOptions: {
+            style: 'filledSquare'
+          }
+        }, {
+          label: 'error',
+          color: 'red',
+          markerOptions: {
+            style: 'filledSquare'
+          }
+        }
+      ],
       highlighter: {
         show: true,
         yvalues: 1,
