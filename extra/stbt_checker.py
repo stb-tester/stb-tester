@@ -29,7 +29,6 @@ class StbtChecker(BaseChecker):
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
         'E7001': ('Image "%s" not found on disk',
-                  'stbt-image-path-error',
                   'Used when the image path given to `stbt.wait_for_match` '
                   'etc. does not exist on disk.'),
     }
