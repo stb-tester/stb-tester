@@ -5,10 +5,12 @@
   <title>Test results {{runs[0].timestamp}} - {{runs[-1].timestamp}}</title>
 
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.css" rel="stylesheet" />
   <style>
     #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
     #details { position: fixed; }
+    #plotdiv { margin-top: 2em; height: 250px; width: 100%; }
   </style>
 </head>
 
@@ -27,6 +29,7 @@
   <div class="row-fluid" style="padding-top: 40px">
 
     <div class="span8" height="100%">
+      <div id="plotdiv"></div>
       <input id="testruns_search_text" class="input-block-level" type="text"
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
@@ -165,6 +168,73 @@
         "<span class='text-error'>Failed: " + num_failed + ".</span> " +
         "<span class='text-warning'>Errors: " + num_warnings + ".</span>");
     };
+  });
+</script>
+
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.highlighter.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.cursor.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasTextRenderer.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+<script>
+  $(document).ready(function() {
+    var plotSeries = [[]];
+    $($('#testruns > tbody > tr').get().reverse()).each(
+      function(index, element) {
+        var timestamp = element.cells.item(0).textContent;
+        var hms = element.cells.item(5).textContent.split(':');
+        var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
+        plotSeries[0].push([index, duration_sec, timestamp]);
+    });
+    var plotOptions = {
+      seriesDefaults: {
+        showLine: false,
+        showMarker: true,
+        markerOptions: { size: 5 }
+      },
+      highlighter: {
+        show: true,
+        yvalues: 1,
+        tooltipAxes: 'y',
+        tooltipLocation: 'n',
+        sizeAdjust: 10,
+        tooltipContentEditor: function(str, seriesIndex, pointIndex, plot) {
+          return plotSeries[seriesIndex][pointIndex][2];
+        }
+      },
+      cursor: { show: false },
+      axesDefaults: { pad: 0 },
+      axes: {
+        xaxis: {
+          tickOptions: {
+            showLabel: false,
+            showGridline: false,
+            showMark: false
+          }
+        },
+        yaxis: {
+          labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+          labelOptions: {
+            fontFamily: 'sans-serif',
+            fontSize: '10pt'
+          },
+          label: 'duration (s)'
+        }
+      }
+    };
+    var plot1 = $.jqplot('plotdiv', plotSeries, plotOptions);
+    $(window).resize(function() {
+      plot1.replot( { resetAxes: true } );
+    });
+    $('#plotdiv').bind('jqplotDataClick',
+      function (ev, seriesIndex, pointIndex, data) {
+        var timestamp = plotSeries[seriesIndex][pointIndex][2];
+        var row = $("#testruns tbody tr td:first-child").filter(function() {
+          return $(this).text() == timestamp;
+        }).parent("tr");
+        row.click();
+      }
+    );
   });
 </script>
 
