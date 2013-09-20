@@ -68,6 +68,8 @@ python_docstrings() {
     doc save_frame
     doc get_frame
     doc draw_text
+    doc load_image
+    doc match_template
     doc get_config
     doc debug
     doc MatchParameters
@@ -79,8 +81,6 @@ python_docstrings() {
     doc NoVideo
     doc UITestFailure
     doc UITestError
-    doc load_image
-    doc match_template
 }
 
 # Prints sed commands to apply,

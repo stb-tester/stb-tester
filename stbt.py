@@ -570,6 +570,123 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
+def load_image(filepath, flag=1):
+    """Load an image from disk at location filepath.
+
+    `flag` is lifted from cv2.imread, where:
+
+    - >0 Loads the image with 3 channels (no alpha)
+    - =0 Loads the image with 1 channel (greyscale)
+    - <0 Loads the image "as is" (with alpha)
+
+    See http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread
+    """
+
+    f = _find_path(filepath)
+    if not os.path.isfile(f):
+        raise UITestError("No such file: '%s'" % f)
+    im = cv2.imread(f, flag)
+    if im is None:
+        raise UITestError("Failed to load image file: '%s'" % f)
+
+    return im
+
+
+def match_template(image, template, match_parameters=None):
+    """stb-tester's core template matching algorithm. Attempts to match a given
+    template to a section of a source image of equal or greater size.
+    Returns True/False.
+
+    `image` is the source image in the form of a gst/numpy array; e.g. a frame
+    from a source video, as supplied by stbt.frames()
+
+    `template` is the template to match to image in the form of a opencv/numpy
+    array; e.g. as loaded by stbt.load_image()
+
+    Specificy match_parameters to customise the image matching algorithm.
+    See the documentation for MatchParameters for details.
+    """
+
+    if not isinstance(image, numpy.ndarray):
+        raise TypeError("Specified `image` is not of type `numpy.ndarray`")
+    if not isinstance(template, numpy.ndarray):
+        raise TypeError("Specified `template` is not of type `numpy.ndarray`")
+
+    if match_parameters is None:
+        match_parameters = MatchParameters()
+
+    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
+
+    match_method_cv2 = {
+        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
+        'ccorr-normed': cv2.TM_CCORR_NORMED,
+        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
+    }[match_parameters.match_method]
+    matches_heatmap = cv2.matchTemplate(
+        image, template, match_method_cv2)
+    log(image, "source")
+    log(template, "template")
+    log(matches_heatmap, "source_matchtemplate")
+
+    min_value, max_value, min_location, max_location = cv2.minMaxLoc(
+        matches_heatmap)
+    if match_method_cv2 == cv2.TM_SQDIFF_NORMED:
+        first_pass_certainty = (1 - min_value)
+        position = Position(*min_location)
+    elif match_method_cv2 in (
+            cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
+        first_pass_certainty = max_value
+        position = Position(*max_location)
+    else:
+        assert False, "Invalid matchTemplate method '%s'" % (
+            match_method_cv2)
+
+    matched = False
+    if first_pass_certainty >= match_parameters.match_threshold:
+        if match_parameters.confirm_method == "none":
+            matched = True
+        else:
+            # Set Region Of Interest to the "best match" location
+            roi = image[
+                position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+                position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
+            image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            log(roi, "source_roi")
+            log(image_gray, "source_roi_gray")
+            log(template_gray, "template_gray")
+
+            if match_parameters.confirm_method == "normed-absdiff":
+                cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
+                cv2.normalize(
+                    template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
+                log(image_gray, "source_roi_gray_normalized")
+                log(template_gray, "template_gray_normalized")
+
+            absdiff = cv2.absdiff(image_gray, template_gray)
+            _, thresholded = cv2.threshold(
+                absdiff, int(match_parameters.confirm_threshold * 255),
+                255, cv2.THRESH_BINARY)
+            eroded = cv2.erode(
+                thresholded,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+                iterations=match_parameters.erode_passes)
+            log(absdiff, "absdiff")
+            log(thresholded, "absdiff_threshold")
+            log(eroded, "absdiff_threshold_erode")
+
+            matched = (cv2.countNonZero(eroded) == 0)
+
+    cv2.rectangle(
+        image,
+        (position.x, position.y),  # pylint: disable=E1101
+        (position.x + template.shape[1], position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+        (32, 0 if matched else 255, 255),  # bgr
+        thickness=3)
+
+    return matched, position, first_pass_certainty
+
+
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -969,123 +1086,6 @@ def gst_to_opencv(gst_buffer):
          3),
         buffer=gst_buffer.data,
         dtype=numpy.uint8)
-
-
-def load_image(filepath, flag=1):
-    """Load an image from disk at location filepath.
-
-    `flag` is lifted from cv2.imread, where:
-
-    - >0 Loads the image with 3 channels (no alpha)
-    - =0 Loads the image with 1 channel (greyscale)
-    - <0 Loads the image "as is" (with alpha)
-
-    See http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread
-    """
-
-    f = _find_path(filepath)
-    if not os.path.isfile(f):
-        raise UITestError("No such file: '%s'" % f)
-    im = cv2.imread(f, flag)
-    if im is None:
-        raise UITestError("Failed to load image file: '%s'" % f)
-
-    return im
-
-
-def match_template(image, template, match_parameters=None):
-    """stb-tester's core template matching algorithm. Attempts to match a given
-    template to a section of a source image of equal or greater size.
-    Returns True/False.
-
-    `image` is the source image in the form of a gst/numpy array; e.g. a frame
-    from a source video, as supplied by stbt.frames()
-
-    `template` is the template to match to image in the form of a opencv/numpy
-    array; e.g. as loaded by stbt.load_image()
-
-    Specificy match_parameters to customise the image matching algorithm.
-    See the documentation for MatchParameters for details.
-    """
-
-    if not isinstance(image, numpy.ndarray):
-        raise TypeError("Specified `image` is not of type `numpy.ndarray`")
-    if not isinstance(template, numpy.ndarray):
-        raise TypeError("Specified `template` is not of type `numpy.ndarray`")
-
-    if match_parameters is None:
-        match_parameters = MatchParameters()
-
-    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
-
-    match_method_cv2 = {
-        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
-        'ccorr-normed': cv2.TM_CCORR_NORMED,
-        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
-    }[match_parameters.match_method]
-    matches_heatmap = cv2.matchTemplate(
-        image, template, match_method_cv2)
-    log(image, "source")
-    log(template, "template")
-    log(matches_heatmap, "source_matchtemplate")
-
-    min_value, max_value, min_location, max_location = cv2.minMaxLoc(
-        matches_heatmap)
-    if match_method_cv2 == cv2.TM_SQDIFF_NORMED:
-        first_pass_certainty = (1 - min_value)
-        position = Position(*min_location)
-    elif match_method_cv2 in (
-            cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
-        first_pass_certainty = max_value
-        position = Position(*max_location)
-    else:
-        assert False, "Invalid matchTemplate method '%s'" % (
-            match_method_cv2)
-
-    matched = False
-    if first_pass_certainty >= match_parameters.match_threshold:
-        if match_parameters.confirm_method == "none":
-            matched = True
-        else:
-            # Set Region Of Interest to the "best match" location
-            roi = image[
-                position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
-                position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
-            image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-            log(roi, "source_roi")
-            log(image_gray, "source_roi_gray")
-            log(template_gray, "template_gray")
-
-            if match_parameters.confirm_method == "normed-absdiff":
-                cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
-                cv2.normalize(
-                    template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-                log(image_gray, "source_roi_gray_normalized")
-                log(template_gray, "template_gray_normalized")
-
-            absdiff = cv2.absdiff(image_gray, template_gray)
-            _, thresholded = cv2.threshold(
-                absdiff, int(match_parameters.confirm_threshold * 255),
-                255, cv2.THRESH_BINARY)
-            eroded = cv2.erode(
-                thresholded,
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
-                iterations=match_parameters.erode_passes)
-            log(absdiff, "absdiff")
-            log(thresholded, "absdiff_threshold")
-            log(eroded, "absdiff_threshold_erode")
-
-            matched = (cv2.countNonZero(eroded) == 0)
-
-    cv2.rectangle(
-        image,
-        (position.x, position.y),  # pylint: disable=E1101
-        (position.x + template.shape[1], position.y + template.shape[0]),  # pylint: disable=E1101,C0301
-        (32, 0 if matched else 255, 255),  # bgr
-        thickness=3)
-
-    return matched, position, first_pass_certainty
 
 
 _frame_number = 0
