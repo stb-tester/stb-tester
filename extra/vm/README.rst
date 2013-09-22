@@ -27,7 +27,7 @@ The VM will recognise any of the following devices connected to your host PC:
 * RedRat3 USB infrared transceiver
 
 To use the RedRat3 (or any other lirc-based infrared emitter) you still have to
-install & configure ``lirc`` yourself. In particular, you'll need to provide a
-``/etc/lirc/lircd.conf`` file describing your remote control; and edit
-``/etc/lirc/hardware.conf`` to set ``REMOTE_DEVICE`` (e.g. ``/dev/lirc0``) and
-``START_LIRCD=true``.
+provide a ``/etc/lirc/lircd.conf`` file describing your remote control; see
+`"Configuring LIRC" <http://stb-tester.com/lirc.html>`_. If your infrared
+hardware device is something other than ``/dev/lirc0`` then you'll also need to
+edit ``REMOTE_DEVICE`` in ``/etc/lirc/hardware.conf``.

@@ -38,6 +38,15 @@ install_packages || {
 # https://bugs.launchpad.net/ubuntu/+source/virtualbox/+bug/1160401
 apt-get install -y linux-generic-lts-quantal
 
+DEBIAN_FRONTEND=noninteractive apt-get install -y lirc
+sed -i \
+    -e 's,^START_LIRCD="false",START_LIRCD="true",' \
+    -e 's,^REMOTE_DEVICE=".*",REMOTE_DEVICE="/dev/lirc0",' \
+    /etc/lirc/hardware.conf
+service lirc start
+# You still need to install /etc/lirc/lircd.conf with a description of your
+# remote control's infrared protocol. See http://stb-tester.com/lirc.html
+
 usermod -a -G video vagrant
 
 sudo su - vagrant /vagrant/setup-vagrant-user.sh
