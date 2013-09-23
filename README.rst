@@ -325,6 +325,17 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
+wait_for_all_matches(images, timeout_secs=10, match_parameters=None)
+    Search for multiple `images` in the source video stream.
+
+    Returns a dictionary of "`template`: `MatchResult`" when all `image`s
+    are found.
+    Raises `MatchAllTimeout` if not all of the matches are found within
+    `timeout_secs` seconds.
+
+    Specify `match_parameters` to customise the image matching algorithm.
+    See the documentation for `MatchParamters` for details.
+
 press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=None)
     Calls `press` as many times as necessary to find the specified `image`.
 
@@ -557,6 +568,13 @@ class MatchTimeout(UITestFailure)
       for the expected image timed out.
     * `expected`: Filename of the image that was being searched for.
     * `timeout_secs`: Number of seconds that the image was searched for.
+
+class MatchAllTimeout(UITestFailure)
+    * `screenshot`: An OpenCV image from the source video when the search
+      for the expect images timed out.
+    * `did_match`: List of filenames of all the images that were matched.
+    * `did_not_match`" List of filenames of the images that were not matched.
+    * `timeout_secs`: Number of seconds that the images were searched for.
 
 class MotionTimeout(UITestFailure)
     * `screenshot`: An OpenCV image from the source video when the search

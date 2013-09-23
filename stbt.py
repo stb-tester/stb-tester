@@ -449,6 +449,54 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
+def wait_for_all_matches(images, timeout_secs=10, match_parameters=None):
+    """Search for multiple `images` in the source video stream.
+
+    Returns a dictionary of "`template`: `MatchResult`" when all `image`s
+    are found.
+    Raises `MatchAllTimeout` if not all of the matches are found within
+    `timeout_secs` seconds.
+
+    Specify `match_parameters` to customise the image matching algorithm.
+    See the documentation for `MatchParamters` for details.
+    """
+
+    if match_parameters == None:
+        match_parameters = MatchParameters()
+
+    match_results = {}
+
+    for frame, timestamp in frames(timeout_secs):
+        for template in images:
+
+            debug("Searching for " + template)
+
+            matched = position = first_pass_certainty = None
+            matched, position, first_pass_certainty = \
+                match_template(
+                    frame, load_image(template),
+                    match_parameters=match_parameters)
+
+            result = MatchResult(
+                timestamp=timestamp,
+                match=matched,
+                position=position,
+                first_pass_result=first_pass_certainty)
+            debug("%s found: %s" % (
+                "Match" if matched else "Weak match", str(result)))
+
+            if matched:
+                match_results[template] = result
+                images.remove(template)
+
+        if not images:
+            print "Found all matches."
+            return match_results
+
+    raise MatchAllTimeout(
+            get_frame(), match_results.keys(), images, timeout_secs)
+
+
 def press_until_match(key, image, interval_secs=3, noise_threshold=None,
                       max_presses=10, match_parameters=None):
     """Calls `press` as many times as necessary to find the specified `image`.
@@ -726,6 +774,42 @@ class MatchTimeout(UITestFailure):
     def __str__(self):
         return "Didn't find match for '%s' within %d seconds." % (
             self.expected, self.timeout_secs)
+
+
+class MatchAllTimeout(UITestFailure):
+    """
+    * `screenshot`: An OpenCV image from the source video when the search
+      for the expect images timed out.
+    * `did_match`: List of filenames of all the images that were matched.
+    * `did_not_match`" List of filenames of the images that were not matched.
+    * `timeout_secs`: Number of seconds that the images were searched for.
+    """
+    def __init__(self, screenshot, did_match, did_not_match, timeout_secs):
+        super(MatchAllTimeout, self).__init__()
+        self.screenshot = screenshot
+        self.did_match = did_match
+        self.did_not_match = did_not_match
+        self.timeout_secs = timeout_secs
+
+    def __str__(self):
+        _dm_msg = ''
+        _dnm_msg = ''
+        if self.did_match:
+            _did_match = ' and '.join(
+                [', '.join(self.did_match[:-1]), self.did_match[-1]]) \
+                if len(self.did_match) > 1 else self.did_match[0]
+            _dm_msg = "Found match%s for %s. " % (
+                "es" if len(self.did_match) > 1 else "", _did_match)
+
+        if self.did_not_match:
+            _did_not_match = ' and '.join(
+                [', '.join(self.did_not_match[:-1]), self.did_not_match[-1]]) \
+                if len(self.did_not_match) > 1 else self.did_not_match[0]
+            _dnm_msg = "Didn't find match%s for %s within %d seconds." % (
+                "es" if len(self.did_not_match) > 1 else "", _did_not_match,
+                self.timeout_secs)
+
+        return (_dm_msg + _dnm_msg)
 
 
 class MotionTimeout(UITestFailure):
