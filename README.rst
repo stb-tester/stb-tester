@@ -548,6 +548,31 @@ class UITestFailure(Exception)
 class UITestError(Exception)
     The test script had an unrecoverable error.
 
+load_image(filepath, flag=1)
+    Load an image from disk at location filepath.
+
+    `flag` is lifted from cv2.imread, where:
+
+    - >0 Loads the image with 3 channels (no alpha)
+    - =0 Loads the image with 1 channel (greyscale)
+    - <0 Loads the image "as is" (with alpha)
+
+    See http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread
+
+match_template(image, template, match_parameters=None)
+    stb-tester's core template matching algorithm. Attempts to match a given
+    template to a section of a source image of equal or greater size.
+    Returns True/False.
+
+    `image` is the source image in the form of a gst/numpy array; e.g. a frame
+    from a source video, as supplied by stbt.frames()
+
+    `template` is the template to match to image in the form of a opencv/numpy
+    array; e.g. as loaded by stbt.load_image()
+
+    Specificy match_parameters to customise the image matching algorithm.
+    See the documentation for MatchParameters for details.
+
 
 .. <end python docs>
 
