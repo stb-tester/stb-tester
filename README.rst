@@ -103,13 +103,13 @@ Global options
     videotestsrc's pattern property (see `gst-inspect videotestsrc`).
 
 --source-pipeline=<pipeline>
-  A gstreamer pipeline providing a video stream to use as video output from the
+  A GStreamer pipeline providing a video stream to use as video output from the
   set-top box under test.  For the Hauppauge HD PVR use::
 
       v4l2src device=/dev/video0 ! mpegtsdemux ! video/x-h264 ! decodebin2
 
 --sink-pipeline=<pipeline>
-  A gstreamer pipeline to use for video output, like `xvimagesink`.
+  A GStreamer pipeline to use for video output, like `xvimagesink`.
 
 --restart-source
   Restart the GStreamer source pipeline when video loss is detected, to work
@@ -232,16 +232,16 @@ Using software components instead
 If you don't mind instrumenting the system under test, you don't even need the
 above hardware components.
 
-stb-tester uses gstreamer, an open source multimedia framework. Instead of a
-video-capture card you can use any gstreamer video-source element. For example:
+stb-tester uses GStreamer, an open source multimedia framework. Instead of a
+video-capture card you can use any GStreamer video-source element. For example:
 
 * If you run tests against a VM running the set-top box software instead
-  of a physical set-top box, you could use the ximagesrc gstreamer
+  of a physical set-top box, you could use the ximagesrc GStreamer
   element to capture video from the VM's X Window.
 
 * If your set-top box uses DirectFB, you could install the DirectFBSource
-  gstreamer element (https://bugzilla.gnome.org/show_bug.cgi?id=685877) on the
-  set-top box to stream video to a updsrc gstreamer element on the test rig.
+  GStreamer element (https://bugzilla.gnome.org/show_bug.cgi?id=685877) on the
+  set-top box to stream video to a updsrc GStreamer element on the test rig.
 
 Instead of a hardware infra-red receiver + emitter, you can use a software
 equivalent (for example a server running on the set-top box that listens on
@@ -264,7 +264,8 @@ SOFTWARE REQUIREMENTS
 
 * Drivers for any required hardware components.
 
-* gstreamer 0.10 (multimedia framework) + gst-plugins-base + gst-plugins-good.
+* GStreamer 0.10 (multimedia framework) + gstreamer-plugins-base +
+  gstreamer-plugins-good.
 
 * python (we have tested with 2.6 and 2.7; on <2.7 you will also need to
   install the python-argparse package) + pygst + docutils (for building
