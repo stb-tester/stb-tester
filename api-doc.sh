@@ -83,7 +83,7 @@ python_docstrings() {
 
 # Prints sed commands to apply,
 # to substitute default templatematch/motiondetect params from stbt.conf.
-sub_default_params() {
+substitute_default_params() {
     local param value
     for param in \
         match.match_method \
@@ -103,6 +103,6 @@ sub_default_params() {
 
 cat $1 |
 substitute_python_docstrings |
-sed -f <(sub_default_params) \
+sed -f <(substitute_default_params) \
 > $1.new &&
 mv $1.new $1
