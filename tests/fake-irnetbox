@@ -25,7 +25,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                     print "fake-irnetbox: Client closed connection"
                     return
                 raise
-        _data_length = struct.unpack(">H", self.recv(2))
+        _ = struct.unpack(">H", self.recv(2))
         message_type = ord(self.recv(1))
         print "fake-irnetbox: Received message %s (0x%02x)" % (
             name(message_type), message_type)

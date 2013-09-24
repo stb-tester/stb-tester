@@ -54,7 +54,7 @@ import sys
 import time
 
 
-class IRNetBox:
+class IRNetBox(object):
     def __init__(self, hostname, port=10001):  # §5
         for i in range(6):
             try:
@@ -207,7 +207,7 @@ def RemoteControlConfig(filename):
     return _parse_config(open(filename))
 
 
-class MessageTypes:
+class MessageTypes(object):
     """§5.2"""
     ERROR = 0x01
     POWER_ON = 0x05
@@ -221,7 +221,7 @@ class MessageTypes:
     IR_ASYNC_COMPLETE = 0x31
 
 
-class NetBoxTypes:
+class NetBoxTypes(object):
     """§5.2.6"""
     MK1 = 2
     MK2 = 7
@@ -339,7 +339,7 @@ def test_that_parse_config_understands_redrat_format():
     assert config["UP"].startswith("\x00\x01\x74\xFA")
 
 
-class _FileToSocket:
+class _FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes.
 
     >>> import StringIO

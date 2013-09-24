@@ -79,7 +79,7 @@ warnings.filterwarnings(
 
 _config = None
 
-
+
 # Functions available to stbt scripts
 #===========================================================================
 
@@ -144,7 +144,7 @@ def draw_text(text, duration_secs=3):
     _display.draw_text(text, duration_secs)
 
 
-class MatchParameters:
+class MatchParameters(object):
     """Parameters to customise the image processing algorithm used by
     `wait_for_match`, `detect_match`, and `press_until_match`.
 
@@ -161,7 +161,8 @@ class MatchParameters:
       `cvMatchTemplate` reference documentation and tutorial:
 
       * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
-      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
+      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/
+                                       template_matching/template_matching.html
 
     `match_threshold` (float) default: From stbt.conf
       How strong a result from `cvMatchTemplate` must be, to be considered a
@@ -633,7 +634,7 @@ class MotionTimeout(UITestFailure):
 class ConfigurationError(UITestError):
     pass
 
-
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
@@ -694,7 +695,7 @@ def teardown_run():
     if _display:
         _display.teardown()
 
-
+
 # Internal
 #===========================================================================
 
@@ -1476,7 +1477,7 @@ def warn(s):
     sys.stderr.write("%s: warning: %s\n" % (
         os.path.basename(sys.argv[0]), str(s)))
 
-
+
 # Tests
 #===========================================================================
 

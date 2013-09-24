@@ -64,7 +64,7 @@ def testrun(rundir):
     ).encode('utf-8')
 
 
-class Run:
+class Run(object):
     def __init__(self, rundir):
         self.rundir = rundir
 
