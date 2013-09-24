@@ -359,13 +359,15 @@ wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, 
       * a string in the form "x/y", where `x` is the number of frames with
         motion detected out of a sliding window of `y` frames.
 
-      The default `consecutive_frames` value is read from stbt.conf.
+      The default value is read from `motion.consecutive_frames` in your
+      configuration file.
 
     `noise_threshold` (float) default: 0.84
       Increase `noise_threshold` to avoid false negatives, at the risk of
       increasing false positives (a value of 0.0 will never report motion).
       This is particularly useful with noisy analogue video sources.
-      The default `noise_threshold` value is read from stbt.conf.
+      The default value is read from `motion.noise_threshold` in your
+      configuration file.
 
     `mask` (str) default: None
       A mask is a black and white image that specifies which part of the image
@@ -399,7 +401,8 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       Increase `noise_threshold` to avoid false negatives, at the risk of
       increasing false positives (a value of 0.0 will never report motion).
       This is particularly useful with noisy analogue video sources.
-      The default `noise_threshold` value is read from stbt.conf.
+      The default value is read from `motion.noise_threshold` in your
+      configuration file.
 
     `mask` (str) default: None
       A mask is a black and white image that specifies which part of the image
