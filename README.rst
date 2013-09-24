@@ -205,7 +205,8 @@ HARDWARE REQUIREMENTS
 The test rig consists of a Linux server, with:
 
 * A video-capture card (for capturing the output from the system under test)
-* An infrared receiver (for recording test cases)
+* An infrared receiver (for recording the system-under-test's infrared
+  protocol)
 * An infrared emitter (for controlling the system under test)
 
 Video capture card
