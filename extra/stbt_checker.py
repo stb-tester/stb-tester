@@ -19,12 +19,16 @@ import re
 
 # Install `pylint` to get `logilab.astng` modules.
 from logilab.astng.node_classes import BinOp, CallFunc, Getattr
-from pylint.interfaces import IASTNGChecker
 from pylint.checkers import BaseChecker
+
+try:  # >= pylint 1.0
+    from pylint.interfaces import IAstroidChecker  # pylint: disable=E0611
+except ImportError:  # < pylint 1.0
+    from pylint.interfaces import IASTNGChecker as IAstroidChecker  # pylint: disable=E0611,C0301
 
 
 class StbtChecker(BaseChecker):
-    __implements__ = IASTNGChecker
+    __implements__ = IAstroidChecker  # pylint: disable=F0220
     name = 'stbt-checker'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
