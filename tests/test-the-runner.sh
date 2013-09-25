@@ -234,6 +234,20 @@ test_runner_recovery_exit_status() {
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
 }
 
+with_retry() {
+    local count ret
+    count="$1"; shift
+    "$@"; ret=$?
+    if [[ $count -gt 0 && $1 == curl && $ret -eq 7 ]];  # connection refused
+    then
+        sleep 1
+        echo "Retrying ($count)..."
+        with_retry $((count - 1)) "$@"
+    else
+        return $ret
+    fi
+}
+
 test_runner_results_server() {
     wait_for_report() {
         local parent=$1 children pid
@@ -265,9 +279,8 @@ test_runner_results_server() {
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://localhost:5787/'
-    sleep 1
 
-    curl --silent --show-error \
+    with_retry 5 curl --silent --show-error \
         -F 'value=manual failure reason' \
         http://localhost:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
@@ -311,9 +324,8 @@ test_runner_results_server_shows_directory_listing() {
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://localhost:5788/'
-    sleep 1
 
-    curl http://localhost:5788/ | grep my-test-session ||
+    with_retry 5 curl http://localhost:5788/ | grep my-test-session ||
         fail "Didn't find directory listing at '/'"
     diff -u my-test-session/index.html \
         <(curl -L http://localhost:5788/my-test-session) ||
