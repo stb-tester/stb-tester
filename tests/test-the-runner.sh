@@ -334,3 +334,19 @@ test_runner_results_server_shows_directory_listing() {
         <(curl http://localhost:5788/my-test-session/) ||
         fail "Didn't find index.html at '/my-test-session/'"
 }
+
+test_runner_isolates_stdin_of_user_hooks() {
+    cat >my-logger <<-EOF
+	read x
+	[[ -z \$x ]] && echo STDIN=None || echo STDIN=\$x
+	EOF
+    chmod +x my-logger
+
+    cat "$testdir"/stbt.conf | \
+        sed -e "s,pre_run =,& $PWD/my-logger," >stbt.conf
+
+    export STBT_CONFIG_FILE="$PWD"/stbt.conf
+    "$srcdir"/extra/runner/run -1 "$testdir"/test.py "$testdir"/test2.py
+    cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
+    cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"
+}

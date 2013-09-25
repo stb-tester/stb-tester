@@ -173,7 +173,7 @@ backtrace() {
 user_command() {
   local c=$(stbt config runner.$1 2>/dev/null)
   [[ -z "$c" ]] && return
-  "$c" $2
+  "$c" $2 </dev/null
 }
 
 check_capture_hardware() {
