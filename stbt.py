@@ -533,8 +533,6 @@ def wait_for_motion(
       pixels the area to ignore.
     """
 
-    if noise_threshold is None:
-        noise_threshold = float(get_config('motion', 'noise_threshold'))
     if consecutive_frames is None:
         consecutive_frames = str(get_config('motion', 'consecutive_frames'))
 
