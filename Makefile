@@ -101,6 +101,7 @@ check-integrationtests:
 	$(parallel) tests/run-tests.sh
 check-pylint:
 	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
+	    stbt-templatematch \
 	    irnetbox.py irnetbox-proxy \
 	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
 	    extra/runner/report.py extra/runner/server |\
