@@ -73,7 +73,7 @@
     </div>
 
     <div class="span4">
-      <iframe data-spy="affix" id="details" name="details" seamless="true"
+      <iframe id="details" name="details" seamless="true"
         width="100%" style="border: none"></iframe>
     </div>
 
@@ -86,7 +86,6 @@
 <script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.5/tablequery.min.js"></script>
 <script>
   $(document).ready(function() {
-    $("#details").css("height", $(window).height());
     $("#testruns tbody tr").on("click", select_testrun);
     $(document).on("keydown", navigate_testruns);
     tablequery.set_table("#testruns");
@@ -98,9 +97,18 @@
     function select_testrun() {
       selected_row.removeClass("info");
       selected_row = $(this).closest("tr");
-      $("#details").attr(
-        "src",
-        $("td:nth-child(2) a", selected_row).attr("href"));
+
+      // Replace old iframe instead of updating its "src" attribute,
+      // to avoid a new history entry with annoying "back" button behaviour.
+      $("#details").replaceWith(
+        "<iframe data-spy='affix' id='details' name='details'" +
+        "  seamless='true' width='100%' style='border: none'" +
+        "  src='" + $("td:nth-child(2) a", selected_row).attr("href") + "'>" +
+        "</iframe>");
+      $("#details").
+        css("height", $(window).height()).
+        affix();
+
       selected_row.addClass("info");
 
       // Scroll if navigated with keyboard outside of visible viewport.
