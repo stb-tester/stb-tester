@@ -1206,7 +1206,9 @@ class LircRemote:
         debug("LircRemote: Connected to %s" % lircd_socket)
 
     def press(self, key):
-        self._connect().sendall(_lirc_command(self.control_name, key))
+        s = self._connect()
+        s.sendall(_lirc_command(self.control_name, key))
+        _read_lircd_reply(s)
         debug("Pressed " + key)
 
     def _connect(self):
@@ -1241,7 +1243,9 @@ class TCPLircRemote:
         debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
     def press(self, key):
-        self._connect().sendall(_lirc_command(self.control_name, key))
+        s = self._connect()
+        s.sendall(_lirc_command(self.control_name, key))
+        _read_lircd_reply(s)
         debug("Pressed " + key)
 
     def _connect(self):
@@ -1452,6 +1456,29 @@ def _lirc_command(control_name, key):
     return "SEND_ONCE %s %s\n" % (control_name, key)
 
 
+def _read_lircd_reply(stream):
+    """Evaluates the reply packet from lircd."""
+    TIMEOUT_SECS = 2
+    stream.settimeout(TIMEOUT_SECS)
+    reply = []
+    try:
+        for record in read_records(stream, "\n"):
+            if record == "BEGIN":
+                reply = []
+            reply.append(record)
+            if record == "END" and "SEND_ONCE" in "".join(reply):
+                break
+    except socket.timeout:
+        raise UITestError(
+            "Timed out: No reply from LIRC remote within %d seconds."
+            % TIMEOUT_SECS)
+    if not "SUCCESS" in reply:
+        if "ERROR" in reply and len(reply) >= 5 and reply[-4] == "DATA":
+            raise UITestError("LIRC remote returned error %s: %s."
+                              % (reply[-3], reply[-2]))
+        raise UITestError("LIRC remote returned unknown error.")
+
+
 def _find_path(image):
     """Searches for the given filename and returns the full path.
 
@@ -1515,6 +1542,9 @@ class FileToSocket:
     def recv(self, bufsize, flags=0):  # pylint: disable=W0613
         return self.file.read(bufsize)
 
+    def settimeout(self, _):
+        pass
+
 
 def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     received = []
@@ -1548,6 +1578,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         # This needs to accept 2 connections (from LircRemote and
         # lirc_remote_listen) and, on receiving input from the LircRemote
         # connection, write to the lirc_remote_listen connection.
+        # pylint: disable=E1101
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
         s.listen(5)
@@ -1560,7 +1591,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                 if m:
                     d = m.groupdict()
                     message = '00000000 0 %s %s\n' % (d['key'], d['control'])
-                    listener.sendall(message)  # pylint: disable=E1101
+                    listener.sendall(message)
+                control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
@@ -1574,6 +1606,28 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
+
+
+def test_that_read_lircd_reply_ignores_broadcast_messages():
+    import StringIO
+    to_stream = lambda s: FileToSocket(StringIO.StringIO(s))
+
+    success_msg = 'BEGIN\nSEND_ONCE test OK\nSUCCESS\nEND\n'
+    _read_lircd_reply(to_stream(success_msg))
+    _read_lircd_reply(to_stream('BEGIN\nNOHUP\nEND\n' + success_msg))
+    _read_lircd_reply(to_stream('0000dead 00 MENU test-input\n' + success_msg))
+
+
+def test_that_read_lircd_reply_fails_on_lircd_error():
+    import StringIO
+
+    try:
+        _read_lircd_reply(FileToSocket(StringIO.StringIO(
+            'BEGIN\nSEND_ONCE test OK\nERROR\n'
+            'DATA\n1\ntransmission failed\nEND\n')))
+        assert False, "Expected UITestError"
+    except UITestError as e:
+        assert 'transmission failed' in e.message
 
 
 def test_uri_to_remote():
