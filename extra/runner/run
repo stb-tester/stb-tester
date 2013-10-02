@@ -51,6 +51,9 @@ main() {
   shift $((OPTIND - 1))
   [[ $# -gt 0 ]] || { usage >&2; exit 1; }
 
+  which ts &>/dev/null ||
+    die "No 'ts' command found; please install 'moreutils' package"
+
   exec 3>/dev/null 4>/dev/null
   [ $verbose -gt 0 ] && exec 3>&1
   [ $verbose -gt 1 ] && exec 4>&1
