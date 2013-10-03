@@ -86,13 +86,18 @@
 <script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.5/tablequery.min.js"></script>
 <script>
   $(document).ready(function() {
-    $("#details").css("height", $(window).height());
     $("#testruns tbody tr").on("click", select_testrun);
     $(document).on("keydown", navigate_testruns);
     tablequery.set_table("#testruns");
     tablequery.set_table_search_text("#testruns_search_text");
     tablequery.on("search", update_totals);
     update_totals();
+
+    function set_details_height() {
+      $("#details").css("height", $(window).height() - 40);
+    }
+    $(window).on("resize", set_details_height);
+    set_details_height();
 
     var selected_row = $();
     function select_testrun() {
@@ -106,7 +111,7 @@
         "  seamless='true' width='100%' style='border: none'" +
         "  src='" + $("td:nth-child(2) a", selected_row).attr("href") + "'>" +
         "</iframe>");
-      $("#details").css("height", $(window).height());
+      set_details_height();
 
       selected_row.addClass("info");
 
