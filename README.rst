@@ -462,7 +462,8 @@ class MatchParameters
       `cvMatchTemplate` reference documentation and tutorial:
 
       * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
-      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/template_matching/template_matching.html
+      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/
+                                       template_matching/template_matching.html
 
     `match_threshold` (float) default: 0.80
       How strong a result from `cvMatchTemplate` must be, to be considered a
