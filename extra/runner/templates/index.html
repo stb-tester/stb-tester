@@ -8,6 +8,7 @@
   <style>
     #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
+    #details { position: fixed; }
   </style>
 </head>
 
@@ -81,7 +82,6 @@
 </div>
 
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
-<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 <script src="http://cdn.jsdelivr.net/sorttable/2/sorttable.js"></script>
 <script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.5/tablequery.min.js"></script>
 <script>
@@ -106,9 +106,7 @@
         "  seamless='true' width='100%' style='border: none'" +
         "  src='" + $("td:nth-child(2) a", selected_row).attr("href") + "'>" +
         "</iframe>");
-      $("#details").
-        css("height", $(window).height()).
-        affix();
+      $("#details").css("height", $(window).height());
 
       selected_row.addClass("info");
 
