@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+"""Fake LIRC daemon for unit tests.
+
+* Returns error for button names that contain "error".
+* Doesn't return anything for button names that contain "timeout".
+* ACKs all other requests.
+* First broadcasts a SIGHUP message if the button name contains "sighup".
+* First broadcasts "infrared signal received" message if the button name
+  contains "broadcast".
+
+See http://www.lirc.org/html/technical.html#applications
+"""
+
+from contextlib import contextmanager
+import os
+import re
+import signal
+import socket
+import tempfile
+
+
+def main():
+    f = tempfile.mktemp()
+    with deleting(f):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(f)
+        s.listen(5)
+        print "SOCKET=" + f
+        while True:
+            client, _ = s.accept()
+            for line in client.makefile():
+                line = line.strip()
+                print "fake-lircd: Received: " + line
+                try:
+                    r = response(line)
+                    if r:
+                        print "\n".join(
+                            "fake-lircd: Sending: " + x for x in r.split())
+                        client.sendall(r)
+                except socket.error as e:
+                    if e.errno == socket.errno.EPIPE:
+                        pass
+                    else:
+                        raise
+
+
+def response(req):
+    s = ""
+    if re.search("sighup", req):
+        s += "BEGIN\nSIGHUP\nEND\n"
+    if re.search("broadcast", req):
+        s += "000f00b 01 OK My-IR-remote\n"
+    if req.startswith("SEND_ONCE"):
+        if re.search("error", req):
+            s += "BEGIN\n%s\nERROR\nDATA\n1\nfake-lircd error\nEND\n" % req
+        elif re.search("timeout", req):
+            pass
+        else:
+            s += "BEGIN\n%s\nSUCCESS\nEND\n" % req
+    return s
+
+
+@contextmanager
+def deleting(f):
+    try:
+        yield
+    finally:
+        os.remove(f)
+
+
+if __name__ == "__main__":
+    main()
