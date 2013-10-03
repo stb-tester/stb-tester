@@ -1206,7 +1206,9 @@ class LircRemote:
         debug("LircRemote: Connected to %s" % lircd_socket)
 
     def press(self, key):
-        self._connect().sendall(_lirc_command(self.control_name, key))
+        s = self._connect()
+        s.sendall(_lirc_command(self.control_name, key))
+        _read_lircd_reply(s)
         debug("Pressed " + key)
 
     def _connect(self):
@@ -1214,7 +1216,6 @@ class LircRemote:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.settimeout(3)
             s.connect(self.lircd_socket)
-            s.settimeout(None)
             return s
         except socket.error as e:
             e.args = (("Failed to connect to Lirc socket %s: %s" % (
@@ -1241,7 +1242,9 @@ class TCPLircRemote:
         debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
     def press(self, key):
-        self._connect().sendall(_lirc_command(self.control_name, key))
+        s = self._connect()
+        s.sendall(_lirc_command(self.control_name, key))
+        _read_lircd_reply(s)
         debug("Pressed " + key)
 
     def _connect(self):
@@ -1452,6 +1455,46 @@ def _lirc_command(control_name, key):
     return "SEND_ONCE %s %s\n" % (control_name, key)
 
 
+def _read_lircd_reply(stream):
+    """Waits for lircd reply and checks if a LIRC send command was successful.
+
+    Waits for a reply message from lircd (called "reply packet" in the LIRC
+    reference) for a SEND_ONCE command, raises exception if it times out or
+    the reply contains an error message.
+
+    The structure of a lircd reply message for a SEND_ONCE command is the
+    following:
+
+    BEGIN
+    <command>
+    (SUCCESS|ERROR)
+    [DATA
+    <number-of-data-lines>
+    <error-message>]
+    END
+
+    See: http://www.lirc.org/html/technical.html#applications
+    """
+    reply = []
+    try:
+        for line in read_records(stream, "\n"):
+            if line == "BEGIN":
+                reply = []
+            reply.append(line)
+            if line == "END" and "SEND_ONCE" in reply[1]:
+                break
+    except socket.timeout:
+        raise UITestError(
+            "Timed out: No reply from LIRC remote control within %d seconds"
+            % stream.gettimeout())
+    if not "SUCCESS" in reply:
+        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
+            num_data_lines = int(reply[4])
+            raise UITestError("LIRC remote control returned error: %s"
+                              % " ".join(reply[5:5 + num_data_lines]))
+        raise UITestError("LIRC remote control returned unknown error")
+
+
 def _find_path(image):
     """Searches for the given filename and returns the full path.
 
@@ -1561,6 +1604,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                     d = m.groupdict()
                     message = '00000000 0 %s %s\n' % (d['key'], d['control'])
                     listener.sendall(message)  # pylint: disable=E1101
+                control.sendall(  # pylint: disable=E1101
+                    'BEGIN\n%sSUCCESS\nEND\n' % cmd)
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
