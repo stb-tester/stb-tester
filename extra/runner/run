@@ -123,9 +123,9 @@ run() {
   stbt --version > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
+  "$runner"/report --classify-only . >/dev/null
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || stop=true; }
-  "$runner"/report --classify-only . >/dev/null
 
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || stop=true
