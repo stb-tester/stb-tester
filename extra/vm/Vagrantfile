@@ -36,4 +36,7 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   config.vm.synced_folder "../../", "/home/vagrant/stb-tester"
 
+  # RTMP server for VidiU video-capture streaming device.
+  config.vm.network "forwarded_port", guest: 1935, host: 1935
+
 end

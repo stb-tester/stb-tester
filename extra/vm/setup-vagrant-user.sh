@@ -43,6 +43,9 @@ cat > ~/.config/stbt/stbt.conf <<-EOF
 	# capture device. Set to "True" if you're using the Hauppauge HD PVR.
 	#restart_source = False
 	
+	# Source pipeline for the Teradek VidiU streaming video-capture device.
+	#source_pipeline = rtmpsrc location=rtmp://localhost/live/stream-name\ live=1 ! decodebin2
+	
 	sink_pipeline = ximagesink sync=false
 	#control = lirc::remote_name
 	

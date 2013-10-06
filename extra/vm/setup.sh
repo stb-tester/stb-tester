@@ -47,6 +47,16 @@ service lirc start
 # You still need to install /etc/lirc/lircd.conf with a description of your
 # remote control's infrared protocol. See http://stb-tester.com/lirc.html
 
+# HDPVR and other V4L devices
 usermod -a -G video vagrant
+
+# VidiU (RTMP streaming device)
+apt-get install -y crtmpserver
+[ -f /etc/crtmpserver/crtmpserver.lua.orig ] ||
+    cp /etc/crtmpserver/crtmpserver.lua{,.orig}
+cp /vagrant/crtmpserver.lua /etc/crtmpserver/
+service crtmpserver restart &>/dev/null </dev/null ||
+    echo error restarting crtmpserver >&2
+service ufw stop &>/dev/null </dev/null || echo error stopping ufw firewall >&2
 
 sudo su - vagrant /vagrant/setup-vagrant-user.sh
