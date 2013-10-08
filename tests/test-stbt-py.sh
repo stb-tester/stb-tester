@@ -88,10 +88,11 @@ test_that_frames_raises_NoVideo() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    ! stbt-run -v --source-pipeline "videotestsrc num-buffers=1" \
-        test.py &> stbt-run.log &&
-    grep -q NoVideo stbt-run.log ||
-    fail "'NoVideo' exception wasn't raised in $scratchdir/stbt-run.log"
+    stbt-run -v \
+        --source-pipeline "videotestsrc ! identity sleep-time=12000000" \
+        test.py &> stbt-run.log
+    grep NoVideo stbt-run.log ||
+        fail "'stbt.frames' didn't raise 'NoVideo' exception"
 }
 
 test_using_frames_to_measure_black_screen() {

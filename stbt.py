@@ -793,6 +793,7 @@ class Display:
         source_bus = self.source_pipeline.get_bus()
         source_bus.connect("message::error", self.on_error)
         source_bus.connect("message::warning", self.on_warning)
+        source_bus.connect("message::eos", self.on_eos)
         source_bus.add_signal_watch()
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-buffer", self.on_new_buffer)
@@ -916,9 +917,14 @@ class Display:
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
-    def on_eos(self, _bus, _message):
-        debug("Got EOS")
-        _mainloop.quit()
+    def on_eos(self, bus, _message):
+        if bus == self.source_pipeline.get_bus():
+            warn("Got EOS from source pipeline")
+            self.restart_source()
+        else:
+            assert bus == self.sink_pipeline.get_bus()
+            debug("Got EOS")
+            _mainloop.quit()
 
     def on_underrun(self, _element):
         if self.underrun_timeout:
@@ -949,7 +955,8 @@ class Display:
         self.create_source_pipeline()
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         warn("Restarted source pipeline")
-        self.underrun_timeout.start()
+        if self.restart_source_enabled:
+            self.underrun_timeout.start()
         return False  # stop the timeout from running again
 
     def teardown(self):
