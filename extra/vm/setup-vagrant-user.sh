@@ -41,7 +41,7 @@ cat > ~/.config/stbt/stbt.conf <<-EOF
 	
 	# Handle loss of video (but without end-of-stream event) from the video
 	# capture device. Set to "True" if you're using the Hauppauge HD PVR.
-	#restart_source = False
+	restart_source = False
 	
 	# Source pipeline for the Teradek VidiU streaming video-capture device.
 	#source_pipeline = rtmpsrc location=rtmp://localhost/live/stream-name\ live=1 ! decodebin2
