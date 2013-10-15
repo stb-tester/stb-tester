@@ -94,9 +94,10 @@ class Run(object):
         self.test_args = self.read("test-args")
         self.test_name = self.read("test-name")
 
-        self.extra_columns = collections.defaultdict(list)
+        self.extra_columns = collections.OrderedDict()
         for line in self.read("extra-columns").splitlines():
             column, value = line.split("\t", 1)
+            self.extra_columns.setdefault(column.strip(), [])
             self.extra_columns[column.strip()].append(value.strip())
 
         t = re.match(
