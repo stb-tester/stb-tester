@@ -17,16 +17,33 @@
 #/   -f             Do not show video output (i.e. direct the output to
 #/                  'fakesink'). This is to activate the pass-through output of
 #/                  Blackmagic cards for monitoring.
+#/   -l             Listen to client connections and stream compressed video
+#/                  through a TCP socket. Port number and video bandwidth (in
+#/                  bps) are read from the 'port' and 'bandwidth' parameters of
+#/                  the [tv] section of the stb-tester config file, or the
+#/                  default values 4953 for port number and 1500000 bps for
+#/                  bandwidth are used. Watch the stream on a remote computer
+#/                  with VLC by opening 'tcp://<host>:<port>', or with
+#/                  GStreamer's 'tcpclientsrc'.
 #/   -v             Enable 'gst-launch' verbose output.
 
 set -eu
 
 usage() { grep '^#/' "$0" | cut -c4-; }
+die() { echo "stbt tv: error: $*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) usage; exit 0;;
         -f) sink="fakesink silent=true";;
+        -l) gst-inspect ffenc_mpeg4 &>/dev/null ||
+                die "'-l' requires gstreamer-ffmpeg package"
+            port=$(stbt config tv.port 2>/dev/null || echo 4953);
+            bw=$(stbt config tv.bandwidth 2>/dev/null || echo 1500000);
+            sink="queue leaky=downstream ! ffenc_mpeg4 bitrate=$bw !
+                  mpegtsmux ! tcpserversink port=$port"
+            echo "Point vlc at: tcp://$(hostname):$port"
+            ;;
         -v) v="-v";;
         -*) usage >&2; exit 1;;
         *) break;;
