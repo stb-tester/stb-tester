@@ -89,10 +89,10 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
-  vr:<hostname>:<port>
+  vr:<hostname>[:<port>]
     A "virtual remote" that communicates with the set-top box over TCP.
     Requires a virtual remote listener (which we haven't released yet) running
-    on the stb.
+    on the set-top box.
 
   none
     Ignores key press commands.
