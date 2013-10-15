@@ -30,12 +30,15 @@
 set -eu
 
 usage() { grep '^#/' "$0" | cut -c4-; }
+die() { echo "stbt tv: error: $*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help) usage; exit 0;;
         -f) sink="fakesink silent=true";;
-        -l) port=$(stbt config tv.port 2>/dev/null || echo 4953);
+        -l) gst-inspect ffenc_mpeg4 &>/dev/null ||
+                die "'-l' requires gstreamer-ffmpeg package"
+            port=$(stbt config tv.port 2>/dev/null || echo 4953);
             bw=$(stbt config tv.bandwidth 2>/dev/null || echo 1500000);
             sink="queue leaky=downstream ! ffenc_mpeg4 bitrate=$bw !
                   mpegtsmux ! tcpserversink port=$port";;
