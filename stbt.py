@@ -773,7 +773,7 @@ class Display:
         sink_bus = self.sink_pipeline.get_bus()
         sink_bus.connect("message::error", self.on_error)
         sink_bus.connect("message::warning", self.on_warning)
-        sink_bus.connect("message::eos", self.on_eos)
+        sink_bus.connect("message::eos", self.on_eos_from_sink_pipeline)
         sink_bus.add_signal_watch()
         self.appsrc = self.sink_pipeline.get_by_name("appsrc")
 
@@ -793,7 +793,7 @@ class Display:
         source_bus = self.source_pipeline.get_bus()
         source_bus.connect("message::error", self.on_error)
         source_bus.connect("message::warning", self.on_warning)
-        source_bus.connect("message::eos", self.on_eos)
+        source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-buffer", self.on_new_buffer)
@@ -917,14 +917,13 @@ class Display:
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
-    def on_eos(self, bus, _message):
-        if bus == self.source_pipeline.get_bus():
-            warn("Got EOS from source pipeline")
-            self.restart_source()
-        else:
-            assert bus == self.sink_pipeline.get_bus()
-            debug("Got EOS")
-            _mainloop.quit()
+    def on_eos_from_source_pipeline(self, _bus, _message):
+        warn("Got EOS from source pipeline")
+        self.restart_source()
+
+    def on_eos_from_sink_pipeline(self, _bus, _message):
+        debug("Got EOS")
+        _mainloop.quit()
 
     def on_underrun(self, _element):
         if self.underrun_timeout:
