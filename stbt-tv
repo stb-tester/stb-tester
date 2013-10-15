@@ -41,7 +41,9 @@ while [ $# -gt 0 ]; do
             port=$(stbt config tv.port 2>/dev/null || echo 4953);
             bw=$(stbt config tv.bandwidth 2>/dev/null || echo 1500000);
             sink="queue leaky=downstream ! ffenc_mpeg4 bitrate=$bw !
-                  mpegtsmux ! tcpserversink port=$port";;
+                  mpegtsmux ! tcpserversink port=$port"
+            echo "Point vlc at: tcp://$(hostname):$port"
+            ;;
         -v) v="-v";;
         -*) usage >&2; exit 1;;
         *) break;;
