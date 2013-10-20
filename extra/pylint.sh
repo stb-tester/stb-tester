@@ -14,7 +14,9 @@ pep8options() {
 ret=0
 for f in "$@"; do
     r=0
-    out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" $f 2>&1) || r=1 ret=1
+    out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" \
+                 --ignored-classes=_socketobject \
+                 $f 2>&1) || r=1 ret=1
     printf "%s" "$out" | grep -v 'pygobject_register_sinkfunc is deprecated'
     pep8 $(pep8options $f) $f || r=1 ret=1
     [ $r -eq 0 ] && echo "$f OK"
