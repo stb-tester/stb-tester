@@ -136,8 +136,8 @@ def main_loop(control_uri, keymap_file):
     timer = None
 
     with terminal() as term:
-        printed_keymap = "Keymap: %s\nControl: %s\n\n%s\n\n" % (
-                         keymap_file, control_uri, keymap_string(keymap))
+        printed_keymap = ("Keymap: %s\nControl: %s\n\n%s\n\n" %
+                          (keymap_file, control_uri, keymap_string(keymap)))
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
         else:

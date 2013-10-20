@@ -1163,8 +1163,7 @@ class VideoTestSrcControl:
                 17, "solid-color",
                 18, "ball",
                 19, "smpte100",
-                20, "bar",
-        ]:
+                20, "bar"]:
             raise UITestFailure(
                 'Key "%s" not valid for the "test" control' % key)
         self.videosrc.props.pattern = key
@@ -1609,9 +1608,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                 if m:
                     d = m.groupdict()
                     message = '00000000 0 %s %s\n' % (d['key'], d['control'])
-                    listener.sendall(message)  # pylint: disable=E1101
-                control.sendall(  # pylint: disable=E1101
-                    'BEGIN\n%sSUCCESS\nEND\n' % cmd)
+                    listener.sendall(message)
+                control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
