@@ -23,6 +23,8 @@
 #/   -t <tag>  Tag to add to test run directory names (useful
 #/         to differentiate directories when you intend to
 #/         merge test results from multiple machines).
+#/
+#/ See 'man runner' for more detailed information.
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }

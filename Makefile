@@ -13,6 +13,8 @@ sysconfdir?=$(prefix)/etc
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
+RUNNER = extra/runner
+
 tools = stbt-run
 tools += stbt-record
 tools += stbt-config
@@ -61,6 +63,24 @@ install: stbt stbt.1 defaults.conf
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 
+install-runner: runner.1
+	$(INSTALL) -m 0644 runner.1 $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 0755 $(RUNNER)/run $(RUNNER)/server $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 -d \
+	    $(DESTDIR)$(prefix)/stb-tester-runner \
+	    $(DESTDIR)$(prefix)/stb-tester-runner/templates \
+	    $(DESTDIR)$(prefix)/stb-tester-runner/static
+	$(INSTALL) -m 0755 $(RUNNER)/report \
+	    $(DESTDIR)$(prefix)/stb-tester-runner
+	ln -s -i $(DESTDIR)$(prefix)/stb-tester-runner/report \
+	    $(DESTDIR)$(bindir)/report
+	$(INSTALL) -m 0644 $(RUNNER)/report.py \
+	    $(DESTDIR)$(prefix)/stb-tester-runner
+	$(INSTALL) -m 0644 $(RUNNER)/templates/*.html \
+	    $(DESTDIR)$(prefix)/stb-tester-runner/templates
+	$(INSTALL) -m 0644 $(RUNNER)/static/*.js \
+	    $(DESTDIR)$(prefix)/stb-tester-runner/static
+
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
 	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
@@ -71,8 +91,13 @@ uninstall:
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-controlc
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
+	rm -f $(DESTDIR)$(man1dir)/runner.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
+	rm -f $(DESTDIR)$(bindir)/run
+	rm -f $(DESTDIR)$(bindir)/report
+	rm -f $(DESTDIR)$(bindir)/server
+	rm -f -r $(DESTDIR)$(prefix)/stb-tester-runner
 	-rmdir $(DESTDIR)$(libexecdir)/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/bash_completion.d
@@ -84,6 +109,9 @@ stbt.1: README.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
 	sed -e '/\.\. image::/,/^$$/ d' |\
 	rst2man > $@
+
+runner.1: $(RUNNER)/README.rst
+	rst2man $< > $@
 
 # Ensure the docs for python functions are kept in sync with the code
 README.rst: stbt.py api-doc.sh
@@ -148,6 +176,6 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags *.py
 
-.PHONY: all clean check dist doc install uninstall
+.PHONY: all clean check dist doc install install-runner uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
 .PHONY: FORCE TAGS

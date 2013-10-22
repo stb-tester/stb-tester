@@ -11,6 +11,12 @@
 #/ according to the reason for failure.
 #/ Generates a detailed report in <testrun directory>/index.html
 #/ and a summary report in <testrun directory>/../index.html.
+#/
+#/ Options:
+#/   --classify-only  Classify the results but don't generate reports.
+#/   --html-only      Generate reports but don't classify the results.
+#/
+#/ See 'man runner' for more detailed information.
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
