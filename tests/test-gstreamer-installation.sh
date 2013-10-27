@@ -3,5 +3,5 @@
 
 # Test for a correct installation of gstreamer
 test_gstreamer_core_elements() {
-    timeout 10 gst-launch-0.10 videotestsrc num-buffers=10 ! ximagesink
+    timeout 10 gst-launch-0.10 videotestsrc num-buffers=10 ! fakesink
 }
