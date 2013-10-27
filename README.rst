@@ -327,6 +327,17 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
+wait_for_all_matches(images, timeout_secs=10, match_parameters=None)
+    Search for multiple `images` in the source video stream.
+
+    Returns a dictionary of "`template`: `MatchResult`" when all `image`s
+    are found.
+    Raises `MatchAllTimeout` if not all of the matches are found within
+    `timeout_secs` seconds.
+
+    Specify `match_parameters` to customise the image matching algorithm.
+    See the documentation for `MatchParamters` for details.
+
 press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=None)
     Calls `press` as many times as necessary to find the specified `image`.
 
@@ -432,6 +443,31 @@ draw_text(text, duration_secs=3)
     Write the specified `text` to the video output.
 
     `duration_secs` is the number of seconds that the text should be displayed.
+
+load_image(filepath, flag=1)
+    Load an image from disk at location filepath.
+
+    `flag` is lifted from cv2.imread, where:
+
+    - >0 Loads the image with 3 channels (no alpha)
+    - =0 Loads the image with 1 channel (greyscale)
+    - <0 Loads the image "as is" (with alpha)
+
+    See http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread
+
+match_template(image, template, match_parameters=None)
+    stb-tester's core template matching algorithm. Attempts to match a given
+    template to a section of a source image of equal or greater size.
+    Returns True/False.
+
+    `image` is the source image in the form of a gst/numpy array; e.g. a frame
+    from a source video, as supplied by stbt.frames()
+
+    `template` is the template to match to image in the form of a opencv/numpy
+    array; e.g. as loaded by stbt.load_image()
+
+    Specificy match_parameters to customise the image matching algorithm.
+    See the documentation for MatchParameters for details.
 
 get_config(section, key, default=None)
     Read the value of `key` from `section` of the stbt config file.
@@ -547,6 +583,13 @@ class MatchTimeout(UITestFailure)
       for the expected image timed out.
     * `expected`: Filename of the image that was being searched for.
     * `timeout_secs`: Number of seconds that the image was searched for.
+
+class MatchAllTimeout(UITestFailure)
+    * `screenshot`: An OpenCV image from the source video when the search
+      for the expect images timed out.
+    * `did_match`: List of filenames of all the images that were matched.
+    * `did_not_match`" List of filenames of the images that were not matched.
+    * `timeout_secs`: Number of seconds that the images were searched for.
 
 class MotionTimeout(UITestFailure)
     * `screenshot`: An OpenCV image from the source video when the search

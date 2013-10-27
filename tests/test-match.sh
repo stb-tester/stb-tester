@@ -420,3 +420,30 @@ test_detect_match_visualisation() {
         --source-pipeline 'filesrc location=video.webm ! decodebin' \
         verify.py
 }
+
+test_wait_for_all_matches() {
+    local source_pipeline="videotestsrc is-live=true pattern=gamut"
+
+    cat > match_all1.py <<-EOF &&
+	import stbt
+	stbt.wait_for_all_matches(["$testdir/gamut-blackwhite.png",
+	    "$testdir/gamut-whitered.png", "$testdir/gamut-redblue.png"],
+	    timeout_secs=1)
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline "$source_pipeline" \
+        match_all1.py ||
+    fail "wait_for_all_matches didn't find all matches"
+
+    cat > match_all2.py <<-EOF &&
+	import stbt
+	stbt.wait_for_all_matches(["$testdir/gamut-blackwhite.png",
+	    "$testdir/gamut-whitered.png", "$testdir/gamut-redblue.png",
+	    "$testdir/videotestsrc-checkers-8.png"], timeout_secs=1)
+	EOF
+    { stbt-run -v --control none \
+        --source-pipeline "$source_pipeline" \
+        match_all2.py |
+    grep "Found matches for .*,.*and.*" | grep "Didn't find match for.*"; } ||
+    fail "wait_for_all_matches didn't raise correct MatchAllTimeout"
+}

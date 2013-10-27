@@ -293,3 +293,71 @@ test_draw_text() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify-draw-text.py
 }
+
+test_load_image() {
+    cat > load_image1.py <<-EOF &&
+	import stbt
+	assert stbt.load_image('$testdir/black.png') is not None
+	EOF
+    stbt-run -v load_image1.py ||
+    fail "load_image failed to load real image"
+
+    cat > load_image2.py <<-EOF &&
+	import stbt
+	try:
+	    stbt.load_image("$testdir/invalid-black.png")
+	except stbt.UITestError as e:
+	    assert 'No such file' in str(e)
+	EOF
+    stbt-run -v load_image2.py ||
+    fail "load_image didn't raise 'No such file' for non-existent file"
+
+    cat > load_image3.py <<-EOF &&
+	import stbt
+	try:
+	    stbt.load_image("$testdir/test-stbt-py.sh")
+	except stbt.UITestError as e:
+	    assert 'Failed to load image' in str(e)
+	EOF
+    stbt-run -v load_image3.py ||
+    fail "load_image didn't raise 'Failed to load image' for non-image file"
+}
+
+test_match_template() {
+    cat > match_template1.py <<-EOF &&
+	import stbt
+	im = stbt.load_image("$testdir/black.png")
+	matched, pos, fpc = stbt.match_template(im, im)
+	assert matched == True
+	assert pos == (0, 0)
+	assert str(fpc).startswith("0.999999")
+	EOF
+    stbt-run -v match_template1.py ||
+    fail "match_template didn't correctly match an image to itself"
+
+    cat > match_template2.py <<-EOF &&
+	import stbt
+	im1 = stbt.load_image("$testdir/known-fail-source.png")
+	im2 = stbt.load_image("$testdir/known-fail-template.png")
+	matched, pos, fpc = stbt.match_template(im1, im2)
+	assert matched == True
+	assert pos == (9, 72)
+	assert str(fpc).startswith("0.834914")
+	EOF
+    stbt-run -v match_template2.py ||
+    fail "match_template didn't get false positive with default parameters"
+
+    # Note that pos/fpc are the same because they are from the *first pass*
+    cat > match_template3.py <<-EOF &&
+	import stbt
+	im1 = stbt.load_image("$testdir/known-fail-source.png")
+	im2 = stbt.load_image("$testdir/known-fail-template.png")
+	mp = stbt.MatchParameters(confirm_method="normed-absdiff")
+	matched, pos, fpc = stbt.match_template(im1, im2, match_parameters=mp)
+	assert matched == False
+	assert pos == (9, 72)
+	assert str(fpc).startswith("0.834914")
+	EOF
+    stbt-run -v match_template3.py ||
+    fail "match_template didn't get true negative with non-default parameters"
+}
