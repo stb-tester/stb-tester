@@ -1100,13 +1100,13 @@ def uri_to_remote(uri, display):
         r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
     if tcp_lirc:
         d = tcp_lirc.groupdict()
-        return TCPLircRemote(d['hostname'] or 'localhost',
-                             int(d['port']), d['control_name'])
+        return new_tcp_lirc_remote(d['hostname'] or 'localhost',
+                                   int(d['port']), d['control_name'])
     lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
     if lirc:
         d = lirc.groupdict()
-        return LircRemote(d['lircd_socket'] or '/var/run/lirc/lircd',
-                          d['control_name'])
+        return new_local_lirc_remote(d['lircd_socket'] or '/var/run/lirc/lircd',
+                                     d['control_name'])
     irnb = re.match(
         r'''irnetbox:
             (?P<hostname>[^:]+)
@@ -1163,8 +1163,7 @@ class VideoTestSrcControl:
                 17, "solid-color",
                 18, "ball",
                 19, "smpte100",
-                20, "bar",
-        ]:
+                20, "bar"]:
             raise UITestFailure(
                 'Key "%s" not valid for the "test" control' % key)
         self.videosrc.props.pattern = key
@@ -1202,59 +1201,55 @@ class LircRemote:
     See http://www.lirc.org/html/technical.html#applications
     """
 
-    def __init__(self, lircd_socket, control_name):
-        self.lircd_socket = lircd_socket
+    def __init__(self, control_name, connect_fn):
         self.control_name = control_name
-        # Connect once so that the test fails immediately if Lirc isn't running
-        # (instead of failing at the first `press` in the script).
-        debug("LircRemote: Connecting to %s" % lircd_socket)
-        self._connect()
-        debug("LircRemote: Connected to %s" % lircd_socket)
+        self._connect = connect_fn
 
     def press(self, key):
         s = self._connect()
-        s.sendall(_lirc_command(self.control_name, key))
+        s.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         _read_lircd_reply(s)
         debug("Pressed " + key)
 
-    def _connect(self):
+
+def new_local_lirc_remote(lircd_socket, control_name):
+    def _connect():
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.settimeout(3)
-            s.connect(self.lircd_socket)
+            s.connect(lircd_socket)
             return s
         except socket.error as e:
             e.args = (("Failed to connect to Lirc socket %s: %s" % (
-                self.lircd_socket, e)),)
+                lircd_socket, e)),)
             e.strerror = e.args[0]
             raise
 
+    # Connect once so that the test fails immediately if Lirc isn't running
+    # (instead of failing at the first `press` in the script).
+    debug("LircRemote: Connecting to %s" % lircd_socket)
+    _connect()
+    debug("LircRemote: Connected to %s" % lircd_socket)
 
-class TCPLircRemote:
+    return LircRemote(control_name, _connect)
+
+
+def new_tcp_lirc_remote(hostname, port, control_name):
     """Send a key-press via a LIRC-enabled device through a LIRC TCP listener.
 
-        control = TCPLircRemote("localhost", "8765", "humax")
+        control = new_tcp_lirc_remote("localhost", "8765", "humax")
         control.press("MENU")
     """
+    def _connect():
+        return _connect_tcp_socket(hostname, port)
 
-    def __init__(self, hostname, port, control_name):
-        self.hostname = hostname
-        self.port = port
-        self.control_name = control_name
-        # Connect once so that the test fails immediately if lircd isn't bound
-        # to the port (instead of failing at the first `press` in the script).
-        debug("TCPLircRemote: Connecting to %s:%d" % (hostname, port))
-        self._connect()
-        debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
+    # Connect once so that the test fails immediately if Lirc isn't running
+    # (instead of failing at the first `press` in the script).
+    debug("TCPLircRemote: Connecting to %s:%d" % (hostname, port))
+    _connect()
+    debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
-    def press(self, key):
-        s = self._connect()
-        s.sendall(_lirc_command(self.control_name, key))
-        _read_lircd_reply(s)
-        debug("Pressed " + key)
-
-    def _connect(self):
-        return _connect_tcp_socket(self.hostname, self.port)
+    return LircRemote(control_name, _connect)
 
 
 class IRNetBoxRemote:
@@ -1456,11 +1451,6 @@ def _connect_tcp_socket(address, port, timeout=3):
         raise
 
 
-def _lirc_command(control_name, key):
-    """Returns a LIRC send key command string."""
-    return "SEND_ONCE %s %s\n" % (control_name, key)
-
-
 def _read_lircd_reply(stream):
     """Waits for lircd reply and checks if a LIRC send command was successful.
 
@@ -1609,9 +1599,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
                 if m:
                     d = m.groupdict()
                     message = '00000000 0 %s %s\n' % (d['key'], d['control'])
-                    listener.sendall(message)  # pylint: disable=E1101
-                control.sendall(  # pylint: disable=E1101
-                    'BEGIN\n%sSUCCESS\nEND\n' % cmd)
+                    listener.sendall(message)
+                control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
 
     lircd_socket = tempfile.mktemp()
     t = threading.Thread()
@@ -1620,7 +1609,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     t.start()
     time.sleep(0.01)  # Give it a chance to start listening (sorry)
     listener = lirc_remote_listen(lircd_socket, 'test')
-    control = LircRemote(lircd_socket, 'test')
+    control = new_local_lirc_remote(lircd_socket, 'test')
     for i in keys:
         control.press(i)
         assert listener.next() == i

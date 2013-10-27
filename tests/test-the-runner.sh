@@ -1,6 +1,14 @@
 # Run with ./run-tests.sh
 
+install_stbt_in_sandbox() {
+    make -C "$srcdir" install prefix=$PWD/opt &&
+    export PATH=$PWD/opt/bin:$PATH &&
+    [ "$(which stbt)" = "$PWD/opt/bin/stbt" ] \
+    || fail "Test setup failure: failed to install stbt"
+}
+
 test_runner_once() {
+    install_stbt_in_sandbox
     { "$srcdir"/extra/runner/run -1 -t my-label "$testdir"/test.py ||
         fail "runner/run failed"
     } | sed 's/^/runner: /'
@@ -20,6 +28,7 @@ test_runner_once() {
 }
 
 test_runner_runs_until_failure() {
+    install_stbt_in_sandbox
     timeout 20 "$srcdir"/extra/runner/run "$testdir"/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
@@ -32,6 +41,7 @@ test_runner_runs_until_failure() {
 }
 
 test_runner_continues_after_uninteresting_failure() {
+    install_stbt_in_sandbox
     timeout 30 "$srcdir"/extra/runner/run -k "$testdir"/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
@@ -46,6 +56,7 @@ test_runner_continues_after_uninteresting_failure() {
 }
 
 test_runner_parse_test_args() {
+    install_stbt_in_sandbox
     sed -n '/^parse_test_args() {/,/^}/ p' "$srcdir"/extra/runner/run \
         > parse_test_args.sh &&
     . parse_test_args.sh &&
@@ -77,6 +88,7 @@ test_runner_parse_test_args() {
 }
 
 test_runner_killtree() {
+    install_stbt_in_sandbox
     sed -n '/^killtree()/,/^}/ p' "$srcdir"/extra/runner/run > killtree.sh &&
     . killtree.sh &&
     declare -f killtree || fail "'killtree' not defined"
@@ -85,6 +97,7 @@ test_runner_killtree() {
 }
 
 test_signalname() {
+    install_stbt_in_sandbox
     sed -n '/^signalname()/,/^}/ p' "$srcdir"/extra/runner/report \
         > signalname.sh &&
     . signalname.sh &&
@@ -107,6 +120,7 @@ expect_runner_to_say() {
 }
 
 test_runner_sigint_once() {
+    install_stbt_in_sandbox
     sleep=4 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
@@ -117,6 +131,7 @@ test_runner_sigint_once() {
 }
 
 test_runner_sigint_twice() {
+    install_stbt_in_sandbox
     sleep=10 "$srcdir"/extra/runner/run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
@@ -130,6 +145,7 @@ test_runner_sigint_twice() {
 }
 
 test_runner_passes_arguments_to_script() {
+    install_stbt_in_sandbox
     "$srcdir"/extra/runner/run \
         "$testdir"/test.py "a b" c d -- \
         "$testdir"/test.py efg hij
@@ -150,6 +166,7 @@ test_runner_report_with_symlinks_for_each_testrun() {
     # Use case: After you've run `runner/run` several times from different
     # directories, you gather all results into a single report by symlinking
     # each testrun into a single directory.
+    install_stbt_in_sandbox
 
     "$srcdir"/extra/runner/run -1 "$testdir"/test.py &&
     mkdir new-report &&
@@ -161,6 +178,7 @@ test_runner_report_with_symlinks_for_each_testrun() {
 }
 
 test_runner_custom_logging() {
+    install_stbt_in_sandbox
     cat "$testdir"/stbt.conf |
     sed -e "s,pre_run =,& $PWD/my-logger," \
         -e "s,post_run =,& $PWD/my-logger," > stbt.conf
@@ -181,6 +199,7 @@ test_runner_custom_logging() {
 }
 
 test_runner_custom_classifier() {
+    install_stbt_in_sandbox
     cat "$testdir"/stbt.conf |
     sed -e "s,classify =,& $PWD/my-classifier," > stbt.conf
 
@@ -201,6 +220,7 @@ test_runner_custom_classifier() {
 }
 
 test_runner_custom_recovery_script() {
+    install_stbt_in_sandbox
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -218,6 +238,7 @@ test_runner_custom_recovery_script() {
 }
 
 test_runner_recovery_exit_status() {
+    install_stbt_in_sandbox
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -268,6 +289,7 @@ test_runner_results_server() {
             wait_for_report $pid
         done
     }
+    install_stbt_in_sandbox
 
     "$srcdir"/extra/runner/run "$testdir"/test.py
     rundir=$(ls -d 20* | tail -1)
@@ -317,6 +339,7 @@ test_runner_results_server() {
 }
 
 test_runner_results_server_shows_directory_listing() {
+    install_stbt_in_sandbox
     mkdir my-test-session
     echo hi > my-test-session/index.html
 
@@ -336,6 +359,7 @@ test_runner_results_server_shows_directory_listing() {
 }
 
 test_runner_isolates_stdin_of_user_hooks() {
+    install_stbt_in_sandbox
     cat >my-logger <<-EOF
 	read x
 	[[ -z \$x ]] && echo STDIN=None || echo STDIN=\$x
