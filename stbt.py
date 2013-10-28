@@ -1052,9 +1052,10 @@ class Display:
     def restart_source(self, *_args):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
-        self.source_pipeline.set_state(gst.STATE_NULL)
-        self.source_pipeline = None
-        GObjectTimeout(5, self.start_source).start()
+        if self.source_pipeline:
+            self.source_pipeline.set_state(gst.STATE_NULL)
+            self.source_pipeline = None
+            GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
 
     def start_source(self):
