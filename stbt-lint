@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt lint [pylint options] <filename> [<filename> ...]
+#/
+#/ Run static analysis over the specified stb-tester python scripts.
+#/
+#/ This runs 'pylint' with the following additional checkers:
+#/ * E7001: Used when the image path given to 'stbt.wait_for_match'
+#/   (and similar functions) does not exist on disk.
+#/
+#/ Any command-line arguments are passed through to pylint.
+
+set -eu
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+die() { echo "stbt lint: error: $*" >&2; exit 1; }
+
+case "$1" in
+    -h|--help) usage; exit 0;;
+esac
+
+which pylint &>/dev/null || die "Couldn't find 'pylint' executable"
+pylint --version 2>&1 | grep -q 'pylint 0\.' ||
+    die "Not compatible with pylint >= 1.0"  # See commits 97eada33, 65a38380
+
+PYTHONPATH="$(dirname "$0"):$PYTHONPATH" \
+pylint --load-plugins=stbt_pylint_plugin "$@"

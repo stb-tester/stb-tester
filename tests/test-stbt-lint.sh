@@ -1,28 +1,22 @@
-# Automated tests for ../stbt_pylint_plugin.py
 # Run with ./run-tests.sh
 
-_pylint() {
-    PYLINTRC="$testdir"/pylint.conf \
-    pylint --load-plugins=stbt_pylint_plugin --errors-only "$@"
-}
-
-test_that_pylint_checker_passes_existing_images() {
+test_that_stbt_lint_passes_existing_images() {
     cat > test.py <<-EOF &&
 	import stbt
 	stbt.wait_for_match('$testdir/videotestsrc-redblue.png')
 	EOF
-    _pylint test.py
+    stbt-lint --errors-only test.py
 }
 
-test_that_pylint_checker_fails_nonexistent_image() {
+test_that_stbt_lint_fails_nonexistent_image() {
     cat > test.py <<-EOF &&
 	import stbt
 	stbt.wait_for_match('idontexist.png')
 	EOF
-    ! _pylint test.py
+    ! stbt-lint --errors-only test.py
 }
 
-test_that_pylint_checker_ignores_generated_image_names() {
+test_that_stbt_lint_ignores_generated_image_names() {
     cat > test.py <<-EOF &&
 	import os
 	import stbt
@@ -31,27 +25,27 @@ test_that_pylint_checker_ignores_generated_image_names() {
 	stbt.wait_for_match('%s.png' % var)
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
 	EOF
-    _pylint test.py
+    stbt-lint --errors-only test.py
 }
 
-test_that_pylint_checker_ignores_regular_expressions() {
+test_that_stbt_lint_ignores_regular_expressions() {
     cat > test.py <<-EOF &&
 	import re
 	re.match(r'.*/(.*)\.png', '')
 	EOF
-    _pylint test.py
+    stbt-lint --errors-only test.py
 }
 
-test_that_pylint_checker_ignores_images_created_by_the_stbt_script() {
+test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     cat > test.py <<-EOF &&
 	import stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	EOF
-    _pylint test.py
+    stbt-lint --errors-only test.py
 }
 
-test_pylint_checker_on_itself() {
+test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
-    _pylint "$srcdir"/stbt_pylint_plugin.py
+    stbt-lint --errors-only "$srcdir"/stbt_pylint_plugin.py
 }

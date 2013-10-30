@@ -2,9 +2,7 @@
 
 * Identifies broken image links in parameters to `stbt.wait_for_match` etc.
 
-Add this file to your PYTHONPATH. Then run pylint with
-`--load-plugins=stbt_pylint_plugin`, or add `load-plugins=stbt_pylint_plugin`
-to the `[MASTER]` section of your pylint config file.
+Intended to be used by "stbt lint".
 
 Documentation on Abstract Syntax Tree traversal with python/pylint:
 
@@ -29,12 +27,12 @@ except ImportError:  # < pylint 1.0
 
 class StbtChecker(BaseChecker):
     __implements__ = IAstroidChecker  # pylint: disable=F0220
-    name = 'stbt-checker'
+    name = 'stb-tester'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
         'E7001': ('Image "%s" not found on disk',
                   'Used when the image path given to `stbt.wait_for_match` '
-                  'etc. does not exist on disk.'),
+                  '(and similar functions) does not exist on disk.'),
     }
 
     def visit_const(self, node):

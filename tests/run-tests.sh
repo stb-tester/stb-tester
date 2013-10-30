@@ -31,6 +31,7 @@ export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
+export PYLINTRC="$testdir/pylint.conf"
 rm -f ~/.gstreamer-0.10/registry.*
 
 run() {

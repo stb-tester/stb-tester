@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.16
+Version: 0.17
 Release: 1%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
@@ -20,6 +20,7 @@ Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients
 Requires: pygtk2
+Requires: pylint < 1.0
 Requires: python >= 2.4
 
 %description

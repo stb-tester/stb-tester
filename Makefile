@@ -17,6 +17,7 @@ tools = stbt-run
 tools += stbt-record
 tools += stbt-config
 tools += stbt-control
+tools += stbt-lint
 tools += stbt-power
 tools += stbt-screenshot
 tools += stbt-templatematch
@@ -54,7 +55,8 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
 	$(INSTALL) -m 0755 stbt irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 stbt.py irnetbox.py $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 stbt.py stbt_pylint_plugin.py irnetbox.py \
+	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
@@ -66,6 +68,7 @@ uninstall:
 	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
 	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
+	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt_pylint_plugin.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
 	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
 	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-controlc
@@ -102,6 +105,7 @@ check-integrationtests:
 check-pylint:
 	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
 	    stbt-templatematch \
+	    stbt_pylint_plugin.py \
 	    irnetbox.py irnetbox-proxy \
 	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
 	    extra/runner/report.py extra/runner/server |\

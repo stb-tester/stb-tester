@@ -15,7 +15,7 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config control power \
+                    run record config control lint power \
                     screenshot templatematch tv)" \
             -- "$cur"))
     else
@@ -24,6 +24,7 @@ _stbt() {
             record)   _stbt_record;;
             config)   _stbt_config;;
             control)  _stbt_control;;
+            lint)     _stbt_lint;;
             power)    _stbt_power;;
             templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
@@ -89,6 +90,11 @@ _stbt_control() {
                             --help --help-keymap --keymap --control)" \
                         -- "$cur"));;
     esac
+}
+
+_stbt_lint() {
+    declare -F _pylint &>/dev/null || return  # Provided by bash-completion
+    _pylint pylint
 }
 
 _stbt_power() {
