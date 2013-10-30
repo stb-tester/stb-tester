@@ -1,10 +1,9 @@
-# Automated tests for ../extra/stbt_checker.py.
+# Automated tests for ../stbt_pylint_plugin.py
 # Run with ./run-tests.sh
 
 _pylint() {
     PYLINTRC="$testdir"/pylint.conf \
-    PYTHONPATH="$srcdir/extra:$PYTHONPATH" \
-    pylint --load-plugins=stbt_checker --errors-only "$@"
+    pylint --load-plugins=stbt_pylint_plugin --errors-only "$@"
 }
 
 test_that_pylint_checker_passes_existing_images() {
@@ -54,5 +53,5 @@ test_that_pylint_checker_ignores_images_created_by_the_stbt_script() {
 test_pylint_checker_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
-    _pylint "$srcdir"/extra/stbt_checker.py
+    _pylint "$srcdir"/stbt_pylint_plugin.py
 }

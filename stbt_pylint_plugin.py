@@ -3,8 +3,8 @@
 * Identifies broken image links in parameters to `stbt.wait_for_match` etc.
 
 Add this file to your PYTHONPATH. Then run pylint with
-`--load-plugins=stbt_checker`, or add `load-plugins=stbt_checker` to the
-`[MASTER]` section of your pylint config file.
+`--load-plugins=stbt_pylint_plugin`, or add `load-plugins=stbt_pylint_plugin`
+to the `[MASTER]` section of your pylint config file.
 
 Documentation on Abstract Syntax Tree traversal with python/pylint:
 
