@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.16
+Version: 0.17
 Release: 1%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
@@ -9,18 +9,19 @@ Source: %{name}-%{version}.tar.gz
 BuildArch: noarch
 BuildRequires: python-docutils
 
-Requires: python >= 2.4
-Requires: pygtk2
-Requires: gstreamer-python
-Requires: gstreamer
-Requires: gstreamer-plugins-base
-Requires: gstreamer-plugins-good
-Requires: gstreamer-plugins-bad-free
-Requires: opencv
-Requires: opencv-python
 Requires: curl
 Requires: expect
+Requires: gstreamer
+Requires: gstreamer-plugins-bad-free
+Requires: gstreamer-plugins-base
+Requires: gstreamer-plugins-good
+Requires: gstreamer-python
+Requires: opencv
+Requires: opencv-python
 Requires: openssh-clients
+Requires: pygtk2
+Requires: pylint < 1.0
+Requires: python >= 2.4
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control

@@ -2,7 +2,9 @@
 
 #/ Usage: pylint.sh file.py [file.py...]
 #/
-#/ Runs pep8 and pylint checkers over the given python source files.
+#/ Enforces the stb-tester project's coding conventions
+#/ by running pep8 and pylint checkers over the given python source files.
+#/ Used by 'make check'.
 
 [ $# -gt 0 ] || { grep '^#/' "$0" | cut -c4- >&2; exit 1; }
 
