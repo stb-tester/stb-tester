@@ -18,9 +18,8 @@ trap "rm -f script.$$" EXIT
     --source-pipeline \
       "filesrc location=video.mpeg ! mpegtsdemux ! video/x-h264 ! decodebin2" \
     --control none \
-    script.$$ |
-  wc -l
+    script.$$
 ) 2>&1 |
 awk '
-  NR == 1 { frames = $1 }
-  /real/  { print (frames/$2) " fps (" frames " frames in " $2 "s)" }'
+  / Position/ { frames += 1 }
+  /^real/    { print (frames/$2) " fps (" frames " frames in " $2 "s)" }'
