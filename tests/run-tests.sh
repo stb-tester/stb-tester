@@ -2,7 +2,7 @@
 
 # Automated tests to test the stb-tester framework itself.
 
-#/ Usage: run-tests.sh [options] [testnames...]
+#/ Usage: run-tests.sh [options] [testsuite or testcase names...]
 #/
 #/         -l      Leave the scratch dir created in /tmp.
 #/         -v      Verbose (don't suppress console output from tests).
@@ -11,9 +11,6 @@
 
 cd "$(dirname "$0")"
 testdir="$PWD"
-for tests in ./test-*.sh; do
-    source $tests
-done
 
 while getopts "lv" option; do
     case $option in
@@ -23,6 +20,17 @@ while getopts "lv" option; do
     esac
 done
 shift $(($OPTIND-1))
+
+testsuites=()
+testcases=()
+while [[ $# -gt 0 ]]; do
+    [[ -f $(basename $1) ]] && testsuites+=($(basename $1)) || testcases+=($1)
+    shift
+done
+for testsuite in ${testsuites[*]:-./test-*.sh}; do
+    source $testsuite
+done
+: ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
 srcdir="$testdir/.."
 export PATH="$srcdir:$PATH"
@@ -80,7 +88,7 @@ killtree() {
 
 # Run the tests ############################################################
 ret=0
-for t in ${*:-$(declare -F | awk '/ test_/ {print $3}')}; do
+for t in ${testcases[*]}; do
     run $t || ret=1
 done
 exit $ret
@@ -93,6 +101,7 @@ _stbt_run_tests() {
         $(echo $COMP_LINE | grep -o '\b[^ ]*run-tests\.sh\b'))"
     local testfiles="$(\ls $testdir/test-*.sh)"
     local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*()/ {print $1}' $testfiles)"
-    COMPREPLY=( $(compgen -W "$testcases" -- "$cur") )
+    COMPREPLY=( $(
+        compgen -W "$testcases $(basename -a $testfiles)" -- "$cur") )
 }
 complete -F _stbt_run_tests run-tests.sh
