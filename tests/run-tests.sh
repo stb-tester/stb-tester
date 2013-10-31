@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Automated tests to test the stb-tester framework itself.
-# See SETUP TIPS in ../README.rst for further information.
 
 #/ Usage: run-tests.sh [options] [testnames...]
 #/
