@@ -305,7 +305,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     debug("Searching for " + template_)
 
     for frame, timestamp in frames(timeout_secs):
-        matched, position, first_pass_certainty = _match_template(
+        matched, position, first_pass_certainty = _match(
             frame, template, match_parameters)
 
         result = MatchResult(
@@ -1003,7 +1003,30 @@ def gst_to_opencv(gst_buffer):
         dtype=numpy.uint8)
 
 
-def _match_template(image, template, match_parameters):
+def _match(image, template, match_parameters):
+    matched, position, first_pass_certainty = _find_match(
+        image, template, match_parameters)
+    if matched:
+        matched = _confirm_match(image, position, template, match_parameters)
+
+    cv2.rectangle(
+        image,
+        (position.x, position.y),
+        (position.x + template.shape[1], position.y + template.shape[0]),
+        (32, 0 if matched else 255, 255),  # bgr
+        thickness=3)
+
+    return matched, position, first_pass_certainty
+
+
+def _find_match(image, template, match_parameters):
+    """Search for `template` in the entire `image`.
+
+    This searches the entire image, so speed is more important than accuracy.
+    False positives are ok; we apply a second pass (`_confirm_match`) to weed
+    out false positives.
+    """
+
     log = functools.partial(_log_image, directory="stbt-debug/detect_match")
 
     match_method_cv2 = {
@@ -1020,60 +1043,58 @@ def _match_template(image, template, match_parameters):
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
     if match_method_cv2 == cv2.TM_SQDIFF_NORMED:
-        first_pass_certainty = (1 - min_value)
+        certainty = (1 - min_value)
         position = Position(*min_location)
-    elif match_method_cv2 in (
-            cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
-        first_pass_certainty = max_value
+    elif match_method_cv2 in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
+        certainty = max_value
         position = Position(*max_location)
     else:
-        assert False, "Invalid matchTemplate method '%s'" % (
-            match_method_cv2)
+        assert False, "Invalid matchTemplate method '%s'" % match_method_cv2
 
-    matched = False
-    if first_pass_certainty >= match_parameters.match_threshold:
-        if match_parameters.confirm_method == "none":
-            matched = True
-        else:
-            # Set Region Of Interest to the "best match" location
-            roi = image[
-                position.y:(position.y + template.shape[0]),
-                position.x:(position.x + template.shape[1])]
-            image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-            log(roi, "source_roi")
-            log(image_gray, "source_roi_gray")
-            log(template_gray, "template_gray")
+    return certainty >= match_parameters.match_threshold, position, certainty
 
-            if match_parameters.confirm_method == "normed-absdiff":
-                cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
-                cv2.normalize(
-                    template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-                log(image_gray, "source_roi_gray_normalized")
-                log(template_gray, "template_gray_normalized")
 
-            absdiff = cv2.absdiff(image_gray, template_gray)
-            _, thresholded = cv2.threshold(
-                absdiff, int(match_parameters.confirm_threshold * 255),
-                255, cv2.THRESH_BINARY)
-            eroded = cv2.erode(
-                thresholded,
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
-                iterations=match_parameters.erode_passes)
-            log(absdiff, "absdiff")
-            log(thresholded, "absdiff_threshold")
-            log(eroded, "absdiff_threshold_erode")
+def _confirm_match(image, position, template, match_parameters):
+    """Confirm that `template` matches `image` at `position`.
 
-            matched = (cv2.countNonZero(eroded) == 0)
+    This only checks `template` at a single position within `image`, so we can
+    afford to do more computationally-intensive checks than `_find_match`.
+    """
 
-    cv2.rectangle(
-        image,
-        (position.x, position.y),
-        (position.x + template.shape[1], position.y + template.shape[0]),
-        (32, 0 if matched else 255, 255),  # bgr
-        thickness=3)
+    if match_parameters.confirm_method == "none":
+        return True
 
-    return matched, position, first_pass_certainty
+    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
+
+    # Set Region Of Interest to the "best match" location
+    roi = image[
+        position.y:(position.y + template.shape[0]),
+        position.x:(position.x + template.shape[1])]
+    image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    log(roi, "source_roi")
+    log(image_gray, "source_roi_gray")
+    log(template_gray, "template_gray")
+
+    if match_parameters.confirm_method == "normed-absdiff":
+        cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
+        cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
+        log(image_gray, "source_roi_gray_normalized")
+        log(template_gray, "template_gray_normalized")
+
+    absdiff = cv2.absdiff(image_gray, template_gray)
+    _, thresholded = cv2.threshold(
+        absdiff, int(match_parameters.confirm_threshold * 255),
+        255, cv2.THRESH_BINARY)
+    eroded = cv2.erode(
+        thresholded,
+        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+        iterations=match_parameters.erode_passes)
+    log(absdiff, "absdiff")
+    log(thresholded, "absdiff_threshold")
+    log(eroded, "absdiff_threshold_erode")
+
+    return (cv2.countNonZero(eroded) == 0)
 
 
 _frame_number = 0
