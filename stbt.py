@@ -234,6 +234,13 @@ class MatchParameters(object):
             confirm_method=str(get_config('match', 'confirm_method')),
             confirm_threshold=float(get_config('match', 'confirm_threshold')),
             erode_passes=int(get_config('match', 'erode_passes'))):
+
+        if match_method not in (
+                "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
+            raise ValueError("Invalid match_method '%s'" % match_method)
+        if confirm_method not in ("none", "absdiff", "normed-absdiff"):
+            raise ValueError("Invalid confirm_method '%s'" % confirm_method)
+
         self.match_method = match_method
         self.match_threshold = match_threshold
         self.confirm_method = confirm_method
