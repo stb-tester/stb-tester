@@ -1025,33 +1025,167 @@ def _find_match(image, template, match_parameters):
     This searches the entire image, so speed is more important than accuracy.
     False positives are ok; we apply a second pass (`_confirm_match`) to weed
     out false positives.
+
+    http://docs.opencv.org/modules/imgproc/doc/object_detection.html
+    http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
     log = functools.partial(_log_image, directory="stbt-debug/detect_match")
+    log(image, "source")
+    log(template, "template")
+    ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    match_method_cv2 = {
+    levels = int(get_config("match", "pyramid_levels"))
+    image_pyramid = _build_pyramid(image, levels)
+    template_pyramid = _build_pyramid(template, levels)
+    roi_mask = None  # Initial region of interest: The whole image.
+
+    for level in reversed(range(len(template_pyramid))):
+
+        matched, best_match_position, certainty, roi_mask = _match_template(
+            image_pyramid[level], template_pyramid[level], match_parameters,
+            roi_mask, level)
+
+        if level == 0 or not matched:
+            return matched, _upsample(best_match_position, level), certainty
+
+
+def _match_template(image, template, match_parameters, roi_mask, level):
+
+    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
+    log_prefix = "level%d-" % level
+    ddebug("Level %d: image %s, template %s" % (
+        level, image.shape, template.shape))
+
+    method = {
         'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
         'ccorr-normed': cv2.TM_CCORR_NORMED,
         'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
     }[match_parameters.match_method]
-    matches_heatmap = cv2.matchTemplate(
-        image, template, match_method_cv2)
-    log(image, "source")
-    log(template, "template")
-    log(matches_heatmap, "source_matchtemplate")
+    threshold = match_parameters.match_threshold
+
+    matches_heatmap = (
+        (numpy.ones if method == cv2.TM_SQDIFF_NORMED else numpy.zeros)(
+            (image.shape[0] - template.shape[0] + 1,
+             image.shape[1] - template.shape[1] + 1),
+            dtype=numpy.float32))
+
+    if roi_mask is None:
+        rois = [  # Initial region of interest: The whole image.
+            _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+    else:
+        roi_mask = cv2.pyrUp(roi_mask)
+        log(roi_mask, log_prefix + "roi_mask")
+        contours, _ = cv2.findContours(
+            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        rois = [
+            _Rect(*cv2.boundingRect(x))
+            # findContours ignores 1-pixel border of the image
+            .shift(Position(-1, -1)).expand(_Size(2, 2))
+            for x in contours]
+
+    if _debug_level > 1:
+        source_with_rois = image.copy()
+        for roi in rois:
+            r = roi
+            t = _Size(*template.shape[:2])
+            s = _Size(*source_with_rois.shape[:2])
+            cv2.rectangle(
+                source_with_rois,
+                (max(0, r.x), max(0, r.y)),
+                (min(s.w - 1, r.x + r.w + t.w - 1),
+                 min(s.h - 1, r.y + r.h + t.h - 1)),
+                (0, 255, 255),
+                thickness=1)
+        log(source_with_rois, log_prefix + "source_with_rois")
+
+    for roi in rois:
+        r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
+        ddebug("Level %d: Searching in %s" % (level, roi))
+        cv2.matchTemplate(
+            image[r.to_slice()],
+            template,
+            method,
+            matches_heatmap[roi.to_slice()])
+
+    log(image, log_prefix + "source")
+    log(template, log_prefix + "template")
+    log(matches_heatmap, log_prefix + "source_matchtemplate")
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
-    if match_method_cv2 == cv2.TM_SQDIFF_NORMED:
+    if method == cv2.TM_SQDIFF_NORMED:
         certainty = (1 - min_value)
-        position = Position(*min_location)
-    elif match_method_cv2 in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
+        best_match_position = Position(*min_location)
+    elif method in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
         certainty = max_value
-        position = Position(*max_location)
+        best_match_position = Position(*max_location)
     else:
-        assert False, "Invalid matchTemplate method '%s'" % match_method_cv2
+        assert False, (
+            "Invalid matchTemplate method '%s'" % method)
 
-    return certainty >= match_parameters.match_threshold, position, certainty
+    _, new_roi_mask = cv2.threshold(
+        matches_heatmap,
+        ((1 - threshold) if method == cv2.TM_SQDIFF_NORMED else threshold),
+        255,
+        (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
+         else cv2.THRESH_BINARY))
+    new_roi_mask = new_roi_mask.astype(numpy.uint8)
+    log(new_roi_mask, log_prefix + "source_matchtemplate_threshold")
+
+    matched = certainty >= threshold
+    ddebug("Level %d: %s at %s with certainty %s" % (
+        level, "Matched" if matched else "Didn't match",
+        best_match_position, certainty))
+    return (matched, best_match_position, certainty, new_roi_mask)
+
+
+def _build_pyramid(image, levels):
+    """A "pyramid" is [an image, the same image at 1/2 the size, at 1/4, ...]
+
+    As a performance optimisation, image processing algorithms work on a
+    "pyramid" by first identifying regions of interest (ROIs) in the smallest
+    image; if results are positive, they proceed to the next larger image, etc.
+    See http://docs.opencv.org/doc/tutorials/imgproc/pyramids/pyramids.html
+
+    The original-sized image is called "level 0", the next smaller image "level
+    1", and so on. This numbering corresponds to the array index of the
+    "pyramid" array.
+    """
+    pyramid = [image]
+    for _ in range(levels - 1):
+        pyramid.append(cv2.pyrDown(pyramid[-1]))
+    return pyramid
+
+
+def _upsample(position, levels):
+    """Convert position coordinates by the given number of pyramid levels.
+
+    There is a loss of precision (unless ``levels`` is 0, in which case this
+    function is a no-op).
+    """
+    return Position(position.x * 2 ** levels, position.y * 2 ** levels)
+
+
+# Order of parameters consistent with ``cv2.boudingRect``.
+class _Rect(namedtuple("_Rect", "x y w h")):
+    def expand(self, size):
+        return _Rect(self.x, self.y, self.w + size.w, self.h + size.h)
+
+    def shrink(self, size):
+        return _Rect(self.x, self.y, self.w - size.w, self.h - size.h)
+
+    def shift(self, position):
+        return _Rect(self.x + position.x, self.y + position.y, self.w, self.h)
+
+    def to_slice(self):
+        """Return a 2-dimensional slice suitable for indexing a numpy array."""
+        return (slice(self.y, self.y + self.h), slice(self.x, self.x + self.w))
+
+
+# Order of parameters consistent with OpenCV's ``numpy.ndarray.shape``.
+class _Size(namedtuple("_Size", "h w")):
+    pass
 
 
 def _confirm_match(image, position, template, match_parameters):
