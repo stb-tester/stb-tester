@@ -94,39 +94,52 @@ ipp_filteroutlet() {
 }
 
 pdu() {
-    local command=$1 hostname=$2 outlet="$3"
-    [[ -z "$outlet" && $command == status ]] && outlet=P1
+    local command=$1 hostname=$2 outlet="$3" pdu_error command_ids data _
 
-    set -o pipefail
-    # ssh access to the pdu is extremely slow... but telnet access fails when
-    # multiple hosts try to connect at once.
-    expect -c "
-        spawn ssh admin@$hostname
-        set timeout 60
-        expect {
-            {Are you sure you want to continue connecting} {
-                send yes\n
-                exp_continue
-            }
-            password: { send admin\n }
-            eof { exit 1 }
-            timeout { exit 1 }
-        }
-        expect {PDU Command >} { send \"pdu $command $outlet\n\" }
-        expect {PDU Command >} { send QUIT\n }
-        expect closed." |
-    sed -En '/ON|OFF/ p' |
-    tail -n +2 ||
-    die "failed to connect to '$hostname'"
+    pdu_error="Failed to execute command '$command' on PDU '$hostname' "
+    pdu_error+="outlet '${outlet:-all}'"
 
-    [[ $command == status ]] || {
-        sleep 2
-        local output=$(pdu status $hostname $outlet | grep -i "$outlet")
-        [[ -n "$output" ]] ||
-            die "invalid outlet '$outlet' (hint: use the 'status' command)"
-        echo "$output"
-        echo "$output" | grep -qi "$command" || exit 1
-    }
+    if [[ $command == status ]]; then
+        if [[ -n $outlet ]]; then
+            pdu_status $hostname "$outlet" || die "$pdu_error"
+        else
+            { pdu_status $hostname '1-A[0-9]+' || die "$pdu_error"; } | \
+                awk '{ printf("1-A%d: %s\n", NR, $0) }'  # Add outlet addresses
+        fi
+    else
+        declare -A command_ids=([on]=1 [off]=2)
+
+        # 2 attempts to minimise failure rate
+        for _ in 1 2; do
+            data="selOutlet=%3F$(pdu_outlet_no "$outlet")&"
+            data+="ctrl_all=${command_ids[$command]}"
+            _curl -d "$data" \
+                http://admin:admin@$hostname/Forms/index_3 >/dev/null
+
+            # The above HTTP POST always succeeds, but doesn't always switch
+            # the power outlet. Check by querying the new outlet status,
+            # allowing up to 8 seconds for it to take effect.
+            for _ in {1..8}; do
+                sleep 1
+                pdu_status $hostname "$outlet" | grep -iq "$command" && return
+            done
+        done
+
+        die "$pdu_error"
+    fi
+}
+pdu_status() {
+    local hostname=$1 outlet="$2"
+    _curl http://admin:admin@$hostname | awk "/$outlet/,/<\/ul>/" | \
+        grep -Eo 'ON|OFF'
+}
+pdu_outlet_no() {
+    echo $1 | sed 's/^1-A//'
+}
+_curl() {
+    # 2 attempts to minimise failure rate
+    curl --anyauth --fail --silent "$@" ||
+    curl --anyauth --fail --show-error --silent "$@"
 }
 
 main "$@"
