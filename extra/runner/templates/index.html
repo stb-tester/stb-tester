@@ -191,11 +191,11 @@
           var hms = element.cells.item(5).textContent.split(':');
           var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
           var seriesIndex;
-          if (element.className == 'success') {
+          if ($(element).hasClass('success')) {
             seriesIndex = 0;
-          } else if (element.className == 'warning') {
+          } else if ($(element).hasClass('warning')) {
             seriesIndex = 1;
-          } else if (element.className == 'error') {
+          } else if ($(element).hasClass('error')) {
             seriesIndex = 2;
           }
           plotSeries[seriesIndex].push([index, duration_sec, timestamp]);
