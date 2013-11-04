@@ -5,7 +5,7 @@
   <title>Test results {{runs[0].timestamp}} - {{runs[-1].timestamp}}</title>
 
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
-  <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.css" rel="stylesheet" />
+  <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.css" rel="stylesheet" />
   <style>
     #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
@@ -174,7 +174,6 @@
 
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.js"></script>
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.highlighter.min.js"></script>
-<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.cursor.min.js"></script>
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasTextRenderer.min.js"></script>
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 <script>
@@ -214,27 +213,13 @@
         showMarker: true,
         markerOptions: { size: 5 }
       },
-      series: [{
-          label: 'success',
-          color: 'gray',
-        }, {
-          label: 'warning',
-          color: 'orange',
-          markerOptions: {
-            style: 'filledSquare'
-          }
-        }, {
-          label: 'error',
-          color: 'red',
-          markerOptions: {
-            style: 'filledSquare'
-          }
-        }
+      series: [
+        {color: 'gray'},
+        {color: 'orange', markerOptions: {style: 'filledSquare'}},
+        {color: 'red', markerOptions: {style: 'filledSquare'}},
       ],
       highlighter: {
         show: true,
-        yvalues: 1,
-        tooltipAxes: 'y',
         tooltipLocation: 'n',
         sizeAdjust: 10,
         tooltipContentEditor: function(str, seriesIndex, pointIndex, plot) {
