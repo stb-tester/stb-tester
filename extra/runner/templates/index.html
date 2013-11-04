@@ -200,8 +200,9 @@
           } else if ($(element).hasClass('error')) {
             seriesIndex = 2;
           }
-          plotSeries[seriesIndex].push(
-            [index, duration_sec, timestamp, test_name]);
+          plotSeries[seriesIndex].push([
+            Date.parse(timestamp.replace(' ', 'T')),
+            duration_sec, timestamp, test_name]);
       });
       if (plot1) {
         plot1.replot({data: plotSeries, resetAxes: true});
