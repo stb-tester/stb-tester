@@ -10,7 +10,7 @@
     #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
     #details { position: fixed; }
-    #plotdiv { margin-top: 2em; height: 250px; width: 100%; }
+    #plotdiv { height: 250px; width: 100%; }
   </style>
 </head>
 
@@ -29,11 +29,11 @@
   <div class="row-fluid" style="padding-top: 40px">
 
     <div class="span8" height="100%">
-      <div id="plotdiv"></div>
       <input id="testruns_search_text" class="input-block-level" type="text"
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
       <p id="totals"></p>
+      <div id="plotdiv"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -178,22 +178,33 @@
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 <script>
   $(document).ready(function() {
-    var plotSeries = [[], [], []];
-    $($('#testruns > tbody > tr').get().reverse()).each(
-      function(index, element) {
-        var timestamp = element.cells.item(0).textContent;
-        var hms = element.cells.item(5).textContent.split(':');
-        var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
-        var seriesIndex;
-        if (element.className == 'success') {
-          seriesIndex = 0;
-        } else if (element.className == 'warning') {
-          seriesIndex = 1;
-        } else if (element.className == 'error') {
-          seriesIndex = 2;
-        }
-        plotSeries[seriesIndex].push([index, duration_sec, timestamp]);
-    });
+    var plot1;
+    var plotSeries;
+    tablequery.on("search", update_plot);
+    update_plot();
+
+    function update_plot() {
+      plotSeries = [[], [], []];
+      $($('#testruns > tbody > tr').filter(":visible").get().reverse()).each(
+        function(index, element) {
+          var timestamp = element.cells.item(0).textContent;
+          var hms = element.cells.item(5).textContent.split(':');
+          var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
+          var seriesIndex;
+          if (element.className == 'success') {
+            seriesIndex = 0;
+          } else if (element.className == 'warning') {
+            seriesIndex = 1;
+          } else if (element.className == 'error') {
+            seriesIndex = 2;
+          }
+          plotSeries[seriesIndex].push([index, duration_sec, timestamp]);
+      });
+      if (plot1) {
+        plot1.replot({data: plotSeries, resetAxes: true});
+      }
+    }
+
     var plotOptions = {
       seriesDefaults: {
         showLine: false,
