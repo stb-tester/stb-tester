@@ -11,6 +11,7 @@
     table.sortable th { cursor: pointer; }
     #details { position: fixed; }
     #plot { height: 250px; width: 100%; }
+    .jqplot-highlighter-tooltip { line-height: 1; }
   </style>
 </head>
 
@@ -188,6 +189,7 @@
       $($('#testruns > tbody > tr').filter(":visible").get().reverse()).each(
         function(index, element) {
           var timestamp = element.cells.item(0).textContent;
+          var test_name = element.cells.item(1).textContent;
           var hms = element.cells.item(5).textContent.split(':');
           var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
           var seriesIndex;
@@ -198,7 +200,8 @@
           } else if ($(element).hasClass('error')) {
             seriesIndex = 2;
           }
-          plotSeries[seriesIndex].push([index, duration_sec, timestamp]);
+          plotSeries[seriesIndex].push(
+            [index, duration_sec, timestamp, test_name]);
       });
       if (plot1) {
         plot1.replot({data: plotSeries, resetAxes: true});
@@ -235,7 +238,7 @@
         tooltipLocation: 'n',
         sizeAdjust: 10,
         tooltipContentEditor: function(str, seriesIndex, pointIndex, plot) {
-          return plotSeries[seriesIndex][pointIndex][2];
+          return plotSeries[seriesIndex][pointIndex].slice(2).join("<br/>");
         }
       },
       cursor: { show: false },
