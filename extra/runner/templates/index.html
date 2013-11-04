@@ -10,7 +10,7 @@
     #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
     #details { position: fixed; }
-    #plotdiv { height: 250px; width: 100%; }
+    #plot { height: 250px; width: 100%; }
   </style>
 </head>
 
@@ -33,7 +33,7 @@
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
       <p id="totals"></p>
-      <div id="plotdiv"></div>
+      <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -258,11 +258,11 @@
         }
       }
     };
-    var plot1 = $.jqplot('plotdiv', plotSeries, plotOptions);
+    var plot1 = $.jqplot('plot', plotSeries, plotOptions);
     $(window).resize(function() {
       plot1.replot( { resetAxes: true } );
     });
-    $('#plotdiv').bind('jqplotDataClick',
+    $('#plot').bind('jqplotDataClick',
       function (ev, seriesIndex, pointIndex, data) {
         var timestamp = plotSeries[seriesIndex][pointIndex][2];
         var row = $("#testruns tbody tr td:first-child").filter(function() {
