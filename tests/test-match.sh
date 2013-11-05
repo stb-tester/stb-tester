@@ -3,7 +3,7 @@
 test_wait_for_match() {
     cat > test.py <<-EOF
 	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
+	    "$testdir/videotestsrc-redblue.png", consecutive_matches=2)
 	EOF
     stbt-run -v test.py
 }
@@ -20,13 +20,12 @@ test_wait_for_match_changing_template() {
     # Tests that we can change the image given to templatematch.
     # Also tests the remote-control infrastructure by using the null control.
     cat > test.py <<-EOF
-	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("MENU")
-	wait_for_match("$testdir/videotestsrc-bw.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-bw.png")
 	press("OK")
 	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
+	    "$testdir/videotestsrc-redblue.png")
 	EOF
     stbt-run -v --control=none test.py
 }
@@ -188,7 +187,7 @@ test_press_until_match() {
 
 test_wait_for_match_searches_in_script_directory() {
     cat > test.py <<-EOF
-	wait_for_match("in-script-dir.png", consecutive_matches=24)
+	wait_for_match("in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
     stbt-run -v test.py
@@ -254,11 +253,9 @@ test_detect_match_searches_in_caller_directory() {
 
 test_changing_input_video_with_the_test_control() {
     cat > test.py <<-EOF
-	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("checkers-8")
-	wait_for_match(
-	    "$testdir/videotestsrc-checkers-8.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-checkers-8.png")
 	EOF
     stbt-run -v test.py
 }
@@ -397,7 +394,7 @@ test_precondition_script() {
 	from preconditions import *
 	checkers_via_gamut()
 	wait_for_match(
-	    "$testdir/videotestsrc-checkers-8.png", consecutive_matches=24)
+	    "$testdir/videotestsrc-checkers-8.png")
 	EOF
     PYTHONPATH="$testdir:$PYTHONPATH" stbt-run -v test.py
 }

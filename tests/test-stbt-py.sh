@@ -17,11 +17,9 @@ test_invalid_source_pipeline() {
 
 test_get_frame_and_save_frame() {
     cat > get-screenshot.py <<-EOF
-	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("gamut")
-	wait_for_match(
-	    "$testdir/videotestsrc-gamut.png", consecutive_matches=24)
+	wait_for_match("$testdir/videotestsrc-gamut.png")
 	save_frame(get_frame(), "gamut.png")
 	EOF
     stbt-run -v get-screenshot.py
