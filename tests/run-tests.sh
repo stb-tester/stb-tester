@@ -51,6 +51,7 @@ run() {
     if [[ "$verbose" = "true" || $status -ne 0 ]]; then
         echo "Showing '$scratchdir/log':"
         cat "$scratchdir/log"
+        echo ""
     fi
     if [[ "$leave_scratch_dir" != "true" && $status -eq 0 ]]; then
         rm -rf "$scratchdir"
