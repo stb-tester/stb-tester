@@ -157,12 +157,12 @@ test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null || {
         echo "webminspector.py not found; skipping this test." >&2
         echo "See http://git.chromium.org/gitweb/?p=webm/webminspector.git" >&2
-        return 0
+        return 77
     }
 
     [ $(uname) = Darwin ] && {
         echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
-        return 0
+        return 77
     }
 
     cat > test.py <<-EOF &&
@@ -183,7 +183,7 @@ test_that_video_index_is_written_on_eos() {
 test_save_video() {
     [ $(uname) = Darwin ] && {
         echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
-        return 0
+        return 77
     }
 
     cat > record.py <<-EOF &&

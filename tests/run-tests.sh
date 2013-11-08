@@ -47,7 +47,11 @@ run() {
     printf "$1... "
     ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
     local status=$?
-    [ $status -eq 0 ] && echo "OK" || echo "FAIL"
+    case $status in
+        0) echo "OK";;
+        77) status=0; echo "SKIPPED";;
+        *) echo "FAIL";;
+    esac
     if [[ "$verbose" = "true" || $status -ne 0 ]]; then
         echo "Showing '$scratchdir/log':"
         cat "$scratchdir/log"

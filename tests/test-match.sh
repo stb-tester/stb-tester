@@ -402,7 +402,7 @@ test_precondition_script() {
 test_detect_match_visualisation() {
     [ $(uname) = Darwin ] && {
         echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
-        return 0
+        return 77
     }
 
     cat > match.py <<-EOF &&
