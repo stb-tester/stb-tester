@@ -400,20 +400,21 @@ test_precondition_script() {
 }
 
 test_detect_match_visualisation() {
-    [ $(uname) = Darwin ] && {
-        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
-        return 77
-    }
-
-    cat > match.py <<-EOF &&
-	wait_for_match("$testdir/videotestsrc-redblue.png",
-	               consecutive_matches=24)
+    cat > detect_match.py <<-EOF &&
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue.png", consecutive_matches=240)
 	EOF
-    stbt-run -v --save-video video.webm match.py &&
     cat > verify.py <<-EOF &&
 	wait_for_match("$testdir/videotestsrc-redblue-with-border.png")
 	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt-run -v \
+        --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
+        detect_match.py &
+    trap "kill $!; rm fifo" EXIT
+
     stbt-run -v --control none \
-        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
