@@ -285,7 +285,7 @@ test_draw_text() {
         --source-pipeline 'videotestsrc is-live=true pattern=black' \
         --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
         draw-text.py &
-    trap 'kill $!; rm fifo' EXIT
+    trap "kill $!; rm fifo" EXIT
 
     stbt-run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
