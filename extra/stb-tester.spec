@@ -1,6 +1,6 @@
 Name: stb-tester
 Version: 0.17
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
 URL: http://stb-tester.com
