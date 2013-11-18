@@ -278,6 +278,8 @@
             seriesIndex = 1;
           } else if ($(element).hasClass('error')) {
             seriesIndex = 2;
+          } else {  // Test in progress
+            return;
           }
           plotSeries[seriesIndex].push([
             Date.parse(timestamp.replace(' ', 'T')),
@@ -327,19 +329,21 @@
         }
       }
     };
-    var plot1 = $.jqplot('plot', plotSeries, plotOptions);
-    $(window).resize(function() {
-      plot1.replot( { resetAxes: true } );
-    });
-    $('#plot').bind('jqplotDataClick',
-      function (ev, seriesIndex, pointIndex, data) {
-        var timestamp = plotSeries[seriesIndex][pointIndex][2];
-        var row = $("#testruns tbody tr td:first-child").filter(function() {
-          return $(this).text() == timestamp;
-        }).parent("tr");
-        row.click();
-      }
-    );
+    if (plotSeries.some(function(x) { return x.length > 0; } )) {  // Has data
+      var plot1 = $.jqplot('plot', plotSeries, plotOptions);
+      $(window).resize(function() {
+        plot1.replot( { resetAxes: true } );
+      });
+      $('#plot').bind('jqplotDataClick',
+        function (ev, seriesIndex, pointIndex, data) {
+          var timestamp = plotSeries[seriesIndex][pointIndex][2];
+          var row = $("#testruns tbody tr td:first-child").filter(function() {
+            return $(this).text() == timestamp;
+          }).parent("tr");
+          row.click();
+        }
+      );
+    }
   });
 </script>
 
