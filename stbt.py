@@ -1035,9 +1035,9 @@ def _find_match(image, template, match_parameters):
     log(template, "template")
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    levels = int(get_config("match", "pyramid_levels"))
-    image_pyramid = _build_pyramid(image, levels)
-    template_pyramid = _build_pyramid(template, levels)
+    template_pyramid = _build_pyramid(
+        template, int(get_config("match", "pyramid_levels")))
+    image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
     for level in reversed(range(len(template_pyramid))):
@@ -1154,6 +1154,8 @@ def _build_pyramid(image, levels):
     """
     pyramid = [image]
     for _ in range(levels - 1):
+        if any(x < 20 for x in pyramid[-1].shape[:2]):
+            break
         pyramid.append(cv2.pyrDown(pyramid[-1]))
     return pyramid
 
