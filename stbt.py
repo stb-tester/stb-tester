@@ -1037,8 +1037,8 @@ def _match_template(image, template, match_parameters):
         else:
             # Set Region Of Interest to the "best match" location
             roi = image[
-                position.y:(position.y + template.shape[0]),  # pylint: disable=E1101,C0301
-                position.x:(position.x + template.shape[1])]  # pylint: disable=E1101,C0301
+                position.y:(position.y + template.shape[0]),
+                position.x:(position.x + template.shape[1])]
             image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
             log(roi, "source_roi")
@@ -1068,8 +1068,8 @@ def _match_template(image, template, match_parameters):
 
     cv2.rectangle(
         image,
-        (position.x, position.y),  # pylint: disable=E1101
-        (position.x + template.shape[1], position.y + template.shape[0]),  # pylint: disable=E1101,C0301
+        (position.x, position.y),
+        (position.x + template.shape[1], position.y + template.shape[0]),
         (32, 0 if matched else 255, 255),  # bgr
         thickness=3)
 
