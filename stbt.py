@@ -1070,7 +1070,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
              image.shape[1] - template.shape[1] + 1),
             dtype=numpy.float32))
 
-    if roi_mask is None:
+    if roi_mask is None or any(x < 3 for x in roi_mask.shape):
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
