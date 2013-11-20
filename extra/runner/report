@@ -40,7 +40,7 @@ main() {
 
       if $do_classify; then
         classify > failure-reason
-        sort --merge stdout.log stderr.log > combined.log
+        LC_ALL=C sort --merge stdout.log stderr.log > combined.log
         user_command classify
         echo "$rundir: $(cat failure-reason)"
       fi
