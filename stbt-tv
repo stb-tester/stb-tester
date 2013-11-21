@@ -55,10 +55,11 @@ source_pipeline=${*:-$("$(dirname "$0")/stbt-config" global.source_pipeline)}
 
 : ${sink:=$(
         case "$(uname)" in
-            (Darwin) echo glimagesink;;
+            (Darwin) echo "glimagesink force-aspect-ratio=true";;
             (Linux) lspci | grep -Eq '(VMware|VirtualBox)' &&
-                        echo ximagesink || echo xvimagesink;;
-            (*) echo ximagesink;;
+                        echo "ximagesink force-aspect-ratio=true" || \
+                        echo "xvimagesink force-aspect-ratio=true";;
+            (*) echo "ximagesink force-aspect-ratio=true";;
         esac)}
 
 set -x
