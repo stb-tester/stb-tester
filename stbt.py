@@ -13,6 +13,7 @@ import ConfigParser
 import contextlib
 import errno
 import functools
+import glob
 import inspect
 import os
 import Queue
@@ -295,18 +296,18 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    template_ = _find_path(image)
-    if not os.path.isfile(template_):
+    template_name = _find_path(image)
+    if not os.path.isfile(template_name):
         raise UITestError("No such template file: %s" % image)
-    template = cv2.imread(template_, cv2.CV_LOAD_IMAGE_COLOR)
+    template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
     if template is None:
-        raise UITestError("Failed to load template file: %s" % template_)
+        raise UITestError("Failed to load template file: %s" % template_name)
 
-    debug("Searching for " + template_)
+    debug("Searching for " + template_name)
 
     for frame, timestamp in frames(timeout_secs):
         matched, position, first_pass_certainty = _match(
-            frame, template, match_parameters)
+            frame, template, match_parameters, template_name)
 
         result = MatchResult(
             timestamp=timestamp,
@@ -1003,7 +1004,7 @@ def gst_to_opencv(gst_buffer):
         dtype=numpy.uint8)
 
 
-def _match(image, template, match_parameters):
+def _match(image, template, match_parameters, template_name):
     matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters)
     if matched:
@@ -1015,6 +1016,12 @@ def _match(image, template, match_parameters):
         (position.x + template.shape[1], position.y + template.shape[0]),
         (32, 0 if matched else 255, 255),  # bgr
         thickness=3)
+
+    if _debug_level > 1:
+        _log_image(image, "source_with_roi", "stbt-debug/detect_match")
+        _log_image_descriptions(
+            template_name, matched, position, first_pass_certainty,
+            match_parameters)
 
     return matched, position, first_pass_certainty
 
@@ -1212,15 +1219,15 @@ def _confirm_match(image, position, template, match_parameters):
         position.x:(position.x + template.shape[1])]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    log(roi, "source_roi")
-    log(image_gray, "source_roi_gray")
-    log(template_gray, "template_gray")
+    log(roi, "confirm-source_roi")
+    log(image_gray, "confirm-source_roi_gray")
+    log(template_gray, "confirm-template_gray")
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        log(image_gray, "source_roi_gray_normalized")
-        log(template_gray, "template_gray_normalized")
+        log(image_gray, "confirm-source_roi_gray_normalized")
+        log(template_gray, "confirm-template_gray_normalized")
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -1230,9 +1237,9 @@ def _confirm_match(image, position, template, match_parameters):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    log(absdiff, "absdiff")
-    log(thresholded, "absdiff_threshold")
-    log(eroded, "absdiff_threshold_erode")
+    log(absdiff, "confirm-absdiff")
+    log(thresholded, "confirm-absdiff_threshold")
+    log(eroded, "confirm-absdiff_threshold_erode")
 
     return (cv2.countNonZero(eroded) == 0)
 
@@ -1253,6 +1260,128 @@ def _log_image(image, name, directory):
     if image.dtype == numpy.float32:
         image = cv2.convertScaleAbs(image, alpha=255)
     cv2.imwrite(os.path.join(d, name) + ".png", image)
+
+
+def _log_image_descriptions(
+        template_name, matched, position, first_pass_certainty,
+        match_parameters):
+    """Create html file that describes the debug images."""
+
+    try:
+        import jinja2
+    except ImportError:
+        warn(
+            "Not generating html guide to the image-processing debug images, "
+            "because python 'jinja2' module is not installed.")
+        return
+
+    d = os.path.join("stbt-debug/detect_match", "%05d" % _frame_number)
+
+    template = jinja2.Template("""
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <style>
+            img {
+                vertical-align: middle; max-width: 300px; max-height: 36px;
+                padding: 1px; border: 1px solid #ccc; }
+            p, li { line-height: 40px; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+        <h4>
+            <i>{{template_name}}</i>
+            {{"matched" if matched else "didn't match"}}
+        </h4>
+
+        <p>Searching for <b>template</b> {{link("template")}}
+            within <b>source</b> {{link("source")}} image.
+
+        {% for level in levels %}
+
+            <p>At level <b>{{level}}</b>:
+            <ul>
+                <li>Searching for <b>template</b> {{link("template", level)}}
+                    within <b>source regions of interest</b>
+                    {{link("source_with_rois", level)}}.
+                <li>OpenCV <b>matchTemplate result</b>
+                    {{link("source_matchtemplate", level)}}
+                    with method {{match_parameters.match_method}}
+                    ({{"darkest" if match_parameters.match_method ==
+                            "sqdiff-normed" else "lightest"}}
+                    pixel indicates position of best match).
+                <li>matchTemplate result <b>above match_threshold</b>
+                    {{link("source_matchtemplate_threshold", level)}}
+                    of {{"%.2f"|format(match_parameters.match_threshold)}}
+                    (white pixels indicate positions above the threshold).
+
+            {% if level == 0 %}
+                <li>Matched at {{position}} {{link("source_with_roi")}}
+                    with certainty {{"%.2f"|format(first_pass_certainty)}}.
+            {% else %}
+                <li>Didn't match (best match at {{position}}
+                    {{link("source_with_roi")}}
+                    with certainty {{"%.2f"|format(first_pass_certainty)}}).
+            {% endif %}
+
+            </ul>
+
+        {% endfor %}
+
+        {% if first_pass_certainty >= match_parameters.match_threshold %}
+            <p><b>Second pass (confirmation):</b>
+            <ul>
+                <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
+                    against <b>source image's region of interest</b>
+                    {{link("confirm-source_roi_gray")}}.
+
+            {% if match_parameters.confirm_method == "normed-absdiff" %}
+                <li>Normalised <b>template</b>
+                    {{link("confirm-template_gray_normalized")}}
+                    and <b>source</b>
+                    {{link("confirm-source_gray_normalized")}}.
+            {% endif %}
+
+                <li><b>Absolute differences</b> {{link("confirm-absdiff")}}.
+                <li>Differences <b>above confirm_threshold</b>
+                    {{link("confirm-absdiff_threshold")}}
+                    of {{"%.2f"|format(match_parameters.confirm_threshold)}}.
+                <li>After <b>eroding</b>
+                    {{link("confirm-absdiff_threshold_erode")}}
+                    {{match_parameters.erode_passes}}
+                    {{"time" if match_parameters.erode_passes == 1
+                        else "times"}}.
+                    {{"No" if matched else "Some"}}
+                    differences (white pixels) remain, so the template
+                    {{"does" if matched else "doesn't"}} match.
+            </ul>
+        {% endif %}
+
+        <p>For further help please read
+            <a href="http://stb-tester.com/match-parameters.html">stb-tester
+            image matching parameters</a>.
+
+        </div>
+        </body>
+        </html>
+    """)
+
+    with open(os.path.join(d, "index.html"), "w") as f:
+        f.write(template.render(
+            first_pass_certainty=first_pass_certainty,
+            levels=reversed(sorted(set(
+                [int(re.search(r"level(\d+)-.*", x).group(1))
+                 for x in glob.glob(os.path.join(d, "level*"))]))),
+            link=lambda s, level=None: (
+                "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
+                .format("" if level is None else "level%d-" % level, s)),
+            match_parameters=match_parameters,
+            matched=matched,
+            position=position,
+            template_name=template_name,
+        ))
 
 
 def uri_to_remote(uri, display):
