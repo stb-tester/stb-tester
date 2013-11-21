@@ -67,7 +67,8 @@ if template is None:
 if args.verbose:
     stbt._debug_level = 2  # pylint: disable=W0212
 
-matched, position, first_pass = stbt._match(image, template, mp)  # pylint: disable=W0212,C0301
+matched, position, first_pass = stbt._match(  # pylint: disable=W0212
+    image, template, mp, args.template_image)
 
 print "%s found: %s" % (
     "Match" if matched else "Weak match",
