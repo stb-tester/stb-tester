@@ -1062,7 +1062,9 @@ def _match_template(image, template, match_parameters, roi_mask, level):
         'ccorr-normed': cv2.TM_CCORR_NORMED,
         'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
     }[match_parameters.match_method]
-    threshold = match_parameters.match_threshold
+    threshold = max(
+        0,
+        match_parameters.match_threshold - (0.2 if level > 0 else 0))
 
     matches_heatmap = (
         (numpy.ones if method == cv2.TM_SQDIFF_NORMED else numpy.zeros)(
