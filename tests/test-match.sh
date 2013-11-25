@@ -10,7 +10,8 @@ test_wait_for_match() {
 
 test_wait_for_match_no_match() {
     cat > test.py <<-EOF
-	wait_for_match("$testdir/videotestsrc-bw-flipped.png", timeout_secs=1)
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=1)
 	EOF
     ! stbt-run -v test.py &&
     [ -f screenshot.png ]
@@ -52,7 +53,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
     # first_pass_result above 0.80 and so the match fails.
     cat > test.py <<-EOF
 	wait_for_match(
-	    "$testdir/videotestsrc-bw-flipped.png",
+	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
 	        match_method="ccorr-normed", confirm_method="none"),
 	    timeout_secs=1)
@@ -61,7 +62,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 
     cat > test.py <<-EOF
 	wait_for_match(
-	    "$testdir/videotestsrc-bw-flipped.png",
+	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
 	        match_method="sqdiff-normed", confirm_method="none"),
 	    timeout_secs=1)
@@ -97,7 +98,7 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
     # confirm_method="none", any image with match any source.
     # (In use, this scenario is completely useless).
     cat > test.py <<-EOF
-	for img in ['circle-big.png', 'videotestsrc-bw-flipped.png',
+	for img in ['circle-big.png', 'videotestsrc-redblue-flipped.png',
 	            'videotestsrc-checkers-8.png', 'videotestsrc-gamut.png']:
 	    wait_for_match("$testdir/" + img, match_parameters=MatchParameters(
 	        match_threshold=0, confirm_method="none"))
@@ -165,6 +166,15 @@ test_wait_for_match_confirm_threshold_affects_match() {
 	               match_parameters=MatchParameters(confirm_threshold=0.4))
 	EOF
     ! stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py
+}
+
+test_wait_for_match_with_pyramid_optimisation_disabled() {
+    cat > test.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue.png")
+	EOF
+    sed -e 's/pyramid_levels =.*/pyramid_levels = 1/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test.py
 }
 
 test_detect_match_nonexistent_template() {
@@ -349,7 +359,7 @@ test_detect_match_changing_template_is_not_racy() {
     #   # Supposed to match and matches
     #   wait_for_match("videotestsrc-bw.png", timeout_secs=1)
     #   # Not supposed to match but matches intermittently
-    #   wait_for_match("videotestsrc-bw-flipped.png", timeout_secs=1)
+    #   wait_for_match("videotestsrc-redblue-flipped.png", timeout_secs=1)
     cat > test.py <<-EOF
 	for match_result in detect_match("$testdir/videotestsrc-bw.png",
 	                                 timeout_secs=1):
@@ -359,7 +369,8 @@ test_detect_match_changing_template_is_not_racy() {
 	    import time
 	    time.sleep(1.0) # make sure the test fail (0.1s also works)
 	    break
-	for match_result in detect_match("$testdir/videotestsrc-bw-flipped.png"):
+	for match_result in detect_match(
+	        "$testdir/videotestsrc-redblue-flipped.png"):
 	    # Not supposed to match
 	    if not match_result.match:
 	        import sys
