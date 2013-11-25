@@ -1035,8 +1035,10 @@ def _find_match(image, template, match_parameters):
     log(template, "template")
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    template_pyramid = _build_pyramid(
-        template, int(get_config("match", "pyramid_levels")))
+    levels = int(get_config("match", "pyramid_levels"))
+    if levels <= 0:
+        raise ConfigurationError("'match.pyramid_levels' must be > 0")
+    template_pyramid = _build_pyramid(template, levels)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
