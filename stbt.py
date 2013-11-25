@@ -701,7 +701,7 @@ def argparser():
     _debug_level = int(get_config('global', 'verbose'))
     parser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
-        default=get_config('global', 'verbose'),
+        default=get_config('global', 'verbose'),  # for stbt-run arguments dump
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
