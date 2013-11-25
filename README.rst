@@ -433,7 +433,7 @@ draw_text(text, duration_secs=3)
 
     `duration_secs` is the number of seconds that the text should be displayed.
 
-get_config(section, key, default=None)
+get_config(section, key, default=None, type_=<type 'str'>)
     Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search

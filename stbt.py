@@ -84,7 +84,7 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
-def get_config(section, key, default=None):
+def get_config(section, key, default=None, type_=str):
     """Read the value of `key` from `section` of the stbt config file.
 
     See 'CONFIGURATION' in the stbt(1) man page for the config file search
@@ -116,12 +116,15 @@ def get_config(section, key, default=None):
         ])
 
     try:
-        return str(_config.get(section, key))
+        return type_(_config.get(section, key))
     except ConfigParser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)
         else:
             return default
+    except ValueError:
+        raise ConfigurationError("'%s.%s' invalid type (must be %s)" % (
+            section, key, type_.__name__))
 
 
 def press(key):
@@ -230,11 +233,13 @@ class MatchParameters(object):
 
     def __init__(
             self,
-            match_method=str(get_config('match', 'match_method')),
-            match_threshold=float(get_config('match', 'match_threshold')),
-            confirm_method=str(get_config('match', 'confirm_method')),
-            confirm_threshold=float(get_config('match', 'confirm_threshold')),
-            erode_passes=int(get_config('match', 'erode_passes'))):
+            match_method=get_config('match', 'match_method'),
+            match_threshold=get_config(
+                'match', 'match_threshold', type_=float),
+            confirm_method=get_config('match', 'confirm_method'),
+            confirm_threshold=get_config(
+                'match', 'confirm_threshold', type_=float),
+            erode_passes=get_config('match', 'erode_passes', type_=int)):
 
         if match_method not in (
                 "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
@@ -349,7 +354,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
     """
 
     if noise_threshold is None:
-        noise_threshold = float(get_config('motion', 'noise_threshold'))
+        noise_threshold = get_config('motion', 'noise_threshold', type_=float)
 
     debug("Searching for motion")
 
@@ -542,7 +547,7 @@ def wait_for_motion(
     """
 
     if consecutive_frames is None:
-        consecutive_frames = str(get_config('motion', 'consecutive_frames'))
+        consecutive_frames = get_config('motion', 'consecutive_frames')
 
     consecutive_frames = str(consecutive_frames)
     if '/' in consecutive_frames:
@@ -698,7 +703,7 @@ def argparser():
             setattr(namespace, self.dest, _debug_level)
 
     global _debug_level
-    _debug_level = int(get_config('global', 'verbose'))
+    _debug_level = get_config('global', 'verbose', type_=int)
     parser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         default=get_config('global', 'verbose'),  # for stbt-run arguments dump
@@ -1042,7 +1047,7 @@ def _find_match(image, template, match_parameters):
     log(template, "template")
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    levels = int(get_config("match", "pyramid_levels"))
+    levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
     template_pyramid = _build_pyramid(template, levels)
