@@ -336,6 +336,9 @@ press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses
     `interval_secs` is the number of seconds to wait for a match before
     pressing again.
 
+    The global defaults for `interval_secs` and `max_presses` can be set
+    in the configuration file, in section `press_until_match`.
+
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
     argument syntax. It will be removed in a future release; please use

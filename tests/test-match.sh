@@ -217,6 +217,31 @@ test_press_until_match_max_presses() {
         { cat test.log; fail "Didn't see exactly 3 keypresses"; }
 }
 
+test_press_until_match_reads_interval_secs_from_config_file() {
+    cat > test-3s.py <<-EOF &&
+	import stbt
+	start = stbt._display.get_frame().timestamp
+	match = press_until_match(
+	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
+	assert (match.timestamp - start) >= 3e9, (
+	    "Took %dns; expected >=3s" % (match.timestamp - start))
+	EOF
+    cp "$testdir"/stbt.conf . &&
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test-3s.py &&
+
+    cat > test-1s.py <<-EOF &&
+	import stbt
+	start = stbt._display.get_frame().timestamp
+	match = press_until_match(
+	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
+	assert (match.timestamp - start) < 3e9, (
+	    "Took %dns; expected <3s" % (match.timestamp - start))
+	EOF
+    sed -e 's/interval_secs =.*/interval_secs = 1/' \
+        stbt.conf > stbt.conf~ && mv stbt.conf~ stbt.conf &&
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test-1s.py
+}
+
 test_wait_for_match_searches_in_script_directory() {
     cat > test.py <<-EOF
 	wait_for_match("in-script-dir.png")

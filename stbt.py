@@ -470,8 +470,14 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     raise MatchTimeout(screenshot, image, timeout_secs)
 
 
-def press_until_match(key, image, interval_secs=3, noise_threshold=None,
-                      max_presses=10, match_parameters=None):
+def press_until_match(
+        key,
+        image,
+        interval_secs=get_config(
+            "press_until_match", "interval_secs", type_=int),
+        noise_threshold=None,
+        max_presses=get_config("press_until_match", "max_presses", type_=int),
+        match_parameters=None):
     """Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
@@ -479,6 +485,9 @@ def press_until_match(key, image, interval_secs=3, noise_threshold=None,
 
     `interval_secs` is the number of seconds to wait for a match before
     pressing again.
+
+    The global defaults for `interval_secs` and `max_presses` can be set
+    in the configuration file, in section `press_until_match`.
 
     The templatematch parameter `noise_threshold` is marked for deprecation
     but appears in the args for backward compatibility with positional
