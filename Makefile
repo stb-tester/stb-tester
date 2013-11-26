@@ -15,6 +15,7 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
 tools = stbt-run
 tools += stbt-record
+tools += stbt-batch
 tools += stbt-config
 tools += stbt-control
 tools += stbt-lint
@@ -50,6 +51,9 @@ install: stbt stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates \
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
@@ -58,6 +62,18 @@ install: stbt stbt.1 defaults.conf
 	$(INSTALL) -m 0644 stbt.py stbt_pylint_plugin.py irnetbox.py \
 	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
+	$(INSTALL) -m 0755 stbt-batch.d/run stbt-batch.d/report \
+	    stbt-batch.d/instaweb \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
+	$(INSTALL) -m 0644 stbt-batch.d/report.py \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
+	$(INSTALL) -m 0644 stbt-batch.d/static/edit-testrun.js \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static
+	$(INSTALL) -m 0644 \
+	    stbt-batch.d/templates/directory-index.html \
+	    stbt-batch.d/templates/index.html \
+	    stbt-batch.d/templates/testrun.html \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
@@ -66,17 +82,10 @@ install: stbt stbt.1 defaults.conf
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
 	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
-	for t in $(tools); do rm -f $(DESTDIR)$(libexecdir)/stbt/$$t; done
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.py
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt_pylint_plugin.py
-	rm -f $(DESTDIR)$(libexecdir)/stbt/irnetbox.py
-	rm -f $(DESTDIR)$(libexecdir)/stbt/*.pyc
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt-controlc
-	rm -f $(DESTDIR)$(libexecdir)/stbt/stbt.conf
+	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
-	-rmdir $(DESTDIR)$(libexecdir)/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/bash_completion.d
 

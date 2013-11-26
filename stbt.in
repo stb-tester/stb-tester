@@ -28,7 +28,7 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester @VERSION@"; exit 0;;
-    run|record|config|control|lint|power|screenshot|templatematch|tv)
+    run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
         @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;
