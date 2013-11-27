@@ -1010,6 +1010,9 @@ def gst_to_opencv(gst_buffer):
 
 
 def _match(image, template, match_parameters, template_name):
+    if any(image.shape[x] < template.shape[x] for x in (0, 1)):
+        raise ValueError("Source image must be larger than template image")
+
     matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters)
     if matched:
