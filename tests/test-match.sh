@@ -186,13 +186,35 @@ test_detect_match_nonexistent_template() {
     ! stbt-run -v test.py
 }
 
-test_press_until_match() {
-    # This doesn't test that press_until_match presses repeatedly, but at least
-    # it tests that press_until_match doesn't blow up completely.
-    cat > test.py <<-EOF
-	press_until_match("checkers-8", "$testdir/videotestsrc-checkers-8.png")
+test_press_until_match_presses_once() {
+    cat > test.py <<-EOF &&
+	press_until_match(
+	    "checkers-8", "$testdir/videotestsrc-checkers-8.png",
+	    interval_secs=1)
 	EOF
-    stbt-run -v test.py
+    stbt-run -v test.py &> test.log || { cat test.log; return 1; }
+    [[ "$(grep -c 'Pressed checkers-8' test.log)" == 1 ]] ||
+        { cat test.log; fail "Didn't see exactly 1 keypress"; }
+}
+
+test_press_until_match_presses_zero_times_if_match_already_present() {
+    cat > test.py <<-EOF
+	press_until_match("smpte", "$testdir/videotestsrc-redblue.png")
+	EOF
+    stbt-run -v test.py &> test.log || { cat test.log; return 1; }
+    [[ "$(grep -c 'Pressed smpte' test.log)" == 0 ]] ||
+        { cat test.log; fail "Saw > 0 keypresses"; }
+}
+
+test_press_until_match_max_presses() {
+    cat > test.py <<-EOF &&
+	press_until_match(
+	    "ball", "$testdir/videotestsrc-checkers-8.png",
+	    interval_secs=1, max_presses=3)
+	EOF
+    ! stbt-run -v test.py &> test.log || fail "Expected MatchTimeout"
+    [[ "$(grep -c 'Pressed ball' test.log)" == 3 ]] ||
+        { cat test.log; fail "Didn't see exactly 3 keypresses"; }
 }
 
 test_wait_for_match_searches_in_script_directory() {
