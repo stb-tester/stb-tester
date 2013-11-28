@@ -602,6 +602,44 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
+def get_frame_timestamp():
+    """Returns the timestamp of the last frame processed.
+
+    This is intended to be used when the test script is running within a
+    "process_all_frames" context, where the last frame processed
+    would be where the last frame processed, i.e, where the last  match/motion
+    was detected.
+    """
+    return _display.get_frame().timestamp
+
+
+@contextlib.contextmanager
+def process_all_frames():
+    """Force the pipeline to process all the frames for the duration of the
+    call.
+
+    This will introduce a delay with the live stream but will not block the
+    pipeline. The delay will depend on which features are actually used in the
+    context of this call.
+
+    Use as a context manager in a 'with' statement.
+    """
+    with _display.process_all_frames():
+        yield
+
+
+def get_live_stream_timestamp(retry=False):
+    """Returns the timestamp from the live stream.
+
+    Normally, this is the equivalent to get_frame().timestamp, but when the
+    test script is running within a "process_all_frames" context, this
+    function needs to be used instead.
+
+    If retry is True, this function will wait until there is video available.
+    """
+    return _display.get_live_stream_timestamp(retry)
+
+
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
@@ -737,6 +775,11 @@ _display = None
 _control = None
 
 
+class OperationMode:
+    DROP_FRAMES = 0
+    PROCESS_ALL_FRAMES = 1
+
+
 class Display:
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
@@ -777,9 +820,12 @@ class Display:
         sink_pipeline_description = " ".join([
             "appsrc name=appsrc !",
             "tee name=t",
+            "t. ! tee name=t2 "
+            "t2. ! max-buffers=1 drop=true  appsink name=upstream_screenshot "
+            "t2. ! ffmpegcolorspace ! queue leaky=downstream name=q !", appsink,
             video_pipeline,
-            "t. ! queue leaky=downstream ! ffmpegcolorspace !",
-            user_sink_pipeline
+            "t. ! queue leaky=downstream ! "
+            "ffmpegcolorspace !", user_sink_pipeline
         ])
 
         self.sink_pipeline = gst.parse_launch(sink_pipeline_description)
@@ -795,6 +841,10 @@ class Display:
 
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         self.sink_pipeline.set_state(gst.STATE_PLAYING)
+
+        self.queue = self.sink_pipeline.get_by_name('q')
+        self.operation_mode = OperationMode.DROP_FRAMES
+        self.underrun_timeout = None
 
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
@@ -881,10 +931,11 @@ class Display:
                    (buffer_or_exception.timestamp, self.last_buffer.qsize()))
 
         # Drop old frame
-        try:
-            self.last_buffer.get_nowait()
-        except Queue.Empty:
-            pass
+        if self.operation_mode == OperationMode.DROP_FRAMES:
+            try:
+                self.last_buffer.get_nowait()
+            except Queue.Empty:
+                pass
 
         self.last_buffer.put_nowait(buffer_or_exception)
 
@@ -916,6 +967,50 @@ class Display:
             newbuf.set_caps(gst_buffer.get_caps())
             newbuf.timestamp = gst_buffer.timestamp
             self.appsrc.emit("push-buffer", newbuf)
+
+    @contextlib.contextmanager
+    def process_all_frames(self):
+        """Temporarily set the pipeline to non leaky.
+        """
+        self.operation_mode = OperationMode.PROCESS_ALL_FRAMES
+        prev_max_values = {
+            'max_size_buffers': self.queue.props.max_size_buffers,
+            'max_size_time': self.queue.props.max_size_time,
+            'max_size_bytes': self.queue.props.max_size_bytes,
+            'queue_max_size': self.last_buffer.maxsize,
+            'leaky': self.queue.props.leaky,
+        }
+        self.queue.props.max_size_buffers = 0
+        self.queue.props.max_size_time = 0
+        self.queue.props.max_size_bytes = 0
+        self.queue.props.leaky = 0
+        self.last_buffer = Queue.Queue(maxsize=0)
+        self.last_buffer.not_empty.acquire()
+        self.last_buffer.not_empty.wait()
+        self.last_buffer.not_empty.release()
+        yield
+        self.queue.props.max_size_buffers = prev_max_values['max_size_buffers']
+        self.queue.props.max_size_time = prev_max_values['max_size_time']
+        self.queue.props.max_size_bytes = prev_max_values['max_size_bytes']
+        self.queue.props.leaky = prev_max_values['leaky']
+        self.last_buffer = Queue.Queue(
+            maxsize=prev_max_values['queue_max_size'])
+        self.catchup_live_stream()
+
+    def catchup_live_stream(self):
+        self.operation_mode = OperationMode.DROP_FRAMES
+        self.restart_source()
+
+    def get_live_stream_timestamp(self, retry=False):
+        upstream_screenshot = \
+            self.sink_pipeline.get_by_name('upstream_screenshot')
+        buf = upstream_screenshot.get_property("last-buffer")
+        if not buf and not retry:
+            raise Exception("get_live_stream_timestamp: no buffer available.")
+        elif not buf:
+            while not buf:
+                buf = upstream_screenshot.get_property("last-buffer")
+        return buf.timestamp
 
     def on_error(self, _bus, message):
         assert message.type == gst.MESSAGE_ERROR
@@ -957,9 +1052,10 @@ class Display:
     def restart_source(self, *_args):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
-        self.source_pipeline.set_state(gst.STATE_NULL)
-        self.source_pipeline = None
-        GObjectTimeout(5, self.start_source).start()
+        if self.source_pipeline:
+            self.source_pipeline.set_state(gst.STATE_NULL)
+            self.source_pipeline = None
+            GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
 
     def start_source(self):
@@ -967,7 +1063,7 @@ class Display:
         self.create_source_pipeline()
         self.source_pipeline.set_state(gst.STATE_PLAYING)
         warn("Restarted source pipeline")
-        if self.restart_source_enabled:
+        if self.restart_source_enabled or self.underrun_timeout:
             self.underrun_timeout.start()
         return False  # stop the timeout from running again
 

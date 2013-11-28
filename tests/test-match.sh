@@ -429,3 +429,43 @@ test_detect_match_visualisation() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
+
+test_match_consecutive_timed_frames() {
+    cat > test.py <<-EOF
+	img1 = '$testdir/videotestsrc-timed-frame.png'
+	img2 = '$testdir/videotestsrc-timed-frame-2.png'
+	img3 = '$testdir/videotestsrc-timed-frame-3.png'
+	with process_all_frames():
+	    res = wait_for_match(img1, timeout_secs=18)
+	    t1 = res.timestamp
+	    res = wait_for_match(img2)
+	    t2 = res.timestamp
+	    res = wait_for_match(img3)
+	    t3 = res.timestamp
+	assert t2 - t1 == 20000000, ('%s and %s did not match in '
+	                             'consecutive frames, the time difference '
+	                             'is %s' % (img1, img2, str(t2 - t1)))
+	assert t3 - t2 == 20000000, ('%s and %s did not match in '
+	                             'consecutive frames, the time difference '
+	                             'is %s' % (img1, img2, str(t2 - t1)))
+	EOF
+    stbt-run --source-pipeline="videotestsrc is-live=true ! \
+        videorate force-fps=50/1 ! cairotimeoverlay ! ffmpegcolorspace" \
+        --sink-pipeline="ximagesink" \
+        test.py
+}
+
+test_live_stream_caught_up_after_process_all_frames() {
+    echo $testdir
+    cat > test.py <<-EOF
+	wait_for_match('$testdir/videotestsrc-checkers-8.png')
+	with process_all_frames():
+	    press('smpte')
+	    wait_for_match('$testdir/videotestsrc-smpte-corner.png')
+	    press('checkers-8')
+	wait_for_match('$testdir/videotestsrc-checkers-8.png')
+	EOF
+    stbt-run --source-pipeline="videotestsrc is-live=true pattern=10 ! \
+        ffmpegcolorspace" \
+        test.py
+}
