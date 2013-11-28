@@ -90,7 +90,7 @@ stbt.1: README.rst VERSION
 
 # Ensure the docs for python functions are kept in sync with the code
 README.rst: stbt.py api-doc.sh
-	./api-doc.sh $@
+	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix
