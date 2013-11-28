@@ -21,6 +21,7 @@ Requires: openssh-clients
 Requires: pygtk2
 Requires: pylint < 1.0
 Requires: python >= 2.4
+Requires: python-jinja2
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control
