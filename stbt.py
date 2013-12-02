@@ -1358,7 +1358,7 @@ def _log_image_descriptions(
                 <li>Normalised <b>template</b>
                     {{link("confirm-template_gray_normalized")}}
                     and <b>source</b>
-                    {{link("confirm-source_gray_normalized")}}.
+                    {{link("confirm-source_roi_gray_normalized")}}.
             {% endif %}
 
                 <li><b>Absolute differences</b> {{link("confirm-absdiff")}}.
