@@ -1549,9 +1549,7 @@ class LircRemote:
     def hold(self, key):
         s = self._connect()
         s.sendall('SEND_START %s %s\n' % (self.control_name, key))
-        s.close()
         yield
-        s = self._connect()
         s.sendall('SEND_STOP %s %s\n' % (self.control_name, key))
         s.close()
 
