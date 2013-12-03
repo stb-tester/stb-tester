@@ -1524,9 +1524,7 @@ class VirtualRemote:
 
     @contextlib.contextmanager
     def hold(self, key):
-        self._connect().sendall('D\t%s\n\x00' % key)  # key Down
-        yield
-        self._connect().sendall('U\t%s\n\x00' % key)  # key Up
+        raise NotImplementedError('VirtualRemote: hold not implemented')
 
 
 class LircRemote:
