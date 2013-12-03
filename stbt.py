@@ -1546,10 +1546,12 @@ class LircRemote:
     @contextlib.contextmanager
     def hold(self, key):
         s = self._connect()
-        s.sendall('SEND_START %s %s\n' % (self.control_name, key))
-        yield
-        s.sendall('SEND_STOP %s %s\n' % (self.control_name, key))
-        s.close()
+        try:
+            s.sendall('SEND_START %s %s\n' % (self.control_name, key))
+            yield
+        finally:
+            s.sendall('SEND_STOP %s %s\n' % (self.control_name, key))
+            s.close()
 
 
 def new_local_lirc_remote(lircd_socket, control_name):
