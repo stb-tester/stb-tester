@@ -82,3 +82,17 @@ test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {
     [ $? -eq $timedout ] && fail "'press' timed out"
     [ $? -ne 0 ] || fail "Expected 'press' to raise exception"
 }
+
+test_hold_with_lirc() {
+    start_fake_lircd
+
+    cat > test.py <<-EOF &&
+	import stbt
+	with stbt.hold("left"):
+	    pass
+	EOF
+    stbt-run -v --control lirc:$lircd_socket:test test.py || return
+    grep -q "fake-lircd: Received: SEND_START test left" fake-lircd.log &&
+    grep -q "fake-lircd: Received: SEND_STOP test left" fake-lircd.log ||
+        fail "fake-lircd didn't receive SEND_START and SEND_STOP messages"
+}
