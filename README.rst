@@ -309,6 +309,30 @@ press(key)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
+hold(key)
+    Context manager that sends key-down/key-up to the system under test.
+
+    Currently this is only implemented for the LIRC control mechanism.
+
+    Example usage:
+
+        with stbt.hold("RIGHT"):
+            stbt.wait_for_match("last-page.png")
+
+    For infrared (LIRC) controls, this is implemented by continuously sending
+    the infrared repeat signal. In some infrared protocols this is the same as
+    sending the initial key-press signal repeatedly; for other protocols, the
+    repeat signal differs from the initial signal. Your LIRC configuration must
+    specify the correct initial & repeat signals for your particular system
+    under test. See section 9 ("An Introduction to Remote Control Signals") of
+    http://redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf , and
+    http://winlirc.sourceforge.net/technicaldetails.html#fileformat.
+
+    Note that with infrared-based control mechanisms you can't use ``press``
+    inside the ``hold`` context, because you can't send two different infrared
+    signals simultaneously (``press`` will raise an exception if you try to do
+    this).
+
 wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
     Search for `image` in the source video stream.
 
