@@ -140,6 +140,7 @@ def press(key):
     draw_text(key, duration_secs=3)
 
 
+@contextlib.contextmanager
 def hold(key):
     """Context manager that sends key-down/key-up to the system under test.
 
@@ -164,7 +165,10 @@ def hold(key):
     signals simultaneously (``press`` will raise an exception if you try to do
     this).
     """
-    return _control.hold(key)
+    draw_text("Holding %s" % key)
+    with _control.hold(key):
+        yield
+    draw_text("Releasing %s" % key)
 
 
 def draw_text(text, duration_secs=3):
