@@ -5,7 +5,8 @@ test_extra_arguments() {
 	import sys
 	assert sys.argv[1:] == ["a", "b c"]
 	EOF
-    stbt-run -v test.py a "b c"
+    stbt-run -v test.py a "b c" &&
+    stbt-run -v test.py -- a "b c"
 }
 
 test_script_accesses_its_path() {
