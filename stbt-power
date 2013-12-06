@@ -24,6 +24,7 @@ usage() { grep '^#/' "$0" | cut -c4-; }  # Print the above usage message.
 die() { echo "stbt power: error: $*" >&2; exit 1; }
 
 main() {
+    [ $# -eq 0 ] && { usage >&2; exit 1; }
     while [ $# -gt 0 ]; do
         case "$1" in
             -h|--help) usage; exit 0;;
