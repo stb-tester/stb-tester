@@ -35,6 +35,12 @@
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
       <p id="totals"></p>
+      <small class="muted">† percentage range reflects the fact that the true
+      reliability of a test is much better known after running more repititons.
+      It is calculated using the
+      <a href="http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">
+      Wilson Score Interval</a> at a confidence level of 95% and is only valid
+      for independent test runs.</small>
       <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
@@ -153,7 +159,12 @@
         return false;
       }
     };
-
+    {% include "statistics.js" %}
+    function format_summary(pos, n) {
+      var a = wilson_score_interval_95(pos, n);
+      return pos + "/" + n + " (" + parseFloat((a[0] * 100).toPrecision(2)) +
+             "% - " + parseFloat((a[1] * 100).toPrecision(2)) + "%†)";
+    }
     function update_totals() {
       var num_success = $(".success:visible").length;
       var num_failed = $(".error:visible").length;  // red
@@ -165,10 +176,9 @@
       }
 
       $("#totals").html(
-        "<span class='text-success'>Passed: " + num_success + "/" + num_total +
-        " (" + percent_success + "%).</span> " +
-        "<span class='text-error'>Failed: " + num_failed + ".</span> " +
-        "<span class='text-warning'>Errors: " + num_warnings + ".</span>");
+        "<span class='text-success'>Passed: " + format_summary(num_success, num_total) + ".</span> " +
+        "<span class='text-error'>Failed: " + format_summary(num_failed, num_total) + ".</span> " +
+        "<span class='text-warning'>Errors: " + format_summary(num_warnings, num_total) + ".</span>");
     };
   });
 </script>
