@@ -35,12 +35,12 @@
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
       <p id="totals"></p>
-      <small class="muted">Percentage range reflects the fact that the true
-      reliability of a test is much better known after running more repititons.
-      It is calculated using the
-      <a href="http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">
-      Wilson Score Interval</a> at a confidence level of 95% and is only valid
-      for independent test runs.</small>
+      <p class="muted"><small>Percentage ranges reflect the fact that the true
+        reliability of a test is better known after running more repetitions.
+        The ranges are calculated using the
+        <a href="http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">
+        Wilson Score Interval</a> at a confidence level of 95%. They are only
+        valid for independent test runs.</small></p>
       <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
@@ -159,14 +159,15 @@
         return false;
       }
     };
-    /* Calculates a Wilson score confidence interval[1] which gives a percentage
-       range of within which there is a 95% chance that the "true" proportion will
-       lie within.
 
-       This is useful when investigating low-reproducability defects and reflects
-       the fact that the true failure rate is much better known after running more
-       tests.  e.g. for a defect with 10% the reproducability you may measure with
-       a certain number of test results:
+    /* Calculates a Wilson score confidence interval[1] which gives a
+       percentage range, within which there is a 95% chance that the "true"
+       proportion will lie.
+
+       This is useful when investigating low-reproducibility defects, and
+       reflects the fact that the true failure rate is much better known after
+       running more tests. e.g. for a defect with 10% reproducibility you
+       may obtain the following measurements:
 
         Runs    Failures   Successes   Failure Rate   Wilson Interval
        --------------------------------------------------------------
@@ -176,19 +177,19 @@
          1000        100         900         10.00%    8.29% - 12.02%
         10000       1001        8999         10.01%    9.44% - 10.61%
 
-       Given the increasing number of runs the Wilson score interval describes both
-       the value and the certainty of the true reproducability far better than the
-       rate as a percentage.
+       Given the increasing number of runs the Wilson score interval describes
+       both the value and the certainty of the true reproducibility far better
+       than the rate as a percentage.
 
-       The wilson score interval is only valid for independant measurements.  e.g.
-       if a test fails completely randomly the wilson interval is useful.  It is
-       potentially misleading if the failures are e.g. dependant on the time of day
+       The Wilson score interval is only valid for independent measurements; if
+       a test fails completely randomly the Wilson interval is useful. It is
+       potentially misleading if the failures are dependent on the time of day,
        for example.
 
        Inputs:
-           pos - The number of measurements (test runs) in a particular category
-                 e.g. number of failures/successes or perhaps number of failures of
-                 a particular type
+           pos - The number of measurements (test runs) in a particular
+                 category, e.g. number of failures or successes, or perhaps
+                 number of failures of a particular type
            n - The number of measurements (test runs)
 
        Outputs:
