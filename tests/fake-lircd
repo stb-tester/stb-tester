@@ -51,7 +51,7 @@ def response(req):
         s += "BEGIN\nSIGHUP\nEND\n"
     if re.search("broadcast", req):
         s += "000f00b 01 OK My-IR-remote\n"
-    if req.startswith("SEND_ONCE"):
+    if re.search("^SEND_ONCE|SEND_START|SEND_STOP", req):
         if re.search("error", req):
             s += "BEGIN\n%s\nERROR\nDATA\n1\nfake-lircd error\nEND\n" % req
         elif re.search("timeout", req):

@@ -140,6 +140,37 @@ def press(key):
     draw_text(key, duration_secs=3)
 
 
+@contextlib.contextmanager
+def hold(key):
+    """Context manager that sends key-down/key-up to the system under test.
+
+    Currently this is only implemented for the LIRC control mechanism.
+
+    Example usage:
+
+        with stbt.hold("RIGHT"):
+            stbt.wait_for_match("last-page.png")
+
+    For infrared (LIRC) controls, this is implemented by continuously sending
+    the infrared repeat signal. In some infrared protocols this is the same as
+    sending the initial key-press signal repeatedly; for other protocols, the
+    repeat signal differs from the initial signal. Your LIRC configuration must
+    specify the correct initial & repeat signals for your particular system
+    under test. See section 9 ("An Introduction to Remote Control Signals") of
+    http://redrat.co.uk/products/IRNetBox_Comms-V3.X.pdf , and
+    http://winlirc.sourceforge.net/technicaldetails.html#fileformat.
+
+    Note that with infrared-based control mechanisms you can't use ``press``
+    inside the ``hold`` context, because you can't send two different infrared
+    signals simultaneously (``press`` will raise an exception if you try to do
+    this).
+    """
+    draw_text("Holding %s" % key)
+    with _control.hold(key):
+        yield
+    draw_text("Releasing %s" % key)
+
+
 def draw_text(text, duration_secs=3):
     """Write the specified `text` to the video output.
 
@@ -1441,6 +1472,12 @@ class NullRemote:
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        debug('NullRemote: Ignoring request to hold "%s"' % key)
+        yield
+        debug('NullRemote: Ignoring request to release "%s"' % key)
+
 
 class VideoTestSrcControl:
     """Remote control used by selftests.
@@ -1483,6 +1520,10 @@ class VideoTestSrcControl:
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        raise NotImplementedError('VideoTestSrcControl: hold not implemented')
+
 
 class VirtualRemote:
     """Send a key-press to a set-top box running a VirtualRemote listener.
@@ -1508,6 +1549,10 @@ class VirtualRemote:
     def _connect(self):
         return _connect_tcp_socket(self.hostname, self.port)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        raise NotImplementedError('VirtualRemote: hold not implemented')
+
 
 class LircRemote:
     """Send a key-press via a LIRC-enabled infrared blaster.
@@ -1524,6 +1569,16 @@ class LircRemote:
         s.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         _read_lircd_reply(s)
         debug("Pressed " + key)
+
+    @contextlib.contextmanager
+    def hold(self, key):
+        s = self._connect()
+        try:
+            s.sendall('SEND_START %s %s\n' % (self.control_name, key))
+            yield
+        finally:
+            s.sendall('SEND_STOP %s %s\n' % (self.control_name, key))
+            s.close()
 
 
 def new_local_lirc_remote(lircd_socket, control_name):
@@ -1600,6 +1655,10 @@ class IRNetBoxRemote:
                 self.hostname, e)),)
             e.strerror = e.args[0]
             raise
+
+    @contextlib.contextmanager
+    def hold(self, key):
+        raise NotImplementedError('IRNetBoxRemote: hold not implemented')
 
 
 def uri_to_remote_recorder(uri):

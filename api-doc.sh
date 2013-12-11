@@ -60,6 +60,7 @@ substitute_python_docstrings() {
 python_docstrings() {
     echo ""
     doc press
+    doc hold
     doc wait_for_match
     doc press_until_match
     doc wait_for_motion
