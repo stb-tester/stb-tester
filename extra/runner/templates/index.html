@@ -35,6 +35,12 @@
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
       <p id="totals"></p>
+      <p class="muted"><small>Percentage ranges reflect the fact that the true
+        reliability of a test is better known after running more repetitions.
+        The ranges are calculated using the
+        <a href="http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">
+        Wilson Score Interval</a> at a confidence level of 95%. They are only
+        valid for independent test runs.</small></p>
       <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
@@ -154,6 +160,64 @@
       }
     };
 
+    /* Calculates a Wilson score confidence interval[1] which gives a
+       percentage range, within which there is a 95% chance that the "true"
+       proportion will lie.
+
+       This is useful when investigating low-reproducibility defects, and
+       reflects the fact that the true failure rate is much better known after
+       running more tests. e.g. for a defect with 10% reproducibility you
+       may obtain the following measurements:
+
+        Runs    Failures   Successes   Failure Rate   Wilson Interval
+       --------------------------------------------------------------
+            1          0           1          0.00%    0.00% - 79.35%
+           10          2           8         20.00%    5.67% - 50.98%
+          100          8          92          8.00%    4.48% - 16.24%
+         1000        100         900         10.00%    8.29% - 12.02%
+        10000       1001        8999         10.01%    9.44% - 10.61%
+
+       Given the increasing number of runs the Wilson score interval describes
+       both the value and the certainty of the true reproducibility far better
+       than the rate as a percentage.
+
+       The Wilson score interval is only valid for independent measurements; if
+       a test fails completely randomly the Wilson interval is useful. It is
+       potentially misleading if the failures are dependent on the time of day,
+       for example.
+
+       Inputs:
+           pos - The number of measurements (test runs) in a particular
+                 category, e.g. number of failures or successes, or perhaps
+                 number of failures of a particular type
+           n - The number of measurements (test runs)
+
+       Outputs:
+           An array [lower bound, upper bound] of the Wilson score confidence
+           interval at 95% confidence.
+
+       [1]: https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval
+    */
+    function wilson_score_interval_95(pos, n) {
+      var z, phat, centre, width;
+
+      /* z is the (1 - ½α) percentile of a standard normal distribution[1].  In
+         this case it has been calculated for a 95% confidence.
+
+         [1]: https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Normal_approximation_interval */
+      var z = 1.96;
+      var phat = 1. * pos / n;
+
+      var centre = (n*phat + z*z/2)/(n+z*z);
+      var radius = (z * Math.sqrt((phat*(1-phat)+z*z/(4*n))/n))/(1+z*z/n);
+      return [ pos == 0 ? 0.0 : (centre - radius),
+               pos == n ? 1.0 : (centre + radius) ];
+    }
+    function format_summary(pos, n) {
+      var a = wilson_score_interval_95(pos, n);
+      return pos + "/" + n + " (" + parseFloat((a[0] * 100).toPrecision(2)) +
+             "% - " + parseFloat((a[1] * 100).toPrecision(2)) + "%)";
+    }
     function update_totals() {
       var num_success = $(".success:visible").length;
       var num_failed = $(".error:visible").length;  // red
@@ -165,10 +229,9 @@
       }
 
       $("#totals").html(
-        "<span class='text-success'>Passed: " + num_success + "/" + num_total +
-        " (" + percent_success + "%).</span> " +
-        "<span class='text-error'>Failed: " + num_failed + ".</span> " +
-        "<span class='text-warning'>Errors: " + num_warnings + ".</span>");
+        "<span class='text-success'>Passed: " + format_summary(num_success, num_total) + ".</span> " +
+        "<span class='text-error'>Failed: " + format_summary(num_failed, num_total) + ".</span> " +
+        "<span class='text-warning'>Errors: " + format_summary(num_warnings, num_total) + ".</span>");
     };
   });
 </script>
