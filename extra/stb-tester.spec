@@ -19,7 +19,7 @@ Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients
 Requires: pygtk2
-Requires: pylint < 1.0
+Requires: pylint
 Requires: python >= 2.4
 Requires: python-jinja2
 
