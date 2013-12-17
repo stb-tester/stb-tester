@@ -5,7 +5,7 @@
 
 set -e
 
-stbt_version=0.16
+stbt_version=0.17
 
 # Install stbt to ~/bin
 tmpdir=$(mktemp -d)
