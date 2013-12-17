@@ -109,7 +109,7 @@ check-pylint:
 	    irnetbox.py irnetbox-proxy \
 	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
 	    extra/runner/report.py extra/runner/server |\
-	$(parallel) extra/pylint.sh
+	PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
