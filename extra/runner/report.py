@@ -39,8 +39,16 @@ def main(argv):
                 testrun(match.group())
         elif target.endswith("index.html"):
             index(dirname(target))
+        elif target.endswith("preview.html"):
+            preview(dirname(target))
         else:
             die("Invalid target '%s'" % target)
+
+
+def preview(parentdir):
+    print templates.get_template("preview.html").render(
+        name=basename(abspath(parentdir)).replace("_", " ")
+    ).encode('utf-8')
 
 
 def index(parentdir):
@@ -82,6 +90,7 @@ class Run(object):
             and not x.endswith(".png")
             and not x.endswith(".manual")
             and not basename(x).startswith("index.html")
+            and not basename(x).startswith("preview.html")
         ])
         self.images = sorted([
             basename(x) for x in glob.glob(rundir + "/*.png")])
