@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.css" rel="stylesheet">
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <style type="text/css">
+        #currentTimeCode {
+            color: #fff;
+            background-color: #000;
+            text-align: center;
+            font-weight: bold;
+            font-family: Verdana, Geneva, sans-serif;
+            font-size: 18px;
+            float: right;
+            padding:20px;
+        }
+        #info {
+            padding: 10px;
+            color: #000;
+            background-color: #eee;
+            font-weight:normal;
+            font-family:"Courier New", Courier, monospace;
+            font-size: 12px;
+            border-color: #000;
+            border-style: solid;
+            border-width: 1px;
+            padding-top: 5px;
+        }
+        h3 {
+            font-weight: bold;
+            font-family: Verdana, Geneva, sans-serif;
+        }
+        </style>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <title>HTML5 frame accuracy player</title>
+    </head>
+<body>
+<div class="container-fluid">
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <a class="brand" href="../index.html">stb-tester results</a>
+      <ul class="nav">
+        <li class="active"><a>{{name}}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="row-fluid" style="padding-top: 10px">
+    <video id="myVideo" width="100%" controls></video>
+    <div class="span8" height="100%">
+        <div id="currentTimeCode"></div>
+        <div id="info">
+            <h3>Video info</h3>
+            <p>Fixed timestamp: <span id="timestamp"></span></p>
+            <p>Source: <span id="source"></span></p>
+            <p>Duration: <span id="duration"></span></p>
+            <button id="minus">-1 frame</button>
+            <button id="plus">+1 frame</button>
+        </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    var updateVideoCurrentTimeCodeInterval;
+    var updateReadyStateInterval;
+    var video = $('video')[0];
+    var FPS = 25;
+    var clickCounter = 0;
+    var $_GET = {};
+
+    document.location.search.replace(/\??(?:([^=]+)=([^&]*)&?)/g, function () {
+        function decode(s) {
+            return decodeURIComponent(s.split("+").join(" "));
+        }
+
+        $_GET[decode(arguments[1])] = decode(arguments[2]);
+    });
+
+    var selected_video = $_GET["video"];
+
+    function updateReadyState() {
+        var HAVE_NOTHING = 0;
+        var HAVE_METADATA = 1;
+        var HAVE_CURRENT_DATA = 2;
+        var HAVE_FUTURE_DATA = 3;
+        var HAVE_ENOUGH_DATA = 4;
+
+        if (video.readyState == HAVE_NOTHING) {
+            $("#duration").html("video.readyState = HAVE_NOTHING");
+        } else if (video.readyState > HAVE_NOTHING) {
+            var readyStateInfo = parseFloat(video.duration.toFixed(2)) + " seconds.";
+            $("#duration").html(readyStateInfo);
+        }
+    }
+
+    function updateVideoCurrentTimeCode() {
+        var fixedTimecode = video.currentTime;
+        var SMPTE_time = secondsToTimecode(video.currentTime, FPS);
+
+        fixedTimecode = parseFloat(fixedTimecode.toFixed(2));
+
+        $("#currentTimeCode").html(SMPTE_time);
+        $("#timestamp").html(fixedTimecode);
+        $("#source").html(video.currentSrc);
+    }
+
+    function seekToTimecode(hh_mm_ss_ff, fps) {
+        if (video.paused == false) {
+            video.pause();
+        }
+
+        var seekTime = timecodeToSeconds(hh_mm_ss_ff, fps);
+        video.currentTime = seekTime;
+    }
+
+    function seekFrames(nr_of_frames, fps) {
+        clickCounter++;
+
+        if (video.paused == false) {
+            video.pause();
+        }
+
+        var currentFrames = video.currentTime * fps;
+
+        var newPos = (currentFrames + nr_of_frames) / fps;
+        newPos = newPos + 0.00001;
+
+        video.currentTime = newPos; // TELL THE PLAYER TO GO HERE
+
+        var seek_error = newPos - video.currentTime;
+        var found_frame = $("#currentTimeCode").text();
+
+        found_frame_split = found_frame.split(":");
+
+        found_frame_nr = Number(found_frame_split[3]);
+
+        var fontColor = "#000";
+        if ( found_frame_nr+1 != clickCounter) {
+            fontColor = "#F00";
+        }
+    }
+
+    function timecodeToSeconds(hh_mm_ss_ff, fps) {
+        var tc_array = hh_mm_ss_ff.split(":");
+        var tc_hh = parseInt(tc_array[0]);
+        var tc_mm = parseInt(tc_array[1]);
+        var tc_ss = parseInt(tc_array[2]);
+        var tc_ff = parseInt(tc_array[3]);
+        var tc_in_seconds = ( tc_hh * 3600 ) + ( tc_mm * 60 ) + tc_ss + ( tc_ff / fps );
+        return tc_in_seconds;
+    }
+
+    function secondsToTimecode(time, fps) {
+        var hours = Math.floor(time / 3600) % 24;
+        var minutes = Math.floor(time / 60) % 60;
+        var seconds = Math.floor(time % 60);
+        var frames = Math.floor(((time % 1)*fps).toFixed(3));
+
+        var result = (hours < 10 ? "0" + hours : hours) + ":"
+        + (minutes < 10 ? "0" + minutes : minutes) + ":"
+        + (seconds < 10 ? "0" + seconds : seconds) + ":"
+        + (frames < 10 ? "0" + frames : frames);
+
+        return result;
+    }
+
+    $('#minus').bind('click', function(e) {
+        seekFrames(-1, 25);
+    });
+
+    $('#plus').bind('click', function(e) {
+        seekFrames(1, 25);
+    });
+
+    $('#jump').bind('click', function(e, where) {
+        if (where == undefined) {
+            where = "00:00:12:21"
+        }
+
+        seekToTimecode(where, 25)
+    });
+
+	updateReadyStateInterval = setInterval(updateReadyState, 100);
+	updateVideoCurrentTimeCodeInterval = setInterval(
+        updateVideoCurrentTimeCode, FPS);
+    $('#myVideo').attr("src", selected_video);
+
+    });
+</script>
+</body>
+</html>

@@ -51,7 +51,11 @@
 
 <p><b>Logs:</b>
 {% for f in run.files %}
-  <p><a href="{{f}}">{{f}}</a>
+    {% if f == "video.webm" %}
+    <p><a href="preview.html?video={{f}}">{{f}}</a>
+    {% else %}
+    <p><a href="{{f}}">{{f}}</a>
+    {% endif %}
 {% endfor %}
 
 <ul class="thumbnails">

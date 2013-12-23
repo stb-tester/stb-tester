@@ -63,6 +63,7 @@ main() {
         mv index.html.$$ index.html
       )
     done
+    python "$runner"/report.py preview.html > preview.html
   fi
 }
 
