@@ -54,8 +54,11 @@
             <p>Fixed timestamp: <span id="timestamp"></span></p>
             <p>Source: <span id="source"></span></p>
             <p>Duration: <span id="duration"></span></p>
+            <button id="backward">&lt;&lt;</button>
             <button id="minus">-1 frame</button>
+            <button id="stop">Pause</button>
             <button id="plus">+1 frame</button>
+            <button id="forward">&gt;&gt;</button>
         </div>
   </div>
 </div>
@@ -66,6 +69,7 @@ $(document).ready(function() {
     var updateReadyStateInterval;
     var video = $('video')[0];
     var FPS = 25;
+    var motionId = null;
     var clickCounter = 0;
     var $_GET = {};
 
@@ -105,25 +109,25 @@ $(document).ready(function() {
         $("#source").html(video.currentSrc);
     }
 
-    function seekToTimecode(hh_mm_ss_ff, fps) {
+    function seekToTimecode(hh_mm_ss_ff) {
         if (video.paused == false) {
             video.pause();
         }
 
-        var seekTime = timecodeToSeconds(hh_mm_ss_ff, fps);
+        var seekTime = timecodeToSeconds(hh_mm_ss_ff, 25);
         video.currentTime = seekTime;
     }
 
-    function seekFrames(nr_of_frames, fps) {
+    function seekFrames(nr_of_frames) {
         clickCounter++;
 
         if (video.paused == false) {
             video.pause();
         }
 
-        var currentFrames = video.currentTime * fps;
+        var currentFrames = video.currentTime * 25;
 
-        var newPos = (currentFrames + nr_of_frames) / fps;
+        var newPos = (currentFrames + nr_of_frames) / 25;
         newPos = newPos + 0.00001;
 
         video.currentTime = newPos; // TELL THE PLAYER TO GO HERE
@@ -136,26 +140,26 @@ $(document).ready(function() {
         found_frame_nr = Number(found_frame_split[3]);
 
         var fontColor = "#000";
-        if ( found_frame_nr+1 != clickCounter) {
+        if ( found_frame_nr + 1 != clickCounter) {
             fontColor = "#F00";
         }
     }
 
-    function timecodeToSeconds(hh_mm_ss_ff, fps) {
+    function timecodeToSeconds(hh_mm_ss_ff) {
         var tc_array = hh_mm_ss_ff.split(":");
         var tc_hh = parseInt(tc_array[0]);
         var tc_mm = parseInt(tc_array[1]);
         var tc_ss = parseInt(tc_array[2]);
         var tc_ff = parseInt(tc_array[3]);
-        var tc_in_seconds = ( tc_hh * 3600 ) + ( tc_mm * 60 ) + tc_ss + ( tc_ff / fps );
+        var tc_in_seconds = ( tc_hh * 3600 ) + ( tc_mm * 60 ) + tc_ss + ( tc_ff / 25 );
         return tc_in_seconds;
     }
 
-    function secondsToTimecode(time, fps) {
+    function secondsToTimecode(time) {
         var hours = Math.floor(time / 3600) % 24;
         var minutes = Math.floor(time / 60) % 60;
         var seconds = Math.floor(time % 60);
-        var frames = Math.floor(((time % 1)*fps).toFixed(3));
+        var frames = Math.floor(((time % 1) * 25).toFixed(3));
 
         var result = (hours < 10 ? "0" + hours : hours) + ":"
         + (minutes < 10 ? "0" + minutes : minutes) + ":"
@@ -165,12 +169,24 @@ $(document).ready(function() {
         return result;
     }
 
+    $('#forward').bind('click', function(e) {
+        motionId = setInterval(function() { seekFrames(1) }, 250);
+    });
+
+    $('#backward').bind('click', function(e) {
+        motionId = setInterval(function() { seekFrames(-1) }, 250);
+    });
+
+    $('#stop').bind('click', function(e) {
+        clearInterval(motionId)
+    });
+
     $('#minus').bind('click', function(e) {
-        seekFrames(-1, 25);
+        seekFrames(-1);
     });
 
     $('#plus').bind('click', function(e) {
-        seekFrames(1, 25);
+        seekFrames(1);
     });
 
     $('#jump').bind('click', function(e, where) {
@@ -186,7 +202,7 @@ $(document).ready(function() {
         updateVideoCurrentTimeCode, FPS);
     $('#myVideo').attr("src", selected_video);
 
-    });
+});
 </script>
 </body>
 </html>
