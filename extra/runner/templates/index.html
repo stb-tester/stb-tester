@@ -193,8 +193,8 @@
            n - The number of measurements (test runs)
 
        Outputs:
-           An array [lower bound, upper bound] of the Wilson score confidence
-           interval at 95% confidence.
+           An object { centre, radius, lower, upper } describing the Wilson
+           score confidence interval at 95% confidence.
 
        [1]: https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval
     */
@@ -210,13 +210,25 @@
 
       var centre = (n*phat + z*z/2)/(n+z*z);
       var radius = (z * Math.sqrt((phat*(1-phat)+z*z/(4*n))/n))/(1+z*z/n);
-      return [ pos == 0 ? 0.0 : (centre - radius),
-               pos == n ? 1.0 : (centre + radius) ];
+      return {
+        centre: centre,
+        radius: radius,
+        lower: pos == 0 ? 0.0 : (centre - radius),
+        upper: pos == n ? 1.0 : (centre + radius),
+      };
     }
     function format_summary(pos, n) {
       var a = wilson_score_interval_95(pos, n);
-      return pos + "/" + n + " (" + parseFloat((a[0] * 100).toPrecision(2)) +
-             "% - " + parseFloat((a[1] * 100).toPrecision(2)) + "%)";
+      var range;
+      if (pos == 0) {
+        range = "<" + parseFloat(a.upper * 100).toPrecision(2);
+      } else if (pos == n) {
+        range = ">" + parseFloat(a.lower * 100).toPrecision(2);
+      } else {
+        range = parseFloat((a.centre * 100).toPrecision(2)) + "±" +
+          parseFloat((a.radius * 100).toPrecision(2));
+      }
+      return pos + "/" + n + " (" + range + "%)";
     }
     function update_totals() {
       var num_success = $(".success:visible").length;
