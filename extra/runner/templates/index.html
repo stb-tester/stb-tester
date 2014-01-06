@@ -221,9 +221,9 @@
       var a = wilson_score_interval_95(pos, n);
       var range;
       if (pos == 0) {
-        range = "<" + parseFloat(a.upper * 100).toPrecision(2);
+        range = "<" + parseFloat((a.upper * 100).toPrecision(2));
       } else if (pos == n) {
-        range = ">" + parseFloat(a.lower * 100).toPrecision(2);
+        range = ">" + parseFloat((a.lower * 100).toPrecision(2));
       } else {
         range = parseFloat((a.centre * 100).toPrecision(2)) + "±" +
           parseFloat((a.radius * 100).toPrecision(2));
