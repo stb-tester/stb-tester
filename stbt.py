@@ -289,8 +289,7 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class MatchResult(namedtuple(
-        'MatchResult', 'timestamp match position first_pass_result')):
+class MatchResult(object):
     """
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
@@ -298,7 +297,21 @@ class MatchResult(namedtuple(
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     """
-    pass
+
+    def __init__(self, timestamp, match, position, first_pass_result):
+        self.timestamp = timestamp
+        self.match = match
+        self.position = position
+        self.first_pass_result = first_pass_result
+
+    def __str__(self):
+        return (
+            "MatchResult(timestamp=%s, match=%s, position=%s, "
+            "first_pass_result=%s)" % (
+                self.timestamp,
+                self.match,
+                self.position,
+                self.first_pass_result))
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -342,10 +355,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             frame, template, match_parameters, template_name)
 
         result = MatchResult(
-            timestamp=timestamp,
-            match=matched,
-            position=position,
-            first_pass_result=first_pass_certainty)
+            timestamp, matched, position, first_pass_certainty)
         debug("%s found: %s" % (
             "Match" if matched else "Weak match", str(result)))
         yield result
