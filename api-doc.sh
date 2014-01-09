@@ -3,6 +3,8 @@
 # Generates documentation from python docstrings, and inserts it at the right
 # place in the README file specified in $1.
 
+set -u
+
 cd "$(dirname "$0")"
 
 doc() {
