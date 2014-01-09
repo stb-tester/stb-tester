@@ -291,3 +291,33 @@ test_draw_text() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify-draw-text.py
 }
+
+test_that_press_waits_between_subsequent_presses() {
+    cat > test.py <<-EOF &&
+	import stbt, datetime
+	stbt.press('OK')
+	time1 = datetime.datetime.now()
+	stbt.press('OK', interpress_delay_secs=0.5)
+	time2 = datetime.datetime.now()
+	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
+	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
+	EOF
+    STBT_CONFIG_FILE= stbt-run -v --control none test.py
+}
+
+test_that_press_reads_default_delay_from_stbt_conf() {
+    cat > stbt.conf <<-EOF &&
+	[press]
+	interpress_delay_secs = 0.5
+	EOF
+    cat > test.py <<-EOF &&
+	import stbt, datetime
+	stbt.press('OK')
+	time1 = datetime.datetime.now()
+	stbt.press('OK')
+	time2 = datetime.datetime.now()
+	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
+	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none test.py
+}
