@@ -296,22 +296,34 @@ class MatchResult(object):
     * `position`: `Position` of the match.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
+    * `frame`: The video frame that was searched, in OpenCV format.
     """
 
-    def __init__(self, timestamp, match, position, first_pass_result):
+    def __init__(
+            self, timestamp, match, position, first_pass_result, frame=None):
         self.timestamp = timestamp
         self.match = match
         self.position = position
         self.first_pass_result = first_pass_result
+        if frame is None:
+            warnings.warn(
+                "Creating a 'MatchResult' without specifying 'frame' is "
+                "deprecated. In a future release of stb-tester the 'frame' "
+                "parameter will be mandatory.",
+                DeprecationWarning, stacklevel=2)
+        self.frame = frame
 
     def __str__(self):
         return (
             "MatchResult(timestamp=%s, match=%s, position=%s, "
-            "first_pass_result=%s)" % (
+            "first_pass_result=%s, frame=%s)" % (
                 self.timestamp,
                 self.match,
                 self.position,
-                self.first_pass_result))
+                self.first_pass_result,
+                "None" if self.frame is None else "%dx%dx%d" % (
+                    self.frame.shape[1], self.frame.shape[0],
+                    self.frame.shape[2])))
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -355,7 +367,16 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             frame, template, match_parameters, template_name)
 
         result = MatchResult(
-            timestamp, matched, position, first_pass_certainty)
+            timestamp, matched, position, first_pass_certainty,
+            numpy.copy(frame))
+
+        cv2.rectangle(
+            frame,
+            (position.x, position.y),
+            (position.x + template.shape[1], position.y + template.shape[0]),
+            (32, 0 if matched else 255, 255),  # bgr
+            thickness=3)
+
         debug("%s found: %s" % (
             "Match" if matched else "Weak match", str(result)))
         yield result
@@ -503,8 +524,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = get_frame()
-    raise MatchTimeout(screenshot, image, timeout_secs)
+    raise MatchTimeout(res.frame, image, timeout_secs)  # pylint: disable=W0631
 
 
 def press_until_match(
@@ -1064,13 +1084,6 @@ def _match(image, template, match_parameters, template_name):
     matched = (
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters))
-
-    cv2.rectangle(
-        image,
-        (position.x, position.y),
-        (position.x + template.shape[1], position.y + template.shape[0]),
-        (32, 0 if matched else 255, 255),  # bgr
-        thickness=3)
 
     if _debug_level > 1:
         _log_image(image, "source_with_roi", "stbt-debug/detect_match")

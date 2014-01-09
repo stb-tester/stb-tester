@@ -543,6 +543,7 @@ class MatchResult
     * `position`: `Position` of the match.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
+    * `frame`: The video frame that was searched, in OpenCV format.
 
 class Position
     * `x` and `y`: Integer coordinates from the top left corner of the video

@@ -476,3 +476,14 @@ test_detect_match_visualisation() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
+
+test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
+    cat > test.py <<-EOF &&
+	wait_for_match("$testdir/videotestsrc-redblue.png")
+	EOF
+    ! stbt-run -v --source-pipeline 'videotestsrc pattern=black' test.py &&
+
+    # sqdiff-normed & ccorr-normed give incorrect result on all-black images
+    stbt templatematch screenshot.png "$testdir"/black-full-frame.png \
+        match_method=ccoeff-normed
+}
