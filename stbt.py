@@ -656,7 +656,21 @@ def wait_for_motion(
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
-def ocr(frame=None, region=None):
+class OcrMode(object):
+    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
+    PAGE_SEGMENTATION_WITH_OSD = 1
+    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
+    PAGE_SEGMENTATION_WITHOUT_OSD = 3
+    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
+    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
+    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
+    SINGLE_LINE = 7
+    SINGLE_WORD = 8
+    SINGLE_WORD_IN_A_CIRCLE = 9
+    SINGLE_CHARACTER = 10
+
+
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
     """Return the text present in the video frame.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -678,7 +692,8 @@ def ocr(frame=None, region=None):
     ocr_output = tempfile.mktemp()
     try:
         cv2.imwrite(ocr_input, frame)
-        subprocess.check_call(["tesseract", ocr_input, ocr_output])
+        subprocess.check_call([
+            "tesseract", ocr_input, ocr_output, "-psm", str(mode)])
         return open(ocr_output + ".txt").read().strip()
     finally:
         if os.path.isfile(ocr_input):
@@ -2098,15 +2113,20 @@ def _fake_frames_at_half_motion():
 
 
 def test_ocr_on_static_images():
-    for image, expected_text, region in [
+    for image, expected_text, region, mode in [
         # pylint: disable=C0301
-        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None),
-        ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40)),
-        ("programme--white-on-black.png", "programme", None),
+        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None, None),
+        ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40), None),
+        ("programme--white-on-black.png", "programme", None, None),
+        ("UJJM--white-text-on-grey-boxes.png", "", None, None),
+        ("UJJM--white-text-on-grey-boxes.png", "UJJM", None, OcrMode.SINGLE_LINE),
     ]:
+        kwargs = {"region": region}
+        if mode is not None:
+            kwargs["mode"] = mode
         text = ocr(
             cv2.imread(os.path.join(
                 os.path.dirname(__file__), "tests", "ocr", image)),
-            region)
+            **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
