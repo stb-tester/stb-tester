@@ -67,6 +67,7 @@ python_docstrings() {
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc ocr
     doc frames
     doc save_frame
     doc get_frame
@@ -76,6 +77,7 @@ python_docstrings() {
     doc MatchParameters
     doc MatchResult
     doc Position
+    doc Region
     doc MotionResult
     doc MatchTimeout
     doc MotionTimeout

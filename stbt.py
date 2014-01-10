@@ -20,8 +20,10 @@ import os
 import Queue
 import re
 import socket
+import subprocess
 import sys
 import threading
+import tempfile
 import time
 import warnings
 
@@ -285,6 +287,16 @@ class Position(namedtuple('Position', 'x y')):
     """
     * `x` and `y`: Integer coordinates from the top left corner of the video
       frame.
+    """
+    pass
+
+
+class Region(namedtuple('Region', 'x y width height')):
+    """Rectangular region within the video frame.
+
+    `x` and `y` are the coordinates of the top left corner of the region,
+    measured in pixels from the top left of the video frame. The `width` and
+    `height` of the rectangle are also measured in pixels.
     """
     pass
 
@@ -642,6 +654,37 @@ def wait_for_motion(
 
     screenshot = get_frame()
     raise MotionTimeout(screenshot, mask, timeout_secs)
+
+
+def ocr(frame=None, region=None):
+    """Return the text present in the video frame.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+    """
+
+    if frame is None:
+        frame = get_frame()
+    if region is not None:
+        frame = frame[
+            region.y:region.y + region.height,
+            region.x:region.x + region.width]
+
+    ocr_input = tempfile.mktemp(suffix=".png")
+    ocr_output = tempfile.mktemp()
+    try:
+        cv2.imwrite(ocr_input, frame)
+        subprocess.check_call(["tesseract", ocr_input, ocr_output])
+        return open(ocr_output + ".txt").read().strip()
+    finally:
+        if os.path.isfile(ocr_input):
+            os.remove(ocr_input)
+        if os.path.isfile(ocr_output + ".txt"):
+            os.remove(ocr_output + ".txt")
 
 
 def frames(timeout_secs=None):
@@ -1949,8 +1992,6 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
 
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
-    import tempfile
-
     keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
 
     def fake_lircd(address):
@@ -2054,3 +2095,18 @@ def _fake_frames_at_half_motion():
     _display, get_frame = FakeDisplay(), _get_frame
     yield
     _display, get_frame = orig_display, orig_get_frame
+
+
+def test_ocr_on_static_images():
+    for image, expected_text, region in [
+        # pylint: disable=C0301
+        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None),
+        ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40)),
+        ("programme--white-on-black.png", "programme", None),
+    ]:
+        text = ocr(
+            cv2.imread(os.path.join(
+                os.path.dirname(__file__), "tests", "ocr", image)),
+            region)
+        assert text == expected_text, (
+            "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))

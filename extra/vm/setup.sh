@@ -14,7 +14,7 @@ install_packages() {
   # Core stbt dependencies
   packages+=" gstreamer0.10-tools gstreamer0.10-plugins-base"
   packages+=" gstreamer0.10-plugins-good gstreamer0.10-plugins-bad"
-  packages+=" python-gst0.10 python-opencv python-numpy"
+  packages+=" python-gst0.10 python-opencv python-numpy tesseract-ocr"
   # For `stbt power`
   packages+=" curl expect openssh-client"
   # For `extra/runner`

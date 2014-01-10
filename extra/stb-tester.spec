@@ -1,6 +1,6 @@
 Name: stb-tester
 Version: 0.17
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: A video-capture record-playback testing system for set-top-boxes
 Group: Development/Tools
 URL: http://stb-tester.com
@@ -22,6 +22,7 @@ Requires: pygtk2
 Requires: pylint
 Requires: python >= 2.4
 Requires: python-jinja2
+Requires: tesseract
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control

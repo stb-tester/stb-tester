@@ -419,6 +419,16 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
+ocr(frame=None, region=None)
+    Return the text present in the video frame.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
 
@@ -548,6 +558,13 @@ class MatchResult
 class Position
     * `x` and `y`: Integer coordinates from the top left corner of the video
       frame.
+
+class Region
+    Rectangular region within the video frame.
+
+    `x` and `y` are the coordinates of the top left corner of the region,
+    measured in pixels from the top left of the video frame. The `width` and
+    `height` of the rectangle are also measured in pixels.
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
