@@ -284,9 +284,10 @@ class MatchParameters(object):
 
 
 class Position(namedtuple('Position', 'x y')):
-    """
-    * `x` and `y`: Integer coordinates from the top left corner of the video
-      frame.
+    """A point within the video frame.
+
+    `x` and `y` are integer coordinates (measured in number of pixels) from the
+    top left corner of the video frame.
     """
     pass
 
