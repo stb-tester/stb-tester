@@ -109,6 +109,14 @@ def press(key, interpress_delay_secs=None):
     draw_text(key, duration_secs=3)
 
 
+def tap(position):
+    _control.touch(position)  # pylint:disable=E1101
+
+
+def text(s):
+    _control.text(s)  # pylint:disable=E1101
+
+
 def draw_text(text, duration_secs=3):
     """Write the specified `text` to the video output.
 
@@ -932,7 +940,19 @@ def argparser():
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
         restart_source=False, transformation_pipeline='identity'):
-    global _display, _control
+
+    global _display, _control, _adb
+
+    try:
+        os.remove("android-screenshots")
+    except OSError:
+        pass
+    os.mkfifo("android-screenshots")
+    _adb = subprocess.Popen(
+        r"while true; do adb shell screencap -p; done | " +
+        r"perl -pe 's/\x0D\x0A/\x0A/g' > android-screenshots",
+        shell=True)
+
     _display = Display(
         gst_source_pipeline, gst_sink_pipeline,
         save_video, restart_source, transformation_pipeline)
@@ -942,6 +962,13 @@ def init_run(
 def teardown_run():
     if _display:
         _display.teardown()
+
+    if _adb:
+        _adb.terminate()
+        try:
+            os.remove("android-screenshots")
+        except OSError:
+            pass
 
 
 # Internal
@@ -1872,6 +1899,10 @@ def uri_to_remote(uri, display):
         d = irnb.groupdict()
         return IRNetBoxRemote(
             d['hostname'], int(d['port'] or 10001), d['output'], d['config'])
+
+    if uri.lower() == 'android':
+        return _AndroidControl()
+
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
@@ -2087,6 +2118,18 @@ class _SamsungTCPRemote(object):
 
 def _new_samsung_tcp_remote(hostname, port):
     return _SamsungTCPRemote(_connect_tcp_socket(hostname, port))
+
+
+class _AndroidControl(object):
+    def __init__(self):
+        pass
+
+    def tap(self, position):
+        subprocess.check_call([
+            "adb", "shell", "input", "tap", str(position.x), str(position.y)])
+
+    def text(self, s):
+        subprocess.check_call(["adb", "shell", "input", "text", s])
 
 
 def uri_to_remote_recorder(uri):
