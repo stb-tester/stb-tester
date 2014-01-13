@@ -11,6 +11,7 @@ import argparse
 from collections import namedtuple, deque
 import ConfigParser
 import contextlib
+import datetime
 import errno
 import functools
 import glob
@@ -127,7 +128,10 @@ def get_config(section, key, default=None, type_=str):
             section, key, type_.__name__))
 
 
-def press(key):
+def press(
+        key,
+        interpress_delay_secs=get_config(
+            "press", "interpress_delay_secs", type_=float)):
     """Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -135,8 +139,31 @@ def press(key):
 
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
+
+    `interpress_delay_secs` is a floating-point number that specifies a minimum
+    time to wait after the preceding key press, in order to accommodate the
+    responsiveness of the device under test.
+
+    The global default for `interpress_delay_secs` can be set in the
+    configuration file, in section `press`.
     """
+
+    if getattr(_control, 'time_of_last_press', None):
+        # `sleep` is inside a `while` loop because the actual suspension time
+        # of `sleep` may be less than that requested.
+        while True:
+            seconds_to_wait = (
+                _control.time_of_last_press - datetime.datetime.now() +
+                datetime.timedelta(seconds=interpress_delay_secs)
+            ).total_seconds()
+            if seconds_to_wait > 0:
+                time.sleep(seconds_to_wait)
+            else:
+                break
+
     _control.press(key)
+    _control.time_of_last_press = (  # pylint:disable=W0201
+        datetime.datetime.now())
     draw_text(key, duration_secs=3)
 
 

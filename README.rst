@@ -300,7 +300,7 @@ The following functions are available:
 
 .. <start python docs>
 
-press(key)
+press(key, interpress_delay_secs=0.0)
     Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -308,6 +308,13 @@ press(key)
 
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
+
+    `interpress_delay_secs` is a floating-point number that specifies a minimum
+    time to wait after the preceding key press, in order to accommodate the
+    responsiveness of the device under test.
+
+    The global default for `interpress_delay_secs` can be set in the
+    configuration file, in section `press`.
 
 wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
     Search for `image` in the source video stream.
