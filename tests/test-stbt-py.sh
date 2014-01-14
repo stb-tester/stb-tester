@@ -302,14 +302,12 @@ test_that_press_waits_between_subsequent_presses() {
 	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
-    STBT_CONFIG_FILE= stbt-run -v --control none test.py
+    stbt-run -v --control none test.py
 }
 
 test_that_press_reads_default_delay_from_stbt_conf() {
-    cat > stbt.conf <<-EOF &&
-	[press]
-	interpress_delay_secs = 0.5
-	EOF
+    sed -e 's/interpress_delay_secs =.*/interpress_delay_secs = 0.5/' \
+        "$testdir"/stbt.conf > stbt.conf &&
     cat > test.py <<-EOF &&
 	import stbt, datetime
 	stbt.press('OK')
