@@ -291,3 +291,46 @@ test_draw_text() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify-draw-text.py
 }
+
+test_that_press_waits_between_subsequent_presses() {
+    cat > test.py <<-EOF &&
+	import stbt, datetime
+	stbt.press('OK')
+	time1 = datetime.datetime.now()
+	stbt.press('OK', interpress_delay_secs=0.5)
+	time2 = datetime.datetime.now()
+	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
+	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
+	EOF
+    stbt-run -v --control none test.py
+}
+
+test_that_press_doesnt_wait_any_longer_than_necessary() {
+    cat > test.py <<-EOF &&
+	import stbt, time
+	
+	def fake_sleep(x):
+	    assert False, "Unexpected call to time.sleep"
+	
+	stbt.press('OK')
+	time.sleep(0.1)
+	time.sleep = fake_sleep
+	stbt.press('OK', interpress_delay_secs=0.1)
+	EOF
+    stbt-run -v --control none test.py
+}
+
+test_that_press_reads_default_delay_from_stbt_conf() {
+    sed -e 's/interpress_delay_secs =.*/interpress_delay_secs = 0.5/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    cat > test.py <<-EOF &&
+	import stbt, datetime
+	stbt.press('OK')
+	time1 = datetime.datetime.now()
+	stbt.press('OK')
+	time2 = datetime.datetime.now()
+	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
+	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none test.py
+}
