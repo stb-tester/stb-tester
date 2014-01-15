@@ -432,13 +432,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
     mask_image = None
     if mask:
-        mask_ = _find_path(mask)
-        debug("Using mask %s" % mask_)
-        if not os.path.isfile(mask_):
-            raise UITestError("No such mask file: %s" % mask)
-        mask_image = cv2.imread(mask_, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-        if mask_image is None:
-            raise UITestError("Failed to load mask file: %s" % mask_)
+        mask_image = _load_mask(mask)
 
     previous_frame_gray = None
     log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
@@ -452,7 +446,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
                     mask_image.shape[:2] != frame.shape[:2]):
                 raise UITestError(
                     "The dimensions of the mask '%s' %s don't match the video "
-                    "frame %s" % (mask_, mask_image.shape, frame.shape))
+                    "frame %s" % (mask, mask_image.shape, frame.shape))
             previous_frame_gray = frame_gray
             continue
 
@@ -1947,6 +1941,18 @@ def _find_path(image):
 
     # Fall back to image from cwd, for convenience of the selftests
     return os.path.abspath(image)
+
+
+def _load_mask(mask):
+    """Loads the given mask file and returns it as an OpenCV image."""
+    mask_path = _find_path(mask)
+    debug("Using mask %s" % mask_path)
+    if not os.path.isfile(mask_path):
+        raise UITestError("No such mask file: %s" % mask)
+    mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    if mask_image is None:
+        raise UITestError("Failed to load mask file: %s" % mask_path)
+    return mask_image
 
 
 def _mkdir(d):
