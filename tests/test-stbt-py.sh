@@ -153,6 +153,52 @@ test_that_frames_doesnt_deadlock() {
 EOF
 }
 
+test_that_black_screen_is_true_for_black_pattern() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(stbt.get_frame())
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=black' \
+        test.py
+}
+
+test_that_black_screen_is_false_for_smpte_pattern() {
+    cat > test.py <<-EOF
+	import stbt
+	assert not stbt.black_screen(stbt.get_frame())
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        test.py
+}
+
+test_that_black_screen_is_true_for_smpte_pattern_when_masked() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(
+	    stbt.get_frame(),
+	    mask="$testdir/videotestsrc-mask-non-black.png"
+	)
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        test.py
+}
+
+test_black_screen_threshold_bounds_for_almost_black_frame() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(stbt.get_frame(), threshold=3)
+	assert not stbt.black_screen(stbt.get_frame(), threshold=2)
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
+}
+
 test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null || {
         echo "webminspector.py not found; skipping this test." >&2

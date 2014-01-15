@@ -729,6 +729,27 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
+def black_screen(frame, mask=None, threshold=10):
+    """Check for the presence of a black screen in a video frame.
+
+    `frame` is the OpenCV image of the video frame to check. The optional
+    `mask` is the filename of a black & white image mask. It must have white
+    pixels for parts of the frame to check and black pixels for any parts to
+    ignore.
+
+    Even when a video frame appears to be black, the intensity of its pixels
+    is not always 0. To differentiate almost-black from non-black pixels, a
+    binary threshold is applied to the frame. This makes use of a `threshold`
+    value in the range 0-255, which can be adjusted if necessary.
+    """
+    if mask:
+        mask = _load_mask(mask)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+    _, maxVal, _, _ = cv2.minMaxLoc(frame, mask)
+    return maxVal == 0
+
+
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
