@@ -297,6 +297,15 @@
             Date.parse(timestamp.replace(' ', 'T')),
             duration_sec, timestamp, test_name]);
       });
+      if (plotSeries[0].length == 0) {
+        // Work around the limitation of jqplot that plotSeries[0] mustn't be
+        // empty in order to have the plot generated, by pushing a fake value.
+        // plotSeries[0][0][0] must be a valid timestamp in order to have the
+        // values on the x-axis distributed correctly.
+        var any_result = plotSeries[1].concat(plotSeries[2]);
+        plotSeries[0].push([
+          any_result[0] ? any_result[0][0] : Date.now(), null, '', '']);
+      }
       if (plot1) {
         plot1.replot({data: plotSeries, resetAxes: true});
       }
