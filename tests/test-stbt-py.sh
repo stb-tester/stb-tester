@@ -106,23 +106,17 @@ test_using_frames_to_measure_black_screen() {
 	    time.sleep(1)
 	    stbt.press("smpte")
 	
-	def is_black_screen(img):
-	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	    _, img = cv2.threshold(img, 10, 255, cv2.THRESH_BINARY)
-	    _, maxVal, _, _ = cv2.minMaxLoc(img)
-	    return maxVal == 0
-	
 	threading.Thread(target=presser).start()
 	
 	frames = stbt.frames(timeout_secs=10)
 	for frame, timestamp in frames:
-	    black = is_black_screen(frame)
+	    black = stbt.black_screen(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if black:
 	        break
 	assert black, "Failed to find black screen"
 	for frame, timestamp in frames:
-	    black = is_black_screen(frame)
+	    black = stbt.black_screen(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if not black:
 	        break
