@@ -297,15 +297,6 @@
             Date.parse(timestamp.replace(' ', 'T')),
             duration_sec, timestamp, test_name]);
       });
-      if (plotSeries[0].length == 0) {
-        // Work around the limitation of jqplot that plotSeries[0] mustn't be
-        // empty in order to have the plot generated, by pushing a fake value.
-        // plotSeries[0][0][0] must be a valid timestamp in order to have the
-        // values on the x-axis distributed correctly.
-        var any_result = plotSeries[1].concat(plotSeries[2]);
-        plotSeries[0].push([
-          any_result[0] ? any_result[0][0] : Date.now(), null, '', '']);
-      }
       if (plot1) {
         plot1.replot({data: plotSeries, resetAxes: true});
       }
@@ -351,7 +342,17 @@
       }
     };
     if (plotSeries.some(function(x) { return x.length > 0; } )) {  // Has data
+      if (plotSeries[0].length == 0) {
+        // Work around the limitation of jqplot that its constructor doesn't
+        // allow plotSeries[0] to be empty, by pushing a fake value.
+        plotSeries[0].push(null);
+      }
       var plot1 = $.jqplot('plot', plotSeries, plotOptions);
+      if (plotSeries[0][0] == null) {
+        // Regenerate the plot without the fake value
+        plotSeries[0].pop();
+        plot1.replot( { resetAxes: true } );
+      }
       $(window).resize(function() {
         plot1.replot( { resetAxes: true } );
       });
