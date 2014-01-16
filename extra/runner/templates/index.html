@@ -223,7 +223,11 @@
       if (pos == 0) {
         range = "<" + parseFloat((a.upper * 100).toPrecision(2));
       } else if (pos == n) {
-        range = ">" + parseFloat((a.lower * 100).toPrecision(2));
+        var bound = parseFloat((a.lower * 100).toPrecision(2));
+        if (bound == 100) {
+          bound = 99;
+        }
+        range = ">" + bound;
       } else {
         range = parseFloat((a.centre * 100).toPrecision(2)) + "±" +
           parseFloat((a.radius * 100).toPrecision(2));
