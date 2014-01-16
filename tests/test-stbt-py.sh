@@ -193,6 +193,32 @@ test_black_screen_threshold_bounds_for_almost_black_frame() {
         test.py
 }
 
+test_that_black_screen_reads_default_threshold_from_stbt_conf() {
+    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    cat > test.py <<-EOF &&
+	assert not stbt.black_screen(stbt.get_frame())
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
+}
+
+test_that_black_screen_threshold_parameter_overrides_default() {
+    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    cat > test.py <<-EOF &&
+	assert stbt.black_screen(stbt.get_frame(), threshold=3)
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
+}
+
 test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null || {
         echo "webminspector.py not found; skipping this test." >&2
