@@ -729,7 +729,9 @@ def get_frame():
     return gst_to_opencv(_display.get_frame())
 
 
-def black_screen(frame, mask=None, threshold=10):
+def black_screen(
+        frame, mask=None,
+        threshold=get_config('black_screen', 'threshold', type_=int)):
     """Check for the presence of a black screen in a video frame.
 
     `frame` is the OpenCV image of the video frame to check. The optional
@@ -740,7 +742,9 @@ def black_screen(frame, mask=None, threshold=10):
     Even when a video frame appears to be black, the intensity of its pixels
     is not always 0. To differentiate almost-black from non-black pixels, a
     binary threshold is applied to the frame. This makes use of a `threshold`
-    value in the range 0-255, which can be adjusted if necessary.
+    value in the range 0-255, which can be adjusted if necessary. The global
+    default can be changed by setting `threshold` in the `[black_screen]`
+    section of `stbt.conf`.
     """
     if mask:
         mask = _load_mask(mask)
