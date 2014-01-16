@@ -13,8 +13,11 @@ import argparse
 import mimetypes
 import os
 from os.path import abspath, basename, dirname, isdir, isfile, normpath
+import signal
 import subprocess
 import sys
+
+signal.signal(signal.SIGCHLD, signal.SIG_IGN)
 
 from flask import \
     Flask, abort, redirect, render_template, request, send_from_directory
