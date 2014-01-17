@@ -1049,10 +1049,11 @@ def _match(image, template, match_parameters, template_name):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
 
-    matched, position, first_pass_certainty = _find_match(
+    first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters)
-    if matched:
-        matched = _confirm_match(image, position, template, match_parameters)
+    matched = (
+        first_pass_matched and
+        _confirm_match(image, position, template, match_parameters))
 
     cv2.rectangle(
         image,
@@ -1064,8 +1065,8 @@ def _match(image, template, match_parameters, template_name):
     if _debug_level > 1:
         _log_image(image, "source_with_roi", "stbt-debug/detect_match")
         _log_image_descriptions(
-            template_name, matched, position, first_pass_certainty,
-            match_parameters)
+            template_name, matched, position,
+            first_pass_matched, first_pass_certainty, match_parameters)
 
     return matched, position, first_pass_certainty
 
@@ -1307,8 +1308,8 @@ def _log_image(image, name, directory):
 
 
 def _log_image_descriptions(
-        template_name, matched, position, first_pass_certainty,
-        match_parameters):
+        template_name, matched, position,
+        first_pass_matched, first_pass_certainty, match_parameters):
     """Create html file that describes the debug images."""
 
     try:
@@ -1361,7 +1362,7 @@ def _log_image_descriptions(
                     of {{"%.2f"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
-            {% if level == 0 %}
+            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
                 <li>Matched at {{position}} {{link("source_with_roi")}}
                     with certainty {{"%.2f"|format(first_pass_certainty)}}.
             {% else %}
@@ -1415,14 +1416,16 @@ def _log_image_descriptions(
     with open(os.path.join(d, "index.html"), "w") as f:
         f.write(template.render(
             first_pass_certainty=first_pass_certainty,
-            levels=reversed(sorted(set(
+            first_pass_matched=first_pass_matched,
+            levels=list(reversed(sorted(set(
                 [int(re.search(r"level(\d+)-.*", x).group(1))
-                 for x in glob.glob(os.path.join(d, "level*"))]))),
+                 for x in glob.glob(os.path.join(d, "level*"))])))),
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
             match_parameters=match_parameters,
             matched=matched,
+            min=min,
             position=position,
             template_name=template_name,
         ))
