@@ -27,6 +27,7 @@ $(document).ready(function() {
                 function() {
                     del.replaceWith(
                         "<span id='deleted' class='text-error'>(Deleted)</span>");
+                    parent.$('tr.info').remove();
                 });
         }
         return false;
