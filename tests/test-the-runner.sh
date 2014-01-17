@@ -275,14 +275,14 @@ test_runner_results_server() {
     assert grep -q UITestError $rundir/index.html
     assert grep -q UITestError index.html
 
-    "$srcdir"/extra/runner/server --debug localhost:5787 &
+    "$srcdir"/extra/runner/server --debug 127.0.0.1:5787 &
     server=$!
     trap "killtree $server; wait $server" EXIT
-    expect_runner_to_say 'Running on http://localhost:5787/'
+    expect_runner_to_say 'Running on http://127.0.0.1:5787/'
 
     with_retry 5 curl --silent --show-error \
         -F 'value=manual failure reason' \
-        http://localhost:5787/$rundir/failure-reason || fail 'Got HTTP failure'
+        http://127.0.0.1:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server
     assert grep -q "manual failure reason" $rundir/failure-reason.manual
@@ -291,7 +291,7 @@ test_runner_results_server() {
 
     curl --silent --show-error \
         -F "value=UITestError: Not the system-under-test's fault" \
-        http://localhost:5787/$rundir/failure-reason || fail 'Got HTTP failure'
+        http://127.0.0.1:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server
     ! [[ -f $rundir/failure-reason.manual ]] ||
@@ -301,7 +301,7 @@ test_runner_results_server() {
 
     curl --silent --show-error \
         -F 'value=Hi there £€' \
-        http://localhost:5787/$rundir/notes || fail 'Got HTTP failure'
+        http://127.0.0.1:5787/$rundir/notes || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/notes"
     wait_for_report $server
     assert grep -q 'Hi there £€' $rundir/notes.manual
@@ -309,7 +309,7 @@ test_runner_results_server() {
     assert grep -q 'Hi there £€' index.html
 
     curl --silent --show-error -X POST \
-        http://localhost:5787/$rundir/delete || fail 'Got HTTP failure'
+        http://127.0.0.1:5787/$rundir/delete || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/delete"
     wait_for_report $server
     ! [[ -f $rundir ]] || fail "server didn't hide '$rundir'"
@@ -320,18 +320,18 @@ test_runner_results_server_shows_directory_listing() {
     mkdir my-test-session
     echo hi > my-test-session/index.html
 
-    "$srcdir"/extra/runner/server --debug localhost:5788 &
+    "$srcdir"/extra/runner/server --debug 127.0.0.1:5788 &
     server=$!
     trap "killtree $server; wait $server" EXIT
-    expect_runner_to_say 'Running on http://localhost:5788/'
+    expect_runner_to_say 'Running on http://127.0.0.1:5788/'
 
-    with_retry 5 curl http://localhost:5788/ | grep my-test-session ||
+    with_retry 5 curl http://127.0.0.1:5788/ | grep my-test-session ||
         fail "Didn't find directory listing at '/'"
     diff -u my-test-session/index.html \
-        <(curl -L http://localhost:5788/my-test-session) ||
+        <(curl -L http://127.0.0.1:5788/my-test-session) ||
         fail "Didn't find index.html at '/my-test-session'"
     diff -u my-test-session/index.html \
-        <(curl http://localhost:5788/my-test-session/) ||
+        <(curl http://127.0.0.1:5788/my-test-session/) ||
         fail "Didn't find index.html at '/my-test-session/'"
 }
 
