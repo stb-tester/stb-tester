@@ -45,6 +45,12 @@ doc() {
           sub(/^ *$/, "");
         }
         /^ *(Method resolution order:|Methods defined here:)$/ { exit; }
+        /^ *Data descriptors defined here:/ { skipping=1; next; }
+        /^ *Data and other attributes defined here:/ {
+                        skipping=0; in_attributes=1; next; }
+        skipping { next; }
+        in_attributes && /^ *$/ { next; }
+        END { if(in_attributes) print ""; }
         { print; }'
 }
 
@@ -67,6 +73,8 @@ python_docstrings() {
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc ocr
+    doc OcrMode
     doc frames
     doc save_frame
     doc get_frame
@@ -76,12 +84,18 @@ python_docstrings() {
     doc MatchParameters
     doc MatchResult
     doc Position
+    doc Region
     doc MotionResult
     doc MatchTimeout
     doc MotionTimeout
     doc NoVideo
     doc UITestFailure
     doc UITestError
+}
+
+substitute_ocr_default_mode() {
+    local mode=$(sed -n '/^class OcrMode/,/^$/ p' stbt.py | awk '/3/ {print $1}')
+    sed "/^ocr(/ s/mode=3/mode=OcrMode.$mode/"
 }
 
 # Prints sed commands to apply,
@@ -106,6 +120,7 @@ substitute_default_params() {
 
 cat $1 |
 substitute_python_docstrings |
+substitute_ocr_default_mode |
 sed -f <(substitute_default_params) \
 > $1.new &&
 mv $1.new $1

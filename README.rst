@@ -419,6 +419,29 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
+ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD)
+    Return the text present in the video frame.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+
+class OcrMode
+    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
+    PAGE_SEGMENTATION_WITHOUT_OSD = 3
+    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
+    PAGE_SEGMENTATION_WITH_OSD = 1
+    SINGLE_CHARACTER = 10
+    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
+    SINGLE_LINE = 7
+    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
+    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
+    SINGLE_WORD = 8
+    SINGLE_WORD_IN_A_CIRCLE = 9
+
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
 
@@ -543,10 +566,20 @@ class MatchResult
     * `position`: `Position` of the match.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
+    * `frame`: The video frame that was searched, in OpenCV format.
 
 class Position
-    * `x` and `y`: Integer coordinates from the top left corner of the video
-      frame.
+    A point within the video frame.
+
+    `x` and `y` are integer coordinates (measured in number of pixels) from the
+    top left corner of the video frame.
+
+class Region
+    Rectangular region within the video frame.
+
+    `x` and `y` are the coordinates of the top left corner of the region,
+    measured in pixels from the top left of the video frame. The `width` and
+    `height` of the rectangle are also measured in pixels.
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
