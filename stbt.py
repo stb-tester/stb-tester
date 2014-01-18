@@ -20,8 +20,10 @@ import os
 import Queue
 import re
 import socket
+import subprocess
 import sys
 import threading
+import tempfile
 import time
 import warnings
 
@@ -76,7 +78,7 @@ import glib
 
 
 warnings.filterwarnings(
-    action="always", category=DeprecationWarning, message='^noise_threshold')
+    action="always", category=DeprecationWarning, message='.*stb-tester')
 
 
 _config = None
@@ -282,23 +284,59 @@ class MatchParameters(object):
 
 
 class Position(namedtuple('Position', 'x y')):
-    """
-    * `x` and `y`: Integer coordinates from the top left corner of the video
-      frame.
+    """A point within the video frame.
+
+    `x` and `y` are integer coordinates (measured in number of pixels) from the
+    top left corner of the video frame.
     """
     pass
 
 
-class MatchResult(namedtuple(
-        'MatchResult', 'timestamp match position first_pass_result')):
+class Region(namedtuple('Region', 'x y width height')):
+    """Rectangular region within the video frame.
+
+    `x` and `y` are the coordinates of the top left corner of the region,
+    measured in pixels from the top left of the video frame. The `width` and
+    `height` of the rectangle are also measured in pixels.
+    """
+    pass
+
+
+class MatchResult(object):
     """
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
     * `position`: `Position` of the match.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
+    * `frame`: The video frame that was searched, in OpenCV format.
     """
-    pass
+
+    def __init__(
+            self, timestamp, match, position, first_pass_result, frame=None):
+        self.timestamp = timestamp
+        self.match = match
+        self.position = position
+        self.first_pass_result = first_pass_result
+        if frame is None:
+            warnings.warn(
+                "Creating a 'MatchResult' without specifying 'frame' is "
+                "deprecated. In a future release of stb-tester the 'frame' "
+                "parameter will be mandatory.",
+                DeprecationWarning, stacklevel=2)
+        self.frame = frame
+
+    def __str__(self):
+        return (
+            "MatchResult(timestamp=%s, match=%s, position=%s, "
+            "first_pass_result=%s, frame=%s)" % (
+                self.timestamp,
+                self.match,
+                self.position,
+                self.first_pass_result,
+                "None" if self.frame is None else "%dx%dx%d" % (
+                    self.frame.shape[1], self.frame.shape[0],
+                    self.frame.shape[2])))
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -323,7 +361,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
@@ -342,10 +381,16 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             frame, template, match_parameters, template_name)
 
         result = MatchResult(
-            timestamp=timestamp,
-            match=matched,
-            position=position,
-            first_pass_result=first_pass_certainty)
+            timestamp, matched, position, first_pass_certainty,
+            numpy.copy(frame))
+
+        cv2.rectangle(
+            frame,
+            (position.x, position.y),
+            (position.x + template.shape[1], position.y + template.shape[0]),
+            (32, 0 if matched else 255, 255),  # bgr
+            thickness=3)
+
         debug("%s found: %s" % (
             "Match" if matched else "Weak match", str(result)))
         yield result
@@ -475,7 +520,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
@@ -493,8 +539,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image)
             return res
 
-    screenshot = get_frame()
-    raise MatchTimeout(screenshot, image, timeout_secs)
+    raise MatchTimeout(res.frame, image, timeout_secs)  # pylint: disable=W0631
 
 
 def press_until_match(
@@ -530,7 +575,8 @@ def press_until_match(
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
@@ -609,6 +655,52 @@ def wait_for_motion(
 
     screenshot = get_frame()
     raise MotionTimeout(screenshot, mask, timeout_secs)
+
+
+class OcrMode(object):
+    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
+    PAGE_SEGMENTATION_WITH_OSD = 1
+    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
+    PAGE_SEGMENTATION_WITHOUT_OSD = 3
+    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
+    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
+    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
+    SINGLE_LINE = 7
+    SINGLE_WORD = 8
+    SINGLE_WORD_IN_A_CIRCLE = 9
+    SINGLE_CHARACTER = 10
+
+
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
+    """Return the text present in the video frame.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+    """
+
+    if frame is None:
+        frame = get_frame()
+    if region is not None:
+        frame = frame[
+            region.y:region.y + region.height,
+            region.x:region.x + region.width]
+
+    ocr_input = tempfile.mktemp(suffix=".png")
+    ocr_output = tempfile.mktemp()
+    try:
+        cv2.imwrite(ocr_input, frame)
+        subprocess.check_call([
+            "tesseract", ocr_input, ocr_output, "-psm", str(mode)])
+        return open(ocr_output + ".txt").read().strip()
+    finally:
+        if os.path.isfile(ocr_input):
+            os.remove(ocr_input)
+        if os.path.isfile(ocr_output + ".txt"):
+            os.remove(ocr_output + ".txt")
 
 
 def frames(timeout_secs=None):
@@ -1054,13 +1146,6 @@ def _match(image, template, match_parameters, template_name):
     matched = (
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters))
-
-    cv2.rectangle(
-        image,
-        (position.x, position.y),
-        (position.x + template.shape[1], position.y + template.shape[0]),
-        (32, 0 if matched else 255, 255),  # bgr
-        thickness=3)
 
     if _debug_level > 1:
         _log_image(image, "source_with_roi", "stbt-debug/detect_match")
@@ -1923,8 +2008,6 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
 
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
-    import tempfile
-
     keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
 
     def fake_lircd(address):
@@ -2028,3 +2111,23 @@ def _fake_frames_at_half_motion():
     _display, get_frame = FakeDisplay(), _get_frame
     yield
     _display, get_frame = orig_display, orig_get_frame
+
+
+def test_ocr_on_static_images():
+    for image, expected_text, region, mode in [
+        # pylint: disable=C0301
+        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None, None),
+        ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40), None),
+        ("programme--white-on-black.png", "programme", None, None),
+        ("UJJM--white-text-on-grey-boxes.png", "", None, None),
+        ("UJJM--white-text-on-grey-boxes.png", "UJJM", None, OcrMode.SINGLE_LINE),
+    ]:
+        kwargs = {"region": region}
+        if mode is not None:
+            kwargs["mode"] = mode
+        text = ocr(
+            cv2.imread(os.path.join(
+                os.path.dirname(__file__), "tests", "ocr", image)),
+            **kwargs)
+        assert text == expected_text, (
+            "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
