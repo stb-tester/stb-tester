@@ -76,7 +76,7 @@ import glib
 
 
 warnings.filterwarnings(
-    action="always", category=DeprecationWarning, message='^noise_threshold')
+    action="always", category=DeprecationWarning, message='.*stb-tester')
 
 
 _config = None
@@ -348,7 +348,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
@@ -506,7 +507,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
@@ -560,7 +562,8 @@ def press_until_match(
 
     if noise_threshold is not None:
         warnings.warn(
-            "noise_threshold is marked for deprecation. Please use "
+            "noise_threshold is deprecated and will be removed in a future "
+            "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
