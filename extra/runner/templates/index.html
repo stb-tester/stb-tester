@@ -163,6 +163,18 @@
         return false;
       }
     };
+    if ($("tr.muted").length > 0) {
+      // Display the time elapsed since the test still running started
+      var timestamp = Date.parse(
+        $("tr.muted > td:eq(0)").text().replace(" ", "T"));
+      var duration = new Date(Date.now() - timestamp);
+      $("tr.muted > td:eq(5)").text(
+        duration.toUTCString().match(/\d{2}:\d{2}:\d{2}/)[0]);
+
+      // Do not show the index page of the test still running
+      $("tr.muted > td:eq(1) > a").css(
+        "pointer-events", "none").attr("href", "#");
+    }
 
     /* Calculates a Wilson score confidence interval[1] which gives a
        percentage range, within which there is a 95% chance that the "true"
