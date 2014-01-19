@@ -94,7 +94,7 @@ python_docstrings() {
 }
 
 substitute_ocr_default_mode() {
-    local mode=$(sed -n '/^class OcrMode/,/^$/ p' stbt.py | awk '/3/ {print $1}')
+    local mode=$(sed -n '/^class OcrMode/,/^[^ ]/ p' stbt.py | awk '/3/ {print $1}')
     sed "/^ocr(/ s/mode=3/mode=OcrMode.$mode/"
 }
 

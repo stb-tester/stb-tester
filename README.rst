@@ -430,6 +430,11 @@ ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD)
     process the entire frame.
 
 class OcrMode
+    Options to control layout analysis and assume a certain form of image.
+
+    For a (brief) description of each option, see the tesseract(1) man page:
+    http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html
+
     ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
     PAGE_SEGMENTATION_WITHOUT_OSD = 3
     PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
