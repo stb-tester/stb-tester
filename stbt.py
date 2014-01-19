@@ -694,16 +694,18 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
             region.y:region.y + region.height,
             region.x:region.x + region.width]
 
-    mktmp = functools.partial(
-        tempfile.NamedTemporaryFile,
-        prefix="stbt-ocr-", dir=os.environ.get("XDG_RUNTIME_DIR", None))
+    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
+    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
+
+    def mktmp(suffix):
+        return tempfile.NamedTemporaryFile(
+            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
         cv2.imwrite(ocr_in.name, frame)
         subprocess.check_call([
             "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)])
-        with open(ocr_out.name) as f:
-            return f.read().strip()
+        return ocr_out.read().strip()
 
 
 def frames(timeout_secs=None):
