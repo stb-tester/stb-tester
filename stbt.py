@@ -694,17 +694,18 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
             region.y:region.y + region.height,
             region.x:region.x + region.width]
 
+    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
-    _, ocr_input = tempfile.mkstemp(suffix=".png", dir=tmpdir)
-    _, ocr_output = tempfile.mkstemp(suffix=".txt", dir=tmpdir)
-    try:
-        cv2.imwrite(ocr_input, frame)
+
+    def mktmp(suffix):
+        return tempfile.NamedTemporaryFile(
+            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
+
+    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
+        cv2.imwrite(ocr_in.name, frame)
         subprocess.check_call([
-            "tesseract", ocr_input, ocr_output[:-4], "-psm", str(mode)])
-        return open(ocr_output).read().strip()
-    finally:
-        os.remove(ocr_input)
-        os.remove(ocr_output)
+            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)])
+        return ocr_out.read().strip()
 
 
 def frames(timeout_secs=None):
