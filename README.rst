@@ -317,16 +317,16 @@ The following functions are available:
 .. <start python docs>
 
 as_precondition(message)
-    Context manager that replaces TestFailures with TestErrors.
+    Context manager that replaces test failures with test errors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `TestFailure` exceptions) as
-    red results, and unhandled exceptions of any other type as yellow results.
-    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
-    `TestFailure` (red results) when they detect a failure. By running such
-    functions inside an `as_precondition` context, any `TestFailure` (red)
-    they raise will be caught, and a `TestError` (yellow) will be raised
-    instead.
+    generates will show test failures (that is, `stbt.TestFailure` exceptions)
+    as red results, and unhandled exceptions of any other type as yellow
+    results. Note that `wait_for_match`, `wait_for_motion`, and similar
+    functions raise `stbt.TestFailure` (red results) when they detect a
+    failure. By running such functions inside an `as_precondition` context, any
+    `stbt.TestFailure` (red) they raise will be caught, and a
+    `stbt.PreconditionError` (yellow) will be raised instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
@@ -665,7 +665,7 @@ class Position
     `x` and `y` are integer coordinates (measured in number of pixels) from the
     top left corner of the video frame.
 
-class PreconditionError(TestError)
+class PreconditionError(Exception)
     Exception raised by `as_precondition`.
 
 press(key, interpress_delay_secs=None)
@@ -779,9 +779,6 @@ save_frame(image, filename)
 
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
-
-class TestError(Exception)
-    The test script had an unrecoverable error.
 
 class TestFailure(Exception)
     The test failed because the system under test didn't behave as expected.

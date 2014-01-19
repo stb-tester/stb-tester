@@ -52,7 +52,7 @@ test_that_stbt_batch_run_runs_until_failure() {
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
     first=$(head -1 testruns)
     grep -q success $first/failure-reason || fail "Expected 1st testrun to succeed"
-    grep -q TestError latest/failure-reason || fail "Expected 2nd testrun to fail with 'TestError'"
+    grep -q RuntimeError latest/failure-reason || fail "Expected 2nd testrun to fail with 'RuntimeError'"
     [[ -f $first/thumbnail.jpg ]] || fail "Expected successful testrun to create thumbnail"
     [[ ! -f $first/screenshot.png ]] || fail "Expected successful testrun to not create screenshot"
     [[ -f latest/thumbnail.jpg ]] || fail "Expected failed testrun to create thumbnail"
@@ -68,8 +68,8 @@ test_that_stbt_batch_run_continues_after_uninteresting_failure() {
     [[ $(cat testruns | wc -l) -eq 3 ]] || fail "Expected 3 test runs"
     grep -q success $(head -1 testruns)/failure-reason ||
         fail "Expected 1st testrun to succeed"
-    grep -q TestError $(sed -n 2p testruns)/failure-reason ||
-        fail "Expected 2nd testrun to fail with 'TestError'"
+    grep -q RuntimeError $(sed -n 2p testruns)/failure-reason ||
+        fail "Expected 2nd testrun to fail with 'RuntimeError'"
     grep -q MatchTimeout latest/failure-reason ||
         fail "Expected 3rd testrun to fail with 'MatchTimeout'"
 }
@@ -320,9 +320,9 @@ test_stbt_batch_instaweb() {
     timeout 60 stbt batch run tests/test.py
     [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
     rundir=$(ls -d 20* | tail -1)
-    assert grep -q TestError $rundir/failure-reason
-    assert grep -q TestError $rundir/index.html
-    assert grep -q TestError index.html
+    assert grep -q RuntimeError $rundir/failure-reason
+    assert grep -q RuntimeError $rundir/index.html
+    assert grep -q RuntimeError index.html
 
     stbt batch instaweb --debug 127.0.0.1:5787 &
     server=$!
@@ -339,7 +339,7 @@ test_stbt_batch_instaweb() {
     assert grep -q "manual failure reason" index.html
 
     curl --silent --show-error \
-        -F "value=TestError: Not the system-under-test's fault" \
+        -F "value=RuntimeError: Not the system-under-test's fault" \
         http://127.0.0.1:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server

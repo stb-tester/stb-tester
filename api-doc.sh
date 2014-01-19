@@ -27,9 +27,9 @@ doc() {
     #  |  Method resolution order:
     #  ...
 
-    # $ pydoc stbt.TestError
-    # stbt.TestError = class TestError(exceptions.Exception)
-    #  |  The test script had an unrecoverable error.
+    # $ pydoc stbt.TestFailure
+    # stbt.TestFailure = class TestFailure(exceptions.Exception)
+    #  |  The test failed because the system under test didn't behave as expected.
     #  |  
     #  |  Method resolution order:
     #  ...
