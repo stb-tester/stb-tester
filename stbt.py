@@ -694,18 +694,17 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
             region.y:region.y + region.height,
             region.x:region.x + region.width]
 
-    ocr_input = tempfile.mktemp(suffix=".png")
-    ocr_output = tempfile.mktemp()
+    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
+    _, ocr_input = tempfile.mkstemp(suffix=".png", dir=tmpdir)
+    _, ocr_output = tempfile.mkstemp(suffix=".txt", dir=tmpdir)
     try:
         cv2.imwrite(ocr_input, frame)
         subprocess.check_call([
-            "tesseract", ocr_input, ocr_output, "-psm", str(mode)])
-        return open(ocr_output + ".txt").read().strip()
+            "tesseract", ocr_input, ocr_output[:-4], "-psm", str(mode)])
+        return open(ocr_output).read().strip()
     finally:
-        if os.path.isfile(ocr_input):
-            os.remove(ocr_input)
-        if os.path.isfile(ocr_output + ".txt"):
-            os.remove(ocr_output + ".txt")
+        os.remove(ocr_input)
+        os.remove(ocr_output)
 
 
 def frames(timeout_secs=None):
