@@ -451,3 +451,30 @@ test_that_transformation_pipeline_transforms_video() {
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
+
+test_backwards_compatibility_with_UITestFailure() {
+    cat > test.py <<-EOF &&
+	import stbt
+	
+	try:
+	    raise stbt.UITestFailure()
+	except stbt.TestFailure:
+	    print "Caught UITestFailure as TestFailure"
+	
+	try:
+	    raise stbt.TestFailure()
+	except stbt.UITestFailure:
+	    print "Caught TestFailure as UITestFailure"
+	
+	try:
+	    raise stbt.MatchTimeout(None, None, None)
+	except stbt.UITestFailure:
+	    print "Caught MatchTimeout as UITestFailure"
+	
+	try:
+	    raise stbt.MatchTimeout(None, None, None)
+	except stbt.TestFailure:
+	    print "Caught MatchTimeout as TestFailure"
+	EOF
+    stbt run -v test.py
+}

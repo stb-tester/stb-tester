@@ -78,5 +78,5 @@ with (stbt.logging.scoped_debug_level(2) if args.verbose
             "Match found" if result else "No match found. Closest match",
             result)
         sys.exit(0 if result else 1)
-    except stbt.UITestError as e:
+    except stbt.TestError as e:
         error(e.message)

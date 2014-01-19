@@ -27,8 +27,8 @@ doc() {
     #  |  Method resolution order:
     #  ...
 
-    # $ pydoc stbt.UITestError
-    # stbt.UITestError = class UITestError(exceptions.Exception)
+    # $ pydoc stbt.TestError
+    # stbt.TestError = class TestError(exceptions.Exception)
     #  |  The test script had an unrecoverable error.
     #  |  
     #  |  Method resolution order:

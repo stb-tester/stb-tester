@@ -210,7 +210,7 @@ EXIT STATUS
 0 on success; 1 on test script failure; 2 on any other error.
 
 Test scripts indicate **failure** (the system under test didn't behave as
-expected) by raising an instance of `stbt.UITestFailure` (or a subclass
+expected) by raising an instance of `stbt.TestFailure` (or a subclass
 thereof). Any other exception is considered a test **error** (a logic error in
 the test script, an error in the system under test's environment, or an error
 in the test framework itself).
@@ -317,15 +317,15 @@ The following functions are available:
 .. <start python docs>
 
 as_precondition(message)
-    Context manager that replaces UITestFailures with UITestErrors.
+    Context manager that replaces TestFailures with TestErrors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `UITestFailure` exceptions) as
+    generates will show test failures (that is, `TestFailure` exceptions) as
     red results, and unhandled exceptions of any other type as yellow results.
     Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
-    `UITestFailure` (red results) when they detect a failure. By running such
-    functions inside an `as_precondition` context, any `UITestFailure` (red)
-    they raise will be caught, and a `UITestError` (yellow) will be raised
+    `TestFailure` (red results) when they detect a failure. By running such
+    functions inside an `as_precondition` context, any `TestFailure` (red)
+    they raise will be caught, and a `TestError` (yellow) will be raised
     instead.
 
     When running a single test script hundreds or thousands of times to
@@ -341,7 +341,7 @@ as_precondition(message)
 
     >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
     ...     # Call tune_channels(), which raises:
-    ...     raise UITestFailure("Failed to tune channels")
+    ...     raise TestFailure("Failed to tune channels")
     Traceback (most recent call last):
       ...
     PreconditionError: Didn't meet precondition 'Channels tuned'
@@ -586,7 +586,7 @@ class MatchResult
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
 
-class MatchTimeout(UITestFailure)
+class MatchTimeout(TestFailure)
     * `screenshot`: An OpenCV image from the source video when the search
       for the expected image timed out.
     * `expected`: Filename of the image that was being searched for.
@@ -596,13 +596,13 @@ class MotionResult
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
 
-class MotionTimeout(UITestFailure)
+class MotionTimeout(TestFailure)
     * `screenshot`: An OpenCV image from the source video when the search
       for motion timed out.
     * `mask`: Filename of the mask that was used (see `wait_for_motion`).
     * `timeout_secs`: Number of seconds that motion was searched for.
 
-class NoVideo(UITestFailure)
+class NoVideo(TestFailure)
     No video available from the source pipeline.
 
 ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
@@ -665,7 +665,7 @@ class Position
     `x` and `y` are integer coordinates (measured in number of pixels) from the
     top left corner of the video frame.
 
-class PreconditionError(UITestError)
+class PreconditionError(TestError)
     Exception raised by `as_precondition`.
 
 press(key, interpress_delay_secs=None)
@@ -780,6 +780,12 @@ save_frame(image, filename)
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
 
+class TestError(Exception)
+    The test script had an unrecoverable error.
+
+class TestFailure(Exception)
+    The test failed because the system under test didn't behave as expected.
+
 class TextMatchResult
     Return type of `match_text`.
 
@@ -788,12 +794,6 @@ class TextMatchResult
     region (Region): The bounding box of the text found or None if no text found
     frame: The video frame matched against
     text (unicode): The text searched for
-
-class UITestError(Exception)
-    The test script had an unrecoverable error.
-
-class UITestFailure(Exception)
-    The test failed because the system under test didn't behave as expected.
 
 wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
     Search for `image` in the source video stream.
