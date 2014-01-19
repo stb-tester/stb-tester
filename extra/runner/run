@@ -94,6 +94,8 @@ run() {
 
   printf "%s\n" "$@" > test-args
 
+  "$runner"/report --html-only . >/dev/null
+
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "

@@ -46,7 +46,7 @@ def main(argv):
 def index(parentdir):
     rundirs = [
         dirname(x) for x in glob.glob(
-            os.path.join(parentdir, "????-??-??_??.??.??*/exit-status"))]
+            os.path.join(parentdir, "????-??-??_??.??.??*/test-name"))]
     runs = [Run(d) for d in sorted(rundirs, reverse=True)]
     if len(runs) == 0:
         die("Directory '%s' doesn't contain any testruns" % parentdir)
@@ -68,31 +68,36 @@ class Run(object):
     def __init__(self, rundir):
         self.rundir = rundir
 
-        self.files = sorted([
-            basename(x) for x in glob.glob(rundir + "/*")
-            if basename(x) not in [
-                "duration",
-                "exit-status",
-                "extra-columns",
-                "failure-reason",
-                "git-commit",
-                "test-args",
-                "test-name",
-            ]
-            and not x.endswith(".png")
-            and not x.endswith(".manual")
-            and not basename(x).startswith("index.html")
-        ])
-        self.images = sorted([
-            basename(x) for x in glob.glob(rundir + "/*.png")])
+        try:
+            self.exit_status = int(self.read("exit-status"))
+        except ValueError:
+            self.exit_status = "still running"
 
         self.duration = self.read_seconds("duration")
-        self.exit_status = int(self.read("exit-status"))
         self.failure_reason = self.read("failure-reason")
         self.git_commit = self.read("git-commit")
         self.notes = self.read("notes")
         self.test_args = self.read("test-args")
         self.test_name = self.read("test-name")
+
+        if self.exit_status != "still running":
+            self.files = sorted([
+                basename(x) for x in glob.glob(rundir + "/*")
+                if basename(x) not in [
+                    "duration",
+                    "exit-status",
+                    "extra-columns",
+                    "failure-reason",
+                    "git-commit",
+                    "test-args",
+                    "test-name",
+                ]
+                and not x.endswith(".png")
+                and not x.endswith(".manual")
+                and not basename(x).startswith("index.html")
+            ])
+            self.images = sorted([
+                basename(x) for x in glob.glob(rundir + "/*.png")])
 
         self.extra_columns = collections.OrderedDict()
         for line in self.read("extra-columns").splitlines():
@@ -106,7 +111,9 @@ class Run(object):
         self.timestamp = datetime.strptime(t.group(), "%Y-%m-%d_%H.%M.%S")
 
     def css_class(self):
-        if self.exit_status == 0:
+        if self.exit_status == "still running":
+            return "muted"  # White
+        elif self.exit_status == 0:
             return "success"
         elif self.exit_status == 1:
             return "error"  # Red: Possible system-under-test failure
