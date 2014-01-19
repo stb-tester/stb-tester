@@ -68,7 +68,7 @@
         <td>{{run.git_commit}}</td>
         <td>
           {{run.exit_status}}
-          {% if run.exit_status > 0 %}
+          {% if run.failure_reason not in ("", "success") %}
             — {{ run.failure_reason | truncate(30, True) }}
           {% endif %}
         </td>
