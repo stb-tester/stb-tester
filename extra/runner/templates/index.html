@@ -61,9 +61,13 @@
       <tr class="{{run.css_class()}}">
         <td>{{run.timestamp}}</td>
         <td>
-          <a href="{{run.rundir}}/index.html" target="details">
-            {{run.test_name}} {{run.test_args}}
-          </a>
+          {% if run.exit_status != "still running" %}
+            <a href="{{run.rundir}}/index.html" target="details">
+          {% endif %}
+              {{run.test_name}} {{run.test_args}}
+          {% if run.exit_status != "still running" %}
+            </a>
+          {% endif %}
         </td>
         <td>{{run.git_commit}}</td>
         <td>
@@ -98,7 +102,7 @@
 <script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.5/tablequery.min.js"></script>
 <script>
   $(document).ready(function() {
-    $("#testruns tbody tr").on("click", select_testrun);
+    $("#testruns tbody tr").not(".muted").on("click", select_testrun);
     $(document).on("keydown", navigate_testruns);
     tablequery.set_table("#testruns");
     tablequery.set_table_search_text("#testruns_search_text");
@@ -142,7 +146,7 @@
     };
     function navigate_testruns(event) {
       if (event.keyCode == 38) { // up
-        var rows = $("#testruns tbody tr").filter(":visible");
+        var rows = $("#testruns tbody tr").filter(":visible").not(".muted");
         var prev = $(rows[ Math.max(0, rows.index(selected_row) - 1) ]);
         if (prev.length) {
           prev.click();
@@ -150,7 +154,7 @@
         return false;
       }
       if (event.keyCode == 40) { // down
-        var rows = $("#testruns tbody tr").filter(":visible");
+        var rows = $("#testruns tbody tr").filter(":visible").not(".muted");
         var next = $(rows[
           Math.min(rows.length - 1, rows.index(selected_row) + 1) ]);
         if (next.length) {
