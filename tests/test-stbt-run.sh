@@ -18,3 +18,26 @@ test_script_accesses_its_path() {
 	EOF
     stbt-run -v test.py
 }
+
+test_stbt_run_return_code_on_test_failure() {
+    local ret
+    cat > test.py <<-EOF
+	wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
+	EOF
+    stbt-run -v test.py
+    ret=$?
+    [[ $ret == 1 ]] || fail "Unexpected return code $ret"
+}
+
+test_stbt_run_return_code_on_precondition_failure() {
+    local ret
+    cat > test.py <<-EOF
+	import stbt
+	with stbt.precondition("Wasn't tuned to gamut pattern"):
+	    wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
+	EOF
+    stbt-run -v test.py &> test.log
+    ret=$?
+    [[ $ret == 2 ]] || fail "Unexpected return code $ret"
+    assert grep "PreconditionError: Wasn't tuned to gamut pattern" test.log
+}

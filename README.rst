@@ -446,6 +446,32 @@ class OcrMode
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
 
+precondition(*args, **kwds)
+    Context manager that replaces UITestFailures with UITestErrors.
+
+    For example::
+
+        with precondition("failed to bring up main menu"):
+            tune_to_channel_x()
+        now_try_to_reproduce_the_defect_i_am_interested_in()
+
+    If you run your test scripts with stb-tester's batch runner, the reports it
+    generates will show test failures (that is, `UITestFailure` exceptions) as
+    red results, and unhandled exceptions of any other type as yellow results.
+    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
+    `UITestFailure` (red results) when they detect a failure. By running such
+    functions inside a `precondition` context, any `UITestFailure` (red) they
+    raise will be caught, and a `UITestError` (yellow) will be raised instead.
+
+    When running a single test script hundreds or thousands of times to
+    reproduce an intermittent defect, it is helpful to mark unrelated failures
+    as test errors (yellow) rather than test failures (red), so that you can
+    focus on diagnosing the failures that are most likely to be the particular
+    defect you are interested in.
+
+    `message` is a string describing the precondition; it will be used as the
+    error message of the UITestError exception.
+
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
 
@@ -619,6 +645,9 @@ class MotionTimeout(UITestFailure)
 
 class NoVideo(UITestFailure)
     No video available from the source pipeline.
+
+class PreconditionError(UITestError)
+    Exception raised by `precondition`.
 
 class UITestFailure(Exception)
     The test failed because the system under test didn't behave as expected.
