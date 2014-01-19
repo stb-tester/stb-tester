@@ -20,7 +20,7 @@ Requires: opencv-python
 Requires: openssh-clients
 Requires: pygtk2
 Requires: pylint
-Requires: python >= 2.4
+Requires: python >= 2.7
 Requires: python-jinja2
 Requires: tesseract
 
