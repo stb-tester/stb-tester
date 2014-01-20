@@ -40,7 +40,6 @@ doc() {
           sub("class " f "\\(__builtin__.object\\)", "class " f);
           sub("exceptions.Exception", "Exception");
           sub("<stbt.MatchParameters instance>", "MatchParameters()");
-          sub(/\*\*kwargs/, "\\*\\*kwargs");
           sub(/^ \|  /, "    ");
           sub(/^ *$/, "");
         }
