@@ -100,6 +100,13 @@ substitute_ocr_default_mode() {
     sed "/^ocr(/ s/mode=3/mode=OcrMode.$mode/"
 }
 
+# stbt.precondition's `@contextmanager` decorator screws up the function
+# signature seen by pydoc
+substitute_precondition_signature() {
+    local sig=$(sed -n '/^def precondition/ { s/:$//; s/^def //; p; }' stbt.py)
+    sed "s/^precondition(.*/$sig/"
+}
+
 # Prints sed commands to apply,
 # to substitute default templatematch/motiondetect params from stbt.conf.
 substitute_default_params() {
@@ -123,6 +130,7 @@ substitute_default_params() {
 cat $1 |
 substitute_python_docstrings |
 substitute_ocr_default_mode |
+substitute_precondition_signature |
 sed -f <(substitute_default_params) \
 > $1.new &&
 mv $1.new $1

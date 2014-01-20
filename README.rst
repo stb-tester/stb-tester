@@ -446,7 +446,7 @@ class OcrMode
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
 
-precondition(*args, **kwds)
+precondition(message)
     Context manager that replaces UITestFailures with UITestErrors.
 
     For example::
