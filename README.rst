@@ -466,6 +466,21 @@ save_frame(image, filename)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
+black_screen(frame, mask=None, threshold=10)
+    Check for the presence of a black screen in a video frame.
+
+    `frame` is the OpenCV image of the video frame to check. The optional
+    `mask` is the filename of a black & white image mask. It must have white
+    pixels for parts of the frame to check and black pixels for any parts to
+    ignore.
+
+    Even when a video frame appears to be black, the intensity of its pixels
+    is not always 0. To differentiate almost-black from non-black pixels, a
+    binary threshold is applied to the frame. This makes use of a `threshold`
+    value in the range 0-255, which can be adjusted if necessary. The global
+    default can be changed by setting `threshold` in the `[black_screen]`
+    section of `stbt.conf`.
+
 draw_text(text, duration_secs=3)
     Write the specified `text` to the video output.
 

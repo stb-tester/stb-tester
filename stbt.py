@@ -432,13 +432,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
     mask_image = None
     if mask:
-        mask_ = _find_path(mask)
-        debug("Using mask %s" % mask_)
-        if not os.path.isfile(mask_):
-            raise UITestError("No such mask file: %s" % mask)
-        mask_image = cv2.imread(mask_, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-        if mask_image is None:
-            raise UITestError("Failed to load mask file: %s" % mask_)
+        mask_image = _load_mask(mask)
 
     previous_frame_gray = None
     log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
@@ -452,7 +446,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
                     mask_image.shape[:2] != frame.shape[:2]):
                 raise UITestError(
                     "The dimensions of the mask '%s' %s don't match the video "
-                    "frame %s" % (mask_, mask_image.shape, frame.shape))
+                    "frame %s" % (mask, mask_image.shape, frame.shape))
             previous_frame_gray = frame_gray
             continue
 
@@ -733,6 +727,31 @@ def save_frame(image, filename):
 def get_frame():
     """Returns an OpenCV image of the current video frame."""
     return gst_to_opencv(_display.get_frame())
+
+
+def black_screen(
+        frame, mask=None,
+        threshold=get_config('black_screen', 'threshold', type_=int)):
+    """Check for the presence of a black screen in a video frame.
+
+    `frame` is the OpenCV image of the video frame to check. The optional
+    `mask` is the filename of a black & white image mask. It must have white
+    pixels for parts of the frame to check and black pixels for any parts to
+    ignore.
+
+    Even when a video frame appears to be black, the intensity of its pixels
+    is not always 0. To differentiate almost-black from non-black pixels, a
+    binary threshold is applied to the frame. This makes use of a `threshold`
+    value in the range 0-255, which can be adjusted if necessary. The global
+    default can be changed by setting `threshold` in the `[black_screen]`
+    section of `stbt.conf`.
+    """
+    if mask:
+        mask = _load_mask(mask)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+    _, maxVal, _, _ = cv2.minMaxLoc(frame, mask)
+    return maxVal == 0
 
 
 def debug(msg):
@@ -1947,6 +1966,18 @@ def _find_path(image):
 
     # Fall back to image from cwd, for convenience of the selftests
     return os.path.abspath(image)
+
+
+def _load_mask(mask):
+    """Loads the given mask file and returns it as an OpenCV image."""
+    mask_path = _find_path(mask)
+    debug("Using mask %s" % mask_path)
+    if not os.path.isfile(mask_path):
+        raise UITestError("No such mask file: %s" % mask)
+    mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    if mask_image is None:
+        raise UITestError("Failed to load mask file: %s" % mask_path)
+    return mask_image
 
 
 def _mkdir(d):

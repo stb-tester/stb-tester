@@ -106,23 +106,17 @@ test_using_frames_to_measure_black_screen() {
 	    time.sleep(1)
 	    stbt.press("smpte")
 	
-	def is_black_screen(img):
-	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	    _, img = cv2.threshold(img, 10, 255, cv2.THRESH_BINARY)
-	    _, maxVal, _, _ = cv2.minMaxLoc(img)
-	    return maxVal == 0
-	
 	threading.Thread(target=presser).start()
 	
 	frames = stbt.frames(timeout_secs=10)
 	for frame, timestamp in frames:
-	    black = is_black_screen(frame)
+	    black = stbt.black_screen(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if black:
 	        break
 	assert black, "Failed to find black screen"
 	for frame, timestamp in frames:
-	    black = is_black_screen(frame)
+	    black = stbt.black_screen(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if not black:
 	        break
@@ -151,6 +145,78 @@ test_that_frames_doesnt_deadlock() {
 
     cat > test2.py <<-EOF
 EOF
+}
+
+test_that_black_screen_is_true_for_black_pattern() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(stbt.get_frame())
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=black' \
+        test.py
+}
+
+test_that_black_screen_is_false_for_smpte_pattern() {
+    cat > test.py <<-EOF
+	import stbt
+	assert not stbt.black_screen(stbt.get_frame())
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        test.py
+}
+
+test_that_black_screen_is_true_for_smpte_pattern_when_masked() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(
+	    stbt.get_frame(),
+	    mask="$testdir/videotestsrc-mask-non-black.png"
+	)
+	EOF
+    stbt-run -v \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        test.py
+}
+
+test_black_screen_threshold_bounds_for_almost_black_frame() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.black_screen(stbt.get_frame(), threshold=3)
+	assert not stbt.black_screen(stbt.get_frame(), threshold=2)
+	EOF
+    stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
+}
+
+test_that_black_screen_reads_default_threshold_from_stbt_conf() {
+    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    cat > test.py <<-EOF &&
+	assert not stbt.black_screen(stbt.get_frame())
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
+}
+
+test_that_black_screen_threshold_parameter_overrides_default() {
+    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+        "$testdir"/stbt.conf > stbt.conf &&
+    cat > test.py <<-EOF &&
+	assert stbt.black_screen(stbt.get_frame(), threshold=3)
+	EOF
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+        --source-pipeline \
+            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+             imagefreeze" \
+        test.py
 }
 
 test_that_video_index_is_written_on_eos() {
