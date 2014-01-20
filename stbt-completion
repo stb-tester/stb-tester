@@ -125,8 +125,13 @@ _stbt_templatematch() {
         *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
         ,4|*,*)
             case "$prev" in
-                match_method=|confirm_method=)
-                    COMPREPLY=($(_stbt_templatematch_enum));;
+                match_method=) COMPREPLY=($(compgen \
+                    -W "$(_stbt_trailing_space \
+                            sqdiff-normed ccorr-normed ccoeff-normed)" \
+                    -- "$cur"));;
+                confirm_method=) COMPREPLY=($(compgen \
+                    -W "$(_stbt_trailing_space none absdiff normed-absdiff)" \
+                    -- "$cur"));;
                 match_threshold=|erode_passes=|confirm_threshold=)
                     COMPREPLY=();;
                 *) COMPREPLY=($(compgen \
@@ -266,16 +271,6 @@ _stbt_power_outlet_outlet() {
     esac
 }
 
-_stbt_templatematch_enum() {
-    # Requires GStreamer bash-completion from
-    # https://bugzilla.gnome.org/show_bug.cgi?id=690515
-    type _gst_property_values &>/dev/null || return
-
-    local property="$(_stbt_camelcase ${_stbt_prev%=})"
-    local cur="$_stbt_cur"
-    compgen -W "$(_gst_property_values stbt-templatematch $property)" -- "$cur"
-}
-
 ## Helper functions
 ############################################################################
 
@@ -322,10 +317,6 @@ _stbt_trailing_space() {
 _stbt_no_space() {
     local c
     for c in $*; do printf -- "$c\n"; done
-}
-
-_stbt_camelcase() {
-    echo "$*" | perl -pe 's/_([a-z])/\U$1/g'
 }
 
 _lirc_tcp_ports() {
@@ -431,10 +422,4 @@ _stbt_test_config_keys() {
             global.key1 global.key2 global.key3 global.key4 run.key5) ||
     _stbt_fail "_stbt_config_keys unexpected output"
     echo _stbt_config_keys: ok
-}
-
-_stbt_test_camelcase() {
-    diff <(echo matchMethod) <(_stbt_camelcase match_method) ||
-    _stbt_fail "_stbt_camelcase unexpected output"
-    echo _stbt_camelcase: ok
 }
