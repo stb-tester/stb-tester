@@ -7,7 +7,7 @@
 # HTTP server that serves HTML reports on the results from tests run with `stbt
 # batch run`. Allows interactive editing of testrun failure-reason and notes.
 # Uses Flask, a python web micro-framework: http://flask.pocoo.org
-# Run with `cd results-directory; stbt batch server 0.0.0.0:8080`
+# Run with `cd results-directory; stbt batch instaweb 0.0.0.0:8080`
 
 import argparse
 import mimetypes
@@ -99,7 +99,7 @@ def testrun_directory(path):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.prog = "stbt batch server"
+    p.prog = "stbt batch instaweb"
     p.add_argument(
         "--debug", action="store_true",
         help="Enable python backtraces and application reloading")

@@ -248,7 +248,7 @@ with_retry() {
     fi
 }
 
-test_stbt_batch_server() {
+test_stbt_batch_instaweb() {
     wait_for_report() {
         local parent=$1 children pid
         children=$(ps -o ppid= -o pid= | awk "\$1 == $parent {print \$2}")
@@ -275,7 +275,7 @@ test_stbt_batch_server() {
     assert grep -q UITestError $rundir/index.html
     assert grep -q UITestError index.html
 
-    stbt-batch server --debug 127.0.0.1:5787 &
+    stbt-batch instaweb --debug 127.0.0.1:5787 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5787/'
@@ -316,11 +316,11 @@ test_stbt_batch_server() {
     assert ! grep -q 'Hi there £€' index.html
 }
 
-test_that_stbt_batch_server_shows_directory_listing() {
+test_that_stbt_batch_instaweb_shows_directory_listing() {
     mkdir my-test-session
     echo hi > my-test-session/index.html
 
-    stbt-batch server --debug 127.0.0.1:5788 &
+    stbt-batch instaweb --debug 127.0.0.1:5788 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5788/'

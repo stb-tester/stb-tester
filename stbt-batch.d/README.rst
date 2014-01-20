@@ -110,21 +110,21 @@ directory set to the directory containing the test run logs:
   the same key will have their values merged into a single column. The program
   should append to the ``extra-columns`` file, not overwrite it.
 
-server
-------
+instaweb
+--------
 
 The generated report is a set of static html files, which you can view locally
 (using a `file:///...` url), or you can serve them with a web server like
 apache. But if you want to interactively *edit* the report, you can run ``stbt
-batch server``. By default, this serves on ``localhost:5000``. To serve on
+batch instaweb``. By default, this serves on ``localhost:5000``. To serve on
 all public network interfaces, run it like this::
 
-    stbt batch server 0.0.0.0:5000
+    stbt batch instaweb 0.0.0.0:5000
 
-Run ``stbt batch server`` from the directory containing the test results (for
+Run ``stbt batch instaweb`` from the directory containing the test results (for
 example ``my-test-session`` in the "report" section above).
 
-``stbt batch server`` probably can't handle high loads or many concurrent
-users. For such cases you should proxy ``stbt batch server`` behind Apache or
-Nginx. ``stbt batch server`` uses "Flask", a python web micro-framework; for
+``stbt batch instaweb`` probably can't handle high loads or many concurrent
+users. For such cases you should proxy ``stbt batch instaweb`` behind Apache or
+Nginx. ``stbt batch instaweb`` uses "Flask", a python web micro-framework; for
 deployment options see http://flask.pocoo.org/docs/deploying/
