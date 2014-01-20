@@ -1,9 +1,9 @@
 # Run with ./run-tests.sh
 
-test_runner_once() {
-    { "$srcdir"/extra/runner/run -1 -t my-label "$testdir"/test.py ||
-        fail "runner/run failed"
-    } | sed 's/^/runner: /'
+test_stbt_batch_run_once() {
+    { stbt-batch run -1 -t my-label "$testdir"/test.py ||
+        fail "stbt batch run failed"
+    } | sed 's/^/stbt batch run: /'
 
     mv latest-my-label latest
     [[ -f latest/combined.log ]] || fail "latest/combined.log not created"
@@ -19,9 +19,9 @@ test_runner_once() {
     grep -q my-label index.html || fail "extra column not in index.html"
 }
 
-test_runner_runs_until_failure() {
-    timeout 20 "$srcdir"/extra/runner/run "$testdir"/test.py
-    [[ $? -eq $timedout ]] && fail "'run' timed out"
+test_that_stbt_batch_run_runs_until_failure() {
+    timeout 20 stbt-batch run "$testdir"/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
@@ -31,8 +31,8 @@ test_runner_runs_until_failure() {
         fail "Expected 2nd testrun to fail with 'UITestError'"
 }
 
-test_runner_continues_after_uninteresting_failure() {
-    timeout 30 "$srcdir"/extra/runner/run -k "$testdir"/test.py
+test_that_stbt_batch_run_continues_after_uninteresting_failure() {
+    timeout 30 stbt-batch run -k "$testdir"/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -45,8 +45,8 @@ test_runner_continues_after_uninteresting_failure() {
         fail "Expected 3rd testrun to fail with 'MatchTimeout'"
 }
 
-test_runner_parse_test_args() {
-    sed -n '/^parse_test_args() {/,/^}/ p' "$srcdir"/extra/runner/run \
+test_stbt_batch_run_parse_test_args() {
+    sed -n '/^parse_test_args() {/,/^}/ p' "$srcdir"/stbt-batch.d/run \
         > parse_test_args.sh &&
     . parse_test_args.sh &&
     declare -f parse_test_args || fail "'parse_test_args' not defined"
@@ -76,8 +76,8 @@ test_runner_parse_test_args() {
     fail "Unexpected output from 'parse_test_args' with '--'"
 }
 
-test_runner_killtree() {
-    sed -n '/^killtree()/,/^}/ p' "$srcdir"/extra/runner/run > killtree.sh &&
+test_stbt_batch_run_killtree() {
+    sed -n '/^killtree()/,/^}/ p' "$srcdir"/stbt-batch.d/run > killtree.sh &&
     . killtree.sh &&
     declare -f killtree || fail "'killtree' not defined"
 
@@ -85,7 +85,7 @@ test_runner_killtree() {
 }
 
 test_signalname() {
-    sed -n '/^signalname()/,/^}/ p' "$srcdir"/extra/runner/report \
+    sed -n '/^signalname()/,/^}/ p' "$srcdir"/stbt-batch.d/report \
         > signalname.sh &&
     . signalname.sh &&
     declare -f signalname || fail "'signalname' not defined"
@@ -106,8 +106,8 @@ expect_runner_to_say() {
     fail "Didn't find '$1' after 10 seconds"
 }
 
-test_runner_sigint_once() {
-    sleep=4 "$srcdir"/extra/runner/run "$testdir"/test.py &
+test_stbt_batch_run_sigint_once() {
+    sleep=4 stbt-batch run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
     kill $runner
@@ -116,8 +116,8 @@ test_runner_sigint_once() {
     diff -u <(echo success) latest/failure-reason || fail "Bad failure-reason"
 }
 
-test_runner_sigint_twice() {
-    sleep=10 "$srcdir"/extra/runner/run "$testdir"/test.py &
+test_stbt_batch_run_sigint_twice() {
+    sleep=10 stbt-batch run "$testdir"/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
     kill $runner
@@ -129,8 +129,8 @@ test_runner_sigint_twice() {
         fail "Bad failure-reason"
 }
 
-test_runner_passes_arguments_to_script() {
-    "$srcdir"/extra/runner/run \
+test_that_stbt_batch_run_passes_arguments_to_script() {
+    stbt-batch run \
         "$testdir"/test.py "a b" c d -- \
         "$testdir"/test.py efg hij
 
@@ -146,21 +146,21 @@ test_runner_passes_arguments_to_script() {
     assert grep 'hij' latest/index.html
 }
 
-test_runner_report_with_symlinks_for_each_testrun() {
-    # Use case: After you've run `runner/run` several times from different
+test_stbt_batch_report_with_symlinks_for_each_testrun() {
+    # Use case: After you've run `stbt batch run` several times from different
     # directories, you gather all results into a single report by symlinking
     # each testrun into a single directory.
 
-    "$srcdir"/extra/runner/run -1 "$testdir"/test.py &&
+    stbt-batch run -1 "$testdir"/test.py &&
     mkdir new-report &&
     ( cd new-report; ln -s ../2* . ) ||
     fail "report directory structure setup failed"
 
-    "$srcdir"/extra/runner/report --html-only new-report/2* || return
+    stbt-batch report --html-only new-report/2* || return
     [[ -f new-report/index.html ]] || fail "new-report/index.html not created"
 }
 
-test_runner_custom_logging() {
+test_stbt_batch_run_with_custom_logging() {
     cat "$testdir"/stbt.conf |
     sed -e "s,pre_run =,& $PWD/my-logger," \
         -e "s,post_run =,& $PWD/my-logger," > stbt.conf
@@ -172,7 +172,7 @@ test_runner_custom_logging() {
     chmod u+x my-logger
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run -1 "$testdir"/test.py
+    stbt-batch run -1 "$testdir"/test.py
 
     grep -q '<th>start time</th>' index.html ||
         fail "'start time' missing from report"
@@ -180,7 +180,7 @@ test_runner_custom_logging() {
         fail "'stop time' missing from report"
 }
 
-test_runner_custom_classifier() {
+test_stbt_batch_run_with_custom_classifier() {
     cat "$testdir"/stbt.conf |
     sed -e "s,classify =,& $PWD/my-classifier," > stbt.conf
 
@@ -194,13 +194,13 @@ test_runner_custom_classifier() {
     chmod u+x my-classifier
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run "$testdir"/test.py
+    stbt-batch run "$testdir"/test.py
 
     grep -q 'Intentional failure' index.html ||
         fail "Custom failure reason missing from report"
 }
 
-test_runner_custom_recovery_script() {
+test_stbt_batch_run_with_custom_recovery_script() {
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -211,13 +211,13 @@ test_runner_custom_recovery_script() {
     chmod u+x my-recover
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run "$testdir"/test.py
+    stbt-batch run "$testdir"/test.py
 
     grep -q '>powercycle.log</a>' latest/index.html ||
         fail "Custom recovery script's log missing from report"
 }
 
-test_runner_recovery_exit_status() {
+test_stbt_batch_run_recovery_exit_status() {
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -228,7 +228,7 @@ test_runner_recovery_exit_status() {
     chmod u+x my-recover
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run -kk "$testdir"/test.py
+    stbt-batch run -kk "$testdir"/test.py
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
@@ -248,7 +248,7 @@ with_retry() {
     fi
 }
 
-test_runner_results_server() {
+test_stbt_batch_server() {
     wait_for_report() {
         local parent=$1 children pid
         children=$(ps -o ppid= -o pid= | awk "\$1 == $parent {print \$2}")
@@ -269,13 +269,13 @@ test_runner_results_server() {
         done
     }
 
-    "$srcdir"/extra/runner/run "$testdir"/test.py
+    stbt-batch run "$testdir"/test.py
     rundir=$(ls -d 20* | tail -1)
     assert grep -q UITestError $rundir/failure-reason
     assert grep -q UITestError $rundir/index.html
     assert grep -q UITestError index.html
 
-    "$srcdir"/extra/runner/server --debug 127.0.0.1:5787 &
+    stbt-batch server --debug 127.0.0.1:5787 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5787/'
@@ -316,11 +316,11 @@ test_runner_results_server() {
     assert ! grep -q 'Hi there £€' index.html
 }
 
-test_runner_results_server_shows_directory_listing() {
+test_that_stbt_batch_server_shows_directory_listing() {
     mkdir my-test-session
     echo hi > my-test-session/index.html
 
-    "$srcdir"/extra/runner/server --debug 127.0.0.1:5788 &
+    stbt-batch server --debug 127.0.0.1:5788 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5788/'
@@ -335,7 +335,7 @@ test_runner_results_server_shows_directory_listing() {
         fail "Didn't find index.html at '/my-test-session/'"
 }
 
-test_runner_isolates_stdin_of_user_hooks() {
+test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
     cat >my-logger <<-EOF
 	read x
 	[[ -z \$x ]] && echo STDIN=None || echo STDIN=\$x
@@ -346,7 +346,7 @@ test_runner_isolates_stdin_of_user_hooks() {
         sed -e "s,pre_run =,& $PWD/my-logger," >stbt.conf
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    "$srcdir"/extra/runner/run -1 "$testdir"/test.py "$testdir"/test2.py
+    stbt-batch run -1 "$testdir"/test.py "$testdir"/test2.py
     cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
     cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"
 }

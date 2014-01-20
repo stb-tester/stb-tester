@@ -6,8 +6,8 @@
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 #/ Usage:
-#/   run [options] test.py [test.py ...]
-#/   run [options] test.py arg [arg ...] -- test.py arg [arg ...] [-- ...]
+#/   stbt batch run [options] test.py [test.py ...]
+#/   stbt batch run [options] test.py arg [arg ...] -- test.py arg [arg ...] [-- ...]
 #/
 #/ Options:
 #/   -1    Run once. The default behaviour is to run the test

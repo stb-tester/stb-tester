@@ -108,7 +108,7 @@ check-pylint:
 	    stbt_pylint_plugin.py \
 	    irnetbox.py irnetbox-proxy \
 	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
-	    extra/runner/report.py extra/runner/server |\
+	    stbt-batch.d/report.py stbt-batch.d/server |\
 	PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests

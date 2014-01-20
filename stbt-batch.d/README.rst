@@ -6,35 +6,36 @@ run
 
 This::
 
-    run path/to/test.py another/test.py
+    stbt batch run path/to/test.py another/test.py
 
 will run the given stb-tester scripts until one of them fails. You can run the
 tests once, or keep going after uninteresting failures, or keep going no matter
 what; see ``run -h`` for help.
 
-``run`` creates a separate timestamped directory for each test run, containing
-the logs from that run.
+``stbt batch run`` creates a separate timestamped directory for each test run,
+containing the logs from that run.
 
 report
 ------
 
-After each test run, ``run`` executes ``report`` to classify the failure
-reason, gather other useful information, and generate a static html report in
-``index.html``. So the way you should use ``run`` is something like this::
+After each test run, ``stbt batch run`` executes ``stbt batch report`` to
+classify the failure reason, gather other useful information, and generate a
+static html report in ``index.html``. So the way you should use ``stbt batch
+run`` is something like this::
 
     mkdir my-test-session
     cd my-test-session
-    run path/to/test.py &
+    stbt batch run path/to/test.py &
     firefox index.html
 
 It's up to you to organise "test sessions" as you want them: You can run
 further tests from the same directory to add them to the existing report,
 or run them from a new directory for a separate report.
 
-See ``report`` for the failure reasons we currently know how to detect.
-``run`` executes ``report`` automatically, but you can also re-run
-``report`` on old test logs (when you've added new classifications after
-those tests were originally run). See ``report -h`` for help.
+``stbt batch run`` executes ``stbt batch report`` automatically, but you can
+also re-run ``stbt batch report`` on old test logs (when you've added new
+classifications after those tests were originally run; see the "classify" user
+hook below). See ``stbt batch report -h`` for help.
 
 User hooks
 ----------
@@ -114,16 +115,16 @@ server
 
 The generated report is a set of static html files, which you can view locally
 (using a `file:///...` url), or you can serve them with a web server like
-apache. But if you want to interactively *edit* the report, you can run our
-``server``. By default, ``server`` serves on ``localhost:5000``. To serve on
+apache. But if you want to interactively *edit* the report, you can run ``stbt
+batch server``. By default, this serves on ``localhost:5000``. To serve on
 all public network interfaces, run it like this::
 
-    server 0.0.0.0:5000
+    stbt batch server 0.0.0.0:5000
 
-Run ``server`` from the directory containing the test results (for example
-``my-test-session`` in the "report" section above).
+Run ``stbt batch server`` from the directory containing the test results (for
+example ``my-test-session`` in the "report" section above).
 
-``server`` probably can't handle high loads or many concurrent users. For such
-cases you should proxy ``server`` behind Apache or Nginx. ``server`` uses
-"Flask", a python web micro-framework; for deployment options see
-http://flask.pocoo.org/docs/deploying/
+``stbt batch server`` probably can't handle high loads or many concurrent
+users. For such cases you should proxy ``stbt batch server`` behind Apache or
+Nginx. ``stbt batch server`` uses "Flask", a python web micro-framework; for
+deployment options see http://flask.pocoo.org/docs/deploying/
