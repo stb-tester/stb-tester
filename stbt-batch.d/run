@@ -176,7 +176,7 @@ backtrace() {
 }
 
 user_command() {
-  local c=$(stbt config runner.$1 2>/dev/null)
+  local c=$(stbt config batch.$1 2>/dev/null)
   [[ -z "$c" ]] && return
   "$c" $2 </dev/null
 }

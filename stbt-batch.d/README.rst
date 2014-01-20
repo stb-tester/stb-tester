@@ -46,12 +46,12 @@ configuration file; if the variable is set to an executable program, ``run``
 will invoke that program at the appropriate time, with the current working
 directory set to the directory containing the test run logs:
 
-**runner.pre_run**
+**batch.pre_run**
   Invoked immediately before the test is run, with the
   single command-line argument "start". Intended for starting custom logging
   processes.
 
-**runner.post_run**
+**batch.post_run**
   Invoked as soon as possible after the test has completed, with the single
   command-line argument "stop" (so that you can set ``pre_run`` and
   ``post_run`` to the same program). Intended for stopping custom logging
@@ -65,7 +65,7 @@ directory set to the directory containing the test run logs:
   can be achieved by writing files to the current working directory (for
   example pid files), which the ``post_run`` program should clean up.
 
-**runner.recover**
+**batch.recover**
   Invoked after the test has failed. This program should restore the
   system-under-test to a state where it is ready to run the next test (for
   example by power-cycling the system-under-test and ensuring the boot sequence
@@ -76,7 +76,7 @@ directory set to the directory containing the test run logs:
   This program should return a non-zero exit status to indicate that recovery
   was unsuccessful and no further tests should be run.
 
-**runner.classify**
+**batch.classify**
   Invoked after the test has completed (after the ``post_run`` program and
   after the built-in classification / log analysis). Intended for additional
   analysis of the log files. This program is also invoked when ``report`` is
