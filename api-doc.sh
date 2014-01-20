@@ -78,7 +78,7 @@ python_docstrings() {
     doc frames
     doc save_frame
     doc get_frame
-    doc black_screen
+    doc is_screen_black
     doc draw_text
     doc get_config
     doc debug

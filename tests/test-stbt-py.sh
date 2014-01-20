@@ -110,13 +110,13 @@ test_using_frames_to_measure_black_screen() {
 	
 	frames = stbt.frames(timeout_secs=10)
 	for frame, timestamp in frames:
-	    black = stbt.black_screen(frame)
+	    black = stbt.is_screen_black(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if black:
 	        break
 	assert black, "Failed to find black screen"
 	for frame, timestamp in frames:
-	    black = stbt.black_screen(frame)
+	    black = stbt.is_screen_black(frame)
 	    print "%s: %s" % (timestamp, black)
 	    if not black:
 	        break
@@ -147,30 +147,30 @@ test_that_frames_doesnt_deadlock() {
 EOF
 }
 
-test_that_black_screen_is_true_for_black_pattern() {
+test_that_is_screen_black_is_true_for_black_pattern() {
     cat > test.py <<-EOF
 	import stbt
-	assert stbt.black_screen(stbt.get_frame())
+	assert stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt-run -v \
         --source-pipeline 'videotestsrc pattern=black' \
         test.py
 }
 
-test_that_black_screen_is_false_for_smpte_pattern() {
+test_that_is_screen_black_is_false_for_smpte_pattern() {
     cat > test.py <<-EOF
 	import stbt
-	assert not stbt.black_screen(stbt.get_frame())
+	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt-run -v \
         --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
         test.py
 }
 
-test_that_black_screen_is_true_for_smpte_pattern_when_masked() {
+test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
     cat > test.py <<-EOF
 	import stbt
-	assert stbt.black_screen(
+	assert stbt.is_screen_black(
 	    stbt.get_frame(),
 	    mask="$testdir/videotestsrc-mask-non-black.png"
 	)
@@ -180,11 +180,11 @@ test_that_black_screen_is_true_for_smpte_pattern_when_masked() {
         test.py
 }
 
-test_black_screen_threshold_bounds_for_almost_black_frame() {
+test_is_screen_black_threshold_bounds_for_almost_black_frame() {
     cat > test.py <<-EOF
 	import stbt
-	assert stbt.black_screen(stbt.get_frame(), threshold=3)
-	assert not stbt.black_screen(stbt.get_frame(), threshold=2)
+	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
+	assert not stbt.is_screen_black(stbt.get_frame(), threshold=2)
 	EOF
     stbt-run -v --control none \
         --source-pipeline \
@@ -193,11 +193,11 @@ test_black_screen_threshold_bounds_for_almost_black_frame() {
         test.py
 }
 
-test_that_black_screen_reads_default_threshold_from_stbt_conf() {
-    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
+    sed -e '/^\[is_screen_black\]/,/^threshold / s/threshold =.*/threshold = 0/' \
         "$testdir"/stbt.conf > stbt.conf &&
     cat > test.py <<-EOF &&
-	assert not stbt.black_screen(stbt.get_frame())
+	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
         --source-pipeline \
@@ -206,11 +206,11 @@ test_that_black_screen_reads_default_threshold_from_stbt_conf() {
         test.py
 }
 
-test_that_black_screen_threshold_parameter_overrides_default() {
-    sed -e '/^\[black_screen\]/,/^threshold / s/threshold =.*/threshold = 0/' \
+test_that_is_screen_black_threshold_parameter_overrides_default() {
+    sed -e '/^\[is_screen_black\]/,/^threshold / s/threshold =.*/threshold = 0/' \
         "$testdir"/stbt.conf > stbt.conf &&
     cat > test.py <<-EOF &&
-	assert stbt.black_screen(stbt.get_frame(), threshold=3)
+	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
 	EOF
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
         --source-pipeline \
