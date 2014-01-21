@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# Copyright 2013 YouView TV Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt batch <subcommand> [args]
+#/
+#/ Available subcommands are:
+#/     run         Run the specified stbt script[s], create report
+#/     report      Re-generate the report for previous test runs
+#/     instaweb    Start a web server to view & edit the report
+#/
+#/ For help on a specific subcommand do 'stbt batch <subcommand> --help'.
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+
+[ $# -ge 1 ] || { usage >&2; exit 1; }
+case "$1" in
+    -h|--help)
+        usage; exit 0;;
+    run|report|instaweb)
+        "$(dirname "$0")"/stbt-batch.d/"$@";;
+    *)
+        usage >&2; exit 1;;
+esac

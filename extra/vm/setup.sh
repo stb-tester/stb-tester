@@ -17,7 +17,7 @@ install_packages() {
   packages+=" python-gst0.10 python-opencv python-numpy tesseract-ocr"
   # For `stbt power`
   packages+=" curl expect openssh-client"
-  # For `extra/runner`
+  # For `stbt batch`
   packages+=" lsof moreutils python-flask python-jinja2"
   # For building stbt and running the self-tests
   packages+=" git pep8 pylint python-docutils python-nose"

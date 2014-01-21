@@ -15,13 +15,14 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record config control lint power \
+                    run record batch config control lint power \
                     screenshot templatematch tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
             run)      _stbt_run;;
             record)   _stbt_record;;
+            batch)    _stbt_batch;;
             config)   _stbt_config;;
             control)  _stbt_control;;
             lint)     _stbt_lint;;
@@ -65,6 +66,24 @@ _stbt_record() {
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder --output-file)" \
             -- "$cur"));;
+    esac
+}
+
+_stbt_batch() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local subcommand="${COMP_WORDS[2]}"
+    case "$COMP_CWORD,$subcommand" in
+        2,*) COMPREPLY=($(compgen \
+                -W "$(_stbt_trailing_space --help run report instaweb)" \
+                -- "$cur"));;
+        3,run) COMPREPLY=($(compgen -W "-h" -f -- "$cur"));;
+        *,run) COMPREPLY=($(compgen -f -- "$cur"));;
+        *,report) COMPREPLY=($(compgen -d -S "/" -- "$cur"));;
+        3,instaweb) COMPREPLY=($(compgen \
+                        -W "$(_stbt_trailing_space \
+                                --help localhost:5000 0.0.0.0:5000)" \
+                        -- "$cur"));;
     esac
 }
 
