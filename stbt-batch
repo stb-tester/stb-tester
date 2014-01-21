@@ -20,7 +20,7 @@ case "$1" in
     -h|--help)
         usage; exit 0;;
     run|report|instaweb)
-        "$(dirname "$0")"/stbt-batch.d/"$@";;
+        exec "$(dirname "$0")"/stbt-batch.d/"$@";;
     *)
         usage >&2; exit 1;;
 esac
