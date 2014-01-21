@@ -81,7 +81,8 @@ test_stbt_batch_run_killtree() {
     . killtree.sh &&
     declare -f killtree || fail "'killtree' not defined"
 
-    test_killtree  # in test-run-tests.sh
+    . "$testdir"/test-run-tests.sh
+    test_killtree
 }
 
 test_signalname() {
