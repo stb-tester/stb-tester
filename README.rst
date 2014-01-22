@@ -446,7 +446,7 @@ class OcrMode
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
 
-precondition(message)
+as_precondition(message)
     Context manager that replaces UITestFailures with UITestErrors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
@@ -454,8 +454,9 @@ precondition(message)
     red results, and unhandled exceptions of any other type as yellow results.
     Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
     `UITestFailure` (red results) when they detect a failure. By running such
-    functions inside a `precondition` context, any `UITestFailure` (red) they
-    raise will be caught, and a `UITestError` (yellow) will be raised instead.
+    functions inside an `as_precondition` context, any `UITestFailure` (red)
+    they raise will be caught, and a `UITestError` (yellow) will be raised
+    instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
@@ -468,7 +469,7 @@ precondition(message)
 
     For example:
 
-    >>> with precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
+    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
     ...     # Call tune_channels(), which raises:
     ...     raise UITestFailure("Failed to tune channels")
     Traceback (most recent call last):
@@ -651,7 +652,7 @@ class NoVideo(UITestFailure)
     No video available from the source pipeline.
 
 class PreconditionError(UITestError)
-    Exception raised by `precondition`.
+    Exception raised by `as_precondition`.
 
 class UITestFailure(Exception)
     The test failed because the system under test didn't behave as expected.

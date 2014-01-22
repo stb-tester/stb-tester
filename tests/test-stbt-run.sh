@@ -33,7 +33,7 @@ test_stbt_run_return_code_on_precondition_error() {
     local ret
     cat > test.py <<-EOF
 	import stbt
-	with stbt.precondition("Tune to gamut pattern"):
+	with stbt.as_precondition("Tune to gamut pattern"):
 	    press("gamut")
 	    wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
