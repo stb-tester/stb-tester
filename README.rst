@@ -449,12 +449,6 @@ class OcrMode
 precondition(message)
     Context manager that replaces UITestFailures with UITestErrors.
 
-    For example::
-
-        with precondition("failed to bring up main menu"):
-            tune_to_channel_x()
-        now_try_to_reproduce_the_defect_i_am_interested_in()
-
     If you run your test scripts with stb-tester's batch runner, the reports it
     generates will show test failures (that is, `UITestFailure` exceptions) as
     red results, and unhandled exceptions of any other type as yellow results.
@@ -469,8 +463,18 @@ precondition(message)
     focus on diagnosing the failures that are most likely to be the particular
     defect you are interested in.
 
-    `message` is a string describing the precondition; it will be used as the
-    error message of the UITestError exception.
+    `message` is a string describing the precondition (it is not the error
+    message if the precondition fails).
+
+    For example:
+
+    >>> with precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
+    ...     # Call tune_channels(), which raises:
+    ...     raise UITestFailure("Failed to tune channels")
+    Traceback (most recent call last):
+      ...
+    PreconditionError: Didn't meet precondition 'Channels tuned'
+    (original exception was: Failed to tune channels)
 
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
