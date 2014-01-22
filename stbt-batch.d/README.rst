@@ -6,35 +6,36 @@ run
 
 This::
 
-    run path/to/test.py another/test.py
+    stbt batch run path/to/test.py another/test.py
 
 will run the given stb-tester scripts until one of them fails. You can run the
 tests once, or keep going after uninteresting failures, or keep going no matter
 what; see ``run -h`` for help.
 
-``run`` creates a separate timestamped directory for each test run, containing
-the logs from that run.
+``stbt batch run`` creates a separate timestamped directory for each test run,
+containing the logs from that run.
 
 report
 ------
 
-After each test run, ``run`` executes ``report`` to classify the failure
-reason, gather other useful information, and generate a static html report in
-``index.html``. So the way you should use ``run`` is something like this::
+After each test run, ``stbt batch run`` executes ``stbt batch report`` to
+classify the failure reason, gather other useful information, and generate a
+static html report in ``index.html``. So the way you should use ``stbt batch
+run`` is something like this::
 
     mkdir my-test-session
     cd my-test-session
-    run path/to/test.py &
+    stbt batch run path/to/test.py &
     firefox index.html
 
 It's up to you to organise "test sessions" as you want them: You can run
 further tests from the same directory to add them to the existing report,
 or run them from a new directory for a separate report.
 
-See ``report`` for the failure reasons we currently know how to detect.
-``run`` executes ``report`` automatically, but you can also re-run
-``report`` on old test logs (when you've added new classifications after
-those tests were originally run). See ``report -h`` for help.
+``stbt batch run`` executes ``stbt batch report`` automatically, but you can
+also re-run ``stbt batch report`` on old test logs (when you've added new
+classifications after those tests were originally run; see the "classify" user
+hook below). See ``stbt batch report -h`` for help.
 
 User hooks
 ----------
@@ -45,12 +46,12 @@ configuration file; if the variable is set to an executable program, ``run``
 will invoke that program at the appropriate time, with the current working
 directory set to the directory containing the test run logs:
 
-**runner.pre_run**
+**batch.pre_run**
   Invoked immediately before the test is run, with the
   single command-line argument "start". Intended for starting custom logging
   processes.
 
-**runner.post_run**
+**batch.post_run**
   Invoked as soon as possible after the test has completed, with the single
   command-line argument "stop" (so that you can set ``pre_run`` and
   ``post_run`` to the same program). Intended for stopping custom logging
@@ -64,7 +65,7 @@ directory set to the directory containing the test run logs:
   can be achieved by writing files to the current working directory (for
   example pid files), which the ``post_run`` program should clean up.
 
-**runner.recover**
+**batch.recover**
   Invoked after the test has failed. This program should restore the
   system-under-test to a state where it is ready to run the next test (for
   example by power-cycling the system-under-test and ensuring the boot sequence
@@ -75,7 +76,7 @@ directory set to the directory containing the test run logs:
   This program should return a non-zero exit status to indicate that recovery
   was unsuccessful and no further tests should be run.
 
-**runner.classify**
+**batch.classify**
   Invoked after the test has completed (after the ``post_run`` program and
   after the built-in classification / log analysis). Intended for additional
   analysis of the log files. This program is also invoked when ``report`` is
@@ -109,21 +110,21 @@ directory set to the directory containing the test run logs:
   the same key will have their values merged into a single column. The program
   should append to the ``extra-columns`` file, not overwrite it.
 
-server
-------
+instaweb
+--------
 
 The generated report is a set of static html files, which you can view locally
 (using a `file:///...` url), or you can serve them with a web server like
-apache. But if you want to interactively *edit* the report, you can run our
-``server``. By default, ``server`` serves on ``localhost:5000``. To serve on
+apache. But if you want to interactively *edit* the report, you can run ``stbt
+batch instaweb``. By default, this serves on ``localhost:5000``. To serve on
 all public network interfaces, run it like this::
 
-    server 0.0.0.0:5000
+    stbt batch instaweb 0.0.0.0:5000
 
-Run ``server`` from the directory containing the test results (for example
-``my-test-session`` in the "report" section above).
+Run ``stbt batch instaweb`` from the directory containing the test results (for
+example ``my-test-session`` in the "report" section above).
 
-``server`` probably can't handle high loads or many concurrent users. For such
-cases you should proxy ``server`` behind Apache or Nginx. ``server`` uses
-"Flask", a python web micro-framework; for deployment options see
-http://flask.pocoo.org/docs/deploying/
+``stbt batch instaweb`` probably can't handle high loads or many concurrent
+users. For such cases you should proxy ``stbt batch instaweb`` behind Apache or
+Nginx. ``stbt batch instaweb`` uses "Flask", a python web micro-framework; for
+deployment options see http://flask.pocoo.org/docs/deploying/
