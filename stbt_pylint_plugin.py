@@ -15,14 +15,18 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 import os
 import re
 
-# Install `pylint` to get `logilab.astng` modules.
-from logilab.astng.node_classes import BinOp, CallFunc, Getattr
+# Install `pylint` to get `logilab.astng` or `astroid` modules.
 from pylint.checkers import BaseChecker
 
+# pylint: disable=E0611,F0401
 try:  # >= pylint 1.0
-    from pylint.interfaces import IAstroidChecker  # pylint: disable=E0611
+    from pylint.interfaces import IAstroidChecker
+    # logilab renames ASTNG to astroid
+    from astroid.node_classes import BinOp, CallFunc, Getattr
 except ImportError:  # < pylint 1.0
-    from pylint.interfaces import IASTNGChecker as IAstroidChecker  # pylint: disable=E0611,C0301
+    from pylint.interfaces import IASTNGChecker as IAstroidChecker
+    from logilab.astng.node_classes import BinOp, CallFunc, Getattr
+# pylint: enable=E0611,F0401
 
 
 class StbtChecker(BaseChecker):
