@@ -74,6 +74,7 @@ python_docstrings() {
     doc detect_motion
     doc ocr
     doc OcrMode
+    doc as_precondition
     doc frames
     doc save_frame
     doc get_frame
@@ -89,6 +90,7 @@ python_docstrings() {
     doc MatchTimeout
     doc MotionTimeout
     doc NoVideo
+    doc PreconditionError
     doc UITestFailure
     doc UITestError
 }
@@ -96,6 +98,13 @@ python_docstrings() {
 substitute_ocr_default_mode() {
     local mode=$(sed -n '/^class OcrMode/,/^[^ ]/ p' stbt.py | awk '/3/ {print $1}')
     sed "/^ocr(/ s/mode=3/mode=OcrMode.$mode/"
+}
+
+# stbt.as_precondition's `@contextmanager` decorator screws up the function
+# signature seen by pydoc
+substitute_as_precondition_signature() {
+    local sig=$(sed -n '/^def as_precondition/ { s/:$//; s/^def //; p; }' stbt.py)
+    sed "s/^as_precondition(.*/$sig/"
 }
 
 # Prints sed commands to apply,
@@ -121,6 +130,7 @@ substitute_default_params() {
 cat $1 |
 substitute_python_docstrings |
 substitute_ocr_default_mode |
+substitute_as_precondition_signature |
 sed -f <(substitute_default_params) \
 > $1.new &&
 mv $1.new $1

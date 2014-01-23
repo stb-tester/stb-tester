@@ -762,6 +762,45 @@ def debug(msg):
             "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
+@contextlib.contextmanager
+def as_precondition(message):
+    """Context manager that replaces UITestFailures with UITestErrors.
+
+    If you run your test scripts with stb-tester's batch runner, the reports it
+    generates will show test failures (that is, `UITestFailure` exceptions) as
+    red results, and unhandled exceptions of any other type as yellow results.
+    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
+    `UITestFailure` (red results) when they detect a failure. By running such
+    functions inside an `as_precondition` context, any `UITestFailure` (red)
+    they raise will be caught, and a `UITestError` (yellow) will be raised
+    instead.
+
+    When running a single test script hundreds or thousands of times to
+    reproduce an intermittent defect, it is helpful to mark unrelated failures
+    as test errors (yellow) rather than test failures (red), so that you can
+    focus on diagnosing the failures that are most likely to be the particular
+    defect you are interested in.
+
+    `message` is a string describing the precondition (it is not the error
+    message if the precondition fails).
+
+    For example:
+
+    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
+    ...     # Call tune_channels(), which raises:
+    ...     raise UITestFailure("Failed to tune channels")
+    Traceback (most recent call last):
+      ...
+    PreconditionError: Didn't meet precondition 'Channels tuned'
+    (original exception was: Failed to tune channels)
+
+    """
+    try:
+        yield
+    except UITestFailure as e:
+        raise PreconditionError(message, e)
+
+
 class UITestError(Exception):
     """The test script had an unrecoverable error."""
     pass
@@ -817,6 +856,19 @@ class MotionTimeout(UITestFailure):
 
 class ConfigurationError(UITestError):
     pass
+
+
+class PreconditionError(UITestError):
+    """Exception raised by `as_precondition`."""
+    def __init__(self, message, original_exception):
+        super(PreconditionError, self).__init__()
+        self.message = message
+        self.original_exception = original_exception
+
+    def __str__(self):
+        return (
+            "Didn't meet precondition '%s' (original exception was: %s)"
+            % (self.message, self.original_exception))
 
 
 # stbt-run initialisation and convenience functions
