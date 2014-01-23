@@ -17,7 +17,6 @@
 set -eu
 
 usage() { grep '^#/' "$0" | cut -c4-; }
-die() { echo "stbt lint: error: $*" >&2; exit 1; }
 
 case "$1" in
     -h|--help) usage; exit 0;;
@@ -25,7 +24,8 @@ esac
 
 which pylint &>/dev/null || die "Couldn't find 'pylint' executable"
 pylint --version 2>&1 | grep -q 'pylint 0\.' ||
-    die "Not compatible with pylint >= 1.0"  # See commits 97eada33, 65a38380
+    echo "Cannot guarantee success with pylint >= 1.0." >&2
+    # See commits 97eada33, 65a38380
 
 PYTHONPATH="$(dirname "$0"):$PYTHONPATH" \
 pylint --load-plugins=stbt_pylint_plugin "$@"
