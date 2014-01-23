@@ -1125,6 +1125,7 @@ class Display(object):
             self.appsrc.emit("push-buffer", newbuf)
 
     def on_error(self, _bus, message):
+        # pylint: disable=W0613
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         self.tell_user_thread(
@@ -1133,19 +1134,23 @@ class Display(object):
 
     @staticmethod
     def on_warning(_bus, message):
+        # pylint: disable=W0613
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
+        # pylint: disable=W0613
         warn("Got EOS from source pipeline")
         self.restart_source()
 
     def on_eos_from_sink_pipeline(self, _bus, _message):
+        # pylint: disable=W0613
         debug("Got EOS")
         _mainloop.quit()
 
     def on_underrun(self, _element):
+        # pylint: disable=W0613
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
@@ -1154,6 +1159,7 @@ class Display(object):
             self.underrun_timeout.start()
 
     def on_running(self, _element):
+        # pylint: disable=W0613
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
             self.underrun_timeout.cancel()
@@ -1162,6 +1168,7 @@ class Display(object):
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source(self, *_args):
+        # pylint: disable=W0613
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
         self.source_pipeline.set_state(gst.STATE_NULL)
@@ -2185,7 +2192,7 @@ def test_wait_for_motion_half_motion_int():
 @contextlib.contextmanager
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
-        def frames(self, _timeout_secs=10):
+        def frames(self, _timeout_secs=10):  # pylint: disable=W0613
             for i in range(10):
                 yield (
                     [
