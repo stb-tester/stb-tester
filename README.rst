@@ -446,6 +446,37 @@ class OcrMode
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
 
+as_precondition(message)
+    Context manager that replaces UITestFailures with UITestErrors.
+
+    If you run your test scripts with stb-tester's batch runner, the reports it
+    generates will show test failures (that is, `UITestFailure` exceptions) as
+    red results, and unhandled exceptions of any other type as yellow results.
+    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
+    `UITestFailure` (red results) when they detect a failure. By running such
+    functions inside an `as_precondition` context, any `UITestFailure` (red)
+    they raise will be caught, and a `UITestError` (yellow) will be raised
+    instead.
+
+    When running a single test script hundreds or thousands of times to
+    reproduce an intermittent defect, it is helpful to mark unrelated failures
+    as test errors (yellow) rather than test failures (red), so that you can
+    focus on diagnosing the failures that are most likely to be the particular
+    defect you are interested in.
+
+    `message` is a string describing the precondition (it is not the error
+    message if the precondition fails).
+
+    For example:
+
+    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
+    ...     # Call tune_channels(), which raises:
+    ...     raise UITestFailure("Failed to tune channels")
+    Traceback (most recent call last):
+      ...
+    PreconditionError: Didn't meet precondition 'Channels tuned'
+    (original exception was: Failed to tune channels)
+
 frames(timeout_secs=None)
     Generator that yields frames captured from the GStreamer pipeline.
 
@@ -619,6 +650,9 @@ class MotionTimeout(UITestFailure)
 
 class NoVideo(UITestFailure)
     No video available from the source pipeline.
+
+class PreconditionError(UITestError)
+    Exception raised by `as_precondition`.
 
 class UITestFailure(Exception)
     The test failed because the system under test didn't behave as expected.
