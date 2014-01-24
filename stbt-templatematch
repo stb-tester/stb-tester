@@ -74,5 +74,5 @@ print "%s found: %s" % (
     "Match" if matched else "Weak match",
     str(stbt.MatchResult(
         timestamp=0, match=True, position=position,
-        first_pass_result=first_pass)))
+        first_pass_result=first_pass, frame=image)))
 sys.exit(0 if matched else 1)
