@@ -9,6 +9,7 @@
 #/ Available commands are:
 #/     run            Run a stbt script
 #/     record         Record a stbt script
+#/     batch          Run stbt scripts repeatedly, create html report
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of stbt scripts
