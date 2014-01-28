@@ -391,8 +391,10 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             (32, 0 if matched else 255, 255),  # bgr
             thickness=3)
 
-        debug("%s found: %s" % (
-            "Match" if matched else "Weak match", str(result)))
+        if matched:
+            debug("Match found: %s" % str(result))
+        else:
+            debug("No match found. Closest match: %s" % str(result))
         yield result
 
 
