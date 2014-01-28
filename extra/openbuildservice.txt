@@ -24,7 +24,7 @@ To build a new release:
 The new packages can take up to an hour to appear at
 http://download.opensuse.org/repositories/home:/stb-tester/
 
-Currently packages are built for Fedora 16 and 17 (x86 and x86_64).
+Currently packages are built for Fedora 17 to 20 (x86 and x86_64).
 To add other architectures and distros see
 https://build.opensuse.org/project/show?project=home%3Astb-tester
 
