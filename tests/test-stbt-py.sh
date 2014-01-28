@@ -222,7 +222,7 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null || {
         echo "webminspector.py not found; skipping this test." >&2
-        echo "See http://git.chromium.org/gitweb/?p=webm/webminspector.git" >&2
+        echo "See https://chromium.googlesource.com/webm/webminspector/" >&2
         return 77
     }
 
