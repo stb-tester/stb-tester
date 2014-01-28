@@ -73,6 +73,6 @@ matched, position, first_pass = stbt._match(  # pylint: disable=W0212
 print "%s: %s" % (
     "Match found" if matched else "No match found. Closest match",
     str(stbt.MatchResult(
-        timestamp=0, match=True, position=position,
+        timestamp=0, match=matched, position=position,
         first_pass_result=first_pass, frame=image)))
 sys.exit(0 if matched else 1)
