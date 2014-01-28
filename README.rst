@@ -2,9 +2,9 @@
  stbt
 ======
 
------------------------------------------------------------------------------
-A video-capture record/playback system for automated testing of set-top boxes
------------------------------------------------------------------------------
+--------------------------------------------------
+Automated user interface testing for set-top boxes
+--------------------------------------------------
 
 .. image:: https://travis-ci.org/drothlis/stb-tester.png?branch=master
    :target: https://travis-ci.org/drothlis/stb-tester
