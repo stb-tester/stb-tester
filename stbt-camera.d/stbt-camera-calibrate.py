@@ -6,15 +6,16 @@ import math
 import sys
 import time
 from collections import namedtuple
-from itertools import count
+from itertools import count, izip
 from os.path import dirname
 
 import cv2
 import numpy
+from gi.repository import Gst  # pylint: disable=E0611
 
 import stbt
 from _stbt import tv_driver
-from _stbt.config import set_config
+from _stbt.config import set_config, xdg_config_dir
 
 videos = {}
 
@@ -215,6 +216,69 @@ def geometric_calibration(tv, interactive=True):
         ' '.join('%s="%s"' % v for v in geometriccorrection_params))
 
 #
+# Uniform Illumination
+#
+
+FRAME_AVERAGE_COUNT = 16
+
+videos['blank-white'] = (
+    'video/x-raw,format=BGR,width=1280,height=720',
+    lambda: [(bytearray([0xff, 0xff, 0xff]) * 1280 * 720, 60 * Gst.SECOND)])
+videos['blank-black'] = (
+    'video/x-raw,format=BGR,width=1280,height=720',
+    lambda: [(bytearray([0, 0, 0]) * 1280 * 720, 60 * Gst.SECOND)])
+
+
+def _create_reference_png(filename):
+    # Throw away some frames to let everything settle
+    pop_with_progress(stbt.frames(), 50)
+
+    average = None
+    for frame in pop_with_progress(stbt.frames(), FRAME_AVERAGE_COUNT):
+        if average is None:
+            average = numpy.zeros(shape=frame[0].shape, dtype=numpy.uint16)
+        average += frame[0]
+    average /= FRAME_AVERAGE_COUNT
+    cv2.imwrite(filename, numpy.array(average, dtype=numpy.uint8))
+
+
+def await_blank(brightness):
+    for frame, _ in stbt.frames(10):
+        grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        min_, max_, _, _ = cv2.minMaxLoc(grayscale)
+        contrast = max_ - min_
+        if contrast < 100 and abs(numpy.median(frame) - brightness) < 100:
+            break
+    else:
+        sys.stderr.write(
+            "WARNING: Did not detect blank frame of brightness %i" % brightness)
+
+
+def calibrate_illumination(tv):
+    img_dir = xdg_config_dir() + '/stbt/'
+
+    props = {
+        'white-reference-image': '%s/vignetting-reference-white.png' % img_dir,
+        'black-reference-image': '%s/vignetting-reference-black.png' % img_dir,
+    }
+
+    tv.show("blank-white")
+    await_blank(255)
+    _create_reference_png(props['white-reference-image'])
+    tv.show("blank-black")
+    await_blank(0)
+    _create_reference_png(props['black-reference-image'])
+
+    contraststretch = stbt._display.source_pipeline.get_by_name(
+        'illumination_correction')
+    for k, v in reversed(props.items()):
+        contraststretch.set_property(k, v)
+    set_config(
+        'global', 'contraststretch_params',
+        ' '.join(["%s=%s" % (k, v) for k, v in props.items()]))
+
+
+#
 # setup
 #
 
@@ -278,6 +342,7 @@ def setup(source_pipeline):
 #
 
 defaults = {
+    'contraststretch_params': '',
     'v4l2_ctls': (
         'brightness=128,contrast=128,saturation=128,'
         'white_balance_temperature_auto=0,white_balance_temperature=6500,'
@@ -287,6 +352,8 @@ defaults = {
     'transformation_pipeline': (
         'stbtgeometriccorrection name=geometric_correction '
         '   %(geometriccorrection_params)s '
+        ' ! stbtcontraststretch name=illumination_correction '
+        '   %(contraststretch_params)s '),
 }
 
 
@@ -299,6 +366,9 @@ def parse_args(argv):
     parser.add_argument(
         '--skip-geometric', action="store_true",
         help="Don't perform geometric calibration")
+    parser.add_argument(
+        '--skip-illumination', action='store_true',
+        help="Don't perform uniform illumination calibration")
     return parser.parse_args(argv[1:])
 
 
@@ -339,6 +409,8 @@ def main(argv):
 
     if not args.skip_geometric:
         geometric_calibration(tv, interactive=args.interactive)
+    if not args.skip_illumination:
+        calibrate_illumination(tv)
 
     if args.interactive:
         raw_input("Calibration complete.  Press <ENTER> to exit")

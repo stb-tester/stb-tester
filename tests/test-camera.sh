@@ -279,3 +279,17 @@ test_that_validation_video_served_over_http_is_correct() {
 
     stop_fake_video_src
 }
+
+# Test illumination compensation
+
+test_illumination_compensation() {
+    skip_if_no_rsvg_plugins
+    export STBT_TEST_VALIDATION_WAIT_TIMEOUT=60
+
+    set_config global.control none
+    start_fake_video_src "$testdir/vignette-overlay.svg" &&
+    stbt --with-experimental camera calibrate --noninteractive &&
+    start_fake_video_src "$testdir/vignette-overlay.svg" &&
+    stbt --with-experimental camera validate &&
+    stop_fake_video_src
+}

@@ -1,7 +1,7 @@
 # The default target of this Makefile is:
 all:
 
-PKG_DEPS=gstreamer-1.0 gstreamer-video-1.0 opencv
+PKG_DEPS=gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 opencv orc-0.4
 
 prefix?=/usr/local
 exec_prefix?=$(prefix)
@@ -359,9 +359,18 @@ installed_camera_files=\
 
 CFLAGS?=-O2
 
+%_orc.h : %.orc
+	orcc --header --internal -o "$@" "$<"
+%_orc.c : %.orc
+	orcc --implementation --internal -o "$@" "$<"
+
 stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrection.c \
                                        stbt-camera.d/gst/stbtgeometriccorrection.h \
                                        stbt-camera.d/gst/plugin.c \
+                                       stbt-camera.d/gst/stbtcontraststretch.c \
+                                       stbt-camera.d/gst/stbtcontraststretch.h \
+                                       stbt-camera.d/gst/stbtcontraststretch_orc.c \
+                                       stbt-camera.d/gst/stbtcontraststretch_orc.h \
                                        VERSION
 	@if ! pkg-config --exists $(PKG_DEPS); then \
 		printf "Please install packages $(PKG_DEPS)"; exit 1; fi

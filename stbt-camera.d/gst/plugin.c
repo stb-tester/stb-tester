@@ -28,12 +28,15 @@
 #include <gst/gst.h>
 
 #include "stbtgeometriccorrection.h"
+#include "stbtcontraststretch.h"
 
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
   return gst_element_register (plugin, "stbtgeometriccorrection", GST_RANK_NONE,
       STBT_TYPE_GEOMETRIC_CORRECTION)
+    && gst_element_register (plugin, "stbtcontraststretch", GST_RANK_NONE,
+      STBT_TYPE_CONTRAST_STRETCH);
 }
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,

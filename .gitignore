@@ -21,3 +21,5 @@ debian-src-pkg/*/stb-tester_*
 extra/debian/changelog
 extra/stb-tester*.debian.tar.xz
 stb-tester_*.deb
+*_orc.h
+*_orc.c
