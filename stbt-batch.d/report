@@ -59,7 +59,7 @@ main() {
   # Generate summary report
   if $do_html; then
     for resultsdir in $(
-      for rundir in "$@"; do dirname $(abspath $rundir); done | sort | uniq)
+      for rundir in "$@"; do dirname "$(abspath "$rundir")"; done | sort | uniq)
     do
       (
         cd "$resultsdir" || die "Invalid directory '$resultsdir'"

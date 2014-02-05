@@ -1,11 +1,11 @@
 # Run with ./run-tests.sh
 
 test_stbt_batch_run_once() {
-    { stbt-batch run -1 -t my-label "$testdir"/test.py ||
+    { stbt-batch run -1 -t "my label" "$testdir"/test.py ||
         fail "stbt batch run failed"
     } | sed 's/^/stbt batch run: /'
 
-    mv latest-my-label latest
+    mv "latest-my label" latest
     [[ -f latest/combined.log ]] || fail "latest/combined.log not created"
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
     [[ -f latest/git-commit ]] || fail "latest/git-commit not created"
@@ -15,8 +15,8 @@ test_stbt_batch_run_once() {
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
     grep -q 'tests/test.py' index.html || fail "test name not in index.html"
-    grep -q my-label latest/index.html || fail "extra column not in latest/index.html"
-    grep -q my-label index.html || fail "extra column not in index.html"
+    grep -q "my label" latest/index.html || fail "extra column not in latest/index.html"
+    grep -q "my label" index.html || fail "extra column not in index.html"
 }
 
 test_that_stbt_batch_run_runs_until_failure() {
