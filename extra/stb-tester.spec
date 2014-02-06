@@ -46,5 +46,5 @@ make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
 /usr/bin/irnetbox-proxy
 /usr/libexec/stbt
 /usr/share/man/man1
-/etc/stbt
 /etc/bash_completion.d/stbt
+%config(noreplace) /etc/stbt
