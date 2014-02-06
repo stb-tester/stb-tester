@@ -34,6 +34,9 @@ main() {
         esac
         shift
     done
+    #Allow return value of a pipeline to be non-zero if a command in the
+    #pipeline exits unsuccessfully (calls die)
+    set -o pipefail
     command="$1"
     [[ "$command" =~ ^(on|off|status)$ ]] || die "invalid command '$command'"
 
