@@ -43,7 +43,7 @@ def frames_to_video(outfilename, frames, caps="image/svg",
     vsrc = pipeline.get_by_name('videosrc')
     asrc = pipeline.get_by_name('audiosrc')
 
-    r = _PipelineRunner(pipeline)
+    r = PipelineRunner(pipeline)
 
     t = 0
     for data, duration in frames:
@@ -70,7 +70,7 @@ def _appsrc_push_data(appsrc, data, pts=0, duration=0):
     appsrc.emit('push-buffer', buf)
 
 
-class _PipelineRunner(object):
+class PipelineRunner(object):
     """Provides an easy way to run a pre-constructed Gstreamer pipeline much
     like gst-launch"""
     def __init__(self, pipeline, stop_pos=None):

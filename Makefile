@@ -333,7 +333,9 @@ install : $(stbt_camera_install_target)
 stbt_camera_files=\
 	_stbt/gst_utils.py \
 	_stbt/tv_driver.py \
-	stbt-camera
+	stbt-camera \
+	stbt-camera.d/glyphs.svg.jinja2 \
+	stbt-camera.d/stbt-camera-validate.py
 
 installed_camera_files=\
 	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files))
