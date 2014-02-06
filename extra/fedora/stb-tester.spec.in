@@ -38,6 +38,7 @@ command.
 
 %package camera
 Summary: stb-tester camera support
+Requires: lighttpd
 Requires: gstreamer1-libav
 %description camera
 Support for using a camera pointed at a TV as input for stb-tester.  This is

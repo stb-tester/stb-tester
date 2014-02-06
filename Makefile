@@ -332,7 +332,8 @@ install : $(stbt_camera_install_target)
 
 stbt_camera_files=\
 	_stbt/gst_utils.py \
-	stbt-camera \
+	_stbt/tv_driver.py \
+	stbt-camera
 
 installed_camera_files=\
 	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files))
