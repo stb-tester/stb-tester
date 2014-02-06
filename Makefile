@@ -331,7 +331,8 @@ all : $(stbt_camera_build_target)
 install : $(stbt_camera_install_target)
 
 stbt_camera_files=\
-	stbt-camera
+	_stbt/gst_utils.py \
+	stbt-camera \
 
 installed_camera_files=\
 	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files))

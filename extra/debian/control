@@ -8,6 +8,7 @@ Build-Depends: curl,
                expect,
                gir1.2-gstreamer-1.0,
                git,
+               gstreamer1.0-libav,
                gstreamer1.0-plugins-bad,
                gstreamer1.0-plugins-base,
                gstreamer1.0-plugins-good,
@@ -64,6 +65,7 @@ Description: Automated User Interface testing for set-top boxes.
 
 Package: stb-tester-camera
 Architecture: any
-Depends: stb-tester (>> ${source:Upstream-Version})
+Depends: stb-tester (>> ${source:Upstream-Version}),
+         gstreamer1.0-libav
 Description: Support for using a camera pointed at a TV as input for
  stb-tester.  This is useful for testing apps running on Smart TVs.
