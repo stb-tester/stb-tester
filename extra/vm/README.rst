@@ -46,7 +46,7 @@ joysticks by navigating to `Network settings` -> `Wired` -> `Info
 menu`):
 
 - Broadcast settings - Mode: Manual
-- Broadcast settings - RTMP server URL: rtmp://<address>/live
+- Broadcast settings - RTMP server URL: rtmp://<ip address of this vm>/live
 - Broadcast settings - Stream name: <stream name>
 - Broadcast settings - User agent: Teradek
 - Broadcast settings - Username: <blank>
