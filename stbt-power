@@ -20,6 +20,8 @@
 #/                 Taken from stbt.conf's "global.power_outlet" if not
 #/                 specified on the command line.
 
+set -o pipefail
+
 usage() { grep '^#/' "$0" | cut -c4-; }  # Print the above usage message.
 die() { echo "stbt power: error: $*" >&2; exit 1; }
 
