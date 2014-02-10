@@ -116,6 +116,23 @@ class _AssumeTvDriver(object):
         sys.stderr.write("Assuming videos are no longer playing\n")
 
 
+class _FakeTvDriver(object):
+    """TV driver intended to be paired up with fake-video-src.py from the test
+    directory"""
+    def __init__(self, control_pipe, video_server):
+        self.control_pipe = open(control_pipe, 'w')
+        self.video_server = video_server
+
+    def show(self, video):
+        uri = self.video_server.get_url(video)
+        self.control_pipe.write("%s\n" % uri)
+        self.control_pipe.flush()
+
+    def stop(self):
+        self.control_pipe.write("stop\n")
+        self.control_pipe.flush()
+
+
 class _ManualTvDriver(object):
     def __init__(self, video_server):
         self.video_server = video_server
@@ -140,6 +157,7 @@ def add_argparse_argument(argparser):
              "    manual - Prompt the user then wait for confirmation.\n"
              "    assume - Assume the video is already playing (useful for "
              "scripting when passing a single test to be run).\n"
+             "    fake:pipe_name - Used for testing",
              default=get_config("camera", "tv_driver", "manual"))
 
 
@@ -150,6 +168,8 @@ def create_from_args(args, video_generator):
         video_format=get_config('camera', 'video_format'))
     if desc == 'assume':
         return _AssumeTvDriver()
+    elif desc.startswith('fake:'):
+        return _FakeTvDriver(desc[5:], video_server)
     elif desc == 'manual':
         return _ManualTvDriver(video_server)
     else:
