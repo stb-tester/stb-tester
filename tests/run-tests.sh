@@ -35,7 +35,6 @@ done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
 srcdir="$testdir/.."
-export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
@@ -50,6 +49,11 @@ fi
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
+    mkdir -p "$scratchdir/config/stbt"
+    export XDG_CONFIG_HOME="$scratchdir/config"
+    cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
+    mkdir -p "$scratchdir/cache"
+    export XDG_CACHE_HOME="$scratchdir/cache"
     [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     printf "$1... "
     ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
