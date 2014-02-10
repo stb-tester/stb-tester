@@ -1064,6 +1064,8 @@ class Display(object):
             self.novideo = False
         except Queue.Empty:
             self.novideo = True
+            Gst.debug_bin_to_dot_file_with_ts(
+                self.source_pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
             raise NoVideo("No video")
         if isinstance(gst_sample, Exception):
             raise UITestError(str(gst_sample))
@@ -1163,14 +1165,17 @@ class Display(object):
 
     def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
+        Gst.debug_bin_to_dot_file_with_ts(
+            self.source_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
         _mainloop.quit()
 
-    @staticmethod
-    def on_warning(_bus, message):
+    def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
+        Gst.debug_bin_to_dot_file_with_ts(
+            self.source_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
