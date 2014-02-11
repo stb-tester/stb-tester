@@ -957,10 +957,12 @@ def argparser():
 
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False):
+        restart_source=False, show_clock=get_config(
+            "global", "show_clock", type_=bool, default=False)):
     global _display, _control
     _display = Display(
-        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source)
+        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source,
+        show_clock)
     _control = uri_to_remote(control_uri, _display)
 
 
@@ -981,7 +983,7 @@ _control = None
 
 class Display:
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
-                 restart_source=False):
+                 restart_source=False, show_clock=False):
         gobject.threads_init()
 
         self.novideo = False
@@ -993,6 +995,7 @@ class Display:
         self.video_debug = []
 
         self.restart_source_enabled = restart_source
+        self.show_clock = show_clock
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
@@ -1143,7 +1146,8 @@ class Display:
             if (gst_buffer.timestamp > timeout):
                 self.video_debug.remove((text, duration, timeout))
 
-        if opencv_image is None and len(self.video_debug) == 0:
+        if opencv_image is None and len(self.video_debug) == 0 and \
+                not self.show_clock:
             self.appsrc.emit("push-buffer", gst_buffer)
         else:
             if opencv_image is None:
@@ -1154,6 +1158,14 @@ class Display:
                     opencv_image, text, (10, (i + 1) * 30),
                     cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
                     color=(255, 255, 255))
+            if self.show_clock:
+                offset = 290
+                left = gst_buffer.get_caps().get_structure(0)["width"] - offset
+                now = datetime.datetime.now().strftime("%H:%I:%S:%f")[:-4]
+
+                cv2.putText(
+                    opencv_image, now, (left, 30), cv2.FONT_HERSHEY_TRIPLEX,
+                    fontScale=1.0, color=(255, 255, 255))
             newbuf = gst.Buffer(opencv_image.data)
             newbuf.set_caps(gst_buffer.get_caps())
             newbuf.timestamp = gst_buffer.timestamp
