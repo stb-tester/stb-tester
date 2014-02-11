@@ -119,7 +119,10 @@ def get_config(section, key, default=None, type_=str):
         ])
 
     try:
-        return type_(_config.get(section, key))
+        if type_ is bool:
+            return _config.getboolean(section, key)
+        else:
+            return type_(_config.get(section, key))
     except ConfigParser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)
@@ -133,7 +136,14 @@ def get_config(section, key, default=None, type_=str):
 def press(
         key,
         interpress_delay_secs=get_config(
-            "press", "interpress_delay_secs", type_=float)):
+            "press", "interpress_delay_secs", type_=float),
+        verbose=get_config(
+            "press", "verbose", type_=bool, default=True),
+        show_timestamp=get_config(
+            "press", "show_timestamp", type_=bool, default=False),
+        verbosity_duration=get_config(
+            "press", "verbosity_duration", type_=float, default=3)
+        ):
     """Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -147,6 +157,24 @@ def press(
     responsiveness of the device under test.
 
     The global default for `interpress_delay_secs` can be set in the
+    configuration file, in section `press`.
+
+    `show_timestamp` is a boolean value that specifies if timestamp for key
+    press should be displayed.
+
+    The global default for `show_timestamp` can be set in the
+    configuration file, in section `press`.
+
+    `verbose` is a boolean value that specifies if key presses should be
+    displayed.
+
+    The global default for `verbose` can be set in the
+    configuration file, in section `press`.
+
+    `verbosity_duration` is a floating-point number that specifies a minimum
+    time key press text should be displayed.
+
+    The global default for `verbosity_duration` can be set in the
     configuration file, in section `press`.
     """
 
@@ -163,10 +191,17 @@ def press(
             else:
                 break
 
+    if show_timestamp:
+        now = datetime.datetime.now().strftime("%H:%I:%S:%f")[:-4]
+        text_key = '{0}: {1}'.format(now, key)
+    else:
+        text_key = key
+
     _control.press(key)
     _control.time_of_last_press = (  # pylint:disable=W0201
         datetime.datetime.now())
-    draw_text(key, duration_secs=3)
+    if verbose:
+        draw_text(text_key, verbosity_duration)
 
 
 def draw_text(text, duration_secs=3):
