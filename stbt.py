@@ -699,8 +699,9 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
         cv2.imwrite(ocr_in.name, frame)
-        subprocess.check_call([
-            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)])
+        subprocess.check_output([
+            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)],
+            stderr=subprocess.STDOUT)
         return ocr_out.read().strip()
 
 
