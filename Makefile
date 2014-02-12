@@ -349,6 +349,7 @@ stbt_camera_files=\
 	_stbt/tv_driver.py \
 	stbt-camera \
 	stbt-camera.d/chessboard-720p-40px-border-white.png \
+	stbt-camera.d/colours.svg \
 	stbt-camera.d/glyphs.svg.jinja2 \
 	stbt-camera.d/stbt-camera-calibrate.py \
 	stbt-camera.d/stbt-camera-validate.py
@@ -392,7 +393,6 @@ install-stbt-camera : $(stbt_camera_files)
 	done
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
-
 
 .PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests

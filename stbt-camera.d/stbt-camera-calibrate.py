@@ -3,9 +3,12 @@
 # pylint: disable=W0212
 
 import math
+import string
+import subprocess
 import sys
 import time
 from collections import namedtuple
+from contextlib import contextmanager
 from itertools import count, izip
 from os.path import dirname
 
@@ -216,6 +219,215 @@ def geometric_calibration(tv, interactive=True):
         ' '.join('%s="%s"' % v for v in geometriccorrection_params))
 
 #
+# Colour Measurement
+#
+
+
+def generate_colours_video():
+    import random
+    template_svg = open(dirname(__file__) + '/colours.svg', 'r').read()
+    for _ in range(0, 10 * 60 * 8):
+        svg = template_svg.replace(
+            '#c0ffee', '#%06x' % random.randint(0, 256 ** 3))
+        yield (svg, 1.0 / 8 * Gst.SECOND)
+
+videos['colours'] = ('image/svg', generate_colours_video)
+
+
+def analyse_colours_video(number=None):
+    """RGB!"""
+    errors_in_a_row = 0
+    n = 0
+    for frame, _ in stbt.frames():
+        if number is not None and n >= number:
+            return
+        colour_hex = ''
+        n = n + 1
+
+        def read_hex(region, frame_=frame):
+            return stbt.ocr(
+                frame_, region, stbt.OcrMode.SINGLE_LINE, tesseract_config={
+                    'tessedit_char_whitelist': '#0123456789abcdef'},
+                tesseract_user_patterns=['#\n\n\n\n\n\n']).replace(' ', '')
+
+        # The colour is written above and below the rectangle because we want
+        # to be sure that the top of the colour box is from the same frame as
+        # the bottom.
+        colour_hex = read_hex(stbt.Region(490, 100, 300, 70))
+        colour_hex_bottom = read_hex(stbt.Region(490, 550, 300, 70))
+
+        if (len(colour_hex) >= 7 and colour_hex[0] == '#' and
+                all(c in string.hexdigits for c in colour_hex[1:7]) and
+                colour_hex == colour_hex_bottom):
+            desired = numpy.array((
+                int(colour_hex[1:3], 16),
+                int(colour_hex[3:5], 16),
+                int(colour_hex[5:7], 16)))
+            colour = cv2.mean(frame[240:480, 520:760])
+            colour = (colour[2], colour[1], colour[0])
+            yield (n, desired, colour)
+            errors_in_a_row = 0
+        else:
+            errors_in_a_row += 1
+            if errors_in_a_row > 50:
+                raise RuntimeError(
+                    "Failed to find hexidecimal colour description")
+
+
+def avg_colour(colours):
+    n = len(colours)
+    return (
+        sum([c[0] for c in colours]) / n,
+        sum([c[1] for c in colours]) / n,
+        sum([c[2] for c in colours]) / n)
+
+
+example_v4l2_ctl_output = """\
+                     brightness (int)    : min=-64 max=64 step=1 default=15 value=15
+                       contrast (int)    : min=0 max=95 step=1 default=30 value=30
+"""
+
+
+def v4l2_ctls(device, data=None):
+    """
+    >>> import pprint
+    >>> pprint.pprint(dict(v4l2_ctls(None, example_v4l2_ctl_output)))
+    {'brightness': {'default': '15',
+                    'max': '64',
+                    'min': '-64',
+                    'step': '1',
+                    'value': '15'},
+     'contrast': {'default': '30',
+                  'max': '95',
+                  'min': '0',
+                  'step': '1',
+                  'value': '30'}}
+    """
+    if data is None:
+        data = subprocess.check_output(['v4l2-ctl', '-d', device, '-l'])
+    for line in data.split('\n'):
+        vals = line.strip().split()
+        if vals == []:
+            continue
+        yield (vals[0], dict([v.split('=', 2) for v in vals[3:]]))
+
+
+def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
+    stream.write('\n')
+    for n, v in izip(range(0, total), iterator):
+        progress = (n * width) // total
+        stream.write(
+            '[%s] %8d / %d\r' % (
+                '#' * progress + ' ' * (width - progress), n, total))
+        yield v
+    stream.write('\r' + ' ' * (total + 28) + '\r')
+
+
+COLOUR_SAMPLES = 50
+
+
+def fit_fn(ideals, measureds):
+    """
+    >>> f = fit_fn([120 , 240, 150, 18, 200], [0, 0, 0, 0, 0])
+    >>> print f(0), f(56)
+    0.0 0.0
+    """
+    from scipy.optimize import curve_fit  # pylint: disable=E0611
+    from scipy.interpolate import interp1d  # pylint: disable=E0611
+    POINTS = 5
+    xs = [n * 255.0 / (POINTS + 1) for n in range(0, POINTS + 2)]
+
+    def fn(x, ys):
+        return interp1d(xs, numpy.array([0] + ys + [0]))(x)
+
+    ys, _ = curve_fit(lambda x, *args: fn(x, list(args)), ideals, measureds,
+                      [0.0] * POINTS)
+    return interp1d(xs, numpy.array([0] + ys.tolist() + [0]))
+
+
+@contextmanager
+def colour_graph():
+    if not _can_show_graphs():
+        sys.stderr.write("Install matplotlib and scipy for graphical "
+                         "assistance with colour calibration\n")
+        yield lambda: None
+        return
+
+    from matplotlib import pyplot
+    sys.stderr.write('Analysing colours...\n')
+    pyplot.ion()
+
+    ideals = [[], [], []]
+    deltas = [[], [], []]
+
+    pyplot.figure()
+
+    def update():
+        pyplot.cla()
+        pyplot.axis([0, 255, -128, 128])
+        pyplot.ylabel("Error (higher means too bright)")
+        pyplot.xlabel("Ideal colour")
+        pyplot.grid()
+
+        delta = [0, 0, 0]
+        for n, ideal, measured in pop_with_progress(
+                analyse_colours_video(), 50):
+            pyplot.draw()
+            for c in [0, 1, 2]:
+                ideals[c].append(ideal[c])
+                delta[c] = measured[c] - ideal[c]
+                deltas[c].append(delta[c])
+            pyplot.plot([ideal[0]], [delta[0]], 'rx',
+                        [ideal[1]], [delta[1]], 'gx',
+                        [ideal[2]], [delta[2]], 'bx')
+
+        fits = [fit_fn(ideals[n], deltas[n]) for n in [0, 1, 2]]
+        pyplot.plot(range(0, 256), [fits[0](x) for x in range(0, 256)], 'r-',
+                    range(0, 256), [fits[1](x) for x in range(0, 256)], 'g-',
+                    range(0, 256), [fits[2](x) for x in range(0, 256)], 'b-')
+        pyplot.draw()
+
+    yield update
+    pyplot.close()
+
+
+def _can_show_graphs():
+    try:
+        # pylint: disable=W0612
+        from matplotlib import pyplot
+        from scipy.optimize import curve_fit  # pylint: disable=E0611
+        from scipy.interpolate import interp1d  # pylint: disable=E0611
+        return True
+    except ImportError:
+        sys.stderr.write("Install matplotlib and scipy for graphical "
+                         "assistance with colour calibration\n")
+        return False
+
+
+def adjust_levels(tv):
+    tv.show("colours")
+    happy = "no"
+    device = stbt.get_config('global', 'v4l2_device')
+    with colour_graph() as update_graph:
+        while not happy.startswith('y'):
+            update_graph()
+
+            # Allow adjustment
+            subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+            cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
+            if cmd.startswith('set'):
+                _, var, val = cmd.split()
+                subprocess.check_call(
+                    ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
+            if cmd.startswith('y') or cmd == '':
+                break
+
+    set_config('global', 'v4l2_ctls', ','.join(
+        ["%s=%s" % (c, a['value'])
+         for c, a in dict(v4l2_ctls(device)).items()]))
+
+
+#
 # Uniform Illumination
 #
 
@@ -409,6 +621,8 @@ def main(argv):
 
     if not args.skip_geometric:
         geometric_calibration(tv, interactive=args.interactive)
+    if args.interactive:
+        adjust_levels(tv)
     if not args.skip_illumination:
         calibrate_illumination(tv)
 

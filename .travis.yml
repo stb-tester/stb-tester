@@ -26,13 +26,16 @@ install:
         python-gobject
         python-jinja2
         python-lxml
+        python-matplotlib
         python-nose
         python-numpy
         python-opencv
+        python-scipy
         python-yaml
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng
+        v4l-utils
         xdotool
         xserver-xorg-video-dummy
         xterm

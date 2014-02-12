@@ -31,11 +31,14 @@ Build-Depends: curl,
                python-lxml,
                python-nose,
                python-opencv,
+               python-scipy,
                python-yaml,
                tesseract-ocr,
                tesseract-ocr-deu,
                tesseract-ocr-eng,
                xdotool
+               tesseract-ocr,
+               v4l-utils
 
 Package: stb-tester
 Architecture: any
@@ -74,6 +77,9 @@ Architecture: any
 Depends: stb-tester (>> ${source:Upstream-Version}),
          gir1.2-gudev-1.0,
          gstreamer1.0-libav,
-         lighttpd
+         lighttpd,
+         v4l-utils
+Recommends: python-matplotlib,
+            python-scipy
 Description: Support for using a camera pointed at a TV as input for
  stb-tester.  This is useful for testing apps running on Smart TVs.
