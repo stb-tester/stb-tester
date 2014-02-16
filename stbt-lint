@@ -24,8 +24,6 @@ case "$1" in
 esac
 
 which pylint &>/dev/null || die "Couldn't find 'pylint' executable"
-pylint --version 2>&1 | grep -q 'pylint 0\.' ||
-    die "Not compatible with pylint >= 1.0"  # See commits 97eada33, 65a38380
 
 PYTHONPATH="$(dirname "$0"):$PYTHONPATH" \
 pylint --load-plugins=stbt_pylint_plugin "$@"
