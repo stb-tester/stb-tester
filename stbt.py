@@ -119,7 +119,10 @@ def get_config(section, key, default=None, type_=str):
         ])
 
     try:
-        return type_(_config.get(section, key))
+        if type_ is bool:
+            return _config.getboolean(section, key)
+        else:
+            return type_(_config.get(section, key))
     except ConfigParser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)
@@ -133,7 +136,14 @@ def get_config(section, key, default=None, type_=str):
 def press(
         key,
         interpress_delay_secs=get_config(
-            "press", "interpress_delay_secs", type_=float)):
+            "press", "interpress_delay_secs", type_=float),
+        verbose=get_config(
+            "press", "verbose", type_=bool, default=True),
+        show_timestamp=get_config(
+            "press", "show_timestamp", type_=bool, default=False),
+        verbosity_duration=get_config(
+            "press", "verbosity_duration", type_=float, default=3)
+        ):
     """Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -147,6 +157,24 @@ def press(
     responsiveness of the device under test.
 
     The global default for `interpress_delay_secs` can be set in the
+    configuration file, in section `press`.
+
+    `show_timestamp` is a boolean value that specifies if timestamp for key
+    press should be displayed.
+
+    The global default for `show_timestamp` can be set in the
+    configuration file, in section `press`.
+
+    `verbose` is a boolean value that specifies if key presses should be
+    displayed.
+
+    The global default for `verbose` can be set in the
+    configuration file, in section `press`.
+
+    `verbosity_duration` is a floating-point number that specifies a minimum
+    time key press text should be displayed.
+
+    The global default for `verbosity_duration` can be set in the
     configuration file, in section `press`.
     """
 
@@ -163,10 +191,17 @@ def press(
             else:
                 break
 
+    if show_timestamp:
+        now = datetime.datetime.now().strftime("%H:%I:%S:%f")[:-4]
+        text_key = '{0}: {1}'.format(now, key)
+    else:
+        text_key = key
+
     _control.press(key)
     _control.time_of_last_press = (  # pylint:disable=W0201
         datetime.datetime.now())
-    draw_text(key, duration_secs=3)
+    if verbose:
+        draw_text(text_key, verbosity_duration)
 
 
 def draw_text(text, duration_secs=3):
@@ -923,10 +958,12 @@ def argparser():
 
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False):
+        restart_source=False, show_clock=get_config(
+            "global", "show_clock", type_=bool, default=False)):
     global _display, _control
     _display = Display(
-        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source)
+        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source,
+        show_clock)
     _control = uri_to_remote(control_uri, _display)
 
 
@@ -947,7 +984,7 @@ _control = None
 
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
-                 restart_source=False):
+                 restart_source=False, show_clock=False):
         gobject.threads_init()
 
         self.novideo = False
@@ -959,6 +996,7 @@ class Display(object):
         self.video_debug = []
 
         self.restart_source_enabled = restart_source
+        self.show_clock = show_clock
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
@@ -1109,7 +1147,8 @@ class Display(object):
             if gst_buffer.timestamp > timeout:
                 self.video_debug.remove((text, duration, timeout))
 
-        if opencv_image is None and len(self.video_debug) == 0:
+        if opencv_image is None and len(self.video_debug) == 0 and \
+                not self.show_clock:
             self.appsrc.emit("push-buffer", gst_buffer)
         else:
             if opencv_image is None:
@@ -1120,6 +1159,14 @@ class Display(object):
                     opencv_image, text, (10, (i + 1) * 30),
                     cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
                     color=(255, 255, 255))
+            if self.show_clock:
+                offset = 290
+                left = gst_buffer.get_caps().get_structure(0)["width"] - offset
+                now = datetime.datetime.now().strftime("%H:%I:%S:%f")[:-4]
+
+                cv2.putText(
+                    opencv_image, now, (left, 30), cv2.FONT_HERSHEY_TRIPLEX,
+                    fontScale=1.0, color=(255, 255, 255))
             newbuf = gst.Buffer(opencv_image.data)
             newbuf.set_caps(gst_buffer.get_caps())
             newbuf.timestamp = gst_buffer.timestamp
