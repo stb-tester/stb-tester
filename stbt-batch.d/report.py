@@ -28,7 +28,7 @@ def main(argv):
     if len(argv[1:]) == 0:
         die(usage)
     if argv[1] in ("-h", "--help"):
-        print(usage)
+        print usage
         sys.exit(0)
     for target in argv[1:]:
         if isdir(target):

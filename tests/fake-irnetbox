@@ -76,7 +76,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
     def recv(self, bufsize):
         data = self.request.recv(bufsize)
         if data:
-            print("fake-irnetbox: recv %s" % hexstring(data))
+            print "fake-irnetbox: recv %s" % hexstring(data)
         else:  # Apparently SocketServer gives me a non-blocking socket
             time.sleep(0.1)
         return data

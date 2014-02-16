@@ -1054,7 +1054,7 @@ class Display(object):
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if (timestamp - self.start_timestamp > timeout_secs * 1e9):
+                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
                         debug("timed out: %d - %d > %d" % (
                             timestamp, self.start_timestamp,
                             timeout_secs * 1e9))
@@ -1106,7 +1106,7 @@ class Display(object):
                 timeout = gst_buffer.timestamp + (duration * 1e9)
                 self.video_debug.remove((text, duration, None))
                 self.video_debug.append((text, duration, timeout))
-            if (gst_buffer.timestamp > timeout):
+            if gst_buffer.timestamp > timeout:
                 self.video_debug.remove((text, duration, timeout))
 
         if opencv_image is None and len(self.video_debug) == 0:
@@ -1451,7 +1451,7 @@ def _confirm_match(image, position, template, match_parameters):
     log(thresholded, "confirm-absdiff_threshold")
     log(eroded, "confirm-absdiff_threshold_erode")
 
-    return (cv2.countNonZero(eroded) == 0)
+    return cv2.countNonZero(eroded) == 0
 
 
 _frame_number = 0
