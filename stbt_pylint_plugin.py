@@ -15,14 +15,17 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 import os
 import re
 
-# Install `pylint` to get `logilab.astng` modules.
-from logilab.astng.node_classes import BinOp, CallFunc, Getattr
+# Install `pylint` to get `logilab.astng` or `astroid` modules.
 from pylint.checkers import BaseChecker
 
+# pylint: disable=E0611,F0401
 try:  # >= pylint 1.0
-    from pylint.interfaces import IAstroidChecker  # pylint: disable=E0611
+    from pylint.interfaces import IAstroidChecker
+    from astroid.node_classes import BinOp, CallFunc, Getattr
 except ImportError:  # < pylint 1.0
-    from pylint.interfaces import IASTNGChecker as IAstroidChecker  # pylint: disable=E0611,C0301
+    from pylint.interfaces import IASTNGChecker as IAstroidChecker
+    from logilab.astng.node_classes import BinOp, CallFunc, Getattr
+# pylint: enable=E0611,F0401
 
 
 class StbtChecker(BaseChecker):
@@ -37,7 +40,7 @@ class StbtChecker(BaseChecker):
 
     def visit_const(self, node):
         if (type(node.value) is str and
-                re.search(r'.png$', node.value) and
+                re.search(r'.+\.png$', node.value) and
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
                 not _is_whitelisted_name(node.value) and

@@ -945,7 +945,7 @@ _display = None
 _control = None
 
 
-class Display:
+class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
         gobject.threads_init()
@@ -1054,7 +1054,7 @@ class Display:
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if (timestamp - self.start_timestamp > timeout_secs * 1e9):
+                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
                         debug("timed out: %d - %d > %d" % (
                             timestamp, self.start_timestamp,
                             timeout_secs * 1e9))
@@ -1106,7 +1106,7 @@ class Display:
                 timeout = gst_buffer.timestamp + (duration * 1e9)
                 self.video_debug.remove((text, duration, None))
                 self.video_debug.append((text, duration, timeout))
-            if (gst_buffer.timestamp > timeout):
+            if gst_buffer.timestamp > timeout:
                 self.video_debug.remove((text, duration, timeout))
 
         if opencv_image is None and len(self.video_debug) == 0:
@@ -1190,7 +1190,7 @@ class Display:
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-class GObjectTimeout:
+class GObjectTimeout(object):
     """Responsible for setting a timeout in the GTK main loop."""
     def __init__(self, timeout_secs, handler, *args):
         self.timeout_secs = timeout_secs
@@ -1451,7 +1451,7 @@ def _confirm_match(image, position, template, match_parameters):
     log(thresholded, "confirm-absdiff_threshold")
     log(eroded, "confirm-absdiff_threshold_erode")
 
-    return (cv2.countNonZero(eroded) == 0)
+    return cv2.countNonZero(eroded) == 0
 
 
 _frame_number = 0
@@ -1631,13 +1631,13 @@ def uri_to_remote(uri, display):
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
-class NullRemote:
+class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
 
-class VideoTestSrcControl:
+class VideoTestSrcControl(object):
     """Remote control used by selftests.
 
     Changes the videotestsrc image to the specified pattern ("0" to "20").
@@ -1679,7 +1679,7 @@ class VideoTestSrcControl:
         debug("Pressed %s" % key)
 
 
-class VirtualRemote:
+class VirtualRemote(object):
     """Send a key-press to a set-top box running a VirtualRemote listener.
 
         control = VirtualRemote("192.168.0.123")
@@ -1704,7 +1704,7 @@ class VirtualRemote:
         return _connect_tcp_socket(self.hostname, self.port)
 
 
-class LircRemote:
+class LircRemote(object):
     """Send a key-press via a LIRC-enabled infrared blaster.
 
     See http://www.lirc.org/html/technical.html#applications
@@ -1761,7 +1761,7 @@ def new_tcp_lirc_remote(hostname, port, control_name):
     return LircRemote(control_name, _connect)
 
 
-class IRNetBoxRemote:
+class IRNetBoxRemote(object):
     """Send a key-press via the network-controlled RedRat IRNetBox IR emitter.
 
     See http://www.redrat.co.uk/products/irnetbox.html
@@ -2059,7 +2059,7 @@ def warn(s):
 # Tests
 #===========================================================================
 
-class FileToSocket:
+class FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes
 
     >>> import StringIO
@@ -2185,7 +2185,7 @@ def test_wait_for_motion_half_motion_int():
 
 @contextlib.contextmanager
 def _fake_frames_at_half_motion():
-    class FakeDisplay:
+    class FakeDisplay(object):
         def frames(self, _timeout_secs=10):
             for i in range(10):
                 yield (

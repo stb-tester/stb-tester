@@ -176,7 +176,7 @@ class IRNetBoxProxy(object):
     def send_management_command(self, message_type):
         message = self.MESSAGE_HEADER.pack(self.MESSAGE_MARKER, 0, message_type)
         self.irnet_sock.sendall(message)
-        response_type, _, _ = self.get_message_from_irnet(True)
+        response_type, _, _ = self.get_message_from_irnet(True)  # pylint: disable=W0633,C0301
         assert response_type == message_type
 
     def accept_client(self):
@@ -193,7 +193,7 @@ class IRNetBoxProxy(object):
                 response = ""
             else:
                 self.irnet_sock.sendall(header + message)
-                _, response_header, response = self.get_message_from_irnet(True)
+                _, response_header, response = self.get_message_from_irnet(True)  # pylint: disable=W0633,C0301
             sock.sendall(response_header + response)
         except Exception, e:  # pylint: disable=W0703
             del self.read_sockets[sock.fileno()]
