@@ -945,7 +945,7 @@ _display = None
 _control = None
 
 
-class Display:
+class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
         gobject.threads_init()
@@ -1126,6 +1126,7 @@ class Display:
             self.appsrc.emit("push-buffer", newbuf)
 
     def on_error(self, _bus, message):
+        # pylint: disable=W0613
         assert message.type == gst.MESSAGE_ERROR
         err, dbg = message.parse_error()
         self.tell_user_thread(
@@ -1134,19 +1135,23 @@ class Display:
 
     @staticmethod
     def on_warning(_bus, message):
+        # pylint: disable=W0613
         assert message.type == gst.MESSAGE_WARNING
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
+        # pylint: disable=W0613
         warn("Got EOS from source pipeline")
         self.restart_source()
 
     def on_eos_from_sink_pipeline(self, _bus, _message):
+        # pylint: disable=W0613
         debug("Got EOS")
         _mainloop.quit()
 
     def on_underrun(self, _element):
+        # pylint: disable=W0613
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
@@ -1155,6 +1160,7 @@ class Display:
             self.underrun_timeout.start()
 
     def on_running(self, _element):
+        # pylint: disable=W0613
         if self.underrun_timeout:
             ddebug("running: cancelling underrun timer")
             self.underrun_timeout.cancel()
@@ -1163,6 +1169,7 @@ class Display:
             ddebug("running: no outstanding underrun timers; ignoring")
 
     def restart_source(self, *_args):
+        # pylint: disable=W0613
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
         self.source_pipeline.set_state(gst.STATE_NULL)
@@ -1190,7 +1197,7 @@ class Display:
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-class GObjectTimeout:
+class GObjectTimeout(object):
     """Responsible for setting a timeout in the GTK main loop."""
     def __init__(self, timeout_secs, handler, *args):
         self.timeout_secs = timeout_secs
@@ -1631,13 +1638,13 @@ def uri_to_remote(uri, display):
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
-class NullRemote:
+class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
 
-class VideoTestSrcControl:
+class VideoTestSrcControl(object):
     """Remote control used by selftests.
 
     Changes the videotestsrc image to the specified pattern ("0" to "20").
@@ -1679,7 +1686,7 @@ class VideoTestSrcControl:
         debug("Pressed %s" % key)
 
 
-class VirtualRemote:
+class VirtualRemote(object):
     """Send a key-press to a set-top box running a VirtualRemote listener.
 
         control = VirtualRemote("192.168.0.123")
@@ -1704,7 +1711,7 @@ class VirtualRemote:
         return _connect_tcp_socket(self.hostname, self.port)
 
 
-class LircRemote:
+class LircRemote(object):
     """Send a key-press via a LIRC-enabled infrared blaster.
 
     See http://www.lirc.org/html/technical.html#applications
@@ -1761,7 +1768,7 @@ def new_tcp_lirc_remote(hostname, port, control_name):
     return LircRemote(control_name, _connect)
 
 
-class IRNetBoxRemote:
+class IRNetBoxRemote(object):
     """Send a key-press via the network-controlled RedRat IRNetBox IR emitter.
 
     See http://www.redrat.co.uk/products/irnetbox.html
@@ -2059,7 +2066,7 @@ def warn(s):
 # Tests
 #===========================================================================
 
-class FileToSocket:
+class FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes
 
     >>> import StringIO
@@ -2185,8 +2192,8 @@ def test_wait_for_motion_half_motion_int():
 
 @contextlib.contextmanager
 def _fake_frames_at_half_motion():
-    class FakeDisplay:
-        def frames(self, _timeout_secs=10):
+    class FakeDisplay(object):
+        def frames(self, _timeout_secs=10):  # pylint: disable=W0613
             for i in range(10):
                 yield (
                     [
