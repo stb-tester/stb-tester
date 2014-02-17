@@ -13,8 +13,7 @@ test_wait_for_match_no_match() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=1)
 	EOF
-    ! stbt-run -v test.py &&
-    [ -f screenshot.png ]
+    ! stbt-run -v test.py
 }
 
 test_wait_for_match_changing_template() {

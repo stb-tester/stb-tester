@@ -44,3 +44,23 @@ test_stbt_run_return_code_on_precondition_error() {
         "PreconditionError: Didn't meet precondition 'Tune to gamut pattern'" \
         test.log
 }
+
+test_that_stbt_run_saves_screenshot_on_match_timeout() {
+    cat > test.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	EOF
+    ! stbt-run -v test.py &&
+    [ -f screenshot.png ]
+}
+
+test_that_stbt_run_saves_screenshot_on_precondition_error() {
+    cat > test.py <<-EOF
+	import stbt
+	with stbt.as_precondition("Impossible precondition"):
+	    wait_for_match(
+	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	EOF
+    ! stbt-run -v test.py &&
+    [ -f screenshot.png ]
+}
