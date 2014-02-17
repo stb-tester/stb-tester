@@ -801,7 +801,10 @@ def as_precondition(message):
     try:
         yield
     except UITestFailure as e:
-        raise PreconditionError(message, e)
+        exc = PreconditionError(message, e)
+        if hasattr(e, 'screenshot'):
+            exc.screenshot = e.screenshot  # pylint: disable=W0201
+        raise exc
 
 
 class UITestError(Exception):
