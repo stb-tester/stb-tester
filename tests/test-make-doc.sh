@@ -36,7 +36,7 @@ test_that_readme_python_api_docs_are_kept_up_to_date() {
 	
 	.. <start python docs>
 	
-	press(key, interpress_delay_secs=0.0)
+	press(key, interpress_delay_secs=None)
 	    Send the specified key-press to the system under test.
 	
 	.. <end python docs>

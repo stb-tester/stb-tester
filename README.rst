@@ -299,7 +299,7 @@ The following functions are available:
 
 .. <start python docs>
 
-press(key, interpress_delay_secs=0.0)
+press(key, interpress_delay_secs=None)
     Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -308,12 +308,12 @@ press(key, interpress_delay_secs=0.0)
     `key` is a string. The allowed values depend on the control you're using:
     If that's lirc, then `key` is a key name from your lirc config file.
 
-    `interpress_delay_secs` is a floating-point number that specifies a minimum
-    time to wait after the preceding key press, in order to accommodate the
-    responsiveness of the device under test.
+    `interpress_delay_secs` (float) default: 0
+      Specifies a minimum time to wait after the preceding key press, in order
+      to accommodate the responsiveness of the device under test.
 
-    The global default for `interpress_delay_secs` can be set in the
-    configuration file, in section `press`.
+      The global default for `interpress_delay_secs` can be set in the
+      configuration file, in section `press`.
 
 wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
     Search for `image` in the source video stream.
@@ -333,25 +333,28 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
 
-press_until_match(key, image, interval_secs=3, noise_threshold=None, max_presses=10, match_parameters=None)
+press_until_match(key, image, interval_secs=None, noise_threshold=None, max_presses=None, match_parameters=None)
     Calls `press` as many times as necessary to find the specified `image`.
 
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `max_presses` times.
 
-    `interval_secs` is the number of seconds to wait for a match before
-    pressing again.
+    `interval_secs` (int) default: 3
+      The number of seconds to wait for a match before pressing again.
 
-    The global defaults for `interval_secs` and `max_presses` can be set
-    in the configuration file, in section `press_until_match`.
+    `max_presses` (int) default: 10
+      The number of times to try pressing the key and looking for the image
+      before giving up and throwing `MatchTimeout`
 
-    The templatematch parameter `noise_threshold` is marked for deprecation
-    but appears in the args for backward compatibility with positional
-    argument syntax. It will be removed in a future release; please use
-    `match_parameters.confirm_threshold` instead.
+    `noise_threshold` (string) DEPRECATED
+      `noise_threshold` is marked for deprecation but appears in the args for
+      backward compatibility with positional argument syntax. It will be
+      removed in a future release; please use
+      `match_parameters.confirm_threshold` instead.
 
-    Specify `match_parameters` to customise the image matching algorithm. See
-    the documentation for `MatchParameters` for details.
+    `match_parameters` (MatchParameters) default: MatchParameters()
+      Customise the image matching algorithm. See the documentation for
+      `MatchParameters` for details.
 
 wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, mask=None)
     Search for motion in the source video stream.
@@ -496,21 +499,23 @@ save_frame(image, filename)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
-is_screen_black(frame, mask=None, threshold=10)
+is_screen_black(frame, mask=None, threshold=None)
     Check for the presence of a black screen in a video frame.
 
-    `frame` is the video frame to check, in OpenCV format (for example as
-    returned by `frames` and `get_frame`).
+    `frame` (numpy.array)
+      The video frame to check, in OpenCV format (for example as returned by
+      `frames` and `get_frame`).
 
-    The optional `mask` is the filename of a black & white image mask. It must
-    have white pixels for parts of the frame to check and black pixels for any
-    parts to ignore.
+    `mask` (string)
+      The filename of a black & white image mask. It must have white pixels for
+      parts of the frame to check and black pixels for any parts to ignore.
 
-    Even when a video frame appears to be black, the intensity of its pixels
-    is not always 0. To differentiate almost-black from non-black pixels, a
-    binary threshold is applied to the frame. The `threshold` value is
-    in the range 0 (black) to 255 (white). The global default can be changed by
-    setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
+    `threshold` (int) default: 10
+      Even when a video frame appears to be black, the intensity of its pixels
+      is not always 0. To differentiate almost-black from non-black pixels, a
+      binary threshold is applied to the frame. The `threshold` value is
+      in the range 0 (black) to 255 (white). The global default can be changed
+      by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
 
 draw_text(text, duration_secs=3)
     Write the specified `text` to the video output.
