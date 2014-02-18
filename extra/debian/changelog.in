@@ -1,0 +1,5 @@
+stb-tester (@VERSION@-1) unstable; urgency=medium
+
+  * Created from stb-tester git repo http://github.com/drothlis/stb-tester
+
+ -- @USER_NAME@ <@USER_EMAIL@>  @RFC_2822_DATE@

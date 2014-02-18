@@ -10,6 +10,10 @@ mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
+user_name?=$(shell git config user.name || \
+                   getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
+user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
+
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
@@ -37,10 +41,14 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt stbt.1 defaults.conf
 
-stbt: stbt.in .stbt-prefix VERSION
+extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
-	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
+	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
+	    -e "s/@RFC_2822_DATE@/$$(date -R)/g" \
+	    -e 's,@USER_NAME@,$(user_name),g' \
+	    -e 's,@USER_EMAIL@,$(user_email),g' \
+	     $< > $@
 
 defaults.conf: stbt.conf .stbt-prefix
 	perl -lpe \
@@ -170,6 +178,38 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 TAGS:
 	etags *.py
+
+# Debian Packaging
+
+extra/stb-tester_$(VERSION)-1.debian.tar.xz : \
+		extra/debian/changelog \
+		extra/debian/compat \
+		extra/debian/control \
+		extra/debian/copyright \
+		extra/debian/rules \
+		extra/debian/source/format
+	tar -C extra --xz -cvvf $@ $(subst extra/debian/,debian/,$^)
+
+debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-1.debian.tar.xz
+	rm -rf debian-src-pkg debian-src-pkg~ && \
+	mkdir debian-src-pkg~ && \
+	srcdir=$$PWD && \
+	tmpdir=$$(mktemp -d -t stb-tester-debian-pkg.XXXXXX) && \
+	cd $$tmpdir && \
+	cp $$srcdir/stb-tester-$(VERSION).tar.gz \
+	   stb-tester_$(VERSION).orig.tar.gz && \
+	cp $$srcdir/extra/stb-tester_$(VERSION)-1.debian.tar.xz . && \
+	tar -xzf stb-tester_$(VERSION).orig.tar.gz && \
+	cd stb-tester-$(VERSION) && \
+	tar -xJf ../stb-tester_$(VERSION)-1.debian.tar.xz && \
+	debuild -S && \
+	cd .. && \
+	mv stb-tester_$(VERSION)-1.dsc stb-tester_$(VERSION)-1_source.changes \
+	   stb-tester_$(VERSION)-1.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
+	   "$$srcdir/debian-src-pkg~" && \
+	cd "$$srcdir" && \
+	rm -Rf "$$tmpdir" && \
+	mv debian-src-pkg~ debian-src-pkg
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
