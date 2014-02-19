@@ -18,7 +18,7 @@
 #/
 #/   -d    Enable "stbt-debug" dump of intermediate images.
 #/   -v    Verbose. Print stbt standard output.
-#/   -vv   Extra verbose. Print stbt stdandard error output.
+#/   -vv   Extra verbose. Print stbt standard error output.
 #/
 #/   -t <tag>  Tag to add to test run directory names (useful
 #/         to differentiate directories when you intend to
