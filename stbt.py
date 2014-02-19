@@ -253,10 +253,13 @@ class MatchResult(object):
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     * `frame`: The video frame that was searched, in OpenCV format.
+    * `image`: The template image that was searched for, as given to
+      `wait_for_match` or `detect_match`.
     """
 
     def __init__(
-            self, timestamp, match, position, first_pass_result, frame=None):
+            self, timestamp, match, position, first_pass_result, frame=None,
+            image=None):
         self.timestamp = timestamp
         self.match = match
         self.position = position
@@ -268,18 +271,27 @@ class MatchResult(object):
                 "parameter will be mandatory.",
                 DeprecationWarning, stacklevel=2)
         self.frame = frame
+        if image is None:
+            warnings.warn(
+                "Creating a 'MatchResult' without specifying 'image' is "
+                "deprecated. In a future release of stb-tester the 'image' "
+                "parameter will be mandatory.",
+                DeprecationWarning, stacklevel=2)
+            image = ""
+        self.image = image
 
     def __str__(self):
         return (
             "MatchResult(timestamp=%s, match=%s, position=%s, "
-            "first_pass_result=%s, frame=%s)" % (
+            "first_pass_result=%s, frame=%s, image=%s)" % (
                 self.timestamp,
                 self.match,
                 self.position,
                 self.first_pass_result,
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
-                    self.frame.shape[2])))
+                    self.frame.shape[2]),
+                _template_name(self.image)))
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -338,7 +350,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
             result = MatchResult(
                 sample.get_buffer().pts, matched, position,
-                first_pass_certainty, numpy.copy(frame))
+                first_pass_certainty, numpy.copy(frame),
+                (image if isinstance(image, numpy.ndarray) else template_name))
 
             cv2.rectangle(
                 frame,
