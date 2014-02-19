@@ -212,6 +212,26 @@ debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)
 	rm -Rf "$$tmpdir" && \
 	mv debian-src-pkg~ debian-src-pkg
 
+# OpenSUSE build service
+
+OBS_PROJECT?=home:stb-tester
+OBS_PACKAGE?=stb-tester
+
+obs-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+	srcdir=$$PWD && \
+	tmpdir=$$(mktemp -d -t stb-tester-osc-publish.XXXXXX) && \
+	cd "$$tmpdir" && \
+	osc checkout "$(OBS_PROJECT)" "$(OBS_PACKAGE)" && \
+	cd "$(OBS_PROJECT)/$(OBS_PACKAGE)" && \
+	rm * && \
+	cp "$$srcdir"/debian-src-pkg/* \
+	   "$$srcdir/stb-tester-$(VERSION).tar.gz" \
+	   "$$srcdir/extra/stb-tester.spec" . && \
+	osc addremove && \
+	osc commit -m "Update to stb-tester version $(VERSION)" && \
+	cd "$$srcdir" && \
+	rm -Rf "$$tmpdir"
+
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
 .PHONY: FORCE TAGS
