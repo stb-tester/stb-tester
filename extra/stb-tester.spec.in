@@ -4,7 +4,7 @@ Release: 1%{?dist}
 Summary: Automated user interface testing for set-top boxes
 Group: Development/Tools
 URL: http://stb-tester.com
-License: LGPLv2.1+
+License: LGPL-2.1+
 Source: %{name}-@VERSION@.tar.gz
 BuildArch: noarch
 BuildRequires: python-docutils
@@ -37,14 +37,14 @@ command.
 make prefix=/usr sysconfdir=/etc
 
 %install
-make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
+make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,-)
 
 /usr/bin/stbt
 /usr/bin/irnetbox-proxy
-/usr/libexec/stbt
+%{_libexecdir}/stbt
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
