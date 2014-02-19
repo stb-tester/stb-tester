@@ -106,11 +106,21 @@ clean:
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
+	# Workaround for https://github.com/nose-devs/nose/issues/49:
+	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v stbt.py irnetbox.py \
-	    tests/test_*.py
-check-integrationtests:
+	    tests/test_*.py \
+	    nosetest-issue-49-workaround-stbt-control.py && \
+	rm nosetest-issue-49-workaround-stbt-control.py
+check-integrationtests :
+	rm -rf tests/test-install && \
+	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
+	      man1dir sysconfdir && \
+	make install prefix=$$PWD/tests/test-install && \
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
-	$(parallel) tests/run-tests.sh
+	$(parallel) tests/run-tests.sh -i && \
+	rm -rf tests/test-install
 check-pylint:
 	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
 	    stbt-templatematch \

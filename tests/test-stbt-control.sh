@@ -1,17 +1,11 @@
 test_that_stbt_control_sends_a_single_key() {
-    stbt-control --control none MENU &&
+    stbt control --control none MENU &&
     cat log | grep -q 'NullRemote: Ignoring request to press "MENU"'
-}
-
-test_stbt_control_unit_tests() {
-    # Workaround for https://github.com/nose-devs/nose/issues/49
-    cp "$srcdir"/stbt-control stbt-control.py
-    PYTHONPATH="$srcdir" nosetests --with-doctest -v stbt-control.py
 }
 
 test_stbt_control_as_stbt_record_control_recorder() {
     cat > test.expect <<-EOF &&
-	spawn stbt-record --control-recorder=stbt-control:$testdir/stbt-control.keymap
+	spawn stbt record --control-recorder=stbt-control:$testdir/stbt-control.keymap
 	expect "stbt-control.keymap"
 	send "f"
 	sleep 1

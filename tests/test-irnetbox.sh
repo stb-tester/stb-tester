@@ -39,7 +39,7 @@ test_stbt_run_irnetbox_control() {
 	press("MENU")
 	press("OK")
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || return
     [[ "$(grep "Received message OUTPUT_IR_ASYNC" fake-irnetbox.log |
@@ -53,7 +53,7 @@ test_that_press_fails_on_irnetbox_error() {
     cat > test.py <<-EOF
 	press("MENU")
 	EOF
-    ! stbt-run -v \
+    ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || fail "Expected 'press' to raise exception"
     cat log | grep -q "IRNetBox returned ERROR" ||
@@ -66,7 +66,7 @@ test_that_press_fails_on_irnetbox_nack() {
     cat > test.py <<-EOF
 	press("MENU")
 	EOF
-    ! stbt-run -v \
+    ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || fail "Expected 'press' to raise exception"
     cat log | grep -q "IRNetBox returned NACK" ||
@@ -82,7 +82,7 @@ test_that_press_waits_for_irnetbox_async_complete() {
 	press("MENU")
 	print "After press: %d" % time.time()
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || return
 
@@ -98,7 +98,7 @@ test_that_press_times_out_when_irnetbox_doesnt_reply() {
     cat > test.py <<-EOF
 	press("MENU")
 	EOF
-    ! stbt-run -v \
+    ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || fail "Expected 'press' to raise exception"
     cat log | grep -q timeout || fail "Didn't raise timeout"

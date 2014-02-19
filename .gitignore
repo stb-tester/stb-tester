@@ -12,3 +12,5 @@ irnetbox-proxyc
 TAGS
 VERSION
 extra/vm/.vagrant
+tests/test-install
+nosetest-issue-49-workaround-stbt-control.py
