@@ -15,6 +15,7 @@ To build a new release:
     cd ~/src/stb-tester
     git checkout <latest tag>
     make dist
+    make extra/stb-tester.spec
     cp stb-tester-<latest tag>.tar.gz extra/stb-tester.spec \
         ~/src/stb-tester-openbuildservice/home:stb-tester/stb-tester/
     cd ~/src/stb-tester-openbuildservice/home:stb-tester/stb-tester

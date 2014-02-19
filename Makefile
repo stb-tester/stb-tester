@@ -41,8 +41,9 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt stbt.1 defaults.conf
 
-extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
+	    -e 's,@ESCAPED_VERSION@,$(subst -,_,$(VERSION)),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
 	    -e "s/@RFC_2822_DATE@/$$(date -R)/g" \
