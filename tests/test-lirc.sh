@@ -20,7 +20,7 @@ test_press_with_lirc() {
 	press("menu")
 	press("ok")
 	EOF
-    stbt-run -v --control lirc:$lircd_socket:test test.py || return
+    stbt run -v --control lirc:$lircd_socket:test test.py || return
     grep -q "fake-lircd: Received: SEND_ONCE test menu" fake-lircd.log &&
     grep -q "fake-lircd: Received: SEND_ONCE test ok" fake-lircd.log ||
         fail "fake-lircd didn't receive 2 SEND_ONCE messages"
@@ -32,7 +32,7 @@ test_that_press_fails_on_lircd_error() {
     cat > test.py <<-EOF &&
 	press("button_that_causes_error")
 	EOF
-    ! stbt-run -v --control lirc:$lircd_socket:test test.py ||
+    ! stbt run -v --control lirc:$lircd_socket:test test.py ||
         fail "Expected 'press' to raise exception"
     cat log | grep 'UITestError' | grep 'fake-lircd error' ||
         fail "Expected to see UITestError('fake-lircd error')"
@@ -44,7 +44,7 @@ test_that_press_times_out_when_lircd_doesnt_reply() {
     cat > test.py <<-EOF
 	press("button_that_causes_timeout")
 	EOF
-    timeout 10s stbt-run -v --control lirc:$lircd_socket:test test.py
+    timeout 10s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
     [ $? -eq $timedout ] && fail "'press' timed out"
     [ $? -ne 0 ] || fail "Expected 'press' to raise exception"
@@ -56,7 +56,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_success() {
     cat > test.py <<-EOF
 	press("button_that_causes_sighup_and_broadcast_and_ack")
 	EOF
-    stbt-run -v --control lirc:$lircd_socket:test test.py || return
+    stbt run -v --control lirc:$lircd_socket:test test.py || return
 }
 
 test_that_press_ignores_lircd_broadcast_messages_on_error() {
@@ -65,7 +65,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_error() {
     cat > test.py <<-EOF
 	press("button_that_causes_sighup_and_broadcast_and_error")
 	EOF
-    ! stbt-run -v --control lirc:$lircd_socket:test test.py ||
+    ! stbt run -v --control lirc:$lircd_socket:test test.py ||
         fail "Expected 'press' to raise exception"
     cat log | grep 'UITestError' | grep 'fake-lircd error' ||
         fail "Expected to see UITestError('fake-lircd error')"
@@ -77,7 +77,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {
     cat > test.py <<-EOF
 	press("button_that_causes_sighup_and_broadcast_and_timeout")
 	EOF
-    timeout 10s stbt-run -v --control lirc:$lircd_socket:test test.py
+    timeout 10s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
     [ $? -eq $timedout ] && fail "'press' timed out"
     [ $? -ne 0 ] || fail "Expected 'press' to raise exception"

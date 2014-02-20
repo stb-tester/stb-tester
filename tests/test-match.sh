@@ -5,7 +5,7 @@ test_wait_for_match() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png", consecutive_matches=2)
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_match_no_match() {
@@ -13,7 +13,7 @@ test_wait_for_match_no_match() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=1)
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_wait_for_match_changing_template() {
@@ -27,14 +27,14 @@ test_wait_for_match_changing_template() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png")
 	EOF
-    stbt-run -v --control=none test.py
+    stbt run -v --control=none test.py
 }
 
 test_wait_for_match_nonexistent_template() {
     cat > test.py <<-EOF
 	wait_for_match("idontexist.png")
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_wait_for_match_noise_threshold_raises_warning() {
@@ -42,7 +42,7 @@ test_wait_for_match_noise_threshold_raises_warning() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png", noise_threshold=0.2)
 	EOF
-    stbt-run -v test.py 2>&1 | grep 'DeprecationWarning'
+    stbt run -v test.py 2>&1 | grep 'DeprecationWarning'
 }
 
 test_wait_for_match_match_method_param_affects_first_pass() {
@@ -57,7 +57,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 	        match_method="ccorr-normed", confirm_method="none"),
 	    timeout_secs=1)
 	EOF
-    stbt-run -v test.py || return
+    stbt run -v test.py || return
 
     cat > test.py <<-EOF
 	wait_for_match(
@@ -66,7 +66,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 	        match_method="sqdiff-normed", confirm_method="none"),
 	    timeout_secs=1)
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_wait_for_match_match_threshold_param_affects_match() {
@@ -81,7 +81,7 @@ test_wait_for_match_match_threshold_param_affects_match() {
 	    match_parameters=MatchParameters(
 	        match_threshold=0.8, confirm_method="none"))
 	EOF
-    ! stbt-run -v test.py || return
+    ! stbt run -v test.py || return
 
     cat > test.py <<-EOF
 	wait_for_match(
@@ -89,7 +89,7 @@ test_wait_for_match_match_threshold_param_affects_match() {
 	    match_parameters=MatchParameters(
 	        match_threshold=0.2, confirm_method="none"))
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_zero() {
@@ -102,7 +102,7 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
 	    wait_for_match("$testdir/" + img, match_parameters=MatchParameters(
 	        match_threshold=0, confirm_method="none"))
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_match_confirm_methods_produce_different_results() {
@@ -115,7 +115,7 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 	    "$testdir/known-fail-template.png",
 	    match_parameters=MatchParameters(confirm_method="normed-absdiff"))
 	EOF
-    ! stbt-run -v --source-pipeline="$source_pipeline" --control=None test.py \
+    ! stbt run -v --source-pipeline="$source_pipeline" --control=None test.py \
         || return
 
     # Expect false match.
@@ -124,7 +124,7 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 	    "$testdir/known-fail-template.png",
 	    match_parameters=MatchParameters(confirm_method="absdiff"))
 	EOF
-    stbt-run -v --source-pipeline="$source_pipeline" --control=None test.py
+    stbt run -v --source-pipeline="$source_pipeline" --control=None test.py
 }
 
 test_wait_for_match_erode_passes_affects_match() {
@@ -137,14 +137,14 @@ test_wait_for_match_erode_passes_affects_match() {
 	wait_for_match("$testdir/circle-small.png",
 	               match_parameters=MatchParameters(erode_passes=2))
 	EOF
-    stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py \
+    stbt run -v --source-pipeline="$source_pipeline" --control=none test.py \
         || return
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/circle-small.png",
 	               match_parameters=MatchParameters(erode_passes=1))
 	EOF
-    ! stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py
+    ! stbt run -v --source-pipeline="$source_pipeline" --control=none test.py
 }
 
 test_wait_for_match_confirm_threshold_affects_match() {
@@ -157,14 +157,14 @@ test_wait_for_match_confirm_threshold_affects_match() {
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
 	               match_parameters=MatchParameters(confirm_threshold=0.5))
 	EOF
-    stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py \
+    stbt run -v --source-pipeline="$source_pipeline" --control=none test.py \
         || return
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
 	               match_parameters=MatchParameters(confirm_threshold=0.4))
 	EOF
-    ! stbt-run -v --source-pipeline="$source_pipeline" --control=none test.py
+    ! stbt run -v --source-pipeline="$source_pipeline" --control=none test.py
 }
 
 test_wait_for_match_with_pyramid_optimisation_disabled() {
@@ -173,7 +173,7 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
 	EOF
     sed -e 's/pyramid_levels =.*/pyramid_levels = 1/' \
         "$testdir"/stbt.conf > stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test.py
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test.py
 }
 
 test_detect_match_nonexistent_template() {
@@ -182,7 +182,7 @@ test_detect_match_nonexistent_template() {
 	m = detect_match("idontexist.png").next()
 	sys.exit(0 if m.match else 1)
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_press_until_match_presses_once() {
@@ -191,7 +191,7 @@ test_press_until_match_presses_once() {
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png",
 	    interval_secs=1)
 	EOF
-    stbt-run -v test.py &> test.log || { cat test.log; return 1; }
+    stbt run -v test.py &> test.log || { cat test.log; return 1; }
     [[ "$(grep -c 'Pressed checkers-8' test.log)" == 1 ]] ||
         { cat test.log; fail "Didn't see exactly 1 keypress"; }
 }
@@ -200,7 +200,7 @@ test_press_until_match_presses_zero_times_if_match_already_present() {
     cat > test.py <<-EOF
 	press_until_match("smpte", "$testdir/videotestsrc-redblue.png")
 	EOF
-    stbt-run -v test.py &> test.log || { cat test.log; return 1; }
+    stbt run -v test.py &> test.log || { cat test.log; return 1; }
     [[ "$(grep -c 'Pressed smpte' test.log)" == 0 ]] ||
         { cat test.log; fail "Saw > 0 keypresses"; }
 }
@@ -211,7 +211,7 @@ test_press_until_match_max_presses() {
 	    "ball", "$testdir/videotestsrc-checkers-8.png",
 	    interval_secs=1, max_presses=3)
 	EOF
-    ! stbt-run -v test.py &> test.log || fail "Expected MatchTimeout"
+    ! stbt run -v test.py &> test.log || fail "Expected MatchTimeout"
     [[ "$(grep -c 'Pressed ball' test.log)" == 3 ]] ||
         { cat test.log; fail "Didn't see exactly 3 keypresses"; }
 }
@@ -226,7 +226,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 	    "Took %dns; expected >=3s" % (match.timestamp - start))
 	EOF
     cp "$testdir"/stbt.conf . &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test-3s.py &&
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test-3s.py &&
 
     cat > test-1s.py <<-EOF &&
 	import stbt
@@ -238,7 +238,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 	EOF
     sed -e 's/interval_secs =.*/interval_secs = 1/' \
         stbt.conf > stbt.conf~ && mv stbt.conf~ stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt-run -v test-1s.py
+    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test-1s.py
 }
 
 test_wait_for_match_searches_in_script_directory() {
@@ -246,7 +246,7 @@ test_wait_for_match_searches_in_script_directory() {
 	wait_for_match("in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_press_until_match_searches_in_script_directory() {
@@ -254,7 +254,7 @@ test_press_until_match_searches_in_script_directory() {
 	press_until_match("checkers-8", "in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-checkers-8.png in-script-dir.png
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_searches_in_script_directory() {
@@ -264,7 +264,7 @@ test_detect_match_searches_in_script_directory() {
 	    raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_searches_in_library_directory() {
@@ -281,7 +281,7 @@ test_detect_match_searches_in_library_directory() {
 	        raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png stbt_helpers/in-helpers-dir.png
-    PYTHONPATH="$PWD:$PYTHONPATH" stbt-run -v test.py
+    PYTHONPATH="$PWD:$PYTHONPATH" stbt run -v test.py
 }
 
 test_detect_match_searches_in_caller_directory() {
@@ -304,7 +304,7 @@ test_detect_match_searches_in_caller_directory() {
 	        raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png stbt_tests/in-caller-dir.png
-    PYTHONPATH="$PWD:$PYTHONPATH" stbt-run -v test.py
+    PYTHONPATH="$PWD:$PYTHONPATH" stbt run -v test.py
 }
 
 test_changing_input_video_with_the_test_control() {
@@ -313,7 +313,7 @@ test_changing_input_video_with_the_test_control() {
 	press("checkers-8")
 	wait_for_match("$testdir/videotestsrc-checkers-8.png")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_reports_match() {
@@ -327,7 +327,7 @@ test_detect_match_reports_match() {
 	        raise Exception("No match incorrectly reported.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_reports_match_position() {
@@ -342,7 +342,7 @@ test_detect_match_reports_match_position() {
 	            "got %s." % str(match_result.position))
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_reports_valid_timestamp() {
@@ -361,7 +361,7 @@ test_detect_match_reports_valid_timestamp() {
 	    last_timestamp = match_result.timestamp
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_reports_no_match() {
@@ -375,7 +375,7 @@ test_detect_match_reports_no_match() {
 	        raise Exception("Wrong match reported.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_times_out() {
@@ -384,7 +384,7 @@ test_detect_match_times_out() {
 	                                 timeout_secs=1):
 	    pass
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_times_out_during_yield() {
@@ -397,7 +397,7 @@ test_detect_match_times_out_during_yield() {
 	    i += 1
 	assert i == 1
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_changing_template_is_not_racy() {
@@ -425,7 +425,7 @@ test_detect_match_changing_template_is_not_racy() {
 	        raise Exception("Wrongly reported a match: race condition.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_match_example_press_and_wait_for_match() {
@@ -443,7 +443,7 @@ test_detect_match_example_press_and_wait_for_match() {
 	            sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_precondition_script() {
@@ -453,7 +453,7 @@ test_precondition_script() {
 	wait_for_match(
 	    "$testdir/videotestsrc-checkers-8.png")
 	EOF
-    PYTHONPATH="$testdir:$PYTHONPATH" stbt-run -v test.py
+    PYTHONPATH="$testdir:$PYTHONPATH" stbt run -v test.py
 }
 
 test_detect_match_visualisation() {
@@ -466,12 +466,12 @@ test_detect_match_visualisation() {
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
-    stbt-run -v \
+    stbt run -v \
         --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
         detect_match.py &
     trap "kill $!; rm fifo" EXIT
 
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
@@ -480,7 +480,7 @@ test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     cat > test.py <<-EOF &&
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
-    ! stbt-run -v --source-pipeline 'videotestsrc pattern=black' test.py &&
+    ! stbt run -v --source-pipeline 'videotestsrc pattern=black' test.py &&
 
     # sqdiff-normed & ccorr-normed give incorrect result on all-black images
     stbt templatematch screenshot.png "$testdir"/black-full-frame.png \

@@ -1,0 +1,8 @@
+#!/usr/bin/make -f
+
+export prefix=/usr
+export libexecdir=/usr/lib
+export sysconfdir=/etc
+
+%:
+	dh $@

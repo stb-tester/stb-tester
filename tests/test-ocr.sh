@@ -10,7 +10,7 @@ test_ocr_on_live_video() {
 	text = stbt.ocr(region=stbt.Region(x=70, y=180, width=90, height=40))
 	assert text == "Hello", "Unexpected text: %s" % text
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --source-pipeline="videotestsrc pattern=black ! \
                 textoverlay text=Hello\ there font-desc=Sans\ 48" \
         test.py

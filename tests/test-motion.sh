@@ -4,35 +4,35 @@ test_wait_for_motion_int() {
     cat > test.py <<-EOF
 	wait_for_motion(consecutive_frames=10)
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_motion_str() {
     cat > test.py <<-EOF
 	wait_for_motion(consecutive_frames='10/10')
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_motion_no_motion_int() {
     cat > test.py <<-EOF
 	wait_for_motion(consecutive_frames=10, timeout_secs=1)
 	EOF
-    ! stbt-run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
+    ! stbt run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
 }
 
 test_wait_for_motion_no_motion_str() {
     cat > test.py <<-EOF
 	wait_for_motion(consecutive_frames='10/10', timeout_secs=1)
 	EOF
-    ! stbt-run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
+    ! stbt run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
 }
 
 test_wait_for_motion_with_mask_reports_motion() {
     cat > test.py <<-EOF
 	wait_for_motion(mask="$testdir/videotestsrc-mask-video.png")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_motion_with_mask_does_not_report_motion() {
@@ -40,7 +40,7 @@ test_wait_for_motion_with_mask_does_not_report_motion() {
 	wait_for_motion(
 	    mask="$testdir/videotestsrc-mask-no-video.png", timeout_secs=1)
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_wait_for_motion_nonexistent_mask() {
@@ -49,7 +49,7 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    timeout 10 stbt-run -v test.py
+    timeout 10 stbt run -v test.py
     local ret=$?
     echo "return code: $ret"
     [ $ret -ne $timedout -a $ret -ne 0 ]
@@ -59,14 +59,14 @@ test_wait_for_motion_with_high_noisethreshold_reports_motion() {
     cat > test.py <<-EOF
 	wait_for_motion(noise_threshold=1.0)
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
     cat > test.py <<-EOF
 	wait_for_motion(noise_threshold=0.0, timeout_secs=1)
 	EOF
-    ! stbt-run -v test.py
+    ! stbt run -v test.py
 }
 
 test_detect_motion_reports_motion() {
@@ -80,7 +80,7 @@ test_detect_motion_reports_motion() {
 	        raise Exception("Motion not reported.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_reports_valid_timestamp() {
@@ -99,7 +99,7 @@ test_detect_motion_reports_valid_timestamp() {
 	    last_timestamp = motion_result.timestamp
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_reports_no_motion() {
@@ -114,7 +114,7 @@ test_detect_motion_reports_no_motion() {
 	        raise Exception("Motion incorrectly reported.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_times_out() {
@@ -122,14 +122,14 @@ test_detect_motion_times_out() {
 	for motion_result in detect_motion(timeout_secs=1):
 	    pass
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_with_debug_output_does_not_segfault_without_mask() {
     cat > test.py <<-EOF
 	wait_for_motion(timeout_secs=1)
 	EOF
-    stbt-run -vv test.py  # creates stbt-debug
+    stbt run -vv test.py  # creates stbt-debug
 
     if [ $? -eq 0 ] && [ -d "stbt-debug" ] && [ "$leave_scratch_dir" != "true" ]; then
         rm -rf "stbt-debug"
@@ -145,7 +145,7 @@ test_detect_motion_times_out_during_yield() {
 	    i += 1
 	assert i == 1
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_changing_mask() {
@@ -159,7 +159,7 @@ test_detect_motion_changing_mask() {
 	        sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_changing_mask_is_not_racy() {
@@ -182,7 +182,7 @@ test_detect_motion_changing_mask_is_not_racy() {
 	        raise Exception("Wrongly reported motion: race condition.")
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_detect_motion_example_press_and_wait_for_no_motion() {
@@ -200,5 +200,5 @@ test_detect_motion_example_press_and_wait_for_no_motion() {
 	            sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }

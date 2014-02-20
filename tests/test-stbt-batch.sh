@@ -1,7 +1,22 @@
 # Run with ./run-tests.sh
 
+create_test_repo() {
+    (
+        git init &&
+        git config user.name "Stb Tester" &&
+        git config user.email "test-stbt-batch@stb-tester.com" &&
+        mkdir tests &&
+        cp "$testdir/test.py" "$testdir/test2.py" \
+           "$testdir/videotestsrc-checkers-8.png" \
+           "$testdir/videotestsrc-gamut.png" tests/ &&
+        git add tests &&
+        git commit -m "Initial commit"
+    ) >/dev/null 2>&1 || fail "Failed to set up git repo"
+}
+
 test_stbt_batch_run_once() {
-    { stbt-batch run -1 -t "my label" "$testdir"/test.py ||
+    create_test_repo
+    { stbt batch run -1 -t "my label" tests/test.py ||
         fail "stbt batch run failed"
     } | sed 's/^/stbt batch run: /'
 
@@ -20,7 +35,8 @@ test_stbt_batch_run_once() {
 }
 
 test_that_stbt_batch_run_runs_until_failure() {
-    timeout 20 stbt-batch run "$testdir"/test.py
+    create_test_repo
+    timeout 20 stbt batch run tests/test.py
     [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -32,7 +48,8 @@ test_that_stbt_batch_run_runs_until_failure() {
 }
 
 test_that_stbt_batch_run_continues_after_uninteresting_failure() {
-    timeout 30 stbt-batch run -k "$testdir"/test.py
+    create_test_repo
+    timeout 30 stbt batch run -k tests/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -108,7 +125,8 @@ expect_runner_to_say() {
 }
 
 test_stbt_batch_run_sigint_once() {
-    sleep=4 stbt-batch run "$testdir"/test.py &
+    create_test_repo
+    sleep=4 stbt batch run tests/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
     kill $runner
@@ -118,7 +136,8 @@ test_stbt_batch_run_sigint_once() {
 }
 
 test_stbt_batch_run_sigint_twice() {
-    sleep=10 stbt-batch run "$testdir"/test.py &
+    create_test_repo
+    sleep=10 stbt batch run tests/test.py &
     runner=$!
     expect_runner_to_say "test.py ..."
     kill $runner
@@ -131,9 +150,10 @@ test_stbt_batch_run_sigint_twice() {
 }
 
 test_that_stbt_batch_run_passes_arguments_to_script() {
-    stbt-batch run \
-        "$testdir"/test.py "a b" c d -- \
-        "$testdir"/test.py efg hij
+    create_test_repo
+    stbt batch run \
+        tests/test.py "a b" c d -- \
+        tests/test.py efg hij
 
     ls -d ????-??-??_??.??.??* > testruns
     assert grep 'Command-line argument: a b$' $(head -1 testruns)/stdout.log
@@ -152,16 +172,18 @@ test_stbt_batch_report_with_symlinks_for_each_testrun() {
     # directories, you gather all results into a single report by symlinking
     # each testrun into a single directory.
 
-    stbt-batch run -1 "$testdir"/test.py &&
+    create_test_repo
+    stbt batch run -1 tests/test.py &&
     mkdir new-report &&
     ( cd new-report; ln -s ../2* . ) ||
     fail "report directory structure setup failed"
 
-    stbt-batch report --html-only new-report/2* || return
+    stbt batch report --html-only new-report/2* || return
     [[ -f new-report/index.html ]] || fail "new-report/index.html not created"
 }
 
 test_stbt_batch_run_with_custom_logging() {
+    create_test_repo
     cat "$testdir"/stbt.conf |
     sed -e "s,pre_run =,& $PWD/my-logger," \
         -e "s,post_run =,& $PWD/my-logger," > stbt.conf
@@ -173,7 +195,7 @@ test_stbt_batch_run_with_custom_logging() {
     chmod u+x my-logger
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    stbt-batch run -1 "$testdir"/test.py
+    stbt batch run -1 tests/test.py
 
     grep -q '<th>start time</th>' index.html ||
         fail "'start time' missing from report"
@@ -182,6 +204,7 @@ test_stbt_batch_run_with_custom_logging() {
 }
 
 test_stbt_batch_run_with_custom_classifier() {
+    create_test_repo
     cat "$testdir"/stbt.conf |
     sed -e "s,classify =,& $PWD/my-classifier," > stbt.conf
 
@@ -195,13 +218,14 @@ test_stbt_batch_run_with_custom_classifier() {
     chmod u+x my-classifier
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    stbt-batch run "$testdir"/test.py
+    stbt batch run tests/test.py
 
     grep -q 'Intentional failure' index.html ||
         fail "Custom failure reason missing from report"
 }
 
 test_stbt_batch_run_with_custom_recovery_script() {
+    create_test_repo
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -212,13 +236,14 @@ test_stbt_batch_run_with_custom_recovery_script() {
     chmod u+x my-recover
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    stbt-batch run "$testdir"/test.py
+    stbt batch run tests/test.py
 
     grep -q '>powercycle.log</a>' latest/index.html ||
         fail "Custom recovery script's log missing from report"
 }
 
 test_stbt_batch_run_recovery_exit_status() {
+    create_test_repo
     cat "$testdir"/stbt.conf |
     sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
 
@@ -229,7 +254,7 @@ test_stbt_batch_run_recovery_exit_status() {
     chmod u+x my-recover
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    stbt-batch run -kk "$testdir"/test.py
+    stbt batch run -kk tests/test.py
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
@@ -270,13 +295,14 @@ test_stbt_batch_instaweb() {
         done
     }
 
-    stbt-batch run "$testdir"/test.py
+    create_test_repo
+    stbt batch run tests/test.py
     rundir=$(ls -d 20* | tail -1)
     assert grep -q UITestError $rundir/failure-reason
     assert grep -q UITestError $rundir/index.html
     assert grep -q UITestError index.html
 
-    stbt-batch instaweb --debug 127.0.0.1:5787 &
+    stbt batch instaweb --debug 127.0.0.1:5787 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5787/'
@@ -321,7 +347,7 @@ test_that_stbt_batch_instaweb_shows_directory_listing() {
     mkdir my-test-session
     echo hi > my-test-session/index.html
 
-    stbt-batch instaweb --debug 127.0.0.1:5788 &
+    stbt batch instaweb --debug 127.0.0.1:5788 &
     server=$!
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5788/'
@@ -337,6 +363,7 @@ test_that_stbt_batch_instaweb_shows_directory_listing() {
 }
 
 test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
+    create_test_repo
     cat >my-logger <<-EOF
 	read x
 	[[ -z \$x ]] && echo STDIN=None || echo STDIN=\$x
@@ -347,7 +374,7 @@ test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
         sed -e "s,pre_run =,& $PWD/my-logger," >stbt.conf
 
     export STBT_CONFIG_FILE="$PWD"/stbt.conf
-    stbt-batch run -1 "$testdir"/test.py "$testdir"/test2.py
+    stbt batch run -1 tests/test.py tests/test2.py
     cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
     cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"
 }

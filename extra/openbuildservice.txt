@@ -1,31 +1,21 @@
 Instructions to deploy a new stb-tester version to the OpenSUSE Build Service
 =============================================================================
 
-The OpenSUSE Build Service (OBS) builds stb-tester RPM packages available at
-http://download.opensuse.org/repositories/home:/stb-tester/
-
-based on the stb-tester.spec file in this directory.
+The OpenSUSE Build Service (OBS) builds stb-tester RPM and deb packages
+available at http://download.opensuse.org/repositories/home:/stb-tester/
+based on the stb-tester.spec file and the contents of debian/ in this
+directory.
 
 To build a new release:
 
     yum install osc  # The OpenBuildService command-line client
-    mkdir ~/src/stb-tester-openbuildservice
-    cd ~/src/stb-tester-openbuildservice
-    osc checkout home:stb-tester  # You will need to know the password! :-)
-    cd ~/src/stb-tester
-    git checkout <latest tag>
-    make dist
-    cp stb-tester-<latest tag>.tar.gz extra/stb-tester.spec \
-        ~/src/stb-tester-openbuildservice/home:stb-tester/stb-tester/
-    cd ~/src/stb-tester-openbuildservice/home:stb-tester/stb-tester
-    osc add stb-tester-<latest tag>.tar.gz
-    osc commit  # Uploads tar & spec files, triggers new build
+    make obs-publish # You will need to know the password! :-)
 
 The new packages can take up to an hour to appear at
 http://download.opensuse.org/repositories/home:/stb-tester/
 
-Currently packages are built for Fedora 17 to 20 (x86 and x86_64).
-To add other architectures and distros see
+Currently packages are built for Fedora 17 to 20 (x86 and x86_64), OpenSUSE
+12.2+ and Debian 7.0.  To add other architectures and distros see
 https://build.opensuse.org/project/show?project=home%3Astb-tester
 
 We don't currently build packages for RHEL6 because of missing dependencies
@@ -33,7 +23,6 @@ python-docutils and opencv-devel. Presumably these are already available from
 other projects within the OpenSUSE Build Service, and we just need to configure
 our OBS project to find those packages.
 
-We don't currently build packages for Debian or Ubuntu because those systems
-use "deb" files instead of rpm. We would need to write the Debian equivalent of
-"stb-tester.spec" (volunteers welcome!). See
-http://en.opensuse.org/openSUSE:Build_Service_Debian_builds
+We don't currently build packages for Ubuntu because we depend on packages in
+the ubuntu "universe" repository which OBS doesn't allow.  An Ubuntu Personal
+Package Archive is more appropriate for this anyhow.
