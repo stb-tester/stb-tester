@@ -10,7 +10,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 import argparse
 from collections import namedtuple, deque
 import ConfigParser
-import contextlib
+from contextlib import contextmanager
 import datetime
 import errno
 import functools
@@ -33,7 +33,7 @@ import numpy
 import irnetbox
 
 
-@contextlib.contextmanager
+@contextmanager
 def hide_argv():
     """ For use with 'with' statement: Provides a context with an empty
     argument list.
@@ -49,7 +49,7 @@ def hide_argv():
         sys.argv = old_argv
 
 
-@contextlib.contextmanager
+@contextmanager
 def hide_stderr():
     """For use with 'with' statement: Hide stderr output.
 
@@ -758,7 +758,7 @@ def debug(msg):
             "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
-@contextlib.contextmanager
+@contextmanager
 def as_precondition(message):
     """Context manager that replaces UITestFailures with UITestErrors.
 
@@ -969,6 +969,50 @@ def _config_init(force=False):
         ])
         _config = config
     return _config
+
+
+@contextmanager
+def _sponge(filename):
+    """Opens a file to be written, which will be atomically replaced if the
+    contextmanager exits cleanly.  Useful like the UNIX moreutils command
+    `sponge`
+    """
+    from tempfile import NamedTemporaryFile
+    with NamedTemporaryFile(prefix=filename + '.', suffix='~',
+                            delete=False) as f:
+        try:
+            yield f
+            os.rename(f.name, filename)
+        except:
+            os.remove(f.name)
+            raise
+
+
+def _set_config(section, option, value):
+    """Update config values (in memory and on disk).
+
+    WARNING: This will overwrite your stbt.conf but comments and whitespace
+    will not be preserved.  For this reason it is not a part of stbt's public
+    API.  This is a limitation of Python's ConfigParser which hopefully we can
+    solve in the future.
+
+    Writes to `$STBT_CONFIG_FILE` if set falling back to
+    `$HOME/stbt/stbt.conf`.
+    """
+    user_config = '%s/stbt/stbt.conf' % _xdg_config_dir()
+    custom_config = os.environ.get('STBT_CONFIG_FILE') or user_config
+
+    config = _config_init()
+
+    parser = ConfigParser.SafeConfigParser()
+    parser.read([custom_config])
+    parser.set(section, option, value)
+
+    with _sponge(custom_config) as f:
+        parser.write(f)
+
+    config.set(section, option, value)
+
 
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
@@ -2208,7 +2252,7 @@ def test_wait_for_motion_half_motion_int():
             pass
 
 
-@contextlib.contextmanager
+@contextmanager
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
         def frames(self, _timeout_secs=10):
