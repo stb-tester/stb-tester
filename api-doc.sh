@@ -112,6 +112,7 @@ substitute_as_precondition_signature() {
 substitute_default_params() {
     local param value
     for param in \
+        is_screen_black.threshold \
         match.match_method \
         match.match_threshold \
         match.confirm_method \
@@ -119,6 +120,9 @@ substitute_default_params() {
         match.confirm_threshold \
         motion.noise_threshold \
         motion.consecutive_frames \
+        press.interpress_delay_secs \
+        press_until_match.interval_secs \
+        press_until_match.max_presses \
     ; do
         value=$(STBT_CONFIG_FILE=./stbt.conf ./stbt-config $param)
         # In:  `match_method` (str) default: <any value here>

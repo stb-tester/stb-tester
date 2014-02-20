@@ -107,7 +107,7 @@ clean:
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py \
-	    tests/test_irnetbox_proxy.py
+	    tests/test_*.py
 check-integrationtests:
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
@@ -116,8 +116,8 @@ check-pylint:
 	    stbt-templatematch \
 	    stbt_pylint_plugin.py \
 	    irnetbox.py irnetbox-proxy \
-	    tests/test_irnetbox_proxy.py tests/fake-irnetbox \
-	    stbt-batch.d/report.py stbt-batch.d/instaweb |\
+	    tests/test_*.py tests/fake-irnetbox stbt-batch.d/report.py \
+	    stbt-batch.d/instaweb |\
 	PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
