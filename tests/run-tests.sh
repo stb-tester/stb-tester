@@ -4,6 +4,7 @@
 
 #/ Usage: run-tests.sh [options] [testsuite or testcase names...]
 #/
+#/         -i      Run against installed version of stbt
 #/         -l      Leave the scratch dir created in /tmp.
 #/         -v      Verbose (don't suppress console output from tests).
 #/
@@ -12,8 +13,9 @@
 cd "$(dirname "$0")"
 testdir="$PWD"
 
-while getopts "lv" option; do
+while getopts "lvi" option; do
     case $option in
+        i) test_installation=true;;
         l) leave_scratch_dir=true;;
         v) verbose=true;;
         *) grep '^#/' < "$0" | cut -c4- >&2; exit 1;; # Print usage message
@@ -33,13 +35,18 @@ done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
 srcdir="$testdir/.."
-export PATH="$srcdir:$PATH"
 export STBT_CONFIG_FILE="$testdir/stbt.conf"
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
 rm -f ~/.gstreamer-0.10/registry.*
+
+if [[ "$test_installation" != "true" ]]; then
+    test_installation_prefix="$(mktemp -d -t stbt-test-installation.XXXXXX)"
+    make -C "$srcdir" install "prefix=$test_installation_prefix"
+    export PATH="$test_installation_prefix/bin:$PATH"
+fi
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
@@ -96,6 +103,9 @@ ret=0
 for t in ${testcases[*]}; do
     run $t || ret=1
 done
+if [[ -n "$test_installation_prefix" ]]; then
+    rm -rf "$test_installation_prefix"
+fi
 exit $ret
 
 

@@ -5,8 +5,8 @@ test_extra_arguments() {
 	import sys
 	assert sys.argv[1:] == ["a", "b c"]
 	EOF
-    stbt-run -v test.py a "b c" &&
-    stbt-run -v test.py -- a "b c"
+    stbt run -v test.py a "b c" &&
+    stbt run -v test.py -- a "b c"
 }
 
 test_script_accesses_its_path() {
@@ -16,7 +16,7 @@ test_script_accesses_its_path() {
 	print '__file__: ' + __file__
 	assert __file__ == "test.py"
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_stbt_run_return_code_on_test_failure() {
@@ -24,7 +24,7 @@ test_stbt_run_return_code_on_test_failure() {
     cat > test.py <<-EOF
 	wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
     ret=$?
     [[ $ret == 1 ]] || fail "Unexpected return code $ret"
 }
@@ -37,7 +37,7 @@ test_stbt_run_return_code_on_precondition_error() {
 	    press("gamut")
 	    wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
-    stbt-run -v test.py --control none &> test.log
+    stbt run -v test.py --control none &> test.log
     ret=$?
     [[ $ret == 2 ]] || fail "Unexpected return code $ret"
     assert grep \
@@ -50,7 +50,7 @@ test_that_stbt_run_saves_screenshot_on_match_timeout() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
 	EOF
-    ! stbt-run -v test.py &&
+    ! stbt run -v test.py &&
     [ -f screenshot.png ]
 }
 
@@ -61,6 +61,6 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
 	    wait_for_match(
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
 	EOF
-    ! stbt-run -v test.py &&
+    ! stbt run -v test.py &&
     [ -f screenshot.png ]
 }

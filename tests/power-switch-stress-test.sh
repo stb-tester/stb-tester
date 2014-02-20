@@ -37,7 +37,7 @@ send_concurrent_commands() {
     local pids=
 
     for outlet in $outlets; do
-        "$(dirname "$0")/../stbt-power" --power-outlet="$uri:$outlet" $cmd &
+        stbt power --power-outlet="$uri:$outlet" $cmd &
         pids="$pids $!"
     done
 

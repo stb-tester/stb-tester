@@ -2,14 +2,14 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    timeout 10 stbt-run -v --control asdf test.py
+    timeout 10 stbt run -v --control asdf test.py
     local ret=$?
-    [ $ret -ne $timedout ] || fail "'stbt-run --control asdf' timed out"
+    [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
 
 test_invalid_source_pipeline() {
     touch test.py
-    stbt-run -v --source-pipeline viddily-boo test.py &> stbt.log
+    stbt run -v --source-pipeline viddily-boo test.py &> stbt.log
     tail -n1 stbt.log | grep -q 'no element "viddily-boo"' ||
         fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
             "expected 'no element \"viddily-boo\"'"
@@ -22,7 +22,7 @@ test_get_frame_and_save_frame() {
 	wait_for_match("$testdir/videotestsrc-gamut.png")
 	save_frame(get_frame(), "gamut.png")
 	EOF
-    stbt-run -v get-screenshot.py
+    stbt run -v get-screenshot.py
     [ -f gamut.png ] ||
         fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
@@ -32,7 +32,7 @@ test_get_frame_and_save_frame() {
 	wait_for_match("gamut.png",
 	               match_parameters=MatchParameters(confirm_threshold=0.7))
 	EOF
-    stbt-run -v match-screenshot.py
+    stbt run -v match-screenshot.py
 }
 
 test_get_config() {
@@ -57,7 +57,7 @@ test_get_config() {
 	except ConfigurationError:
 	    pass
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_that_frames_returns_at_least_one_frame() {
@@ -66,7 +66,7 @@ test_that_frames_returns_at_least_one_frame() {
 	stbt.frames(timeout_secs=0).next()
 	stbt.frames(timeout_secs=0).next()
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_that_frames_doesnt_time_out() {
@@ -75,7 +75,7 @@ test_that_frames_doesnt_time_out() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    timeout 12 stbt-run -v test.py
+    timeout 12 stbt run -v test.py
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
@@ -86,7 +86,7 @@ test_that_frames_raises_NoVideo() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --source-pipeline "videotestsrc ! identity sleep-time=12000000" \
         test.py &> stbt-run.log
     grep NoVideo stbt-run.log ||
@@ -122,7 +122,7 @@ test_using_frames_to_measure_black_screen() {
 	        break
 	assert not black, "Failed to find non-black screen"
 	EOF
-    stbt-run -v test.py
+    stbt run -v test.py
 }
 
 test_that_frames_doesnt_deadlock() {
@@ -141,7 +141,7 @@ test_that_frames_doesnt_deadlock() {
 	frames3 = stbt.frames()
 	frame3 = frames3.next()  # old `frames` still holds lock
 	EOF
-    timeout 10 stbt-run -v test.py &&
+    timeout 10 stbt run -v test.py &&
 
     cat > test2.py <<-EOF
 EOF
@@ -152,7 +152,7 @@ test_that_is_screen_black_is_true_for_black_pattern() {
 	import stbt
 	assert stbt.is_screen_black(stbt.get_frame())
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --source-pipeline 'videotestsrc pattern=black' \
         test.py
 }
@@ -162,7 +162,7 @@ test_that_is_screen_black_is_false_for_smpte_pattern() {
 	import stbt
 	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
         test.py
 }
@@ -175,7 +175,7 @@ test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
 	    mask="$testdir/videotestsrc-mask-non-black.png"
 	)
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
         test.py
 }
@@ -186,7 +186,7 @@ test_is_screen_black_threshold_bounds_for_almost_black_frame() {
 	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
 	assert not stbt.is_screen_black(stbt.get_frame(), threshold=2)
 	EOF
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin2 !
              imagefreeze" \
@@ -199,7 +199,7 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
     cat > test.py <<-EOF &&
 	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin2 !
              imagefreeze" \
@@ -212,7 +212,7 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
     cat > test.py <<-EOF &&
 	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none \
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin2 !
              imagefreeze" \
@@ -235,7 +235,7 @@ test_that_video_index_is_written_on_eos() {
 	import time
 	time.sleep(5)
 	EOF
-    stbt-run -v \
+    stbt run -v \
         --sink-pipeline \
             "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
         test.py &&
@@ -258,11 +258,11 @@ test_save_video() {
 	EOF
     sed -e 's/save_video =.*/save_video = video.webm/' \
         "$testdir/stbt.conf" > stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt-run -v record.py &&
+    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt run -v record.py &&
     cat > test.py <<-EOF &&
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm ! decodebin' \
         test.py
 }
@@ -270,14 +270,14 @@ test_save_video() {
 test_that_verbosity_level_is_read_from_config_file() {
     sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
     touch test.py &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run test.py &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run test.py &&
     cat log | grep "verbose: 2"
 }
 
 test_that_verbose_command_line_argument_overrides_config_file() {
     sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
     touch test.py &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v test.py &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v test.py &&
     cat log | grep "verbose: 1"
 }
 
@@ -287,14 +287,14 @@ test_that_restart_source_option_is_read() {
 	print "value: %s" % stbt._display.restart_source_enabled
 	EOF
     # Read from the command line
-    stbt-run -v --restart-source --control none test.py &&
+    stbt run -v --restart-source --control none test.py &&
     cat log | grep "restart_source: True" &&
     cat log | grep "value: True" &&
     echo > log &&
     # Read from the config file
     sed 's/restart_source = .*/restart_source = True/' \
         "$testdir/stbt.conf" > stbt.conf &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none test.py &&
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none test.py &&
     cat log | grep "restart_source: True" &&
     cat log | grep "value: True"
 }
@@ -315,7 +315,7 @@ test_press_visualisation() {
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
-    stbt-run -v \
+    stbt run -v \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
         press.py &
     press_script=$!
@@ -329,7 +329,7 @@ test_press_visualisation() {
 	os.kill($press_script, signal.SIGUSR2)
 	wait_for_match("$testdir/red-black.png")
 	EOF
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
@@ -347,13 +347,13 @@ test_draw_text() {
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline 'videotestsrc is-live=true pattern=black' \
         --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
         draw-text.py &
     trap "kill $!; rm fifo" EXIT
 
-    stbt-run -v --control none \
+    stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify-draw-text.py
 }
@@ -368,7 +368,7 @@ test_that_press_waits_between_subsequent_presses() {
 	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
-    stbt-run -v --control none test.py
+    stbt run -v --control none test.py
 }
 
 test_that_press_doesnt_wait_any_longer_than_necessary() {
@@ -383,7 +383,7 @@ test_that_press_doesnt_wait_any_longer_than_necessary() {
 	time.sleep = fake_sleep
 	stbt.press('OK', interpress_delay_secs=0.1)
 	EOF
-    stbt-run -v --control none test.py
+    stbt run -v --control none test.py
 }
 
 test_that_press_reads_default_delay_from_stbt_conf() {
@@ -398,5 +398,5 @@ test_that_press_reads_default_delay_from_stbt_conf() {
 	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt-run -v --control none test.py
+    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none test.py
 }
