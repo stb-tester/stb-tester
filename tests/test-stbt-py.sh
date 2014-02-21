@@ -188,7 +188,7 @@ test_is_screen_black_threshold_bounds_for_almost_black_frame() {
 	EOF
     stbt run -v --control none \
         --source-pipeline \
-            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+            "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
         test.py
 }
@@ -201,7 +201,7 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
 	EOF
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
         --source-pipeline \
-            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+            "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
         test.py
 }
@@ -214,7 +214,7 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 	EOF
     STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
         --source-pipeline \
-            "filesrc location=$testdir/almost-black.png ! decodebin2 !
+            "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
         test.py
 }
@@ -237,7 +237,7 @@ test_that_video_index_is_written_on_eos() {
 	EOF
     stbt run -v \
         --sink-pipeline \
-            "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
+            "queue ! vp8enc cpu-used=6 ! webmmux ! filesink location=video.webm" \
         test.py &&
     webminspector.py video.webm &> webminspector.log &&
     grep "Cue Point" webminspector.log || {

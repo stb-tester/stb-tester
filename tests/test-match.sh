@@ -107,7 +107,7 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
 
 test_wait_for_match_confirm_methods_produce_different_results() {
     local source_pipeline="filesrc location=$testdir/known-fail-source.png ! \
-        decodebin2 ! imagefreeze ! ffmpegcolorspace"
+        decodebin ! imagefreeze ! videoconvert"
 
     # Expect correct nomatch.
     cat > test.py <<-EOF
@@ -131,7 +131,7 @@ test_wait_for_match_erode_passes_affects_match() {
     # This test demonstrates that changing the number of erodePasses
     # can cause incongruent images to match falsely.
     local source_pipeline="filesrc location=$testdir/circle-big.png ! \
-        decodebin2 ! imagefreeze ! ffmpegcolorspace"
+        decodebin ! imagefreeze ! videoconvert"
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/circle-small.png",
@@ -151,7 +151,7 @@ test_wait_for_match_confirm_threshold_affects_match() {
     # This test demonstrates that changing the confirm_threshold parameter
     # can cause incongruent images to match falsely.
     local source_pipeline="filesrc location=$testdir/slight-variation-1.png ! \
-        decodebin2 ! imagefreeze ! ffmpegcolorspace"
+        decodebin ! imagefreeze ! videoconvert"
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
@@ -219,7 +219,7 @@ test_press_until_match_max_presses() {
 test_press_until_match_reads_interval_secs_from_config_file() {
     cat > test-3s.py <<-EOF &&
 	import stbt
-	start = stbt._display.get_frame().timestamp
+	start = stbt._display.get_frame().pts
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
 	assert (match.timestamp - start) >= 3e9, (
@@ -230,7 +230,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 
     cat > test-1s.py <<-EOF &&
 	import stbt
-	start = stbt._display.get_frame().timestamp
+	start = stbt._display.get_frame().pts
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
 	assert (match.timestamp - start) < 3e9, (

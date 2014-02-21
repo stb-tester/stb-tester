@@ -67,7 +67,7 @@ push streams to the server. The logs are at
 Configure stb-tester as an RTMP client that reads from the crtmpserver,
 with a source pipeline like::
 
-  rtmpsrc location=rtmp://localhost/live/<stream name>\ live=1 ! decodebin2
+  rtmpsrc location=rtmp://localhost/live/<stream name>\ live=1 ! decodebin
 
 Note the backslash after the stream name -- "live=1" is part of the "location"
 value, not a separate "live" GStreamer property.

@@ -12,9 +12,10 @@ install_packages() {
   # VirtualBox guest additions for shared folders, USB, window resizing, etc.
   packages+=" virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11"
   # Core stbt dependencies
-  packages+=" gstreamer0.10-tools gstreamer0.10-plugins-base"
-  packages+=" gstreamer0.10-plugins-good gstreamer0.10-plugins-bad"
-  packages+=" python-gst0.10 python-opencv python-numpy tesseract-ocr"
+  packages+=" gstreamer1.0-tools gstreamer1.0-plugins-base"
+  packages+=" gstreamer1.0-plugins-good gstreamer1.0-plugins-bad"
+  packages+=" python-gobject gir1.2-gstreamer-1.0 python-opencv python-numpy"
+  packages+=" tesseract-ocr"
   # For `stbt power`
   packages+=" curl expect openssh-client"
   # For `stbt batch`
@@ -22,7 +23,7 @@ install_packages() {
   # For building stbt and running the self-tests
   packages+=" git pep8 pylint python-docutils python-nose"
   # For the Hauppauge HDPVR
-  packages+=" gstreamer0.10-ffmpeg v4l-utils"
+  packages+=" gstreamer1.0-libav v4l-utils"
 
   apt-get install -y $packages
 }
