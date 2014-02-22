@@ -23,12 +23,14 @@
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
+export STBT_VERSION="@VERSION@"
+
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 case "$1" in
     -h|--help)
         usage; exit 0;;
     -v|--version)
-        echo "stb-tester @VERSION@"; exit 0;;
+        echo "stb-tester $STBT_VERSION"; exit 0;;
     run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
