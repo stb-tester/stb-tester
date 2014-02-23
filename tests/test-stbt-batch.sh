@@ -2,14 +2,14 @@
 
 create_test_repo() {
     (
-        git init &&
+        git init tests &&
+        cd tests &&
         git config user.name "Stb Tester" &&
         git config user.email "test-stbt-batch@stb-tester.com" &&
-        mkdir tests &&
         cp "$testdir/test.py" "$testdir/test2.py" \
            "$testdir/videotestsrc-checkers-8.png" \
-           "$testdir/videotestsrc-gamut.png" tests/ &&
-        git add tests &&
+           "$testdir/videotestsrc-gamut.png" . &&
+        git add . &&
         git commit -m "Initial commit"
     ) >/dev/null 2>&1 || fail "Failed to set up git repo"
 }
@@ -31,7 +31,7 @@ test_stbt_batch_run_once() {
     [[ -f latest/index.html ]] || fail "latest/index.html not created"
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
-    grep -q 'tests/test.py' index.html || fail "test name not in index.html"
+    grep -q test.py index.html || fail "test name not in index.html"
     grep -q "my label" latest/index.html || fail "extra column not in latest/index.html"
     grep -q "my label" index.html || fail "extra column not in index.html"
 }
@@ -212,7 +212,7 @@ test_stbt_batch_run_with_custom_classifier() {
 
     cat > my-classifier <<-'EOF'
 	#!/bin/bash
-	if [[ $(cat exit-status) -ne 0 && $(cat test-name) =~ tests/test.py ]];
+	if [[ $(cat exit-status) -ne 0 && $(cat test-name) =~ test.py ]];
 	then
 	    echo 'Intentional failure' > failure-reason
 	fi
