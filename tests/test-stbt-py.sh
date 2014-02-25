@@ -226,11 +226,6 @@ test_that_video_index_is_written_on_eos() {
         return 77
     }
 
-    [ $(uname) = Darwin ] && {
-        echo "Skipping this test because vp8enc/webmmux don't work on OS X" >&2
-        return 77
-    }
-
     cat > test.py <<-EOF &&
 	import time
 	time.sleep(5)
