@@ -20,11 +20,13 @@ test_stbt_batch_run_once() {
         fail "stbt batch run failed"
     } | sed 's/^/stbt batch run: /'
 
+    local expected_commit="$(cd tests && git describe --always)"
+
     mv "latest-my label" latest
     [[ -f latest/combined.log ]] || fail "latest/combined.log not created"
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
-    [[ -f latest/git-commit ]] || fail "latest/git-commit not created"
-    [[ $(cat latest/test-name) =~ test.py ]] || fail "wrong latest/test-name"
+    [[ $(cat latest/git-commit) == "$expected_commit" ]] || fail "wrong latest/git-commit"
+    [[ $(cat latest/test-name) == test.py ]] || fail "wrong latest/test-name"
     diff -u <(cat "$srcdir"/VERSION) latest/stbt-version.log ||
         fail "Wrong latest/stbt-version.log"
     [[ -f latest/video.webm ]] || fail "latest/video.webm not created"
@@ -32,6 +34,8 @@ test_stbt_batch_run_once() {
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
     grep -q test.py index.html || fail "test name not in index.html"
+    grep -q "$expected_commit" latest/index.html || fail "git commit not in latest/index.html"
+    grep -q "$expected_commit" index.html || fail "git commit not in index.html"
     grep -q "my label" latest/index.html || fail "extra column not in latest/index.html"
     grep -q "my label" index.html || fail "extra column not in index.html"
 }
@@ -62,6 +66,20 @@ test_that_stbt_batch_run_continues_after_uninteresting_failure() {
         fail "Expected 2nd testrun to fail with 'UITestError'"
     grep -q MatchTimeout latest/failure-reason ||
         fail "Expected 3rd testrun to fail with 'MatchTimeout'"
+}
+
+test_stbt_batch_run_when_test_script_isnt_in_git_repo() {
+    create_test_repo
+    rm -rf tests/.git
+
+    { stbt batch run -1 tests/test.py || fail "stbt batch run failed"; } \
+        | sed 's/^/stbt batch run: /'
+
+    [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
+    [[ ! -f latest/git-commit ]] || fail "didn't expect to see latest/git-commit"
+    grep -q tests/test.py latest/test-name || fail "wrong latest/test-name"
+    grep -q tests/test.py latest/index.html || fail "test name not in latest/index.html"
+    grep -q tests/test.py index.html || fail "test name not in index.html"
 }
 
 test_stbt_batch_run_parse_test_args() {

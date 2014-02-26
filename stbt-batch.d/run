@@ -82,15 +82,13 @@ run() {
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
   ( cd "$(dirname "$testpath")" &&
-    git describe --always --dirty
-  ) > git-commit ||
-  die "Failed to determine the test script's git revision."
+    git describe --always --dirty 2>/dev/null
+  ) > git-commit || rm -f git-commit
 
   ( cd "$(dirname "$testpath")" &&
-    gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir)")") &&
-    echo "${testpath#$gitdir/}"
-  ) > test-name ||
-  die "Failed to determine the test script's path relative to its git repo."
+    gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir 2>/dev/null)")") &&
+    echo "${testpath#$gitdir/}" || echo "$testpath"
+  ) > test-name
 
   printf "%s\n" "$@" > test-args
 
