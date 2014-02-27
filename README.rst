@@ -89,6 +89,11 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
+  samsung:<hostname>[:<port>]
+    Can be used to control Samsung Smart TVs using the same TCP network
+    protocol that their mobile phone app uses.  Tested against a Samsung
+    UE32F5370 but will probably work with all recent Samsung Smart TVs.
+
   vr:<hostname>[:<port>]
     A "virtual remote" that communicates with the set-top box over TCP.
     Requires a virtual remote listener (which we haven't released yet) running
