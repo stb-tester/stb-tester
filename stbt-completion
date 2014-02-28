@@ -175,11 +175,12 @@ _stbt_control_uri() {
         --control=lirc:*:*:) _stbt_lirc_name;;
         --control=lirc:*:) _stbt_lirc_port_or_name;;
         --control=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
+        --control=samsung:*) _stbt_hostname;;
         --control=vr:*:) _stbt_vr_port;;
         --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc: vr:
+                    _stbt_no_space irnetbox: lirc: vr: samsung:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac

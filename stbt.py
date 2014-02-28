@@ -1676,6 +1676,10 @@ def uri_to_remote(uri, display):
     if vr:
         d = vr.groupdict()
         return VirtualRemote(d['hostname'], int(d['port'] or 2033))
+    vr = re.match(r'samsung:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
+    if vr:
+        d = vr.groupdict()
+        return _new_samsung_tcp_remote(d['hostname'], int(d['port'] or 55000))
     tcp_lirc = re.match(
         r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
     if tcp_lirc:
@@ -1866,6 +1870,54 @@ class IRNetBoxRemote(object):
                 self.hostname, e)),)
             e.strerror = e.args[0]
             raise
+
+
+class _SamsungTCPRemote(object):
+    """Send a key-press via Samsung remote control protocol.
+
+    See http://sc0ty.pl/2012/02/samsung-tv-network-remote-control-protocol/
+    """
+    def __init__(self, sock):
+        self.socket = sock
+        self._hello()
+
+    @staticmethod
+    def _encode_string(string):
+        r"""
+        >>> _SamsungTCPRemote._encode_string('192.168.0.10')
+        '\x10\x00MTkyLjE2OC4wLjEw'
+        """
+        from base64 import b64encode
+        from struct import pack
+        b64 = b64encode(string)
+        return pack('<H', len(b64)) + b64
+
+    def _send_payload(self, payload):
+        from struct import pack
+        sender = "iphone.iapp.samsung"
+        packet_start = pack('<BH', 0, len(sender)) + sender
+        self.socket.send(packet_start + pack('<H', len(payload)) + payload)
+
+    def _hello(self):
+        payload = bytearray([0x64, 0x00])
+        payload += self._encode_string(self.socket.getsockname()[0])
+        payload += self._encode_string("my_id")
+        payload += self._encode_string("stb-tester")
+        self._send_payload(payload)
+        reply = self.socket.recv(4096)
+        debug("SamsungTCPRemote reply: %s\n" % reply)
+
+    def press(self, key):
+        payload_start = bytearray([0x00, 0x00, 0x00])
+        key_enc = self._encode_string(key)
+        self._send_payload(payload_start + key_enc)
+        debug("Pressed " + key)
+        reply = self.socket.recv(4096)
+        debug("SamsungTCPRemote reply: %s\n" % reply)
+
+
+def _new_samsung_tcp_remote(hostname, port):
+    return _SamsungTCPRemote(_connect_tcp_socket(hostname, port))
 
 
 def uri_to_remote_recorder(uri):
@@ -2204,6 +2256,31 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         control.press(i)
         assert listener.next() == i
     t.join()
+
+
+def test_samsung_tcp_remote():
+    # This is more of a regression test than anything.
+    sent_data = []
+
+    class TestSocket(object):
+        def send(self, data):
+            sent_data.append(data)
+
+        def recv(self, _):
+            return ""
+
+        def getsockname(self):
+            return ['192.168.0.8', 12345]
+
+    r = _SamsungTCPRemote(TestSocket())
+    assert len(sent_data) == 1
+    assert sent_data[0] == (
+        b'\x00\x13\x00iphone.iapp.samsung0\x00d\x00\x10\x00MTkyLjE2OC4wLjg=' +
+        b'\x08\x00bXlfaWQ=\x10\x00c3RiLXRlc3Rlcg==')
+    r.press('KEY_0')
+    assert len(sent_data) == 2
+    assert sent_data[1] == (
+        b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
 
 
 def test_uri_to_remote():
