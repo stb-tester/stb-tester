@@ -1299,7 +1299,15 @@ def _match(image, template, match_parameters, template_name):
         _confirm_match(image, position, template, match_parameters))
 
     if _debug_level > 1:
-        _log_image(image, "source_with_roi", "stbt-debug/detect_match")
+        source_with_roi = image.copy()
+        cv2.rectangle(
+            source_with_roi,
+            (position.x, position.y),
+            (position.x + template.shape[1], position.y + template.shape[0]),
+            (32, 0 if first_pass_matched else 255, 255),  # bgr
+            thickness=1)
+        _log_image(
+            source_with_roi, "source_with_roi", "stbt-debug/detect_match")
         _log_image_descriptions(
             template_name, matched, position,
             first_pass_matched, first_pass_certainty, match_parameters)
