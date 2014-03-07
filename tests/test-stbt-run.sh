@@ -9,6 +9,14 @@ test_extra_arguments() {
     stbt run -v test.py -- a "b c"
 }
 
+test_that_optional_arguments_are_passed_through_to_test_script() {
+    cat > test.py <<-EOF
+	import sys
+	assert sys.argv[1:] == ['--option', '--source-pipeline=not_real']
+	EOF
+    stbt run -v test.py --option --source-pipeline=not_real
+}
+
 test_script_accesses_its_path() {
     touch module.py
     cat > test.py <<-EOF
@@ -37,7 +45,7 @@ test_stbt_run_return_code_on_precondition_error() {
 	    press("gamut")
 	    wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
-    stbt run -v test.py --control none &> test.log
+    stbt run -v --control none test.py &> test.log
     ret=$?
     [[ $ret == 2 ]] || fail "Unexpected return code $ret"
     assert grep \
