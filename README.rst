@@ -658,7 +658,7 @@ class MotionTimeout(UITestFailure)
     * `mask`: Filename of the mask that was used (see `wait_for_motion`).
     * `timeout_secs`: Number of seconds that motion was searched for.
 
-class NoVideo(UITestFailure)
+class NoVideo(exceptions.RuntimeError)
     No video available from the source pipeline.
 
 class PreconditionError(UITestError)
