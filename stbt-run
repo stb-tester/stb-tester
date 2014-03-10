@@ -9,6 +9,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 import os
 import sys
 import traceback
+import argparse
 
 import stbt
 
@@ -22,7 +23,7 @@ parser.add_argument(
 parser.add_argument(
     'script', help='The test script to run', metavar='SCRIPT')
 parser.add_argument(
-    'args', nargs='*', metavar='ARG',
+    'args', nargs=argparse.REMAINDER, metavar='ARG',
     help='Additional arguments passed on to the SCRIPT')
 
 args = parser.parse_args(sys.argv[1:])
