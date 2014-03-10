@@ -136,10 +136,10 @@ test_that_frames_doesnt_deadlock() {
 	    break
 	frames = stbt.frames()
 	frame1 = frames.next()
-	frames = stbt.frames()  # Drop reference to old `frames`; should be GCd.
+	frames = stbt.frames()  # Drop reference to old 'frames'; should be GCd.
 	frame2 = frames.next()
 	frames3 = stbt.frames()
-	frame3 = frames3.next()  # old `frames` still holds lock
+	frame3 = frames3.next()  # old 'frames' still holds lock
 	EOF
     timeout 10 stbt run -v test.py &&
 
