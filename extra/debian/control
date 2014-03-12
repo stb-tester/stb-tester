@@ -3,11 +3,47 @@ Maintainer: William Manley <will@stb-tester.com>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: curl, debhelper (>= 9), expect, git, gstreamer0.10-plugins-bad, gstreamer0.10-plugins-base, gstreamer0.10-plugins-good, gstreamer0.10-x, gstreamer0.10-tools, moreutils, pep8 (>= 1.3.4), pylint, python-docutils, python-flask, python-gst0.10, python-gtk2, python-jinja2, python-nose, python-opencv, tesseract-ocr
+Build-Depends: curl,
+               debhelper (>= 9),
+               expect,
+               git,
+               gstreamer0.10-plugins-bad,
+               gstreamer0.10-plugins-base,
+               gstreamer0.10-plugins-good,
+               gstreamer0.10-x,
+               gstreamer0.10-tools,
+               moreutils,
+               pep8 (>= 1.3.4),
+               pylint,
+               python-docutils,
+               python-flask,
+               python-gst0.10,
+               python-gtk2,
+               python-jinja2,
+               python-nose,
+               python-opencv,
+               tesseract-ocr
 
 Package: stb-tester
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, curl, gstreamer0.10-plugins-bad, gstreamer0.10-plugins-base, gstreamer0.10-plugins-good, gstreamer0.10-tools, gstreamer0.10-x, moreutils, openssh-client, pylint, python (>= 2.7), python-flask, python-gst0.10, python-gtk2, python-jinja2, python-opencv, tesseract-ocr
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         curl,
+         gstreamer0.10-plugins-bad,
+         gstreamer0.10-plugins-base,
+         gstreamer0.10-plugins-good,
+         gstreamer0.10-tools,
+         gstreamer0.10-x,
+         moreutils,
+         openssh-client,
+         pylint,
+         python (>= 2.7),
+         python-flask,
+         python-gst0.10,
+         python-gtk2,
+         python-jinja2,
+         python-opencv,
+         tesseract-ocr
 Description: Automated User Interface testing for set-top boxes. 
  stb-tester tests a set-top-box by issuing commands to it using a remote-control
  and checking that it has done the right thing by analysing what is on screen.
