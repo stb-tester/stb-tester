@@ -37,6 +37,16 @@ test_wait_for_match_nonexistent_template() {
     ! stbt run -v test.py
 }
 
+test_wait_for_match_opencv_image_can_be_used_as_template() {
+    cat > test.py <<-EOF &&
+	import stbt, cv2
+	stbt.wait_for_match(cv2.imread("$testdir/videotestsrc-redblue.png"))
+	wait_for_match("$testdir/videotestsrc-redblue.png")
+	EOF
+
+    stbt run -v --control none test.py
+}
+
 test_wait_for_match_noise_threshold_raises_warning() {
     cat > test.py <<-EOF
 	wait_for_match(
