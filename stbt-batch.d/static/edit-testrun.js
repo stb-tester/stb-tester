@@ -6,12 +6,18 @@ $(document).ready(function() {
         url: "failure-reason",
         send: "always",
         toggle: "dblclick",
+        success: function(_, newValue) {
+            parent.$("tr.info > td:eq(3) > span").text(truncate(newValue, 30));
+        },
     });
     $("#notes").editable({
         type: "textarea",
         url: "notes",
         send: "always",
         toggle: "dblclick",
+        success: function(_, newValue) {
+            parent.$("tr.info > td:eq(4)").text(truncate(newValue, 30));
+        },
     });
     // http://getbootstrap.com/2.3.2/javascript.html#tooltips
     $("#failure-reason, #notes").tooltip({
@@ -34,3 +40,7 @@ $(document).ready(function() {
     });
     $("#permalink").after(del);
 });
+
+function truncate(str, len) {
+    return str.length > len ? str.substr(0, len) + "..." : str;
+}
