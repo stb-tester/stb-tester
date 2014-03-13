@@ -194,12 +194,11 @@ test_is_screen_black_threshold_bounds_for_almost_black_frame() {
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
-    sed -e '/^\[is_screen_black\]/,/^threshold / s/threshold =.*/threshold = 0/' \
-        "$testdir"/stbt.conf > stbt.conf &&
+    set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
 	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
+    stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
@@ -207,12 +206,11 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
 }
 
 test_that_is_screen_black_threshold_parameter_overrides_default() {
-    sed -e '/^\[is_screen_black\]/,/^threshold / s/threshold =.*/threshold = 0/' \
-        "$testdir"/stbt.conf > stbt.conf &&
+    set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
 	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none \
+    stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
@@ -246,28 +244,28 @@ test_save_video() {
 	import time
 	time.sleep(2)
 	EOF
-    sed -e 's/save_video =.*/save_video = video.webm/' \
-        "$testdir/stbt.conf" > stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir/stbt.conf" stbt run -v record.py &&
+    set_config run.save_video "video.webm" &&
+    stbt run -v record.py &&
     cat > test.py <<-EOF &&
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
+    set_config run.save_video "" &&
     stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm ! decodebin' \
         test.py
 }
 
 test_that_verbosity_level_is_read_from_config_file() {
-    sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
+    set_config global.verbose "2" &&
     touch test.py &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run test.py &&
+    stbt run test.py &&
     cat log | grep "verbose: 2"
 }
 
 test_that_verbose_command_line_argument_overrides_config_file() {
-    sed 's/verbose = 0/verbose = 2/' "$testdir/stbt.conf" > stbt.conf &&
+    set_config global.verbose "2" &&
     touch test.py &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v test.py &&
+    stbt run -v test.py &&
     cat log | grep "verbose: 1"
 }
 
@@ -282,9 +280,8 @@ test_that_restart_source_option_is_read() {
     cat log | grep "value: True" &&
     echo > log &&
     # Read from the config file
-    sed 's/restart_source = .*/restart_source = True/' \
-        "$testdir/stbt.conf" > stbt.conf &&
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none test.py &&
+    set_config global.restart_source "True" &&
+    stbt run -v --control none test.py &&
     cat log | grep "restart_source: True" &&
     cat log | grep "value: True"
 }
@@ -377,8 +374,7 @@ test_that_press_doesnt_wait_any_longer_than_necessary() {
 }
 
 test_that_press_reads_default_delay_from_stbt_conf() {
-    sed -e 's/interpress_delay_secs =.*/interpress_delay_secs = 0.5/' \
-        "$testdir"/stbt.conf > stbt.conf &&
+    set_config press.interpress_delay_secs "0.5" &&
     cat > test.py <<-EOF &&
 	import stbt, datetime
 	stbt.press('OK')
@@ -388,5 +384,5 @@ test_that_press_reads_default_delay_from_stbt_conf() {
 	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
-    STBT_CONFIG_FILE="$PWD/stbt.conf" stbt run -v --control none test.py
+    stbt run -v --control none test.py
 }

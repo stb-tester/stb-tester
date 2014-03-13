@@ -171,9 +171,8 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
     cat > test.py <<-EOF &&
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
-    sed -e 's/pyramid_levels =.*/pyramid_levels = 1/' \
-        "$testdir"/stbt.conf > stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test.py
+    set_config match.pyramid_levels "1" &&
+    stbt run -v test.py
 }
 
 test_detect_match_nonexistent_template() {
@@ -225,8 +224,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 	assert (match.timestamp - start) >= 3e9, (
 	    "Took %dns; expected >=3s" % (match.timestamp - start))
 	EOF
-    cp "$testdir"/stbt.conf . &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test-3s.py &&
+    stbt run -v test-3s.py &&
 
     cat > test-1s.py <<-EOF &&
 	import stbt
@@ -236,9 +234,8 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 	assert (match.timestamp - start) < 3e9, (
 	    "Took %dns; expected <3s" % (match.timestamp - start))
 	EOF
-    sed -e 's/interval_secs =.*/interval_secs = 1/' \
-        stbt.conf > stbt.conf~ && mv stbt.conf~ stbt.conf &&
-    STBT_CONFIG_FILE="$scratchdir"/stbt.conf stbt run -v test-1s.py
+    set_config press_until_match.interval_secs "1" &&
+    stbt run -v test-1s.py
 }
 
 test_wait_for_match_searches_in_script_directory() {
