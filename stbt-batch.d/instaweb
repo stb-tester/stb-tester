@@ -63,7 +63,7 @@ def update_file(testrun, filename):
     d = testrun_directory(testrun)
     manual_text = request.form["value"].encode('utf-8', errors="ignore").strip()
     f = os.path.join(d, filename)
-    automatic_text = open(f).read().strip() if isfile(f) else None
+    automatic_text = open(f).read().strip() if isfile(f) else ""
     if len(manual_text) == 0 or manual_text == automatic_text:
         try:
             os.remove(f + ".manual")
@@ -76,7 +76,7 @@ def update_file(testrun, filename):
         os.path.join(dirname(abspath(__file__)), "report"),
         "--html-only",
         d])
-    return ""
+    return manual_text if len(manual_text) > 0 else automatic_text
 
 
 @app.route("/<path:testrun>/delete", methods=["POST"])
