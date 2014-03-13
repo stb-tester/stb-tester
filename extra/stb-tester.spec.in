@@ -10,11 +10,11 @@ BuildArch: noarch
 BuildRequires: python-docutils
 
 Requires: curl
-Requires: gstreamer
-Requires: gstreamer-plugins-bad-free
-Requires: gstreamer-plugins-base
-Requires: gstreamer-plugins-good
-Requires: gstreamer-python
+Requires: gstreamer1
+Requires: gstreamer1-plugins-bad-free
+Requires: gstreamer1-plugins-base
+Requires: gstreamer1-plugins-good
+Requires: python-gstreamer1
 Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients

@@ -31,51 +31,10 @@ import cv2
 import numpy
 
 import irnetbox
+from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
 
-
-@contextmanager
-def hide_argv():
-    """ For use with 'with' statement: Provides a context with an empty
-    argument list.
-
-    This is used because otherwise gst-python will exit if '-h', '--help', '-v'
-    or '--version' command line arguments are given.
-    """
-    old_argv = sys.argv[:]
-    sys.argv = [sys.argv[0]]
-    try:
-        yield
-    finally:
-        sys.argv = old_argv
-
-
-@contextmanager
-def hide_stderr():
-    """For use with 'with' statement: Hide stderr output.
-
-    This is used because otherwise gst-python will print
-    'pygobject_register_sinkfunc is deprecated'.
-    """
-    fd = sys.__stderr__.fileno()
-    saved_fd = os.dup(fd)
-    sys.__stderr__.flush()
-    null_stream = open(os.devnull, 'w', 0)
-    os.dup2(null_stream.fileno(), fd)
-    try:
-        yield
-    finally:
-        sys.__stderr__.flush()
-        os.dup2(saved_fd, sys.__stderr__.fileno())
-        null_stream.close()
-
-
-import pygst  # gstreamer
-pygst.require("0.10")
-with hide_argv(), hide_stderr():
-    import gst
-import gobject
-import glib
-
+GObject.threads_init()
+Gst.init(None)
 
 warnings.filterwarnings(
     action="always", category=DeprecationWarning, message='.*stb-tester')
@@ -722,7 +681,7 @@ def save_frame(image, filename):
 
 def get_frame():
     """Returns an OpenCV image of the current video frame."""
-    return gst_to_opencv(_display.get_frame())
+    return gst_to_opencv(_display.get_sample())
 
 
 def is_screen_black(frame, mask=None, threshold=None):
@@ -937,7 +896,7 @@ def teardown_run():
 #===========================================================================
 
 _debug_level = 0
-_mainloop = glib.MainLoop()
+_mainloop = GLib.MainLoop()
 
 _display = None
 _control = None
@@ -1019,11 +978,9 @@ def _set_config(section, option, value):
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
-        gobject.threads_init()
-
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
-        self.last_buffer = Queue.Queue(maxsize=1)
+        self.last_sample = Queue.Queue(maxsize=1)
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
@@ -1034,12 +991,11 @@ class Display(object):
         appsink = (
             "appsink name=appsink max-buffers=1 drop=true sync=false "
             "emit-signals=true "
-            "caps=video/x-raw-rgb,bpp=24,depth=24,endianness=4321,"
-            "red_mask=0xFF,green_mask=0xFF00,blue_mask=0xFF0000")
+            "caps=video/x-raw,format=BGR")
         self.source_pipeline_description = " ! ".join([
             user_source_pipeline,
             "queue leaky=downstream name=q",
-            "ffmpegcolorspace",
+            "videoconvert",
             appsink])
         self.create_source_pipeline()
 
@@ -1048,20 +1004,22 @@ class Display(object):
                 save_video += ".webm"
             debug("Saving video to '%s'" % save_video)
             video_pipeline = (
-                "t. ! queue leaky=downstream ! ffmpegcolorspace ! "
-                "vp8enc speed=7 ! webmmux ! filesink location=%s" % save_video)
+                "t. ! queue leaky=downstream ! videoconvert ! "
+                "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
+                "webmmux ! filesink location=%s" % save_video)
         else:
             video_pipeline = ""
 
         sink_pipeline_description = " ".join([
-            "appsrc name=appsrc !",
+            "appsrc name=appsrc format=time " +
+            "caps=video/x-raw,format=(string)BGR !",
             "tee name=t",
             video_pipeline,
-            "t. ! queue leaky=downstream ! ffmpegcolorspace !",
+            "t. ! queue leaky=downstream ! videoconvert !",
             user_sink_pipeline
         ])
 
-        self.sink_pipeline = gst.parse_launch(sink_pipeline_description)
+        self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
         sink_bus = self.sink_pipeline.get_bus()
         sink_bus.connect("message::error", self.on_error)
         sink_bus.connect("message::warning", self.on_warning)
@@ -1072,15 +1030,15 @@ class Display(object):
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
 
-        self.source_pipeline.set_state(gst.STATE_PLAYING)
-        self.sink_pipeline.set_state(gst.STATE_PLAYING)
+        self.source_pipeline.set_state(Gst.State.PLAYING)
+        self.sink_pipeline.set_state(Gst.State.PLAYING)
 
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
         self.mainloop_thread.start()
 
     def create_source_pipeline(self):
-        self.source_pipeline = gst.parse_launch(
+        self.source_pipeline = Gst.parse_launch(
             self.source_pipeline_description)
         source_bus = self.source_pipeline.get_bus()
         source_bus.connect("message::error", self.on_error)
@@ -1088,7 +1046,7 @@ class Display(object):
         source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
         appsink = self.source_pipeline.get_by_name("appsink")
-        appsink.connect("new-buffer", self.on_new_buffer)
+        appsink.connect("new-sample", self.on_new_sample)
 
         if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
@@ -1098,29 +1056,34 @@ class Display(object):
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
 
-    def get_frame(self, timeout_secs=10):
+    def get_sample(self, timeout_secs=10):
         try:
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
-            gst_buffer = self.last_buffer.get(timeout=timeout_secs)
+            gst_sample = self.last_sample.get(timeout=timeout_secs)
             self.novideo = False
         except Queue.Empty:
             self.novideo = True
+            Gst.debug_bin_to_dot_file_with_ts(
+                self.source_pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
             raise NoVideo("No video")
-        if isinstance(gst_buffer, Exception):
-            raise UITestError(str(gst_buffer))
+        if isinstance(gst_sample, Exception):
+            raise UITestError(str(gst_sample))
 
-        return gst_buffer
+        return gst_sample
+
+    def get_frame(self, timeout_secs=10):
+        return self.get_sample(timeout_secs).get_buffer()
 
     def frames(self, timeout_secs):
         self.start_timestamp = None
 
         with self.lock:
             while True:
-                ddebug("user thread: Getting buffer at %s" % time.time())
-                buf = self.get_frame(max(10, timeout_secs))
-                ddebug("user thread: Got buffer at %s" % time.time())
-                timestamp = buf.timestamp
+                ddebug("user thread: Getting sample at %s" % time.time())
+                sample = self.get_sample(max(10, timeout_secs))
+                ddebug("user thread: Got sample at %s" % time.time())
+                timestamp = sample.get_buffer().pts
 
                 if timeout_secs is not None:
                     if not self.start_timestamp:
@@ -1131,81 +1094,88 @@ class Display(object):
                             timeout_secs * 1e9))
                         return
 
-                image = gst_to_opencv(buf)
+                image = gst_to_opencv(sample)
                 try:
                     yield (image, timestamp)
                 finally:
-                    self.push_buffer(buf, image)
+                    self.push_sample(sample, image)
 
-    def on_new_buffer(self, appsink):
-        buf = appsink.emit("pull-buffer")
-        self.tell_user_thread(buf)
+    def on_new_sample(self, appsink):
+        sample = appsink.emit("pull-sample")
+        self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
-                self.push_buffer(buf)
+                self.push_sample(sample)
             finally:
                 self.lock.release()
+        return Gst.FlowReturn.OK
 
-    def tell_user_thread(self, buffer_or_exception):
-        # `self.last_buffer` (a synchronised Queue) is how we communicate from
+    def tell_user_thread(self, sample_or_exception):
+        # `self.last_sample` (a synchronised Queue) is how we communicate from
         # this thread (the GLib main loop) to the main application thread
         # running the user's script. Note that only this thread writes to the
         # Queue.
 
-        if isinstance(buffer_or_exception, Exception):
+        if isinstance(sample_or_exception, Exception):
             ddebug("glib thread: reporting exception to user thread: %s" %
-                   buffer_or_exception)
+                   sample_or_exception)
         else:
-            ddebug("glib thread: new buffer (timestamp=%s). Queue.qsize: %d" %
-                   (buffer_or_exception.timestamp, self.last_buffer.qsize()))
+            ddebug("glib thread: new sample (timestamp=%s). Queue.qsize: %d" %
+                   (sample_or_exception.get_buffer().pts,
+                    self.last_sample.qsize()))
 
         # Drop old frame
         try:
-            self.last_buffer.get_nowait()
+            self.last_sample.get_nowait()
         except Queue.Empty:
             pass
 
-        self.last_buffer.put_nowait(buffer_or_exception)
+        self.last_sample.put_nowait(sample_or_exception)
 
     def draw_text(self, text, duration_secs):
         """Draw the specified text on the output video."""
         self.video_debug.append((text, duration_secs, None))
 
-    def push_buffer(self, gst_buffer, opencv_image=None):
+    def push_sample(self, gst_sample, opencv_image=None):
+        timestamp = gst_sample.get_buffer().pts
         for text, duration, timeout in list(self.video_debug):
             if timeout is None:
-                timeout = gst_buffer.timestamp + (duration * 1e9)
+                timeout = timestamp + (duration * 1e9)
                 self.video_debug.remove((text, duration, None))
                 self.video_debug.append((text, duration, timeout))
-            if gst_buffer.timestamp > timeout:
+            if timestamp > timeout:
                 self.video_debug.remove((text, duration, timeout))
 
         if opencv_image is None and len(self.video_debug) == 0:
-            self.appsrc.emit("push-buffer", gst_buffer)
+            self.appsrc.props.caps = gst_sample.get_caps()
+            self.appsrc.emit("push-buffer", gst_sample.get_buffer())
         else:
             if opencv_image is None:
-                opencv_image = gst_to_opencv(gst_buffer)
+                opencv_image = gst_to_opencv(gst_sample)
             for i in range(len(self.video_debug)):
                 text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
                 cv2.putText(
                     opencv_image, text, (10, (i + 1) * 30),
                     cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
                     color=(255, 255, 255))
-            newbuf = gst.Buffer(opencv_image.data)
-            newbuf.set_caps(gst_buffer.get_caps())
-            newbuf.timestamp = gst_buffer.timestamp
+            newbuf = Gst.Buffer.new_wrapped(opencv_image.data)
+            newbuf.pts = timestamp
+            self.appsrc.props.caps = gst_sample.get_caps()
             self.appsrc.emit("push-buffer", newbuf)
 
     def on_error(self, _bus, message):
-        assert message.type == gst.MESSAGE_ERROR
+        assert message.type == Gst.MessageType.ERROR
+        Gst.debug_bin_to_dot_file_with_ts(
+            self.source_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
         _mainloop.quit()
 
-    @staticmethod
-    def on_warning(_bus, message):
-        assert message.type == gst.MESSAGE_WARNING
+    def on_warning(self, _bus, message):
+        assert message.type == Gst.MessageType.WARNING
+        Gst.debug_bin_to_dot_file_with_ts(
+            self.source_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
@@ -1236,7 +1206,7 @@ class Display(object):
     def restart_source(self, *_args):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
-        self.source_pipeline.set_state(gst.STATE_NULL)
+        self.source_pipeline.set_state(Gst.State.NULL)
         self.source_pipeline = None
         GObjectTimeout(5, self.start_source).start()
         return False  # stop the timeout from running again
@@ -1244,7 +1214,7 @@ class Display(object):
     def start_source(self):
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
-        self.source_pipeline.set_state(gst.STATE_PLAYING)
+        self.source_pipeline.set_state(Gst.State.PLAYING)
         warn("Restarted source pipeline")
         if self.restart_source_enabled:
             self.underrun_timeout.start()
@@ -1252,7 +1222,7 @@ class Display(object):
 
     def teardown(self):
         if self.source_pipeline:
-            self.source_pipeline.set_state(gst.STATE_NULL)
+            self.source_pipeline.set_state(Gst.State.NULL)
         if not self.novideo:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
@@ -1270,21 +1240,23 @@ class GObjectTimeout(object):
         self.timeout_id = None
 
     def start(self):
-        self.timeout_id = gobject.timeout_add(
+        self.timeout_id = GObject.timeout_add(
             self.timeout_secs * 1000, self.handler, *self.args)
 
     def cancel(self):
         if self.timeout_id:
-            gobject.source_remove(self.timeout_id)
+            GObject.source_remove(self.timeout_id)
         self.timeout_id = None
 
 
-def gst_to_opencv(gst_buffer):
+def gst_to_opencv(sample):
+    buf = sample.get_buffer()
+    caps = sample.get_caps()
     return numpy.ndarray(
-        (gst_buffer.get_caps().get_structure(0)["height"],
-         gst_buffer.get_caps().get_structure(0)["width"],
+        (caps.get_structure(0).get_value('height'),
+         caps.get_structure(0).get_value('width'),
          3),
-        buffer=gst_buffer.data,
+        buffer=buf.extract_dup(0, buf.get_size()),
         dtype=numpy.uint8)
 
 

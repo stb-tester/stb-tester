@@ -212,6 +212,15 @@ debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)
 	rm -Rf "$$tmpdir" && \
 	mv debian-src-pkg~ debian-src-pkg
 
+debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
+stb-tester_$(VERSION)-1_$(debian_architecture).deb : debian-src-pkg/
+	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
+	dpkg-source -x debian-src-pkg/stb-tester_$(VERSION)-1.dsc $$tmpdir/source && \
+	(cd "$$tmpdir/source" && \
+	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b) && \
+	mv "$$tmpdir/$@" . && \
+	rm -rf "$$tmpdir"
+
 # OpenSUSE build service
 
 OBS_PROJECT?=home:stb-tester

@@ -63,4 +63,4 @@ source_pipeline=${*:-$("$(dirname "$0")/stbt-config" global.source_pipeline)}
         esac)}
 
 set -x
-gst-launch-0.10 ${v:-} $source_pipeline ! ffmpegcolorspace ! $sink sync=false
+gst-launch-1.0 ${v:-} $source_pipeline ! videoconvert ! $sink sync=false
