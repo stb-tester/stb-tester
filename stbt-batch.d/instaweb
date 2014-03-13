@@ -35,13 +35,14 @@ def catch_all(path):
         abort(404)
 
     if isfile(f):
-        return send_from_directory(app.instance_path, path)
+        return send_from_directory(app.instance_path, path, cache_timeout=1)
     if isdir(f):
         if not path.endswith("/") and path != "":
             return redirect(path + "/")
         index = os.path.join(path, "index.html")
         if isfile(index):
-            return send_from_directory(app.instance_path, index)
+            return send_from_directory(
+                app.instance_path, index, cache_timeout=1)
         else:
             return render_template(
                 "directory-index.html",
