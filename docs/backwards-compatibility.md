@@ -37,5 +37,19 @@ Advice for users of specific hardware:
     shutdown.  This shouldn't affect your ability to test with the VidiU but we
     are looking into it.
 
+*   **Blackmagic Intensity Pro** - **has known issue with the current
+    stb-tester master branch**. During pipeline teardown (after the test script
+    has run to completion) `stbt run` hangs indefinitely. We are investigating
+    and will fix this before the 0.19 release.
+
+    In GStreamer 1.0 `decklinksrc`'s `subdevice` property has been renamed to
+    `device-number`. You also need to add a `videoconvert` element. So
+    `source_pipeline` should become:
+
+        decklinksrc mode=... connection=... device-number=0 ! videoconvert
+
+    (Where `mode` and `connection` should be set to the appropriate values for
+    your hardware setup; these values haven't changed since GStreamer 0.10.)
+
 [gstport]: http://cgit.freedesktop.org/gstreamer/gstreamer/tree/docs/random/porting-to-1.0.txt
 [#725860]: https://bugzilla.gnome.org/show_bug.cgi?id=725860
