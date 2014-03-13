@@ -3,13 +3,25 @@ language: c
 install:
  - sudo add-apt-repository -y ppa:gstreamer-developers/ppa
  - sudo apt-get update
- - sudo apt-get install gstreamer1.0-tools gstreamer1.0-plugins-base
-       gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
-       python-gobject gir1.2-gstreamer-1.0 python-opencv python-numpy
-       tesseract-ocr
-       moreutils python-flask python-jinja2
-       python-docutils python-nose pep8 pylint expect
-       gstreamer1.0-x
+ - sudo apt-get install
+        expect
+        gir1.2-gstreamer-1.0
+        gstreamer1.0-plugins-bad
+        gstreamer1.0-plugins-base
+        gstreamer1.0-plugins-good
+        gstreamer1.0-tools
+        gstreamer1.0-x
+        moreutils
+        pep8
+        pylint
+        python-docutils
+        python-flask
+        python-gobject
+        python-jinja2
+        python-nose
+        python-numpy
+        python-opencv
+        tesseract-ocr
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make prefix=$HOME install
 
