@@ -1,7 +1,12 @@
 # Run with ./run-tests.sh
 
 test_that_stbt_config_reads_from_STBT_CONFIG_FILE() {
-    [ "$(stbt config global.test_key)" = "this is a test value" ]
+    cat >test-stbt.conf <<-EOF
+	[global]
+	another_test_key = this is a test value
+	EOF
+    export STBT_CONFIG_FILE=$PWD/test-stbt.conf &&
+    [ "$(stbt config global.another_test_key)" = "this is a test value" ]
 }
 
 test_that_stbt_config_searches_in_specified_section() {

@@ -204,9 +204,8 @@ test_stbt_batch_report_with_symlinks_for_each_testrun() {
 
 test_stbt_batch_run_with_custom_logging() {
     create_test_repo
-    cat "$testdir"/stbt.conf |
-    sed -e "s,pre_run =,& $PWD/my-logger," \
-        -e "s,post_run =,& $PWD/my-logger," > stbt.conf
+    set_config batch.pre_run "$PWD/my-logger"
+    set_config batch.post_run "$PWD/my-logger"
 
     cat > my-logger <<-'EOF'
 	#!/bin/sh
@@ -214,7 +213,6 @@ test_stbt_batch_run_with_custom_logging() {
 	EOF
     chmod u+x my-logger
 
-    export STBT_CONFIG_FILE="$PWD"/stbt.conf
     stbt batch run -1 tests/test.py
 
     grep -q '<th>start time</th>' index.html ||
@@ -225,8 +223,7 @@ test_stbt_batch_run_with_custom_logging() {
 
 test_stbt_batch_run_with_custom_classifier() {
     create_test_repo
-    cat "$testdir"/stbt.conf |
-    sed -e "s,classify =,& $PWD/my-classifier," > stbt.conf
+    set_config batch.classify "$PWD/my-classifier"
 
     cat > my-classifier <<-'EOF'
 	#!/bin/bash
@@ -237,7 +234,6 @@ test_stbt_batch_run_with_custom_classifier() {
 	EOF
     chmod u+x my-classifier
 
-    export STBT_CONFIG_FILE="$PWD"/stbt.conf
     stbt batch run tests/test.py
 
     grep -q 'Intentional failure' index.html ||
@@ -246,8 +242,7 @@ test_stbt_batch_run_with_custom_classifier() {
 
 test_stbt_batch_run_with_custom_recovery_script() {
     create_test_repo
-    cat "$testdir"/stbt.conf |
-    sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
+    set_config batch.recover "$PWD/my-recover"
 
     cat > my-recover <<-'EOF'
 	#!/bin/sh
@@ -255,7 +250,6 @@ test_stbt_batch_run_with_custom_recovery_script() {
 	EOF
     chmod u+x my-recover
 
-    export STBT_CONFIG_FILE="$PWD"/stbt.conf
     stbt batch run tests/test.py
 
     grep -q '>powercycle.log</a>' latest/index.html ||
@@ -264,8 +258,7 @@ test_stbt_batch_run_with_custom_recovery_script() {
 
 test_stbt_batch_run_recovery_exit_status() {
     create_test_repo
-    cat "$testdir"/stbt.conf |
-    sed -e "s,recover =,& $PWD/my-recover," > stbt.conf
+    set_config batch.recover "$PWD/my-recover"
 
     cat > my-recover <<-'EOF'
 	#!/bin/sh
@@ -273,7 +266,6 @@ test_stbt_batch_run_recovery_exit_status() {
 	EOF
     chmod u+x my-recover
 
-    export STBT_CONFIG_FILE="$PWD"/stbt.conf
     stbt batch run -kk tests/test.py
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -390,10 +382,8 @@ test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
 	EOF
     chmod +x my-logger
 
-    cat "$testdir"/stbt.conf | \
-        sed -e "s,pre_run =,& $PWD/my-logger," >stbt.conf
+    set_config batch.pre_run "$PWD/my-logger" &&
 
-    export STBT_CONFIG_FILE="$PWD"/stbt.conf
     stbt batch run -1 tests/test.py tests/test2.py
     cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
     cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"

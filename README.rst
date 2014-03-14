@@ -326,6 +326,13 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
+    `image` is the image used as the template during matching.  It can either
+    be the filename of a png file on disk or a numpy array containing the
+    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
+    arrays are the same format that OpenCV uses for images.  This allows
+    generating templates on the fly (possibly using OpenCV) or searching for
+    images captured from the system under test earlier in the test script.
+
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position. Increase
     `consecutive_matches` to avoid false positives due to noise.
@@ -394,6 +401,13 @@ wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, 
 detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None)
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
+
+    `image` is the image used as the template during matching.  It can either
+    be the filename of a png file on disk or a numpy array containing the
+    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
+    arrays are the same format that OpenCV uses for images.  This allows
+    generating templates on the fly (possibly using OpenCV) or searching for
+    images captured from the system under test earlier in the test script.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)

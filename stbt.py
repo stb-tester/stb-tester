@@ -286,6 +286,13 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
+    `image` is the image used as the template during matching.  It can either
+    be the filename of a png file on disk or a numpy array containing the
+    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
+    arrays are the same format that OpenCV uses for images.  This allows
+    generating templates on the fly (possibly using OpenCV) or searching for
+    images captured from the system under test earlier in the test script.
+
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
@@ -309,12 +316,17 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    template_name = _find_path(image)
-    if not os.path.isfile(template_name):
-        raise UITestError("No such template file: %s" % image)
-    template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
-    if template is None:
-        raise UITestError("Failed to load template file: %s" % template_name)
+    if isinstance(image, numpy.ndarray):
+        template = image
+        template_name = _template_name(image)
+    else:
+        template_name = _find_path(image)
+        if not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % image)
+        template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        if template is None:
+            raise UITestError("Failed to load template file: %s" %
+                              template_name)
 
     debug("Searching for " + template_name)
 
@@ -433,12 +445,29 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         yield result
 
 
+def _template_name(template):
+    if isinstance(template, numpy.ndarray):
+        return "<Custom Image>"
+    elif isinstance(template, str) or isinstance(template, unicode):
+        return template
+    else:
+        assert False, ("template is of unexpected type '%s'" %
+                       type(template).__name__)
+
+
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    noise_threshold=None, match_parameters=None):
     """Search for `image` in the source video stream.
 
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
+
+    `image` is the image used as the template during matching.  It can either
+    be the filename of a png file on disk or a numpy array containing the
+    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
+    arrays are the same format that OpenCV uses for images.  This allows
+    generating templates on the fly (possibly using OpenCV) or searching for
+    images captured from the system under test earlier in the test script.
 
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position. Increase
@@ -474,7 +503,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             match_count = 0
         last_pos = res.position
         if match_count == consecutive_matches:
-            debug("Matched " + image)
+            debug("Matched " + _template_name(image))
             return res
 
     raise MatchTimeout(res.frame, image, timeout_secs)  # pylint: disable=W0631
@@ -1267,6 +1296,12 @@ def gst_to_opencv(sample):
 def _match(image, template, match_parameters, template_name):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
+    if any(template.shape[x] < 1 for x in (0, 1)):
+        raise ValueError("Template image must contain some data")
+    if template.shape[2] != 3:
+        raise ValueError("Template image must be 3 channel BGR")
+    if template.dtype != numpy.uint8:
+        raise ValueError("Template image must be 8-bits per channel")
 
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters)
