@@ -506,7 +506,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + _template_name(image))
             return res
 
-    raise MatchTimeout(res.frame, image, timeout_secs)  # pylint: disable=W0631
+    raise MatchTimeout(res.frame, _template_name(image), timeout_secs)  # pylint: disable=W0631,C0301
 
 
 def press_until_match(
