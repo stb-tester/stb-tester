@@ -801,7 +801,7 @@ class UITestFailure(Exception):
     pass
 
 
-class NoVideo(UITestFailure):
+class NoVideo(RuntimeError):
     """No video available from the source pipeline."""
     pass
 
@@ -820,7 +820,7 @@ class MatchTimeout(UITestFailure):
         self.timeout_secs = timeout_secs
 
     def __str__(self):
-        return "Didn't find match for '%s' within %d seconds." % (
+        return "Didn't find match for '%s' within %f seconds." % (
             self.expected, self.timeout_secs)
 
 
@@ -838,7 +838,7 @@ class MotionTimeout(UITestFailure):
         self.timeout_secs = timeout_secs
 
     def __str__(self):
-        return "Didn't find motion%s within %d seconds." % (
+        return "Didn't find motion%s within %f seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
 
