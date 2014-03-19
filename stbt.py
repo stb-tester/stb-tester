@@ -735,9 +735,19 @@ def is_screen_black(frame, mask=None, threshold=None):
         threshold = get_config('is_screen_black', 'threshold', type_=int)
     if mask:
         mask = _load_mask(mask)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
-    _, maxVal, _, _ = cv2.minMaxLoc(frame, mask)
+    greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, greyframe = cv2.threshold(greyframe, threshold, 255, cv2.THRESH_BINARY)
+    _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
+    if maxVal > 0 and _debug_level > 1:
+        _log_image(frame, 'original', 'stbt-debug/is_screen_black')
+        if mask is not None:
+            _log_image(mask, 'mask', 'stbt-debug/is_screen_black')
+            _log_image(numpy.bitwise_and(greyframe, mask),
+                       'non-black-regions-after-masking',
+                       'stbt-debug/is_screen_black')
+        else:
+            _log_image(greyframe, 'non-black-regions-after-masking',
+                       'stbt-debug/is_screen_black')
     return maxVal == 0
 
 
