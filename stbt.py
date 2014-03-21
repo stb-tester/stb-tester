@@ -33,6 +33,7 @@ import numpy
 import irnetbox
 from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
 
+from gst_hacks import map_gst_buffer
 GObject.threads_init()
 Gst.init(None)
 
@@ -330,20 +331,22 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
     debug("Searching for " + template_name)
 
-    for frame, timestamp in frames(timeout_secs):
-        matched, position, first_pass_certainty = _match(
-            frame, template, match_parameters, template_name)
+    for sample in _display.gst_samples(timeout_secs):
+        with _numpy_from_sample(sample) as frame:
+            matched, position, first_pass_certainty = _match(
+                frame, template, match_parameters, template_name)
 
-        result = MatchResult(
-            timestamp, matched, position, first_pass_certainty,
-            numpy.copy(frame))
+            result = MatchResult(
+                sample.get_buffer().pts, matched, position,
+                first_pass_certainty, numpy.copy(frame))
 
-        cv2.rectangle(
-            frame,
-            (position.x, position.y),
-            (position.x + template.shape[1], position.y + template.shape[0]),
-            (32, 0 if matched else 255, 255),  # bgr
-            thickness=3)
+            cv2.rectangle(
+                frame,
+                (position.x, position.y),
+                (position.x + template.shape[1],
+                 position.y + template.shape[0]),
+                (32, 0 if matched else 255, 255),  # bgr
+                thickness=3)
 
         if matched:
             debug("Match found: %s" % str(result))
@@ -393,16 +396,17 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
     previous_frame_gray = None
     log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
 
-    for frame, timestamp in frames(timeout_secs):
-        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    for sample in _display.gst_samples(timeout_secs):
+        with _numpy_from_sample(sample, readonly=True) as frame:
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         log(frame_gray, "source")
 
         if previous_frame_gray is None:
             if (mask_image is not None and
-                    mask_image.shape[:2] != frame.shape[:2]):
+                    mask_image.shape[:2] != frame_gray.shape[:2]):
                 raise UITestError(
                     "The dimensions of the mask '%s' %s don't match the video "
-                    "frame %s" % (mask, mask_image.shape, frame.shape))
+                    "frame %s" % (mask, mask_image.shape, frame_gray.shape))
             previous_frame_gray = frame_gray
             continue
 
@@ -427,19 +431,20 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
         # Visualisation: Highlight in red the areas where we detected motion
         if motion:
-            cv2.add(
-                frame,
-                numpy.multiply(
-                    numpy.ones(frame.shape, dtype=numpy.uint8),
-                    (0, 0, 255),  # bgr
-                    dtype=numpy.uint8),
-                mask=cv2.dilate(
-                    thresholded,
-                    cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
-                    iterations=1),
-                dst=frame)
+            with _numpy_from_sample(sample) as frame:
+                cv2.add(
+                    frame,
+                    numpy.multiply(
+                        numpy.ones(frame.shape, dtype=numpy.uint8),
+                        (0, 0, 255),  # bgr
+                        dtype=numpy.uint8),
+                    mask=cv2.dilate(
+                        thresholded,
+                        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
+                        iterations=1),
+                    dst=frame)
 
-        result = MotionResult(timestamp, motion)
+        result = MotionResult(sample.get_buffer().pts, motion)
         debug("%s found: %s" % (
             "Motion" if motion else "No motion", str(result)))
         yield result
@@ -710,7 +715,8 @@ def save_frame(image, filename):
 
 def get_frame():
     """Returns an OpenCV image of the current video frame."""
-    return gst_to_opencv(_display.get_sample())
+    with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
+        return frame.copy()
 
 
 def is_screen_black(frame, mask=None, threshold=None):
@@ -1004,6 +1010,99 @@ def _set_config(section, option, value):
     config.set(section, option, value)
 
 
+def _gst_sample_make_writable(sample):
+    if sample.get_buffer().mini_object.is_writable():
+        return sample
+    else:
+        return Gst.Sample.new(
+            sample.get_buffer().copy_region(
+                Gst.BufferCopyFlags.FLAGS | Gst.BufferCopyFlags.TIMESTAMPS |
+                Gst.BufferCopyFlags.META | Gst.BufferCopyFlags.MEMORY, 0,
+                sample.get_buffer().get_size()),
+            sample.get_caps(),
+            sample.get_segment(),
+            sample.get_info())
+
+
+@contextmanager
+def _numpy_from_sample(sample, readonly=False):
+    """
+    Allow the contents of a GstSample to be read (and optionally changed) as a
+    numpy array.  The provided numpy array is a view onto the contents of the
+    GstBuffer in the sample provided.  The data is only valid within the `with:`
+    block where this contextmanager is used so the provided array should not
+    be referenced outside the `with:` block.  If you want to use it elsewhere
+    either copy the data with `numpy.ndarray.copy()` or reference the GstSample
+    directly.
+
+    A `numpy.ndarray` may be passed as sample, in which case this
+    contextmanager is a no-op.  This makes it easier to create functions which
+    will accept either numpy arrays or GstSamples providing a migration path
+    for reducing copying in stb-tester.
+
+    :param sample:   Either a GstSample or a `numpy.ndarray` containing the data
+                     you wish to manipulate as a `numpy.ndarray`
+    :param readonly: bool. Determines whether you want to just read or change
+                     the data contained within sample.  If True the GstSample
+                     passed must be writeable or ValueError will be raised.
+                     Use `stbt.gst_sample_make_writable` to get a writable
+                     `GstSample`.
+
+    >>> s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+    ...                    Gst.Caps.from_string("video/x-raw"), None, None)
+    >>> with _numpy_from_sample(s) as a:
+    ...     print a
+    [104 101 108 108 111]
+    """
+    if isinstance(sample, numpy.ndarray):
+        yield sample
+        return
+    if not isinstance(sample, Gst.Sample):
+        raise TypeError("numpy_from_gstsample must take a Gst.Sample")
+
+    caps = sample.get_caps()
+    flags = Gst.MapFlags.READ
+    if not readonly:
+        flags |= Gst.MapFlags.WRITE
+
+    with map_gst_buffer(sample.get_buffer(), flags) as buf:
+        array = numpy.frombuffer((buf), dtype=numpy.uint8)
+        array.flags.writeable = not readonly
+        if caps.get_structure(0).get_value('format') in ['BGR', 'RGB']:
+            array.shape = (caps.get_structure(0).get_value('height'),
+                           caps.get_structure(0).get_value('width'),
+                           3)
+        yield array
+
+
+def _test_that_mapping_a_sample_readonly_gives_a_readonly_array():
+    Gst.init([])
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+                       Gst.Caps.from_string("video/x-raw"), None, None)
+    with _numpy_from_sample(s, readonly=True) as ro:
+        try:
+            ro[0] = 3
+            assert False, 'Writing elements should have thrown'
+        except (ValueError, RuntimeError):
+            # Different versions of numpy raise different exceptions
+            pass
+
+
+def _test_passing_a_numpy_ndarray_as_sample_is_a_noop():
+    a = numpy.ndarray((5, 2))
+    with _numpy_from_sample(a) as m:
+        assert a is m
+
+
+def _test_that_dimensions_of_array_are_according_to_caps():
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(
+        "row 1 4 px  row 2 4 px  row 3 4 px  "),
+        Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
+        None, None)
+    with _numpy_from_sample(s, readonly=True) as a:
+        assert a.shape == (3, 4, 3)
+
+
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
                  restart_source=False):
@@ -1101,10 +1200,13 @@ class Display(object):
 
         return gst_sample
 
-    def get_frame(self, timeout_secs=10):
-        return self.get_sample(timeout_secs).get_buffer()
+    def frames(self, timeout_secs=None):
+        for sample in self.gst_samples(timeout_secs=timeout_secs):
+            with _numpy_from_sample(sample, readonly=True) as frame:
+                copy = frame.copy()
+            yield (copy, sample.get_buffer().pts)
 
-    def frames(self, timeout_secs):
+    def gst_samples(self, timeout_secs=None):
         self.start_timestamp = None
 
         with self.lock:
@@ -1123,11 +1225,11 @@ class Display(object):
                             timeout_secs * 1e9))
                         return
 
-                image = gst_to_opencv(sample)
+                sample = _gst_sample_make_writable(sample)
                 try:
-                    yield (image, timestamp)
+                    yield sample
                 finally:
-                    self.push_sample(sample, image)
+                    self.push_sample(sample)
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -1165,8 +1267,8 @@ class Display(object):
         """Draw the specified text on the output video."""
         self.video_debug.append((text, duration_secs, None))
 
-    def push_sample(self, gst_sample, opencv_image=None):
-        timestamp = gst_sample.get_buffer().pts
+    def push_sample(self, sample):
+        timestamp = sample.get_buffer().pts
         for text, duration, timeout in list(self.video_debug):
             if timeout is None:
                 timeout = timestamp + (duration * 1e9)
@@ -1175,22 +1277,18 @@ class Display(object):
             if timestamp > timeout:
                 self.video_debug.remove((text, duration, timeout))
 
-        if opencv_image is None and len(self.video_debug) == 0:
-            self.appsrc.props.caps = gst_sample.get_caps()
-            self.appsrc.emit("push-buffer", gst_sample.get_buffer())
-        else:
-            if opencv_image is None:
-                opencv_image = gst_to_opencv(gst_sample)
-            for i in range(len(self.video_debug)):
-                text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
-                cv2.putText(
-                    opencv_image, text, (10, (i + 1) * 30),
-                    cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-                    color=(255, 255, 255))
-            newbuf = Gst.Buffer.new_wrapped(opencv_image.data)
-            newbuf.pts = timestamp
-            self.appsrc.props.caps = gst_sample.get_caps()
-            self.appsrc.emit("push-buffer", newbuf)
+        if len(self.video_debug) > 0:
+            sample = _gst_sample_make_writable(sample)
+            with _numpy_from_sample(sample) as img:
+                for i in range(len(self.video_debug)):
+                    text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
+                    cv2.putText(
+                        img, text, (10, (i + 1) * 30),
+                        cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+                        color=(255, 255, 255))
+
+        self.appsrc.props.caps = sample.get_caps()
+        self.appsrc.emit("push-buffer", sample.get_buffer())
 
     def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
@@ -1279,18 +1377,6 @@ class GObjectTimeout(object):
 
 
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
-
-
-def gst_to_opencv(sample):
-    buf = sample.get_buffer()
-    caps = sample.get_caps()
-    assert caps.can_intersect(_BGR_CAPS)
-    return numpy.ndarray(
-        (caps.get_structure(0).get_value('height'),
-         caps.get_structure(0).get_value('width'),
-         3),
-        buffer=buf.extract_dup(0, buf.get_size()),
-        dtype=numpy.uint8)
 
 
 def _match(image, template, match_parameters, template_name):
@@ -2353,14 +2439,17 @@ def test_wait_for_motion_half_motion_int():
 @contextmanager
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
-        def frames(self, _timeout_secs=10):
+        def gst_samples(self, _timeout_secs=10):
+            data = [
+                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
+            ]
             for i in range(10):
-                yield (
-                    [
-                        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-                        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-                    ][(i / 2) % 2],
-                    i * 1000000000)
+                buf = Gst.Buffer.new_wrapped(data[(i // 2) % 2].flatten())
+                buf.pts = i * 1000000000
+                yield _gst_sample_make_writable(
+                    Gst.Sample.new(buf, Gst.Caps.from_string(
+                        'video/x-raw,format=BGR,width=2,height=2'), None, None))
 
     def _get_frame():
         return None
