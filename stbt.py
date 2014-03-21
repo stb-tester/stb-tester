@@ -1138,13 +1138,17 @@ class Display(object):
         self.restart_source_enabled = restart_source
 
         appsink = (
-            "appsink name=appsink max-buffers=1 drop=true sync=false "
+            "appsink name=appsink max-buffers=1 drop=false sync=true "
             "emit-signals=true "
             "caps=video/x-raw,format=BGR")
         self.source_pipeline_description = " ! ".join([
             user_source_pipeline,
-            "queue leaky=downstream name=q",
-            "videoconvert",
+            'queue name=_stbt_user_data_queue max-size-buffers=0 '
+            '    max-size-bytes=0 max-size-time=10000000000',
+            "decodebin",
+            'videoconvert',
+            'video/x-raw,format=BGR',
+            'queue name=_stbt_raw_frames_queue max-size-buffers=2',
             appsink])
         self.create_source_pipeline()
 
@@ -1179,6 +1183,14 @@ class Display(object):
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
 
+        if (self.source_pipeline.set_state(Gst.State.PAUSED)
+                == Gst.StateChangeReturn.NO_PREROLL):
+            # This is a live source, drop frames if we get behind
+            self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
+                .set_property('leaky', 'downstream')
+            self.source_pipeline.get_by_name('appsink') \
+                .set_property('sync', False)
+
         self.source_pipeline.set_state(Gst.State.PLAYING)
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
@@ -1200,7 +1212,8 @@ class Display(object):
         if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
             # Hauppauge HDPVR capture device.
-            source_queue = self.source_pipeline.get_by_name("q")
+            source_queue = self.source_pipeline.get_by_name(
+                "_stbt_user_data_queue")
             self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)

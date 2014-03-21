@@ -25,6 +25,6 @@ trap "rm -f script.$$" EXIT
 
 ../stbt-run \
     --source-pipeline \
-      "filesrc location=video.mpeg ! tsdemux ! video/x-h264 ! decodebin" \
+      "filesrc location=video.mpeg ! tsdemux ! h264parse" \
     --control none \
     script.$$

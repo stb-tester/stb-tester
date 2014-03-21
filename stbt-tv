@@ -63,4 +63,12 @@ source_pipeline=${*:-$("$(dirname "$0")/stbt-config" global.source_pipeline)}
         esac)}
 
 set -x
-eval gst-launch-1.0 ${v:-} $source_pipeline ! videoconvert ! $sink sync=false
+eval gst-launch-1.0 ${v:-} \
+    $source_pipeline \
+    ! queue name=_stbt_user_data_queue max-size-buffers=0  \
+        max-size-bytes=0 max-size-time=1000000000 \
+    ! decodebin \
+    ! videoconvert \
+    ! video/x-raw,format=BGR \
+    ! queue name=_stbt_raw_frames_queue max-size-buffers=2 leaky=upstream \
+    ! $sink sync=false

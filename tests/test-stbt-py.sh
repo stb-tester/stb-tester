@@ -153,7 +153,7 @@ test_that_is_screen_black_is_true_for_black_pattern() {
 	assert stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=black' \
+        --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -163,7 +163,7 @@ test_that_is_screen_black_is_false_for_smpte_pattern() {
 	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -176,7 +176,7 @@ test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
 	)
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -257,7 +257,7 @@ test_save_video() {
 	EOF
     set_config run.save_video "" &&
     timeout 10 stbt run -v --control none \
-        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
 
