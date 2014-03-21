@@ -529,7 +529,7 @@ is_screen_black(frame, mask=None, threshold=None)
       The filename of a black & white image mask. It must have white pixels for
       parts of the frame to check and black pixels for any parts to ignore.
 
-    `threshold` (int) default: 30
+    `threshold` (int) default: 10
       Even when a video frame appears to be black, the intensity of its pixels
       is not always 0. To differentiate almost-black from non-black pixels, a
       binary threshold is applied to the frame. The `threshold` value is
