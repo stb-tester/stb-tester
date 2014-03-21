@@ -33,6 +33,7 @@ import numpy
 import irnetbox
 from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
 
+from gst_hacks import map_gst_buffer
 GObject.threads_init()
 Gst.init(None)
 
@@ -1187,7 +1188,12 @@ class Display(object):
                     opencv_image, text, (10, (i + 1) * 30),
                     cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
                     color=(255, 255, 255))
-            newbuf = Gst.Buffer.new_wrapped(opencv_image.data)
+            newbuf = Gst.Buffer.new_allocate(None, len(opencv_image.data),
+                                             Gst.AllocationParams())
+            with map_gst_buffer(
+                    newbuf, Gst.MapFlags.READ | Gst.MapFlags.WRITE) as frame:
+                numpy.copyto(numpy.frombuffer(frame, dtype=numpy.uint8),
+                             opencv_image.data)
             newbuf.pts = timestamp
             self.appsrc.props.caps = gst_sample.get_caps()
             self.appsrc.emit("push-buffer", newbuf)

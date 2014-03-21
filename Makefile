@@ -68,7 +68,7 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
 	$(INSTALL) -m 0755 stbt irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 stbt.py stbt_pylint_plugin.py irnetbox.py \
+	$(INSTALL) -m 0644 gst_hacks.py stbt.py stbt_pylint_plugin.py irnetbox.py \
 	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 stbt-batch.d/run stbt-batch.d/report \
@@ -117,7 +117,10 @@ check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	nosetests --with-doctest -v stbt.py irnetbox.py \
+	nosetests --with-doctest -v \
+	    gst_hacks.py \
+	    irnetbox.py \
+	    stbt.py \
 	    tests/test_*.py \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
@@ -131,12 +134,21 @@ check-integrationtests :
 	$(parallel) tests/run-tests.sh -i && \
 	rm -rf tests/test-install
 check-pylint:
-	printf "%s\n" stbt.py stbt-run stbt-record stbt-config stbt-control \
+	printf "%s\n" \
+	    gst_hacks.py \
+	    irnetbox.py \
+	    irnetbox-proxy \
+	    stbt.py \
+	    stbt-batch.d/instaweb \
+	    stbt-batch.d/report.py \
+	    stbt-config \
+	    stbt-control \
+	    stbt-record \
+	    stbt-run \
 	    stbt-templatematch \
 	    stbt_pylint_plugin.py \
-	    irnetbox.py irnetbox-proxy \
-	    tests/test_*.py tests/fake-irnetbox stbt-batch.d/report.py \
-	    stbt-batch.d/instaweb |\
+	    tests/fake-irnetbox \
+	    tests/test_*.py |\
 	PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
