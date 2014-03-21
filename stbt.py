@@ -28,12 +28,13 @@ import time
 import warnings
 
 import cv2
+from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
 import numpy
 
 import irnetbox
-from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
-
 from gst_hacks import map_gst_buffer
+
+
 GObject.threads_init()
 Gst.init(None)
 
