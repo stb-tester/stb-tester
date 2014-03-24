@@ -250,7 +250,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    stbt run -v --control none \
+    timeout 10 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm ! decodebin' \
         test.py
 }
