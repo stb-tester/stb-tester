@@ -224,9 +224,14 @@ test_that_video_index_is_written_on_eos() {
         return 77
     }
 
+    _test_that_video_index_is_written_on_eos 5 && return
+    echo "Failed with 5s video; trying again with 20s video"
+    _test_that_video_index_is_written_on_eos 20
+}
+_test_that_video_index_is_written_on_eos() {
     cat > test.py <<-EOF &&
 	import time
-	time.sleep(5)
+	time.sleep($1)
 	EOF
     stbt run -v \
         --sink-pipeline \
@@ -235,7 +240,8 @@ test_that_video_index_is_written_on_eos() {
     webminspector.py video.webm &> webminspector.log &&
     grep "Cue Point" webminspector.log || {
       cat webminspector.log
-      fail "Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+      echo "error: Didn't find 'Cue Point' in $scratchdir/webminspector.log"
+      return 1
     }
 }
 
