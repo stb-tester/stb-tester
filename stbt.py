@@ -931,10 +931,11 @@ def argparser():
 
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False):
+        restart_source=False, transformation_pipeline='identity'):
     global _display, _control
     _display = Display(
-        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source)
+        gst_source_pipeline, gst_sink_pipeline,
+        save_video, restart_source, transformation_pipeline)
     _control = uri_to_remote(control_uri, _display)
 
 
@@ -1124,8 +1125,10 @@ def _test_that_dimensions_of_array_are_according_to_caps():
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
-                 restart_source=False):
+    def __init__(self, user_source_pipeline, user_sink_pipeline,
+                 save_video,
+                 restart_source=False,
+                 transformation_pipeline='identity'):
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
@@ -1149,6 +1152,7 @@ class Display(object):
             'videoconvert',
             'video/x-raw,format=BGR',
             'queue name=_stbt_raw_frames_queue max-size-buffers=2',
+            transformation_pipeline,
             appsink])
         self.create_source_pipeline()
 

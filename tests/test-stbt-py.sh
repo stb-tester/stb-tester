@@ -392,3 +392,19 @@ test_that_press_reads_default_delay_from_stbt_conf() {
 	EOF
     stbt run -v --control none test.py
 }
+
+test_that_transformation_pipeline_transforms_video() {
+    set_config global.transformation_pipeline \
+        "videoflip method=horizontal-flip"
+    cat > test.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	EOF
+    stbt run -v test.py || fail "Video was not flipped"
+
+    cat > test.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue.png", timeout_secs=0)
+	EOF
+    ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
+}
