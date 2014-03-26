@@ -42,7 +42,7 @@ test_stbt_batch_run_once() {
 
 test_that_stbt_batch_run_runs_until_failure() {
     create_test_repo
-    timeout 20 stbt batch run tests/test.py
+    timeout 30 stbt batch run tests/test.py
     [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -55,7 +55,7 @@ test_that_stbt_batch_run_runs_until_failure() {
 
 test_that_stbt_batch_run_continues_after_uninteresting_failure() {
     create_test_repo
-    timeout 30 stbt batch run -k tests/test.py
+    timeout 40 stbt batch run -k tests/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
