@@ -42,7 +42,7 @@ test_stbt_batch_run_once() {
 
 test_that_stbt_batch_run_runs_until_failure() {
     create_test_repo
-    timeout 20 stbt batch run tests/test.py
+    timeout 60 stbt batch run tests/test.py
     [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -55,7 +55,7 @@ test_that_stbt_batch_run_runs_until_failure() {
 
 test_that_stbt_batch_run_continues_after_uninteresting_failure() {
     create_test_repo
-    timeout 30 stbt batch run -k tests/test.py
+    timeout 60 stbt batch run -k tests/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -171,7 +171,7 @@ test_stbt_batch_run_sigint_twice() {
 
 test_that_stbt_batch_run_passes_arguments_to_script() {
     create_test_repo
-    stbt batch run \
+    stbt batch run -1 \
         tests/test.py "a b" c d -- \
         tests/test.py efg hij
 
@@ -234,7 +234,8 @@ test_stbt_batch_run_with_custom_classifier() {
 	EOF
     chmod u+x my-classifier
 
-    stbt batch run tests/test.py
+    timeout 60 stbt batch run tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     grep -q 'Intentional failure' index.html ||
         fail "Custom failure reason missing from report"
@@ -250,7 +251,8 @@ test_stbt_batch_run_with_custom_recovery_script() {
 	EOF
     chmod u+x my-recover
 
-    stbt batch run tests/test.py
+    timeout 60 stbt batch run tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     grep -q '>powercycle.log</a>' latest/index.html ||
         fail "Custom recovery script's log missing from report"
@@ -266,7 +268,8 @@ test_stbt_batch_run_recovery_exit_status() {
 	EOF
     chmod u+x my-recover
 
-    stbt batch run -kk tests/test.py
+    timeout 60 stbt batch run -kk tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
@@ -308,7 +311,8 @@ test_stbt_batch_instaweb() {
     }
 
     create_test_repo
-    stbt batch run tests/test.py
+    timeout 60 stbt batch run tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
     rundir=$(ls -d 20* | tail -1)
     assert grep -q UITestError $rundir/failure-reason
     assert grep -q UITestError $rundir/index.html
