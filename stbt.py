@@ -35,7 +35,7 @@ import irnetbox
 from gst_hacks import map_gst_buffer
 
 
-GObject.threads_init()
+GObject.threads_init()  # Required for GObject < 3.12
 Gst.init(None)
 
 warnings.filterwarnings(
