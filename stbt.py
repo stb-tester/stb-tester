@@ -1016,11 +1016,15 @@ def _set_config(section, option, value):
 
     parser = ConfigParser.SafeConfigParser()
     parser.read([custom_config])
+    if not parser.has_section(section):
+        parser.add_section(section)
     parser.set(section, option, value)
 
     with _sponge(custom_config) as f:
         parser.write(f)
 
+    if not config.has_section(section):
+        config.add_section(section)
     config.set(section, option, value)
 
 
