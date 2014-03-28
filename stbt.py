@@ -1382,14 +1382,15 @@ class Display(object):
 
     def teardown(self):
         self.tearing_down = True
-        if self.source_pipeline:
-            for elem in gst_iterate(self.source_pipeline.iterate_sources()):
+        self.source_pipeline, source = None, self.source_pipeline
+        if source:
+            for elem in gst_iterate(source.iterate_sources()):
                 elem.send_event(Gst.Event.new_eos())
             if not self.appsink_await_eos(
-                    self.source_pipeline.get_by_name('appsink'), timeout=10):
+                    source.get_by_name('appsink'), timeout=10):
                 debug("teardown: Source pipeline did not teardown gracefully")
-            self.source_pipeline.set_state(Gst.State.NULL)
-            self.source_pipeline = None
+            source.set_state(Gst.State.NULL)
+            source = None
         if not self.novideo:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
