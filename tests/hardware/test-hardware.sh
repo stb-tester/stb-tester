@@ -1,10 +1,6 @@
-# Run with ./run-tests.sh
+# Run with ../run-tests.sh
 
 hardware_test() {
-    if [ -z "$STBT_ENABLE_HARDWARE_TESTS" ]; then
-        # Skip unless we definitely want this
-        exit 77
-    fi
     config="$1" &&
     echo "Testing with config: $config" &&
     "$testdir/hardware/$config.sh" start || fail "Setup of $config failed"
