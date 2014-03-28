@@ -28,6 +28,7 @@ import time
 import warnings
 
 import cv2
+import gi
 from gi.repository import GObject, Gst, GLib  # pylint: disable=E0611
 import numpy
 
@@ -35,7 +36,8 @@ import irnetbox
 from gst_hacks import map_gst_buffer, gst_iterate
 
 
-GObject.threads_init()  # Required for GObject < 3.12
+if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
+    GObject.threads_init()
 Gst.init(None)
 
 warnings.filterwarnings(
