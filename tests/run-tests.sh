@@ -10,8 +10,6 @@
 #/
 #/         If any test names are specified, only those test cases will be run.
 
-cd "$(dirname "$0")"
-testdir="$PWD"
 
 while getopts "lvi" option; do
     case $option in
@@ -26,15 +24,17 @@ shift $(($OPTIND-1))
 testsuites=()
 testcases=()
 while [[ $# -gt 0 ]]; do
-    [[ -f $(basename $1) ]] && testsuites+=($(basename $1)) || testcases+=($1)
+    [[ -f $1 ]] && testsuites+=($1) || testcases+=($1)
     shift
 done
-for testsuite in ${testsuites[*]:-./test-*.sh}; do
+for testsuite in ${testsuites[*]:-"$(dirname "$0")"/test-*.sh}; do
     source $testsuite
 done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
-srcdir="$testdir/.."
+cd "$(dirname "$0")"
+export testdir="$PWD"
+export srcdir="$testdir/.."
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
@@ -46,6 +46,8 @@ if [[ "$test_installation" != "true" ]]; then
     make -C "$srcdir" install "prefix=$test_installation_prefix"
     export PATH="$test_installation_prefix/bin:$PATH"
 fi
+
+. $testdir/utils.sh
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
@@ -74,41 +76,6 @@ run() {
     [ $status -eq 0 ]
 }
 
-# Portable timeout command. Usage: timeout <secs> <command> [<args>...]
-timeout() { "$testdir"/timeout.pl "$@"; }
-timedout=142
-
-fail() { echo "error: $*"; exit 1; }
-
-assert() {
-    local not ret
-    [[ "$1" == '!' ]] && { not='!'; shift; } || not=
-    "$@"
-    ret=$?
-    case "$not,$ret" in
-        ,0) ;;
-        ,*) fail "Command failed: $*";;
-        !,0) fail "Expected command to fail: $*";;
-        !,*) ;;
-    esac
-}
-
-killtree() {
-    local parent=$1 child
-    for child in $(ps -o ppid= -o pid= | awk "\$1==$parent {print \$2}"); do
-        killtree $child
-    done
-    kill $parent
-}
-
-set_config() {
-    python - "$@" <<-EOF
-	import sys, stbt
-	section, name = sys.argv[1].split('.')
-	stbt._set_config(section, name, sys.argv[2])
-	EOF
-}
-
 # Run the tests ############################################################
 ret=0
 for t in ${testcases[*]}; do
@@ -125,9 +92,9 @@ _stbt_run_tests() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local testdir="$(dirname \
         $(echo $COMP_LINE | grep -o '\b[^ ]*run-tests\.sh\b'))"
-    local testfiles="$(\ls $testdir/test-*.sh)"
+    local testfiles="$(\ls $testdir/test-*.sh | sed -e 's,^\./,,')"
     local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*()/ {print $1}' $testfiles)"
     COMPREPLY=( $(
-        compgen -W "$testcases $(basename -a $testfiles)" -- "$cur") )
+        compgen -W "$testcases $testfiles" -- "$cur") )
 }
 complete -F _stbt_run_tests run-tests.sh

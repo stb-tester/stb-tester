@@ -124,15 +124,13 @@ check-nosetests:
 	    tests/test_*.py \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
-check-integrationtests :
-	rm -rf tests/test-install && \
-	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
-	      man1dir sysconfdir && \
-	make install prefix=$$PWD/tests/test-install && \
+check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
-	$(parallel) tests/run-tests.sh -i && \
-	rm -rf tests/test-install
+	$(parallel) tests/run-tests.sh -i
+check-hardware: install-for-test
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" \
 	    gst_hacks.py \
@@ -158,6 +156,12 @@ check-bashcompletion:
 	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
 	        ($$t); \
 	    done'
+
+install-for-test:
+	rm -rf tests/test-install && \
+	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
+	      man1dir sysconfdir && \
+	make install prefix=$$PWD/tests/test-install
 
 parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
@@ -261,5 +265,6 @@ ppa-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/stb-tester_$(VERSION)-1_source.changes
 
 .PHONY: all clean check dist doc install uninstall
-.PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
+.PHONY: check-bashcompletion check-hardware check-integrationtests
+.PHONY: check-nosetests check-pylint install-for-test
 .PHONY: FORCE TAGS
