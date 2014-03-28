@@ -23,3 +23,7 @@ test_teradek_vidiu() {
 test_hauppauge_hdpvr() {
     hardware_test hauppauge-hdpvr
 }
+
+test_blackmagic_intensitypro() {
+    hardware_test blackmagic-intensitypro
+}
