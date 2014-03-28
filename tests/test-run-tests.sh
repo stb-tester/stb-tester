@@ -1,5 +1,5 @@
-# Tests the helper functions, used by the tests, defined in run-tests.sh.
-# Run with ./run-tests.sh
+# Tests the self-test framework and the helper functions in utils.sh used by
+# the self-tests. Run with ./run-tests.sh
 
 test_assert() {
     ( assert true ) || fail "'assert true' failed"
