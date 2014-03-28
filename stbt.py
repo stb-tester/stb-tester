@@ -28,7 +28,7 @@ import time
 import warnings
 
 import cv2
-from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
+from gi.repository import GObject, Gst, GLib  # pylint: disable=E0611
 import numpy
 
 import irnetbox
