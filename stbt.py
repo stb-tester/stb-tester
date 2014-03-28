@@ -32,7 +32,7 @@ from gi.repository import GObject, Gst, GLib  # pylint: disable-msg=E0611
 import numpy
 
 import irnetbox
-from gst_hacks import map_gst_buffer
+from gst_hacks import map_gst_buffer, gst_iterate
 
 
 GObject.threads_init()  # Required for GObject < 3.12
@@ -1127,6 +1127,7 @@ class Display(object):
         self.start_timestamp = None
         self.underrun_timeout = None
         self.video_debug = []
+        self.tearing_down = False
 
         self.restart_source_enabled = restart_source
 
@@ -1321,8 +1322,9 @@ class Display(object):
         sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
-        warn("Got EOS from source pipeline")
-        self.restart_source()
+        if not self.tearing_down:
+            warn("Got EOS from source pipeline")
+            self.restart_source()
 
     def on_eos_from_sink_pipeline(self, _bus, _message):
         debug("Got EOS")
@@ -1353,6 +1355,8 @@ class Display(object):
         return False  # stop the timeout from running again
 
     def start_source(self):
+        if self.tearing_down:
+            return False
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
         self.source_pipeline.set_state(Gst.State.PLAYING)
@@ -1361,9 +1365,31 @@ class Display(object):
             self.underrun_timeout.start()
         return False  # stop the timeout from running again
 
+    @staticmethod
+    def appsink_await_eos(appsink, timeout=None):
+        done = threading.Event()
+
+        def on_eos(_appsink):
+            done.set()
+            return True
+        hid = appsink.connect('eos', on_eos)
+        if appsink.get_property('eos'):
+            appsink.disconnect(hid)
+            return True
+        d = done.wait(timeout)
+        appsink.disconnect(hid)
+        return d
+
     def teardown(self):
+        self.tearing_down = True
         if self.source_pipeline:
+            for elem in gst_iterate(self.source_pipeline.iterate_sources()):
+                elem.send_event(Gst.Event.new_eos())
+            if not self.appsink_await_eos(
+                    self.source_pipeline.get_by_name('appsink'), timeout=10):
+                debug("teardown: Source pipeline did not teardown gracefully")
             self.source_pipeline.set_state(Gst.State.NULL)
+            self.source_pipeline = None
         if not self.novideo:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
