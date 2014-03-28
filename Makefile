@@ -1,7 +1,7 @@
 # The default target of this Makefile is:
 all:
 
-PKG_DEPS=gstreamer-1.0
+PKG_DEPS=gstreamer-1.0 gstreamer-video-1.0 opencv
 
 prefix?=/usr/local
 exec_prefix?=$(prefix)
@@ -348,6 +348,7 @@ stbt_camera_files=\
 	_stbt/gst_utils.py \
 	_stbt/tv_driver.py \
 	stbt-camera \
+	stbt-camera.d/chessboard-720p-40px-border-white.png \
 	stbt-camera.d/glyphs.svg.jinja2 \
 	stbt-camera.d/stbt-camera-calibrate.py \
 	stbt-camera.d/stbt-camera-validate.py
@@ -358,7 +359,9 @@ installed_camera_files=\
 
 CFLAGS?=-O2
 
-stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/plugin.c \
+stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrection.c \
+                                       stbt-camera.d/gst/stbtgeometriccorrection.h \
+                                       stbt-camera.d/gst/plugin.c \
                                        VERSION
 	@if ! pkg-config --exists $(PKG_DEPS); then \
 		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
@@ -380,6 +383,7 @@ install-stbt-camera : $(stbt_camera_files)
 	done
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
+
 
 .PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests

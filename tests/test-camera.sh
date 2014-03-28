@@ -7,6 +7,87 @@ skip_if_no_rsvg_plugins() {
     fi
 }
 
+stb_tester_logo_src_1080p="\
+    videotestsrc pattern=solid-color \
+    ! video/x-raw,width=1280,height=720 \
+    ! rsvgoverlay location=$testdir/stb-tester-350px.svg x=465 y=210 \
+    ! videoscale \
+    ! video/x-raw,width=1920,height=1080 \
+    ! videoconvert "
+
+###
+### stbtgeometriccorrection tests
+###
+
+create_stb_tester_logo_template() {
+    # Can't just use rsvgdec as it doesn't seem to respect the white background
+    # colour in the svg
+    gst-launch-1.0 videotestsrc pattern=solid-color \
+                 ! video/x-raw,width=349,height=301 \
+                 ! rsvgoverlay location="$testdir/stb-tester-350px.svg" \
+                 ! videoconvert ! video/x-raw,format=RGB ! pngenc snapshot = true \
+                 ! filesink location="stb-tester-350px.png"
+}
+
+test_that_stbtgeometriccorrection_scales_by_default() {
+    skip_if_no_rsvg_plugins
+
+    start_fake_video_src_launch_1080 $stb_tester_logo_src_1080p &&
+    set_config global.transformation_pipeline "stbtgeometriccorrection" &&
+    set_config global.control "none" &&
+
+    create_stb_tester_logo_template &&
+    echo 'wait_for_match("stb-tester-350px.png")' >test.py &&
+    stbt run -v test.py
+}
+
+# Properties to be passed to stbtgeometriccorrection to flatten capture-logo.png.
+# capture-logo.png was taken with a Logitech C920 webcam.
+wp_matricies='
+    camera-matrix="1491.1536435672558    0.0             929.63729425798135
+                      0.0             1490.0565740887305 569.55885903330557
+                      0.0                0.0               1.0"
+
+    distortion-coefficients="0.12152211775145583 -0.28102519335279752
+        0.00020128754517049412 3.738779032027093e-05 0.08124443207970744"
+
+    homography-matrix="1337.9978689558545       -1.2281763921416602   636.39368178649374
+                        -18.912787775602091   1237.5658408092195      398.39453388539317
+                          0.10401610284561842   -0.080103205719775208   1.0"'
+wp_props="$(echo "$wp_matricies" | tr '\n' ' ')"
+
+test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
+    skip_if_no_rsvg_plugins
+
+    create_stb_tester_logo_template &&
+    start_fake_video_src_launch_1080 uridecodebin "uri=file://$testdir/capture-logo.png" ! videoconvert ! imagefreeze &&
+    set_config global.transformation_pipeline "stbtgeometriccorrection $wp_props" &&
+    set_config global.control "none" &&
+
+    create_stb_tester_logo_template &&
+    echo 'wait_for_match("stb-tester-350px.png",
+                         match_parameters=MatchParameters(confirm_threshold=0.3))' >test.py &&
+    stbt run -v test.py
+}
+
+test_that_stbt_camera_calibrate_corrects_for_geometric_distortion() {
+    set_config camera.tv_driver assume
+    set_config global.control none
+
+    skip_if_no_rsvg_plugins
+
+    start_fake_video_src_launch_1080 \
+        uridecodebin "uri=file://$testdir/capture-chessboard.png" \
+        ! videoconvert ! imagefreeze &&
+
+    stbt --with-experimental camera calibrate --noninteractive --skip-illumination &&
+    start_fake_video_src_launch_1080 \
+        uridecodebin "uri=file://$testdir/capture-letters-bw.png" \
+        ! videoconvert ! imagefreeze &&
+    stbt --with-experimental camera validate --positions-only letters-bw &&
+    stop_fake_video_src
+}
+
 ###
 ### Fake Video Source - test infrastructure.
 ###

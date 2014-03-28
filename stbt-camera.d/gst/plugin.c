@@ -27,10 +27,13 @@
 
 #include <gst/gst.h>
 
+#include "stbtgeometriccorrection.h"
+
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
-  return TRUE;
+  return gst_element_register (plugin, "stbtgeometriccorrection", GST_RANK_NONE,
+      STBT_TYPE_GEOMETRIC_CORRECTION)
 }
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
