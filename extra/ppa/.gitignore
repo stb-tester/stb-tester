@@ -1,0 +1,11 @@
+gst-plugins-good1.0/
+uvcvideo-dkms/
+uvcvideo/
+linux/
+*.dsc
+*.xz
+*.gz
+*.patch
+*.build
+*.changes
+*.upload

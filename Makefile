@@ -253,6 +253,13 @@ obs-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 	cd "$$srcdir" && \
 	rm -Rf "$$tmpdir"
 
+# Ubuntu PPA
+
+DPUT_HOST?=ppa:stb-tester
+
+ppa-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+	dput $(DPUT_HOST) debian-src-pkg/stb-tester_$(VERSION)-1_source.changes
+
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
 .PHONY: FORCE TAGS
