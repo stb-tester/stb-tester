@@ -8,7 +8,7 @@ STREAM_NAME=steam
 case $1 in
     start)
         sed "s,@SCRATCH_DIR@,$scratch_dir,g" \
-            $testdir/hardware-test/crtmpserver.lua.in >"crtmpserver.lua"
+            $testdir/hardware/crtmpserver.lua.in >"crtmpserver.lua"
         crtmpserver "crtmpserver.lua" &
         # Wait for rtmp server to start up:
         while ! netstat -ln --tcp | grep -q ':1935'; do

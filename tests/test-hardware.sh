@@ -7,11 +7,11 @@ hardware_test() {
     fi
     config="$1" &&
     echo "Testing with config: $config" &&
-    "$testdir/hardware-test/$config.sh" start || fail "Setup of $config failed"
+    "$testdir/hardware/$config.sh" start || fail "Setup of $config failed"
 
-    stbt run -v --control=none "$testdir/hardware-test/test.py"
+    stbt run -v --control=none "$testdir/hardware/test.py"
     exit_status=$?
-    "$testdir/hardware-test/$config.sh" stop \
+    "$testdir/hardware/$config.sh" stop \
         || echo "WARNING: $config teardown failed"
     exit $exit_status
 }
