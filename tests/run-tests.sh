@@ -10,10 +10,6 @@
 #/
 #/         If any test names are specified, only those test cases will be run.
 
-cd "$(dirname "$0")"
-export testdir="$PWD"
-
-. $testdir/utils.sh
 
 while getopts "lvi" option; do
     case $option in
@@ -28,15 +24,17 @@ shift $(($OPTIND-1))
 testsuites=()
 testcases=()
 while [[ $# -gt 0 ]]; do
-    [[ -f $(basename $1) ]] && testsuites+=($(basename $1)) || testcases+=($1)
+    [[ -f $1 ]] && testsuites+=($1) || testcases+=($1)
     shift
 done
-for testsuite in ${testsuites[*]:-./test-*.sh}; do
+for testsuite in ${testsuites[*]:-"$(dirname "$0")"/test-*.sh}; do
     source $testsuite
 done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
-srcdir="$testdir/.."
+cd "$(dirname "$0")"
+export testdir="$PWD"
+export srcdir="$testdir/.."
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
@@ -48,6 +46,8 @@ if [[ "$test_installation" != "true" ]]; then
     make -C "$srcdir" install "prefix=$test_installation_prefix"
     export PATH="$test_installation_prefix/bin:$PATH"
 fi
+
+. $testdir/utils.sh
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
@@ -92,9 +92,9 @@ _stbt_run_tests() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local testdir="$(dirname \
         $(echo $COMP_LINE | grep -o '\b[^ ]*run-tests\.sh\b'))"
-    local testfiles="$(\ls $testdir/test-*.sh)"
+    local testfiles="$(\ls $testdir/test-*.sh | sed -e 's,^\./,,')"
     local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*()/ {print $1}' $testfiles)"
     COMPREPLY=( $(
-        compgen -W "$testcases $(basename -a $testfiles)" -- "$cur") )
+        compgen -W "$testcases $testfiles" -- "$cur") )
 }
 complete -F _stbt_run_tests run-tests.sh
