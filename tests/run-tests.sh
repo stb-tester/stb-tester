@@ -11,7 +11,9 @@
 #/         If any test names are specified, only those test cases will be run.
 
 cd "$(dirname "$0")"
-testdir="$PWD"
+export testdir="$PWD"
+
+. $testdir/utils.sh
 
 while getopts "lvi" option; do
     case $option in
@@ -99,14 +101,6 @@ killtree() {
         killtree $child
     done
     kill $parent
-}
-
-set_config() {
-    python - "$@" <<-EOF
-	import sys, stbt
-	section, name = sys.argv[1].split('.')
-	stbt._set_config(section, name, sys.argv[2])
-	EOF
 }
 
 # Run the tests ############################################################
