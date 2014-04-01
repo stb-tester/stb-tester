@@ -73,7 +73,7 @@
         <td>
           {{run.exit_status}}
           {% if run.failure_reason not in ("", "success") %}
-            — {{ run.failure_reason | truncate(30, True) }}
+            — <span>{{ run.failure_reason | truncate(30, True) }}</span>
           {% endif %}
         </td>
         <td>{{ run.notes | truncate(30, True) }}</td>

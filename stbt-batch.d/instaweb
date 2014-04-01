@@ -35,13 +35,14 @@ def catch_all(path):
         abort(404)
 
     if isfile(f):
-        return send_from_directory(app.instance_path, path)
+        return send_from_directory(app.instance_path, path, cache_timeout=1)
     if isdir(f):
         if not path.endswith("/") and path != "":
             return redirect(path + "/")
         index = os.path.join(path, "index.html")
         if isfile(index):
-            return send_from_directory(app.instance_path, index)
+            return send_from_directory(
+                app.instance_path, index, cache_timeout=1)
         else:
             return render_template(
                 "directory-index.html",
@@ -62,7 +63,7 @@ def update_file(testrun, filename):
     d = testrun_directory(testrun)
     manual_text = request.form["value"].encode('utf-8', errors="ignore").strip()
     f = os.path.join(d, filename)
-    automatic_text = open(f).read().strip() if isfile(f) else None
+    automatic_text = open(f).read().strip() if isfile(f) else ""
     if len(manual_text) == 0 or manual_text == automatic_text:
         try:
             os.remove(f + ".manual")
@@ -75,7 +76,7 @@ def update_file(testrun, filename):
         os.path.join(dirname(abspath(__file__)), "report"),
         "--html-only",
         d])
-    return ""
+    return manual_text if len(manual_text) > 0 else automatic_text
 
 
 @app.route("/<path:testrun>/delete", methods=["POST"])
