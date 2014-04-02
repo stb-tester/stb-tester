@@ -18,7 +18,12 @@ for f in "$@"; do
     r=0
     out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" \
                  $f 2>&1) || r=1 ret=1
-    printf "%s" "$out" | grep -v 'pygobject_register_sinkfunc is deprecated'
+    printf "%s" "$out" |
+        grep -v \
+            -e 'pygobject_register_sinkfunc is deprecated' \
+            -e "assertion 'G_TYPE_IS_BOXED (boxed_type)' failed" \
+            -e "assertion 'G_IS_PARAM_SPEC (pspec)' failed" \
+            -e "return isinstance(object, (type, types.ClassType))"
     pep8 $(pep8options $f) $f || r=1 ret=1
     [ $r -eq 0 ] && echo "$f OK"
 done
