@@ -244,15 +244,14 @@ stb-tester_$(VERSION)-1_$(debian_architecture).deb : debian-src-pkg/
 OBS_PROJECT?=home:stb-tester
 OBS_PACKAGE?=stb-tester
 
-obs-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+obs-publish : stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 	srcdir=$$PWD && \
 	tmpdir=$$(mktemp -d -t stb-tester-osc-publish.XXXXXX) && \
 	cd "$$tmpdir" && \
 	osc checkout "$(OBS_PROJECT)" "$(OBS_PACKAGE)" && \
 	cd "$(OBS_PROJECT)/$(OBS_PACKAGE)" && \
 	rm * && \
-	cp "$$srcdir"/debian-src-pkg/* \
-	   "$$srcdir/stb-tester-$(VERSION).tar.gz" \
+	cp "$$srcdir/stb-tester-$(VERSION).tar.gz" \
 	   "$$srcdir/extra/stb-tester.spec" . && \
 	osc addremove && \
 	osc commit -m "Update to stb-tester version $(VERSION)" && \
