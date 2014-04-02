@@ -6,6 +6,8 @@
 
 In 0.19 we migrated stb-tester from GStreamer 0.10 to 1.0.  This should require
 **no changes to test scripts** but **configuration may need to be updated**.
+It is also no longer required that source pipelines output raw video.
+stb-tester may even be able to save memory if it is fed compressed video.
 
 Specifically you may need to update `global.source_pipeline` in your
 `stbt.conf`.  Some GStreamer elements have been renamed:
@@ -23,7 +25,7 @@ Advice for users of specific hardware:
 
 *   **Hauppauge HD-PVR**.  `source_pipeline` should become:
 
-        v4l2src device=/dev/video0 ! tsdemux ! video/x-h264 ! decodebin
+        v4l2src device=/dev/video0 ! tsdemux ! h264parse
 
     Note: to use the HD-PVR with GStreamer 1.0 you need to have
     gst-plugins-good version >=1.2.4 or an earlier version with the patches
@@ -31,7 +33,7 @@ Advice for users of specific hardware:
 
 *   **Teradek VidiU** - `source_pipeline` should become:
 
-        rtmpsrc location=rtmp://localhost/live/stream-name\ live=1 ! decodebin
+        rtmpsrc location=rtmp://localhost/live/stream-name\ live=1
 
     Note: With GStreamer 1.0 there is a 20s delay during VidiU pipeline
     shutdown.  This shouldn't affect your ability to test with the VidiU but we

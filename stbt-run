@@ -34,7 +34,8 @@ stbt.debug("Arguments:\n" + "\n".join([
 try:
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
-        args.save_video, args.restart_source)
+        args.save_video, args.restart_source,
+        stbt.get_config('global', 'transformation_pipeline'))
     # pylint: disable=W0611
     from stbt import (
         # For backwards compatibility. We want to encourage people to

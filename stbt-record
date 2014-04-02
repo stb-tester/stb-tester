@@ -38,7 +38,9 @@ def main(argv):
     try:
         stbt.init_run(
             args.source_pipeline, args.sink_pipeline, args.control,
-            restart_source=args.restart_source)
+            restart_source=args.restart_source,
+            transformation_pipeline=(
+                stbt.get_config('global', 'transformation_pipeline')))
         record(args.control_recorder, script)
     finally:
         stbt.teardown_run()

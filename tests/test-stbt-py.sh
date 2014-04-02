@@ -153,7 +153,7 @@ test_that_is_screen_black_is_true_for_black_pattern() {
 	assert stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=black' \
+        --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -163,7 +163,7 @@ test_that_is_screen_black_is_false_for_smpte_pattern() {
 	assert not stbt.is_screen_black(stbt.get_frame())
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -176,7 +176,7 @@ test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
 	)
 	EOF
     stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true' \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
         test.py
 }
 
@@ -257,7 +257,7 @@ test_save_video() {
 	EOF
     set_config run.save_video "" &&
     timeout 10 stbt run -v --control none \
-        --source-pipeline 'filesrc location=video.webm ! decodebin' \
+        --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
 
@@ -391,4 +391,20 @@ test_that_press_reads_default_delay_from_stbt_conf() {
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
     stbt run -v --control none test.py
+}
+
+test_that_transformation_pipeline_transforms_video() {
+    set_config global.transformation_pipeline \
+        "videoflip method=horizontal-flip"
+    cat > test.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	EOF
+    stbt run -v test.py || fail "Video was not flipped"
+
+    cat > test.py <<-EOF
+	wait_for_match(
+	    "$testdir/videotestsrc-redblue.png", timeout_secs=0)
+	EOF
+    ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
