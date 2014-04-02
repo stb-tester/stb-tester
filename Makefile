@@ -250,7 +250,7 @@ obs-publish : stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 	cd "$$tmpdir" && \
 	osc checkout "$(OBS_PROJECT)" "$(OBS_PACKAGE)" && \
 	cd "$(OBS_PROJECT)/$(OBS_PACKAGE)" && \
-	rm * && \
+	rm -f * && \
 	cp "$$srcdir/stb-tester-$(VERSION).tar.gz" \
 	   "$$srcdir/extra/stb-tester.spec" . && \
 	osc addremove && \
