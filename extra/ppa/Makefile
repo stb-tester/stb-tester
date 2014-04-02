@@ -1,7 +1,7 @@
 DPUT_HOST?=ppa:stb-tester
 DEBUILD_OPTS=
 
-UVC_RELEASE=1.3
+UVC_RELEASE=1.4
 
 VER=1.2.0
 REL=1ubuntu1
@@ -94,6 +94,8 @@ uvcvideo : $(LINUX_SOURCES) $(LINUX_PATCHES)
 	dpkg-source -x linux_3.11.0-18.32.dsc && \
 	cd linux-3.11.0 && \
 	patch -p1 < ../../uvcvideo-work-around-buggy-logitech-c920-firmware.patch && \
+	sed -E --in-place 's/#define DRIVER_VERSION\s+"(.*)"/#define DRIVER_VERSION "\1-stbtester1"/' \
+		drivers/media/usb/uvc/uvcvideo.h && \
 	rm -f drivers/media/usb/uvc/*.orig && \
 	cp -r drivers/media/usb/uvc $(abspath $@)
 
