@@ -14,6 +14,7 @@ Requires: gstreamer1
 Requires: gstreamer1-plugins-bad-free
 Requires: gstreamer1-plugins-base
 Requires: gstreamer1-plugins-good
+Requires: moreutils
 Requires: python-gstreamer1
 Requires: opencv
 Requires: opencv-python
