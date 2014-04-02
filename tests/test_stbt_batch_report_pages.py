@@ -14,8 +14,13 @@ import tempfile
 import threading
 import time
 
-from selenium import webdriver
-from selenium.common import exceptions
+import nose
+
+try:
+    from selenium import webdriver
+    from selenium.common import exceptions
+except ImportError:
+    raise nose.SkipTest("Selenium Python Client Driver is not installed")
 
 
 REPOSITORY_ROOT = os.path.join(os.path.dirname(__file__), "..")
