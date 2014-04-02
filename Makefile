@@ -198,6 +198,8 @@ TAGS:
 
 # Debian Packaging
 
+DPKG_OPTS?=
+
 extra/stb-tester_$(VERSION)-1.debian.tar.xz : \
 		extra/debian/changelog \
 		extra/debian/compat \
@@ -219,7 +221,7 @@ debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)
 	tar -xzf stb-tester_$(VERSION).orig.tar.gz && \
 	cd stb-tester-$(VERSION) && \
 	tar -xJf ../stb-tester_$(VERSION)-1.debian.tar.xz && \
-	debuild -S && \
+	debuild -S $(DPKG_OPTS) && \
 	cd .. && \
 	mv stb-tester_$(VERSION)-1.dsc stb-tester_$(VERSION)-1_source.changes \
 	   stb-tester_$(VERSION)-1.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
@@ -233,7 +235,7 @@ stb-tester_$(VERSION)-1_$(debian_architecture).deb : debian-src-pkg/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
 	dpkg-source -x debian-src-pkg/stb-tester_$(VERSION)-1.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
-	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b) && \
+	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir/$@" . && \
 	rm -rf "$$tmpdir"
 
