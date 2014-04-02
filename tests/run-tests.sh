@@ -21,6 +21,13 @@ while getopts "lvi" option; do
 done
 shift $(($OPTIND-1))
 
+export testdir="$(cd "$(dirname "$0")" && pwd)"
+export srcdir="$testdir/.."
+export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
+export PYTHONPATH="$srcdir:$PYTHONPATH"
+export PYTHONUNBUFFERED=x
+export PYLINTRC="$testdir/pylint.conf"
+
 testsuites=()
 testcases=()
 while [[ $# -gt 0 ]]; do
@@ -32,13 +39,7 @@ for testsuite in ${testsuites[*]:-"$(dirname "$0")"/test-*.sh}; do
 done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}
 
-cd "$(dirname "$0")"
-export testdir="$PWD"
-export srcdir="$testdir/.."
-export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
-export PYTHONPATH="$srcdir:$PYTHONPATH"
-export PYTHONUNBUFFERED=x
-export PYLINTRC="$testdir/pylint.conf"
+cd "$testdir"
 rm -f ~/.gstreamer-1.0/registry.*
 
 if [[ "$test_installation" != "true" ]]; then
