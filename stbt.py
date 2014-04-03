@@ -673,17 +673,8 @@ class OcrMode(object):
     SINGLE_CHARACTER = 10
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
-    """Return the text present in the video frame.
-
-    Perform OCR (Optical Character Recognition) using the "Tesseract"
-    open-source OCR engine, which must be installed on your system.
-
-    If `frame` isn't specified, take a frame from the source video stream.
-    If `region` is specified, only process that region of the frame; otherwise
-    process the entire frame.
-    """
-
+def _tesseract(frame=None, region=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
     if frame is None:
         frame = get_frame()
     if region is not None:
@@ -700,12 +691,25 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
         cv2.imwrite(ocr_in.name, frame)
-        subprocess.check_output([
-            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)],
-            stderr=subprocess.STDOUT)
-        text = ocr_out.read().strip()
-        debug("OCR read '%s'." % text)
-        return text
+        cmd = ["tesseract", ocr_in.name,
+               ocr_out.name[:-len('.txt')], "-psm", str(mode)]
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return ocr_out.read()
+
+
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
+    """Return the text present in the video frame.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+    """
+    text = _tesseract(frame, region, mode, lang).strip()
+    debug("OCR read '%s'." % text)
+    return text
 
 
 def frames(timeout_secs=None):
