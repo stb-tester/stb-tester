@@ -39,7 +39,7 @@ VERSION?=$(shell cat VERSION)
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf
+all: stbt stbt.1 defaults.conf extra/stb-tester.spec
 
 extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
