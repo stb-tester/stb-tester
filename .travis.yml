@@ -13,6 +13,7 @@ install:
         gstreamer1.0-plugins-good
         gstreamer1.0-tools
         gstreamer1.0-x
+        libgstreamer1.0-dev
         librsvg2-bin
         lighttpd
         moreutils
