@@ -17,6 +17,7 @@ import time
 import nose
 
 try:
+    # pylint: disable=F0401
     from selenium import webdriver
     from selenium.common import exceptions
 except ImportError:
@@ -29,10 +30,10 @@ REPOSITORY_ROOT = os.path.join(os.path.dirname(__file__), "..")
 def generate_stbt_batch_results():
     os.environ["STBT_CONFIG_FILE"] = \
         os.path.join(REPOSITORY_ROOT, "tests", "stbt.conf")
-    proc = subprocess.Popen([
-            os.path.join(REPOSITORY_ROOT, "stbt-batch.d", "run"),
-            os.path.join(REPOSITORY_ROOT, "tests", "test.py")
-        ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    proc = subprocess.Popen(
+        [os.path.join(REPOSITORY_ROOT, "stbt-batch.d", "run"),
+         os.path.join(REPOSITORY_ROOT, "tests", "test.py")],
+        stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
     timer = threading.Timer(60, proc.kill)
     timer.start()
     proc.wait()
