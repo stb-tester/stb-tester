@@ -240,13 +240,87 @@ class Position(namedtuple('Position', 'x y')):
 
 
 class Region(namedtuple('Region', 'x y width height')):
-    """Rectangular region within the video frame.
+    # pylint: disable=E1101
+    u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,
     measured in pixels from the top left of the video frame. The `width` and
     `height` of the rectangle are also measured in pixels.
+
+    Example:
+
+    regions a, b and c::
+
+          01234567890123
+        0 ░░░░░░░░
+        1 ░a░░░░░░
+        2 ░░░░░░░░
+        3 ░░░░░░░░
+        4 ░░░░▓▓▓▓░░▓c▓
+        5 ░░░░▓▓▓▓░░▓▓▓
+        6 ░░░░▓▓▓▓░░░░░
+        7 ░░░░▓▓▓▓░░░░░
+        8     ░░░░░░b░░
+        9     ░░░░░░░░░
+
+        >>> a = Region(0, 0, 8, 8)
+        >>> b = Region.from_extents(4, 4, 13, 10)
+        >>> b
+        Region(x=4, y=4, width=9, height=6)
+        >>> c = Region(10, 4, 3, 2)
+        >>> a.right
+        8
+        >>> b.bottom
+        10
+        >>> b.contains(c)
+        True
+        >>> a.contains(b)
+        False
+        >>> c.contains(b)
+        False
     """
-    pass
+    @staticmethod
+    def from_extents(x, y, right, bottom):
+        """Create a Region using right and bottom extents rather than width and
+        height."""
+        return Region(x, y, right - x, bottom - y)
+
+    @property
+    def right(self):
+        """The x coordinate beyond the right edge of the region"""
+        return self.x + self.width
+
+    @property
+    def bottom(self):
+        """The y coordinate beyond the bottom edge of the region"""
+        return self.y + self.height
+
+    def contains(self, other):
+        """Checks whether other is entirely contained within self"""
+        return (self.x <= other.x and self.y <= other.y and
+                self.right >= other.right and self.bottom >= other.bottom)
+
+
+def _bounding_box(a, b):
+    """Find the bounding box of two regions.  Returns the smallest region which
+    contains both regions a and b.
+
+    >>> _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+    Region(x=20, y=20, width=40, height=30)
+    >>> _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(None, Region(20, 30, 10, 20))
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(Region(20, 30, 10, 20), None)
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(None, None)
+    """
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return Region.from_extents(min(a.x, b.x), min(a.y, b.y),
+                               max(a.right, b.right), max(a.bottom, b.bottom))
 
 
 class MatchResult(object):

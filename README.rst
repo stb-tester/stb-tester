@@ -667,6 +667,38 @@ class Region
     measured in pixels from the top left of the video frame. The `width` and
     `height` of the rectangle are also measured in pixels.
 
+    Example:
+
+    regions a, b and c::
+
+          01234567890123
+        0 ░░░░░░░░
+        1 ░a░░░░░░
+        2 ░░░░░░░░
+        3 ░░░░░░░░
+        4 ░░░░▓▓▓▓░░▓c▓
+        5 ░░░░▓▓▓▓░░▓▓▓
+        6 ░░░░▓▓▓▓░░░░░
+        7 ░░░░▓▓▓▓░░░░░
+        8     ░░░░░░b░░
+        9     ░░░░░░░░░
+
+        >>> a = Region(0, 0, 8, 8)
+        >>> b = Region.from_extents(4, 4, 13, 10)
+        >>> b
+        Region(x=4, y=4, width=9, height=6)
+        >>> c = Region(10, 4, 3, 2)
+        >>> a.right
+        8
+        >>> b.bottom
+        10
+        >>> b.contains(c)
+        True
+        >>> a.contains(b)
+        False
+        >>> c.contains(b)
+        False
+
 class MotionResult
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
