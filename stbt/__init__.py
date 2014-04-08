@@ -467,7 +467,8 @@ class MatchResult(object):
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
-                _template_name(self.image)))
+                self.image if isinstance(self.image, numpy.ndarray)
+                else "<Custom Image>"))
 
     @property
     def position(self):
@@ -475,6 +476,28 @@ class MatchResult(object):
 
     def __nonzero__(self):
         return self.match
+
+
+class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate', 'image filename')):
+    @property
+    def friendly_name(self):
+        return self.filename or '<Custom Image>'
+
+
+def _load_template(template):
+    if isinstance(template, _AnnotatedTemplate):
+        return template
+    if isinstance(template, numpy.ndarray):
+        return _AnnotatedTemplate(template, None)
+    else:
+        template_name = _find_path(template)
+        if not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % template_name)
+        image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        if image is None:
+            raise UITestError("Failed to load template file: %s" %
+                              template_name)
+        return _AnnotatedTemplate(image, template_name)
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -512,29 +535,19 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    if isinstance(image, numpy.ndarray):
-        template = image
-        template_name = _template_name(image)
-    else:
-        template_name = _find_path(image)
-        if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % image)
-        template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
-        if template is None:
-            raise UITestError("Failed to load template file: %s" %
-                              template_name)
+    template = _load_template(image)
 
-    debug("Searching for " + template_name)
+    debug("Searching for " + template.friendly_name)
 
     for sample in _display.gst_samples(timeout_secs):
         with _numpy_from_sample(sample) as frame:
             matched, region, first_pass_certainty = _match(
-                frame, template, match_parameters, template_name)
+                frame, template.image, match_parameters, template.friendly_name)
 
             result = MatchResult(
                 sample.get_buffer().pts, matched, region, first_pass_certainty,
                 numpy.copy(frame),
-                (image if isinstance(image, numpy.ndarray) else template_name))
+                (template.filename or template.image))
 
             cv2.rectangle(
                 frame,
@@ -644,16 +657,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         yield result
 
 
-def _template_name(template):
-    if isinstance(template, numpy.ndarray):
-        return "<Custom Image>"
-    elif isinstance(template, str) or isinstance(template, unicode):
-        return template
-    else:
-        assert False, ("template is of unexpected type '%s'" %
-                       type(template).__name__)
-
-
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    noise_threshold=None, match_parameters=None):
     """Search for `image` in the source video stream.
@@ -694,6 +697,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
+    image = _load_template(image)
     for res in detect_match(
             image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
@@ -702,10 +706,10 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             match_count = 0
         last_pos = res.position
         if match_count == consecutive_matches:
-            debug("Matched " + _template_name(image))
+            debug("Matched " + image.friendly_name)
             return res
 
-    raise MatchTimeout(res.frame, _template_name(image), timeout_secs)  # pylint: disable=W0631,C0301
+    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
 
 
 def press_until_match(
