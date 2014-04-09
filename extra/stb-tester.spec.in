@@ -15,11 +15,10 @@ Requires: gstreamer1-plugins-bad-free
 Requires: gstreamer1-plugins-base
 Requires: gstreamer1-plugins-good
 Requires: moreutils
-Requires: python-gstreamer1
 Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients
-Requires: pygtk2
+Requires: pygobject3
 Requires: pylint
 Requires: python >= 2.7
 Requires: python-flask
