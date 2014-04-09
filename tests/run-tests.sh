@@ -54,6 +54,7 @@ run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
     mkdir -p "$scratchdir/config/stbt"
     export XDG_CONFIG_HOME="$scratchdir/config"
+    unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
     mkdir -p "$scratchdir/cache"
     export XDG_CACHE_HOME="$scratchdir/cache"
