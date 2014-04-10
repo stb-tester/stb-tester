@@ -29,3 +29,15 @@ test_killtree() {
     ! ps -f | grep -v grep | grep -q killtree-test3.sh ||
     fail "child process 'killtree-test3.sh' still running"
 }
+
+test_that_run_tests_isnt_affected_by_user_config_file() {
+    cat > user.conf <<-EOF
+	[global]
+	test_key = this is overridden by the user's config
+	EOF
+    export STBT_CONFIG_FILE=$(pwd)/user.conf
+    "$testdir"/run-tests.sh -i _test_that_run_tests_isnt_affected_by_user_config_file
+}
+_test_that_run_tests_isnt_affected_by_user_config_file() {
+    assert [ "$(stbt config global.test_key)" == "this is a test value" ]
+}
