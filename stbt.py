@@ -1764,16 +1764,16 @@ def _log_image_descriptions(
                     pixel indicates position of best match).
                 <li>matchTemplate result <b>above match_threshold</b>
                     {{link("source_matchtemplate_threshold", level)}}
-                    of {{"%.2f"|format(match_parameters.match_threshold)}}
+                    of {{"%g"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
             {% if (level == 0 and first_pass_matched) or level != min(levels) %}
                 <li>Matched at {{position}} {{link("source_with_roi")}}
-                    with certainty {{"%.2f"|format(first_pass_certainty)}}.
+                    with certainty {{"%.4f"|format(first_pass_certainty)}}.
             {% else %}
                 <li>Didn't match (best match at {{position}}
                     {{link("source_with_roi")}}
-                    with certainty {{"%.2f"|format(first_pass_certainty)}}).
+                    with certainty {{"%.4f"|format(first_pass_certainty)}}).
             {% endif %}
 
             </ul>
