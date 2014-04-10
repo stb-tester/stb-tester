@@ -13,6 +13,28 @@
     #plot { height: 250px; width: 100%; }
     .jqplot-highlighter-tooltip {
       line-height: 1; background-color: rgba(208, 208, 208, 0.9); }
+
+    /* Border around selected row, opening up like a '{' onto right pane */
+    table#testruns { border-collapse: separate; }
+    #testruns tr.selected td {
+      border-top: 2px solid #999; padding-top: 3px;
+      border-bottom: 2px solid #999; padding-bottom: 2px; }
+    #testruns tr.selected td:first-child {
+      border-left: 2px solid #999; padding-left: 3px; }
+    #testruns td:last-child, th:last-child { border-right: 2px solid #999; }
+    #testruns tr.selected td:last-child { border-right: none; }
+
+    /* Brighter colour of selected row, fading to white */
+    #testruns tr.selected td { background-color: transparent; }
+    #testruns tr.selected.error { background-color: #ffeaea; }
+    #testruns tr.selected.success td { background-color: #edffe6; }
+    #testruns tr.selected.warning td { background-color: #fffbe6; }
+    #testruns tr.selected.error td:last-child {
+      background: linear-gradient(to right, #ffeaea, #fff); }
+    #testruns tr.selected.success td:last-child {
+      background: linear-gradient(to right, #edffe6, #fff); }
+    #testruns tr.selected.warning td:last-child {
+      background: linear-gradient(to right, #fffbe6, #fff); }
   </style>
 </head>
 
@@ -117,7 +139,8 @@
 
     var selected_row = $();
     function select_testrun() {
-      selected_row.removeClass("info");
+      selected_row.removeClass("selected");
+
       selected_row = $(this).closest("tr");
 
       // Replace old iframe instead of updating its "src" attribute,
@@ -129,7 +152,7 @@
         "</iframe>");
       set_details_height();
 
-      selected_row.addClass("info");
+      selected_row.addClass("selected");
 
       // Scroll if navigated with keyboard outside of visible viewport.
       if (selected_row.offset().top + selected_row.height() >
