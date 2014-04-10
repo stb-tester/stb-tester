@@ -27,10 +27,10 @@ parser.add_argument(
     "-v", "--verbose", action="store_true",
     help="Dump image processing debug images to ./stbt-debug directory")
 parser.add_argument(
-    "full_frame", help="""The screenshot to compare against (you can capture it
+    "source_file", help="""The screenshot to compare against (you can capture it
         using 'stbt screenshot')""")
 parser.add_argument(
-    "template_image", help="The image to search for")
+    "template_file", help="The image to search for")
 parser.add_argument(
     "match_parameters", nargs="*",
     help="""Parameters for the image processing algorithm. See
@@ -57,22 +57,23 @@ try:
 except Exception:  # pylint: disable=W0703
     error("Invalid argument '%s'" % p)
 
-image = cv2.imread(args.full_frame)
-if image is None:
-    error("Invalid image '%s'" % args.full_frame)
-template = cv2.imread(args.template_image)
-if template is None:
-    error("Invalid image '%s'" % args.template_image)
+source_image = cv2.imread(args.source_file)
+if source_image is None:
+    error("Invalid image '%s'" % args.source_file)
+template_image = cv2.imread(args.template_file)
+if template_image is None:
+    error("Invalid image '%s'" % args.template_file)
 
 if args.verbose:
     stbt._debug_level = 2  # pylint: disable=W0212
 
 matched, position, first_pass = stbt._match(  # pylint: disable=W0212
-    image, template, mp, args.template_image)
+    source_image, template_image, mp, args.template_file)
 
 print "%s: %s" % (
     "Match found" if matched else "No match found. Closest match",
     str(stbt.MatchResult(
         timestamp=0, match=matched, position=position,
-        first_pass_result=first_pass, frame=image)))
+        first_pass_result=first_pass, frame=source_image,
+        image=args.template_file)))
 sys.exit(0 if matched else 1)
