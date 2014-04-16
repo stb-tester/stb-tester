@@ -72,3 +72,25 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
     ! stbt run -v test.py &&
     [ -f screenshot.png ]
 }
+
+test_that_stbt_run_saves_gst_debug_to_file_when_configured() {
+    cat > test.py <<-EOF
+	import time
+	time.sleep(1)
+	EOF
+
+    sed -e 's/gst_debug =/gst_debug=videotestsrc:5/' \
+        "$testdir/stbt.conf" > gst-debug.conf
+    STBT_CONFIG_FILE=gst-debug.conf stbt run -v test.py
+    [ -f stbt-gst-debug.log ]
+}
+
+test_that_stbt_run_doesnt_save_gst_debug_to_file_when_not_configured() {
+    cat > test.py <<-EOF
+	import time
+	time.sleep(1)
+	EOF
+
+    stbt run -v test.py
+    [ ! -f stbt-gst-debug.log ]
+}

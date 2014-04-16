@@ -25,6 +25,13 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 
 export STBT_VERSION="@VERSION@"
 
+gst_debug="$(@LIBEXECDIR@/stbt/stbt-config gst.gst_debug)"
+if [ -n "${gst_debug}" ]; then
+    export GST_DEBUG="${gst_debug}"
+    export GST_DEBUG_NO_COLOR=1
+    export GST_DEBUG_FILE=stbt-gst-debug.log
+fi
+
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 case "$1" in
     -h|--help)
