@@ -1,3 +1,4 @@
+# coding: utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.
@@ -673,6 +674,35 @@ class OcrMode(object):
     SINGLE_CHARACTER = 10
 
 
+# Tesseract sometimes has a hard job distinguishing certain glyphs such as
+# ligatures and different forms of the same punctuation.  We strip out this
+# superfluous information improving matching accuracy with minimal effect on
+# meaning.  This means that stbt.ocr give much more consistent results.
+_ocr_replacements = {
+    # Ligatures
+    u'ﬀ': u'ff',
+    u'ﬁ': u'fi',
+    u'ﬂ': u'fl',
+    u'ﬃ': u'ffi',
+    u'ﬄ': u'ffl',
+    u'ﬅ': u'ft',
+    u'ﬆ': u'st',
+    # Punctuation
+    u'“': u'"',
+    u'”': u'"',
+    u'‘': u'\'',
+    u'’': u'\'',
+    # These are actually different glyphs!:
+    u'‐': u'-',
+    u'‑': u'-',
+    u'‒': u'-',
+    u'–': u'-',
+    u'—': u'-',
+    u'―': u'-',
+}
+_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
+
+
 def _tesseract(frame=None, region=None,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     if frame is None:
@@ -728,7 +758,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     defaults to English.
     """
     text, frame, region = _tesseract(frame, region, mode, lang)
-    text = text.decode('utf-8').strip()
+    text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
 
