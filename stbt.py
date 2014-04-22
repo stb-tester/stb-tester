@@ -685,6 +685,13 @@ def _tesseract(frame=None, region=None,
     subframe = frame[region.y:region.y + region.height,
                      region.x:region.x + region.width]
 
+    # We scale image up 3x before feeding it to tesseract as this significantly
+    # reduces the error rate by more than 6x in tests.  This uses bilinear
+    # interpolation which produces the best results.  See
+    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+    outsize = (subframe.shape[1] * 3, subframe.shape[0] * 3)
+    subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
+
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
