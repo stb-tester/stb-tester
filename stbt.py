@@ -701,7 +701,7 @@ def _tesseract(frame=None, region=None,
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None):
-    """Return the text present in the video frame.
+    """Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine, which must be installed on your system.
@@ -719,8 +719,8 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
     """
-    text = _tesseract(frame, region, mode, lang).strip()
-    debug("OCR read '%s'." % text)
+    text = _tesseract(frame, region, mode, lang).decode('utf-8').strip()
+    debug(u"OCR read '%s'." % text)
     return text
 
 

@@ -441,7 +441,7 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       pixels the area to ignore.
 
 ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None)
-    Return the text present in the video frame.
+    Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine, which must be installed on your system.
