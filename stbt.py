@@ -677,12 +677,13 @@ def _tesseract(frame=None, region=None,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     if frame is None:
         frame = get_frame()
-    if region is not None:
-        frame = frame[
-            region.y:region.y + region.height,
-            region.x:region.x + region.width]
+    if region is None:
+        region = Region(0, 0, frame.shape[1], frame.shape[0])
     if lang is None:
         lang = 'eng'
+
+    subframe = frame[region.y:region.y + region.height,
+                     region.x:region.x + region.width]
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -692,11 +693,11 @@ def _tesseract(frame=None, region=None,
             prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
-        cv2.imwrite(ocr_in.name, frame)
+        cv2.imwrite(ocr_in.name, subframe)
         cmd = ["tesseract", '-l', lang, ocr_in.name,
                ocr_out.name[:-len('.txt')], "-psm", str(mode)]
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return ocr_out.read()
+        return (ocr_out.read(), frame, region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -719,8 +720,9 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
     """
-    text = _tesseract(frame, region, mode, lang).decode('utf-8').strip()
-    debug(u"OCR read '%s'." % text)
+    text, frame, region = _tesseract(frame, region, mode, lang)
+    text = text.decode('utf-8').strip()
+    debug(u"OCR in region %s read '%s'." % (region, text))
     return text
 
 
