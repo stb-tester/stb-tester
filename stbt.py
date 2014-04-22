@@ -674,13 +674,15 @@ class OcrMode(object):
 
 
 def _tesseract(frame=None, region=None,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     if frame is None:
         frame = get_frame()
     if region is not None:
         frame = frame[
             region.y:region.y + region.height,
             region.x:region.x + region.width]
+    if lang is None:
+        lang = 'eng'
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -691,13 +693,14 @@ def _tesseract(frame=None, region=None,
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
         cv2.imwrite(ocr_in.name, frame)
-        cmd = ["tesseract", ocr_in.name,
+        cmd = ["tesseract", '-l', lang, ocr_in.name,
                ocr_out.name[:-len('.txt')], "-psm", str(mode)]
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return ocr_out.read()
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+        lang=None):
     """Return the text present in the video frame.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -706,6 +709,15 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
     If `frame` isn't specified, take a frame from the source video stream.
     If `region` is specified, only process that region of the frame; otherwise
     process the entire frame.
+
+    `lang` is the three letter ISO-639-3 language code of the language you are
+    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
+    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
+    that the text to be read may be in a mixture of English and German.  To read
+    a language you must have the corresponding tesseract language pack
+    installed.  This language code is passed directly down to the tesseract OCR
+    engine.  For more information see the tesseract documentation.  `lang`
+    defaults to English.
     """
     text = _tesseract(frame, region, mode, lang).strip()
     debug("OCR read '%s'." % text)
