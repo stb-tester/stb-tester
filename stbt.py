@@ -8,6 +8,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
 import argparse
+import codecs
 from collections import namedtuple, deque
 import ConfigParser
 from contextlib import contextmanager
@@ -763,13 +764,6 @@ def is_screen_black(frame, mask=None, threshold=None):
     return maxVal == 0
 
 
-def debug(msg):
-    """Print the given string to stderr if stbt run `--verbose` was given."""
-    if _debug_level > 0:
-        sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
-
-
 @contextmanager
 def as_precondition(message):
     """Context manager that replaces UITestFailures with UITestErrors.
@@ -1342,7 +1336,7 @@ class Display(object):
         Gst.debug_bin_to_dot_file_with_ts(
             self.source_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
-        sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+        warn("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
         if not self.tearing_down:
@@ -2337,15 +2331,25 @@ def _mkdir(d):
     return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
 
 
-def ddebug(s):
-    """Extra verbose debug for stbt developers, not end users"""
-    if _debug_level > 1:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+_debugstream = codecs.getwriter('utf-8')(sys.stderr)
 
 
 def warn(s):
-    sys.stderr.write("%s: warning: %s\n" % (
+    _debugstream.write("%s: warning: %s\n" % (
         os.path.basename(sys.argv[0]), str(s)))
+
+
+def debug(msg):
+    """Print the given string to stderr if stbt run `--verbose` was given."""
+    if _debug_level > 0:
+        _debugstream.write(
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
+
+
+def ddebug(s):
+    """Extra verbose debug for stbt developers, not end users"""
+    if _debug_level > 1:
+        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
 
 
 # Tests
