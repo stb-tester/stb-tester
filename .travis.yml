@@ -22,6 +22,8 @@ install:
         python-numpy
         python-opencv
         tesseract-ocr
+        tesseract-ocr-deu
+        tesseract-ocr-eng
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make prefix=$HOME install
 

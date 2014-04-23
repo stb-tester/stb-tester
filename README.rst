@@ -440,8 +440,8 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
-ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD)
-    Return the text present in the video frame.
+ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None)
+    Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine, which must be installed on your system.
@@ -449,6 +449,15 @@ ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD)
     If `frame` isn't specified, take a frame from the source video stream.
     If `region` is specified, only process that region of the frame; otherwise
     process the entire frame.
+
+    `lang` is the three letter ISO-639-3 language code of the language you are
+    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
+    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
+    that the text to be read may be in a mixture of English and German.  To read
+    a language you must have the corresponding tesseract language pack
+    installed.  This language code is passed directly down to the tesseract OCR
+    engine.  For more information see the tesseract documentation.  `lang`
+    defaults to English.
 
 class OcrMode
     Options to control layout analysis and assume a certain form of image.

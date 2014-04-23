@@ -1,3 +1,4 @@
+# coding: utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.
@@ -8,6 +9,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
 import argparse
+import codecs
 from collections import namedtuple, deque
 import ConfigParser
 from contextlib import contextmanager
@@ -672,23 +674,53 @@ class OcrMode(object):
     SINGLE_CHARACTER = 10
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
-    """Return the text present in the video frame.
+# Tesseract sometimes has a hard job distinguishing certain glyphs such as
+# ligatures and different forms of the same punctuation.  We strip out this
+# superfluous information improving matching accuracy with minimal effect on
+# meaning.  This means that stbt.ocr give much more consistent results.
+_ocr_replacements = {
+    # Ligatures
+    u'ﬀ': u'ff',
+    u'ﬁ': u'fi',
+    u'ﬂ': u'fl',
+    u'ﬃ': u'ffi',
+    u'ﬄ': u'ffl',
+    u'ﬅ': u'ft',
+    u'ﬆ': u'st',
+    # Punctuation
+    u'“': u'"',
+    u'”': u'"',
+    u'‘': u'\'',
+    u'’': u'\'',
+    # These are actually different glyphs!:
+    u'‐': u'-',
+    u'‑': u'-',
+    u'‒': u'-',
+    u'–': u'-',
+    u'—': u'-',
+    u'―': u'-',
+}
+_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
-    Perform OCR (Optical Character Recognition) using the "Tesseract"
-    open-source OCR engine, which must be installed on your system.
 
-    If `frame` isn't specified, take a frame from the source video stream.
-    If `region` is specified, only process that region of the frame; otherwise
-    process the entire frame.
-    """
-
+def _tesseract(frame=None, region=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     if frame is None:
         frame = get_frame()
-    if region is not None:
-        frame = frame[
-            region.y:region.y + region.height,
-            region.x:region.x + region.width]
+    if region is None:
+        region = Region(0, 0, frame.shape[1], frame.shape[0])
+    if lang is None:
+        lang = 'eng'
+
+    subframe = frame[region.y:region.y + region.height,
+                     region.x:region.x + region.width]
+
+    # We scale image up 3x before feeding it to tesseract as this significantly
+    # reduces the error rate by more than 6x in tests.  This uses bilinear
+    # interpolation which produces the best results.  See
+    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+    outsize = (subframe.shape[1] * 3, subframe.shape[0] * 3)
+    subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -698,13 +730,37 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
             prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
-        cv2.imwrite(ocr_in.name, frame)
-        subprocess.check_output([
-            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)],
-            stderr=subprocess.STDOUT)
-        text = ocr_out.read().strip()
-        debug("OCR read '%s'." % text)
-        return text
+        cv2.imwrite(ocr_in.name, subframe)
+        cmd = ["tesseract", '-l', lang, ocr_in.name,
+               ocr_out.name[:-len('.txt')], "-psm", str(mode)]
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return (ocr_out.read(), frame, region)
+
+
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+        lang=None):
+    """Return the text present in the video frame as a Unicode string.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+
+    `lang` is the three letter ISO-639-3 language code of the language you are
+    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
+    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
+    that the text to be read may be in a mixture of English and German.  To read
+    a language you must have the corresponding tesseract language pack
+    installed.  This language code is passed directly down to the tesseract OCR
+    engine.  For more information see the tesseract documentation.  `lang`
+    defaults to English.
+    """
+    text, frame, region = _tesseract(frame, region, mode, lang)
+    text = text.decode('utf-8').strip().translate(_ocr_transtab)
+    debug(u"OCR in region %s read '%s'." % (region, text))
+    return text
 
 
 def frames(timeout_secs=None):
@@ -761,13 +817,6 @@ def is_screen_black(frame, mask=None, threshold=None):
     _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
     _, maxVal, _, _ = cv2.minMaxLoc(frame, mask)
     return maxVal == 0
-
-
-def debug(msg):
-    """Print the given string to stderr if stbt run `--verbose` was given."""
-    if _debug_level > 0:
-        sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
 @contextmanager
@@ -1342,7 +1391,7 @@ class Display(object):
         Gst.debug_bin_to_dot_file_with_ts(
             self.source_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
-        sys.stderr.write("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+        warn("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
         if not self.tearing_down:
@@ -2337,15 +2386,25 @@ def _mkdir(d):
     return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
 
 
-def ddebug(s):
-    """Extra verbose debug for stbt developers, not end users"""
-    if _debug_level > 1:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+_debugstream = codecs.getwriter('utf-8')(sys.stderr)
 
 
 def warn(s):
-    sys.stderr.write("%s: warning: %s\n" % (
+    _debugstream.write("%s: warning: %s\n" % (
         os.path.basename(sys.argv[0]), str(s)))
+
+
+def debug(msg):
+    """Print the given string to stderr if stbt run `--verbose` was given."""
+    if _debug_level > 0:
+        _debugstream.write(
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
+
+
+def ddebug(s):
+    """Extra verbose debug for stbt developers, not end users"""
+    if _debug_level > 1:
+        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
 
 
 # Tests
