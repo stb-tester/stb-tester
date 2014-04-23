@@ -1227,7 +1227,9 @@ class Display(object):
 
         self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
         sink_bus = self.sink_pipeline.get_bus()
-        sink_bus.connect("message::error", self.on_error)
+        sink_bus.connect(
+            "message::error",
+            lambda bus, msg: self.on_error(self.sink_pipeline, bus, msg))
         sink_bus.connect("message::warning", self.on_warning)
         sink_bus.connect("message::eos", self.on_eos_from_sink_pipeline)
         sink_bus.add_signal_watch()
@@ -1255,7 +1257,9 @@ class Display(object):
         self.source_pipeline = Gst.parse_launch(
             self.source_pipeline_description)
         source_bus = self.source_pipeline.get_bus()
-        source_bus.connect("message::error", self.on_error)
+        source_bus.connect(
+            "message::error",
+            lambda bus, msg: self.on_error(self.source_pipeline, bus, msg))
         source_bus.connect("message::warning", self.on_warning)
         source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
@@ -1377,10 +1381,10 @@ class Display(object):
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
 
-    def on_error(self, _bus, message):
+    def on_error(self, pipeline, _bus, message):
         assert message.type == Gst.MessageType.ERROR
         Gst.debug_bin_to_dot_file_with_ts(
-            self.source_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
+            pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
