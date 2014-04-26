@@ -776,6 +776,17 @@ _ocr_replacements = {
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
 
+@contextmanager
+def _named_temporary_directory(
+        suffix='', prefix='tmp', dir=None):  # pylint: disable=W0622
+    from shutil import rmtree
+    dirname = tempfile.mkdtemp(suffix, prefix, dir)
+    try:
+        yield dirname
+    finally:
+        rmtree(dirname)
+
+
 def _tesseract(frame=None, region=None,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     if frame is None:
@@ -798,16 +809,22 @@ def _tesseract(frame=None, region=None,
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
-    def mktmp(suffix):
-        return tempfile.NamedTemporaryFile(
-            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
+    # The second argument to tesseract is "output base" which is a filename to
+    # which tesseract will append an extension. Unfortunately this filename
+    # isn't easy to predict in advance across different versions of tesseract.
+    # If you give it "hello" the output will be written to "hello.txt", but in
+    # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
+    # (tesseract 3.03). We work around this with a temporary directory:
+    with _named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
+        outdir = tmp + '/output'
+        os.mkdir(outdir)
 
-    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
-        cv2.imwrite(ocr_in.name, subframe)
-        cmd = ["tesseract", '-l', lang, ocr_in.name,
-               ocr_out.name[:-len('.txt')], "-psm", str(mode)]
+        cv2.imwrite(tmp + '/input.png', subframe)
+        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
+               outdir + '/output', "-psm", str(mode)]
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return (ocr_out.read(), frame, region)
+        with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
+            return (outfile.read(), frame, region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
