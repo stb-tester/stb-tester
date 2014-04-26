@@ -789,20 +789,21 @@ def _named_temporary_directory(
 
 def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
                lang=None):
-    if region is None:
-        region = Region(0, 0, frame.shape[1], frame.shape[0])
     if lang is None:
         lang = 'eng'
 
-    subframe = frame[region.y:region.y + region.height,
-                     region.x:region.x + region.width]
+    with _numpy_from_sample(frame, readonly=True) as f:
+        if region is None:
+            region = Region(0, 0, f.shape[1], f.shape[0])
 
-    # We scale image up 3x before feeding it to tesseract as this significantly
-    # reduces the error rate by more than 6x in tests.  This uses bilinear
-    # interpolation which produces the best results.  See
-    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-    outsize = (subframe.shape[1] * 3, subframe.shape[0] * 3)
-    subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
+        subframe = f[region.y:region.bottom, region.x:region.right]
+
+        # We scale image up 3x before feeding it to tesseract as this
+        # significantly reduces the error rate by more than 6x in tests.  This
+        # uses bilinear interpolation which produces the best results.  See
+        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+        outsize = (region.width * 3, region.height * 3)
+        subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -846,7 +847,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     defaults to English.
     """
     if frame is None:
-        frame = get_frame()
+        frame = _display.get_sample()
 
     text, region = _tesseract(frame, region, mode, lang)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
