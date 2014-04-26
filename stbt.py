@@ -787,10 +787,8 @@ def _named_temporary_directory(
         rmtree(dirname)
 
 
-def _tesseract(frame=None, region=None,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
-    if frame is None:
-        frame = get_frame()
+def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+               lang=None):
     if region is None:
         region = Region(0, 0, frame.shape[1], frame.shape[0])
     if lang is None:
@@ -824,7 +822,7 @@ def _tesseract(frame=None, region=None,
                outdir + '/output', "-psm", str(mode)]
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return (outfile.read(), frame, region)
+            return (outfile.read(), region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -847,7 +845,10 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
     """
-    text, frame, region = _tesseract(frame, region, mode, lang)
+    if frame is None:
+        frame = get_frame()
+
+    text, region = _tesseract(frame, region, mode, lang)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
