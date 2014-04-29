@@ -129,7 +129,15 @@
     tablequery.set_table("#testruns");
     tablequery.set_table_search_text("#testruns_search_text");
     tablequery.on("search", update_totals);
+    tablequery.on("search", function() {
+      window.history.replaceState({}, "", "?" + $("#testruns_search_text").val())});
     update_totals();
+    var search_string = decodeURIComponent(window.location.search.substring(1));
+    if (search_string) {
+      $("#testruns_search_text").val(search_string);
+      // Hack until https://github.com/asimihsan/tablequeryjs/issues/18 fixed:
+      tablequery._table_search_text_on_keyup({}, search_string);
+    }
 
     function set_details_height() {
       $("#details").css("height", $(window).height() - 40);
