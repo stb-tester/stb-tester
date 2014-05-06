@@ -1198,9 +1198,9 @@ class Display(object):
             'queue name=_stbt_user_data_queue max-size-buffers=0 '
             '    max-size-bytes=0 max-size-time=10000000000',
             "decodebin",
+            'queue name=_stbt_raw_frames_queue max-size-buffers=2',
             'videoconvert',
             'video/x-raw,format=BGR',
-            'queue name=_stbt_raw_frames_queue max-size-buffers=2',
             transformation_pipeline,
             appsink])
         self.create_source_pipeline()
