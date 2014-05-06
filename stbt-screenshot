@@ -19,8 +19,8 @@ filename=${1:-screenshot.png}
 
 "$(dirname "$0")/stbt-run" -v --control=none --save-video= <(cat <<-EOF
 	import time
+	get_frame()
 	if (args.source_pipeline.startswith("decklink")):
-	    get_frame()
 	    time.sleep(2)  # First second of Blackmagic video has purple tint
 	save_frame(get_frame(), "$filename")
 	print "Screenshot saved to '$filename'"
