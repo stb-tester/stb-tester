@@ -21,6 +21,7 @@ install:
         python-nose
         python-numpy
         python-opencv
+        python-yaml
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng
