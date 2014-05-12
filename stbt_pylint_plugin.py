@@ -15,8 +15,9 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 import os
 import re
 
-# Install `pylint` to get `logilab.astng` or `astroid` modules.
 from pylint.checkers import BaseChecker
+
+# Install `pylint` to get `logilab.astng` or `astroid` modules.
 
 # pylint: disable=E0611,F0401
 try:  # >= pylint 1.0

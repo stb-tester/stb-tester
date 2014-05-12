@@ -49,8 +49,8 @@ Features
 
 """
 
-import cStringIO as StringIO
 import argparse
+import cStringIO as StringIO
 import itertools
 import select
 import socket

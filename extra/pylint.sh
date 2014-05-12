@@ -25,6 +25,7 @@ for f in "$@"; do
             -e "assertion .G_IS_PARAM_SPEC (pspec). failed" \
             -e "return isinstance(object, (type, types.ClassType))"
     pep8 $(pep8options $f) $f || r=1 ret=1
+    isort --check-only $f >/dev/null || r=1 ret=1
     [ $r -eq 0 ] && echo "$f OK"
 done
 exit $ret

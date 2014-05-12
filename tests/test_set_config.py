@@ -1,7 +1,8 @@
+import os
 from contextlib import contextmanager
 from textwrap import dedent
-from stbt import _sponge, _set_config, get_config, _config_init
-import os
+
+from stbt import _config_init, _set_config, _sponge, get_config
 
 
 @contextmanager

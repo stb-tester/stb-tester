@@ -12,13 +12,12 @@
 import argparse
 import mimetypes
 import os
-from os.path import abspath, basename, dirname, isdir, isfile, normpath
 import subprocess
 import sys
+from os.path import abspath, basename, dirname, isdir, isfile, normpath
 
-from flask import \
-    Flask, abort, redirect, render_template, request, send_from_directory
-
+from flask import (abort, Flask, redirect, render_template, request,
+                   send_from_directory)
 
 app = Flask(__name__, instance_path=os.getcwd())
 
