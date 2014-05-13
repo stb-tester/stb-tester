@@ -17,7 +17,6 @@ from nose.tools import raises
 
 import stbt
 
-
 SPECIAL_CHARS = {
     curses.ascii.SP: "Space",
     curses.ascii.NL: "Enter",

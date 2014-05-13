@@ -7,15 +7,16 @@
 """Generates reports from logs of stb-tester test runs created by 'run'."""
 
 import collections
-from datetime import datetime
 import glob
 import itertools
 import os
-from os.path import abspath, basename, dirname, isdir
 import re
 import sys
+from datetime import datetime
+from os.path import abspath, basename, dirname, isdir
 
 import jinja2
+
 escape = jinja2.Markup.escape
 
 

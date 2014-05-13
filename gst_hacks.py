@@ -1,7 +1,7 @@
-from contextlib import contextmanager
 import ctypes
-from os.path import dirname
 import platform
+from contextlib import contextmanager
+from os.path import dirname
 
 from gi.repository import Gst  # pylint: disable=E0611
 

@@ -6,10 +6,10 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
-import stbt
-
 import itertools
 import sys
+
+import stbt
 
 
 def main(argv):

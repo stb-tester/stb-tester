@@ -10,9 +10,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 import argparse
 import codecs
-from collections import namedtuple, deque
 import ConfigParser
-from contextlib import contextmanager
 import datetime
 import errno
 import functools
@@ -24,19 +22,20 @@ import re
 import socket
 import subprocess
 import sys
-import threading
 import tempfile
+import threading
 import time
 import warnings
+from collections import deque, namedtuple
+from contextlib import contextmanager
 
 import cv2
 import gi
-from gi.repository import GObject, Gst, GLib  # pylint: disable=E0611
 import numpy
+from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 import irnetbox
-from gst_hacks import map_gst_buffer, gst_iterate
-
+from gst_hacks import gst_iterate, map_gst_buffer
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()

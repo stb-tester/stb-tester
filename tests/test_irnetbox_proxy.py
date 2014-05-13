@@ -2,7 +2,6 @@ import imp
 import os
 import unittest
 
-
 IRNetBoxProxy = imp.load_source(
     "irnetbox_proxy",
     os.path.join(os.path.dirname(__file__), "..", "irnetbox-proxy")
