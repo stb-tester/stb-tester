@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <style>
+      td { padding-right: 1em; }
+    </style>
+  </head>
+  <body>
+    <h1>Result: {{total_matched}} / {{total}} = {{percentage}}%</h1>
+    {% for image in images %}
+    <div class="panel-group" id="accordion">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a data-toggle="collapse" data-parent="#accordion"
+               href="#collapse{{loop.index}}">
+              {{image.name}}
+            </a>
+            {{image.matches}} / {{image.total}} = {{image.percentage}}%
+          </h4>
+        </div>
+        <div id="collapse{{loop.index}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            <img src="{{image.path}}" />
+            <table>
+            {% for phrase in image.phrases %}
+              <tr class="{% if phrase.match %}pass{% else %}fail{% endif %}">
+                <td>{% if phrase.match %}PASS{% else %}FAIL{% endif %}</td>
+                <td>{{phrase.text}}</td>
+              </tr>
+            {% endfor %}
+            </table>
+            <pre>
+              {{image.text}}
+            </pre>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </body>
+</html>

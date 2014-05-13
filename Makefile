@@ -146,8 +146,9 @@ check-pylint:
 	    stbt-templatematch \
 	    stbt_pylint_plugin.py \
 	    tests/fake-irnetbox \
-	    tests/test_*.py |\
-	PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
+	    tests/test_*.py \
+	    tests/validate-ocr.py \
+	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
