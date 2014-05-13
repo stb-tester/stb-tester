@@ -113,7 +113,7 @@ README.rst: stbt.py api-doc.sh
 clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix
 
-check: check-nosetests check-integrationtests check-pylint check-bashcompletion
+check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests:
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
