@@ -787,10 +787,40 @@ def _named_temporary_directory(
         rmtree(dirname)
 
 
+def _find_tessdata_dir():
+    from distutils.spawn import find_executable
+    tess_prefix_share = os.path.normpath(
+        find_executable('tesseract') + '/../../share/')
+    for suffix in ['/tessdata', '/tesseract-ocr/tessdata']:
+        if os.path.exists(tess_prefix_share + suffix):
+            return tess_prefix_share + suffix
+    raise RuntimeError('Installation error: Cannot locate tessdata directory')
+
+
+def _symlink_copy_dir(a, b):
+    """Behaves like `cp -rs` with GNU cp but is portable and doesn't require
+    execing another process.  Tesseract requires files in the "tessdata"
+    directory to be modified to set config options.  tessdata may be on a
+    read-only system directory so we use this to work around that limitation.
+    """
+    from os.path import basename, join, relpath
+    newroot = join(b, basename(a))
+    for dirpath, dirnames, filenames in os.walk(a):
+        for name in dirnames:
+            if name not in ['.', '..']:
+                rel = relpath(join(dirpath, name), a)
+                os.mkdir(join(newroot, rel))
+        for name in filenames:
+            rel = relpath(join(dirpath, name), a)
+            os.symlink(join(a, rel), join(newroot, rel))
+
+
 def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None):
+               lang=None, config=None):
     if lang is None:
         lang = 'eng'
+    if config is None:
+        config = {}
 
     with _numpy_from_sample(frame, readonly=True) as f:
         if region is None:
@@ -818,16 +848,34 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         outdir = tmp + '/output'
         os.mkdir(outdir)
 
-        cv2.imwrite(tmp + '/input.png', subframe)
         cmd = ["tesseract", '-l', lang, tmp + '/input.png',
                outdir + '/output', "-psm", str(mode)]
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+
+        tessenv = os.environ.copy()
+
+        if config:
+            tessdata_dir = tmp + '/tessdata'
+            os.mkdir(tessdata_dir)
+            _symlink_copy_dir(_find_tessdata_dir(), tmp)
+            tessenv['TESSDATA_PREFIX'] = tmp + '/'
+
+            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
+                for k, v in config.iteritems():
+                    if isinstance(v, bool):
+                        cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
+                    else:
+                        cfg.write((u"%s %s\n" % (k, unicode(v)))
+                                  .encode('utf-8'))
+            cmd += ['stbtester']
+
+        cv2.imwrite(tmp + '/input.png', subframe)
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None):
+        lang=None, tesseract_config=None):
     """Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -845,11 +893,17 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     installed.  This language code is passed directly down to the tesseract OCR
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
+
+    `tesseract_config` (dict)
+      Allows passing configuration down to the underlying OCR engine.  See the
+      tesseract documentation for details:
+      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
     """
     if frame is None:
         frame = _display.get_sample()
 
-    text, region = _tesseract(frame, region, mode, lang)
+    text, region = _tesseract(
+        frame, region, mode, lang, config=tesseract_config)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text

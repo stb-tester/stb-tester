@@ -440,7 +440,7 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
-ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None)
+ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
     Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -458,6 +458,11 @@ ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=No
     installed.  This language code is passed directly down to the tesseract OCR
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
+
+    `tesseract_config` (dict)
+      Allows passing configuration down to the underlying OCR engine.  See the
+      tesseract documentation for details:
+      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
 
 class OcrMode
     Options to control layout analysis and assume a certain form of image.
