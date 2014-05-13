@@ -16,6 +16,7 @@ pep8options() {
 ret=0
 for f in "$@"; do
     r=0
+
     out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" \
                  $f 2>&1) || r=1 ret=1
     printf "%s" "$out" |
@@ -24,10 +25,18 @@ for f in "$@"; do
             -e "assertion .G_TYPE_IS_BOXED (boxed_type). failed" \
             -e "assertion .G_IS_PARAM_SPEC (pspec). failed" \
             -e "return isinstance(object, (type, types.ClassType))"
+
     pep8 $(pep8options $f) $f || r=1 ret=1
+
+    # PEP8-compliant order of 'import' statements
     if which isort &>/dev/null; then
-        isort --check-only $f >/dev/null || r=1 ret=1;
+        if ! isort --check-only $f >/dev/null; then
+            isort --version
+            isort --diff $f
+            r=1 ret=1
+        fi
     fi
+
     [ $r -eq 0 ] && echo "$f OK"
 done
 exit $ret
