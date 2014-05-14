@@ -43,6 +43,8 @@ def test(imgname, phrases, params):
     from stbt import ocr
 
     img = cv2.imread(imgname)
+    if img is None:
+        raise IOError('No such file or directory "%s"' % imgname)
     text = ocr(img, **params)
 
     matches = sum(1 for x in phrases if x in text)
