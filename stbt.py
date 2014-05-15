@@ -28,6 +28,7 @@ import time
 import warnings
 from collections import deque, namedtuple
 from contextlib import contextmanager
+from distutils.version import LooseVersion
 
 import cv2
 import gi
@@ -814,9 +815,30 @@ def _symlink_copy_dir(a, b):
             rel = relpath(join(dirpath, name), a)
             os.symlink(join(a, rel), join(newroot, rel))
 
+_memoise_tesseract_version = None
+
+
+def _tesseract_version(output=None):
+    r"""Different versions of tesseract have different bugs.  This function
+    allows us to tell the user if what they want isn't going to work.
+
+    >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
+    ...  _tesseract_version('tesseract 3.02\n'))
+    True
+    """
+    global _memoise_tesseract_version
+    if output is None:
+        if _memoise_tesseract_version is None:
+            _memoise_tesseract_version = subprocess.check_output(
+                ['tesseract', '--version'], stderr=subprocess.STDOUT)
+        output = _memoise_tesseract_version
+
+    line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
+    return LooseVersion(line.split()[1])
+
 
 def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None, config=None):
+               lang=None, config=None, user_patterns=None, user_words=None):
     if lang is None:
         lang = 'eng'
     if config is None:
@@ -853,12 +875,29 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
 
         tessenv = os.environ.copy()
 
-        if config:
+        if config or user_words or user_patterns:
             tessdata_dir = tmp + '/tessdata'
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
 
+        if user_words:
+            assert 'user_words_suffix' not in config
+            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_words).encode('utf-8'))
+            config['user_words_suffix'] = 'user-words'
+
+        if user_patterns:
+            assert 'user_patterns_suffix' not in config
+            if _tesseract_version() < LooseVersion('3.03'):
+                raise RuntimeError(
+                    'tesseract version >=3.03 is required for user_patterns.  '
+                    'version %s is currently installed' % _tesseract_version())
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_patterns).encode('utf-8'))
+            config['user_patterns_suffix'] = 'user-patterns'
+
+        if config:
             with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
                 for k, v in config.iteritems():
                     if isinstance(v, bool):
@@ -875,7 +914,8 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None, tesseract_config=None):
+        lang=None, tesseract_config=None, tesseract_user_words=None,
+        tesseract_user_patterns=None):
     """Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -898,12 +938,25 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
       Allows passing configuration down to the underlying OCR engine.  See the
       tesseract documentation for details:
       https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+
+    `tesseract_user_words` (list of unicode strings)
+      List of words to be added to the tesseract dictionary.  Can help matching.
+      To replace the tesseract system dictionary set
+      `tesseract_config['load_system_dawg'] = False` and
+      `tesseract_config['load_freq_dawg'] = False`.
+
+    `tesseract_user_patterns` (list of unicode strings)
+      List of patterns to be considered as if they had been added to the
+      tesseract dictionary.  Can aid matching.  See the tesseract documentation
+      for information on the format of the patterns:
+      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
     """
     if frame is None:
         frame = _display.get_sample()
 
     text, region = _tesseract(
-        frame, region, mode, lang, config=tesseract_config)
+        frame, region, mode, lang, config=tesseract_config,
+        user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text

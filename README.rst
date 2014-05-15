@@ -440,7 +440,7 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
-ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
+ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
     Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -463,6 +463,18 @@ ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=No
       Allows passing configuration down to the underlying OCR engine.  See the
       tesseract documentation for details:
       https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+
+    `tesseract_user_words` (list of unicode strings)
+      List of words to be added to the tesseract dictionary.  Can help matching.
+      To replace the tesseract system dictionary set
+      `tesseract_config['load_system_dawg'] = False` and
+      `tesseract_config['load_freq_dawg'] = False`.
+
+    `tesseract_user_patterns` (list of unicode strings)
+      List of patterns to be considered as if they had been added to the
+      tesseract dictionary.  Can aid matching.  See the tesseract documentation
+      for information on the format of the patterns:
+      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
 
 class OcrMode
     Options to control layout analysis and assume a certain form of image.
