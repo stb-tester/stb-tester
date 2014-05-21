@@ -28,6 +28,7 @@ import time
 import warnings
 from collections import deque, namedtuple
 from contextlib import contextmanager
+from distutils.version import LooseVersion
 
 import cv2
 import gi
@@ -240,13 +241,87 @@ class Position(namedtuple('Position', 'x y')):
 
 
 class Region(namedtuple('Region', 'x y width height')):
-    """Rectangular region within the video frame.
+    # pylint: disable=E1101
+    u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,
     measured in pixels from the top left of the video frame. The `width` and
     `height` of the rectangle are also measured in pixels.
+
+    Example:
+
+    regions a, b and c::
+
+          01234567890123
+        0 ░░░░░░░░
+        1 ░a░░░░░░
+        2 ░░░░░░░░
+        3 ░░░░░░░░
+        4 ░░░░▓▓▓▓░░▓c▓
+        5 ░░░░▓▓▓▓░░▓▓▓
+        6 ░░░░▓▓▓▓░░░░░
+        7 ░░░░▓▓▓▓░░░░░
+        8     ░░░░░░b░░
+        9     ░░░░░░░░░
+
+        >>> a = Region(0, 0, 8, 8)
+        >>> b = Region.from_extents(4, 4, 13, 10)
+        >>> b
+        Region(x=4, y=4, width=9, height=6)
+        >>> c = Region(10, 4, 3, 2)
+        >>> a.right
+        8
+        >>> b.bottom
+        10
+        >>> b.contains(c)
+        True
+        >>> a.contains(b)
+        False
+        >>> c.contains(b)
+        False
     """
-    pass
+    @staticmethod
+    def from_extents(x, y, right, bottom):
+        """Create a Region using right and bottom extents rather than width and
+        height."""
+        return Region(x, y, right - x, bottom - y)
+
+    @property
+    def right(self):
+        """The x coordinate beyond the right edge of the region"""
+        return self.x + self.width
+
+    @property
+    def bottom(self):
+        """The y coordinate beyond the bottom edge of the region"""
+        return self.y + self.height
+
+    def contains(self, other):
+        """Checks whether other is entirely contained within self"""
+        return (self.x <= other.x and self.y <= other.y and
+                self.right >= other.right and self.bottom >= other.bottom)
+
+
+def _bounding_box(a, b):
+    """Find the bounding box of two regions.  Returns the smallest region which
+    contains both regions a and b.
+
+    >>> _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+    Region(x=20, y=20, width=40, height=30)
+    >>> _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(None, Region(20, 30, 10, 20))
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(Region(20, 30, 10, 20), None)
+    Region(x=20, y=30, width=10, height=20)
+    >>> _bounding_box(None, None)
+    """
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return Region.from_extents(min(a.x, b.x), min(a.y, b.y),
+                               max(a.right, b.right), max(a.bottom, b.bottom))
 
 
 class MatchResult(object):
@@ -702,42 +777,145 @@ _ocr_replacements = {
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
 
-def _tesseract(frame=None, region=None,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
-    if frame is None:
-        frame = get_frame()
-    if region is None:
-        region = Region(0, 0, frame.shape[1], frame.shape[0])
+@contextmanager
+def _named_temporary_directory(
+        suffix='', prefix='tmp', dir=None):  # pylint: disable=W0622
+    from shutil import rmtree
+    dirname = tempfile.mkdtemp(suffix, prefix, dir)
+    try:
+        yield dirname
+    finally:
+        rmtree(dirname)
+
+
+def _find_tessdata_dir():
+    from distutils.spawn import find_executable
+    tess_prefix_share = os.path.normpath(
+        find_executable('tesseract') + '/../../share/')
+    for suffix in ['/tessdata', '/tesseract-ocr/tessdata']:
+        if os.path.exists(tess_prefix_share + suffix):
+            return tess_prefix_share + suffix
+    raise RuntimeError('Installation error: Cannot locate tessdata directory')
+
+
+def _symlink_copy_dir(a, b):
+    """Behaves like `cp -rs` with GNU cp but is portable and doesn't require
+    execing another process.  Tesseract requires files in the "tessdata"
+    directory to be modified to set config options.  tessdata may be on a
+    read-only system directory so we use this to work around that limitation.
+    """
+    from os.path import basename, join, relpath
+    newroot = join(b, basename(a))
+    for dirpath, dirnames, filenames in os.walk(a):
+        for name in dirnames:
+            if name not in ['.', '..']:
+                rel = relpath(join(dirpath, name), a)
+                os.mkdir(join(newroot, rel))
+        for name in filenames:
+            rel = relpath(join(dirpath, name), a)
+            os.symlink(join(a, rel), join(newroot, rel))
+
+_memoise_tesseract_version = None
+
+
+def _tesseract_version(output=None):
+    r"""Different versions of tesseract have different bugs.  This function
+    allows us to tell the user if what they want isn't going to work.
+
+    >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
+    ...  _tesseract_version('tesseract 3.02\n'))
+    True
+    """
+    global _memoise_tesseract_version
+    if output is None:
+        if _memoise_tesseract_version is None:
+            _memoise_tesseract_version = subprocess.check_output(
+                ['tesseract', '--version'], stderr=subprocess.STDOUT)
+        output = _memoise_tesseract_version
+
+    line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
+    return LooseVersion(line.split()[1])
+
+
+def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+               lang=None, config=None, user_patterns=None, user_words=None):
     if lang is None:
         lang = 'eng'
+    if config is None:
+        config = {}
 
-    subframe = frame[region.y:region.y + region.height,
-                     region.x:region.x + region.width]
+    with _numpy_from_sample(frame, readonly=True) as f:
+        if region is None:
+            region = Region(0, 0, f.shape[1], f.shape[0])
 
-    # We scale image up 3x before feeding it to tesseract as this significantly
-    # reduces the error rate by more than 6x in tests.  This uses bilinear
-    # interpolation which produces the best results.  See
-    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-    outsize = (subframe.shape[1] * 3, subframe.shape[0] * 3)
-    subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
+        subframe = f[region.y:region.bottom, region.x:region.right]
+
+        # We scale image up 3x before feeding it to tesseract as this
+        # significantly reduces the error rate by more than 6x in tests.  This
+        # uses bilinear interpolation which produces the best results.  See
+        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+        outsize = (region.width * 3, region.height * 3)
+        subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
-    def mktmp(suffix):
-        return tempfile.NamedTemporaryFile(
-            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
+    # The second argument to tesseract is "output base" which is a filename to
+    # which tesseract will append an extension. Unfortunately this filename
+    # isn't easy to predict in advance across different versions of tesseract.
+    # If you give it "hello" the output will be written to "hello.txt", but in
+    # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
+    # (tesseract 3.03). We work around this with a temporary directory:
+    with _named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
+        outdir = tmp + '/output'
+        os.mkdir(outdir)
 
-    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
-        cv2.imwrite(ocr_in.name, subframe)
-        cmd = ["tesseract", '-l', lang, ocr_in.name,
-               ocr_out.name[:-len('.txt')], "-psm", str(mode)]
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return (ocr_out.read(), frame, region)
+        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
+               outdir + '/output', "-psm", str(mode)]
+
+        tessenv = os.environ.copy()
+
+        if config or user_words or user_patterns:
+            tessdata_dir = tmp + '/tessdata'
+            os.mkdir(tessdata_dir)
+            _symlink_copy_dir(_find_tessdata_dir(), tmp)
+            tessenv['TESSDATA_PREFIX'] = tmp + '/'
+
+        if user_words:
+            assert 'user_words_suffix' not in config
+            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_words).encode('utf-8'))
+            config['user_words_suffix'] = 'user-words'
+
+        if user_patterns:
+            assert 'user_patterns_suffix' not in config
+            if _tesseract_version() < LooseVersion('3.03'):
+                raise RuntimeError(
+                    'tesseract version >=3.03 is required for user_patterns.  '
+                    'version %s is currently installed' % _tesseract_version())
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_patterns).encode('utf-8'))
+            config['user_patterns_suffix'] = 'user-patterns'
+
+        if config:
+            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
+                for k, v in config.iteritems():
+                    if isinstance(v, bool):
+                        cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
+                    else:
+                        cfg.write((u"%s %s\n" % (k, unicode(v)))
+                                  .encode('utf-8'))
+            cmd += ['stbtester']
+
+        cv2.imwrite(tmp + '/input.png', subframe)
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
+            return (outfile.read(), region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None):
+        lang=None, tesseract_config=None, tesseract_user_words=None,
+        tesseract_user_patterns=None):
     """Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -755,8 +933,30 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     installed.  This language code is passed directly down to the tesseract OCR
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
+
+    `tesseract_config` (dict)
+      Allows passing configuration down to the underlying OCR engine.  See the
+      tesseract documentation for details:
+      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+
+    `tesseract_user_words` (list of unicode strings)
+      List of words to be added to the tesseract dictionary.  Can help matching.
+      To replace the tesseract system dictionary set
+      `tesseract_config['load_system_dawg'] = False` and
+      `tesseract_config['load_freq_dawg'] = False`.
+
+    `tesseract_user_patterns` (list of unicode strings)
+      List of patterns to be considered as if they had been added to the
+      tesseract dictionary.  Can aid matching.  See the tesseract documentation
+      for information on the format of the patterns:
+      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
     """
-    text, frame, region = _tesseract(frame, region, mode, lang)
+    if frame is None:
+        frame = _display.get_sample()
+
+    text, region = _tesseract(
+        frame, region, mode, lang, config=tesseract_config,
+        user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text

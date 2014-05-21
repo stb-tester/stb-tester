@@ -43,6 +43,8 @@ def test(imgname, phrases, params):
     from stbt import ocr
 
     img = cv2.imread(imgname)
+    if img is None:
+        raise IOError('No such file or directory "%s"' % imgname)
     text = ocr(img, **params)
 
     matches = sum(1 for x in phrases if x in text)
@@ -72,7 +74,7 @@ def main(argv):
 
     files = []
     for root, _dirs, dfiles in os.walk(args.corpus):
-        files += [root + '/' + f for f in dfiles if f.endswith('.txt')]
+        files += [root + '/' + f for f in dfiles if f.endswith('.png.txt')]
 
     for n, f in zip(range(len(files)), files):
         sys.stderr.write("%i / %i Complete\r" % (n, len(files)))

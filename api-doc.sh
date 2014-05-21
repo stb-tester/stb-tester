@@ -7,6 +7,8 @@ set -u
 
 cd "$(dirname "$0")"
 
+export PYTHONIOENCODING=UTF-8
+
 doc() {
     # $ pydoc stbt.press
     # Help on function press in stbt:

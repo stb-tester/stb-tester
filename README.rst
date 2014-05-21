@@ -440,7 +440,7 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
-ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None)
+ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
     Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -458,6 +458,23 @@ ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=No
     installed.  This language code is passed directly down to the tesseract OCR
     engine.  For more information see the tesseract documentation.  `lang`
     defaults to English.
+
+    `tesseract_config` (dict)
+      Allows passing configuration down to the underlying OCR engine.  See the
+      tesseract documentation for details:
+      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+
+    `tesseract_user_words` (list of unicode strings)
+      List of words to be added to the tesseract dictionary.  Can help matching.
+      To replace the tesseract system dictionary set
+      `tesseract_config['load_system_dawg'] = False` and
+      `tesseract_config['load_freq_dawg'] = False`.
+
+    `tesseract_user_patterns` (list of unicode strings)
+      List of patterns to be considered as if they had been added to the
+      tesseract dictionary.  Can aid matching.  See the tesseract documentation
+      for information on the format of the patterns:
+      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
 
 class OcrMode
     Options to control layout analysis and assume a certain form of image.
@@ -666,6 +683,38 @@ class Region
     `x` and `y` are the coordinates of the top left corner of the region,
     measured in pixels from the top left of the video frame. The `width` and
     `height` of the rectangle are also measured in pixels.
+
+    Example:
+
+    regions a, b and c::
+
+          01234567890123
+        0 ░░░░░░░░
+        1 ░a░░░░░░
+        2 ░░░░░░░░
+        3 ░░░░░░░░
+        4 ░░░░▓▓▓▓░░▓c▓
+        5 ░░░░▓▓▓▓░░▓▓▓
+        6 ░░░░▓▓▓▓░░░░░
+        7 ░░░░▓▓▓▓░░░░░
+        8     ░░░░░░b░░
+        9     ░░░░░░░░░
+
+        >>> a = Region(0, 0, 8, 8)
+        >>> b = Region.from_extents(4, 4, 13, 10)
+        >>> b
+        Region(x=4, y=4, width=9, height=6)
+        >>> c = Region(10, 4, 3, 2)
+        >>> a.right
+        8
+        >>> b.bottom
+        10
+        >>> b.contains(c)
+        True
+        >>> a.contains(b)
+        False
+        >>> c.contains(b)
+        False
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
