@@ -5,16 +5,6 @@
 
 set -e
 
-stbt_version=0.19.1
-
-# Install stbt to ~/bin
-tmpdir=$(mktemp -d)
-trap 'rm -rf $tmpdir' EXIT
-git clone ~/stb-tester $tmpdir
-cd $tmpdir
-git checkout $stbt_version
-make prefix=$HOME install
-
 # Bash tab-completion
 cat > ~/.bash_completion <<-'EOF'
 	for f in ~/etc/bash_completion.d/*; do source $f; done

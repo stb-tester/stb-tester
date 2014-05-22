@@ -11,15 +11,6 @@ install_packages() {
   packages=lubuntu-desktop
   # VirtualBox guest additions for shared folders, USB, window resizing, etc.
   packages+=" virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11"
-  # Core stbt dependencies
-  packages+=" gstreamer1.0-tools gstreamer1.0-plugins-base"
-  packages+=" gstreamer1.0-plugins-good gstreamer1.0-plugins-bad"
-  packages+=" python-gobject gir1.2-gstreamer-1.0 python-opencv python-numpy"
-  packages+=" tesseract-ocr"
-  # For `stbt power`
-  packages+=" curl openssh-client"
-  # For `stbt batch`
-  packages+=" lsof moreutils python-flask python-jinja2"
   # For building stbt and running the self-tests
   packages+=" expect git pep8 pylint python-docutils python-nose"
   # For the Hauppauge HDPVR
@@ -34,6 +25,10 @@ install_packages || {
   install_packages
 }
 
+apt-get install -y software-properties-common  # for "add-apt-repository"
+add-apt-repository -y ppa:stb-tester/stb-tester
+apt-get update
+apt-get install -y stb-tester
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y lirc
 sed -i \
