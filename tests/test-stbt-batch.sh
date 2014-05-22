@@ -144,7 +144,7 @@ expect_runner_to_say() {
     fail "Didn't find '$1' after 10 seconds"
 }
 
-test_stbt_batch_run_sigint_once() {
+test_stbt_batch_run_sigterm_once() {
     create_test_repo
     sleep=4 stbt batch run tests/test.py &
     runner=$!
@@ -155,7 +155,7 @@ test_stbt_batch_run_sigint_once() {
     diff -u <(echo success) latest/failure-reason || fail "Bad failure-reason"
 }
 
-test_stbt_batch_run_sigint_twice() {
+test_stbt_batch_run_sigterm_twice() {
     create_test_repo
     sleep=10 stbt batch run tests/test.py &
     runner=$!
