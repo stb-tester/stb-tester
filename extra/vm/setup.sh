@@ -17,11 +17,11 @@ install_packages() {
   packages+=" python-gobject gir1.2-gstreamer-1.0 python-opencv python-numpy"
   packages+=" tesseract-ocr"
   # For `stbt power`
-  packages+=" curl expect openssh-client"
+  packages+=" curl openssh-client"
   # For `stbt batch`
   packages+=" lsof moreutils python-flask python-jinja2"
   # For building stbt and running the self-tests
-  packages+=" git pep8 pylint python-docutils python-nose"
+  packages+=" expect git pep8 pylint python-docutils python-nose"
   # For the Hauppauge HDPVR
   packages+=" gstreamer1.0-libav v4l-utils"
 
