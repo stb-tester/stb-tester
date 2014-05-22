@@ -187,7 +187,7 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	$(TAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
 	       -f stb-tester-$(VERSION).tar $^ \
 	       --mtime="$(shell git show -s --format=%ci HEAD)" \
-	       --format=gnu && \
+	       --format=gnu --owner=root --group=root && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
