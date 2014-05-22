@@ -14,8 +14,6 @@ git clone ~/stb-tester $tmpdir
 cd $tmpdir
 git checkout $stbt_version
 make prefix=$HOME install
-# Apply fix from master https://github.com/drothlis/stb-tester/commit/799067a2
-sed -i 's/grep -q VMware/grep -Eq "VMware|VirtualBox"/' ~/libexec/stbt/stbt-tv
 
 # Bash tab-completion
 cat > ~/.bash_completion <<-'EOF'
