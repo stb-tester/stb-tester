@@ -13,11 +13,20 @@ pep8options() {
     echo --ignore=E501
 }
 
+# Disable pylint options that aren't present in all versions of pylint (if you
+# use "--disable=C0330" with pylint < 1.2 it raises an "Unknown message"
+# exception). Our Travis CI server runs Ubuntu 12.04 with pylint 0.25.
+pylintdisables=
+for x in C0330; do
+    pylint --list-msgs 2>/dev/null | grep -q $x && pylintdisables+=$x,
+done
+[[ -n "$pylintdisables" ]] && pylintdisables="--disable=$pylintdisables"
+
 ret=0
 for f in "$@"; do
     r=0
 
-    out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" \
+    out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" $pylintdisables \
                  $f 2>&1) || r=1 ret=1
     printf "%s" "$out" |
         grep -v \
