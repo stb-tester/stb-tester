@@ -16,6 +16,7 @@ user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
 
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
+GZIP ?= gzip
 
 tools = stbt-run
 tools += stbt-record
@@ -181,7 +182,13 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    printf 'Error: "make dist" requires GNU tar ' >&2; \
 	    printf '(use "make dist TAR=gnutar").\n' >&2; \
 	    exit 1; }
-	$(TAR) -c -z --transform='s,^,stb-tester-$(VERSION)/,' -f $@ $^
+	# Separate tar and gzip so we can pass "-n" for more deterministic tarball
+	# generation
+	$(TAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
+	       -f stb-tester-$(VERSION).tar $^ \
+	       --mtime="$(shell git show -s --format=%ci HEAD)" \
+	       --format=gnu && \
+	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
 # Force rebuild if installation directories change
