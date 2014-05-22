@@ -34,10 +34,6 @@ install_packages || {
   install_packages
 }
 
-# Kernel >= 3.3 for the RedRat3 USB infrared emitter
-# Note that xserver-xorg-lts-quantal conflicts with virtualbox-guest-x11:
-# https://bugs.launchpad.net/ubuntu/+source/virtualbox/+bug/1160401
-apt-get install -y linux-generic-lts-quantal
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y lirc
 sed -i \

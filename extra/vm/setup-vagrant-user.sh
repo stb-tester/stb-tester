@@ -5,7 +5,7 @@
 
 set -e
 
-stbt_version=0.18
+stbt_version=0.19.1
 
 # Install stbt to ~/bin
 tmpdir=$(mktemp -d)
@@ -20,8 +20,8 @@ cat > ~/.bash_completion <<-'EOF'
 	for f in ~/etc/bash_completion.d/*; do source $f; done
 	EOF
 mkdir -p ~/etc/bash_completion.d
-wget -q -O ~/etc/bash_completion.d/gstreamer-completion-0.10 \
-  https://raw.github.com/drothlis/gstreamer/bash-completion-0.10/tools/gstreamer-completion-0.10
+wget -q -O ~/etc/bash_completion.d/gstreamer-completion-1.2.4 \
+  http://cgit.freedesktop.org/gstreamer/gstreamer/plain/tools/gstreamer-completion?id=1.2.4
 
 sed -i '/### stb-tester configuration ###/,$ d' ~/.bashrc
 cat >> ~/.bashrc <<-EOF

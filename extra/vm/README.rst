@@ -11,12 +11,11 @@ Instructions
 
 1. `Install vagrant <http://docs.vagrantup.com/v2/installation/index.html>`_
 2. `Install VirtualBox <https://www.virtualbox.org/wiki/Downloads>`_
-3. Run ``vagrant up`` from this directory. When it finishes, run ``vagrant
-   reload`` to reboot the VM (because the initial ``vagrant up`` installed
-   a newer kernel).
+3. Run ``vagrant up`` from this directory.
 
-Log in as the user ``vagrant``, password ``vagrant``. You can ssh to the VM
-with ``vagrant ssh``.
+When it finishes, log in as the user ``vagrant``, password ``vagrant``. You can
+ssh to the VM with ``vagrant ssh`` and you can reboot the VM with ``vagrant
+reload``.
 
 Hardware
 --------
