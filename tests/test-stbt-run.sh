@@ -72,3 +72,28 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
     ! stbt run -v test.py &&
     [ -f screenshot.png ]
 }
+
+test_that_stbt_run_exits_on_ctrl_c() {
+    # Enable job control, otherwise bash prevents sigint to background command.
+    set -m
+
+    cat > test.py <<-EOF
+	from time import sleep
+
+	for c in range(5, 0, -1):
+	    print "%i bottles of beer on the wall" % c
+	    sleep(1)
+
+	print "No beer left"
+	EOF
+    stbt run test.py >beer.txt &
+    STBT_PID=$!
+
+    sleep 1
+    kill -INT "$STBT_PID"
+    wait "$STBT_PID"
+    exit_status=$?
+
+    ! grep -q "No beer left" beer.txt || fail "Test script should not have completed"
+    [ "$exit_status" != "0" ] || fail "Unexpected return code $exit_status"
+}

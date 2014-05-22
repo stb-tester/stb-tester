@@ -1196,7 +1196,7 @@ def teardown_run():
 #===========================================================================
 
 _debug_level = 0
-_mainloop = GLib.MainLoop()
+_mainloop = GLib.MainLoop.new(None, False)
 
 _display = None
 _control = None
