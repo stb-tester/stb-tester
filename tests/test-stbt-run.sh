@@ -97,3 +97,14 @@ test_that_stbt_run_exits_on_ctrl_c() {
     ! grep -q "No beer left" beer.txt || fail "Test script should not have completed"
     [ "$exit_status" != "0" ] || fail "Unexpected return code $exit_status"
 }
+
+# A regression test
+test_that_stbt_run_exits_gracefully_with_non_live_sources() {
+    cat > test.py <<-EOF
+	wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=1)
+	EOF
+    stbt run -v --source-pipeline="videotestsrc" test.py >log.log 2>&1
+
+    ! grep -q "Source pipeline did not teardown gracefully" log.log ||
+        fail "Source pipeline did not teardown gracefully"
+}
