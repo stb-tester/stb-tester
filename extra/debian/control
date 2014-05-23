@@ -48,6 +48,7 @@ Depends: ${shlibs:Depends},
          python-gobject,
          python-jinja2,
          python-opencv,
+         snmp,
          tesseract-ocr,
          tesseract-ocr-eng
 Description: Automated User Interface testing for set-top boxes. 

@@ -17,6 +17,7 @@ Requires: gstreamer1-plugins-base
 Requires: gstreamer1-plugins-good
 Requires: lsof
 Requires: moreutils
+Requires: net-snmp-utils
 Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients
