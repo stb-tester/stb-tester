@@ -22,7 +22,9 @@ Build-Depends: curl,
                python-jinja2,
                python-nose,
                python-opencv,
-               tesseract-ocr
+               python-yaml,
+               tesseract-ocr,
+               tesseract-ocr-deu
 
 Package: stb-tester
 Architecture: any
