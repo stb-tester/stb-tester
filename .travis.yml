@@ -27,7 +27,7 @@ install:
         tesseract-ocr-eng
  - sudo pip install isort
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
- - make prefix=$HOME install
+ - make
 
 script:
- - PATH=~/bin:~/webminspector:$PATH make check
+ - PATH=~/webminspector:$PATH make check
