@@ -1648,10 +1648,7 @@ class Display(object):
             done.set()
             return True
         hid = appsink.connect('eos', on_eos)
-        if appsink.get_property('eos'):
-            appsink.disconnect(hid)
-            return True
-        d = done.wait(timeout)
+        d = appsink.get_property('eos') or done.wait(timeout)
         appsink.disconnect(hid)
         return d
 
