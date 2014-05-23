@@ -1585,6 +1585,12 @@ class Display(object):
         Gst.debug_bin_to_dot_file_with_ts(
             pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
+        print "err.domain: %s" % err.domain
+        print "err.code: %s" % err.code
+        print "Gst.ResourceError.quark(): %s" % Gst.ResourceError.quark()
+        print "Gst.ResourceError.SETTINGS.real: %s" % (
+            Gst.ResourceError.SETTINGS.real)
+        print "message.src.name: %s" % message.src.name
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
         _mainloop.quit()
