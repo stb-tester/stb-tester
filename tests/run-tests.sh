@@ -56,8 +56,6 @@ run() {
     export XDG_CONFIG_HOME="$scratchdir/config"
     unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
-    mkdir -p "$scratchdir/cache"
-    export XDG_CACHE_HOME="$scratchdir/cache"
     [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     printf "$1... "
     ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
