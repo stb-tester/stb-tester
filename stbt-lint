@@ -4,7 +4,7 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-#/ usage: stbt lint [pylint options] <filename> [<filename> ...]
+#/ usage: stbt lint [--help] [pylint options] <filename> [<filename> ...]
 #/
 #/ Run static analysis over the specified stb-tester python scripts.
 #/
@@ -19,6 +19,7 @@ set -eu
 usage() { grep '^#/' "$0" | cut -c4-; }
 die() { echo "stbt lint: error: $*" >&2; exit 1; }
 
+[ $# -gt 0 ] || { usage | sed -n 1p >&2; exit 1; }
 case "$1" in
     -h|--help) usage; exit 0;;
 esac
