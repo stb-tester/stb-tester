@@ -52,11 +52,11 @@ fi
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
+    [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     mkdir -p "$scratchdir/config/stbt"
     export XDG_CONFIG_HOME="$scratchdir/config"
     unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
-    [ -n "$scratchdir" ] || { echo "$0: mktemp failed" >&2; exit 1; }
     printf "$1... "
     ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
     local status=$?
