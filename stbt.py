@@ -1196,7 +1196,14 @@ def teardown_run():
 #===========================================================================
 
 _debug_level = 0
-_mainloop = GLib.MainLoop()
+if hasattr(GLib.MainLoop, 'new'):
+    _mainloop = GLib.MainLoop.new(context=None, is_running=False)
+else:
+    # Ubuntu 12.04 (Travis) support: PyGObject <3.7.2 doesn't expose the "new"
+    # constructor we'd like to be using, so fall back to __init__.  This means
+    # Ctrl-C is broken on 12.04 and threading will behave differently on Travis
+    # than on our supported systems.
+    _mainloop = GLib.MainLoop()
 
 _display = None
 _control = None
@@ -1648,10 +1655,7 @@ class Display(object):
             done.set()
             return True
         hid = appsink.connect('eos', on_eos)
-        if appsink.get_property('eos'):
-            appsink.disconnect(hid)
-            return True
-        d = done.wait(timeout)
+        d = appsink.get_property('eos') or done.wait(timeout)
         appsink.disconnect(hid)
         return d
 
@@ -1660,6 +1664,8 @@ class Display(object):
         self.source_pipeline, source = None, self.source_pipeline
         if source:
             for elem in gst_iterate(source.iterate_sources()):
+                elem.send_event(Gst.Event.new_flush_start())
+                elem.send_event(Gst.Event.new_flush_stop(False))
                 elem.send_event(Gst.Event.new_eos())
             if not self.appsink_await_eos(
                     source.get_by_name('appsink'), timeout=10):
