@@ -5,25 +5,13 @@
 
 set -e
 
-stbt_version=0.18
-
-# Install stbt to ~/bin
-tmpdir=$(mktemp -d)
-trap 'rm -rf $tmpdir' EXIT
-git clone ~/stb-tester $tmpdir
-cd $tmpdir
-git checkout $stbt_version
-make prefix=$HOME install
-# Apply fix from master https://github.com/drothlis/stb-tester/commit/799067a2
-sed -i 's/grep -q VMware/grep -Eq "VMware|VirtualBox"/' ~/libexec/stbt/stbt-tv
-
 # Bash tab-completion
 cat > ~/.bash_completion <<-'EOF'
 	for f in ~/etc/bash_completion.d/*; do source $f; done
 	EOF
 mkdir -p ~/etc/bash_completion.d
-wget -q -O ~/etc/bash_completion.d/gstreamer-completion-0.10 \
-  https://raw.github.com/drothlis/gstreamer/bash-completion-0.10/tools/gstreamer-completion-0.10
+wget -q -O ~/etc/bash_completion.d/gstreamer-completion-1.2.4 \
+  http://cgit.freedesktop.org/gstreamer/gstreamer/plain/tools/gstreamer-completion?id=1.2.4
 
 sed -i '/### stb-tester configuration ###/,$ d' ~/.bashrc
 cat >> ~/.bashrc <<-EOF
