@@ -7,7 +7,7 @@ STREAM_NAME=steam
 
 case $1 in
     start)
-        sed "s,@SCRATCH_DIR@,$scratch_dir,g" \
+        sed "s,@SCRATCHDIR@,$scratchdir,g" \
             $testdir/hardware/crtmpserver.lua.in >"crtmpserver.lua"
 
         crtmpserver "crtmpserver.lua" &
@@ -21,11 +21,11 @@ case $1 in
         done
         $started || fail "Failed to start crtmpserver"
 
-        echo "$RTMPD_PID" >"$scratch_dir/crtmpserver.pid"
+        echo "$RTMPD_PID" >"$scratchdir/crtmpserver.pid"
         set_config global.source_pipeline \
             "rtmpsrc location=rtmp://localhost/live/$STREAM_NAME\ live=1 ! decodebin"
         ;;
     stop)
-        kill $(<"$scratch_dir/crtmpserver.pid")
+        kill $(<"$scratchdir/crtmpserver.pid")
         ;;
 esac

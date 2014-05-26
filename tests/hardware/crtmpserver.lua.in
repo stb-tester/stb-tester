@@ -8,7 +8,7 @@ configuration=
       name="file appender",
       type="file",
       level=6,
-      fileName="@SCRATCH_DIR@/crtmpserver.log",
+      fileName="@SCRATCHDIR@/crtmpserver.log",
     }
   },
   applications=
