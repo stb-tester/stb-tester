@@ -19,9 +19,9 @@ For example, here is a code generated at random by one user's set-top box, for
 the purpose of pairing with a second-screen device:
 
     >>> import cv2, stbt
-    >>> ujjm2lge = cv2.imread("../tests/ocr/UJJM2LGE.png")
+    >>> ujjm2lge = cv2.imread("images/UJJM2LGE.png")
 
-![](../tests/ocr/UJJM2LGE.png)
+![](images/UJJM2LGE.png)
 
 The code consists of 8 characters randomly chosen from the upper case letters
 and the digits. Tesseract is not expecting this and we need to give it some
