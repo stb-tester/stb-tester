@@ -52,7 +52,7 @@ extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSIO
 	    -e 's,@ESCAPED_VERSION@,$(subst -,_,$(VERSION)),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
-	    -e "s/@RFC_2822_DATE@/$$(date +'%a, %e %b %Y %H:%M:%S %z')/g" \
+	    -e "s/@RFC_2822_DATE@/$$(git show -s --format=%aD HEAD)/g" \
 	    -e 's,@USER_NAME@,$(user_name),g' \
 	    -e 's,@USER_EMAIL@,$(user_email),g' \
 	     $< > $@
