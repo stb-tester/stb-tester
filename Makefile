@@ -14,8 +14,13 @@ user_name?=$(shell git config user.name || \
                    getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
 user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
 
+ubuntu_releases ?= saucy trusty
+debian_base_release=1
+
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
+MKTAR = $(TAR) --format=gnu --owner=root --group=root \
+    --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
 
 tools = stbt-run
@@ -47,7 +52,7 @@ extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSIO
 	    -e 's,@ESCAPED_VERSION@,$(subst -,_,$(VERSION)),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
-	    -e "s/@RFC_2822_DATE@/$$(date +'%a, %e %b %Y %H:%M:%S %z')/g" \
+	    -e "s/@RFC_2822_DATE@/$$(git show -s --format=%aD HEAD)/g" \
 	    -e 's,@USER_NAME@,$(user_name),g' \
 	    -e 's,@USER_EMAIL@,$(user_email),g' \
 	     $< > $@
@@ -184,10 +189,8 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    exit 1; }
 	# Separate tar and gzip so we can pass "-n" for more deterministic tarball
 	# generation
-	$(TAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
-	       -f stb-tester-$(VERSION).tar $^ \
-	       --mtime="$(shell git show -s --format=%ci HEAD)" \
-	       --format=gnu --owner=root --group=root && \
+	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
+	         -f stb-tester-$(VERSION).tar $^ && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
@@ -208,44 +211,63 @@ TAGS:
 
 DPKG_OPTS?=
 
-extra/stb-tester_$(VERSION)-1.debian.tar.xz : \
-		extra/debian/changelog \
-		extra/debian/compat \
-		extra/debian/control \
-		extra/debian/copyright \
-		extra/debian/rules \
-		extra/debian/source/format
-	tar -C extra --xz -cvvf $@ $(subst extra/debian/,debian/,$^)
+extra/debian/$(debian_base_release)~%/debian/changelog : extra/debian/changelog
+	mkdir -p $(dir $@) && \
+	sed -e "s/@RELEASE@/$(debian_base_release)~$*/g" \
+	    -e "s/@DISTRIBUTION@/$*/g" \
+	    $< >$@
 
-debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-1.debian.tar.xz
-	rm -rf debian-src-pkg debian-src-pkg~ && \
-	mkdir debian-src-pkg~ && \
+extra/debian/$(debian_base_release)/debian/changelog : extra/debian/changelog
+	mkdir -p $(dir $@) && \
+	sed -e "s/@RELEASE@/$(debian_base_release)/g" \
+	    -e "s/@DISTRIBUTION@/unstable/g" \
+	    $< >$@
+
+static_debian_files = \
+	debian/compat \
+	debian/control \
+	debian/copyright \
+	debian/rules \
+	debian/source/format
+
+extra/stb-tester_$(VERSION)-%.debian.tar.xz : \
+		extra/debian/%/debian/changelog \
+		$(patsubst %,extra/%,$(static_debian_files))
+	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) $(static_debian_files) && \
+	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) debian/changelog && \
+	xz -f $(patsubst %.tar.xz,%.tar,$@)
+
+debian-src-pkg/%/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
+	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
+	mkdir -p debian-src-pkg/$*~ && \
 	srcdir=$$PWD && \
 	tmpdir=$$(mktemp -d -t stb-tester-debian-pkg.XXXXXX) && \
 	cd $$tmpdir && \
 	cp $$srcdir/stb-tester-$(VERSION).tar.gz \
 	   stb-tester_$(VERSION).orig.tar.gz && \
-	cp $$srcdir/extra/stb-tester_$(VERSION)-1.debian.tar.xz . && \
+	cp $$srcdir/extra/stb-tester_$(VERSION)-$*.debian.tar.xz . && \
 	tar -xzf stb-tester_$(VERSION).orig.tar.gz && \
 	cd stb-tester-$(VERSION) && \
-	tar -xJf ../stb-tester_$(VERSION)-1.debian.tar.xz && \
-	debuild -S $(DPKG_OPTS) && \
+	tar -xJf ../stb-tester_$(VERSION)-$*.debian.tar.xz && \
+	LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S $(DPKG_OPTS) && \
 	cd .. && \
-	mv stb-tester_$(VERSION)-1.dsc stb-tester_$(VERSION)-1_source.changes \
-	   stb-tester_$(VERSION)-1.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
-	   "$$srcdir/debian-src-pkg~" && \
+	mv stb-tester_$(VERSION)-$*.dsc stb-tester_$(VERSION)-$*_source.changes \
+	   stb-tester_$(VERSION)-$*.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
+	   "$$srcdir/debian-src-pkg/$*~" && \
 	cd "$$srcdir" && \
 	rm -Rf "$$tmpdir" && \
-	mv debian-src-pkg~ debian-src-pkg
+	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-stb-tester_$(VERSION)-1_$(debian_architecture).deb : debian-src-pkg/
+stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
-	dpkg-source -x debian-src-pkg/stb-tester_$(VERSION)-1.dsc $$tmpdir/source && \
+	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir/$@" . && \
 	rm -rf "$$tmpdir"
+
+deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 # OpenSUSE build service
 
@@ -270,10 +292,12 @@ obs-publish : stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
-	dput $(DPUT_HOST) debian-src-pkg/stb-tester_$(VERSION)-1_source.changes
+ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
-.PHONY: all clean check dist doc install uninstall
+ppa-publish : $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
+
+.PHONY: all clean check deb dist doc install uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: FORCE TAGS
