@@ -1,4 +1,4 @@
-stb-tester (@VERSION@-1) unstable; urgency=medium
+stb-tester (@VERSION@-@RELEASE@) @DISTRIBUTION@; urgency=medium
 
   * Created from stb-tester git repo http://github.com/drothlis/stb-tester
 
