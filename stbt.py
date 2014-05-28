@@ -2356,28 +2356,20 @@ def _new_samsung_tcp_remote(hostname, port):
 
 
 def uri_to_remote_recorder(uri):
-    vr = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
-    if vr:
-        d = vr.groupdict()
-        return virtual_remote_listen(d['hostname'], int(d['port'] or 2033))
-    tcp_lirc = re.match(
-        r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
-    if tcp_lirc:
-        d = tcp_lirc.groupdict()
-        return lirc_remote_listen_tcp(d['hostname'] or 'localhost',
-                                      int(d['port']), d['control_name'])
-    lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
-    if lirc:
-        d = lirc.groupdict()
-        return lirc_remote_listen(d['lircd_socket'] or '/var/run/lirc/lircd',
-                                  d['control_name'])
-    f = re.match('file://(?P<filename>.+)', uri)
-    if f:
-        return file_remote_recorder(f.group('filename'))
-    stbt_control = re.match(r'stbt-control(:(?P<keymap_file>.+))?', uri)
-    if stbt_control:
-        d = stbt_control.groupdict()
-        return stbt_control_listen(d['keymap_file'])
+    remotes = [
+        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', virtual_remote_listen),
+        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+         lirc_remote_listen_tcp),
+        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+         lirc_remote_listen),
+        ('file://(?P<filename>.+)', file_remote_recorder),
+        (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
+    ]
+
+    for regex, factory in remotes:
+        m = re.match(regex, uri)
+        if m:
+            return factory(**m.groupdict())
     raise ConfigurationError('Invalid remote control recorder URI: "%s"' % uri)
 
 
@@ -2432,9 +2424,11 @@ def vr_key_reader(cmd_iter):
             yield key
 
 
-def virtual_remote_listen(address, port):
+def virtual_remote_listen(address, port=None):
     """Waits for a VirtualRemote to connect, and returns an iterator yielding
     keypresses."""
+    if port is None:
+        port = 2033
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind((address, port))
@@ -2452,6 +2446,8 @@ def lirc_remote_listen(lircd_socket, control_name):
 
     See http://www.lirc.org/html/technical.html#applications
     """
+    if lircd_socket is None:
+        lircd_socket = '/var/run/lirc/lircd'
     lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     debug("control-recorder connecting to lirc file socket '%s'..." %
           lircd_socket)
@@ -2463,6 +2459,8 @@ def lirc_remote_listen(lircd_socket, control_name):
 def lirc_remote_listen_tcp(address, port, control_name):
     """Returns an iterator yielding keypresses received from a lircd TCP
     socket."""
+    address = address or 'localhost'
+    port = int(port)
     debug("control-recorder connecting to lirc TCP socket %s:%s..." %
           (address, port))
     lircd = _connect_tcp_socket(address, port, timeout=None)
