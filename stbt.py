@@ -2103,41 +2103,26 @@ def _log_image_descriptions(
 
 
 def uri_to_remote(uri, display):
-    if uri.lower() == 'none':
-        return NullRemote()
-    if uri.lower() == 'test':
-        return VideoTestSrcControl(display)
-    vr = re.match(r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
-    if vr:
-        d = vr.groupdict()
-        return VirtualRemote(d['hostname'], int(d['port'] or 2033))
-    vr = re.match(r'samsung:(?P<hostname>[^:]*)(:(?P<port>\d+))?', uri)
-    if vr:
-        d = vr.groupdict()
-        return _new_samsung_tcp_remote(d['hostname'], int(d['port'] or 55000))
-    tcp_lirc = re.match(
-        r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)', uri)
-    if tcp_lirc:
-        d = tcp_lirc.groupdict()
-        return new_tcp_lirc_remote(d['hostname'] or 'localhost',
-                                   int(d['port']), d['control_name'])
-    lirc = re.match(r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)', uri)
-    if lirc:
-        d = lirc.groupdict()
-        return new_local_lirc_remote(d['lircd_socket'] or '/var/run/lirc/lircd',
-                                     d['control_name'])
-    irnb = re.match(
-        r'''irnetbox:
-            (?P<hostname>[^:]+)
-            (:(?P<port>\d+))?
-            :(?P<output>\d+)
-            :(?P<config>[^:]+)''',
-        uri,
-        re.VERBOSE)
-    if irnb:
-        d = irnb.groupdict()
-        return IRNetBoxRemote(
-            d['hostname'], int(d['port'] or 10001), d['output'], d['config'])
+    remotes = [
+        (r'none', NullRemote),
+        (r'test', lambda: VideoTestSrcControl(display)),
+        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', VirtualRemote),
+        (r'samsung:(?P<hostname>[^:]*)(:(?P<port>\d+))?',
+         _new_samsung_tcp_remote),
+        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+         new_tcp_lirc_remote),
+        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+         new_local_lirc_remote),
+        (r'''irnetbox:
+             (?P<hostname>[^:]+)
+             (:(?P<port>\d+))?
+             :(?P<output>\d+)
+             :(?P<config>[^:]+)''', IRNetBoxRemote),
+    ]
+    for regex, factory in remotes:
+        m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
+        if m:
+            return factory(**m.groupdict())
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
@@ -2196,9 +2181,9 @@ class VirtualRemote(object):
         control.press("MENU")
     """
 
-    def __init__(self, hostname, port):
+    def __init__(self, hostname, port=None):
         self.hostname = hostname
-        self.port = port
+        self.port = int(port or 2033)
         # Connect once so that the test fails immediately if STB not found
         # (instead of failing at the first `press` in the script).
         debug("VirtualRemote: Connecting to %s:%d" % (hostname, port))
@@ -2232,6 +2217,9 @@ class LircRemote(object):
 
 
 def new_local_lirc_remote(lircd_socket, control_name):
+    if lircd_socket is None:
+        lircd_socket = '/var/run/lirc/lircd'
+
     def _connect():
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -2259,6 +2247,10 @@ def new_tcp_lirc_remote(hostname, port, control_name):
         control = new_tcp_lirc_remote("localhost", "8765", "humax")
         control.press("MENU")
     """
+    if hostname is None:
+        hostname = 'localhost'
+    port = int(port)
+
     def _connect():
         return _connect_tcp_socket(hostname, port)
 
@@ -2278,11 +2270,11 @@ class IRNetBoxRemote(object):
 
     """
 
-    def __init__(self, hostname, port, output, config_file):
+    def __init__(self, hostname, port, output, config):
         self.hostname = hostname
-        self.port = port
+        self.port = int(port or 10001)
         self.output = int(output)
-        self.config = irnetbox.RemoteControlConfig(config_file)
+        self.config = irnetbox.RemoteControlConfig(config)
         # Connect once so that the test fails immediately if irNetBox not found
         # (instead of failing at the first `press` in the script).
         debug("IRNetBoxRemote: Connecting to %s" % hostname)
@@ -2352,7 +2344,7 @@ class _SamsungTCPRemote(object):
 
 
 def _new_samsung_tcp_remote(hostname, port):
-    return _SamsungTCPRemote(_connect_tcp_socket(hostname, port))
+    return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
 
 
 def uri_to_remote_recorder(uri):
@@ -2730,7 +2722,9 @@ def test_uri_to_remote():
     global IRNetBoxRemote  # pylint: disable=W0601
     orig_IRNetBoxRemote = IRNetBoxRemote
     try:
-        IRNetBoxRemote = lambda *args: ":".join([str(x) for x in args])
+        # pylint: disable=W0621
+        def IRNetBoxRemote(hostname, port, output, config):
+            return ":".join([hostname, str(port or '10001'), output, config])
         out = uri_to_remote("irnetbox:localhost:1234:1:conf", None)
         assert out == "localhost:1234:1:conf", (
             "Failed to parse uri with irnetbox port. Output was '%s'" % out)
