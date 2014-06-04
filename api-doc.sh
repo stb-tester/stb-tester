@@ -81,6 +81,7 @@ python_docstrings() {
     doc save_frame
     doc get_frame
     doc is_screen_black
+    doc sleep
     doc draw_text
     doc get_config
     doc debug

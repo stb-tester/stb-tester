@@ -562,6 +562,11 @@ is_screen_black(frame, mask=None, threshold=None)
       in the range 0 (black) to 255 (white). The global default can be changed
       by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
 
+sleep(duration)
+    Do nothing for `duration` secs. Used to delay further actions.
+
+    Draws text on the output video to indicate that STBT is sleeping.
+
 draw_text(text, duration_secs=3)
     Write the specified `text` to the video output.
 
