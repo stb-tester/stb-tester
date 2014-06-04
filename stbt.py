@@ -1197,7 +1197,7 @@ def teardown_run():
 
 _debug_level = 0
 if hasattr(GLib.MainLoop, 'new'):
-    _mainloop = GLib.MainLoop.new(context=None, is_running=False)
+    _mainloop = GLib.MainLoop.new(context=None, is_running=False)  # pylint: disable=E1120
 else:
     # Ubuntu 12.04 (Travis) support: PyGObject <3.7.2 doesn't expose the "new"
     # constructor we'd like to be using, so fall back to __init__.  This means
@@ -1664,8 +1664,8 @@ class Display(object):
         self.source_pipeline, source = None, self.source_pipeline
         if source:
             for elem in gst_iterate(source.iterate_sources()):
-                elem.send_event(Gst.Event.new_flush_start())
-                elem.send_event(Gst.Event.new_eos())
+                elem.send_event(Gst.Event.new_flush_start())  # pylint: disable=E1120
+                elem.send_event(Gst.Event.new_eos())  # pylint: disable=E1120
                 elem.send_event(Gst.Event.new_flush_stop(False))
             if not self.appsink_await_eos(
                     source.get_by_name('appsink'), timeout=10):
