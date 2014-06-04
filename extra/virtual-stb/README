@@ -1,0 +1,9 @@
+Configures stbt to take video from and provide input to a application via X as
+given by a command.
+
+Usage:
+
+    virtual-stb.py glxgears
+
+    virtual-stb.py chromium-browser --disable-background-networking \
+        --app=http://youtube.com/tv --user-data-dir=$(mktemp -d)
