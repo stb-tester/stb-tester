@@ -1018,6 +1018,16 @@ def is_screen_black(frame, mask=None, threshold=None):
     return maxVal == 0
 
 
+def sleep(duration):
+    """Do nothing for `duration` secs. Used to delay further actions.
+
+    Draws text on the output video to indicate that STBT is sleeping.
+    """
+    for i in range(duration, 0, -1):
+        draw_text("Sleeping: %ds" % i, duration_secs=0.99)
+        time.sleep(1)
+
+
 @contextmanager
 def as_precondition(message):
     """Context manager that replaces UITestFailures with UITestErrors.
