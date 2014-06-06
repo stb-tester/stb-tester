@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# WARNING: DON'T ADD SUPPORT FOR NEW POWER DEVICES TO THIS SCRIPT.
+# WE WANT TO PORT IT TO PYTHON FIRST. SEE
+# https://groups.google.com/d/msg/stb-tester/0wFNSIimHn0/317YMmc4CesJ
+
 #/ usage: stbt power [--help] [--power-outlet <uri>] on|off|status
 #/
 #/ Send commands to network-controllable power switch.
