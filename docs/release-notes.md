@@ -21,6 +21,9 @@ For installation instructions see
 For upgrade instructions from 0.18, see the release notes for the 0.19 beta
 release.
 
+Thanks to Lewis Haley and Máté Szendrő for extensive testing, bug reports, and
+patches.
+
 ##### Breaking changes since 0.19 beta
 
 * `stbt.ocr` returns a unicode object rather than a string.
@@ -61,6 +64,8 @@ Changes to the command-line tools:
 * Improve `stbt run` latency on slow computers and after video-capture device
   restarts ([issue #137](https://github.com/drothlis/stb-tester/issues/137),
   introduced in 0.19).
+* `stbt power` supports the ATEN brand of network-controlled power distribution
+  units (thanks to Aiman Baharna).
 * `stbt tv` fixed on OS X (broken in 0.19 in the port to GStreamer 1).
 * `stbt lint` gives a better error message when no arguments are given.
 * `stbt control` no longer needs `nose` (a python testing tool) to run.
