@@ -1351,7 +1351,8 @@ def _numpy_from_sample(sample, readonly=False):
         yield sample
         return
     if not isinstance(sample, Gst.Sample):
-        raise TypeError("numpy_from_gstsample must take a Gst.Sample")
+        raise TypeError("numpy_from_gstsample must take a Gst.Sample or a "
+                        "numpy.ndarray.  Received a %s" % str(type(sample)))
 
     caps = sample.get_caps()
     flags = Gst.MapFlags.READ
