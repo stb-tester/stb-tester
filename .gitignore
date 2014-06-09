@@ -14,7 +14,7 @@ VERSION
 extra/vm/.vagrant
 tests/test-install
 nosetest-issue-49-workaround-stbt-control.py
-extra/stb-tester.spec
+extra/fedora/stb-tester.spec
 stb-tester-*.tar.gz
 debian-src-pkg/*/stb-tester_*
 extra/debian/changelog

@@ -46,9 +46,9 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf extra/stb-tester.spec
+all: stbt stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/fedora/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -274,7 +274,7 @@ deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
 ppa-publish : $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
@@ -288,11 +288,11 @@ src_rpm=stb-tester-$(ESCAPED_VERSION)-1.fc20.src.rpm
 
 srpm: $(src_rpm)
 
-$(src_rpm): stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+$(src_rpm): stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	@printf "\n*** Building Fedora src rpm ***\n"
 	mkdir -p $(rpm_topdir)/SOURCES
 	cp stb-tester-$(VERSION).tar.gz $(rpm_topdir)/SOURCES
-	rpmbuild --define "_topdir $(rpm_topdir)" -bs extra/stb-tester.spec
+	rpmbuild --define "_topdir $(rpm_topdir)" -bs extra/fedora/stb-tester.spec
 	mv $(rpm_topdir)/SRPMS/$(src_rpm) .
 
 # For copr-cli, generate API token from http://copr.fedoraproject.org/api/
@@ -300,7 +300,7 @@ $(src_rpm): stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 copr-publish: $(src_rpm)
 	@printf "\n*** Building rpm from src rpm to validate src rpm ***\n"
 	yum-builddep -y $(src_rpm)
-	rpmbuild --define "_topdir $(rpm_topdir)" -bb extra/stb-tester.spec
+	rpmbuild --define "_topdir $(rpm_topdir)" -bb extra/fedora/stb-tester.spec
 	@printf "\n*** Publishing src rpm to %s ***\n" \
 	    https://github.com/drothlis/stb-tester-srpms
 	rm -rf stb-tester-srpms
