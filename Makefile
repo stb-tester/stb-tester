@@ -41,15 +41,16 @@ generate_version := $(shell \
 	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
+ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf extra/stb-tester.spec
+all: stbt stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/fedora/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
-	    -e 's,@ESCAPED_VERSION@,$(subst -,_,$(VERSION)),g' \
+	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
 	    -e "s/@RFC_2822_DATE@/$$(git show -s --format=%aD HEAD)/g" \
@@ -269,35 +270,53 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 
 deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
-# OpenSUSE build service
-
-OBS_PROJECT?=home:stb-tester
-OBS_PACKAGE?=stb-tester
-
-obs-publish : stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
-	srcdir=$$PWD && \
-	tmpdir=$$(mktemp -d -t stb-tester-osc-publish.XXXXXX) && \
-	cd "$$tmpdir" && \
-	osc checkout "$(OBS_PROJECT)" "$(OBS_PACKAGE)" && \
-	cd "$(OBS_PROJECT)/$(OBS_PACKAGE)" && \
-	rm -f * && \
-	cp "$$srcdir/stb-tester-$(VERSION).tar.gz" \
-	   "$$srcdir/extra/stb-tester.spec" . && \
-	osc addremove && \
-	osc commit -m "Update to stb-tester version $(VERSION)" && \
-	cd "$$srcdir" && \
-	rm -Rf "$$tmpdir"
-
 # Ubuntu PPA
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
+ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
 ppa-publish : $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
 
+# Fedora Packaging
+
+COPR_PROJECT?=stbt
+COPR_PACKAGE?=stb-tester
+rpm_topdir?=$(HOME)/rpmbuild
+src_rpm=stb-tester-$(ESCAPED_VERSION)-1.fc20.src.rpm
+
+srpm: $(src_rpm)
+
+$(src_rpm): stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
+	@printf "\n*** Building Fedora src rpm ***\n"
+	mkdir -p $(rpm_topdir)/SOURCES
+	cp stb-tester-$(VERSION).tar.gz $(rpm_topdir)/SOURCES
+	rpmbuild --define "_topdir $(rpm_topdir)" -bs extra/fedora/stb-tester.spec
+	mv $(rpm_topdir)/SRPMS/$(src_rpm) .
+
+# For copr-cli, generate API token from http://copr.fedoraproject.org/api/
+# and paste into ~/.config/copr
+copr-publish: $(src_rpm)
+	@printf "\n*** Building rpm from src rpm to validate src rpm ***\n"
+	yum-builddep -y $(src_rpm)
+	rpmbuild --define "_topdir $(rpm_topdir)" -bb extra/fedora/stb-tester.spec
+	@printf "\n*** Publishing src rpm to %s ***\n" \
+	    https://github.com/drothlis/stb-tester-srpms
+	rm -rf stb-tester-srpms
+	git clone --depth 1 https://github.com/drothlis/stb-tester-srpms.git
+	cp $(src_rpm) stb-tester-srpms
+	cd stb-tester-srpms && \
+	    git add $(src_rpm) && \
+	    git commit -m "$(src_rpm)" && \
+	    git push origin master
+	@printf "\n*** Publishing package to COPR ***\n"
+	copr-cli build stb-tester \
+	    https://github.com/drothlis/stb-tester-srpms/raw/master/$(src_rpm)
+
+
 .PHONY: all clean check deb dist doc install uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
+.PHONY: copr-publish ppa-publish srpm
 .PHONY: FORCE TAGS
