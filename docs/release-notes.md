@@ -33,6 +33,8 @@ For installation instructions see
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
+* `Region` now has the convenience method `extend()` to make it easier to
+  receive a region, modify it and then pass it to another function.
 
 ##### Developer-visible changes since 0.20
 

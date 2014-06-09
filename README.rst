@@ -727,6 +727,14 @@ class Region
         False
         >>> c.contains(b)
         False
+        >>> b.extend(x=6, bottom=-4) == c
+        True
+        >>> a.extend(right=5).contains(c)
+        True
+        >>> a.extend(x=3).width
+        5
+        >>> a.extend(right=-3).width
+        5
 
 class MotionResult
     * `timestamp`: Video stream timestamp.

@@ -278,6 +278,14 @@ class Region(namedtuple('Region', 'x y width height')):
         False
         >>> c.contains(b)
         False
+        >>> b.extend(x=6, bottom=-4) == c
+        True
+        >>> a.extend(right=5).contains(c)
+        True
+        >>> a.extend(x=3).width
+        5
+        >>> a.extend(right=-3).width
+        5
     """
     @staticmethod
     def from_extents(x, y, right, bottom):
@@ -299,6 +307,12 @@ class Region(namedtuple('Region', 'x y width height')):
         """Checks whether other is entirely contained within self"""
         return (self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
+
+    def extend(self, x=0, y=0, right=0, bottom=0):
+        """Returns a new region with the positions of the edges of the region
+        adjusted by the given amounts."""
+        return Region.from_extents(
+            self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
 
 def _bounding_box(a, b):
