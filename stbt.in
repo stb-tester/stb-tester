@@ -26,6 +26,7 @@
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 export STBT_VERSION="@VERSION@"
+export PYTHONPATH=@LIBEXECDIR@:$PYTHONPATH
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 case "$1" in
