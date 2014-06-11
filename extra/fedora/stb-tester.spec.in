@@ -15,6 +15,7 @@ Requires: gstreamer1-plugins-bad-free
 Requires: gstreamer1-plugins-bad-free-extras
 Requires: gstreamer1-plugins-base
 Requires: gstreamer1-plugins-good
+Requires: libvpx
 Requires: lsof
 Requires: moreutils
 Requires: net-snmp-utils
