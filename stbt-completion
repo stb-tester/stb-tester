@@ -180,7 +180,7 @@ _stbt_control_uri() {
         --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc: vr: samsung:
+                    _stbt_no_space irnetbox: lirc: vr: samsung: x11:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac

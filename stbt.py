@@ -2118,6 +2118,7 @@ def uri_to_remote(uri, display):
              (:(?P<port>\d+))?
              :(?P<output>\d+)
              :(?P<config>[^:]+)''', IRNetBoxRemote),
+        (r'x11:(?P<display>.+)?', _X11Remote),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -2345,6 +2346,19 @@ class _SamsungTCPRemote(object):
 
 def _new_samsung_tcp_remote(hostname, port):
     return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
+
+
+class _X11Remote(object):
+    """Simulate key presses using xdotool.
+    """
+    def __init__(self, display=None):
+        self.display = display
+
+    def press(self, key):
+        e = os.environ.copy()
+        if self.display is not None:
+            e['DISPLAY'] = self.display
+        subprocess.check_call(['xdotool', 'key', key], env=e)
 
 
 def uri_to_remote_recorder(uri):
@@ -2716,6 +2730,32 @@ def test_samsung_tcp_remote():
     assert len(sent_data) == 2
     assert sent_data[1] == (
         b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
+
+
+def test_x11_remote():
+    from nose.plugins.skip import SkipTest
+    from distutils.spawn import find_executable
+    if not find_executable('Xorg') or not find_executable('xterm'):
+        raise SkipTest("Testing X11Remote requires X11 and xterm")
+    if os.path.exists('/tmp/.X11-unix/X99'):
+        raise SkipTest("There is already a display server running on :99")
+
+    with _named_temporary_directory() as tmp:
+        x11 = subprocess.Popen(
+            ['Xorg', '-logfile', './99.log', '-config',
+             os.path.dirname(__file__) + '/tests/xorg.conf', ':99'], cwd=tmp)
+        while not os.path.exists('/tmp/.X11-unix/X99'):
+            time.sleep(0.1)
+        xterm = subprocess.Popen(['xterm'], env={'DISPLAY': ':99'}, cwd=tmp)
+        # Wait for xterm to get ready to process keyboard input (sorry):
+        time.sleep(1)
+        r = uri_to_remote('x11::99', None)
+        for k in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o', 'd',
+                  'Return', 'e', 'x', 'i', 't', 'Return']:
+            r.press(k)
+        xterm.wait()
+        assert os.path.exists(tmp + '/good')
+        x11.terminate()
 
 
 def test_uri_to_remote():
