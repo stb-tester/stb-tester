@@ -337,16 +337,18 @@ test_detect_match_reports_match() {
     stbt run -v test.py
 }
 
-test_detect_match_reports_match_position() {
+test_detect_match_reports_match_region() {
     cat > test.py <<-EOF
+	from stbt import detect_match, Position, Region
 	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
-	    if match_result.position.x == 228 and match_result.position.y == 0:
+	    if match_result.region == Region(228, 0, 92, 160):
+	        assert match_result.position == Position(228, 0)
 	        import sys
 	        sys.exit(0)
 	    else:
 	        raise Exception(
-	            "Wrong match position reported, expected: (228,0), "
-	            "got %s." % str(match_result.position))
+	            "Wrong match region reported, expected: (228, 0, 92, 160), "
+	            "got %s." % str(match_result.region))
 	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt run -v test.py
