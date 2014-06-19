@@ -2741,21 +2741,28 @@ def test_x11_remote():
         raise SkipTest("There is already a display server running on :99")
 
     with _named_temporary_directory() as tmp:
-        x11 = subprocess.Popen(
-            ['Xorg', '-logfile', './99.log', '-config',
-             os.path.dirname(__file__) + '/tests/xorg.conf', ':99'], cwd=tmp)
-        while not os.path.exists('/tmp/.X11-unix/X99'):
-            time.sleep(0.1)
-        xterm = subprocess.Popen(['xterm'], env={'DISPLAY': ':99'}, cwd=tmp)
-        # Wait for xterm to get ready to process keyboard input (sorry):
-        time.sleep(1)
-        r = uri_to_remote('x11::99', None)
-        for k in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o', 'd',
-                  'Return', 'e', 'x', 'i', 't', 'Return']:
-            r.press(k)
-        xterm.wait()
-        assert os.path.exists(tmp + '/good')
-        x11.terminate()
+        x11 = None
+        xterm = None
+        try:
+            x11 = subprocess.Popen(
+                ['Xorg', '-logfile', './99.log', '-config',
+                 os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
+                cwd=tmp)
+            while not os.path.exists('/tmp/.X11-unix/X99'):
+                time.sleep(0.1)
+            xterm = subprocess.Popen(['xterm'], env={'DISPLAY': ':99'}, cwd=tmp)
+            # Wait for xterm to get ready to process keyboard input (sorry):
+            time.sleep(1)
+            r = uri_to_remote('x11::99', None)
+            for k in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o', 'd',
+                      'Return', 'e', 'x', 'i', 't', 'Return']:
+                r.press(k)
+            xterm.wait()
+            assert os.path.exists(tmp + '/good')
+        finally:
+            for p in (x11, xterm):
+                if p is not None and p.returncode is None:
+                    p.terminate()
 
 
 def test_uri_to_remote():
