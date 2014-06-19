@@ -2750,7 +2750,9 @@ def test_x11_remote():
                 cwd=tmp)
             while not os.path.exists('/tmp/.X11-unix/X99'):
                 time.sleep(0.1)
-            xterm = subprocess.Popen(['xterm'], env={'DISPLAY': ':99'}, cwd=tmp)
+            xterm = subprocess.Popen(
+                ['xterm'], env={'DISPLAY': ':99', 'PATH': os.environ['PATH']},
+                cwd=tmp)
             # Wait for xterm to get ready to process keyboard input (sorry):
             time.sleep(1)
             r = uri_to_remote('x11::99', None)
