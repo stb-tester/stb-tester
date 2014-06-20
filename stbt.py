@@ -1677,7 +1677,7 @@ class Display(object):
         self.source_pipeline, source = None, self.source_pipeline
         if source:
             for elem in gst_iterate(source.iterate_sources()):
-                elem.send_event(Gst.Event.new_eos())
+                elem.send_event(Gst.Event.new_eos())  # pylint: disable=E1120
             if not self.appsink_await_eos(
                     source.get_by_name('appsink'), timeout=10):
                 debug("teardown: Source pipeline did not teardown gracefully")
