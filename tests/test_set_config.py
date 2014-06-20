@@ -81,3 +81,14 @@ def test_that_set_config_preserves_file_comments_and_formatting():
         _set_config('global', 'test', 'goodbye')
         assert open('test.cfg', 'r').read() == test_config.replace(
             'hello', 'goodbye')
+
+
+def test_that_set_config_creates_directories_if_required():
+    with _directory_sandbox() as d:
+        os.environ['XDG_CONFIG_HOME'] = d + '/.config'
+        if 'STBT_CONFIG_FILE' in os.environ:
+            del os.environ['STBT_CONFIG_FILE']
+        _set_config('global', 'test', 'hello2')
+        assert os.path.isfile(d + '/.config/stbt/stbt.conf')
+        _config_init(force=True)
+        assert get_config('global', 'test') == 'hello2'

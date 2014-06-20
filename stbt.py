@@ -1295,6 +1295,10 @@ def _set_config(section, option, value):
         parser.add_section(section)
     parser.set(section, option, value)
 
+    d = os.path.dirname(custom_config)
+    if not _mkdir(d):
+        raise RuntimeError(
+            "Failed to create directory '%s'; cannot write config file." % d)
     with _sponge(custom_config) as f:
         parser.write(f)
 
