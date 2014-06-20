@@ -3,9 +3,11 @@ test_that_stbt_control_sends_a_single_key() {
     cat log | grep -q 'NullRemote: Ignoring request to press "MENU"'
 }
 
-test_stbt_control_as_stbt_record_control_recorder() {
+validate_stbt_record_control_recorder() {
+    control_uri=$1
+
     cat > test.expect <<-EOF &&
-	spawn stbt record --control-recorder=stbt-control:$testdir/stbt-control.keymap
+	spawn stbt record --control-recorder=$control_uri
 	expect "stbt-control.keymap"
 	send "f"
 	sleep 1
@@ -33,4 +35,19 @@ test_stbt_control_as_stbt_record_control_recorder() {
 	stbt.wait_for_match('0003-smpte-complete.png')
 	EOF
     diff -u expected test.py
+}
+
+test_stbt_control_as_stbt_record_control_recorder__explict_keymap() {
+    validate_stbt_record_control_recorder \
+        stbt-control:$testdir/stbt-control.keymap
+}
+
+test_stbt_control_as_stbt_record_control_recorder__default_keymap() {
+    cp "$testdir/stbt-control.keymap" "$XDG_CONFIG_HOME/stbt/control.conf" &&
+    validate_stbt_record_control_recorder stbt-control
+}
+
+test_stbt_control_as_stbt_record_control_recorder__keymap_from_config() {
+    set_config control.keymap "$testdir/stbt-control.keymap" &&
+    validate_stbt_record_control_recorder stbt-control
 }

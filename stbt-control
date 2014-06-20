@@ -121,6 +121,15 @@ def show_help_keymap():
             m       MENU    Main Menu
             Enter   OK
             c       CLOSE   Close     // Go back to live TV
+
+    The keymap file to use can be specified by:
+
+    1. Passing the filename of the keymap to the --keymap=<filename> command
+       line argument.
+    2. Or setting the configuration value `control.keymap` to the filename of
+       the keymap file
+    3. Copying it into $XDG_CONFIG_PATH/stbt/control.conf (defaults to
+       $HOME/.config/stbt/control.conf).
     """
     print globals()["show_help_keymap"].__doc__
 
@@ -277,7 +286,8 @@ def test_validate():
 def default_keymap_file():
     config_dir = os.environ.get(
         'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
-    return os.path.join(config_dir, "stbt", "control.conf")
+    return stbt.get_config("control", "keymap", "") or \
+        os.path.join(config_dir, "stbt", "control.conf")
 
 
 def error(s):
