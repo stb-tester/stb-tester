@@ -107,6 +107,14 @@ Global options
     `--source-pipeline=videotestsrc`. A script like `press("18")` will change
     videotestsrc's pattern property (see `gst-inspect videotestsrc`).
 
+  x11:<display>
+    Send keypresses to a given X display using the xtest extension. Can be used
+    with GStreamer's ximagesrc for testing desktop applications and websites.
+    The key names are X keysyms, i.e. "a", "b", "comma", "space", etc.  For a
+    full list see http://www.cl.cam.ac.uk/~mgk25/ucs/keysyms.txt .
+
+    Requires that `xdotool` is installed.
+
 --source-pipeline=<pipeline>
   A GStreamer pipeline providing a video stream to use as video output from the
   set-top box under test.  For the Hauppauge HD PVR use::

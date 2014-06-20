@@ -25,6 +25,9 @@ install:
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng
+        xdotool
+        xserver-xorg-video-dummy
+        xterm
  - sudo pip install isort
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make

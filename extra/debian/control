@@ -25,7 +25,8 @@ Build-Depends: curl,
                python-yaml,
                tesseract-ocr,
                tesseract-ocr-deu,
-               tesseract-ocr-eng
+               tesseract-ocr-eng,
+               xdotool
 
 Package: stb-tester
 Architecture: any
@@ -50,7 +51,8 @@ Depends: ${shlibs:Depends},
          python-opencv,
          snmp,
          tesseract-ocr,
-         tesseract-ocr-eng
+         tesseract-ocr-eng,
+         xdotool
 Description: Automated User Interface testing for set-top boxes. 
  stb-tester tests a set-top-box by issuing commands to it using a remote-control
  and checking that it has done the right thing by analysing what is on screen.
