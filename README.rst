@@ -672,7 +672,8 @@ class MatchParameters
 
 class MatchResult
     * `timestamp`: Video stream timestamp.
-    * `match`: Boolean result.
+    * `match`: Boolean result, the same as evaluating `MatchResult` as a bool.
+      e.g: `if match_result:` will behave the same as `if match_result.match`.
     * `region`: The `Region` in the video frame where the image was found.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
