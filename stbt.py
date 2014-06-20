@@ -252,7 +252,7 @@ class Region(namedtuple('Region', 'x y width height')):
 
     regions a, b and c::
 
-          01234567890123
+        - 01234567890123
         0 ░░░░░░░░
         1 ░a░░░░░░
         2 ░░░░░░░░
