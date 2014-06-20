@@ -270,7 +270,7 @@ test_press_until_match_searches_in_script_directory() {
 test_detect_match_searches_in_script_directory() {
     cat > test.py <<-EOF
 	m = detect_match("in-script-dir.png").next()
-	if not m.match:
+	if not m:
 	    raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
@@ -287,7 +287,7 @@ test_detect_match_searches_in_library_directory() {
 	import stbt
 	def find():
 	    m = stbt.detect_match("in-helpers-dir.png").next()
-	    if not m.match:
+	    if not m:
 	        raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png stbt_helpers/in-helpers-dir.png
@@ -310,7 +310,7 @@ test_detect_match_searches_in_caller_directory() {
 	import stbt
 	def find(image):
 	    m = stbt.detect_match(image).next()
-	    if not m.match:
+	    if not m:
 	        raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png stbt_tests/in-caller-dir.png
@@ -330,7 +330,8 @@ test_detect_match_reports_match() {
     cat > test.py <<-EOF
 	# Should report a match
 	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
-	    if match_result.match:
+	    if match_result:
+	        assert match_result.match
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -380,7 +381,8 @@ test_detect_match_reports_no_match() {
     cat > test.py <<-EOF
 	# Should not report a match
 	for match_result in detect_match("$testdir/videotestsrc-checkers-8.png"):
-	    if not match_result.match:
+	    if not match_result:
+	        assert not match_result.match
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -421,7 +423,7 @@ test_detect_match_changing_template_is_not_racy() {
     cat > test.py <<-EOF
 	for match_result in detect_match("$testdir/videotestsrc-bw.png",
 	                                 timeout_secs=1):
-	    if not match_result.match:
+	    if not match_result:
 	        raise Exception("Match not reported.")
 	    # Leave time for another frame to be processed with this template
 	    import time
@@ -430,7 +432,7 @@ test_detect_match_changing_template_is_not_racy() {
 	for match_result in detect_match(
 	        "$testdir/videotestsrc-redblue-flipped.png"):
 	    # Not supposed to match
-	    if not match_result.match:
+	    if not match_result:
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -445,12 +447,12 @@ test_detect_match_example_press_and_wait_for_match() {
 	key_sent = False
 	for match_result in detect_match("$testdir/videotestsrc-checkers-8.png"):
 	    if not key_sent:
-	        if match_result.match:
+	        if match_result:
 	            raise Exception("Wrong match reported.")
 	        press("checkers-8")
 	        key_sent = True
 	    else:
-	        if match_result.match:
+	        if match_result:
 	            import sys
 	            sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")

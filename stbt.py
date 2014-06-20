@@ -326,7 +326,8 @@ def _bounding_box(a, b):
 class MatchResult(object):
     """
     * `timestamp`: Video stream timestamp.
-    * `match`: Boolean result.
+    * `match`: Boolean result, the same as evaluating `MatchResult` as a bool.
+      e.g: `if match_result:` will behave the same as `if match_result.match`.
     * `region`: The `Region` in the video frame where the image was found.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
@@ -376,6 +377,9 @@ class MatchResult(object):
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
+
+    def __nonzero__(self):
+        return self.match
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
