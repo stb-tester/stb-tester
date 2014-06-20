@@ -101,10 +101,24 @@ def start_x(width, height):
                 xorg.wait()
 
 
+def sd_notify(text):
+    sock = None
+    try:
+        import socket
+        sockname = os.envion.get('NOTIFY_SOCKET', None)
+        if sockname and sockname[0] in ['/', '@'] and sockname[1:]:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            sock.sendto(text, sockname)
+    except:
+        if sock:
+            sock.close()
+
+
 def main(argv):
     parser = argparse.ArgumentParser(
         description="Configure stb-tester to use a local program as "
                     "input/output")
+    parser.add_argument('--daemonize')
     parser.add_argument('command', nargs=1)
     parser.add_argument('args', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
@@ -118,10 +132,13 @@ def main(argv):
         stbt._set_config('press', 'interpress_display_secs', '0.5')
         stbt._set_config('global', 'x_display', display)
 
-        # TODO: Notify ready here
-
         os.environ['DISPLAY'] = display
-        subprocess.check_call(args.command + args.args)
+        child = subprocess.Popen(args.command + args.args)
+        sd_notify('X_DISPLAY=%s' % display)
+        sd_notify('X_CHILD_PID=%i' % child.pid)
+        sd_notify('READY=1')
+
+        return child.wait()
 
 
 if __name__ == '__main__':
