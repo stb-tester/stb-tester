@@ -188,10 +188,13 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
 test_detect_match_nonexistent_template() {
     cat > test.py <<-EOF
 	import sys
-	m = detect_match("idontexist.png").next()
-	sys.exit(0 if m.match else 1)
+	try:
+	    detect_match("idontexist.png").next()
+	    assert False, "Trying to match an non-existant template should throw"
+	except:
+	    pass
 	EOF
-    ! stbt run -v test.py
+    stbt run -v test.py
 }
 
 test_press_until_match_presses_once() {
