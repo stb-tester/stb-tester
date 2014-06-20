@@ -241,7 +241,6 @@ class Position(namedtuple('Position', 'x y')):
 
 
 class Region(namedtuple('Region', 'x y width height')):
-    # pylint: disable=E1101
     u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,

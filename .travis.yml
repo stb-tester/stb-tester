@@ -13,7 +13,6 @@ install:
         gstreamer1.0-x
         moreutils
         pep8
-        pylint
         python-docutils
         python-flask
         python-gobject
@@ -28,7 +27,7 @@ install:
         xdotool
         xserver-xorg-video-dummy
         xterm
- - sudo pip install isort
+ - sudo pip install isort pylint==1.1.0
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make
 
