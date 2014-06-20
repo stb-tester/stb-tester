@@ -2737,39 +2737,47 @@ def test_samsung_tcp_remote():
         b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
 
 
+@contextmanager
+def temporary_x_session():
+    from nose.plugins.skip import SkipTest
+    if os.path.exists('/tmp/.X11-unix/X99'):
+        raise SkipTest("There is already a display server running on :99")
+    with _named_temporary_directory() as tmp:
+        x11 = subprocess.Popen(
+            ['Xorg', '-logfile', './99.log', '-config',
+             os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
+            cwd=tmp, stderr=open('/dev/null', 'w'))
+        while not os.path.exists('/tmp/.X11-unix/X99'):
+            assert x11.returncode is None
+            time.sleep(0.1)
+        try:
+            yield ':99'
+        finally:
+            x11.terminate()
+
+
 def test_x11_remote():
     from nose.plugins.skip import SkipTest
     from distutils.spawn import find_executable
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")
-    if os.path.exists('/tmp/.X11-unix/X99'):
-        raise SkipTest("There is already a display server running on :99")
 
-    with _named_temporary_directory() as tmp:
-        x11 = None
-        xterm = None
-        try:
-            x11 = subprocess.Popen(
-                ['Xorg', '-logfile', './99.log', '-config',
-                 os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
-                cwd=tmp)
-            while not os.path.exists('/tmp/.X11-unix/X99'):
-                time.sleep(0.1)
-            xterm = subprocess.Popen(
-                ['xterm'], env={'DISPLAY': ':99', 'PATH': os.environ['PATH']},
-                cwd=tmp)
-            # Wait for xterm to get ready to process keyboard input (sorry):
-            time.sleep(1)
-            r = uri_to_remote('x11::99', None)
-            for k in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o', 'd',
-                      'Return', 'e', 'x', 'i', 't', 'Return']:
-                r.press(k)
-            xterm.wait()
-            assert os.path.exists(tmp + '/good')
-        finally:
-            for p in (x11, xterm):
-                if p is not None and p.returncode is None:
-                    p.terminate()
+    with _named_temporary_directory() as tmp, temporary_x_session() as display:
+        r = uri_to_remote('x11:%s' % display, None)
+
+        subprocess.Popen(
+            ['xterm'], env={'DISPLAY': display, 'PATH': os.environ['PATH']},
+            cwd=tmp, stderr=open('/dev/null', 'w'))
+
+        # Can't be sure how long xterm will take to get ready:
+        for _ in range(0, 20):
+            for keysym in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o',
+                           'd', 'Return']:
+                r.press(keysym)
+            if os.path.exists(tmp + '/good'):
+                break
+            time.sleep(0.5)
+        assert os.path.exists(tmp + '/good')
 
 
 def test_uri_to_remote():
