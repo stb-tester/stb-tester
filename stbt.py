@@ -241,7 +241,6 @@ class Position(namedtuple('Position', 'x y')):
 
 
 class Region(namedtuple('Region', 'x y width height')):
-    # pylint: disable=E1101
     u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,
@@ -252,7 +251,7 @@ class Region(namedtuple('Region', 'x y width height')):
 
     regions a, b and c::
 
-          01234567890123
+        - 01234567890123
         0 ░░░░░░░░
         1 ░a░░░░░░
         2 ░░░░░░░░
@@ -328,20 +327,22 @@ class MatchResult(object):
     """
     * `timestamp`: Video stream timestamp.
     * `match`: Boolean result.
-    * `position`: `Position` of the match.
+    * `region`: The `Region` in the video frame where the image was found.
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     * `frame`: The video frame that was searched, in OpenCV format.
     * `image`: The template image that was searched for, as given to
       `wait_for_match` or `detect_match`.
+    * `position`: `Position` of the match, the same as in `region`. Included
+      for backwards compatibility; we recommend using `region` instead.
     """
 
     def __init__(
-            self, timestamp, match, position, first_pass_result, frame=None,
+            self, timestamp, match, region, first_pass_result, frame=None,
             image=None):
         self.timestamp = timestamp
         self.match = match
-        self.position = position
+        self.region = region
         self.first_pass_result = first_pass_result
         if frame is None:
             warnings.warn(
@@ -361,16 +362,20 @@ class MatchResult(object):
 
     def __str__(self):
         return (
-            "MatchResult(timestamp=%s, match=%s, position=%s, "
+            "MatchResult(timestamp=%s, match=%s, region=%s, "
             "first_pass_result=%s, frame=%s, image=%s)" % (
                 self.timestamp,
                 self.match,
-                self.position,
+                self.region,
                 self.first_pass_result,
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
                 _template_name(self.image)))
+
+    @property
+    def position(self):
+        return Position(self.region.x, self.region.y)
 
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
@@ -424,19 +429,17 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
     for sample in _display.gst_samples(timeout_secs):
         with _numpy_from_sample(sample) as frame:
-            matched, position, first_pass_certainty = _match(
+            matched, region, first_pass_certainty = _match(
                 frame, template, match_parameters, template_name)
 
             result = MatchResult(
-                sample.get_buffer().pts, matched, position,
-                first_pass_certainty, numpy.copy(frame),
+                sample.get_buffer().pts, matched, region, first_pass_certainty,
+                numpy.copy(frame),
                 (image if isinstance(image, numpy.ndarray) else template_name))
 
             cv2.rectangle(
                 frame,
-                (position.x, position.y),
-                (position.x + template.shape[1],
-                 position.y + template.shape[0]),
+                (region.x, region.y), (region.right, region.bottom),
                 (32, 0 if matched else 255, 255),  # bgr
                 thickness=3)
 
@@ -1674,7 +1677,7 @@ class Display(object):
         self.source_pipeline, source = None, self.source_pipeline
         if source:
             for elem in gst_iterate(source.iterate_sources()):
-                elem.send_event(Gst.Event.new_eos())
+                elem.send_event(Gst.Event.new_eos())  # pylint: disable=E1120
             if not self.appsink_await_eos(
                     source.get_by_name('appsink'), timeout=10):
                 debug("teardown: Source pipeline did not teardown gracefully")
@@ -1725,12 +1728,14 @@ def _match(image, template, match_parameters, template_name):
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters))
 
+    region = Region(position.x, position.y,
+                    template.shape[1], template.shape[0])
+
     if _debug_level > 1:
         source_with_roi = image.copy()
         cv2.rectangle(
             source_with_roi,
-            (position.x, position.y),
-            (position.x + template.shape[1], position.y + template.shape[0]),
+            (region.x, region.y), (region.right, region.bottom),
             (32, 0 if first_pass_matched else 255, 255),  # bgr
             thickness=1)
         _log_image(
@@ -1739,7 +1744,7 @@ def _match(image, template, match_parameters, template_name):
             template_name, matched, position,
             first_pass_matched, first_pass_certainty, match_parameters)
 
-    return matched, position, first_pass_certainty
+    return matched, region, first_pass_certainty
 
 
 def _find_match(image, template, match_parameters):
