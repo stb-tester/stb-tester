@@ -29,6 +29,14 @@ install:
         xterm
  - sudo pip install isort pylint==1.1.0
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
+ - wget http://ftpmirror.gnu.org/parallel/parallel-20140522.tar.bz2 &&
+   tar -xvf parallel-20140522.tar.bz2 &&
+   cd parallel-20140522/ &&
+   ./configure --prefix=/usr/local &&
+   make &&
+   sudo make install &&
+   cd .. &&
+   rm -Rf parallel-20140522/
  - make
 
 script:

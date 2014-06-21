@@ -9,25 +9,25 @@ test_assert() {
 }
 
 test_killtree() {
-    cat > killtree-test1.sh <<-EOF
-	sh killtree-test2.sh
+    cat > killtree-$$-test1.sh <<-EOF
+	sh killtree-$$-test2.sh
 	EOF
-    cat > killtree-test2.sh <<-EOF
-	sh killtree-test3.sh
+    cat > killtree-$$-test2.sh <<-EOF
+	sh killtree-$$-test3.sh
 	EOF
-    cat > killtree-test3.sh <<-EOF
+    cat > killtree-$$-test3.sh <<-EOF
 	sleep 60
 	EOF
 
     waitfor() { while ! ps -f | grep -v grep | grep "$1"; do sleep 0.1; done; }
 
-    sh killtree-test1.sh &
+    sh killtree-$$-test1.sh &
     pid=$!
-    waitfor killtree-test3.sh
+    waitfor killtree-$$-test3.sh
     killtree $!
     ps -f
-    ! ps -f | grep -v grep | grep -q killtree-test3.sh ||
-    fail "child process 'killtree-test3.sh' still running"
+    ! ps -f | grep -v grep | grep -q killtree-$$-test3.sh ||
+    fail "child process 'killtree-$$-test3.sh' still running"
 }
 
 test_that_run_tests_isnt_affected_by_user_config_file() {
