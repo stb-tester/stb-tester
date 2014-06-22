@@ -2770,7 +2770,8 @@ def test_x11_remote():
         r = uri_to_remote('x11:%s' % display, None)
 
         subprocess.Popen(
-            ['xterm'], env={'DISPLAY': display, 'PATH': os.environ['PATH']},
+            ['xterm', '-l', '-lf', 'xterm.log'],
+            env={'DISPLAY': display, 'PATH': os.environ['PATH']},
             cwd=tmp, stderr=open('/dev/null', 'w'))
 
         # Can't be sure how long xterm will take to get ready:
@@ -2781,6 +2782,9 @@ def test_x11_remote():
             if os.path.exists(tmp + '/good'):
                 break
             time.sleep(0.5)
+        with open(tmp + '/xterm.log', 'r') as log:
+            for line in log:
+                print "xterm.log: " + line,
         assert os.path.exists(tmp + '/good')
 
 
