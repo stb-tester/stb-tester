@@ -173,7 +173,7 @@ install-for-test:
 
 parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
-    echo parallel --gnu -j +4 || echo xargs)
+    echo parallel --gnu --no-notice -j +4 || echo xargs)
 
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
