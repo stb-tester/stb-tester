@@ -47,7 +47,7 @@ warnings.filterwarnings(
 
 
 # Functions available to stbt scripts
-#===========================================================================
+# ===========================================================================
 
 def get_config(section, key, default=None, type_=str):
     """Read the value of `key` from `section` of the stbt config file.
@@ -1150,7 +1150,7 @@ class PreconditionError(UITestError):
 
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
-#===========================================================================
+# ===========================================================================
 
 def argparser():
     parser = argparse.ArgumentParser()
@@ -1211,7 +1211,7 @@ def teardown_run():
 
 
 # Internal
-#===========================================================================
+# ===========================================================================
 
 _debug_level = 0
 if hasattr(GLib.MainLoop, 'new'):
@@ -2644,7 +2644,7 @@ def ddebug(s):
 
 
 # Tests
-#===========================================================================
+# ===========================================================================
 
 class FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes
