@@ -36,7 +36,9 @@ install:
    make &&
    sudo make install &&
    cd .. &&
-   rm -Rf parallel-20140522/
+   rm -Rf parallel-20140522/ &&
+   mkdir $HOME/.parallel &&
+   touch $HOME/.parallel/will-cite  # Silence citation warning
  - make
 
 script:
