@@ -47,7 +47,7 @@ warnings.filterwarnings(
 
 
 # Functions available to stbt scripts
-#===========================================================================
+# ===========================================================================
 
 def get_config(section, key, default=None, type_=str):
     """Read the value of `key` from `section` of the stbt config file.
@@ -799,7 +799,8 @@ def _find_tessdata_dir():
     from distutils.spawn import find_executable
     tess_prefix_share = os.path.normpath(
         find_executable('tesseract') + '/../../share/')
-    for suffix in ['/tessdata', '/tesseract-ocr/tessdata']:
+    for suffix in [
+            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
@@ -1149,7 +1150,7 @@ class PreconditionError(UITestError):
 
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
-#===========================================================================
+# ===========================================================================
 
 def argparser():
     parser = argparse.ArgumentParser()
@@ -1210,7 +1211,7 @@ def teardown_run():
 
 
 # Internal
-#===========================================================================
+# ===========================================================================
 
 _debug_level = 0
 if hasattr(GLib.MainLoop, 'new'):
@@ -2568,7 +2569,7 @@ def _read_lircd_reply(stream):
         raise UITestError(
             "Timed out: No reply from LIRC remote control within %d seconds"
             % stream.gettimeout())
-    if not "SUCCESS" in reply:
+    if "SUCCESS" not in reply:
         if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
             num_data_lines = int(reply[4])
             raise UITestError("LIRC remote control returned error: %s"
@@ -2643,7 +2644,7 @@ def ddebug(s):
 
 
 # Tests
-#===========================================================================
+# ===========================================================================
 
 class FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes
@@ -2756,9 +2757,14 @@ def temporary_x_session():
             ['Xorg', '-logfile', './99.log', '-config',
              os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
             cwd=tmp, stderr=open('/dev/null', 'w'))
-        while not os.path.exists('/tmp/.X11-unix/X99'):
-            assert x11.returncode is None
+        start_t = time.time()
+        while time.time() - start_t < 10:
+            if os.path.exists('/tmp/.X11-unix/X99'):
+                break
+            assert x11.poll() is None
             time.sleep(0.1)
+        else:
+            raise RuntimeError("X-server didn't start within 10 seconds.")
         try:
             yield ':99'
         finally:
