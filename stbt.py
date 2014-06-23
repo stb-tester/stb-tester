@@ -799,7 +799,8 @@ def _find_tessdata_dir():
     from distutils.spawn import find_executable
     tess_prefix_share = os.path.normpath(
         find_executable('tesseract') + '/../../share/')
-    for suffix in ['/tessdata', '/tesseract-ocr/tessdata']:
+    for suffix in [
+            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
