@@ -55,7 +55,7 @@ test_that_stbt_batch_run_runs_until_failure() {
 
 test_that_stbt_batch_run_continues_after_uninteresting_failure() {
     create_test_repo
-    timeout 60 stbt batch run -k tests/test.py
+    timeout 120 stbt batch run -k tests/test.py
     [[ $? -eq $timedout ]] && fail "'run' timed out"
 
     ls -d ????-??-??_??.??.??* > testruns
@@ -368,7 +368,7 @@ test_that_stbt_batch_instaweb_shows_directory_listing() {
     trap "killtree $server; wait $server" EXIT
     expect_runner_to_say 'Running on http://127.0.0.1:5788/'
 
-    with_retry 5 curl http://127.0.0.1:5788/ | grep my-test-session ||
+    with_retry 10 curl http://127.0.0.1:5788/ | grep my-test-session ||
         fail "Didn't find directory listing at '/'"
     diff -u my-test-session/index.html \
         <(curl -L http://127.0.0.1:5788/my-test-session) ||
