@@ -2758,7 +2758,7 @@ def temporary_x_session():
              os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
             cwd=tmp, stderr=open('/dev/null', 'w'))
         while not os.path.exists('/tmp/.X11-unix/X99'):
-            assert x11.returncode is None
+            assert x11.poll() is None
             time.sleep(0.1)
         try:
             yield ':99'
