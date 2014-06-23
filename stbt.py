@@ -2569,7 +2569,7 @@ def _read_lircd_reply(stream):
         raise UITestError(
             "Timed out: No reply from LIRC remote control within %d seconds"
             % stream.gettimeout())
-    if not "SUCCESS" in reply:
+    if "SUCCESS" not in reply:
         if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
             num_data_lines = int(reply[4])
             raise UITestError("LIRC remote control returned error: %s"
