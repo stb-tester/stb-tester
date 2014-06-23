@@ -2761,7 +2761,7 @@ def temporary_x_session():
         while time.time() - start_t < 10:
             if os.path.exists('/tmp/.X11-unix/X99'):
                 break
-            assert x11.returncode is None
+            assert x11.poll() is None
             time.sleep(0.1)
         else:
             raise RuntimeError("X-server didn't start within 10 seconds.")
