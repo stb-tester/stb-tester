@@ -297,7 +297,7 @@ def _parse_config(config_file):
 
 
 # Tests
-#===========================================================================
+# ===========================================================================
 
 def test_that_read_responses_doesnt_hang_on_incomplete_data():
     import StringIO
