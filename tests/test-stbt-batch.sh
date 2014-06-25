@@ -392,3 +392,22 @@ test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
     cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
     cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"
 }
+
+test_stbt_batch_run_with_custom_report_and_summary_generators() {
+    create_test_repo
+    set_config batch.report "$PWD/my-report-generator"
+    set_config batch.summary "$PWD/my-summary-generator"
+
+    echo "pwd > $PWD/report.txt" > my-report-generator
+    echo "pwd > $PWD/summary.txt" > my-summary-generator
+    chmod u+x my-report-generator my-summary-generator
+
+    timeout 60 stbt batch run -1 tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
+
+    [[ -d "$(cat report.txt | xargs basename)" &&
+        ! -f ????-??-??_??.??.??/index.html ]] ||
+      fail "Custom report missing or generated in incorrect directory"
+    [[ "$(cat summary.txt)" == "$PWD" && ! -f index.html ]] ||
+      fail "Custom summary missing or generated in incorrect directory"
+}

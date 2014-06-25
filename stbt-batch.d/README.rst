@@ -41,10 +41,10 @@ User hooks
 ----------
 
 The following hooks are available for custom log collection, failure
-classification, and failure recovery. Each hook is a variable in the stbt
-configuration file; if the variable is set to an executable program, ``run``
-will invoke that program at the appropriate time, with the current working
-directory set to the directory containing the test run logs:
+classification, failure recovery, and custom report generation. Each hook is a
+variable in the stbt configuration file; if the variable is set to an executable
+program, ``run`` will invoke that program at the appropriate time, with the
+current working directory set to the directory containing the test run logs:
 
 **batch.pre_run**
   Invoked immediately before the test is run, with the
@@ -109,6 +109,48 @@ directory set to the directory containing the test run logs:
   followed by a tab, followed by a value (arbitrary text). Multiple lines with
   the same key will have their values merged into a single column. The program
   should append to the ``extra-columns`` file, not overwrite it.
+
+**batch.report**
+  Invoked twice per test run by ``stbt batch run``: first very early before the
+  test is started and before any other hook; next after the test and all other
+  hooks have completed. Also invoked when ``stbt batch report`` is run by the
+  user, once in each directory specified in the command line arguments.
+
+  Intended for generating a custom-tailored test report. It may be used to
+  update the database of some other test reporting system. Replaces the built-in
+  html test report generator.
+
+  During the first invocation it can read ``test-name`` file and its purpose is
+  to indicate that the test is currently being executed; ``failure-reason`` and
+  ``exit-status`` are not available in that phase. During the second invocation,
+  after the test has completed, it has access to all files that
+  ``batch.classify`` does.
+
+  Using a custom ``report`` generator with the built-in ``summary`` generator
+  requires each ``report`` execution to generate an ``index.html`` file in
+  the current working directory.
+
+**batch.summary**
+  Invoked by ``stbt batch run`` right after a ``report`` hook, with the
+  difference that its current working directory is the current batch run's root
+  directory. When ``stbt batch report`` is run by the user, it is invoked in
+  the specified test run directories' parent directory, after all ``report``
+  executions have completed.
+
+  Intended for publishing a summary report, updated with the status of the
+  latest ongoing or completed testrun. Replaces the built-in html summary
+  generator.
+
+  It has access to all test runs of a batch execution in the following
+  structure::
+
+      batch_run_root  # The current working directory
+      |-- testrun1
+      |   `-- logs
+      |-- testrun2
+      |   `-- logs
+      |-- current  # Symlink to the currently executed test's directory
+      `-- latest  # Symlink to the most recently completed test's directory
 
 instaweb
 --------

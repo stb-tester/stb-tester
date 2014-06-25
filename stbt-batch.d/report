@@ -50,8 +50,12 @@ main() {
           echo "$rundir: Not a test result directory; skipping"
           return 0
         }
-        python "$runner"/report.py . > index.html.$$ &&
-        mv index.html.$$ index.html
+        if "$runner"/../stbt-config batch.report 2>/dev/null; then
+          user_command report
+        else
+          python "$runner"/report.py . > index.html.$$ &&
+          mv index.html.$$ index.html
+        fi
       fi
     ) || return
   done
@@ -63,8 +67,12 @@ main() {
     do
       (
         cd "$resultsdir" || die "Invalid directory '$resultsdir'"
-        python "$runner"/report.py index.html > index.html.$$ &&
-        mv index.html.$$ index.html
+        if "$runner"/../stbt-config batch.summary 2>/dev/null; then
+          user_command summary
+        else
+          python "$runner"/report.py index.html > index.html.$$ &&
+          mv index.html.$$ index.html
+        fi
       )
     done
   fi
