@@ -12,12 +12,11 @@
 See http://www.lirc.org/html/technical.html#applications
 """
 
-from contextlib import contextmanager
 import os
 import re
-import signal
 import socket
 import tempfile
+from contextlib import contextmanager
 
 
 def main():

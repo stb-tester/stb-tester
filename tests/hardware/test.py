@@ -1,6 +1,7 @@
-import stbt
 import argparse
 import sys
+
+import stbt
 
 
 def main(argv):
@@ -16,6 +17,7 @@ def main(argv):
         pass
 
     if args.test_pipeline_restart:
+        # pylint: disable=W0511
         # TODO: Automate this by using a Raspberry Pi to stimulate the capture
         #       hardware
         sys.stdout.write("Waiting for a long time for match to check pipeline "

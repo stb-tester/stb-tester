@@ -120,15 +120,16 @@ README.rst: stbt.py api-doc.sh
 clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix
 
+PYTHON_FILES = $(shell (git ls-files '*.py' && \
+           git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+           | sort | uniq)
+
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests:
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v \
-	    gst_hacks.py \
-	    irnetbox.py \
-	    stbt.py \
-	    tests/test_*.py \
+	    $(filter-out tests/test.py,$(wildcard $(subst -,_,$(PYTHON_FILES)))) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
@@ -140,21 +141,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" \
-	    gst_hacks.py \
-	    irnetbox.py \
-	    irnetbox-proxy \
-	    stbt.py \
-	    stbt-batch.d/instaweb \
-	    stbt-batch.d/report.py \
-	    stbt-config \
-	    stbt-control \
-	    stbt-record \
-	    stbt-run \
-	    stbt-templatematch \
-	    stbt_pylint_plugin.py \
-	    tests/fake-irnetbox \
-	    tests/test_*.py \
-	    tests/validate-ocr.py \
+	    $(PYTHON_FILES) \
 	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
