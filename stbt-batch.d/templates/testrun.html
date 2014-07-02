@@ -15,6 +15,7 @@
     .editable-click { border-bottom: none; }
     #delete,
     #deleted { margin-left: 1em; }
+    video { width: 100% }
   </style>
 </head>
 
@@ -24,6 +25,9 @@
 <div class="span4">
 
 <p><a id="permalink" href="">[Link to this result]</a>
+{% if run.video %}
+  <video src="{{run.video}}" preload="none" poster="thumbnail.jpg" controls></video>
+{% endif %}
 <p><b>Timestamp:</b> {{run.timestamp}}
 
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}

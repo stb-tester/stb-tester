@@ -140,6 +140,15 @@ run() {
   [[ $exit_status -ne 0 && ! -f screenshot.png ]] &&
     "$runner"/../stbt-screenshot &>/dev/null
   echo $exit_status > exit-status
+
+  "$runner"/../stbt-screenshot thumbnail.png &>/dev/null &&
+  cat <<-EOF | python &&
+		import cv2
+		im = cv2.imread('thumbnail.png')
+		cv2.imwrite('thumbnail.jpg', cv2.resize(im, (300, 300 * 9 // 16)))
+		EOF
+  rm -f thumbnail.png
+
   user_command post_run stop
 
   rm "$tmpdir"/rawout "$tmpdir"/rawerr
