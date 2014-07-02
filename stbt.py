@@ -2627,20 +2627,20 @@ _debugstream = codecs.getwriter('utf-8')(sys.stderr)
 
 def warn(s):
     _debugstream.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), str(s)))
+        os.path.basename(sys.argv[0]), s))
 
 
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
         _debugstream.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
 
 
 def ddebug(s):
     """Extra verbose debug for stbt developers, not end users"""
     if _debug_level > 1:
-        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
 
 
 # Tests
