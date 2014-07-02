@@ -2887,3 +2887,18 @@ def test_ocr_on_static_images():
             **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
+
+
+def test_that_debug_can_write_unicode_strings():
+    def test(level):
+        global _debug_level
+        oldlevel = _debug_level
+        try:
+            _debug_level = level
+            warn(u'Prüfungs Debug-Unicode')
+            debug(u'Prüfungs Debug-Unicode')
+            ddebug(u'Prüfungs Debug-Unicode')
+        finally:
+            _debug_level = oldlevel
+    for level in [0, 1, 2]:
+        yield (test, level)
