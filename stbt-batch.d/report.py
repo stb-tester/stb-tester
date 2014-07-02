@@ -118,8 +118,10 @@ class Run(object):
             return "success"
         elif self.exit_status == 1:
             return "error"  # Red: Possible system-under-test failure
-        else:
+        elif self.exit_status == 2:
             return "warning"  # Yellow: Test infrastructure error
+        else:
+            return "uninteresting"  # Grey: Things like sigterm
 
     def read(self, f):
         f = os.path.join(self.rundir, f)
