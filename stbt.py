@@ -2627,20 +2627,20 @@ _debugstream = codecs.getwriter('utf-8')(sys.stderr)
 
 def warn(s):
     _debugstream.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), str(s)))
+        os.path.basename(sys.argv[0]), s))
 
 
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
         _debugstream.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
 
 
 def ddebug(s):
     """Extra verbose debug for stbt developers, not end users"""
     if _debug_level > 1:
-        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), str(s)))
+        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
 
 
 # Tests
@@ -2887,3 +2887,18 @@ def test_ocr_on_static_images():
             **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
+
+
+def test_that_debug_can_write_unicode_strings():
+    def test(level):
+        global _debug_level
+        oldlevel = _debug_level
+        try:
+            _debug_level = level
+            warn(u'Prüfungs Debug-Unicode')
+            debug(u'Prüfungs Debug-Unicode')
+            ddebug(u'Prüfungs Debug-Unicode')
+        finally:
+            _debug_level = oldlevel
+    for level in [0, 1, 2]:
+        yield (test, level)
