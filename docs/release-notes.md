@@ -11,12 +11,20 @@ endeavour to keep backwards compatibility. The release notes always provide an
 exhaustive list of any changes, along with upgrade instructions where
 necessary.
 
-#### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
+#### 0.21:
 
-6 Jun 2014.
+<DATE>
 
 For installation instructions see
 [Getting Started](http://stb-tester.com/getting-started.html).
+
+##### Breaking changes since 0.20
+##### User-visible changes since 0.20
+##### Developer-visible changes since 0.20
+
+#### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
+
+6 Jun 2014.
 
 For upgrade instructions from 0.18, see the release notes for the 0.19 beta
 release.
