@@ -19,6 +19,11 @@ For installation instructions see
 [Getting Started](http://stb-tester.com/getting-started.html).
 
 ##### Breaking changes since 0.20
+
+* `stbt batch run` now exits with non-zero exit status if any of the tests in the
+  run failed or errored.  This, in combination with the `-1` option makes it
+  easier to use from and integrate with external CI systems.
+
 ##### User-visible changes since 0.20
 ##### Developer-visible changes since 0.20
 

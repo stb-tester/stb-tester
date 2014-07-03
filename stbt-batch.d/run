@@ -37,6 +37,7 @@ main() {
   tag=
   v=-v
   verbose=0
+  failure_count=0
   while getopts ":1dhkt:v" option; do
     case $option in
       1) run_once=true;;
@@ -60,11 +61,17 @@ main() {
 
   while true; do
     while IFS=$'\t' read -a test; do
-      run "${test[@]}"
+      run "${test[@]}" || failure_count=$((failure_count+1))
       should_i_continue || break 2
     done < <(parse_test_args "$@")
     $run_once && break
   done
+
+  if [ "$failure_count" = 0 ]; then
+    exit 0
+  else
+    exit 1
+  fi
 }
 
 run() {
@@ -139,6 +146,7 @@ run() {
 
   cd ..
   rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
+  return $exit_status
 }
 
 trap on_kill1 sigint sigterm

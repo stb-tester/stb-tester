@@ -7,6 +7,7 @@ create_test_repo() {
         git config user.name "Stb Tester" &&
         git config user.email "test-stbt-batch@stb-tester.com" &&
         cp "$testdir/test.py" "$testdir/test2.py" \
+           "$testdir"/test_{success,error,failure}.py \
            "$testdir/videotestsrc-checkers-8.png" \
            "$testdir/videotestsrc-gamut.png" . &&
         git add . &&
@@ -391,4 +392,18 @@ test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
     stbt batch run -1 tests/test.py tests/test2.py
     cat log | grep -q "STDIN=None" || fail "Data in user script's STDIN"
     cat log | grep -q "test2.py ..." || fail "test2.py wasn't executed"
+}
+
+test_that_stbt_batch_run_exits_with_failure_if_any_test_fails() {
+    create_test_repo
+    stbt batch run -1 tests/test_success.py || fail "Test should succeed"
+    cat */combined.log
+
+    ! stbt batch run -1 tests/test_failure.py || fail "Test should fail"
+    ! stbt batch run -1 tests/test_error.py || fail "Test should fail"
+
+    ! stbt batch run -1 tests/test_success.py tests/test_failure.py \
+        || fail "Test should fail"
+    ! stbt batch run -1 tests/test_failure.py tests/test_success.py \
+        || fail "Test should fail"
 }
