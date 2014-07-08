@@ -17,7 +17,7 @@ from .logging import debug, scoped_debug_level
 __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
 
-def uri_to_remote(uri, display):
+def uri_to_remote(uri, display=None):
     remotes = [
         (r'none', NullRemote),
         (r'test', lambda: VideoTestSrcControl(display)),
@@ -607,7 +607,7 @@ def test_x11_remote():
 
     with utils.named_temporary_directory() as tmp, \
             temporary_x_session() as display:
-        r = uri_to_remote('x11:%s' % display, None)
+        r = uri_to_remote('x11:%s' % display)
 
         subprocess.Popen(
             ['xterm', '-l', '-lf', 'xterm.log'],
@@ -635,14 +635,14 @@ def test_uri_to_remote():
         # pylint: disable=W0621
         def IRNetBoxRemote(hostname, port, output, config):
             return ":".join([hostname, str(port or '10001'), output, config])
-        out = uri_to_remote("irnetbox:localhost:1234:1:conf", None)
+        out = uri_to_remote("irnetbox:localhost:1234:1:conf")
         assert out == "localhost:1234:1:conf", (
             "Failed to parse uri with irnetbox port. Output was '%s'" % out)
-        out = uri_to_remote("irnetbox:localhost:1:conf", None)
+        out = uri_to_remote("irnetbox:localhost:1:conf")
         assert out == "localhost:10001:1:conf", (
             "Failed to parse uri without irnetbox port. Output was '%s'" % out)
         try:
-            uri_to_remote("irnetbox:localhost::1:conf", None)
+            uri_to_remote("irnetbox:localhost::1:conf")
             assert False, "Uri with empty field should have raised"
         except ConfigurationError:
             pass
