@@ -25,7 +25,7 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
          new_tcp_lirc_remote),
-        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          new_local_lirc_remote),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
@@ -148,10 +148,12 @@ class LircRemote(object):
         _read_lircd_reply(s)
         debug("Pressed " + key)
 
+DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
+
 
 def new_local_lirc_remote(lircd_socket, control_name):
     if lircd_socket is None:
-        lircd_socket = '/var/run/lirc/lircd'
+        lircd_socket = DEFAULT_LIRCD_SOCKET
 
     def _connect():
         try:
@@ -556,10 +558,23 @@ def _fake_lircd():
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     with _fake_lircd() as lircd_socket:
         listener = lirc_remote_listen(lircd_socket, 'test')
-        control = new_local_lirc_remote(lircd_socket, 'test')
+        control = uri_to_remote('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
             assert listener.next() == key
+
+
+def test_that_local_lirc_socket_is_correctly_defaulted():
+    global DEFAULT_LIRCD_SOCKET
+    old_default = DEFAULT_LIRCD_SOCKET
+    try:
+        with _fake_lircd() as lircd_socket:
+            DEFAULT_LIRCD_SOCKET = lircd_socket
+            listener = lirc_remote_listen(lircd_socket, 'test')
+            uri_to_remote('lirc::test').press('KEY')
+            assert listener.next() == 'KEY'
+    finally:
+        DEFAULT_LIRCD_SOCKET = old_default
 
 
 def test_samsung_tcp_remote():
