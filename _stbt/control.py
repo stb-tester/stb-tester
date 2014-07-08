@@ -5,7 +5,6 @@ import re
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -518,40 +517,49 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     assert received == keys
 
 
-def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
-    keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
-
-    def fake_lircd(address):
-        # This needs to accept 2 connections (from LircRemote and
-        # lirc_remote_listen) and, on receiving input from the LircRemote
-        # connection, write to the lirc_remote_listen connection.
+@contextmanager
+def _fake_lircd():
+    import multiprocessing
+    # This needs to accept 2 connections (from LircRemote and
+    # lirc_remote_listen) and, on receiving input from the LircRemote
+    # connection, write to the lirc_remote_listen connection.
+    with utils.named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
+        address = tmp + '/lircd'
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
-        s.listen(5)
-        listener, _ = s.accept()
-        # "+ 1" is for LircRemote's __init__.
-        for _ in range(len(keys) + 1):
-            control, _ = s.accept()
-            for cmd in control.makefile():
-                m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
-                if m:
-                    d = m.groupdict()
-                    message = '00000000 0 %s %s\n' % (d['key'], d['control'])
-                    listener.sendall(message)
-                control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+        s.listen(6)
 
-    lircd_socket = tempfile.mktemp()
-    t = threading.Thread()
-    t.daemon = True
-    t.run = lambda: fake_lircd(lircd_socket)
-    t.start()
-    time.sleep(0.01)  # Give it a chance to start listening (sorry)
-    listener = lirc_remote_listen(lircd_socket, 'test')
-    control = new_local_lirc_remote(lircd_socket, 'test')
-    for i in keys:
-        control.press(i)
-        assert listener.next() == i
-    t.join()
+        def listen():
+            import signal
+            signal.signal(signal.SIGTERM, lambda _, __: sys.exit(0))
+
+            listener, _ = s.accept()
+            while True:
+                control, _ = s.accept()
+                for cmd in control.makefile():
+                    m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
+                    if m:
+                        listener.sendall(
+                            '00000000 0 %(key)s %(ctrl)s\n' % m.groupdict())
+                    control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+                control.close()
+
+        t = multiprocessing.Process(target=listen)
+        t.daemon = True
+        t.start()
+        try:
+            yield address
+        finally:
+            t.terminate()
+
+
+def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
+    with _fake_lircd() as lircd_socket:
+        listener = lirc_remote_listen(lircd_socket, 'test')
+        control = new_local_lirc_remote(lircd_socket, 'test')
+        for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
+            control.press(key)
+            assert listener.next() == key
 
 
 def test_samsung_tcp_remote():
