@@ -1512,8 +1512,10 @@ class Display(object):
             self.novideo = False
         except Queue.Empty:
             self.novideo = True
-            Gst.debug_bin_to_dot_file_with_ts(
-                self.source_pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
+            pipeline = self.source_pipeline
+            if pipeline:
+                Gst.debug_bin_to_dot_file_with_ts(
+                    pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
             raise NoVideo("No video")
         if isinstance(gst_sample, Exception):
             raise UITestError(str(gst_sample))
