@@ -20,10 +20,10 @@ def uri_to_remote(uri, display=None):
     remotes = [
         (r'none', NullRemote),
         (r'test', lambda: VideoTestSrcControl(display)),
-        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', VirtualRemote),
-        (r'samsung:(?P<hostname>[^:]*)(:(?P<port>\d+))?',
+        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
+        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_remote),
-        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          new_tcp_lirc_remote),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          new_local_lirc_remote),
@@ -43,10 +43,10 @@ def uri_to_remote(uri, display=None):
 
 def uri_to_remote_recorder(uri):
     remotes = [
-        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', virtual_remote_listen),
-        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          lirc_remote_listen_tcp),
-        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
         ('file://(?P<filename>.+)', file_remote_recorder),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
@@ -119,9 +119,9 @@ class VirtualRemote(object):
         self.port = int(port or 2033)
         # Connect once so that the test fails immediately if STB not found
         # (instead of failing at the first `press` in the script).
-        debug("VirtualRemote: Connecting to %s:%d" % (hostname, port))
+        debug("VirtualRemote: Connecting to %s:%d" % (hostname, self.port))
         self._connect()
-        debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
+        debug("VirtualRemote: Connected to %s:%d" % (hostname, self.port))
 
     def press(self, key):
         self._connect().sendall(
@@ -176,7 +176,7 @@ def new_local_lirc_remote(lircd_socket, control_name):
     return LircRemote(control_name, _connect)
 
 
-def new_tcp_lirc_remote(hostname, port, control_name):
+def new_tcp_lirc_remote(control_name, hostname=None, port=None):
     """Send a key-press via a LIRC-enabled device through a LIRC TCP listener.
 
         control = new_tcp_lirc_remote("localhost", "8765", "humax")
@@ -184,6 +184,9 @@ def new_tcp_lirc_remote(hostname, port, control_name):
     """
     if hostname is None:
         hostname = 'localhost'
+    if port is None:
+        port = 8765
+
     port = int(port)
 
     def _connect():
@@ -352,6 +355,7 @@ def virtual_remote_listen(address, port=None):
     keypresses."""
     if port is None:
         port = 2033
+    port = int(port)
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind((address, port))
@@ -503,7 +507,7 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     def listener():
         # "* 2" is once for VirtualRemote's __init__ and once for press.
         for _ in range(len(keys) * 2):
-            for k in virtual_remote_listen('localhost', 2033):
+            for k in uri_to_remote_recorder('vr:localhost:2033'):
                 received.append(k)
 
     t = threading.Thread()
@@ -512,7 +516,7 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     t.start()
     for k in keys:
         time.sleep(0.1)  # Give listener a chance to start listening (sorry)
-        vr = VirtualRemote('localhost', 2033)
+        vr = uri_to_remote('vr:localhost:2033')
         time.sleep(0.1)
         vr.press(k)
     t.join()
@@ -557,7 +561,7 @@ def _fake_lircd():
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     with _fake_lircd() as lircd_socket:
-        listener = lirc_remote_listen(lircd_socket, 'test')
+        listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
         control = uri_to_remote('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
@@ -570,7 +574,7 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
     try:
         with _fake_lircd() as lircd_socket:
             DEFAULT_LIRCD_SOCKET = lircd_socket
-            listener = lirc_remote_listen(lircd_socket, 'test')
+            listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
             uri_to_remote('lirc::test').press('KEY')
             assert listener.next() == 'KEY'
     finally:
