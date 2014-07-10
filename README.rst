@@ -735,6 +735,12 @@ class Region
         5
         >>> a.extend(right=-3).width
         5
+        >>> a.intersect(b)
+        Region(x=4, y=4, width=4, height=4)
+        >>> c.intersect(b) == c
+        True
+        >>> a.intersect(c) is None
+        True
 
 class MotionResult
     * `timestamp`: Video stream timestamp.

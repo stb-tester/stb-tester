@@ -286,6 +286,12 @@ class Region(namedtuple('Region', 'x y width height')):
         5
         >>> a.extend(right=-3).width
         5
+        >>> a.intersect(b)
+        Region(x=4, y=4, width=4, height=4)
+        >>> c.intersect(b) == c
+        True
+        >>> a.intersect(c) is None
+        True
     """
     @staticmethod
     def from_extents(x, y, right, bottom):
@@ -313,6 +319,15 @@ class Region(namedtuple('Region', 'x y width height')):
         adjusted by the given amounts."""
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
+
+    def intersect(self, other):
+        """Returns the intersection of self and the Region other"""
+        extents = (max(self.x, other.x), max(self.y, other.y),
+                   min(self.right, other.right), min(self.bottom, other.bottom))
+        if extents[0] < extents[2] and extents[1] < extents[3]:
+            return Region.from_extents(*extents)
+        else:
+            return None
 
 
 def _bounding_box(a, b):
