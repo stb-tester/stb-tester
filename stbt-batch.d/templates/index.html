@@ -7,12 +7,12 @@
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
   <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.css" rel="stylesheet" />
   <style>
-    #totals { font-weight: bold; }
     table.sortable th { cursor: pointer; }
     #details { position: fixed; }
     #plot { height: 250px; width: 100%; }
     .jqplot-highlighter-tooltip {
       line-height: 1; background-color: rgba(208, 208, 208, 0.9); }
+    #totals th:first-child { text-align: right; }
 
     /* Border around selected row, opening up like a '{' onto right pane */
     table#testruns { border-collapse: separate; }
@@ -21,7 +21,8 @@
       border-bottom: 2px solid #999; padding-bottom: 2px; }
     #testruns tr.selected td:first-child {
       border-left: 2px solid #999; padding-left: 3px; }
-    #testruns td:last-child, th:last-child { border-right: 2px solid #999; }
+    #testruns td:last-child, #testruns th:last-child {
+      border-right: 2px solid #999; }
     #testruns tr.selected td:last-child { border-right: none; }
 
     /* Brighter colour of selected row, fading to white */
@@ -56,6 +57,7 @@
       <input id="testruns_search_text" class="input-block-level" type="text"
         tabindex="1"
         placeholder="Specify filter: A single word, or an expression like: 'exit status' ilike matchtimeout && test ilike mytestname">
+      <div id="plot"></div>
       <p id="totals"></p>
       <p class="muted"><small>Percentage ranges reflect the fact that the true
         reliability of a test is better known after running more repetitions.
@@ -63,7 +65,6 @@
         <a href="http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">
         Wilson Score Interval</a> at a confidence level of 95%. They are only
         valid for independent test runs.</small></p>
-      <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
@@ -270,15 +271,49 @@
       return pos + "/" + n + " (" + range + "%)";
     }
     function update_totals() {
-      var num_success = $(".success:visible").length;
-      var num_failed = $(".error:visible").length;  // red
-      var num_warnings = $(".warning:visible").length;  // yellow
-      var num_total = num_success + num_failed + num_warnings;
+      var totals = {}
+
+      $("#testruns tbody tr:visible").each(function() {
+        var name = $("td:nth-child(2) a", this).text().trim();
+        var status;
+        switch (parseInt($("td:nth-child(3)", this).text(), 10)) {
+          case 0: status = "successes"; break;
+          case 1: status = "failures"; break;
+          default: status = "errors";
+        }
+        if (!(name in totals)) {
+          totals[name] = {successes: 0, failures: 0, errors: 0};
+        }
+        totals[name][status] += 1;
+      });
+
+      var html = "";
+
+      var total_successes = 0, total_failures = 0, total_errors = 0;
+
+      var tests = Object.keys(totals).sort();
+      for (var i in tests) {
+        var test = tests[i];
+        var t = totals[test];
+        var subtotal = t.successes + t.failures + t.errors;
+        total_successes += t.successes;
+        total_failures += t.failures;
+        total_errors += t.errors;
+        html += "<tr><td>" + test + "</td>";
+        html += "<td class='text-success'>" + format_summary(t.successes, subtotal) + "</td>";
+        html += "<td class='text-error'>" + format_summary(t.failures, subtotal) + "</td>";
+        html += "<td class='text-warning'>" + format_summary(t.errors, subtotal) + "</td>";
+        html += "</tr>"
+      }
 
       $("#totals").html(
-        "<span class='text-success'>Passed: " + format_summary(num_success, num_total) + ".</span> " +
-        "<span class='text-error'>Failed: " + format_summary(num_failed, num_total) + ".</span> " +
-        "<span class='text-warning'>Errors: " + format_summary(num_warnings, num_total) + ".</span>");
+        "<table class='table table-condensed'>" +
+          "<tr><th>Total:</th>" +
+          "<th class='text-success'>Passed: " + total_successes + "</th>" +
+          "<th class='text-error'>Failed: " + total_failures + "</th>" +
+          "<th class='text-warning'>Errors: " + total_errors + "</th>" +
+          html +
+          "</table>");
     };
   });
 </script>
