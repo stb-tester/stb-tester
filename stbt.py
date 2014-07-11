@@ -293,10 +293,15 @@ class Region(namedtuple('Region', 'x y width height')):
         >>> a.intersect(c) is None
         True
     """
+    def __new__(cls, x, y, width, height):
+        assert width > 0 and height > 0
+        return super(Region, cls).__new__(cls, x, y, width, height)
+
     @staticmethod
     def from_extents(x, y, right, bottom):
         """Create a Region using right and bottom extents rather than width and
         height."""
+        assert x < right and y < bottom
         return Region(x, y, right - x, bottom - y)
 
     @property
