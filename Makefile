@@ -83,6 +83,7 @@ install: stbt stbt.1 defaults.conf
 	    irnetbox.py \
 	    stbt.py \
 	    stbt_pylint_plugin.py \
+	    utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
