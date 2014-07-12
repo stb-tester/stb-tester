@@ -8,10 +8,12 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 import argparse
 import sys
+from contextlib import contextmanager
 
 import cv2
 
 import stbt
+import utils
 
 
 def error(s):
@@ -64,11 +66,14 @@ template_image = cv2.imread(args.template_file)
 if template_image is None:
     error("Invalid image '%s'" % args.template_file)
 
-if args.verbose:
-    stbt._debug_level = 2  # pylint: disable=W0212
 
-matched, region, first_pass = stbt._match(  # pylint: disable=W0212
-    source_image, template_image, mp, args.template_file)
+@contextmanager
+def noop_contextmanager():
+    yield
+
+with utils.scoped_debug_level(2) if args.verbose else noop_contextmanager():
+    matched, region, first_pass = stbt._match(  # pylint: disable=W0212
+        source_image, template_image, mp, args.template_file)
 
 print "%s: %s" % (
     "Match found" if matched else "No match found. Closest match",
