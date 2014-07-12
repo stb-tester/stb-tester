@@ -766,17 +766,6 @@ _ocr_replacements = {
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
 
-@contextmanager
-def _named_temporary_directory(
-        suffix='', prefix='tmp', dir=None):  # pylint: disable=W0622
-    from shutil import rmtree
-    dirname = tempfile.mkdtemp(suffix, prefix, dir)
-    try:
-        yield dirname
-    finally:
-        rmtree(dirname)
-
-
 def _find_tessdata_dir():
     from distutils.spawn import find_executable
     tess_prefix_share = os.path.normpath(
@@ -856,7 +845,7 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     # If you give it "hello" the output will be written to "hello.txt", but in
     # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
     # (tesseract 3.03). We work around this with a temporary directory:
-    with _named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
+    with utils.named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
         outdir = tmp + '/output'
         os.mkdir(outdir)
 
@@ -2594,7 +2583,7 @@ def temporary_x_session():
     from nose.plugins.skip import SkipTest
     if os.path.exists('/tmp/.X11-unix/X99'):
         raise SkipTest("There is already a display server running on :99")
-    with _named_temporary_directory() as tmp:
+    with utils.named_temporary_directory() as tmp:
         x11 = subprocess.Popen(
             ['Xorg', '-logfile', './99.log', '-config',
              os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
@@ -2614,7 +2603,8 @@ def test_x11_remote():
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")
 
-    with _named_temporary_directory() as tmp, temporary_x_session() as display:
+    with utils.named_temporary_directory() as tmp, \
+            temporary_x_session() as display:
         r = uri_to_remote('x11:%s' % display, None)
 
         subprocess.Popen(
