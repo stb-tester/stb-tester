@@ -10,9 +10,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 import argparse
 import codecs
-import ConfigParser
 import datetime
-import errno
 import functools
 import glob
 import inspect
@@ -35,7 +33,10 @@ import gi
 import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
+import config as stbt_config
 import irnetbox
+import utils
+from config import ConfigurationError
 from gst_hacks import gst_iterate, map_gst_buffer
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
@@ -46,34 +47,12 @@ warnings.filterwarnings(
     action="always", category=DeprecationWarning, message='.*stb-tester')
 
 
+get_config = stbt_config.get_config
 UITestError = utils.UITestError
 UITestFailure = utils.UITestFailure
 
 # Functions available to stbt scripts
 # ===========================================================================
-
-def get_config(section, key, default=None, type_=str):
-    """Read the value of `key` from `section` of the stbt config file.
-
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
-
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found, unless `default` is specified (in which case `default` is returned).
-    """
-
-    config = _config_init()
-
-    try:
-        return type_(config.get(section, key))
-    except ConfigParser.Error as e:
-        if default is None:
-            raise ConfigurationError(e.message)
-        else:
-            return default
-    except ValueError:
-        raise ConfigurationError("'%s.%s' invalid type (must be %s)" % (
-            section, key, type_.__name__))
 
 
 def press(key, interpress_delay_secs=None):
@@ -1123,10 +1102,6 @@ class MotionTimeout(UITestFailure):
             self.timeout_secs)
 
 
-class ConfigurationError(UITestError):
-    pass
-
-
 class PreconditionError(UITestError):
     """Exception raised by `as_precondition`."""
     def __init__(self, message, original_exception):
@@ -1217,87 +1192,6 @@ else:
 
 _display = None
 _control = None
-
-_config = None
-
-
-def _xdg_config_dir():
-    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
-
-
-def _config_init(force=False):
-    global _config
-    if force or not _config:
-        config = ConfigParser.SafeConfigParser()
-        config.readfp(
-            open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
-        try:
-            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
-            # Running `stbt` from source (not installed) location.
-            system_config = ''
-        config.read([
-            system_config,
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % _xdg_config_dir(),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
-        _config = config
-    return _config
-
-
-@contextmanager
-def _sponge(filename):
-    """Opens a file to be written, which will be atomically replaced if the
-    contextmanager exits cleanly.  Useful like the UNIX moreutils command
-    `sponge`
-    """
-    from tempfile import NamedTemporaryFile
-    with NamedTemporaryFile(prefix=filename + '.', suffix='~',
-                            delete=False) as f:
-        try:
-            yield f
-            os.rename(f.name, filename)
-        except:
-            os.remove(f.name)
-            raise
-
-
-def _set_config(section, option, value):
-    """Update config values (in memory and on disk).
-
-    WARNING: This will overwrite your stbt.conf but comments and whitespace
-    will not be preserved.  For this reason it is not a part of stbt's public
-    API.  This is a limitation of Python's ConfigParser which hopefully we can
-    solve in the future.
-
-    Writes to `$STBT_CONFIG_FILE` if set falling back to
-    `$HOME/stbt/stbt.conf`.
-    """
-    user_config = '%s/stbt/stbt.conf' % _xdg_config_dir()
-    custom_config = os.environ.get('STBT_CONFIG_FILE') or user_config
-
-    config = _config_init()
-
-    parser = ConfigParser.SafeConfigParser()
-    parser.read([custom_config])
-    if not parser.has_section(section):
-        parser.add_section(section)
-    parser.set(section, option, value)
-
-    d = os.path.dirname(custom_config)
-    if not _mkdir(d):
-        raise RuntimeError(
-            "Failed to create directory '%s'; cannot write config file." % d)
-    with _sponge(custom_config) as f:
-        parser.write(f)
-
-    if not config.has_section(section):
-        config.add_section(section)
-    config.set(section, option, value)
 
 
 def _gst_sample_make_writable(sample):
@@ -1979,7 +1873,7 @@ def _log_image(image, name, directory):
     if name == "source":
         _frame_number += 1
     d = os.path.join(directory, "%05d" % _frame_number)
-    if not _mkdir(d):
+    if not utils.mkdir(d):
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
     if image.dtype == numpy.float32:
@@ -2605,15 +2499,6 @@ def _load_mask(mask):
     if mask_image is None:
         raise UITestError("Failed to load mask file: %s" % mask_path)
     return mask_image
-
-
-def _mkdir(d):
-    try:
-        os.makedirs(d)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            return False
-    return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
 
 
 _debugstream = codecs.getwriter('utf-8')(sys.stderr)

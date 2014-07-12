@@ -79,6 +79,7 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
+	    config.py \
 	    gst_hacks.py \
 	    irnetbox.py \
 	    stbt.py \
