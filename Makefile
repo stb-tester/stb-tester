@@ -82,6 +82,7 @@ install: stbt stbt.1 defaults.conf
 	    config.py \
 	    gst_hacks.py \
 	    irnetbox.py \
+	    remote.py \
 	    stbt.py \
 	    stbt_pylint_plugin.py \
 	    utils.py \
