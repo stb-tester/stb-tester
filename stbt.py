@@ -2385,6 +2385,7 @@ class _X11Remote(object):
         if self.display is not None:
             e['DISPLAY'] = self.display
         subprocess.check_call(['xdotool', 'key', key], env=e)
+        debug("Pressed " + key)
 
 
 def uri_to_remote_recorder(uri):
