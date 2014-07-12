@@ -73,12 +73,21 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL) -m 0755 stbt irnetbox-proxy $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 \
+	    irnetbox-proxy \
+	    stbt \
+	    $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 gst_hacks.py stbt.py stbt_pylint_plugin.py irnetbox.py \
+	$(INSTALL) -m 0644 \
+	    gst_hacks.py \
+	    irnetbox.py \
+	    stbt.py \
+	    stbt_pylint_plugin.py \
 	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0755 stbt-batch.d/run stbt-batch.d/report \
+	$(INSTALL) -m 0755 \
+	    stbt-batch.d/run \
+	    stbt-batch.d/report \
 	    stbt-batch.d/instaweb \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
 	$(INSTALL) -m 0644 stbt-batch.d/report.py \
