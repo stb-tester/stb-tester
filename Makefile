@@ -128,8 +128,8 @@ check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests:
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	nosetests --with-doctest -v \
-	    $(filter-out tests/test.py,$(wildcard $(subst -,_,$(PYTHON_FILES)))) \
+	nosetests --with-doctest -v --match "^test_" \
+	    $(shell git ls-files '*.py' | grep -v tests/test.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
@@ -140,8 +140,7 @@ check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
-	printf "%s\n" \
-	    $(PYTHON_FILES) \
+	printf "%s\n" $(PYTHON_FILES) \
 	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests

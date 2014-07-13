@@ -39,7 +39,7 @@ import jinja2
 import yaml
 
 
-def test(imgname, phrases, params):
+def check(imgname, phrases, params):
     from stbt import ocr
 
     img = cv2.imread(imgname)
@@ -91,7 +91,7 @@ def main(argv):
 
         phrases = [x.decode('utf-8') for x in sections[-1].split('\n')
                    if x.strip() != '']
-        results.append(test(imgname, phrases, params))
+        results.append(check(imgname, phrases, params))
 
     sys.stderr.write('\n')
 
