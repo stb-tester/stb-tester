@@ -9,6 +9,7 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 import itertools
 import sys
 
+import remote
 import stbt
 
 
@@ -52,7 +53,7 @@ def record(control_recorder, script_out):
     old_key = None
     script_out.write("import stbt\n\n\n")
     try:
-        for key in stbt.uri_to_remote_recorder(control_recorder):
+        for key in remote.uri_to_remote_recorder(control_recorder):
             write_wait_for_match(script_out, count.next(), old_key)
             script_out.write("stbt.press('%s')\n" % key)
             stbt.press(key)

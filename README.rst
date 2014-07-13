@@ -732,22 +732,22 @@ class MotionResult
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
 
-class MatchTimeout(UITestFailure)
+class MatchTimeout(utils.UITestFailure)
     * `screenshot`: An OpenCV image from the source video when the search
       for the expected image timed out.
     * `expected`: Filename of the image that was being searched for.
     * `timeout_secs`: Number of seconds that the image was searched for.
 
-class MotionTimeout(UITestFailure)
+class MotionTimeout(utils.UITestFailure)
     * `screenshot`: An OpenCV image from the source video when the search
       for motion timed out.
     * `mask`: Filename of the mask that was used (see `wait_for_motion`).
     * `timeout_secs`: Number of seconds that motion was searched for.
 
-class NoVideo(UITestFailure)
+class NoVideo(utils.UITestFailure)
     No video available from the source pipeline.
 
-class PreconditionError(UITestError)
+class PreconditionError(utils.UITestError)
     Exception raised by `as_precondition`.
 
 class UITestFailure(Exception)

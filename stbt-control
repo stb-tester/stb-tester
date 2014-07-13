@@ -43,9 +43,6 @@ def main(argv):
     remote = stbt.uri_to_remote(args.control, None)
 
     if args.remote_control_key:  # Send a single key and exit
-        if args.control == "none":
-            # Print key name to standard error
-            stbt._debug_level = 1  # pylint: disable=W0212
         remote.press(args.remote_control_key)
     else:  # Interactive
         for key in main_loop(args.control, args.keymap):
