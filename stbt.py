@@ -797,6 +797,15 @@ def _named_temporary_directory(
 
 def _find_tessdata_dir():
     from distutils.spawn import find_executable
+
+    tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
+    if tessdata_prefix:
+        tessdata = tessdata_prefix + '/tessdata'
+        if os.path.exists(tessdata):
+            return tessdata
+        else:
+            raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
+
     tess_prefix_share = os.path.normpath(
         find_executable('tesseract') + '/../../share/')
     for suffix in [
