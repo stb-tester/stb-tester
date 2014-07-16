@@ -80,7 +80,7 @@ test_that_stbt_run_exits_on_ctrl_c() {
     cat > test.py <<-EOF
 	from time import sleep
 
-	for c in range(20, 0, -1):
+	for c in range(60, 0, -1):
 	    print "%i bottles of beer on the wall" % c
 	    sleep(1)
 
