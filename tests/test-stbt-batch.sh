@@ -407,3 +407,15 @@ test_that_stbt_batch_run_exits_with_failure_if_any_test_fails() {
     ! stbt batch run -1 tests/test_failure.py tests/test_success.py \
         || fail "Test should fail"
 }
+
+test_stbt_batch_output_dir() {
+    create_test_repo
+    mkdir "my results"
+    stbt batch run -1 -o "my-results" tests/test.py tests/test2.py \
+        || fail "Tests should succeed"
+
+    [[ -f "my-results"/index.html ]] || fail "'my-results/index.html' not created"
+    ! [[ -f index.html ]] || fail "index.html created in current directory"
+    grep -q test.py "my-results"/*/test-name || fail "First test's results not in 'my-results'"
+    grep -q test2.py "my-results"/*/test-name || fail "Second test's results not in 'my-results'"
+}

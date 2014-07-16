@@ -20,6 +20,8 @@
 #/   -v    Verbose. Print stbt standard output.
 #/   -vv   Extra verbose. Print stbt standard error output.
 #/
+#/   -o    Output directory to save the report and test-run
+#/         logs under (defaults to the current directory).
 #/   -t <tag>  Tag to add to test run directory names (useful
 #/         to differentiate directories when you intend to
 #/         merge test results from multiple machines).
@@ -32,18 +34,20 @@ main() {
   export PYTHONUNBUFFERED=x
 
   keep_going=0
+  outputdir="$PWD"
   run_once=false
   stop=false
   tag=
   v=-v
   verbose=0
   failure_count=0
-  while getopts ":1dhkt:v" option; do
+  while getopts ":1dhko:t:v" option; do
     case $option in
       1) run_once=true;;
       d) v=-vv;;
       h) usage; exit 0;;
       k) keep_going=$((keep_going + 1));;
+      o) outputdir=$(realpath "$OPTARG");;
       t) tag=-$OPTARG;;
       v) verbose=$((verbose + 1));;
       *) die "Invalid option '-$OPTARG'. Use '-h' for help.";;
@@ -79,13 +83,15 @@ run() {
 
   test="$1" && shift &&
   testpath=$(realpath "$test") &&
+  mkdir -p "$outputdir" &&
+  pushd "$outputdir" >/dev/null &&
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
   mkdir "$rundir" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
   cd "$rundir" &&
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
-  die "Failed to set up test-run directory '$rundir'."
+  die "Failed to set up test-run directory '$outputdir/$rundir'."
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
@@ -146,6 +152,7 @@ run() {
 
   cd ..
   rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
+  popd >/dev/null
   return $exit_status
 }
 
