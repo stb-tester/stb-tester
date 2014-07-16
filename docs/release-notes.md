@@ -25,6 +25,12 @@ For installation instructions see
   easier to use from and integrate with external CI systems.
 
 ##### User-visible changes since 0.20
+
+* `stbt batch run` has a new `-o` flag to specify the output directory where
+  you want the report and test-run logs to be saved. If not specified it
+  defaults to the existing behaviour, which is to write to the current working
+  directory.
+
 ##### Developer-visible changes since 0.20
 
 #### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
