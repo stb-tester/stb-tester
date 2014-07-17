@@ -1622,13 +1622,16 @@ def argparser():
 
 
 def init_run(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False, transformation_pipeline='identity'):
+        gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
+        save_video=False, restart_source=False,
+        transformation_pipeline='identity'):
     global _display, _control
     _display = Display(
-        gst_source_pipeline, gst_sink_pipeline,
+        gst_source_pipeline or get_config('global', 'source_pipeline'),
+        gst_sink_pipeline or get_config('global', 'sink_pipeline'),
         save_video, restart_source, transformation_pipeline)
-    _control = control.uri_to_remote(control_uri, _display)
+    _control = control.uri_to_remote(
+        control_uri or get_config('global', 'control'), _display)
 
 
 def teardown_run():
