@@ -20,9 +20,12 @@ For installation instructions see
 
 ##### Breaking changes since 0.20
 
-* `stbt batch run` now exits with non-zero exit status if any of the tests in the
-  run failed or errored.  This, in combination with the `-1` option makes it
-  easier to use from and integrate with external CI systems.
+* `stbt batch run` now exits with non-zero exit status if any of the tests in
+  the run failed or errored.  In addition if only a single test was executed a
+  single time `stbt batch run` will propogate the exit status through.  This, in
+  combination with the `-1` option makes it easier to use from and integrate
+  with external CI systems and makes it possible to use `stbt batch run` just
+  like `stbt run`, but with calling the hooks and producing the HTML report.
 
 ##### User-visible changes since 0.20
 

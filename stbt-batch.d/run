@@ -63,15 +63,22 @@ main() {
   [ $verbose -gt 0 ] && exec 3>&1
   [ $verbose -gt 1 ] && exec 4>&1
 
+  run_count=0
   while true; do
     while IFS=$'\t' read -a test; do
-      run "${test[@]}" || failure_count=$((failure_count+1))
+      run_count=$((run_count+1))
+      run "${test[@]}";
+      last_exit_status=$?
+      [ "$last_exit_status" = 0 ] || failure_count=$((failure_count+1))
       should_i_continue || break 2
     done < <(parse_test_args "$@")
     $run_once && break
   done
 
-  if [ "$failure_count" = 0 ]; then
+  if [ "$run_count" = 1 ]; then
+    # If we only run a single test a single time propagate the result through
+    exit "$last_exit_status"
+  elif [ "$failure_count" = 0 ]; then
     exit 0
   else
     exit 1

@@ -408,6 +408,18 @@ test_that_stbt_batch_run_exits_with_failure_if_any_test_fails() {
         || fail "Test should fail"
 }
 
+test_that_stbt_batch_propagates_exit_status_if_running_a_single_test() {
+    create_test_repo
+    stbt batch run -1 tests/test_success.py
+    [ "$?" = 0 ] || fail "Test should succeed"
+
+    stbt batch run -1 tests/test_failure.py
+    [ "$?" = 1 ] || fail "Test should fail"
+
+    stbt batch run -1 tests/test_error.py
+    [ "$?" = 2 ] || fail "Test should error"
+}
+
 test_stbt_batch_output_dir() {
     create_test_repo
     mkdir "my results"
