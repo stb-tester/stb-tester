@@ -13,6 +13,7 @@ TAGS
 VERSION
 extra/vm/.vagrant
 tests/test-install
+tests/ocr/menu.png
 nosetest-issue-49-workaround-stbt-control.py
 extra/fedora/stb-tester.spec
 stb-tester-*.tar.gz

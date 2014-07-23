@@ -11,12 +11,14 @@ install:
         gstreamer1.0-plugins-good
         gstreamer1.0-tools
         gstreamer1.0-x
+        librsvg2-bin
         moreutils
         pep8
         python-docutils
         python-flask
         python-gobject
         python-jinja2
+        python-lxml
         python-nose
         python-numpy
         python-opencv

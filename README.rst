@@ -449,6 +449,33 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
+match_text(text, frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
+    Search the screen for the given text.
+
+    Can be used as an alternative to `wait_for_match`, etc. searching for text
+    instead of an image.
+
+    Args:
+        text (unicode): Text to search for.
+
+    Kwargs:
+        Refer to the arguments to `ocr()`.
+
+    Returns:
+        TextMatchResult.  Will evaluate to True if text matched, false
+        otherwise.
+
+    Example:
+
+    Select a button in a vertical menu by name.  In this case "TV Guide".
+
+    ::
+
+        m = stbt.match_text(u"TV Guide", match('button-background.png').region)
+        assert m.match
+        while not stbt.match('selected-button.png').region.contains(m.region):
+            press('KEY_DOWN')
+
 ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
     Return the text present in the video frame as a Unicode string.
 
@@ -763,6 +790,15 @@ class NoVideo(UITestFailure)
 
 class PreconditionError(UITestError)
     Exception raised by `as_precondition`.
+
+class TextMatchResult
+    Return type of `match_text`.
+
+    timestamp: Timestamp of the frame matched against
+    match (bool): Whether the text was found or not
+    region (Region): The bounding box of the text found or None if no text found
+    frame: The video frame matched against
+    text (unicode): The text searched for
 
 class UITestFailure(Exception)
     The test failed because the system under test didn't behave as expected.

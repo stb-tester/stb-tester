@@ -2,6 +2,7 @@
 
 import codecs
 import distutils
+import re
 import sys
 from textwrap import dedent
 
@@ -97,3 +98,82 @@ def test_user_dictionary_with_non_english_language():
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
         tesseract_user_words=[u'UJJM2LGE']))
+
+# Menu as listed in menu.svg:
+menu = [
+    [
+        u"Onion Bhaji",
+        u"Mozzarella Pasta\nBake",
+        u"Lamb and Date\nCasserole",
+        u"Jerk Chicken"
+    ], [
+        u"Beef Wellington",
+        u"Kerala Prawn Curry",
+        u"Chocolate Fudge Cake",
+        u"Halloumi Stuffed\nPeppers"
+    ]
+]
+
+
+def iterate_menu():
+    for x in range(4):
+        for y in range(2):
+            text = menu[y][x]
+            yield (
+                text,
+                stbt.Region((1 + 8 * x) * 40, (3 + 7 * y) * 40, 6 * 40, 2 * 40),
+                '\n' in text)
+
+
+def test_that_text_location_is_recognised():
+    frame = cv2.imread("tests/ocr/menu.png")
+
+    def test(text, region):
+        result = stbt.match_text(text, frame=frame)
+        assert result
+        assert region.contains(result.region)  # pylint: disable=E1101
+
+    for text, region, multiline in iterate_menu():
+        # Don't currently support multi-line comments
+        if multiline:
+            continue
+
+        yield (test, text, region)
+
+
+def test_match_text_stringify_result():
+    frame = cv2.imread("tests/ocr/menu.png")
+    result = stbt.match_text(u"Onion Bhaji", frame=frame)
+
+    assert re.match(
+        r"TextMatchResult\(timestamp=None, match=True, region=Region\(.*\), "
+        r"frame=1280x720x3, text=u'Onion Bhaji'\)", str(result))
+
+
+def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
+    frame = cv2.imread("tests/ocr/menu.png")
+    text, region, _ = list(iterate_menu())[6]
+    result = stbt.match_text(
+        text, frame=frame, region=region.extend(right=+12800))
+    assert result
+    assert region.contains(result.region)
+
+
+def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame():
+    frame = cv2.imread("tests/ocr/menu.png")
+    result = stbt.match_text("Onion Bhaji", frame=frame,
+                             region=stbt.Region(1280, 0, 1280, 720))
+    assert result.match is False
+    assert result.region is None
+    assert result.text == "Onion Bhaji"
+
+
+def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame():
+    frame = cv2.imread("tests/ocr/menu.png")
+    result = stbt.ocr(frame=frame, region=stbt.Region(1280, 0, 1280, 720))
+    assert result == u''
+
+
+def test_that_match_text_returns_no_match_for_non_matching_text():
+    frame = cv2.imread("tests/ocr/menu.png")
+    assert not stbt.match_text(u"Noodle Soup", frame=frame)

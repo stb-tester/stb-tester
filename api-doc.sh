@@ -74,6 +74,7 @@ python_docstrings() {
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc match_text
     doc ocr
     doc OcrMode
     doc as_precondition
@@ -93,13 +94,15 @@ python_docstrings() {
     doc MotionTimeout
     doc NoVideo
     doc PreconditionError
+    doc TextMatchResult
     doc UITestFailure
     doc UITestError
 }
 
 substitute_ocr_default_mode() {
     local mode=$(sed -n '/^class OcrMode/,/^[^ ]/ p' stbt.py | awk '/3/ {print $1}')
-    sed "/^ocr(/ s/mode=3/mode=OcrMode.$mode/"
+    sed -e "/^ocr(/ s/mode=3/mode=OcrMode.$mode/" \
+        -e "/^match_text(/ s/mode=3/mode=OcrMode.$mode/"
 }
 
 # stbt.as_precondition's `@contextmanager` decorator screws up the function

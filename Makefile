@@ -125,7 +125,7 @@ PYTHON_FILES = $(shell (git ls-files '*.py' && \
            | sort | uniq)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests:
+check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v --match "^test_" \
@@ -161,6 +161,8 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
+tests/ocr/menu.png : %.png : %.svg
+	rsvg-convert $< >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
 # list of files) won't be set correctly.
