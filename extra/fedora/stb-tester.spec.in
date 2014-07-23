@@ -27,6 +27,7 @@ Requires: pylint
 Requires: python >= 2.7
 Requires: python-flask
 Requires: python-jinja2
+Requires: python-lxml
 Requires: tesseract
 
 %description

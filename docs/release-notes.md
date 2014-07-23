@@ -29,10 +29,17 @@ For installation instructions see
 
 ##### User-visible changes since 0.20
 
+* New API: `stbt.match_text`.  It takes a string and returns a
+  `TextMatchResult`, much like how `wait_for_match` takes an image template and
+  returns a `MatchResult`.  This provides additional information like the
+  region of the match.  It should be very helpful for UIs which consist of menus
+  of text, which seem to be most UIs.
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
+* `Region` now has convenience methods `extend()` and `intersect()` to make it
+  easier to receive a region, modify it and then pass it to another function.
 
 ##### Developer-visible changes since 0.20
 
