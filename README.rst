@@ -762,17 +762,19 @@ class Region
         5
         >>> a.extend(right=-3).width
         5
-        >>> print a.intersect(b)
+        >>> print Region.intersect(a, b)
         Region(x=4, y=4, width=4, height=4)
-        >>> c.intersect(b) == c
+        >>> Region.intersect(c, b) == c
         True
-        >>> print a.intersect(c)
+        >>> print Region.intersect(a, c)
+        None
+        >>> print Region.intersect(None, a)
         None
         >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
         ...                    right=0, bottom=0)
         >>> quadrant2.translate(2, 2)
         Region(x=-inf, y=-inf, right=2, bottom=2)
-        >>> Region.ALL.intersect(c) == c
+        >>> Region.intersect(Region.ALL, c) == c
         True
         >>> Region.ALL
         Region.ALL

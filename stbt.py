@@ -286,17 +286,19 @@ class Region(namedtuple('Region', 'x y right bottom')):
         5
         >>> a.extend(right=-3).width
         5
-        >>> print a.intersect(b)
+        >>> print Region.intersect(a, b)
         Region(x=4, y=4, width=4, height=4)
-        >>> c.intersect(b) == c
+        >>> Region.intersect(c, b) == c
         True
-        >>> print a.intersect(c)
+        >>> print Region.intersect(a, c)
+        None
+        >>> print Region.intersect(None, a)
         None
         >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
         ...                    right=0, bottom=0)
         >>> quadrant2.translate(2, 2)
         Region(x=-inf, y=-inf, right=2, bottom=2)
-        >>> Region.ALL.intersect(c) == c
+        >>> Region.intersect(Region.ALL, c) == c
         True
         >>> Region.ALL
         Region.ALL
@@ -335,6 +337,22 @@ class Region(namedtuple('Region', 'x y right bottom')):
         assert x < right and y < bottom
         return Region(x, y, right=right, bottom=bottom)
 
+    @staticmethod
+    def intersect(a, b):
+        """Returns the intersection of the regions a and b.  If the regions
+        don't intersect returns None.  Either a or b can also be None so
+        intersect is commutative and associative so can behave like an
+        operator."""
+        if a is None or b is None:
+            return None
+        else:
+            extents = (max(a.x, b.x), max(a.y, b.y),
+                       min(a.right, b.right), min(a.bottom, b.bottom))
+            if extents[0] < extents[2] and extents[1] < extents[3]:
+                return Region.from_extents(*extents)
+            else:
+                return None
+
     @property
     def width(self):
         """The width of the region"""
@@ -355,15 +373,6 @@ class Region(namedtuple('Region', 'x y right bottom')):
         adjusted by the given amounts."""
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
-
-    def intersect(self, other):
-        """Returns the intersection of self and the Region other"""
-        extents = (max(self.x, other.x), max(self.y, other.y),
-                   min(self.right, other.right), min(self.bottom, other.bottom))
-        if extents[0] < extents[2] and extents[1] < extents[3]:
-            return Region.from_extents(*extents)
-        else:
-            return None
 
 
 Region.ALL = Region(x=float("-inf"), y=float("-inf"),
