@@ -449,7 +449,7 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
-match_text(text, frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
+match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
     Search the screen for the given text.
 
     Can be used as an alternative to `wait_for_match`, etc. searching for text
@@ -476,7 +476,7 @@ match_text(text, frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT
         while not stbt.match('selected-button.png').region.contains(m.region):
             press('KEY_DOWN')
 
-ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
+ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
     Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -772,6 +772,12 @@ class Region
         ...                    right=0, bottom=0)
         >>> quadrant2.translate(2, 2)
         Region(x=-inf, y=-inf, right=2, bottom=2)
+        >>> Region.ALL.intersect(c) == c
+        True
+        >>> Region.ALL
+        Region.ALL
+        >>> print Region.ALL
+        Region.ALL
 
 class MotionResult
     * `timestamp`: Video stream timestamp.

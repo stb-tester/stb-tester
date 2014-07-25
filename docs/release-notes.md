@@ -45,10 +45,22 @@ For installation instructions see
   returns a `MatchResult`.  This provides additional information like the
   region of the match.  It should be very helpful for UIs which consist of menus
   of text, which seem to be most UIs.
+
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
+
+* New API: `Region.ALL` represents the entire 2D frame from -∞ to +∞ in both
+  the x and y directions.  This is useful to pass to functions that take a
+  `region=` parameter to say that we want the whole frame considered.
+
+  In 0.20 `region=None` served the purpose of selecting the whole image for OCR
+  when passed to the `ocr()` function.  This was the default value.
+  `Region.ALL` is the new default value with the same meaning.  Passing
+  `region=None` to `ocr()` is still supported but deprecated and in the future
+  we may change its meaning to mean the empty region for consistency.
+
 * `Region` now has convenience methods `extend()` and `intersect()` to make it
   easier to receive a region, modify it and then pass it to another function.
 

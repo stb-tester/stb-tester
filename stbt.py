@@ -296,6 +296,12 @@ class Region(namedtuple('Region', 'x y right bottom')):
         ...                    right=0, bottom=0)
         >>> quadrant2.translate(2, 2)
         Region(x=-inf, y=-inf, right=2, bottom=2)
+        >>> Region.ALL.intersect(c) == c
+        True
+        >>> Region.ALL
+        Region.ALL
+        >>> print Region.ALL
+        Region.ALL
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         assert x is not None and (width is None) != (right is None)
@@ -307,11 +313,20 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
     def __unicode__(self):
-        return u'Region(x=%s, y=%s, width=%s, height=%s)' \
-            % (self.x, self.y, self.width, self.height)
+        if self == Region.ALL:
+            return u'Region.ALL'
+        else:
+            return u'Region(x=%s, y=%s, width=%s, height=%s)' \
+                % (self.x, self.y, self.width, self.height)
 
     def __str__(self):
         return str(unicode(self))
+
+    def __repr__(self):
+        if self == Region.ALL:
+            return 'Region.ALL'
+        else:
+            return super(Region, self).__repr__()
 
     @staticmethod
     def from_extents(x, y, right, bottom):
@@ -349,6 +364,10 @@ class Region(namedtuple('Region', 'x y right bottom')):
             return Region.from_extents(*extents)
         else:
             return None
+
+
+Region.ALL = Region(x=float("-inf"), y=float("-inf"),
+                    right=float("inf"), bottom=float("inf"))
 
 
 def _bounding_box(a, b):
@@ -905,8 +924,9 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None, config=None, user_patterns=None, user_words=None):
+def _tesseract(frame, region=Region.ALL,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               config=None, user_patterns=None, user_words=None):
     if lang is None:
         lang = 'eng'
     if config is None:
@@ -914,16 +934,13 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
 
     with _numpy_from_sample(frame, readonly=True) as f:
         frame_region = Region(0, 0, f.shape[1], f.shape[0])
-        if region is None:
-            region = frame_region
+        intersection = Region.intersect(frame_region, region)
+        if intersection is None:
+            warn("Requested OCR in region %s which doesn't overlap with "
+                 "the frame %s" % (str(region), frame_region))
+            return ('', None)
         else:
-            intersection = frame_region.intersect(region)
-            if intersection is None:
-                warn("Requested OCR in region %s which doesn't overlap with "
-                     "the frame %s" % (str(region), frame_region))
-                return ('', None)
-            else:
-                region = intersection
+            region = intersection
 
         subframe = f[region.y:region.bottom, region.x:region.right]
 
@@ -990,7 +1007,8 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             return (outfile.read(), region)
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+def ocr(frame=None, region=Region.ALL,
+        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None):
     """Return the text present in the video frame as a Unicode string.
@@ -1030,6 +1048,14 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     """
     if frame is None:
         frame = _display.get_sample()
+
+    if region is None:
+        warnings.warn(
+            "Passing region=None to ocr is deprecated since 0.21 and the "
+            "meaning will change in a future version.  To OCR an entire video "
+            "frame pass region=Region.ALL instead",
+            DeprecationWarning, stacklevel=2)
+        region = Region.ALL
 
     text, region = _tesseract(
         frame, region, mode, lang, config=tesseract_config,
@@ -1110,7 +1136,7 @@ class TextMatchResult(namedtuple(
                 repr(self.text)))
 
 
-def match_text(text, frame=None, region=None,
+def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None):
     """Search the screen for the given text.
