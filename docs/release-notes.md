@@ -61,9 +61,9 @@ For installation instructions see
   `region=None` to `ocr()` is still supported but deprecated and in the future
   we may change its meaning to mean the empty region for consistency.
 
-* `Region` now has convenience methods `extend()` and the function `intersect()`
-  to make it easier to receive a region, modify it and then pass it to another
-  function.
+* `Region` now has convenience methods `extend()` and `translate()` and the
+  function `intersect()` to make it easier to receive a region, modify it and
+  then pass it to another function.
 
 ##### Developer-visible changes since 0.20
 

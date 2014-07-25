@@ -304,6 +304,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
         Region.ALL
         >>> print Region.ALL
         Region.ALL
+        >>> print c.translate(x=-9, y=-3)
+        Region(x=1, y=1, width=3, height=2)
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         assert x is not None and (width is None) != (right is None)
@@ -374,6 +376,11 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
+    def translate(self, x=0, y=0):
+        """Returns a new region with the position of the region adjusted by the
+        given amounts."""
+        return Region.from_extents(self.x + x, self.y + y,
+                                   self.right + x, self.bottom + y)
 
 Region.ALL = Region(x=float("-inf"), y=float("-inf"),
                     right=float("inf"), bottom=float("inf"))

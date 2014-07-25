@@ -780,6 +780,8 @@ class Region
         Region.ALL
         >>> print Region.ALL
         Region.ALL
+        >>> print c.translate(x=-9, y=-3)
+        Region(x=1, y=1, width=3, height=2)
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
