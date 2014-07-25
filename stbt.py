@@ -240,7 +240,7 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class Region(namedtuple('Region', 'x y width height')):
+class Region(namedtuple('Region', 'x y right bottom')):
     u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,
@@ -265,7 +265,7 @@ class Region(namedtuple('Region', 'x y width height')):
 
         >>> a = Region(0, 0, 8, 8)
         >>> b = Region.from_extents(4, 4, 13, 10)
-        >>> b
+        >>> print b
         Region(x=4, y=4, width=9, height=6)
         >>> c = Region(10, 4, 3, 2)
         >>> a.right
@@ -286,33 +286,49 @@ class Region(namedtuple('Region', 'x y width height')):
         5
         >>> a.extend(right=-3).width
         5
-        >>> a.intersect(b)
+        >>> print a.intersect(b)
         Region(x=4, y=4, width=4, height=4)
         >>> c.intersect(b) == c
         True
-        >>> a.intersect(c) is None
-        True
+        >>> print a.intersect(c)
+        None
+        >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
+        ...                    right=0, bottom=0)
+        >>> quadrant2.translate(2, 2)
+        Region(x=-inf, y=-inf, right=2, bottom=2)
     """
-    def __new__(cls, x, y, width, height):
-        assert width > 0 and height > 0
-        return super(Region, cls).__new__(cls, x, y, width, height)
+    def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
+        assert x is not None and (width is None) != (right is None)
+        assert y is not None and (height is None) != (bottom is None)
+        if right is None:
+            right = x + width
+        if bottom is None:
+            bottom = y + height
+        return super(Region, cls).__new__(cls, x, y, right, bottom)
+
+    def __unicode__(self):
+        return u'Region(x=%s, y=%s, width=%s, height=%s)' \
+            % (self.x, self.y, self.width, self.height)
+
+    def __str__(self):
+        return str(unicode(self))
 
     @staticmethod
     def from_extents(x, y, right, bottom):
         """Create a Region using right and bottom extents rather than width and
         height."""
         assert x < right and y < bottom
-        return Region(x, y, right - x, bottom - y)
+        return Region(x, y, right=right, bottom=bottom)
 
     @property
-    def right(self):
-        """The x coordinate beyond the right edge of the region"""
-        return self.x + self.width
+    def width(self):
+        """The width of the region"""
+        return self.right - self.x
 
     @property
-    def bottom(self):
-        """The y coordinate beyond the bottom edge of the region"""
-        return self.y + self.height
+    def height(self):
+        """The height of the region"""
+        return self.bottom - self.y
 
     def contains(self, other):
         """Checks whether other is entirely contained within self"""
@@ -339,15 +355,16 @@ def _bounding_box(a, b):
     """Find the bounding box of two regions.  Returns the smallest region which
     contains both regions a and b.
 
-    >>> _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+    >>> print _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
     Region(x=20, y=20, width=40, height=30)
-    >>> _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+    >>> print _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(None, Region(20, 30, 10, 20))
+    >>> print _bounding_box(None, Region(20, 30, 10, 20))
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(Region(20, 30, 10, 20), None)
+    >>> print _bounding_box(Region(20, 30, 10, 20), None)
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(None, None)
+    >>> print _bounding_box(None, None)
+    None
     """
     if a is None:
         return b

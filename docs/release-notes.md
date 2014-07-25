@@ -20,6 +20,17 @@ For installation instructions see
 
 ##### Breaking changes since 0.20
 
+* The internal representation of `Region` has changed from (x, y, right, bottom)
+  to (x, y, width, height). The constructor `Region(x, y, width, height)`, and
+  the `width` and `height` properties, remain for backward compatibility, so
+  this is not intended as an externally visible change. However, some details
+  may leak through the cracks. These include:
+
+    * The string returned by `__repr__` lists right and bottom rather than
+      width and height.  This is necessary as `repr` should be unambiguous.
+    * If you use subscripting to get at the internal representation of the
+      `Region` (e.g. `region[2:]`) this will now return `right` and `bottom`.
+
 * `stbt batch run` now exits with non-zero exit status if any of the tests in
   the run failed or errored.  In addition if only a single test was executed a
   single time `stbt batch run` will propogate the exit status through.  This, in

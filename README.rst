@@ -741,7 +741,7 @@ class Region
 
         >>> a = Region(0, 0, 8, 8)
         >>> b = Region.from_extents(4, 4, 13, 10)
-        >>> b
+        >>> print b
         Region(x=4, y=4, width=9, height=6)
         >>> c = Region(10, 4, 3, 2)
         >>> a.right
@@ -762,12 +762,16 @@ class Region
         5
         >>> a.extend(right=-3).width
         5
-        >>> a.intersect(b)
+        >>> print a.intersect(b)
         Region(x=4, y=4, width=4, height=4)
         >>> c.intersect(b) == c
         True
-        >>> a.intersect(c) is None
-        True
+        >>> print a.intersect(c)
+        None
+        >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
+        ...                    right=0, bottom=0)
+        >>> quadrant2.translate(2, 2)
+        Region(x=-inf, y=-inf, right=2, bottom=2)
 
 class MotionResult
     * `timestamp`: Video stream timestamp.
