@@ -500,6 +500,15 @@ def _load_template(template):
         return _AnnotatedTemplate(image, template_name)
 
 
+def _draw_match(frame, match_result):
+    with _numpy_from_sample(frame, readonly=False) as frame:
+        r = match_result.region
+        cv2.rectangle(
+            frame, (r.x, r.y), (r.right, r.bottom),
+            (32, 0 if match_result else 255, 255),  # bgr
+            thickness=3)
+
+
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
@@ -549,11 +558,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
                 numpy.copy(frame),
                 (template.filename or template.image))
 
-            cv2.rectangle(
-                frame,
-                (region.x, region.y), (region.right, region.bottom),
-                (32, 0 if matched else 255, 255),  # bgr
-                thickness=3)
+            _draw_match(sample, result)
 
         if matched:
             debug("Match found: %s" % str(result))
