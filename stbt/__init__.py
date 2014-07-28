@@ -50,6 +50,7 @@ __all__ = [
     "get_config",
     "get_frame",
     "is_screen_black",
+    "match",
     "match_text",
     "MatchParameters",
     "MatchResult",
@@ -130,7 +131,7 @@ def draw_text(text, duration_secs=3):
 
 class MatchParameters(object):
     """Parameters to customise the image processing algorithm used by
-    `wait_for_match`, `detect_match`, and `press_until_match`.
+    `match`, `wait_for_match`, `detect_match`, and `press_until_match`.
 
     You can change the default values for these parameters by setting
     a key (with the same name as the corresponding python parameter)
@@ -432,7 +433,7 @@ class MatchResult(object):
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
     """
-
+    # pylint: disable=W0621
     def __init__(
             self, timestamp, match, region, first_pass_result, frame=None,
             image=None):
@@ -509,17 +510,71 @@ def _draw_match(frame, match_result):
             thickness=3)
 
 
+def match(image, frame=None, match_parameters=None):
+    """
+    Search for `image` in a single frame of the source video stream.
+    Returns a `MatchResult`.
+
+    `image` (string or numpy.array)
+      The image used as the template during matching. It can either be the
+      filename of a png file on disk or a numpy array containing the pixel data
+      in 8-bit BGR format.
+
+      8-bit BGR numpy arrays are the same format that OpenCV uses for images.
+      This allows generating templates on the fly (possibly using OpenCV) or
+      searching for images captured from the system under test earlier in the
+      test script.
+
+    `frame` (numpy.array) default: None
+      If this is specified it is used as the video frame to search in;
+      otherwise a frame is grabbed from the source video stream. It is a
+      `numpy.array` in OpenCV format (for example as returned by `frames` and
+      `get_frame`).
+
+    `match_parameters` (stbt.MatchParameters) default: MatchParameters()
+      Customise the image matching algorithm. See the documentation for
+      `MatchParameters` for details.
+    """
+    if match_parameters is None:
+        match_parameters = MatchParameters()
+
+    template = _load_template(image)
+
+    grabbed_from_live = (frame is None)
+    if grabbed_from_live:
+        frame = _display.get_sample()
+
+    with _numpy_from_sample(frame, readonly=True) as npframe:
+        matched, position, first_pass_certainty = _match(
+            npframe, template.image, match_parameters,
+            template.friendly_name)
+
+        region = Region(position.x, position.y, template.image.shape[1],
+                        template.image.shape[0])
+        result = MatchResult(
+            _get_frame_timestamp(frame), matched, position,
+            first_pass_certainty, numpy.copy(npframe),
+            (template.filename or template.image))
+
+    if grabbed_from_live and frame.get_buffer().mini_object.is_writable():
+        # Don't want to draw on user-provided frames!
+        _draw_match(frame, result)
+
+    if result.match:
+        debug("Match found: %s" % str(result))
+    else:
+        debug("No match found. Closest match: %s" % str(result))
+
+    return result
+
+
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `stbt.match`
+    for more information.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
@@ -532,16 +587,13 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
-
-    if match_parameters is None:
-        match_parameters = MatchParameters()
-
     if noise_threshold is not None:
         warnings.warn(
             "noise_threshold is deprecated and will be removed in a future "
             "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
+        match_parameters = match_parameters or MatchParameters()
         match_parameters.confirm_threshold = noise_threshold
 
     template = _load_template(image)
@@ -549,21 +601,9 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     debug("Searching for " + template.friendly_name)
 
     for sample in _display.gst_samples(timeout_secs):
-        with _numpy_from_sample(sample) as frame:
-            matched, region, first_pass_certainty = _match(
-                frame, template.image, match_parameters, template.friendly_name)
-
-            result = MatchResult(
-                sample.get_buffer().pts, matched, region, first_pass_certainty,
-                numpy.copy(frame),
-                (template.filename or template.image))
-
-            _draw_match(sample, result)
-
-        if matched:
-            debug("Match found: %s" % str(result))
-        else:
-            debug("No match found. Closest match: %s" % str(result))
+        result = match(
+            template, frame=sample, match_parameters=match_parameters)
+        _draw_match(sample, result)
         yield result
 
 
@@ -669,12 +709,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `match`
+    for more information.
 
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position. Increase
@@ -1164,7 +1200,7 @@ def match_text(text, frame=None, region=Region.ALL,
                tesseract_config=None):
     """Search the screen for the given text.
 
-    Can be used as an alternative to `wait_for_match`, etc. searching for text
+    Can be used as an alternative to `match`, etc. searching for text
     instead of an image.
 
     Args:

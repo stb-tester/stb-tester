@@ -44,8 +44,14 @@ For installation instructions see
 
 ##### User-visible changes since 0.20
 
+* Added new API `stbt.match` which was previously conspicuous in its absence.
+  This, in combination with the ability to treat `MatchResult` as a boolean
+  makes it much easier to compose matching operations in user code.  e.g.:
+
+        assert stbt.match('template.png') or stbt.match('template2.png')
+
 * New API: `stbt.match_text`.  It takes a string and returns a
-  `TextMatchResult`, much like how `wait_for_match` takes an image template and
+  `TextMatchResult`, much like how `stbt.match` takes an image template and
   returns a `MatchResult`.  This provides additional information like the
   region of the match.  It should be very helpful for UIs which consist of menus
   of text, which seem to be most UIs.
