@@ -510,7 +510,16 @@ def _draw_match(frame, match_result):
             thickness=3)
 
 
-def match(image, frame=None, match_parameters=None):
+def _crop(frame, region):
+    assert _image_region(frame).contains(region)
+    return frame[region.y:region.bottom, region.x:region.right]
+
+
+def _image_region(image):
+    return Region(0, 0, image.shape[1], image.shape[0])
+
+
+def match(image, frame=None, match_parameters=None, region=Region.ALL):
     """
     Search for `image` in a single frame of the source video stream.
     Returns a `MatchResult`.
@@ -534,6 +543,9 @@ def match(image, frame=None, match_parameters=None):
     `match_parameters` (stbt.MatchParameters) default: MatchParameters()
       Customise the image matching algorithm. See the documentation for
       `MatchParameters` for details.
+
+    `region` (stbt.Region) default: Region.ALL
+      Only search within the specified region of the video frame.
     """
     if match_parameters is None:
         match_parameters = MatchParameters()
@@ -545,14 +557,15 @@ def match(image, frame=None, match_parameters=None):
         frame = _display.get_sample()
 
     with _numpy_from_sample(frame, readonly=True) as npframe:
-        matched, position, first_pass_certainty = _match(
-            npframe, template.image, match_parameters,
+        region = Region.intersect(_image_region(npframe), region)
+
+        matched, match_region, first_pass_certainty = _match(
+            _crop(npframe, region), template.image, match_parameters,
             template.friendly_name)
 
-        region = Region(position.x, position.y, template.image.shape[1],
-                        template.image.shape[0])
+        match_region = match_region.translate(region.x, region.y)
         result = MatchResult(
-            _get_frame_timestamp(frame), matched, position,
+            _get_frame_timestamp(frame), matched, match_region,
             first_pass_certainty, numpy.copy(npframe),
             (template.filename or template.image))
 
@@ -1001,14 +1014,13 @@ def _tesseract(frame, region=Region.ALL,
         else:
             region = intersection
 
-        subframe = f[region.y:region.bottom, region.x:region.right]
-
         # We scale image up 3x before feeding it to tesseract as this
         # significantly reduces the error rate by more than 6x in tests.  This
         # uses bilinear interpolation which produces the best results.  See
         # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
         outsize = (region.width * 3, region.height * 3)
-        subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
+        subframe = cv2.resize(_crop(f, region), outsize,
+                              interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)

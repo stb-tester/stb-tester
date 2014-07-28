@@ -356,6 +356,26 @@ test_match_searches_in_provided_frame() {
     stbt run -v --source-pipeline 'videotestsrc pattern=black' test.py
 }
 
+test_match_searches_in_provided_region() {
+    cat > test.py <<-EOF
+	from stbt import match, Region
+	for search_area in [Region.ALL, Region(228, 0, 92, 160),
+	                    Region(200, 0, 300, 400), Region(200, 0, 300, 400),
+	                    Region(-200, -100, 600, 800)]:
+	    print "\nSearch Area:", search_area
+	    match_result = match("$testdir/videotestsrc-redblue.png",
+	                         region=search_area)
+	    assert match_result and match_result.region == Region(228, 0, 92, 160)
+	
+	for search_area in [Region(228, 3, 92, 260), Region(10, 0, 300, 200),
+	                    Region(-210, -23, 400, 200)]:
+	    print "Search Area:", search_area
+	    assert not match("$testdir/videotestsrc-redblue.png",
+	                     region=search_area)
+	EOF
+    stbt run -v test.py
+}
+
 test_detect_match_reports_valid_timestamp() {
     cat > test.py <<-EOF
 	last_timestamp=None

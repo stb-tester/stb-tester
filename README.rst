@@ -433,7 +433,7 @@ is_screen_black(frame, mask=None, threshold=None)
       in the range 0 (black) to 255 (white). The global default can be changed
       by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
 
-match(image, frame=None, match_parameters=None)
+match(image, frame=None, match_parameters=None, region=Region.ALL)
     Search for `image` in a single frame of the source video stream.
     Returns a `MatchResult`.
 
@@ -456,6 +456,9 @@ match(image, frame=None, match_parameters=None)
     `match_parameters` (stbt.MatchParameters) default: MatchParameters()
       Customise the image matching algorithm. See the documentation for
       `MatchParameters` for details.
+
+    `region` (stbt.Region) default: Region.ALL
+      Only search within the specified region of the video frame.
 
 match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
     Search the screen for the given text.
