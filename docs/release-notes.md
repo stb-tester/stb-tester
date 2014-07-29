@@ -20,6 +20,17 @@ For installation instructions see
 
 ##### Breaking changes since 0.20
 
+* The internal representation of `Region` has changed from (x, y, right, bottom)
+  to (x, y, width, height). The constructor `Region(x, y, width, height)`, and
+  the `width` and `height` properties, remain for backward compatibility, so
+  this is not intended as an externally visible change. However, some details
+  may leak through the cracks. These include:
+
+    * The string returned by `__repr__` lists right and bottom rather than
+      width and height.  This is necessary as `repr` should be unambiguous.
+    * If you use subscripting to get at the internal representation of the
+      `Region` (e.g. `region[2:]`) this will now return `right` and `bottom`.
+
 * `stbt batch run` now exits with non-zero exit status if any of the tests in
   the run failed or errored.  In addition if only a single test was executed a
   single time `stbt batch run` will propogate the exit status through.  This, in
@@ -34,12 +45,25 @@ For installation instructions see
   returns a `MatchResult`.  This provides additional information like the
   region of the match.  It should be very helpful for UIs which consist of menus
   of text, which seem to be most UIs.
+
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
-* `Region` now has convenience methods `extend()` and `intersect()` to make it
-  easier to receive a region, modify it and then pass it to another function.
+
+* New API: `Region.ALL` represents the entire 2D frame from -∞ to +∞ in both
+  the x and y directions.  This is useful to pass to functions that take a
+  `region=` parameter to say that we want the whole frame considered.
+
+  In 0.20 `region=None` served the purpose of selecting the whole image for OCR
+  when passed to the `ocr()` function.  This was the default value.
+  `Region.ALL` is the new default value with the same meaning.  Passing
+  `region=None` to `ocr()` is still supported but deprecated and in the future
+  we may change its meaning to mean the empty region for consistency.
+
+* `Region` now has convenience methods `extend()` and `translate()` and the
+  function `intersect()` to make it easier to receive a region, modify it and
+  then pass it to another function.
 
 ##### Developer-visible changes since 0.20
 

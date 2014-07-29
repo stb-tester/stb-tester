@@ -240,7 +240,7 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class Region(namedtuple('Region', 'x y width height')):
+class Region(namedtuple('Region', 'x y right bottom')):
     u"""Rectangular region within the video frame.
 
     `x` and `y` are the coordinates of the top left corner of the region,
@@ -265,7 +265,7 @@ class Region(namedtuple('Region', 'x y width height')):
 
         >>> a = Region(0, 0, 8, 8)
         >>> b = Region.from_extents(4, 4, 13, 10)
-        >>> b
+        >>> print b
         Region(x=4, y=4, width=9, height=6)
         >>> c = Region(10, 4, 3, 2)
         >>> a.right
@@ -286,33 +286,84 @@ class Region(namedtuple('Region', 'x y width height')):
         5
         >>> a.extend(right=-3).width
         5
-        >>> a.intersect(b)
+        >>> print Region.intersect(a, b)
         Region(x=4, y=4, width=4, height=4)
-        >>> c.intersect(b) == c
+        >>> Region.intersect(c, b) == c
         True
-        >>> a.intersect(c) is None
+        >>> print Region.intersect(a, c)
+        None
+        >>> print Region.intersect(None, a)
+        None
+        >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
+        ...                    right=0, bottom=0)
+        >>> quadrant2.translate(2, 2)
+        Region(x=-inf, y=-inf, right=2, bottom=2)
+        >>> Region.intersect(Region.ALL, c) == c
         True
+        >>> Region.ALL
+        Region.ALL
+        >>> print Region.ALL
+        Region.ALL
+        >>> print c.translate(x=-9, y=-3)
+        Region(x=1, y=1, width=3, height=2)
     """
-    def __new__(cls, x, y, width, height):
-        assert width > 0 and height > 0
-        return super(Region, cls).__new__(cls, x, y, width, height)
+    def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
+        assert x is not None and (width is None) != (right is None)
+        assert y is not None and (height is None) != (bottom is None)
+        if right is None:
+            right = x + width
+        if bottom is None:
+            bottom = y + height
+        return super(Region, cls).__new__(cls, x, y, right, bottom)
+
+    def __unicode__(self):
+        if self == Region.ALL:
+            return u'Region.ALL'
+        else:
+            return u'Region(x=%s, y=%s, width=%s, height=%s)' \
+                % (self.x, self.y, self.width, self.height)
+
+    def __str__(self):
+        return str(unicode(self))
+
+    def __repr__(self):
+        if self == Region.ALL:
+            return 'Region.ALL'
+        else:
+            return super(Region, self).__repr__()
 
     @staticmethod
     def from_extents(x, y, right, bottom):
         """Create a Region using right and bottom extents rather than width and
         height."""
         assert x < right and y < bottom
-        return Region(x, y, right - x, bottom - y)
+        return Region(x, y, right=right, bottom=bottom)
+
+    @staticmethod
+    def intersect(a, b):
+        """Returns the intersection of the regions a and b.  If the regions
+        don't intersect returns None.  Either a or b can also be None so
+        intersect is commutative and associative so can behave like an
+        operator."""
+        if a is None or b is None:
+            return None
+        else:
+            extents = (max(a.x, b.x), max(a.y, b.y),
+                       min(a.right, b.right), min(a.bottom, b.bottom))
+            if extents[0] < extents[2] and extents[1] < extents[3]:
+                return Region.from_extents(*extents)
+            else:
+                return None
 
     @property
-    def right(self):
-        """The x coordinate beyond the right edge of the region"""
-        return self.x + self.width
+    def width(self):
+        """The width of the region"""
+        return self.right - self.x
 
     @property
-    def bottom(self):
-        """The y coordinate beyond the bottom edge of the region"""
-        return self.y + self.height
+    def height(self):
+        """The height of the region"""
+        return self.bottom - self.y
 
     def contains(self, other):
         """Checks whether other is entirely contained within self"""
@@ -325,29 +376,30 @@ class Region(namedtuple('Region', 'x y width height')):
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
-    def intersect(self, other):
-        """Returns the intersection of self and the Region other"""
-        extents = (max(self.x, other.x), max(self.y, other.y),
-                   min(self.right, other.right), min(self.bottom, other.bottom))
-        if extents[0] < extents[2] and extents[1] < extents[3]:
-            return Region.from_extents(*extents)
-        else:
-            return None
+    def translate(self, x=0, y=0):
+        """Returns a new region with the position of the region adjusted by the
+        given amounts."""
+        return Region.from_extents(self.x + x, self.y + y,
+                                   self.right + x, self.bottom + y)
+
+Region.ALL = Region(x=float("-inf"), y=float("-inf"),
+                    right=float("inf"), bottom=float("inf"))
 
 
 def _bounding_box(a, b):
     """Find the bounding box of two regions.  Returns the smallest region which
     contains both regions a and b.
 
-    >>> _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+    >>> print _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
     Region(x=20, y=20, width=40, height=30)
-    >>> _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+    >>> print _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(None, Region(20, 30, 10, 20))
+    >>> print _bounding_box(None, Region(20, 30, 10, 20))
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(Region(20, 30, 10, 20), None)
+    >>> print _bounding_box(Region(20, 30, 10, 20), None)
     Region(x=20, y=30, width=10, height=20)
-    >>> _bounding_box(None, None)
+    >>> print _bounding_box(None, None)
+    None
     """
     if a is None:
         return b
@@ -888,8 +940,9 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None, config=None, user_patterns=None, user_words=None):
+def _tesseract(frame, region=Region.ALL,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               config=None, user_patterns=None, user_words=None):
     if lang is None:
         lang = 'eng'
     if config is None:
@@ -897,16 +950,13 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
 
     with _numpy_from_sample(frame, readonly=True) as f:
         frame_region = Region(0, 0, f.shape[1], f.shape[0])
-        if region is None:
-            region = frame_region
+        intersection = Region.intersect(frame_region, region)
+        if intersection is None:
+            warn("Requested OCR in region %s which doesn't overlap with "
+                 "the frame %s" % (str(region), frame_region))
+            return ('', None)
         else:
-            intersection = frame_region.intersect(region)
-            if intersection is None:
-                warn("Requested OCR in region %s which doesn't overlap with "
-                     "the frame %s" % (str(region), frame_region))
-                return ('', None)
-            else:
-                region = intersection
+            region = intersection
 
         subframe = f[region.y:region.bottom, region.x:region.right]
 
@@ -973,7 +1023,8 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             return (outfile.read(), region)
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+def ocr(frame=None, region=Region.ALL,
+        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None):
     """Return the text present in the video frame as a Unicode string.
@@ -1013,6 +1064,14 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     """
     if frame is None:
         frame = _display.get_sample()
+
+    if region is None:
+        warnings.warn(
+            "Passing region=None to ocr is deprecated since 0.21 and the "
+            "meaning will change in a future version.  To OCR an entire video "
+            "frame pass region=Region.ALL instead",
+            DeprecationWarning, stacklevel=2)
+        region = Region.ALL
 
     text, region = _tesseract(
         frame, region, mode, lang, config=tesseract_config,
@@ -1093,7 +1152,7 @@ class TextMatchResult(namedtuple(
                 repr(self.text)))
 
 
-def match_text(text, frame=None, region=None,
+def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None):
     """Search the screen for the given text.
