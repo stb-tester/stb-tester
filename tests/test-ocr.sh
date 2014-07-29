@@ -13,6 +13,7 @@ test_ocr_on_live_video() {
 	EOF
     stbt run -v \
         --source-pipeline="videotestsrc pattern=black ! \
+                video/x-raw,format=BGR ! \
                 textoverlay text=Hello\ there font-desc=Sans\ 48" \
         test.py
 }
