@@ -5,19 +5,24 @@ from os.path import dirname
 
 from gi.repository import Gst  # pylint: disable=E0611
 
-
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see
 # [bz #678663]).  Apparently this is fixed upstream but we are still awaiting
 # an upstream release (Mar 2014).  Hopefully this can be removed in the future.
 
+_GST_PADDING = 4  # From gstconfig.h
 
+
+# From struct GstMapInfo in gstreamer/gst/gstmemory.h:
 class _GstMapInfo(ctypes.Structure):
     _fields_ = [("memory", ctypes.c_void_p),   # GstMemory *memory
                 ("flags", ctypes.c_int),       # GstMapFlags flags
                 ("data", ctypes.POINTER(ctypes.c_byte)),    # guint8 *data
                 ("size", ctypes.c_size_t),     # gsize size
-                ("maxsize", ctypes.c_size_t)]  # gsize maxsize
+                ("maxsize", ctypes.c_size_t),  # gsize maxsize
+                ("user_data", ctypes.c_void_p * 4),     # gpointer user_data[4]
+                # gpointer _gst_reserved[GST_PADDING]:
+                ("_gst_reserved", ctypes.c_void_p * _GST_PADDING)]
 
 _GstMapInfo_p = ctypes.POINTER(_GstMapInfo)
 
