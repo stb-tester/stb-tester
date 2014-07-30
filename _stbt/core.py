@@ -1780,8 +1780,11 @@ def _find_match(image, template, match_parameters, imglog):
             image_pyramid[level], template_pyramid[level], match_parameters,
             roi_mask, level, imglog)
 
-        if level == 0 or not matched:
-            return matched, _upsample(best_match_position, level), certainty
+        if not matched:
+            break
+
+    # pylint: disable=W0631
+    return matched, _upsample(best_match_position, level), certainty
 
 
 def _match_template(image, template, match_parameters, roi_mask, level, imglog):
