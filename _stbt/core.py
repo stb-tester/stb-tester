@@ -1770,6 +1770,11 @@ def _find_match(image, template, match_parameters, imglog):
     roi_mask = None  # Initial region of interest: The whole image.
 
     for level in reversed(range(len(template_pyramid))):
+        if roi_mask is not None:
+            if any(x < 3 for x in roi_mask.shape):
+                roi_mask = None
+            else:
+                roi_mask = cv2.pyrUp(roi_mask)
 
         matched, best_match_position, certainty, roi_mask = _match_template(
             image_pyramid[level], template_pyramid[level], match_parameters,
@@ -1799,11 +1804,10 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
              image.shape[1] - template.shape[1] + 1),
             dtype=numpy.float32))
 
-    if roi_mask is None or any(x < 3 for x in roi_mask.shape):
+    if roi_mask is None:
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        roi_mask = cv2.pyrUp(roi_mask)
         imglog.add("roi_mask", roi_mask, level)
         contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
