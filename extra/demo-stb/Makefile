@@ -1,6 +1,6 @@
 virtual-stb/big_buck_bunny_480p_stereo.ogg:
 	cd $(dirname $@) && \
-	wget http://mirror.bigbuckbunny.de/peach/bigbuckbunny_movies/$(notdir $@)
+	wget http://mirrorblender.top-ix.org/peach/bigbuckbunny_movies/$(notdir $@)
 
 docker-build :
 	docker build -t $(docker_prefix)virtual-stb-stbt-demo . && \

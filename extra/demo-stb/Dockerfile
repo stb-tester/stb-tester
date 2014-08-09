@@ -7,7 +7,7 @@ RUN sudo apt-get update && \
 
 RUN mkdir /var/lib/stbt/virtual-stb && \
     curl --fail -o /var/lib/stbt/virtual-stb/big_buck_bunny_480p_stereo.ogg \
-        http://mirror.bigbuckbunny.de/peach/bigbuckbunny_movies/big_buck_bunny_480p_stereo.ogg
+        http://mirrorblender.top-ix.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_stereo.ogg
 
 RUN mkdir -p /var/lib/stbt/.config/chromium/Default/ /var/lib/stbt/.config/stbt
 ADD Preferences /var/lib/stbt/.config/chromium/Default/Preferences
