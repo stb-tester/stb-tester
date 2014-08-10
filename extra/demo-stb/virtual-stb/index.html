@@ -200,8 +200,8 @@ $(document).ready(function() {
       $("#pause-patch").html("&#xe106;");
       $("#pause-button p").text("Pause");
       play_patch_timeout = setTimeout(
-        function() { $("#pause-patch").fadeOut(400) },
-        1500);
+        function() { $("#pause-patch").fadeOut(500) },
+        1000);
     }
     else {
       tv.pause();
