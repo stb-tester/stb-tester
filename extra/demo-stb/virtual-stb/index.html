@@ -25,6 +25,14 @@
       width: 150px;
       opacity: 0.6;
     }
+    #pause-patch {
+      display: none;
+      position: absolute; top: 160px; left: 346px;
+      width: 160px; height: 160px; text-align: center;
+      font-size: 80px; line-height: 160px;
+      background-color: rgba(200, 200, 200, 0.7);
+      border-radius: 8px;
+    }
 
     .help {
       position: absolute; bottom: 20px; right: 20px;
@@ -106,7 +114,15 @@
 
 <img id="logo" src="stb-tester.svg">
 
+<div id="pause-patch" class="ligaturesymbols"></div>
+
 <ul id="tv-help" class="help">
+  <li id="pause-button">
+    <a href="#">
+      <h1>P</h1>
+      <p>Pause</p>
+    </a>
+  </li>
   <li id="home-button">
     <a href="#">
       <h1>H</h1>
@@ -176,14 +192,41 @@ $(document).ready(function() {
   }
   var hide_home = show_home;
 
+  var play_patch_timeout;
+  function pause_or_play() {
+    var tv = $("#tv")[0];
+    if (tv.paused) {
+      tv.play();
+      $("#pause-patch").html("&#xe106;");
+      $("#pause-button p").text("Pause");
+      play_patch_timeout = setTimeout(
+        function() { $("#pause-patch").fadeOut(400) },
+        1500);
+    }
+    else {
+      tv.pause();
+      clearTimeout(play_patch_timeout);
+      $("#pause-patch").html("&#xe09d;");
+      $("#pause-patch").show();
+      $("#pause-button p").text("Play");
+    }
+  }
+
   $("#home-button").click(show_home);
   $("#close-button").click(hide_home);
+  $("#pause-button").click(pause_or_play);
+
   $(document).keydown(function(e) {
-    if (! $("#home").hasClass("active") && e.which == "H".charCodeAt(0)) {
-      show_home();
+    if ($("#home").hasClass("active")) {
+      switch (e.which) {
+        case 27: hide_home(); break;  // escape
+      }
     }
-    else if ($("#home").hasClass("active") && e.which == 27 /* escape */) {
-      hide_home();
+    else {  /* tv */
+      switch (e.which) {
+        case "H".charCodeAt(0): show_home(); break;
+        case "P".charCodeAt(0): pause_or_play(); break;
+      }
     }
   });
 });
