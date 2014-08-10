@@ -5,69 +5,184 @@
   <title>stb-tester demo stb</title>
 
   <style>
+    body, div, h1, p, ul, li {
+      margin: 0; padding: 0;
+    }
     body {
       background-color: #000;
       font-family: Verdana, sans-serif; font-size: 12pt;
+      margin: 0; padding: 0;
+    }
+    #body {
+      position: absolute; margin: 0; padding: 0;
+      width: 853px; height: 480px; overflow: hidden;
     }
     #tv {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      z-index: -1;
+      position: absolute; z-index: -1;
     }
     #logo {
-      position: fixed; top: 20px; right: 10%;
+      position: absolute; top: 10px; right: 0; z-index: 1;
+      width: 150px;
       opacity: 0.6;
     }
-    #help {
-      position: fixed; bottom: 20px; right: 10%;
+
+    .help {
+      position: absolute; bottom: 20px; right: 20px;
       list-style: none; margin: 0; padding: 0;
       text-align: center; color: #fff;
+      z-index: 1;
     }
-    #help li {
-      display: inline; list-style: none;
+    .help li {
+      list-style: none; margin-top: 10px;
     }
-    #help li a {
-      display: inline-block; width: 60px; text-decoration: none;
+    .help li a {
+      display: inline; width: 60px; text-decoration: none; padding-bottom: 10px;
     }
-    #help h1 {
+    .help h1 {
       width: 40px; height: 40px; line-height: 40px; margin: 0 auto;
       background-color: #fff; border-radius: 8px;
       box-shadow: 2px 2px 2px 0 #333;
       font-size: 18pt; color: #333;
     }
-    #help p {
-      color: #fff; text-shadow: 2px 2px 2px #333; margin: 0 0 1em;
+    .help p {
+      color: #fff; text-shadow: 2px 2px 2px #333;
     }
-    /* #help #back { display: none; } */
+    #close-button h1 {
+      font-size: 9pt;
+    }
+
+    @font-face {
+      font-family: LigatureSymbols;
+      src: url('LigatureSymbols-2.11.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    .ligaturesymbols {
+      font-family: LigatureSymbols;
+    }
+
+    #home {
+      position: absolute; transition: 1s; left: -100%;
+      width: 100%; height: 100%;
+      background-color: rgba(200, 200, 200, 0.7);
+    }
+    #home.active {
+      left: 0;
+    }
+    #home div {
+      padding: 0 177px 0 20px;
+    }
+    #home img {
+      width: 124px; height: 175px;
+    }
+    #home img + p {
+      width: 124px;
+      font-size: 9pt;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #home img.selected {}
+    #home div div {
+      float: left; padding: 10px; margin: 10px;
+      text-align: center;
+      background-color: #000;
+      color: #fff; font-weight: bold;
+    }
+    #home div div:first-child {
+      background: linear-gradient(to bottom, #0085e3, #005a9c);
+    }
   </style>
 </head>
 
 <body>
+<div id="body">
 
 <video id="tv" src="big_buck_bunny_480p_stereo.ogg" autoplay loop muted></video>
 
 <img id="logo" src="stb-tester.svg">
 
-<ul id="help">
-  <li id="home">
+<ul id="tv-help" class="help">
+  <li id="home-button">
     <a href="#">
       <h1>H</h1>
       <p>Home</p>
     </a>
   </li>
-  <li id="search">
-    <a href="#">
-      <h1>S</h1>
-      <p>Search</p>
-    </a>
-  </li>
-  <li id="back">
-    <a href="#">
-      <h1>&#9003;</h1>
-      <p>Back</p>
-    </a>
-  </li>
 </ul>
 
+<div id="home"><div>
+
+  <div>
+    <img src="thumbnail-ed.jpg">
+    <p>Elephants Dream</p>
+  </div>
+  <div>
+    <img src="thumbnail-bbb.jpg">
+    <p>Big Buck Bunny</p>
+  </div>
+  <div>
+    <img src="thumbnail-sintel.jpg">
+    <p>Sintel</p>
+  </div>
+  <div>
+    <img src="thumbnail-tos.png">
+    <p>Tears Of Steel</p>
+  </div>
+  <div>
+    <img src="thumbnail-hercules.jpg">
+    <p>Hercules</p>
+  </div>
+
+  <ul class="help">
+    <li>
+      <a href="#">
+        <h1 class="ligaturesymbols">&#xe093;</h1>
+        <p>Select</p>
+      </a>
+    </li>
+    <li>
+      <a href="#">
+        <h1>&#x21b5;</h1>
+        <p>Play</p>
+      </a>
+    </li>
+    <li id="search-button">
+      <a href="#">
+        <h1>&#x2328;</h1>
+        <p>Search</p>
+      </a>
+    </li>
+    <li id="close-button">
+      <a href="#">
+        <h1>esc</h1>
+        <p>Close</p>
+      </a>
+    </li>
+  </ul>
+</div></div>
+
+<script src="jquery-2.1.1.min.js"></script>
+<script>
+$(document).ready(function() {
+  function show_home() {
+    $("#home").toggleClass("active");
+    $("#tv-help").toggle();
+    return false;
+  }
+  var hide_home = show_home;
+
+  $("#home-button").click(show_home);
+  $("#close-button").click(hide_home);
+  $(document).keydown(function(e) {
+    if (! $("#home").hasClass("active") && e.which == "H".charCodeAt(0)) {
+      show_home();
+    }
+    else if ($("#home").hasClass("active") && e.which == 27 /* escape */) {
+      hide_home();
+    }
+  });
+});
+</script>
+
+</div>
 </body>
 </html>
