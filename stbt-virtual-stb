@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec python "$(dirname "$0")"/extra/virtual-stb/virtual-stb.py "$@"

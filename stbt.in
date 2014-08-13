@@ -17,6 +17,8 @@
 #/     screenshot     Capture a single screenshot
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
+#/     virtual-stb    Start and configure a virtual stb for testing without
+#/                    hardware
 #/
 #/ For help on a specific command do 'stbt <command> --help'.
 #/ See 'man stbt' for more detailed information.
@@ -24,6 +26,7 @@
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 export STBT_VERSION="@VERSION@"
+export PYTHONPATH=@LIBEXECDIR@/stbt:$PYTHONPATH
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 case "$1" in
@@ -31,7 +34,7 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
+    run|record|batch|config|control|lint|power|screenshot|templatematch|tv|virtual-stb)
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;

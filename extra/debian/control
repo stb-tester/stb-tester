@@ -47,15 +47,18 @@ Depends: ${shlibs:Depends},
          openssh-client,
          pylint,
          python (>= 2.7),
+         python-enum,
          python-flask,
          python-gobject,
          python-jinja2,
          python-lxml,
          python-opencv,
+         ratpoison,
          snmp,
          tesseract-ocr,
          tesseract-ocr-eng,
-         xdotool
+         xdotool,
+         xserver-xorg-video-dummy
 Description: Automated User Interface testing for set-top boxes. 
  stb-tester tests a set-top-box by issuing commands to it using a remote-control
  and checking that it has done the right thing by analysing what is on screen.
