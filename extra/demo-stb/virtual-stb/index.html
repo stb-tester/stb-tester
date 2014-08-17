@@ -312,6 +312,9 @@ $(document).ready(function() {
   $("#pause-button").click(pause_or_play);
 
   $(document).keydown(function(e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) {
+      return true;
+    }
     if ($("#home").hasClass("active")) {
       switch (e.which) {
         case 13: select(); break;  // enter
