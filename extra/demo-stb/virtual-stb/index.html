@@ -148,19 +148,19 @@
 <div id="home">
 
   <div class="carousel">
-    <div>
+    <div data-movie="ed_1024.ogv">
       <img src="thumbnail-ed.jpg">
       <p>Elephants Dream</p>
     </div>
-    <div>
+    <div data-movie="big_buck_bunny_480p_stereo.ogg">
       <img src="thumbnail-bbb.jpg">
       <p>Big Buck Bunny</p>
     </div>
-    <div>
+    <div data-movie="sintel_trailer-720p.ogv">
       <img src="thumbnail-sintel.jpg">
       <p>Sintel</p>
     </div>
-    <div>
+    <div data-movie="tears_of_steel_720p.mkv">
       <img src="thumbnail-tos.png">
       <p>Tears Of Steel</p>
     </div>
@@ -213,19 +213,26 @@ $(document).ready(function() {
     var tv = $("#tv")[0];
     if (tv.paused) {
       tv.play();
-      $("#pause-patch").html("&#xe106;");
+      show_play_patch();
       $("#pause-button p").text("Pause");
-      play_patch_timeout = setTimeout(
-        function() { $("#pause-patch").fadeOut(500) },
-        1000);
     }
     else {
       tv.pause();
-      clearTimeout(play_patch_timeout);
-      $("#pause-patch").html("&#xe09d;");
-      $("#pause-patch").show();
+      show_pause_patch();
       $("#pause-button p").text("Play");
     }
+  }
+  function show_play_patch() {
+    $("#pause-patch").html("&#xe106;");
+    $("#pause-patch").show();
+    play_patch_timeout = setTimeout(
+      function() { $("#pause-patch").fadeOut(500) },
+      1000);
+  }
+  function show_pause_patch() {
+    clearTimeout(play_patch_timeout);
+    $("#pause-patch").html("&#xe09d;");
+    $("#pause-patch").show();
   }
 
   // background must be outside of `.carousel div`, so that it is a sibling of
@@ -297,6 +304,13 @@ $(document).ready(function() {
         break;
     }
   }
+  function select() {
+    var item = $($("#home .carousel div")[selection.carousel_index - 1]);
+    $("#tv").attr("src", item.data("movie"));
+    $("#tv")[0].load();
+    show_play_patch();
+    hide_home();
+  }
 
   create_carousel_backgrounds();
   $("#home-button").click(show_home);
@@ -306,6 +320,7 @@ $(document).ready(function() {
   $(document).keydown(function(e) {
     if ($("#home").hasClass("active")) {
       switch (e.which) {
+        case 13: select(); break;  // enter
         case 27: hide_home(); break;  // escape
         case 37: move_selection("left"); break;
         case 38: move_selection("up"); break;
