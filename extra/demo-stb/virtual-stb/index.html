@@ -21,7 +21,7 @@
       position: absolute; z-index: -1; width: 100%; height: 100%;
     }
     #logo {
-      position: absolute; top: 20px; right: 0; z-index: 1;
+      position: absolute; top: 20px; right: 0; z-index: 4;
       width: 225px;
       opacity: 0.6;
     }
@@ -118,6 +118,21 @@
       background: linear-gradient(to bottom, #0085e3, #005a9c);
       transition-duration: 0.3s;
     }
+
+    #dialogue {
+      display: none;
+      position: absolute; width: 100%; height: 100%; z-index: 3;
+      background-color: rgba(200, 200, 200, 0.7);
+      text-align: center;
+    }
+    #dialogue div {
+      margin: 240px auto 0; width: 50%; padding: 40px;
+      background-color: #fff; color: #333;
+      border-radius: 8px; box-shadow: 2px 2px 2px 0 #333;
+    }
+    #dialogue h1 {
+      font-size: 18pt; margin: 0 0 1em;
+    }
   </style>
 </head>
 
@@ -192,6 +207,13 @@
   </ul>
 </div>
 
+<div id="dialogue">
+  <div>
+    <h1></h1>
+    <p></p>
+  </div>
+</div>
+
 <script src="jquery-2.1.1.min.js"></script>
 <script>
 $(document).ready(function() {
@@ -201,6 +223,12 @@ $(document).ready(function() {
     return false;
   }
   var hide_home = show_home;
+
+  function dialogue(title, message) {
+    $("#dialogue h1").text(title);
+    $("#dialogue p").text(message);
+    $("#dialogue").show();
+  }
 
   var play_patch_timeout;
   function pause_or_play() {
@@ -300,10 +328,17 @@ $(document).ready(function() {
   }
   function select() {
     var item = $($("#home .carousel div")[selection.carousel_index - 1]);
-    $("#tv").attr("src", item.data("movie"));
-    $("#tv")[0].load();
-    show_play_patch();
-    hide_home();
+    var movie_url = item.data("movie");
+    if (movie_url) {
+      $("#tv").attr("src", movie_url);
+      $("#tv")[0].load();
+      show_play_patch();
+      hide_home();
+    }
+    else {
+      dialogue(
+        "Error", "This content is not available to stream in your region.");
+    }
   }
 
   // Forget current selection when the user closes the menu.
@@ -321,6 +356,15 @@ $(document).ready(function() {
   $(document).keydown(function(e) {
     if (e.ctrlKey || e.altKey || e.metaKey) {
       return true;
+    }
+    if ($("#dialogue").css("display") != "none") {
+      switch (e.which) {
+        case 13:  // enter
+        case 27:  // escape
+          $("#dialogue").fadeOut();
+          break;
+      }
+      return false;
     }
     if ($("#home").hasClass("active")) {
       switch (e.which) {
