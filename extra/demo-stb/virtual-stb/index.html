@@ -306,6 +306,13 @@ $(document).ready(function() {
     hide_home();
   }
 
+  // Forget current selection when the user closes the menu.
+  $("#home").on("transitionend", function(e) {
+    if (e.target == $("#home")[0] && $("#home").position().left != 0) {
+      move_selection_to(1);
+    }
+  });
+
   create_carousel_backgrounds();
   $("#home-button").click(show_home);
   $("#close-button").click(hide_home);

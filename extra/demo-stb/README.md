@@ -13,3 +13,4 @@ A bare-bones HTML5 set-top box UI that can be used to demo stb-tester.
 
 * If you pause while the "play" patch is fading out, the "pause" patch doesn't
   appear.
+* If you close the menu it forgets your current selection.
