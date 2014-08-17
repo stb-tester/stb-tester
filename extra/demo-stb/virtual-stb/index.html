@@ -83,26 +83,40 @@
     #home.active {
       left: 0;
     }
-    #home div {
-      padding: 0 400px 0 40px;
+    #home .carousel {
+      position: absolute; top: 30px; left: 50px;
     }
-    #home img {
+    #home .carousel img {
       width: 170px; height: 240px;
     }
-    #home img + p {
+    #home .carousel img + p {
       width: 170px;
       font-size: 12pt;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    #home img.selected {}
-    #home div div {
-      float: left; padding: 10px; margin: 20px 10px 0;
-      text-align: center;
-      background-color: #000;
+    #home .carousel div {
+      position: absolute; padding: 10px; text-align: center;
       color: #fff; font-weight: bold;
     }
-    #home div div:first-child {
+    #home .carousel div:nth-child(1),
+    #home .carousel div:nth-child(2),
+    #home .carousel div:nth-child(3),
+    #home .carousel div:nth-child(4) { top: 0; }
+    #home .carousel div:nth-child(5),
+    #home .carousel div:nth-child(6),
+    #home .carousel div:nth-child(7),
+    #home .carousel div:nth-child(8) { top: 302px; }
+    #home .carousel div:nth-child(4n+1) { left: 0; }
+    #home .carousel div:nth-child(4n+2) { left: 210px; }
+    #home .carousel div:nth-child(4n+3) { left: 420px; }
+    #home .carousel div:nth-child(4n+4) { left: 630px; }
+    #home .carousel { z-index: 2; }
+    #home .carousel-backgrounds { z-index: 0; }
+    #home .carousel-backgrounds div { background-color: #000; }
+    #home .carousel-selection {
+      position: absolute; top: 0; left; 0; z-index: 1;
       background: linear-gradient(to bottom, #0085e3, #005a9c);
+      transition-duration: 0.3s;
     }
   </style>
 </head>
@@ -131,27 +145,29 @@
   </li>
 </ul>
 
-<div id="home"><div>
+<div id="home">
 
-  <div>
-    <img src="thumbnail-ed.jpg">
-    <p>Elephants Dream</p>
-  </div>
-  <div>
-    <img src="thumbnail-bbb.jpg">
-    <p>Big Buck Bunny</p>
-  </div>
-  <div>
-    <img src="thumbnail-sintel.jpg">
-    <p>Sintel</p>
-  </div>
-  <div>
-    <img src="thumbnail-tos.png">
-    <p>Tears Of Steel</p>
-  </div>
-  <div>
-    <img src="thumbnail-hercules.jpg">
-    <p>Hercules</p>
+  <div class="carousel">
+    <div>
+      <img src="thumbnail-ed.jpg">
+      <p>Elephants Dream</p>
+    </div>
+    <div>
+      <img src="thumbnail-bbb.jpg">
+      <p>Big Buck Bunny</p>
+    </div>
+    <div>
+      <img src="thumbnail-sintel.jpg">
+      <p>Sintel</p>
+    </div>
+    <div>
+      <img src="thumbnail-tos.png">
+      <p>Tears Of Steel</p>
+    </div>
+    <div>
+      <img src="thumbnail-hercules.jpg">
+      <p>Hercules</p>
+    </div>
   </div>
 
   <ul class="help">
@@ -180,7 +196,7 @@
       </a>
     </li>
   </ul>
-</div></div>
+</div>
 
 <script src="jquery-2.1.1.min.js"></script>
 <script>
@@ -212,6 +228,77 @@ $(document).ready(function() {
     }
   }
 
+  // background must be outside of `.carousel div`, so that it is a sibling of
+  // `.carousel-selection` so that z-index works (z-indexes are only relative
+  // between children of the same parent).
+  function create_carousel_backgrounds() {
+    var backgrounds = $("<div class='carousel-backgrounds'></div>");
+    var carousel = $("#home .carousel");
+    backgrounds.css({
+      position: "absolute",
+      top: carousel.css("top"),
+      left: carousel.css("left"),
+    });
+    $("#home .carousel div").each(function(n, div) {
+      var background = $("<div></div>");
+      var item = $(div);
+      background.css({
+        position: "absolute",
+        padding: item.css("padding"),
+        top: item.css("top"),
+        left: item.css("left"),
+        width: item.css("width"),
+        height: item.css("height"),
+      });
+      backgrounds.append(background);
+    });
+    $("#home").append(backgrounds);
+  }
+
+  var selection = $("<div class='carousel-selection'></div>");
+  move_selection_to(1);
+  $("#home").append(selection);
+  function move_selection_to(index) {
+    var carousel = $("#home .carousel");
+    var item = $($("#home .carousel div")[index - 1]);
+    selection.css({
+      position: "absolute",
+      padding: item.css("padding"),
+      top: item.position().top + carousel.position().top,
+      left: item.position().left + carousel.position().left,
+      width: item.css("width"),
+      height: item.css("height"),
+    });
+    selection.carousel_index = index;
+  }
+  function move_selection(direction) {
+    var num_items = $("#home .carousel div").length;
+    switch(direction) {
+      case "left":
+        if (selection.carousel_index %4 != 1) {
+          move_selection_to(selection.carousel_index - 1);
+        }
+        break;
+      case "right":
+        if (selection.carousel_index % 4 != 0 &&
+            selection.carousel_index < num_items) {
+          move_selection_to(selection.carousel_index + 1);
+        }
+        break;
+      case "up":
+        if (selection.carousel_index > 4) {
+          move_selection_to(selection.carousel_index - 4);
+        }
+        break;
+      case "down":
+        if (selection.carousel_index + 4 <= num_items) {
+          move_selection_to(selection.carousel_index + 4);
+        }
+        break;
+    }
+  }
+
+  create_carousel_backgrounds();
   $("#home-button").click(show_home);
   $("#close-button").click(hide_home);
   $("#pause-button").click(pause_or_play);
@@ -220,6 +307,10 @@ $(document).ready(function() {
     if ($("#home").hasClass("active")) {
       switch (e.which) {
         case 27: hide_home(); break;  // escape
+        case 37: move_selection("left"); break;
+        case 38: move_selection("up"); break;
+        case 39: move_selection("right"); break;
+        case 40: move_selection("down"); break;
       }
     }
     else {  /* tv */
