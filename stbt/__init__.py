@@ -1780,6 +1780,7 @@ class Display(object):
     def restart_source(self):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
+        self.sink_pipeline.set_state(Gst.State.NULL)
         self.source_pipeline.set_state(Gst.State.NULL)
         self.source_pipeline = None
         GObjectTimeout(5, self.start_source).start()
@@ -1791,6 +1792,7 @@ class Display(object):
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
         self.source_pipeline.set_state(Gst.State.PLAYING)
+        self.sink_pipeline.set_state(Gst.State.PLAYING)
         warn("Restarted source pipeline")
         if self.restart_source_enabled:
             self.underrun_timeout.start()
