@@ -143,6 +143,8 @@ Additional options to stbt run
 
 --save-video=<file>
   Record a video (in the HTML5-compatible WebM format) to the specified `file`.
+  Multiple video files are created in case of video loss from VidiU or HD PVR
+  video-capture devices, indexed as `file`, `file1`, `file2` etc.
 
 Additional options to stbt record
 ---------------------------------
