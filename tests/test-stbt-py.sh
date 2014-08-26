@@ -408,3 +408,13 @@ test_that_transformation_pipeline_transforms_video() {
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
+
+test_that_restart_source_doesnt_increase_timeout() {
+    cat > test.py <<-EOF &&
+	import stbt
+	for i, _ in enumerate(stbt.frames(timeout_secs=10)):
+	    if i == 75:  # ~3 secs
+	        stbt._display.restart_source()
+	EOF
+    timeout 11s stbt run -v test.py || fail "Exceeded the expected timeout"
+}

@@ -1522,10 +1522,12 @@ class Display(object):
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
         self.source_pipeline = None
-        self.start_timestamp = None
         self.underrun_timeout = None
         self.video_debug = []
         self.tearing_down = False
+        self.timestamp_offset = 0
+        self.last_timestamp = 0
+        self.last_sample_time = 0
 
         self.restart_source_enabled = restart_source
 
@@ -1601,7 +1603,6 @@ class Display(object):
         # Handle loss of video (but without end-of-stream event) from the
         # Hauppauge HDPVR capture device.
         source_queue = self.source_pipeline.get_by_name("_stbt_user_data_queue")
-        self.start_timestamp = None
         source_queue.connect("underrun", self.on_underrun)
         source_queue.connect("running", self.on_running)
 
@@ -1638,7 +1639,7 @@ class Display(object):
             yield (copy, sample.get_buffer().pts)
 
     def gst_samples(self, timeout_secs=None):
-        self.start_timestamp = None
+        start_timestamp = None
 
         with self.lock:
             while True:
@@ -1648,11 +1649,11 @@ class Display(object):
                 timestamp = sample.get_buffer().pts
 
                 if timeout_secs is not None:
-                    if not self.start_timestamp:
-                        self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
+                    if not start_timestamp:
+                        start_timestamp = timestamp
+                    if timestamp - start_timestamp > timeout_secs * 1e9:
                         debug("timed out: %d - %d > %d" % (
-                            timestamp, self.start_timestamp,
+                            timestamp, start_timestamp,
                             timeout_secs * 1e9))
                         return
 
@@ -1664,6 +1665,11 @@ class Display(object):
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
+        buf = sample.get_buffer()
+        # Timestamps are counted from zero after a source pipeline restart
+        buf.pts += self.timestamp_offset
+        self.last_timestamp = buf.pts
+        self.last_sample_time = time.time()
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
@@ -1791,6 +1797,9 @@ class Display(object):
             return False
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
+        self.timestamp_offset = \
+            self.last_timestamp + (time.time() - self.last_sample_time) * 1e9
+        ddebug("start_source: new timestamp offset: %d" % self.timestamp_offset)
         self.source_pipeline.set_state(Gst.State.PLAYING)
         self.sink_pipeline.set_state(Gst.State.PLAYING)
         warn("Restarted source pipeline")
