@@ -1547,17 +1547,17 @@ class Display(object):
             appsink])
         self.create_source_pipeline()
 
-        self.video_file_name = save_video
-        self.video_file_index = 0
-        if self.video_file_name:
-            if not self.video_file_name.endswith(".webm"):
-                self.video_file_name += ".webm"
-            debug("Saving video to '%s'" % self.video_file_name)
+        if save_video:
+            if not save_video.endswith(".webm"):
+                save_video += ".webm"
+            debug("Saving video to '%s'" % save_video)
+            if os.path.isfile(save_video):
+                os.unlink(save_video)
             video_pipeline = (
                 "t. ! queue leaky=downstream ! videoconvert ! "
                 "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
-                "webmmux ! filesink name=_stbt_filesink location=%s"
-                % self.video_file_name)
+                "webmmux streamable=true ! filesink location=%s append=true"
+                % save_video)
         else:
             video_pipeline = ""
 
@@ -1803,21 +1803,12 @@ class Display(object):
         self.timestamp_offset = \
             self.last_timestamp + (time.time() - self.last_sample_time) * 1e9
         ddebug("start_source: new timestamp offset: %d" % self.timestamp_offset)
-        self.start_new_video_file()
         self.source_pipeline.set_state(Gst.State.PLAYING)
         self.sink_pipeline.set_state(Gst.State.PLAYING)
         warn("Restarted source pipeline")
         if self.restart_source_enabled:
             self.underrun_timeout.start()
         return False  # stop the timeout from running again
-
-    def start_new_video_file(self):
-        filesink = self.sink_pipeline.get_by_name("_stbt_filesink")
-        if filesink:
-            self.video_file_index += 1
-            base, ext = os.path.splitext(self.video_file_name)
-            filesink.set_property(
-                "location", "%s%d%s" % (base, self.video_file_index, ext))
 
     @staticmethod
     def appsink_await_eos(appsink, timeout=None):
