@@ -2789,7 +2789,7 @@ def _connect_tcp_socket(address, port, timeout=3):
         s.connect((address, port))
         return s
     except socket.error as e:
-        e.args = (("Failed to connect to remote at %s:%d: %s" % (
+        e.args = (("Failed to connect to remote control at %s:%d: %s" % (
             address, port, e)),)
         e.strerror = e.args[0]
         raise
