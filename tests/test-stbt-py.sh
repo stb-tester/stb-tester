@@ -341,7 +341,7 @@ test_draw_text() {
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v --control none \
-        --source-pipeline 'videotestsrc is-live=true pattern=black' \
+        --source-pipeline 'videotestsrc is-live=true pattern=white' \
         --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
         draw-text.py &
     trap "kill $!; rm fifo" EXIT
