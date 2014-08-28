@@ -1851,8 +1851,16 @@ class Display(object):
             with _numpy_from_sample(sample) as img:
                 for i in range(len(self.video_debug)):
                     text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
+                    origin = (10, (i + 1) * 30)
+                    (width, height), _ = cv2.getTextSize(
+                        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+                        thickness=1)
+                    cv2.rectangle(
+                        img, origin, (origin[0] + width, origin[1] - height),
+                        thickness=-1,  # filled
+                        color=(0, 0, 0))
                     cv2.putText(
-                        img, text, (10, (i + 1) * 30),
+                        img, text, origin,
                         cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
                         color=(255, 255, 255))
 
