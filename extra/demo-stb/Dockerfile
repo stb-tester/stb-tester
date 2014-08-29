@@ -1,4 +1,4 @@
-FROM stb-tester-virtual-stb:latest
+FROM stb_tester/stb-tester-virtual-stb:latest
 
 MAINTAINER david@stb-tester.com
 
