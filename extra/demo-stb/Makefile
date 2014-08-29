@@ -15,7 +15,7 @@ virtual-stb/LigatureSymbols-2.11.ttf:
 	unzip -p LigatureSymbols.zip LigatureSymbols/$(notdir $@) > $@
 	rm -f LigatureSymbols.zip
 
-docker-build :
+docker-build : install-dependencies
 	docker build -t $(docker_prefix)virtual-stb-stbt-demo . && \
 	printf "Now run with:\n\n" && \
 	printf "    stbt virtual-stb --docker-image=$(docker_prefix)virtual-stb-stbt-demo\n"
