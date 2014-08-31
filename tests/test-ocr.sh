@@ -4,7 +4,7 @@ test_ocr_on_live_video() {
     cat > test.py <<-EOF
 	import stbt
 	
-	stbt.frames(timeout_secs=30).next()  # wait 'til video pipeline playing
+	stbt.frames(timeout_secs=60).next()  # wait 'til video pipeline playing
 	text = stbt.ocr()
 	assert text == "Hello there", "Unexpected text: %s" % text
 	
