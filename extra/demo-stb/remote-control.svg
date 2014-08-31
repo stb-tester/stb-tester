@@ -377,7 +377,7 @@
        key="KEY_OK" />
     <g
        id="g4635"
-       class="KEY"
+       class="key"
        key="KEY_PLAYPAUSE">
       <path
          transform="matrix(1.7894737,0,0,1.7894737,-157.27444,-208.48144)"
