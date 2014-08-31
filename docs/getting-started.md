@@ -246,8 +246,8 @@ configuration instructions see [Infrared hardware for DIY stb-tester rigs].
 network. Currently stb-tester supports Samsung TVs; see the documentation for
 ["control" in the stbt(1) man page] for configuration details.
 
-For other control methods, add your own receiver and emitter code to stb-tester
-by editing *stbt.py* and send us a pull request on github.
+For other control methods, add your own receiver and emitter code and send us a
+pull request on github.
 
 ## stbt control
 

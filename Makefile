@@ -67,6 +67,7 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates \
@@ -79,9 +80,11 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0644 \
 	    gst_hacks.py \
 	    irnetbox.py \
-	    stbt.py \
 	    stbt_pylint_plugin.py \
 	    $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 \
+	    stbt/__init__.py \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
 	    stbt-batch.d/run \
@@ -121,7 +124,7 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: stbt.py api-doc.sh
+README.rst: stbt/__init__.py api-doc.sh
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
