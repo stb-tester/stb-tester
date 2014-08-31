@@ -2490,7 +2490,7 @@ class LircRemote(object):
 
 
 def new_local_lirc_remote(lircd_socket, control_name):
-    if lircd_socket is None:
+    if lircd_socket is '':
         lircd_socket = '/var/run/lirc/lircd'
 
     def _connect():
@@ -2520,7 +2520,7 @@ def new_tcp_lirc_remote(hostname, port, control_name):
         control = new_tcp_lirc_remote("localhost", "8765", "humax")
         control.press("MENU")
     """
-    if hostname is None:
+    if hostname is '':
         hostname = 'localhost'
     port = int(port)
 
