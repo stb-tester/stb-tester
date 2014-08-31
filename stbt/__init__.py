@@ -1478,7 +1478,7 @@ def _config_init(force=False):
     if force or not _config:
         config = ConfigParser.SafeConfigParser()
         config.readfp(
-            open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
+            open(os.path.join(os.path.dirname(__file__), '..', 'stbt.conf')))
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
             system_config = config.get('global', '__system_config')
@@ -2751,8 +2751,8 @@ def stbt_control_listen(keymap_file):
     """Returns an iterator yielding keypresses received from `stbt control`.
     """
     import imp
-    tool_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             'stbt-control')
+    tool_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..', 'stbt-control')
     stbt_control = imp.load_source('stbt_control', tool_path)
 
     global _debug_level
@@ -3013,7 +3013,8 @@ def temporary_x_session():
     with _named_temporary_directory() as tmp:
         x11 = subprocess.Popen(
             ['Xorg', '-logfile', './99.log', '-config',
-             os.path.dirname(__file__) + '/tests/xorg.conf', ':99'],
+             os.path.join(os.path.dirname(__file__), '../tests/xorg.conf'),
+             ':99'],
             cwd=tmp, stderr=open('/dev/null', 'w'))
         while not os.path.exists('/tmp/.X11-unix/X99'):
             assert x11.poll() is None
@@ -3141,7 +3142,7 @@ def test_ocr_on_static_images():
             kwargs["mode"] = mode
         text = ocr(
             cv2.imread(os.path.join(
-                os.path.dirname(__file__), "tests", "ocr", image)),
+                os.path.dirname(__file__), "..", "tests", "ocr", image)),
             **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
