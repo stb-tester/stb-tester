@@ -78,12 +78,12 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
-	    gst_hacks.py \
 	    irnetbox.py \
 	    stbt_pylint_plugin.py \
 	    $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
 	    stbt/__init__.py \
+	    stbt/gst_hacks.py \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
