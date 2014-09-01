@@ -34,37 +34,6 @@
       border-radius: 12px;
     }
 
-    .help {
-      position: absolute; bottom: 20px; right: 20px;
-      list-style: none; margin: 0; padding: 0;
-      text-align: center; color: #fff;
-      z-index: 1;
-    }
-    .help li {
-      list-style: none; margin-top: 10px;
-    }
-    .help li a {
-      display: inline; width: 60px; text-decoration: none; padding-bottom: 10px;
-    }
-    .help h1 {
-      width: 40px; height: 40px; line-height: 40px; margin: 0 auto;
-      background-color: #fff; border-radius: 8px;
-      box-shadow: 2px 2px 2px 0 #333;
-      font-size: 18pt; color: #333;
-    }
-    .help p {
-      color: #fff; text-shadow: 2px 2px 2px #333;
-    }
-    #close-button h1 {
-      font-size: 9pt;
-    }
-    #search-button h1 {
-      font-size: 24pt;
-    }
-    .help h1.return {
-      line-height: 45px;
-    }
-
     @font-face {
       font-family: LigatureSymbols;
       src: url('LigatureSymbols-2.11.ttf') format('truetype');
@@ -145,23 +114,7 @@
 
 <div id="pause-patch" class="ligaturesymbols"></div>
 
-<ul id="tv-help" class="help">
-  <li id="pause-button">
-    <a href="#">
-      <h1>P</h1>
-      <p>Pause</p>
-    </a>
-  </li>
-  <li id="home-button">
-    <a href="#">
-      <h1>H</h1>
-      <p>Home</p>
-    </a>
-  </li>
-</ul>
-
 <div id="home">
-
   <div class="carousel">
     <div data-movie="ed_1024.ogv">
       <img src="thumbnail-ed.jpg">
@@ -184,27 +137,6 @@
       <p>Hercules</p>
     </div>
   </div>
-
-  <ul class="help">
-    <li>
-      <a href="#">
-        <h1 class="ligaturesymbols">&#xe093;</h1>
-        <p>Select</p>
-      </a>
-    </li>
-    <li>
-      <a href="#">
-        <h1 class="return">&#x21b5;</h1>
-        <p>Play</p>
-      </a>
-    </li>
-    <li id="close-button">
-      <a href="#">
-        <h1>esc</h1>
-        <p>Close</p>
-      </a>
-    </li>
-  </ul>
 </div>
 
 <div id="dialogue">
@@ -219,7 +151,6 @@
 $(document).ready(function() {
   function show_home() {
     $("#home").toggleClass("active");
-    $("#tv-help").toggle();
     return false;
   }
   var hide_home = show_home;
