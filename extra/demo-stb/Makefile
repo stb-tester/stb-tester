@@ -1,5 +1,5 @@
 install-dependencies: download-static-assets.sh
-	$<
+	./$<
 
 docker-build :
 	docker build -t $(docker_prefix)virtual-stb-stbt-demo . && \
