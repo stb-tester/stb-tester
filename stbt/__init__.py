@@ -69,12 +69,12 @@ def press(key, interpress_delay_secs=None):
     if interpress_delay_secs is None:
         interpress_delay_secs = get_config(
             "press", "interpress_delay_secs", type_=float)
-    if getattr(_control, 'time_of_last_press', None):
+    if getattr(press, 'time_of_last_press', None):
         # `sleep` is inside a `while` loop because the actual suspension time
         # of `sleep` may be less than that requested.
         while True:
             seconds_to_wait = (
-                _control.time_of_last_press - datetime.datetime.now() +
+                press.time_of_last_press - datetime.datetime.now() +
                 datetime.timedelta(seconds=interpress_delay_secs)
             ).total_seconds()
             if seconds_to_wait > 0:
@@ -83,8 +83,7 @@ def press(key, interpress_delay_secs=None):
                 break
 
     _control.press(key)
-    _control.time_of_last_press = (  # pylint:disable=W0201
-        datetime.datetime.now())
+    press.time_of_last_press = datetime.datetime.now()
     draw_text(key, duration_secs=3)
 
 
