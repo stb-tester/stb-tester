@@ -38,6 +38,10 @@ For installation instructions see
   with external CI systems and makes it possible to use `stbt batch run` just
   like `stbt run`, but with calling the hooks and producing the HTML report.
 
+* `stbt.ConfigurationError` now inherits from `Exception` instead of
+  `stbt.UITestError`. (In future we may replace `UITestError` throughout stbt
+  -- see <https://github.com/drothlis/stb-tester/pull/86>.)
+
 ##### User-visible changes since 0.20
 
 * New API: `stbt.match_text`.  It takes a string and returns a
