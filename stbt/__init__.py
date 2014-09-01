@@ -10,7 +10,6 @@ https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 import argparse
 import codecs
-import ConfigParser
 import datetime
 import errno
 import functools
@@ -35,8 +34,10 @@ import gi
 import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
+from . import config
 from . import irnetbox
 from . import utils
+from .config import ConfigurationError, get_config  # For backward compat
 from .gst_hacks import gst_iterate, map_gst_buffer
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
@@ -49,30 +50,6 @@ warnings.filterwarnings(
 
 # Functions available to stbt scripts
 # ===========================================================================
-
-def get_config(section, key, default=None, type_=str):
-    """Read the value of `key` from `section` of the stbt config file.
-
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
-
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found, unless `default` is specified (in which case `default` is returned).
-    """
-
-    config = _config_init()
-
-    try:
-        return type_(config.get(section, key))
-    except ConfigParser.Error as e:
-        if default is None:
-            raise ConfigurationError(e.message)
-        else:
-            return default
-    except ValueError:
-        raise ConfigurationError("'%s.%s' invalid type (must be %s)" % (
-            section, key, type_.__name__))
-
 
 def press(key, interpress_delay_secs=None):
     """Send the specified key-press to the system under test.
@@ -932,11 +909,11 @@ def _tesseract_version(output=None):
 
 def _tesseract(frame, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
-               config=None, user_patterns=None, user_words=None):
+               _config=None, user_patterns=None, user_words=None):
     if lang is None:
         lang = 'eng'
-    if config is None:
-        config = {}
+    if _config is None:
+        _config = {}
 
     with _numpy_from_sample(frame, readonly=True) as f:
         frame_region = Region(0, 0, f.shape[1], f.shape[0])
@@ -975,31 +952,31 @@ def _tesseract(frame, region=Region.ALL,
 
         tessenv = os.environ.copy()
 
-        if config or user_words or user_patterns:
+        if _config or user_words or user_patterns:
             tessdata_dir = tmp + '/tessdata'
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
 
         if user_words:
-            assert 'user_words_suffix' not in config
+            assert 'user_words_suffix' not in _config
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(user_words).encode('utf-8'))
-            config['user_words_suffix'] = 'user-words'
+            _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
-            assert 'user_patterns_suffix' not in config
+            assert 'user_patterns_suffix' not in _config
             if _tesseract_version() < LooseVersion('3.03'):
                 raise RuntimeError(
                     'tesseract version >=3.03 is required for user_patterns.  '
                     'version %s is currently installed' % _tesseract_version())
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(user_patterns).encode('utf-8'))
-            config['user_patterns_suffix'] = 'user-patterns'
+            _config['user_patterns_suffix'] = 'user-patterns'
 
-        if config:
+        if _config:
             with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
-                for k, v in config.iteritems():
+                for k, v in _config.iteritems():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
@@ -1064,7 +1041,7 @@ def ocr(frame=None, region=Region.ALL,
         region = Region.ALL
 
     text, region = _tesseract(
-        frame, region, mode, lang, config=tesseract_config,
+        frame, region, mode, lang, _config=tesseract_config,
         user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
@@ -1175,12 +1152,12 @@ def match_text(text, frame=None, region=Region.ALL,
     if frame is None:
         frame = get_frame()
 
-    config = dict(tesseract_config or {})
-    config['tessedit_create_hocr'] = 1
+    _config = dict(tesseract_config or {})
+    _config['tessedit_create_hocr'] = 1
 
     ts = _get_frame_timestamp(frame)
 
-    xml, region = _tesseract(frame, region, mode, lang, config=config)
+    xml, region = _tesseract(frame, region, mode, lang, _config=_config)
     if xml == '':
         return TextMatchResult(ts, False, None, frame, text)
     hocr = lxml.etree.fromstring(xml)
@@ -1361,10 +1338,6 @@ class MotionTimeout(UITestFailure):
             self.timeout_secs)
 
 
-class ConfigurationError(Exception):
-    pass
-
-
 class PreconditionError(UITestError):
     """Exception raised by `as_precondition`."""
     def __init__(self, message, original_exception):
@@ -1455,87 +1428,6 @@ else:
 
 _display = None
 _control = None
-
-_config = None
-
-
-def _xdg_config_dir():
-    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
-
-
-def _config_init(force=False):
-    global _config
-    if force or not _config:
-        config = ConfigParser.SafeConfigParser()
-        config.readfp(
-            open(os.path.join(os.path.dirname(__file__), '..', 'stbt.conf')))
-        try:
-            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
-            # Running `stbt` from source (not installed) location.
-            system_config = ''
-        config.read([
-            system_config,
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % _xdg_config_dir(),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
-        _config = config
-    return _config
-
-
-@contextmanager
-def _sponge(filename):
-    """Opens a file to be written, which will be atomically replaced if the
-    contextmanager exits cleanly.  Useful like the UNIX moreutils command
-    `sponge`
-    """
-    from tempfile import NamedTemporaryFile
-    with NamedTemporaryFile(prefix=filename + '.', suffix='~',
-                            delete=False) as f:
-        try:
-            yield f
-            os.rename(f.name, filename)
-        except:
-            os.remove(f.name)
-            raise
-
-
-def _set_config(section, option, value):
-    """Update config values (in memory and on disk).
-
-    WARNING: This will overwrite your stbt.conf but comments and whitespace
-    will not be preserved.  For this reason it is not a part of stbt's public
-    API.  This is a limitation of Python's ConfigParser which hopefully we can
-    solve in the future.
-
-    Writes to `$STBT_CONFIG_FILE` if set falling back to
-    `$HOME/stbt/stbt.conf`.
-    """
-    user_config = '%s/stbt/stbt.conf' % _xdg_config_dir()
-    custom_config = os.environ.get('STBT_CONFIG_FILE') or user_config
-
-    config = _config_init()
-
-    parser = ConfigParser.SafeConfigParser()
-    parser.read([custom_config])
-    if not parser.has_section(section):
-        parser.add_section(section)
-    parser.set(section, option, value)
-
-    d = os.path.dirname(custom_config)
-    if not _mkdir(d):
-        raise RuntimeError(
-            "Failed to create directory '%s'; cannot write config file." % d)
-    with _sponge(custom_config) as f:
-        parser.write(f)
-
-    if not config.has_section(section):
-        config.add_section(section)
-    config.set(section, option, value)
 
 
 def _gst_sample_make_writable(sample):
@@ -2533,7 +2425,7 @@ class IRNetBoxRemote(object):
 
     """
 
-    def __init__(self, hostname, port, output, config):
+    def __init__(self, hostname, port, output, config):  # pylint: disable=W0621
         self.hostname = hostname
         self.port = int(port or 10001)
         self.output = int(output)
