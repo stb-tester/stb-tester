@@ -71,6 +71,12 @@ For installation instructions see
 
 ##### Developer-visible changes since 0.20
 
+* The `stbt.py` python module has been split into a python package
+  (`stbt/__init__.py`, `stbt/config.py`, etc). This is for code organisation
+  and (in future) flexibility in deployment. Users of the public API (that is,
+  test scripts) should continue to use the same API (for example
+  `stbt.get_config` not `stbt.config.get_config`).
+
 #### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
 
 6 Jun 2014.
