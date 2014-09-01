@@ -35,7 +35,7 @@ import gi
 import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
-import irnetbox
+from . import irnetbox
 from .gst_hacks import gst_iterate, map_gst_buffer
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
