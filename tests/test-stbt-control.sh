@@ -44,7 +44,14 @@ test_stbt_control_as_stbt_record_control_recorder__explict_keymap() {
 
 test_stbt_control_as_stbt_record_control_recorder__default_keymap() {
     cp "$testdir/stbt-control.keymap" "$XDG_CONFIG_HOME/stbt/control.conf" &&
-    validate_stbt_record_control_recorder stbt-control
+    validate_stbt_record_control_recorder stbt-control;
+    local ret=$?
+    if [[ $ret -ne 0 ]] &&
+        cat log | grep -q "Unable to print keymap because the terminal is too small";
+    then
+        return 77  # skip
+    fi
+    return $ret
 }
 
 test_stbt_control_as_stbt_record_control_recorder__keymap_from_config() {
