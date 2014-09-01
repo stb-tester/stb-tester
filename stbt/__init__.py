@@ -36,6 +36,7 @@ import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 from . import irnetbox
+from . import utils
 from .gst_hacks import gst_iterate, map_gst_buffer
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
@@ -2242,7 +2243,7 @@ def _log_image(image, name, directory):
     if name == "source":
         _frame_number += 1
     d = os.path.join(directory, "%05d" % _frame_number)
-    if not _mkdir(d):
+    if not utils.mkdir(d):
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
     if image.dtype == numpy.float32:
@@ -2869,15 +2870,6 @@ def _load_mask(mask):
     if mask_image is None:
         raise UITestError("Failed to load mask file: %s" % mask_path)
     return mask_image
-
-
-def _mkdir(d):
-    try:
-        os.makedirs(d)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            return False
-    return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
 
 
 _debugstream = codecs.getwriter('utf-8')(sys.stderr)
