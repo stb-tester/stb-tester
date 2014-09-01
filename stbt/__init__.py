@@ -8,8 +8,9 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import absolute_import
+
 import argparse
-import codecs
 import datetime
 import errno
 import functools
@@ -36,9 +37,11 @@ from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 from . import config
 from . import irnetbox
+from . import logging
 from . import utils
 from .config import ConfigurationError, get_config  # For backward compat
 from .gst_hacks import gst_iterate, map_gst_buffer
+from .logging import debug, ddebug, warn  # For backward compat
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()
@@ -1230,7 +1233,7 @@ def is_screen_black(frame, mask=None, threshold=None):
     greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     _, greyframe = cv2.threshold(greyframe, threshold, 255, cv2.THRESH_BINARY)
     _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
-    if _debug_level > 1:
+    if logging.get_debug_level() > 1:
         _log_image(frame, 'source', 'stbt-debug/is_screen_black')
         if mask is not None:
             _log_image(mask, 'mask', 'stbt-debug/is_screen_black')
@@ -1378,22 +1381,7 @@ def argparser():
         help='Restart the GStreamer source pipeline when video loss is '
              'detected')
 
-    class IncreaseDebugLevel(argparse.Action):
-        num_calls = 0
-
-        def __call__(self, parser, namespace, values, option_string=None):
-            self.num_calls += 1
-            global _debug_level
-            _debug_level = self.num_calls
-            setattr(namespace, self.dest, _debug_level)
-
-    global _debug_level
-    _debug_level = get_config('global', 'verbose', type_=int)
-    parser.add_argument(
-        '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
-        default=get_config('global', 'verbose'),  # for stbt-run arguments dump
-        help='Enable debug output (specify twice to enable GStreamer element '
-             'dumps to ./stbt-debug directory)')
+    logging.argparser_add_verbose_argument(parser)
 
     return parser
 
@@ -1416,7 +1404,6 @@ def teardown_run():
 # Internal
 # ===========================================================================
 
-_debug_level = 0
 if hasattr(GLib.MainLoop, 'new'):
     _mainloop = GLib.MainLoop.new(context=None, is_running=False)
 else:
@@ -1880,7 +1867,7 @@ def _match(image, template, match_parameters, template_name):
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    if _debug_level > 1:
+    if logging.get_debug_level() > 1:
         source_with_roi = image.copy()
         cv2.rectangle(
             source_with_roi,
@@ -1965,7 +1952,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
             .shift(Position(-1, -1)).expand(_Size(2, 2))
             for x in contours]
 
-    if _debug_level > 1:
+    if logging.get_debug_level() > 1:
         source_with_rois = image.copy()
         for roi in rois:
             r = roi
@@ -2118,7 +2105,7 @@ _frame_number = 0
 
 
 def _log_image(image, name, directory):
-    if _debug_level <= 1:
+    if logging.get_debug_level() <= 1:
         return
     global _frame_number
     if name == "source":
@@ -2637,10 +2624,10 @@ def stbt_control_listen(keymap_file):
         os.path.dirname(os.path.abspath(__file__)), '..', 'stbt-control')
     stbt_control = imp.load_source('stbt_control', tool_path)
 
-    global _debug_level
-    _debug_level = 0  # Don't mess up printed keymap with debug messages
-    return stbt_control.main_loop(
-        'stbt record', keymap_file or stbt_control.default_keymap_file())
+    with logging.scoped_debug_level(0):
+        # Don't mess up printed keymap with debug messages
+        return stbt_control.main_loop(
+            'stbt record', keymap_file or stbt_control.default_keymap_file())
 
 
 def lirc_key_reader(cmd_iter, control_name):
@@ -2751,27 +2738,6 @@ def _load_mask(mask):
     if mask_image is None:
         raise UITestError("Failed to load mask file: %s" % mask_path)
     return mask_image
-
-
-_debugstream = codecs.getwriter('utf-8')(sys.stderr)
-
-
-def warn(s):
-    _debugstream.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), s))
-
-
-def debug(msg):
-    """Print the given string to stderr if stbt run `--verbose` was given."""
-    if _debug_level > 0:
-        _debugstream.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
-
-
-def ddebug(s):
-    """Extra verbose debug for stbt developers, not end users"""
-    if _debug_level > 1:
-        _debugstream.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
 
 
 # Tests
@@ -3020,18 +2986,3 @@ def test_ocr_on_static_images():
             **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
-
-
-def test_that_debug_can_write_unicode_strings():
-    def test(level):
-        global _debug_level
-        oldlevel = _debug_level
-        try:
-            _debug_level = level
-            warn(u'Prüfungs Debug-Unicode')
-            debug(u'Prüfungs Debug-Unicode')
-            ddebug(u'Prüfungs Debug-Unicode')
-        finally:
-            _debug_level = oldlevel
-    for level in [0, 1, 2]:
-        yield (test, level)

@@ -82,6 +82,7 @@ install: stbt.sh stbt.1 defaults.conf
 	    stbt/config.py \
 	    stbt/gst_hacks.py \
 	    stbt/irnetbox.py \
+	    stbt/logging.py \
 	    stbt/pylint_plugin.py \
 	    stbt/utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt
