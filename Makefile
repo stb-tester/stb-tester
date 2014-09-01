@@ -80,6 +80,7 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0644 \
 	    stbt/__init__.py \
 	    stbt/config.py \
+	    stbt/control.py \
 	    stbt/gst_hacks.py \
 	    stbt/irnetbox.py \
 	    stbt/logging.py \
