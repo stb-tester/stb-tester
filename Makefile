@@ -46,9 +46,9 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf extra/fedora/stb-tester.spec
+all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/fedora/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -63,27 +63,30 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt stbt.1 defaults.conf
+install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates \
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL) -m 0755 \
-	    irnetbox-proxy \
-	    stbt \
-	    $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
-	    gst_hacks.py \
-	    irnetbox.py \
-	    stbt.py \
-	    stbt_pylint_plugin.py \
-	    $(DESTDIR)$(libexecdir)/stbt
+	    stbt/__init__.py \
+	    stbt/config.py \
+	    stbt/control.py \
+	    stbt/gst_hacks.py \
+	    stbt/irnetbox.py \
+	    stbt/logging.py \
+	    stbt/pylint_plugin.py \
+	    stbt/utils.py \
+	    $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
 	    stbt-batch.d/run \
@@ -123,11 +126,11 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: stbt.py api-doc.sh
+README.rst: api-doc.sh stbt/__init__.py stbt/config.py
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf .stbt-prefix
+	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \

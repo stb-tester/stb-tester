@@ -34,8 +34,8 @@ test_that_press_fails_on_lircd_error() {
 	EOF
     ! stbt run -v --control lirc:$lircd_socket:test test.py ||
         fail "Expected 'press' to raise exception"
-    cat log | grep 'UITestError' | grep 'fake-lircd error' ||
-        fail "Expected to see UITestError('fake-lircd error')"
+    cat log | grep 'RuntimeError' | grep 'fake-lircd error' ||
+        fail "Expected to see RuntimeError('fake-lircd error')"
 }
 
 test_that_press_times_out_when_lircd_doesnt_reply() {
@@ -67,8 +67,8 @@ test_that_press_ignores_lircd_broadcast_messages_on_error() {
 	EOF
     ! stbt run -v --control lirc:$lircd_socket:test test.py ||
         fail "Expected 'press' to raise exception"
-    cat log | grep 'UITestError' | grep 'fake-lircd error' ||
-        fail "Expected to see UITestError('fake-lircd error')"
+    cat log | grep 'RuntimeError' | grep 'fake-lircd error' ||
+        fail "Expected to see RuntimeError('fake-lircd error')"
 }
 
 test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {

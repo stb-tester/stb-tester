@@ -27,4 +27,4 @@ esac
 which pylint &>/dev/null || die "Couldn't find 'pylint' executable"
 
 PYTHONPATH="$(dirname "$0"):$PYTHONPATH" \
-pylint --load-plugins=stbt_pylint_plugin "$@"
+pylint --load-plugins=stbt.pylint_plugin "$@"

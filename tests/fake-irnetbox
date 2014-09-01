@@ -2,7 +2,7 @@
 
 """Fake irNetBox server for unit tests.
 
-Just ACKs all requests. See ../irnetbox.py for information on the irNetBox.
+Just ACKs all requests. See ../stbt/irnetbox.py for information on the irNetBox.
 """
 
 import socket
@@ -11,7 +11,7 @@ import struct
 import sys
 import time
 
-from irnetbox import MessageTypes
+from stbt.irnetbox import MessageTypes
 
 
 class FakeIRNetBox(SocketServer.BaseRequestHandler):

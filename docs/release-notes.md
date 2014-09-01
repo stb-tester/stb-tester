@@ -38,6 +38,10 @@ For installation instructions see
   with external CI systems and makes it possible to use `stbt batch run` just
   like `stbt run`, but with calling the hooks and producing the HTML report.
 
+* `stbt.ConfigurationError` now inherits from `Exception` instead of
+  `stbt.UITestError`. (In future we may replace `UITestError` throughout stbt
+  -- see <https://github.com/drothlis/stb-tester/pull/86>.)
+
 ##### User-visible changes since 0.20
 
 * New API: `stbt.match_text`.  It takes a string and returns a
@@ -66,6 +70,12 @@ For installation instructions see
   then pass it to another function.
 
 ##### Developer-visible changes since 0.20
+
+* The `stbt.py` python module has been split into a python package
+  (`stbt/__init__.py`, `stbt/config.py`, etc). This is for code organisation
+  and (in future) flexibility in deployment. Users of the public API (that is,
+  test scripts) should continue to use the same API (for example
+  `stbt.get_config` not `stbt.config.get_config`).
 
 #### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
 
