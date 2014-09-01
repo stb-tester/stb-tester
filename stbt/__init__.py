@@ -2310,7 +2310,7 @@ class VideoTestSrcControl(object):
                 18, "ball",
                 19, "smpte100",
                 20, "bar"]:
-            raise UITestFailure(
+            raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
@@ -2693,15 +2693,15 @@ def _read_lircd_reply(stream):
             if line == "END" and "SEND_ONCE" in reply[1]:
                 break
     except socket.timeout:
-        raise UITestError(
+        raise RuntimeError(
             "Timed out: No reply from LIRC remote control within %d seconds"
             % stream.gettimeout())
     if "SUCCESS" not in reply:
         if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
             num_data_lines = int(reply[4])
-            raise UITestError("LIRC remote control returned error: %s"
-                              % " ".join(reply[5:5 + num_data_lines]))
-        raise UITestError("LIRC remote control returned unknown error")
+            raise RuntimeError("LIRC remote control returned error: %s"
+                               % " ".join(reply[5:5 + num_data_lines]))
+        raise RuntimeError("LIRC remote control returned unknown error")
 
 
 def _find_path(image):
