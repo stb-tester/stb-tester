@@ -46,9 +46,9 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 .DELETE_ON_ERROR:
 
 
-all: stbt stbt.1 defaults.conf extra/fedora/stb-tester.spec
+all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/fedora/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -63,7 +63,7 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt stbt.1 defaults.conf
+install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -73,10 +73,8 @@ install: stbt stbt.1 defaults.conf
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL) -m 0755 \
-	    irnetbox-proxy \
-	    stbt \
-	    $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
 	    gst_hacks.py \
@@ -127,7 +125,7 @@ README.rst: stbt.py api-doc.sh
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf .stbt-prefix
+	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
