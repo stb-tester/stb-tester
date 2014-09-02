@@ -354,12 +354,8 @@ detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None
     Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `stbt.match`
+    for more information.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
@@ -437,10 +433,37 @@ is_screen_black(frame, mask=None, threshold=None)
       in the range 0 (black) to 255 (white). The global default can be changed
       by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
 
+match(image, frame=None, match_parameters=None, region=Region.ALL)
+    Search for `image` in a single frame of the source video stream.
+    Returns a `MatchResult`.
+
+    `image` (string or numpy.array)
+      The image used as the template during matching. It can either be the
+      filename of a png file on disk or a numpy array containing the pixel data
+      in 8-bit BGR format.
+
+      8-bit BGR numpy arrays are the same format that OpenCV uses for images.
+      This allows generating templates on the fly (possibly using OpenCV) or
+      searching for images captured from the system under test earlier in the
+      test script.
+
+    `frame` (numpy.array) default: None
+      If this is specified it is used as the video frame to search in;
+      otherwise a frame is grabbed from the source video stream. It is a
+      `numpy.array` in OpenCV format (for example as returned by `frames` and
+      `get_frame`).
+
+    `match_parameters` (stbt.MatchParameters) default: MatchParameters()
+      Customise the image matching algorithm. See the documentation for
+      `MatchParameters` for details.
+
+    `region` (stbt.Region) default: Region.ALL
+      Only search within the specified region of the video frame.
+
 match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
     Search the screen for the given text.
 
-    Can be used as an alternative to `wait_for_match`, etc. searching for text
+    Can be used as an alternative to `match`, etc. searching for text
     instead of an image.
 
     Args:
@@ -466,7 +489,7 @@ match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_W
 
 class MatchParameters
     Parameters to customise the image processing algorithm used by
-    `wait_for_match`, `detect_match`, and `press_until_match`.
+    `match`, `wait_for_match`, `detect_match`, and `press_until_match`.
 
     You can change the default values for these parameters by setting
     a key (with the same name as the corresponding python parameter)
@@ -774,12 +797,8 @@ wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=No
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `match`
+    for more information.
 
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position. Increase

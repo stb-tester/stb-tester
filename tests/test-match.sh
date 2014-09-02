@@ -82,7 +82,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 test_wait_for_match_match_threshold_param_affects_match() {
     # Confirm_method="none" means that if anything passes the first pass of
     # templatematching, it is considered a positive result. Using this, by
-    # using 2 detect_matches with match_thresholds either side of the
+    # using 2 matches with match_thresholds either side of the known
     # first_pass_result of this match, we can get one to pass and the other
     # to fail.
     cat > test.py <<-EOF
@@ -185,10 +185,11 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
     stbt run -v test.py
 }
 
-test_detect_match_nonexistent_template() {
+test_match_nonexistent_template() {
     cat > test.py <<-EOF
+	import stbt
 	try:
-	    detect_match("idontexist.png").next()
+	    stbt.match("idontexist.png")
 	    assert False, "Trying to match an non-existant template should throw"
 	except:
 	    pass
@@ -266,17 +267,16 @@ test_press_until_match_searches_in_script_directory() {
     stbt run -v test.py
 }
 
-test_detect_match_searches_in_script_directory() {
+test_match_searches_in_script_directory() {
     cat > test.py <<-EOF
-	m = detect_match("in-script-dir.png").next()
-	if not m:
-	    raise Exception("'No match' when expecting match.")
+	import stbt
+	assert stbt.match("in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
     stbt run -v test.py
 }
 
-test_detect_match_searches_in_library_directory() {
+test_match_searches_in_library_directory() {
     cat > test.py <<-EOF
 	import stbt_helpers
 	stbt_helpers.find()
@@ -285,7 +285,7 @@ test_detect_match_searches_in_library_directory() {
     cat > stbt_helpers/__init__.py <<-EOF
 	import stbt
 	def find():
-	    m = stbt.detect_match("in-helpers-dir.png").next()
+	    m = stbt.match("in-helpers-dir.png")
 	    if not m:
 	        raise Exception("'No match' when expecting match.")
 	EOF
@@ -293,7 +293,7 @@ test_detect_match_searches_in_library_directory() {
     PYTHONPATH="$PWD:$PYTHONPATH" stbt run -v test.py
 }
 
-test_detect_match_searches_in_caller_directory() {
+test_match_searches_in_caller_directory() {
     cat > test.py <<-EOF
 	import stbt_tests
 	stbt_tests.find()
@@ -308,7 +308,7 @@ test_detect_match_searches_in_caller_directory() {
     cat > stbt_helpers/__init__.py <<-EOF
 	import stbt
 	def find(image):
-	    m = stbt.detect_match(image).next()
+	    m = stbt.match(image)
 	    if not m:
 	        raise Exception("'No match' when expecting match.")
 	EOF
@@ -325,34 +325,53 @@ test_changing_input_video_with_the_test_control() {
     stbt run -v test.py
 }
 
-test_detect_match_reports_match() {
+test_match_reports_match() {
     cat > test.py <<-EOF
 	# Should report a match
-	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
-	    if match_result:
-	        assert match_result.match
-	        import sys
-	        sys.exit(0)
-	    else:
-	        raise Exception("No match incorrectly reported.")
-	raise Exception("Timeout occured without any result reported.")
+	import stbt
+	match_result = stbt.match("$testdir/videotestsrc-redblue.png")
+	assert match_result
+	assert match_result.match
 	EOF
     stbt run -v test.py
 }
 
-test_detect_match_reports_match_region() {
+test_match_reports_match_region() {
     cat > test.py <<-EOF
-	from stbt import detect_match, Position, Region
-	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
-	    if match_result.region == Region(228, 0, 92, 160):
-	        assert match_result.position == Position(228, 0)
-	        import sys
-	        sys.exit(0)
-	    else:
-	        raise Exception(
-	            "Wrong match region reported, expected: (228, 0, 92, 160), "
-	            "got %s." % str(match_result.region))
-	raise Exception("Timeout occured without any result reported.")
+	from stbt import match, Position, Region
+	match_result = match("$testdir/videotestsrc-redblue.png")
+	assert match_result.region == Region(228, 0, 92, 160)
+	assert match_result.position == Position(228, 0)
+	EOF
+    stbt run -v test.py
+}
+
+test_match_searches_in_provided_frame() {
+    cat > test.py <<-EOF
+	import cv2, stbt
+	assert stbt.match(
+	    "$testdir/videotestsrc-redblue.png",
+	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))
+	EOF
+    stbt run -v --source-pipeline 'videotestsrc pattern=black' test.py
+}
+
+test_match_searches_in_provided_region() {
+    cat > test.py <<-EOF
+	from stbt import match, Region
+	for search_area in [Region.ALL, Region(228, 0, 92, 160),
+	                    Region(200, 0, 300, 400), Region(200, 0, 300, 400),
+	                    Region(-200, -100, 600, 800)]:
+	    print "\nSearch Area:", search_area
+	    match_result = match("$testdir/videotestsrc-redblue.png",
+	                         region=search_area)
+	    assert match_result and match_result.region == Region(228, 0, 92, 160)
+	
+	for search_area in [Region(228, 3, 92, 260), Region(10, 0, 300, 200),
+	                    Region(-210, -23, 400, 200)]:
+	    print "Search Area:", search_area
+	    assert not match("$testdir/videotestsrc-redblue.png",
+	                     region=search_area)
 	EOF
     stbt run -v test.py
 }
@@ -376,17 +395,13 @@ test_detect_match_reports_valid_timestamp() {
     stbt run -v test.py
 }
 
-test_detect_match_reports_no_match() {
+test_match_reports_no_match() {
     cat > test.py <<-EOF
+	import stbt
 	# Should not report a match
-	for match_result in detect_match("$testdir/videotestsrc-checkers-8.png"):
-	    if not match_result:
-	        assert not match_result.match
-	        import sys
-	        sys.exit(0)
-	    else:
-	        raise Exception("Wrong match reported.")
-	raise Exception("Timeout occured without any result reported.")
+	match_result = stbt.match("$testdir/videotestsrc-checkers-8.png")
+	assert not match_result
+	assert not match_result.match
 	EOF
     stbt run -v test.py
 }
@@ -469,8 +484,8 @@ test_precondition_script() {
     PYTHONPATH="$testdir:$PYTHONPATH" stbt run -v test.py
 }
 
-test_detect_match_visualisation() {
-    cat > detect_match.py <<-EOF &&
+test_match_visualisation() {
+    cat > match.py <<-EOF &&
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png", consecutive_matches=240)
 	EOF
@@ -481,7 +496,7 @@ test_detect_match_visualisation() {
 
     stbt run -v \
         --sink-pipeline 'gdppay ! filesink location=fifo sync=false' \
-        detect_match.py &
+        match.py &
     trap "kill $!; rm fifo" EXIT
 
     stbt run -v --control none \

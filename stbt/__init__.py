@@ -50,6 +50,7 @@ __all__ = [
     "get_config",
     "get_frame",
     "is_screen_black",
+    "match",
     "match_text",
     "MatchParameters",
     "MatchResult",
@@ -130,7 +131,7 @@ def draw_text(text, duration_secs=3):
 
 class MatchParameters(object):
     """Parameters to customise the image processing algorithm used by
-    `wait_for_match`, `detect_match`, and `press_until_match`.
+    `match`, `wait_for_match`, `detect_match`, and `press_until_match`.
 
     You can change the default values for these parameters by setting
     a key (with the same name as the corresponding python parameter)
@@ -432,7 +433,7 @@ class MatchResult(object):
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
     """
-
+    # pylint: disable=W0621
     def __init__(
             self, timestamp, match, region, first_pass_result, frame=None,
             image=None):
@@ -467,7 +468,8 @@ class MatchResult(object):
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
-                _template_name(self.image)))
+                self.image if isinstance(self.image, numpy.ndarray)
+                else "<Custom Image>"))
 
     @property
     def position(self):
@@ -477,17 +479,115 @@ class MatchResult(object):
         return self.match
 
 
+class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate', 'image filename')):
+    @property
+    def friendly_name(self):
+        return self.filename or '<Custom Image>'
+
+
+def _load_template(template):
+    if isinstance(template, _AnnotatedTemplate):
+        return template
+    if isinstance(template, numpy.ndarray):
+        return _AnnotatedTemplate(template, None)
+    else:
+        template_name = _find_path(template)
+        if not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % template_name)
+        image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        if image is None:
+            raise UITestError("Failed to load template file: %s" %
+                              template_name)
+        return _AnnotatedTemplate(image, template_name)
+
+
+def _draw_match(frame, match_result):
+    with _numpy_from_sample(frame, readonly=False) as frame:
+        r = match_result.region
+        cv2.rectangle(
+            frame, (r.x, r.y), (r.right, r.bottom),
+            (32, 0 if match_result else 255, 255),  # bgr
+            thickness=3)
+
+
+def _crop(frame, region):
+    assert _image_region(frame).contains(region)
+    return frame[region.y:region.bottom, region.x:region.right]
+
+
+def _image_region(image):
+    return Region(0, 0, image.shape[1], image.shape[0])
+
+
+def match(image, frame=None, match_parameters=None, region=Region.ALL):
+    """
+    Search for `image` in a single frame of the source video stream.
+    Returns a `MatchResult`.
+
+    `image` (string or numpy.array)
+      The image used as the template during matching. It can either be the
+      filename of a png file on disk or a numpy array containing the pixel data
+      in 8-bit BGR format.
+
+      8-bit BGR numpy arrays are the same format that OpenCV uses for images.
+      This allows generating templates on the fly (possibly using OpenCV) or
+      searching for images captured from the system under test earlier in the
+      test script.
+
+    `frame` (numpy.array) default: None
+      If this is specified it is used as the video frame to search in;
+      otherwise a frame is grabbed from the source video stream. It is a
+      `numpy.array` in OpenCV format (for example as returned by `frames` and
+      `get_frame`).
+
+    `match_parameters` (stbt.MatchParameters) default: MatchParameters()
+      Customise the image matching algorithm. See the documentation for
+      `MatchParameters` for details.
+
+    `region` (stbt.Region) default: Region.ALL
+      Only search within the specified region of the video frame.
+    """
+    if match_parameters is None:
+        match_parameters = MatchParameters()
+
+    template = _load_template(image)
+
+    grabbed_from_live = (frame is None)
+    if grabbed_from_live:
+        frame = _display.get_sample()
+
+    with _numpy_from_sample(frame, readonly=True) as npframe:
+        region = Region.intersect(_image_region(npframe), region)
+
+        matched, match_region, first_pass_certainty = _match(
+            _crop(npframe, region), template.image, match_parameters,
+            template.friendly_name)
+
+        match_region = match_region.translate(region.x, region.y)
+        result = MatchResult(
+            _get_frame_timestamp(frame), matched, match_region,
+            first_pass_certainty, numpy.copy(npframe),
+            (template.filename or template.image))
+
+    if grabbed_from_live and frame.get_buffer().mini_object.is_writable():
+        # Don't want to draw on user-provided frames!
+        _draw_match(frame, result)
+
+    if result.match:
+        debug("Match found: %s" % str(result))
+    else:
+        debug("No match found. Closest match: %s" % str(result))
+
+    return result
+
+
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the source video stream.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `stbt.match`
+    for more information.
 
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
@@ -500,52 +600,23 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
-
-    if match_parameters is None:
-        match_parameters = MatchParameters()
-
     if noise_threshold is not None:
         warnings.warn(
             "noise_threshold is deprecated and will be removed in a future "
             "release of stb-tester. Please use "
             "match_parameters.confirm_threshold instead.",
             DeprecationWarning, stacklevel=2)
+        match_parameters = match_parameters or MatchParameters()
         match_parameters.confirm_threshold = noise_threshold
 
-    if isinstance(image, numpy.ndarray):
-        template = image
-        template_name = _template_name(image)
-    else:
-        template_name = _find_path(image)
-        if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % image)
-        template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
-        if template is None:
-            raise UITestError("Failed to load template file: %s" %
-                              template_name)
+    template = _load_template(image)
 
-    debug("Searching for " + template_name)
+    debug("Searching for " + template.friendly_name)
 
     for sample in _display.gst_samples(timeout_secs):
-        with _numpy_from_sample(sample) as frame:
-            matched, region, first_pass_certainty = _match(
-                frame, template, match_parameters, template_name)
-
-            result = MatchResult(
-                sample.get_buffer().pts, matched, region, first_pass_certainty,
-                numpy.copy(frame),
-                (image if isinstance(image, numpy.ndarray) else template_name))
-
-            cv2.rectangle(
-                frame,
-                (region.x, region.y), (region.right, region.bottom),
-                (32, 0 if matched else 255, 255),  # bgr
-                thickness=3)
-
-        if matched:
-            debug("Match found: %s" % str(result))
-        else:
-            debug("No match found. Closest match: %s" % str(result))
+        result = match(
+            template, frame=sample, match_parameters=match_parameters)
+        _draw_match(sample, result)
         yield result
 
 
@@ -644,16 +715,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         yield result
 
 
-def _template_name(template):
-    if isinstance(template, numpy.ndarray):
-        return "<Custom Image>"
-    elif isinstance(template, str) or isinstance(template, unicode):
-        return template
-    else:
-        assert False, ("template is of unexpected type '%s'" %
-                       type(template).__name__)
-
-
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    noise_threshold=None, match_parameters=None):
     """Search for `image` in the source video stream.
@@ -661,12 +722,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     Returns `MatchResult` when `image` is found.
     Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
+    `image` is the image used as the template during matching.  See `match`
+    for more information.
 
     `consecutive_matches` forces this function to wait for several consecutive
     frames with a match found at the same x,y position. Increase
@@ -694,6 +751,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
+    image = _load_template(image)
     for res in detect_match(
             image, timeout_secs, match_parameters=match_parameters):
         if res.match and (match_count == 0 or res.position == last_pos):
@@ -702,10 +760,10 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             match_count = 0
         last_pos = res.position
         if match_count == consecutive_matches:
-            debug("Matched " + _template_name(image))
+            debug("Matched " + image.friendly_name)
             return res
 
-    raise MatchTimeout(res.frame, _template_name(image), timeout_secs)  # pylint: disable=W0631,C0301
+    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
 
 
 def press_until_match(
@@ -956,14 +1014,13 @@ def _tesseract(frame, region=Region.ALL,
         else:
             region = intersection
 
-        subframe = f[region.y:region.bottom, region.x:region.right]
-
         # We scale image up 3x before feeding it to tesseract as this
         # significantly reduces the error rate by more than 6x in tests.  This
         # uses bilinear interpolation which produces the best results.  See
         # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
         outsize = (region.width * 3, region.height * 3)
-        subframe = cv2.resize(subframe, outsize, interpolation=cv2.INTER_LINEAR)
+        subframe = cv2.resize(_crop(f, region), outsize,
+                              interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -1155,7 +1212,7 @@ def match_text(text, frame=None, region=Region.ALL,
                tesseract_config=None):
     """Search the screen for the given text.
 
-    Can be used as an alternative to `wait_for_match`, etc. searching for text
+    Can be used as an alternative to `match`, etc. searching for text
     instead of an image.
 
     Args:

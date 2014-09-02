@@ -29,7 +29,7 @@ test_that_stbt_templatematch_rejects_invalid_parameters() {
     ! stbt templatematch \
         "$testdir"/videotestsrc-full-frame.png \
         idontexisteither.png &&
-    cat log | grep -q "Invalid image 'idontexisteither.png'" &&
+    cat log | grep -q "No such template file: $PWD/idontexisteither.png" &&
     ! stbt templatematch \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
