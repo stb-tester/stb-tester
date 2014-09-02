@@ -1811,7 +1811,7 @@ class Display(object):
                         thickness=1)
                     cv2.rectangle(
                         img, origin, (origin[0] + width, origin[1] - height),
-                        thickness=-1,  # filled
+                        thickness=cv2.cv.CV_FILLED,
                         color=(0, 0, 0))
                     cv2.putText(
                         img, text, origin,
