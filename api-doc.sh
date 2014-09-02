@@ -74,7 +74,7 @@ python_docstrings() {
 }
 
 substitute_ocr_default_mode() {
-    local mode=$(sed -n '/^class OcrMode/,/^[^ ]/ p' stbt/__init__.py |
+    local mode=$(sed -n '/^class OcrMode/,/^[^ ]/ p' stbt/core.py |
                  awk '/3/ {print $1}')
     sed -e "/^ocr(/ s/mode=3/mode=OcrMode.$mode/" \
         -e "/^match_text(/ s/mode=3/mode=OcrMode.$mode/"
@@ -84,7 +84,7 @@ substitute_ocr_default_mode() {
 # signature seen by pydoc
 substitute_as_precondition_signature() {
     local sig=$(sed -n '/^def as_precondition/ { s/:$//; s/^def //; p; }' \
-                    stbt/__init__.py)
+                    stbt/core.py)
     sed "s/^as_precondition(.*/$sig/"
 }
 
