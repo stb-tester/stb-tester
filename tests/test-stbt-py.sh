@@ -278,7 +278,7 @@ test_that_verbose_command_line_argument_overrides_config_file() {
 test_that_restart_source_option_is_read() {
     cat > test.py <<-EOF &&
 	import stbt
-	print "value: %s" % stbt._display.restart_source_enabled
+	print "value: %s" % stbt.core._display.restart_source_enabled
 	EOF
     # Read from the command line
     stbt run -v --restart-source --control none test.py &&

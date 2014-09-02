@@ -81,6 +81,7 @@ install: stbt.sh stbt.1 defaults.conf
 	    stbt/__init__.py \
 	    stbt/config.py \
 	    stbt/control.py \
+	    stbt/core.py \
 	    stbt/gst_hacks.py \
 	    stbt/irnetbox.py \
 	    stbt/logging.py \
