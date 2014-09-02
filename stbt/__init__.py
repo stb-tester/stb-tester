@@ -35,9 +35,9 @@ from . import config
 from . import control
 from . import logging
 from . import utils
-from .config import ConfigurationError, get_config  # For backward compat
+from .config import ConfigurationError, get_config
 from .gst_hacks import gst_iterate, map_gst_buffer
-from .logging import debug, ddebug, warn  # For backward compat
+from .logging import debug, ddebug, warn
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()
