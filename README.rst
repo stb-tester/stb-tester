@@ -313,99 +313,42 @@ The following functions are available:
 
 .. <start python docs>
 
-press(key, interpress_delay_secs=None)
-    Send the specified key-press to the system under test.
+as_precondition(message)
+    Context manager that replaces UITestFailures with UITestErrors.
 
-    The mechanism used to send the key-press depends on what you've configured
-    with `--control`.
+    If you run your test scripts with stb-tester's batch runner, the reports it
+    generates will show test failures (that is, `UITestFailure` exceptions) as
+    red results, and unhandled exceptions of any other type as yellow results.
+    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
+    `UITestFailure` (red results) when they detect a failure. By running such
+    functions inside an `as_precondition` context, any `UITestFailure` (red)
+    they raise will be caught, and a `UITestError` (yellow) will be raised
+    instead.
 
-    `key` is a string. The allowed values depend on the control you're using:
-    If that's lirc, then `key` is a key name from your lirc config file.
+    When running a single test script hundreds or thousands of times to
+    reproduce an intermittent defect, it is helpful to mark unrelated failures
+    as test errors (yellow) rather than test failures (red), so that you can
+    focus on diagnosing the failures that are most likely to be the particular
+    defect you are interested in.
 
-    `interpress_delay_secs` (float) default: 0
-      Specifies a minimum time to wait after the preceding key press, in order
-      to accommodate the responsiveness of the device under test.
+    `message` is a string describing the precondition (it is not the error
+    message if the precondition fails).
 
-      The global default for `interpress_delay_secs` can be set in the
-      configuration file, in section `press`.
+    For example:
 
-wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
-    Search for `image` in the source video stream.
+    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
+    ...     # Call tune_channels(), which raises:
+    ...     raise UITestFailure("Failed to tune channels")
+    Traceback (most recent call last):
+      ...
+    PreconditionError: Didn't meet precondition 'Channels tuned'
+    (original exception was: Failed to tune channels)
 
-    Returns `MatchResult` when `image` is found.
-    Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
+class ConfigurationError(Exception)
+    An error with your stbt configuration file.
 
-    `image` is the image used as the template during matching.  It can either
-    be the filename of a png file on disk or a numpy array containing the
-    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
-    arrays are the same format that OpenCV uses for images.  This allows
-    generating templates on the fly (possibly using OpenCV) or searching for
-    images captured from the system under test earlier in the test script.
-
-    `consecutive_matches` forces this function to wait for several consecutive
-    frames with a match found at the same x,y position. Increase
-    `consecutive_matches` to avoid false positives due to noise.
-
-    The templatematch parameter `noise_threshold` is marked for deprecation
-    but appears in the args for backward compatibility with positional
-    argument syntax. It will be removed in a future release; please use
-    `match_parameters.confirm_threshold` instead.
-
-    Specify `match_parameters` to customise the image matching algorithm. See
-    the documentation for `MatchParameters` for details.
-
-press_until_match(key, image, interval_secs=None, noise_threshold=None, max_presses=None, match_parameters=None)
-    Calls `press` as many times as necessary to find the specified `image`.
-
-    Returns `MatchResult` when `image` is found.
-    Raises `MatchTimeout` if no match is found after `max_presses` times.
-
-    `interval_secs` (int) default: 3
-      The number of seconds to wait for a match before pressing again.
-
-    `max_presses` (int) default: 10
-      The number of times to try pressing the key and looking for the image
-      before giving up and throwing `MatchTimeout`
-
-    `noise_threshold` (string) DEPRECATED
-      `noise_threshold` is marked for deprecation but appears in the args for
-      backward compatibility with positional argument syntax. It will be
-      removed in a future release; please use
-      `match_parameters.confirm_threshold` instead.
-
-    `match_parameters` (MatchParameters) default: MatchParameters()
-      Customise the image matching algorithm. See the documentation for
-      `MatchParameters` for details.
-
-wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, mask=None)
-    Search for motion in the source video stream.
-
-    Returns `MotionResult` when motion is detected.
-    Raises `MotionTimeout` if no motion is detected after `timeout_secs`
-    seconds.
-
-    `consecutive_frames` (str) default: 10/20
-      Considers the video stream to have motion if there were differences
-      between the specified number of `consecutive_frames`, which can be:
-
-      * a positive integer value, or
-      * a string in the form "x/y", where `x` is the number of frames with
-        motion detected out of a sliding window of `y` frames.
-
-      The default value is read from `motion.consecutive_frames` in your
-      configuration file.
-
-    `noise_threshold` (float) default: 0.84
-      Increase `noise_threshold` to avoid false negatives, at the risk of
-      increasing false positives (a value of 0.0 will never report motion).
-      This is particularly useful with noisy analogue video sources.
-      The default value is read from `motion.noise_threshold` in your
-      configuration file.
-
-    `mask` (str) default: None
-      A mask is a black and white image that specifies which part of the image
-      to search for motion. White pixels select the area to search; black
-      pixels the area to ignore.
+debug(msg)
+    Print the given string to stderr if stbt run `--verbose` was given.
 
 detect_match(image, timeout_secs=10, noise_threshold=None, match_parameters=None)
     Generator that yields a sequence of one `MatchResult` for each frame
@@ -449,6 +392,51 @@ detect_motion(timeout_secs=10, noise_threshold=None, mask=None)
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
+draw_text(text, duration_secs=3)
+    Write the specified `text` to the video output.
+
+    `duration_secs` is the number of seconds that the text should be displayed.
+
+frames(timeout_secs=None)
+    Generator that yields frames captured from the GStreamer pipeline.
+
+    "timeout_secs" is in seconds elapsed, from the method call. Note that
+    you can also simply stop iterating over the sequence yielded by this
+    method.
+
+    Returns an (image, timestamp) tuple for every frame captured, where
+    "image" is in OpenCV format.
+
+get_config(section, key, default=None, type_=<type 'str'>)
+    Read the value of `key` from `section` of the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `section` or `key` is not
+    found, unless `default` is specified (in which case `default` is returned).
+
+get_frame()
+    Returns an OpenCV image of the current video frame.
+
+is_screen_black(frame, mask=None, threshold=None)
+    Check for the presence of a black screen in a video frame.
+
+    `frame` (numpy.array)
+      The video frame to check, in OpenCV format (for example as returned by
+      `frames` and `get_frame`).
+
+    `mask` (string)
+      The filename of a black & white image mask. It must have white pixels for
+      parts of the frame to check and black pixels for any parts to ignore.
+
+    `threshold` (int) default: 10
+      Even when a video frame appears to be black, the intensity of its pixels
+      is not always 0. To differentiate almost-black from non-black pixels, a
+      binary threshold is applied to the frame. The `threshold` value is
+      in the range 0 (black) to 255 (white). The global default can be changed
+      by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
+
 match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
     Search the screen for the given text.
 
@@ -475,145 +463,6 @@ match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_W
         assert m.match
         while not stbt.match('selected-button.png').region.contains(m.region):
             press('KEY_DOWN')
-
-ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
-    Return the text present in the video frame as a Unicode string.
-
-    Perform OCR (Optical Character Recognition) using the "Tesseract"
-    open-source OCR engine, which must be installed on your system.
-
-    If `frame` isn't specified, take a frame from the source video stream.
-    If `region` is specified, only process that region of the frame; otherwise
-    process the entire frame.
-
-    `lang` is the three letter ISO-639-3 language code of the language you are
-    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
-    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
-    that the text to be read may be in a mixture of English and German.  To read
-    a language you must have the corresponding tesseract language pack
-    installed.  This language code is passed directly down to the tesseract OCR
-    engine.  For more information see the tesseract documentation.  `lang`
-    defaults to English.
-
-    `tesseract_config` (dict)
-      Allows passing configuration down to the underlying OCR engine.  See the
-      tesseract documentation for details:
-      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
-
-    `tesseract_user_words` (list of unicode strings)
-      List of words to be added to the tesseract dictionary.  Can help matching.
-      To replace the tesseract system dictionary set
-      `tesseract_config['load_system_dawg'] = False` and
-      `tesseract_config['load_freq_dawg'] = False`.
-
-    `tesseract_user_patterns` (list of unicode strings)
-      List of patterns to be considered as if they had been added to the
-      tesseract dictionary.  Can aid matching.  See the tesseract documentation
-      for information on the format of the patterns:
-      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
-
-class OcrMode
-    Options to control layout analysis and assume a certain form of image.
-
-    For a (brief) description of each option, see the tesseract(1) man page:
-    http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html
-
-    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
-    PAGE_SEGMENTATION_WITHOUT_OSD = 3
-    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
-    PAGE_SEGMENTATION_WITH_OSD = 1
-    SINGLE_CHARACTER = 10
-    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
-    SINGLE_LINE = 7
-    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
-    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
-    SINGLE_WORD = 8
-    SINGLE_WORD_IN_A_CIRCLE = 9
-
-as_precondition(message)
-    Context manager that replaces UITestFailures with UITestErrors.
-
-    If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `UITestFailure` exceptions) as
-    red results, and unhandled exceptions of any other type as yellow results.
-    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
-    `UITestFailure` (red results) when they detect a failure. By running such
-    functions inside an `as_precondition` context, any `UITestFailure` (red)
-    they raise will be caught, and a `UITestError` (yellow) will be raised
-    instead.
-
-    When running a single test script hundreds or thousands of times to
-    reproduce an intermittent defect, it is helpful to mark unrelated failures
-    as test errors (yellow) rather than test failures (red), so that you can
-    focus on diagnosing the failures that are most likely to be the particular
-    defect you are interested in.
-
-    `message` is a string describing the precondition (it is not the error
-    message if the precondition fails).
-
-    For example:
-
-    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
-    ...     # Call tune_channels(), which raises:
-    ...     raise UITestFailure("Failed to tune channels")
-    Traceback (most recent call last):
-      ...
-    PreconditionError: Didn't meet precondition 'Channels tuned'
-    (original exception was: Failed to tune channels)
-
-frames(timeout_secs=None)
-    Generator that yields frames captured from the GStreamer pipeline.
-
-    "timeout_secs" is in seconds elapsed, from the method call. Note that
-    you can also simply stop iterating over the sequence yielded by this
-    method.
-
-    Returns an (image, timestamp) tuple for every frame captured, where
-    "image" is in OpenCV format.
-
-save_frame(image, filename)
-    Saves an OpenCV image to the specified file.
-
-    Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
-
-get_frame()
-    Returns an OpenCV image of the current video frame.
-
-is_screen_black(frame, mask=None, threshold=None)
-    Check for the presence of a black screen in a video frame.
-
-    `frame` (numpy.array)
-      The video frame to check, in OpenCV format (for example as returned by
-      `frames` and `get_frame`).
-
-    `mask` (string)
-      The filename of a black & white image mask. It must have white pixels for
-      parts of the frame to check and black pixels for any parts to ignore.
-
-    `threshold` (int) default: 10
-      Even when a video frame appears to be black, the intensity of its pixels
-      is not always 0. To differentiate almost-black from non-black pixels, a
-      binary threshold is applied to the frame. The `threshold` value is
-      in the range 0 (black) to 255 (white). The global default can be changed
-      by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
-
-draw_text(text, duration_secs=3)
-    Write the specified `text` to the video output.
-
-    `duration_secs` is the number of seconds that the text should be displayed.
-
-get_config(section, key, default=None, type_=<type 'str'>)
-    Read the value of `key` from `section` of the stbt config file.
-
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
-
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found, unless `default` is specified (in which case `default` is returned).
-
-debug(msg)
-    Print the given string to stderr if stbt run `--verbose` was given.
 
 class MatchParameters
     Parameters to customise the image processing algorithm used by
@@ -710,11 +559,126 @@ class MatchResult
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
 
+class MatchTimeout(UITestFailure)
+    * `screenshot`: An OpenCV image from the source video when the search
+      for the expected image timed out.
+    * `expected`: Filename of the image that was being searched for.
+    * `timeout_secs`: Number of seconds that the image was searched for.
+
+class MotionResult
+    * `timestamp`: Video stream timestamp.
+    * `motion`: Boolean result.
+
+class MotionTimeout(UITestFailure)
+    * `screenshot`: An OpenCV image from the source video when the search
+      for motion timed out.
+    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
+    * `timeout_secs`: Number of seconds that motion was searched for.
+
+class NoVideo(UITestFailure)
+    No video available from the source pipeline.
+
+ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
+    Return the text present in the video frame as a Unicode string.
+
+    Perform OCR (Optical Character Recognition) using the "Tesseract"
+    open-source OCR engine, which must be installed on your system.
+
+    If `frame` isn't specified, take a frame from the source video stream.
+    If `region` is specified, only process that region of the frame; otherwise
+    process the entire frame.
+
+    `lang` is the three letter ISO-639-3 language code of the language you are
+    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
+    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
+    that the text to be read may be in a mixture of English and German.  To read
+    a language you must have the corresponding tesseract language pack
+    installed.  This language code is passed directly down to the tesseract OCR
+    engine.  For more information see the tesseract documentation.  `lang`
+    defaults to English.
+
+    `tesseract_config` (dict)
+      Allows passing configuration down to the underlying OCR engine.  See the
+      tesseract documentation for details:
+      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+
+    `tesseract_user_words` (list of unicode strings)
+      List of words to be added to the tesseract dictionary.  Can help matching.
+      To replace the tesseract system dictionary set
+      `tesseract_config['load_system_dawg'] = False` and
+      `tesseract_config['load_freq_dawg'] = False`.
+
+    `tesseract_user_patterns` (list of unicode strings)
+      List of patterns to be considered as if they had been added to the
+      tesseract dictionary.  Can aid matching.  See the tesseract documentation
+      for information on the format of the patterns:
+      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
+
+class OcrMode
+    Options to control layout analysis and assume a certain form of image.
+
+    For a (brief) description of each option, see the tesseract(1) man page:
+    http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html
+
+    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
+    PAGE_SEGMENTATION_WITHOUT_OSD = 3
+    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
+    PAGE_SEGMENTATION_WITH_OSD = 1
+    SINGLE_CHARACTER = 10
+    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
+    SINGLE_LINE = 7
+    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
+    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
+    SINGLE_WORD = 8
+    SINGLE_WORD_IN_A_CIRCLE = 9
+
 class Position
     A point within the video frame.
 
     `x` and `y` are integer coordinates (measured in number of pixels) from the
     top left corner of the video frame.
+
+class PreconditionError(UITestError)
+    Exception raised by `as_precondition`.
+
+press(key, interpress_delay_secs=None)
+    Send the specified key-press to the system under test.
+
+    The mechanism used to send the key-press depends on what you've configured
+    with `--control`.
+
+    `key` is a string. The allowed values depend on the control you're using:
+    If that's lirc, then `key` is a key name from your lirc config file.
+
+    `interpress_delay_secs` (float) default: 0
+      Specifies a minimum time to wait after the preceding key press, in order
+      to accommodate the responsiveness of the device under test.
+
+      The global default for `interpress_delay_secs` can be set in the
+      configuration file, in section `press`.
+
+press_until_match(key, image, interval_secs=None, noise_threshold=None, max_presses=None, match_parameters=None)
+    Calls `press` as many times as necessary to find the specified `image`.
+
+    Returns `MatchResult` when `image` is found.
+    Raises `MatchTimeout` if no match is found after `max_presses` times.
+
+    `interval_secs` (int) default: 3
+      The number of seconds to wait for a match before pressing again.
+
+    `max_presses` (int) default: 10
+      The number of times to try pressing the key and looking for the image
+      before giving up and throwing `MatchTimeout`
+
+    `noise_threshold` (string) DEPRECATED
+      `noise_threshold` is marked for deprecation but appears in the args for
+      backward compatibility with positional argument syntax. It will be
+      removed in a future release; please use
+      `match_parameters.confirm_threshold` instead.
+
+    `match_parameters` (MatchParameters) default: MatchParameters()
+      Customise the image matching algorithm. See the documentation for
+      `MatchParameters` for details.
 
 class Region
     Rectangular region within the video frame.
@@ -783,27 +747,11 @@ class Region
         >>> print c.translate(x=-9, y=-3)
         Region(x=1, y=1, width=3, height=2)
 
-class MotionResult
-    * `timestamp`: Video stream timestamp.
-    * `motion`: Boolean result.
+save_frame(image, filename)
+    Saves an OpenCV image to the specified file.
 
-class MatchTimeout(UITestFailure)
-    * `screenshot`: An OpenCV image from the source video when the search
-      for the expected image timed out.
-    * `expected`: Filename of the image that was being searched for.
-    * `timeout_secs`: Number of seconds that the image was searched for.
-
-class MotionTimeout(UITestFailure)
-    * `screenshot`: An OpenCV image from the source video when the search
-      for motion timed out.
-    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
-    * `timeout_secs`: Number of seconds that motion was searched for.
-
-class NoVideo(UITestFailure)
-    No video available from the source pipeline.
-
-class PreconditionError(UITestError)
-    Exception raised by `as_precondition`.
+    Takes an image obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
 
 class TextMatchResult
     Return type of `match_text`.
@@ -814,11 +762,66 @@ class TextMatchResult
     frame: The video frame matched against
     text (unicode): The text searched for
 
+class UITestError(Exception)
+    The test script had an unrecoverable error.
+
 class UITestFailure(Exception)
     The test failed because the system under test didn't behave as expected.
 
-class UITestError(Exception)
-    The test script had an unrecoverable error.
+wait_for_match(image, timeout_secs=10, consecutive_matches=1, noise_threshold=None, match_parameters=None)
+    Search for `image` in the source video stream.
+
+    Returns `MatchResult` when `image` is found.
+    Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
+
+    `image` is the image used as the template during matching.  It can either
+    be the filename of a png file on disk or a numpy array containing the
+    actual template image pixel data in 8-bit BGR format.  8-bit BGR numpy
+    arrays are the same format that OpenCV uses for images.  This allows
+    generating templates on the fly (possibly using OpenCV) or searching for
+    images captured from the system under test earlier in the test script.
+
+    `consecutive_matches` forces this function to wait for several consecutive
+    frames with a match found at the same x,y position. Increase
+    `consecutive_matches` to avoid false positives due to noise.
+
+    The templatematch parameter `noise_threshold` is marked for deprecation
+    but appears in the args for backward compatibility with positional
+    argument syntax. It will be removed in a future release; please use
+    `match_parameters.confirm_threshold` instead.
+
+    Specify `match_parameters` to customise the image matching algorithm. See
+    the documentation for `MatchParameters` for details.
+
+wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, mask=None)
+    Search for motion in the source video stream.
+
+    Returns `MotionResult` when motion is detected.
+    Raises `MotionTimeout` if no motion is detected after `timeout_secs`
+    seconds.
+
+    `consecutive_frames` (str) default: 10/20
+      Considers the video stream to have motion if there were differences
+      between the specified number of `consecutive_frames`, which can be:
+
+      * a positive integer value, or
+      * a string in the form "x/y", where `x` is the number of frames with
+        motion detected out of a sliding window of `y` frames.
+
+      The default value is read from `motion.consecutive_frames` in your
+      configuration file.
+
+    `noise_threshold` (float) default: 0.84
+      Increase `noise_threshold` to avoid false negatives, at the risk of
+      increasing false positives (a value of 0.0 will never report motion).
+      This is particularly useful with noisy analogue video sources.
+      The default value is read from `motion.noise_threshold` in your
+      configuration file.
+
+    `mask` (str) default: None
+      A mask is a black and white image that specifies which part of the image
+      to search for motion. White pixels select the area to search; black
+      pixels the area to ignore.
 
 
 .. <end python docs>

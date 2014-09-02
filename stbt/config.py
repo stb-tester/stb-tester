@@ -8,6 +8,7 @@ _config = None
 
 
 class ConfigurationError(Exception):
+    """An error with your stbt configuration file."""
     pass
 
 

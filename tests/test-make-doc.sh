@@ -36,8 +36,8 @@ test_that_readme_python_api_docs_are_kept_up_to_date() {
 	
 	.. <start python docs>
 	
-	press(key, interpress_delay_secs=None)
-	    Send the specified key-press to the system under test.
+	as_precondition(message)
+	    Context manager that replaces UITestFailures with UITestErrors.
 	
 	.. <end python docs>
 	
