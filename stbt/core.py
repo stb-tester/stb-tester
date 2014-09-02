@@ -28,6 +28,37 @@ from .config import ConfigurationError, get_config
 from .gst_hacks import gst_iterate, map_gst_buffer
 from .logging import ddebug, debug, warn
 
+__all__ = [
+    "as_precondition",
+    "detect_match",
+    "detect_motion",
+    "draw_text",
+    "frames",
+    "get_frame",
+    "is_screen_black",
+    "match",
+    "match_text",
+    "MatchParameters",
+    "MatchResult",
+    "MatchTimeout",
+    "MotionResult",
+    "MotionTimeout",
+    "NoVideo",
+    "ocr",
+    "OcrMode",
+    "Position",
+    "PreconditionError",
+    "press",
+    "press_until_match",
+    "Region",
+    "save_frame",
+    "TextMatchResult",
+    "UITestError",
+    "UITestFailure",
+    "wait_for_match",
+    "wait_for_motion",
+]
+
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()
 Gst.init(None)
