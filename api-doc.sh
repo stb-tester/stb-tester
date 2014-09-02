@@ -68,35 +68,9 @@ substitute_python_docstrings() {
 }
 python_docstrings() {
     echo ""
-    doc press
-    doc wait_for_match
-    doc press_until_match
-    doc wait_for_motion
-    doc detect_match
-    doc detect_motion
-    doc match_text
-    doc ocr
-    doc OcrMode
-    doc as_precondition
-    doc frames
-    doc save_frame
-    doc get_frame
-    doc is_screen_black
-    doc draw_text
-    doc get_config
-    doc debug
-    doc MatchParameters
-    doc MatchResult
-    doc Position
-    doc Region
-    doc MotionResult
-    doc MatchTimeout
-    doc MotionTimeout
-    doc NoVideo
-    doc PreconditionError
-    doc TextMatchResult
-    doc UITestFailure
-    doc UITestError
+    for x in $(python -c $'import stbt\nfor x in stbt.__all__: print x'); do
+        doc $x
+    done
 }
 
 substitute_ocr_default_mode() {
