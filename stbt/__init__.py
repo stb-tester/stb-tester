@@ -1733,10 +1733,11 @@ class Display(object):
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
+                    if (timestamp - self.start_timestamp >
+                            timeout_secs * Gst.SECOND):
                         debug("timed out: %d - %d > %d" % (
                             timestamp, self.start_timestamp,
-                            timeout_secs * 1e9))
+                            timeout_secs * Gst.SECOND))
                         return
 
                 sample = _gst_sample_make_writable(sample)
@@ -1795,7 +1796,7 @@ class Display(object):
         for x in list(texts):
             text, duration, end_time = x
             if end_time is None:
-                end_time = now + (duration * 1e9)
+                end_time = now + (duration * Gst.SECOND)
                 texts.remove(x)
                 texts.append((text, duration, end_time))
             elif now > end_time:
