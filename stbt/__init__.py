@@ -1612,10 +1612,12 @@ class Display(object):
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
         self.source_pipeline = None
-        self.start_timestamp = None
         self.underrun_timeout = None
         self.video_debug = []
         self.tearing_down = False
+        self.timestamp_offset = 0
+        self.last_timestamp = 0
+        self.last_sample_time = 0
 
         self.restart_source_enabled = restart_source
 
@@ -1639,10 +1641,13 @@ class Display(object):
             if not save_video.endswith(".webm"):
                 save_video += ".webm"
             debug("Saving video to '%s'" % save_video)
+            if os.path.isfile(save_video):
+                os.unlink(save_video)
             video_pipeline = (
                 "t. ! queue leaky=downstream ! videoconvert ! "
                 "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
-                "webmmux ! filesink location=%s" % save_video)
+                "webmmux streamable=true ! filesink location=%s append=true"
+                % save_video)
         else:
             video_pipeline = ""
 
@@ -1688,14 +1693,11 @@ class Display(object):
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-sample", self.on_new_sample)
 
-        if self.restart_source_enabled:
-            # Handle loss of video (but without end-of-stream event) from the
-            # Hauppauge HDPVR capture device.
-            source_queue = self.source_pipeline.get_by_name(
-                "_stbt_user_data_queue")
-            self.start_timestamp = None
-            source_queue.connect("underrun", self.on_underrun)
-            source_queue.connect("running", self.on_running)
+        # Handle loss of video (but without end-of-stream event) from the
+        # Hauppauge HDPVR capture device.
+        source_queue = self.source_pipeline.get_by_name("_stbt_user_data_queue")
+        source_queue.connect("underrun", self.on_underrun)
+        source_queue.connect("running", self.on_running)
 
         if (self.source_pipeline.set_state(Gst.State.PAUSED)
                 == Gst.StateChangeReturn.NO_PREROLL):
@@ -1730,7 +1732,7 @@ class Display(object):
             yield (copy, sample.get_buffer().pts)
 
     def gst_samples(self, timeout_secs=None):
-        self.start_timestamp = None
+        start_timestamp = None
 
         with self.lock:
             while True:
@@ -1740,11 +1742,11 @@ class Display(object):
                 timestamp = sample.get_buffer().pts
 
                 if timeout_secs is not None:
-                    if not self.start_timestamp:
-                        self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
+                    if not start_timestamp:
+                        start_timestamp = timestamp
+                    if timestamp - start_timestamp > timeout_secs * 1e9:
                         debug("timed out: %d - %d > %d" % (
-                            timestamp, self.start_timestamp,
+                            timestamp, start_timestamp,
                             timeout_secs * 1e9))
                         return
 
@@ -1756,6 +1758,11 @@ class Display(object):
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
+        buf = sample.get_buffer()
+        # Timestamps are counted from zero after a source pipeline restart
+        buf.pts += self.timestamp_offset
+        self.last_timestamp = buf.pts
+        self.last_sample_time = time.time()
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
@@ -1778,13 +1785,14 @@ class Display(object):
                    (sample_or_exception.get_buffer().pts,
                     self.last_sample.qsize()))
 
-        # Drop old frame
+        self.drop_old_sample()
+        self.last_sample.put_nowait(sample_or_exception)
+
+    def drop_old_sample(self):
         try:
             self.last_sample.get_nowait()
         except Queue.Empty:
             pass
-
-        self.last_sample.put_nowait(sample_or_exception)
 
     def draw_text(self, text, duration_secs):
         """Draw the specified text on the output video."""
@@ -1850,8 +1858,8 @@ class Display(object):
         if self.underrun_timeout:
             ddebug("underrun: I already saw a recent underrun; ignoring")
         else:
-            ddebug("underrun: scheduling 'restart_source' in 2s")
-            self.underrun_timeout = GObjectTimeout(2, self.restart_source)
+            ddebug("underrun: scheduling 'handle_underrun' in 2s")
+            self.underrun_timeout = GObjectTimeout(2, self.handle_underrun)
             self.underrun_timeout.start()
 
     def on_running(self, _element):
@@ -1862,9 +1870,16 @@ class Display(object):
         else:
             ddebug("running: no outstanding underrun timers; ignoring")
 
-    def restart_source(self, *_args):
+    def handle_underrun(self, *_args):
+        self.drop_old_sample()
+        ddebug("underrun: dropped the last sample")
+        if self.restart_source_enabled:
+            self.restart_source()
+
+    def restart_source(self):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
+        self.sink_pipeline.set_state(Gst.State.NULL)
         self.source_pipeline.set_state(Gst.State.NULL)
         self.source_pipeline = None
         GObjectTimeout(5, self.start_source).start()
@@ -1875,7 +1890,11 @@ class Display(object):
             return False
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
+        self.timestamp_offset = \
+            self.last_timestamp + (time.time() - self.last_sample_time) * 1e9
+        ddebug("start_source: new timestamp offset: %d" % self.timestamp_offset)
         self.source_pipeline.set_state(Gst.State.PLAYING)
+        self.sink_pipeline.set_state(Gst.State.PLAYING)
         warn("Restarted source pipeline")
         if self.restart_source_enabled:
             self.underrun_timeout.start()
