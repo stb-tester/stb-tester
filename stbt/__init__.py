@@ -1614,7 +1614,7 @@ class Display(object):
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
-        self.video_debug = []
+        self.text_annotations = []
         self.tearing_down = False
 
         self.restart_source_enabled = restart_source
@@ -1788,35 +1788,28 @@ class Display(object):
 
     def draw_text(self, text, duration_secs):
         """Draw the specified text on the output video."""
-        self.video_debug.append((text, duration_secs, None))
+        self.text_annotations.append((text, duration_secs, None))
 
     def push_sample(self, sample):
-        timestamp = sample.get_buffer().pts
-        for text, duration, timeout in list(self.video_debug):
-            if timeout is None:
-                timeout = timestamp + (duration * 1e9)
-                self.video_debug.remove((text, duration, None))
-                self.video_debug.append((text, duration, timeout))
-            if timestamp > timeout:
-                self.video_debug.remove((text, duration, timeout))
+        # Calculate whether we need to draw any annotations on the output video.
+        now = sample.get_buffer().pts
+        texts = self.text_annotations
+        for x in list(texts):
+            text, duration, end_time = x
+            if end_time is None:
+                end_time = now + (duration * 1e9)
+                texts.remove(x)
+                texts.append((text, duration, end_time))
+            elif now > end_time:
+                texts.remove(x)
 
-        if len(self.video_debug) > 0:
+        if texts:  # Draw the annotations.
             sample = _gst_sample_make_writable(sample)
             with _numpy_from_sample(sample) as img:
-                for i in range(len(self.video_debug)):
-                    text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
+                for i in range(len(texts)):
+                    text, _, _ = texts[len(texts) - i - 1]
                     origin = (10, (i + 1) * 30)
-                    (width, height), _ = cv2.getTextSize(
-                        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-                        thickness=1)
-                    cv2.rectangle(
-                        img, origin, (origin[0] + width, origin[1] - height),
-                        thickness=cv2.cv.CV_FILLED,
-                        color=(0, 0, 0))
-                    cv2.putText(
-                        img, text, origin,
-                        cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-                        color=(255, 255, 255))
+                    _draw_text(img, text, origin)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -1910,6 +1903,17 @@ class Display(object):
             self.mainloop_thread.join(10)
             debug("teardown: Exiting (GLib mainloop %s)" % (
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
+
+
+def _draw_text(numpy_image, text, origin):
+    (width, height), _ = cv2.getTextSize(
+        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0, thickness=1)
+    cv2.rectangle(
+        numpy_image, origin, (origin[0] + width, origin[1] - height),
+        thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
+    cv2.putText(
+        numpy_image, text, origin, cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+        color=(255, 255, 255))
 
 
 class GObjectTimeout(object):
