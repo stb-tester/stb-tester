@@ -520,6 +520,7 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
 
 def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
+    lircd_started = [False]
 
     def fake_lircd(address):
         # This needs to accept 2 connections (from LircRemote and
@@ -528,6 +529,7 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
         s.listen(5)
+        lircd_started[0] = True
         listener, _ = s.accept()
         # "+ 1" is for LircRemote's __init__.
         for _ in range(len(keys) + 1):
@@ -545,7 +547,8 @@ def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
     t.daemon = True
     t.run = lambda: fake_lircd(lircd_socket)
     t.start()
-    time.sleep(0.01)  # Give it a chance to start listening (sorry)
+    while not lircd_started[0]:
+        time.sleep(0.1)
     listener = lirc_remote_listen(lircd_socket, 'test')
     control = new_local_lirc_remote(lircd_socket, 'test')
     for i in keys:
