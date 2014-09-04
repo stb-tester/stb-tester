@@ -126,7 +126,7 @@ def draw_text(text, duration_secs=3):
 
     `duration_secs` is the number of seconds that the text should be displayed.
     """
-    _display.draw_text(text, duration_secs)
+    _display.draw(text, duration_secs)
 
 
 class MatchParameters(object):
@@ -501,15 +501,6 @@ def _load_template(template):
         return _AnnotatedTemplate(image, template_name)
 
 
-def _draw_match(frame, match_result):
-    with _numpy_from_sample(frame, readonly=False) as frame:
-        r = match_result.region
-        cv2.rectangle(
-            frame, (r.x, r.y), (r.right, r.bottom),
-            (32, 0 if match_result else 255, 255),  # bgr
-            thickness=3)
-
-
 def _crop(frame, region):
     assert _image_region(frame).contains(region)
     return frame[region.y:region.bottom, region.x:region.right]
@@ -569,9 +560,8 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
             first_pass_certainty, numpy.copy(npframe),
             (template.filename or template.image))
 
-    if grabbed_from_live and frame.get_buffer().mini_object.is_writable():
-        # Don't want to draw on user-provided frames!
-        _draw_match(frame, result)
+    if grabbed_from_live:
+        _display.draw(result, None)
 
     if result.match:
         debug("Match found: %s" % str(result))
@@ -616,7 +606,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     for sample in _display.gst_samples(timeout_secs):
         result = match(
             template, frame=sample, match_parameters=match_parameters)
-        _draw_match(sample, result)
+        _display.draw(result, None)
         yield result
 
 
@@ -1614,7 +1604,8 @@ class Display(object):
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
-        self.video_debug = []
+        self.text_annotations = []
+        self.match_annotations = []
         self.tearing_down = False
 
         self.restart_source_enabled = restart_source
@@ -1742,10 +1733,11 @@ class Display(object):
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs * 1e9:
+                    if (timestamp - self.start_timestamp >
+                            timeout_secs * Gst.SECOND):
                         debug("timed out: %d - %d > %d" % (
                             timestamp, self.start_timestamp,
-                            timeout_secs * 1e9))
+                            timeout_secs * Gst.SECOND))
                         return
 
                 sample = _gst_sample_make_writable(sample)
@@ -1786,37 +1778,44 @@ class Display(object):
 
         self.last_sample.put_nowait(sample_or_exception)
 
-    def draw_text(self, text, duration_secs):
-        """Draw the specified text on the output video."""
-        self.video_debug.append((text, duration_secs, None))
+    def draw(self, obj, duration_secs):
+        if type(obj) in (str, unicode):
+            self.text_annotations.append((obj, duration_secs, None))
+        elif type(obj) is MatchResult:
+            if obj.timestamp is not None:
+                self.match_annotations.append(obj)
+        else:
+            raise TypeError(
+                "Can't draw object of type '%s'" % type(obj).__name__)
 
     def push_sample(self, sample):
-        timestamp = sample.get_buffer().pts
-        for text, duration, timeout in list(self.video_debug):
-            if timeout is None:
-                timeout = timestamp + (duration * 1e9)
-                self.video_debug.remove((text, duration, None))
-                self.video_debug.append((text, duration, timeout))
-            if timestamp > timeout:
-                self.video_debug.remove((text, duration, timeout))
+        # Calculate whether we need to draw any annotations on the output video.
+        now = sample.get_buffer().pts
+        texts = self.text_annotations
+        matches = []
+        for x in list(texts):
+            text, duration, end_time = x
+            if end_time is None:
+                end_time = now + (duration * Gst.SECOND)
+                texts.remove(x)
+                texts.append((text, duration, end_time))
+            elif now > end_time:
+                texts.remove(x)
+        for match_result in list(self.match_annotations):
+            if match_result.timestamp == now:
+                matches.append(match_result)
+            if now >= match_result.timestamp:
+                self.match_annotations.remove(match_result)
 
-        if len(self.video_debug) > 0:
+        if texts or matches:  # Draw the annotations.
             sample = _gst_sample_make_writable(sample)
             with _numpy_from_sample(sample) as img:
-                for i in range(len(self.video_debug)):
-                    text, _, _ = self.video_debug[len(self.video_debug) - i - 1]
+                for i in range(len(texts)):
+                    text, _, _ = texts[len(texts) - i - 1]
                     origin = (10, (i + 1) * 30)
-                    (width, height), _ = cv2.getTextSize(
-                        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-                        thickness=1)
-                    cv2.rectangle(
-                        img, origin, (origin[0] + width, origin[1] - height),
-                        thickness=cv2.cv.CV_FILLED,
-                        color=(0, 0, 0))
-                    cv2.putText(
-                        img, text, origin,
-                        cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-                        color=(255, 255, 255))
+                    _draw_text(img, text, origin)
+                for match_result in matches:
+                    _draw_match(img, match_result.region, match_result.match)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -1912,6 +1911,24 @@ class Display(object):
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
+def _draw_text(numpy_image, text, origin):
+    (width, height), _ = cv2.getTextSize(
+        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0, thickness=1)
+    cv2.rectangle(
+        numpy_image, origin, (origin[0] + width, origin[1] - height),
+        thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
+    cv2.putText(
+        numpy_image, text, origin, cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+        color=(255, 255, 255))
+
+
+def _draw_match(numpy_image, region, match_, thickness=3):
+    cv2.rectangle(
+        numpy_image, (region.x, region.y), (region.right, region.bottom),
+        (32, 0 if match_ else 255, 255),  # bgr
+        thickness=thickness)
+
+
 class GObjectTimeout(object):
     """Responsible for setting a timeout in the GTK main loop."""
     def __init__(self, timeout_secs, handler, *args):
@@ -1954,11 +1971,7 @@ def _match(image, template, match_parameters, template_name):
 
     if logging.get_debug_level() > 1:
         source_with_roi = image.copy()
-        cv2.rectangle(
-            source_with_roi,
-            (region.x, region.y), (region.right, region.bottom),
-            (32, 0 if first_pass_matched else 255, 255),  # bgr
-            thickness=1)
+        _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
         _log_image(
             source_with_roi, "source_with_roi", "stbt-debug/detect_match")
         _log_image_descriptions(
