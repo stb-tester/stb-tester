@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from textwrap import dedent
 
-from _stbt.config import _config_init, _set_config, _sponge, get_config
+from _stbt.config import _config_init, _sponge, get_config, set_config
 
 
 @contextmanager
@@ -55,7 +55,7 @@ def set_config_test():
 
 def test_that_set_config_modifies_config_value():
     with set_config_test():
-        _set_config('global', 'test', 'goodbye')
+        set_config('global', 'test', 'goodbye')
         assert get_config('global', 'test', 'goodbye')
         _config_init(force=True)
         assert get_config('global', 'test', 'goodbye')
@@ -63,7 +63,7 @@ def test_that_set_config_modifies_config_value():
 
 def test_that_set_config_creates_new_sections_if_required():
     with set_config_test():
-        _set_config('non_existent_section', 'test', 'goodbye')
+        set_config('non_existent_section', 'test', 'goodbye')
         assert get_config('non_existent_section', 'test', 'goodbye')
         _config_init(force=True)
         assert get_config('non_existent_section', 'test', 'goodbye')
@@ -78,7 +78,7 @@ def test_that_set_config_preserves_file_comments_and_formatting():
     from nose import SkipTest
     raise SkipTest("set_config doesn't currently preserve formatting")
     with set_config_test():
-        _set_config('global', 'test', 'goodbye')
+        set_config('global', 'test', 'goodbye')
         assert open('test.cfg', 'r').read() == test_config.replace(
             'hello', 'goodbye')
 
@@ -88,7 +88,7 @@ def test_that_set_config_creates_directories_if_required():
         os.environ['XDG_CONFIG_HOME'] = d + '/.config'
         if 'STBT_CONFIG_FILE' in os.environ:
             del os.environ['STBT_CONFIG_FILE']
-        _set_config('global', 'test', 'hello2')
+        set_config('global', 'test', 'hello2')
         assert os.path.isfile(d + '/.config/stbt/stbt.conf')
         _config_init(force=True)
         assert get_config('global', 'test') == 'hello2'

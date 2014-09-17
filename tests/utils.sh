@@ -27,8 +27,8 @@ killtree() {
 
 set_config() {
     python - "$@" <<-EOF
-	import sys, stbt
+	import sys, _stbt.config
 	section, name = sys.argv[1].split('.')
-	_stbt.config._set_config(section, name, sys.argv[2])
+	_stbt.config.set_config(section, name, sys.argv[2])
 	EOF
 }

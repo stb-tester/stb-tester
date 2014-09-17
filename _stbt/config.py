@@ -36,7 +36,7 @@ def get_config(section, key, default=None, type_=str):
             section, key, type_.__name__))
 
 
-def _set_config(section, option, value):
+def set_config(section, option, value):
     """Update config values (in memory and on disk).
 
     WARNING: This will overwrite your stbt.conf but comments and whitespace
