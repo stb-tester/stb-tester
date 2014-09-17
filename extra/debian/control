@@ -61,3 +61,9 @@ Description: Automated User Interface testing for set-top boxes.
  and checking that it has done the right thing by analysing what is on screen.
  Test scripts are written in Python and can be generated with the `stbt record`
  command.
+
+Package: stb-tester-camera
+Architecture: any
+Depends: stb-tester (>> ${source:Upstream-Version})
+Description: Support for using a camera pointed at a TV as input for
+ stb-tester.  This is useful for testing apps running on Smart TVs.

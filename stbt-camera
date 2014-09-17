@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Copyright 2014 stb-tester.com Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+
+#/ usage: stbt camera [--help] <command> [args]
+#/
+#/ Available commands are:
+#/
+#/ For help on a specific command do 'stbt camera <command> --help'.
+#/ See 'man stbt' for more detailed information.
+
+usage() { grep '^#/' "$0" | cut -c4-; }
+
+[ $# -ge 1 ] || { usage >&2; exit 1; }
+case "$1" in
+    -h|--help)
+        usage; exit 0;;
+    *)
+        usage >&2; exit 1;;
+esac

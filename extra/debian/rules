@@ -13,3 +13,7 @@ export sysconfdir=/etc
 # TODO: Investigate and re-enable `make check` by removing the following:
 override_dh_auto_test :
 	true
+
+override_dh_auto_install :
+	make install-core DESTDIR=debian/stb-tester
+	make install-stbt-camera DESTDIR=debian/stb-tester-camera

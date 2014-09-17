@@ -14,6 +14,7 @@ user_name?=$(shell git config user.name || \
                    getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
 user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
 
+enable_stbt_camera?=yes
 ubuntu_releases ?= saucy trusty
 debian_base_release=1
 
@@ -48,7 +49,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -63,7 +64,8 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt.sh stbt.1 defaults.conf
+install : install-core
+install-core : stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -267,7 +269,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
-	mv "$$tmpdir/$@" . && \
+	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
 deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
@@ -316,8 +318,38 @@ copr-publish: $(src_rpm)
 	copr-cli build stb-tester \
 	    https://github.com/drothlis/stb-tester-srpms/raw/master/$(src_rpm)
 
+# stbt camera - Optional Smart TV support
 
-.PHONY: all clean check deb dist doc install uninstall
+stbt_camera_build_target=$(if $(enable_stbt_camera), \
+	stbt-camera, \
+	$(info Not building optional plugins for Smart TV support))
+stbt_camera_install_target=$(if $(enable_stbt_camera), \
+	install-stbt-camera, \
+	$(info Not installing optional plugins for Smart TV support))
+
+all : $(stbt_camera_build_target)
+install : $(stbt_camera_install_target)
+
+stbt_camera_files=\
+	stbt-camera
+
+installed_camera_files=\
+	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files))
+
+install-stbt-camera : $(stbt_camera_files)
+	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
+	@for file in $(stbt_camera_files); \
+	do \
+		if [ -x "$$file" ]; then \
+			perms=0755; \
+		else \
+			perms=0644; \
+		fi; \
+		echo INSTALL "$$file"; \
+		$(INSTALL) -m $$perms "$$file" "$(DESTDIR)$(libexecdir)/stbt/$$file"; \
+	done
+
+.PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
