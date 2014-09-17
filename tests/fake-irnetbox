@@ -11,7 +11,7 @@ import struct
 import sys
 import time
 
-from stbt.irnetbox import MessageTypes
+from _stbt.irnetbox import MessageTypes
 
 
 class FakeIRNetBox(SocketServer.BaseRequestHandler):

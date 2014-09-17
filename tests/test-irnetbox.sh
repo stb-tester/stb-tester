@@ -17,7 +17,7 @@ test_irnetbox_commands() {
     start_fake_irnetbox
 
     cat > test.py <<-EOF
-	from stbt import irnetbox
+	from _stbt import irnetbox
 	rcu = irnetbox.RemoteControlConfig("$testdir/irnetbox.conf")
 	with irnetbox.IRNetBox("localhost", $irnetbox_port) as ir:
 	    ir.power_on()
@@ -115,7 +115,7 @@ test_irnetbox_proxy() {
 
     cat > test1.py <<-EOF
 	import time
-	from stbt import irnetbox
+	from _stbt import irnetbox
 	with irnetbox.IRNetBox("localhost", $proxy_port) as ir:
 	    for _ in range(10):
 	        ir.indicators_on()
@@ -125,7 +125,7 @@ test_irnetbox_proxy() {
 
     cat > test2.py <<-EOF
 	import time
-	from stbt import irnetbox
+	from _stbt import irnetbox
 	rcu = irnetbox.RemoteControlConfig("$testdir/irnetbox.conf")
 	with irnetbox.IRNetBox("localhost", $proxy_port) as ir:
 	    for _ in range(10):

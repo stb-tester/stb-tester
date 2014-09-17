@@ -67,6 +67,7 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/_stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
@@ -78,15 +79,16 @@ install: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
-	    stbt/__init__.py \
-	    stbt/config.py \
-	    stbt/control.py \
-	    stbt/gst_hacks.py \
-	    stbt/irnetbox.py \
-	    stbt/logging.py \
-	    stbt/pylint_plugin.py \
-	    stbt/utils.py \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt
+	    _stbt/__init__.py \
+	    _stbt/config.py \
+	    _stbt/control.py \
+	    _stbt/gst_hacks.py \
+	    _stbt/irnetbox.py \
+	    _stbt/logging.py \
+	    _stbt/pylint_plugin.py \
+	    _stbt/utils.py \
+	    $(DESTDIR)$(libexecdir)/stbt/_stbt
+	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
 	    stbt-batch.d/run \
@@ -126,7 +128,7 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: api-doc.sh stbt/__init__.py stbt/config.py
+README.rst: api-doc.sh stbt/__init__.py _stbt/config.py
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:

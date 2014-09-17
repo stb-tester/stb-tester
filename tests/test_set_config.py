@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from textwrap import dedent
 
-from stbt.config import _config_init, _set_config, _sponge, get_config
+from _stbt.config import _config_init, _set_config, _sponge, get_config
 
 
 @contextmanager

@@ -31,13 +31,13 @@ import gi
 import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
-from . import config
-from . import control
-from . import logging
-from . import utils
-from .config import ConfigurationError, get_config
-from .gst_hacks import gst_iterate, map_gst_buffer
-from .logging import debug, ddebug, warn
+from _stbt import config
+from _stbt import control
+from _stbt import logging
+from _stbt import utils
+from _stbt.config import ConfigurationError, get_config
+from _stbt.gst_hacks import gst_iterate, map_gst_buffer
+from _stbt.logging import debug, ddebug, warn
 
 __all__ = [
     "as_precondition",
