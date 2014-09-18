@@ -47,7 +47,7 @@ def set_config(section, option, value):
     Writes to `$STBT_CONFIG_FILE` if set falling back to
     `$HOME/stbt/stbt.conf`.
     """
-    user_config = '%s/stbt/stbt.conf' % _xdg_config_dir()
+    user_config = '%s/stbt/stbt.conf' % xdg_config_dir()
     custom_config = os.environ.get('STBT_CONFIG_FILE') or user_config
 
     config = _config_init()
@@ -84,7 +84,7 @@ def _config_init(force=False):
             system_config,
             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
             # directory specification:
-            '%s/stbt/stbt.conf' % _xdg_config_dir(),
+            '%s/stbt/stbt.conf' % xdg_config_dir(),
             # Config files specific to the test suite / test run:
             os.environ.get('STBT_CONFIG_FILE', ''),
         ])
@@ -92,7 +92,7 @@ def _config_init(force=False):
     return _config
 
 
-def _xdg_config_dir():
+def xdg_config_dir():
     return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
 
 
