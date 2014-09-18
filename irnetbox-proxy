@@ -307,7 +307,7 @@ def main():
         proxy.run()
     except (KeyboardInterrupt, StopRunning), e:
         proxy.error(e, "Stopped")
-    except Exception, e:
+    except Exception, e:  # pylint:disable=W0703
         proxy.error(e, "irNetProxy encountered an error")
 
 if __name__ == "__main__":
