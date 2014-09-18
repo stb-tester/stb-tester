@@ -30,6 +30,7 @@ for f in "$@"; do
                  $f 2>&1) || r=1 ret=1
     printf "%s" "$out" |
         grep -v \
+            -e 'libdc1394 error: Failed to initialize libdc1394' \
             -e 'pygobject_register_sinkfunc is deprecated' \
             -e "assertion .G_TYPE_IS_BOXED (boxed_type). failed" \
             -e "assertion .G_IS_PARAM_SPEC (pspec). failed" \
