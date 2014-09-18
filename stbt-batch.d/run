@@ -145,7 +145,10 @@ run() {
   cat <<-EOF | python &&
 		import cv2
 		im = cv2.imread('thumbnail.png')
-		cv2.imwrite('thumbnail.jpg', cv2.resize(im, (300, 300 * 9 // 16)))
+		cv2.imwrite(
+		    'thumbnail.jpg',
+		    cv2.resize(im, (640, 640 * im.shape[0] // im.shape[1])),
+		    [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
 		EOF
   rm -f thumbnail.png
 
