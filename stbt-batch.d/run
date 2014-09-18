@@ -137,20 +137,18 @@ run() {
   # Data that must be collected ASAP
   echo $(( $(date +%s) - $start_time )) > duration
   which sensors &>/dev/null && sensors &> sensors.log
-  [[ $exit_status -ne 0 && ! -f screenshot.png ]] &&
-    "$runner"/../stbt-screenshot &>/dev/null
+  [[ -f screenshot.png ]] || "$runner"/../stbt-screenshot &>/dev/null
   echo $exit_status > exit-status
 
-  "$runner"/../stbt-screenshot thumbnail.png &>/dev/null &&
   cat <<-EOF | python &&
 		import cv2
-		im = cv2.imread('thumbnail.png')
+		im = cv2.imread('screenshot.png')
 		cv2.imwrite(
 		    'thumbnail.jpg',
 		    cv2.resize(im, (640, 640 * im.shape[0] // im.shape[1])),
 		    [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
 		EOF
-  rm -f thumbnail.png
+  [[ $exit_status -eq 0 ]] && rm -f screenshot.png
 
   user_command post_run stop
 
