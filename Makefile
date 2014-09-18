@@ -316,8 +316,17 @@ copr-publish: $(src_rpm)
 	copr-cli build stb-tester \
 	    https://github.com/drothlis/stb-tester-srpms/raw/master/$(src_rpm)
 
+# Docker images
 
-.PHONY: all clean check deb dist doc install uninstall
+docker-build : stb-tester-$(VERSION).tar.gz
+	tmpdir=$$(mktemp -d) && \
+	tar -C "$$tmpdir" -xzf $(abspath $<) && \
+	find "$$tmpdir/stb-tester-$(VERSION)" -print0 | xargs -0 touch -cht 197001010000.00 && \
+	docker.io build --rm=false -t stb-tester:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
+	rm -rf "$$tmpdir" && \
+	printf "Run with:\n    docker.io run stb-tester:$(VERSION)\n"
+
+.PHONY: all clean check deb dist doc docker-build install uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
