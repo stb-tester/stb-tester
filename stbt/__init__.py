@@ -2218,7 +2218,9 @@ def _log_image(image, name, directory):
     if name == "source":
         _frame_number += 1
     d = os.path.join(directory, "%05d" % _frame_number)
-    if not utils.mkdir(d):
+    try:
+        utils.mkdir_p(d)
+    except OSError:
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
     if image.dtype == numpy.float32:

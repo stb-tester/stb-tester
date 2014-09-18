@@ -5,13 +5,18 @@ from contextlib import contextmanager
 from shutil import rmtree
 
 
-def mkdir(d):
+def mkdir_p(d):
+    """Python 3.2 has an optional argument to os.makedirs called exist_ok.  To
+    support older versions of python we can't use this and need to catch
+    exceptions"""
     try:
         os.makedirs(d)
     except OSError, e:
-        if e.errno != errno.EEXIST:
-            return False
-    return os.path.isdir(d) and os.access(d, os.R_OK | os.W_OK)
+        if e.errno == errno.EEXIST and os.path.isdir(d) \
+                and os.access(d, os.R_OK | os.W_OK):
+            return
+        else:
+            raise
 
 
 @contextmanager
