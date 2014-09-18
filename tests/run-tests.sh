@@ -93,7 +93,7 @@ _stbt_run_tests() {
     local testdir="$(dirname \
         $(echo $COMP_LINE | grep -o '\b[^ ]*run-tests\.sh\b'))"
     local testfiles="$(\ls $testdir/test-*.sh | sed -e 's,^\./,,')"
-    local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*()/ {print $1}' $testfiles)"
+    local testcases="$(awk -F'[ ()]' '/^test_[a-z_]*\(\)/ {print $1}' $testfiles)"
     COMPREPLY=( $(
         compgen -W "$testcases $testfiles" -- "$cur") )
 }
