@@ -143,10 +143,11 @@ run() {
   cat <<-EOF | python &&
 		import cv2
 		im = cv2.imread('screenshot.png')
-		cv2.imwrite(
-		    'thumbnail.jpg',
-		    cv2.resize(im, (640, 640 * im.shape[0] // im.shape[1])),
-		    [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
+		if im is not None:
+		    cv2.imwrite(
+		        'thumbnail.jpg',
+		        cv2.resize(im, (640, 640 * im.shape[0] // im.shape[1])),
+		        [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
 		EOF
   [[ $exit_status -eq 0 ]] && rm -f screenshot.png
 
