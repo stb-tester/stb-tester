@@ -1,6 +1,8 @@
 # The default target of this Makefile is:
 all:
 
+PKG_DEPS=gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 opencv orc-0.4
+
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
@@ -13,6 +15,15 @@ sysconfdir?=$(prefix)/etc
 user_name?=$(shell git config user.name || \
                    getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
 user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
+
+# Support installing GStreamer elements under $HOME
+gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/gstreamer-1.0/plugins
+gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
+gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
+
+# Enable building/installing stbt camera (smart TV support) Gstreamer elements
+# by default if the build-dependencies are available
+enable_stbt_camera?=$(filter yes,$(shell pkg-config --exists $(PKG_DEPS) && echo yes))
 
 ubuntu_releases ?= saucy trusty
 debian_base_release=1
@@ -48,7 +59,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -63,7 +74,8 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt.sh stbt.1 defaults.conf
+install : install-core
+install-core : stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -132,7 +144,8 @@ README.rst: api-doc.sh stbt/__init__.py _stbt/config.py
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix
+	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
+	      stbt-camera.d/gst/stbt-gst-plugins.so
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
@@ -147,7 +160,8 @@ check-nosetests: tests/ocr/menu.png
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
@@ -167,9 +181,10 @@ check-bashcompletion:
 
 install-for-test:
 	rm -rf tests/test-install && \
-	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
-	      man1dir sysconfdir && \
-	make install prefix=$$PWD/tests/test-install
+	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir \
+	      gstpluginsdir mandir man1dir sysconfdir && \
+	make install prefix=$$PWD/tests/test-install \
+	     gstpluginsdir=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins
 
 parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
@@ -267,7 +282,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
-	mv "$$tmpdir/$@" . && \
+	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
 deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
@@ -316,8 +331,70 @@ copr-publish: $(src_rpm)
 	copr-cli build stb-tester \
 	    https://github.com/drothlis/stb-tester-srpms/raw/master/$(src_rpm)
 
+# stbt camera - Optional Smart TV support
 
-.PHONY: all clean check deb dist doc install uninstall
+stbt_camera_build_target=$(if $(enable_stbt_camera), \
+	stbt-camera \
+	stbt-camera.d/gst/stbt-gst-plugins.so, \
+	$(info Not building optional plugins for Smart TV support))
+stbt_camera_install_target=$(if $(enable_stbt_camera), \
+	install-stbt-camera, \
+	$(info Not installing optional plugins for Smart TV support))
+
+all : $(stbt_camera_build_target)
+install : $(stbt_camera_install_target)
+
+stbt_camera_files=\
+	_stbt/gst_utils.py \
+	_stbt/tv_driver.py \
+	stbt-camera \
+	stbt-camera.d/chessboard-720p-40px-border-white.png \
+	stbt-camera.d/colours.svg \
+	stbt-camera.d/glyphs.svg.jinja2 \
+	stbt-camera.d/stbt-camera-calibrate.py \
+	stbt-camera.d/stbt-camera-validate.py
+
+installed_camera_files=\
+	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files)) \
+	$(DESTDIR)$(gstpluginsdir)/stbt-gst-plugins.so
+
+CFLAGS?=-O2
+
+%_orc.h : %.orc
+	orcc --header --internal -o "$@" "$<"
+%_orc.c : %.orc
+	orcc --implementation --internal -o "$@" "$<"
+
+stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrection.c \
+                                       stbt-camera.d/gst/stbtgeometriccorrection.h \
+                                       stbt-camera.d/gst/plugin.c \
+                                       stbt-camera.d/gst/stbtcontraststretch.c \
+                                       stbt-camera.d/gst/stbtcontraststretch.h \
+                                       stbt-camera.d/gst/stbtcontraststretch_orc.c \
+                                       stbt-camera.d/gst/stbtcontraststretch_orc.h \
+                                       VERSION
+	@if ! pkg-config --exists $(PKG_DEPS); then \
+		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
+	gcc -shared -o $@ $(filter %.c %.o,$^) -fPIC  -Wall -Werror $(CFLAGS) \
+		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
+		-DVERSION=\"$(VERSION)\"
+
+install-stbt-camera : $(stbt_camera_files)
+	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
+	@for file in $(stbt_camera_files); \
+	do \
+		if [ -x "$$file" ]; then \
+			perms=0755; \
+		else \
+			perms=0644; \
+		fi; \
+		echo INSTALL "$$file"; \
+		$(INSTALL) -m $$perms "$$file" "$(DESTDIR)$(libexecdir)/stbt/$$file"; \
+	done
+	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
+		$(DESTDIR)$(gstpluginsdir)
+
+.PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm

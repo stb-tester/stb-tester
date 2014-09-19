@@ -4,7 +4,7 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
-#/ usage: stbt [--help] [--version] <command> [args]
+#/ usage: stbt [--help] [--version] [--with-experimental] <command> [args]
 #/
 #/ Available commands are:
 #/     run            Run a stbt script
@@ -18,6 +18,10 @@
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
 #/
+#/ Experimental commands. These may change in the future in a backwards-
+#/ incompatible way. They require passing the '--with-experimental' flag:
+#/     camera         Configure stbt to capture video from a TV using a camera
+#/
 #/ For help on a specific command do 'stbt <command> --help'.
 #/ See 'man stbt' for more detailed information.
 
@@ -26,12 +30,33 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 export STBT_VERSION="@VERSION@"
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
+
+if [ $1 = '--with-experimental' ]; then
+    experimental=1
+    shift
+else
+    experimental=0
+fi
+
 case "$1" in
     -h|--help)
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
     run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
+        exec @LIBEXECDIR@/stbt/stbt-"$@";;
+    # Experimental sub-commands:
+    camera)
+        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$1" ]; then
+            echo "stb-tester camera support is not installed." 1>&2
+            exit 1
+        fi
+        if [ "$experimental" != 1 ]; then
+            echo "stbt $1 is an experimental feature which may change in" 1>&2
+            echo "the future in a backwards-incompatible way. If you still" 1>&2
+            echo "want to proceed use 'stbt --with-experimental'." 1>&2
+            exit 1
+        fi
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;

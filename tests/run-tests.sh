@@ -23,8 +23,6 @@ shift $(($OPTIND-1))
 
 export testdir="$(cd "$(dirname "$0")" && pwd)"
 export srcdir="$testdir/.."
-export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
-export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
 
@@ -43,9 +41,11 @@ cd "$testdir"
 rm -f ~/.gstreamer-1.0/registry.*
 
 if [[ "$test_installation" != "true" ]]; then
-    test_installation_prefix="$(mktemp -d -t stbt-test-installation.XXXXXX)"
-    make -C "$srcdir" install "prefix=$test_installation_prefix"
-    export PATH="$test_installation_prefix/bin:$PATH"
+    test_installation_prefix="$(mktemp -d -t stbt-test-installation.XXXXXX)" &&
+    make -C "$srcdir" install "prefix=$test_installation_prefix" \
+         "gstpluginsdir=$test_installation_prefix/lib/gstreamer-1.0/plugins" &&
+    export PATH="$test_installation_prefix/bin:$PATH" \
+           GST_PLUGIN_PATH=$test_installation_prefix/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH
 fi
 
 . $testdir/utils.sh

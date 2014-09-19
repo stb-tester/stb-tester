@@ -6,12 +6,19 @@ install:
  - sudo apt-get install
         expect
         gir1.2-gstreamer-1.0
+        gir1.2-gudev-1.0
+        gstreamer1.0-libav
         gstreamer1.0-plugins-bad
         gstreamer1.0-plugins-base
         gstreamer1.0-plugins-good
         gstreamer1.0-tools
         gstreamer1.0-x
+        libgstreamer1.0-dev
+        libgstreamer-plugins-base1.0-dev
+        libopencv-dev
+        liborc-0.4-dev
         librsvg2-bin
+        lighttpd
         moreutils
         pep8
         python-docutils
@@ -19,13 +26,16 @@ install:
         python-gobject
         python-jinja2
         python-lxml
+        python-matplotlib
         python-nose
         python-numpy
         python-opencv
+        python-scipy
         python-yaml
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng
+        v4l-utils
         xdotool
         xserver-xorg-video-dummy
         xterm
@@ -41,7 +51,7 @@ install:
    rm -Rf parallel-20140522/ &&
    mkdir $HOME/.parallel &&
    touch $HOME/.parallel/will-cite  # Silence citation warning
- - make
+ - make enable_stbt_camera=yes
 
 script:
  - PATH=~/webminspector:$PATH make check

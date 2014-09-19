@@ -6,7 +6,6 @@ Group: Development/Tools
 URL: http://stb-tester.com
 License: LGPL-2.1+
 Source: %{name}-@VERSION@.tar.gz
-BuildArch: noarch
 BuildRequires: python-docutils
 
 Requires: curl
@@ -36,6 +35,23 @@ and checking that it has done the right thing by analysing what is on screen.
 Test scripts are written in Python and can be generated with the `stbt record`
 command.
 
+%package camera
+Summary: stb-tester camera support
+
+BuildRequires: gcc
+BuildRequires: gstreamer1-devel
+BuildRequires: gstreamer1-plugins-base-devel
+BuildRequires: opencv-devel
+BuildRequires: orc-compiler
+BuildRequires: orc-devel
+
+Requires: lighttpd
+Requires: gstreamer1-libav
+
+%description camera
+Support for using a camera pointed at a TV as input for stb-tester.  This is
+useful for testing apps running on Smart TVs.
+
 %prep
 %setup -n stb-tester-@VERSION@
 
@@ -43,7 +59,7 @@ command.
 make prefix=/usr sysconfdir=/etc
 
 %install
-make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM_BUILD_ROOT}
+make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir=%{_libdir}/gstreamer-1.0 DESTDIR=${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,-)
@@ -54,3 +70,7 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
+
+%files camera
+%{_libexecdir}/stbt/stbt-camera
+%{_libdir}/gstreamer-1.0/stbt-gst-plugins.so

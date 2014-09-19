@@ -1614,6 +1614,15 @@ class Display(object):
             "appsink name=appsink max-buffers=1 drop=false sync=true "
             "emit-signals=true "
             "caps=video/x-raw,format=BGR")
+        # Notes on the source pipeline:
+        # * _stbt_raw_frames_queue is kept small to reduce the amount of slack
+        #   (and thus the latency) of the pipeline.
+        # * _stbt_user_data_queue before the decodebin is large.  We don't want
+        #   to drop encoded packets as this will cause significant image
+        #   artifacts in the decoded buffers.  We make the assumption that we
+        #   have enough horse-power to decode the incoming stream and any delays
+        #   will be transient otherwise it could start filling up causing
+        #   increased latency.
         self.source_pipeline_description = " ! ".join([
             user_source_pipeline,
             'queue name=_stbt_user_data_queue max-size-buffers=0 '
@@ -2209,7 +2218,9 @@ def _log_image(image, name, directory):
     if name == "source":
         _frame_number += 1
     d = os.path.join(directory, "%05d" % _frame_number)
-    if not utils.mkdir(d):
+    try:
+        utils.mkdir_p(d)
+    except OSError:
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
     if image.dtype == numpy.float32:

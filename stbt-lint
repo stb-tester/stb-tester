@@ -14,7 +14,7 @@
 #/
 #/ Any command-line arguments are passed through to pylint.
 
-set -eu
+set -e
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 die() { echo "stbt lint: error: $*" >&2; exit 1; }
