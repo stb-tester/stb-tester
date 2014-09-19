@@ -24,7 +24,6 @@ shift $(($OPTIND-1))
 export testdir="$(cd "$(dirname "$0")" && pwd)"
 export srcdir="$testdir/.."
 export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
-export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
 
