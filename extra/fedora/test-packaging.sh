@@ -29,5 +29,6 @@ docker run --rm --volumes-from test-fedora-rpm-builder \
 	'sudo yum install -y rpmbuild/RPMS/*/*stb-tester*.rpm &&
 	stbt --version &&
 	stbt --help &&
+	man stbt | cat &&
 	cd /usr/src/stb-tester &&
 	./tests/run-tests.sh -i tests/test-match.sh'
