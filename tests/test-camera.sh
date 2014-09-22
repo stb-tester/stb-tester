@@ -2,8 +2,7 @@
 
 skip_if_no_rsvg_plugins() {
     if ! gst-inspect-1.0 rsvg 2>&1 >/dev/null; then
-        echo "SKIP: Skipping test as rsvg plugins not installed"
-        exit 77
+        skip "rsvg plugins not installed"
     fi
 }
 

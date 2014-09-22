@@ -1,6 +1,7 @@
 # Run with ./run-tests.sh
 
 create_test_repo() {
+    which git || skip "git is not installed"
     (
         git init tests &&
         cd tests &&

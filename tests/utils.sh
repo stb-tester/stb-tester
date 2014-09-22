@@ -3,6 +3,7 @@ timeout() { "$testdir"/timeout.pl "$@"; }
 timedout=142
 
 fail() { echo "error: $*"; exit 1; }
+skip() { echo "skipping: $*"; exit 77; }
 
 assert() {
     local not ret

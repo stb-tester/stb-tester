@@ -218,11 +218,8 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 }
 
 test_that_video_index_is_written_on_eos() {
-    which webminspector.py &>/dev/null || {
-        echo "webminspector.py not found; skipping this test." >&2
-        echo "See https://chromium.googlesource.com/webm/webminspector/" >&2
-        return 77
-    }
+    which webminspector.py &>/dev/null \
+        || skip "webminspector.py not found. See https://chromium.googlesource.com/webm/webminspector/"
 
     _test_that_video_index_is_written_on_eos 5 && return
     echo "Failed with 5s video; trying again with 20s video"

@@ -5,6 +5,7 @@ test_that_stbt_control_sends_a_single_key() {
 }
 
 validate_stbt_record_control_recorder() {
+    which expect || skip "expect is not installed"
     control_uri=$1
 
     cat > test.expect <<-EOF &&
@@ -50,7 +51,7 @@ test_stbt_control_as_stbt_record_control_recorder__default_keymap() {
     if [[ $ret -ne 0 ]] &&
         cat log | grep -q "Unable to print keymap because the terminal is too small";
     then
-        return 77  # skip
+        skip "terminal is too narrow"
     fi
     return $ret
 }
