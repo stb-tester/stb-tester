@@ -31,6 +31,7 @@ test_stbt_batch_run_once() {
     diff -u <(cat "$srcdir"/VERSION) latest/stbt-version.log ||
         fail "Wrong latest/stbt-version.log"
     [[ -f latest/video.webm ]] || fail "latest/video.webm not created"
+    [[ -f latest/thumbnail.jpg ]] || fail "test/thumbnail.jpg not created"
     [[ -f latest/index.html ]] || fail "latest/index.html not created"
     [[ -f index.html ]] || fail "index.html not created"
     grep -q test.py latest/index.html || fail "test name not in latest/index.html"
@@ -48,10 +49,13 @@ test_that_stbt_batch_run_runs_until_failure() {
 
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
-    grep -q success $(head -1 testruns)/failure-reason ||
-        fail "Expected 1st testrun to succeed"
-    grep -q UITestError latest/failure-reason ||
-        fail "Expected 2nd testrun to fail with 'UITestError'"
+    first=$(head -1 testruns)
+    grep -q success $first/failure-reason || fail "Expected 1st testrun to succeed"
+    grep -q UITestError latest/failure-reason || fail "Expected 2nd testrun to fail with 'UITestError'"
+    [[ -f $first/thumbnail.jpg ]] || fail "Expected successful testrun to create thumbnail"
+    [[ ! -f $first/screenshot.png ]] || fail "Expected successful testrun to not create screenshot"
+    [[ -f latest/thumbnail.jpg ]] || fail "Expected failed testrun to create thumbnail"
+    [[ -f latest/screenshot.png ]] || fail "Expected failed testrun to create thumbnail"
 }
 
 test_that_stbt_batch_run_continues_after_uninteresting_failure() {

@@ -56,6 +56,10 @@ For installation instructions see
   region of the match.  It should be very helpful for UIs which consist of menus
   of text, which seem to be most UIs.
 
+* The videos recorded by `stbt batch run` of each test run are now shown inline
+  in the HTML report using the HTML5 video tag. This looks great and makes
+  triage easier.
+
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working

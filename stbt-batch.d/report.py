@@ -81,6 +81,9 @@ class Run(object):
         self.test_args = self.read("test-args")
         self.test_name = self.read("test-name")
 
+        if os.path.exists(rundir + '/video.webm'):
+            self.video = 'video.webm'
+
         if self.exit_status != "still running":
             self.files = sorted([
                 basename(x) for x in glob.glob(rundir + "/*")
