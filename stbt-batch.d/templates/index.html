@@ -12,7 +12,12 @@
     #plot { height: 250px; width: 100%; }
     .jqplot-highlighter-tooltip {
       line-height: 1; background-color: rgba(208, 208, 208, 0.9); }
-    #totals th:first-child { text-align: right; }
+    #totals th { cursor: pointer; }
+    #totals th:first-child { width: 70%; text-align: right; }
+    #totals th:not(:first-child) { width: 10%; }
+    #totals table {
+      border-bottom: 1px solid #ddd; padding-bottom: 0; margin-bottom: 0; }
+    #totals tr:not(:first-child), #totals + p { display: none; }
 
     /* Border around selected row, opening up like a '{' onto right pane */
     table#testruns { border-collapse: separate; }
@@ -314,6 +319,9 @@
           "<th class='text-warning'>Errors: " + total_errors + "</th>" +
           html +
           "</table>");
+      $("#totals tr:first-child").click(function() {
+        $("#totals tr:not(:first-child), #totals + p").toggle();
+      });
     };
   });
 </script>
