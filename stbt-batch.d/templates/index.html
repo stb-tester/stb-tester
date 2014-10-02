@@ -100,10 +100,10 @@
         <td>
           {{run.exit_status}}
           {% if run.failure_reason not in ("", "success") %}
-            — <span>{{run.failure_reason}}</span>
+            — <span>{{run.failure_reason|e}}</span>
           {% endif %}
         </td>
-        <td>{{run.notes}}</td>
+        <td>{{run.notes|e}}</td>
         <td>{{run.duration}}</td>
         {% for column in extra_columns %}
           <td style="white-space: pre">{{
