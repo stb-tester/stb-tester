@@ -8,11 +8,16 @@
   <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.css" rel="stylesheet" />
   <style>
     #totals { font-weight: bold; }
-    table.sortable th { cursor: pointer; }
     #details { position: fixed; }
     #plot { height: 250px; width: 100%; }
     .jqplot-highlighter-tooltip {
       line-height: 1; background-color: rgba(208, 208, 208, 0.9); }
+
+    table.sortable th { cursor: pointer; }
+    #testruns { table-layout: fixed; width: 100%; }
+    #testruns th { word-wrap: break-word; }
+    #testruns td {
+      white-space: nowrap; overflow-x: hidden; text-overflow: ellipsis; }
 
     /* Border around selected row, opening up like a '{' onto right pane */
     table#testruns { border-collapse: separate; }
@@ -67,12 +72,12 @@
       <table id="testruns" class="table table-condensed sortable">
       <thead>
       <tr>
-        <th>Timestamp</th>
-        <th>Test</th>
+        <th style="width:10em">Timestamp</th>
+        <th style="width:30%">Test</th>
         <th>Commit</th>
         <th>Exit status</th>
         <th>Notes</th>
-        <th>Duration</th>
+        <th style="width:5em">Duration</th>
         {% for column in extra_columns %}
           <th>{{column}}</th>
         {% endfor %}
@@ -95,10 +100,10 @@
         <td>
           {{run.exit_status}}
           {% if run.failure_reason not in ("", "success") %}
-            — <span>{{ run.failure_reason | truncate(30, True) }}</span>
+            — <span>{{run.failure_reason}}</span>
           {% endif %}
         </td>
-        <td>{{ run.notes | truncate(30, True) }}</td>
+        <td>{{run.notes}}</td>
         <td>{{run.duration}}</td>
         {% for column in extra_columns %}
           <td style="white-space: pre">{{
