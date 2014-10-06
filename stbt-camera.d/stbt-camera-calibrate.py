@@ -340,8 +340,8 @@ def fit_fn(ideals, measureds):
     def fn(x, ys):
         return interp1d(xs, numpy.array([0] + ys + [0]))(x)
 
-    ys, _ = curve_fit(lambda x, *args: fn(x, list(args)), ideals, measureds,
-                      [0.0] * POINTS)
+    ys, _ = curve_fit(  # pylint:disable=W0632
+        lambda x, *args: fn(x, list(args)), ideals, measureds, [0.0] * POINTS)
     return interp1d(xs, numpy.array([0] + ys.tolist() + [0]))
 
 
