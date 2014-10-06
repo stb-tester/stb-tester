@@ -377,7 +377,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
     def contains(self, other):
         """Checks whether other is entirely contained within self"""
-        return (self.x <= other.x and self.y <= other.y and
+        return (other and self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
 
     def extend(self, x=0, y=0, right=0, bottom=0):
