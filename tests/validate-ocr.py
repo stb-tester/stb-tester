@@ -76,7 +76,7 @@ def main(argv):
     for root, _dirs, dfiles in os.walk(args.corpus):
         files += [root + '/' + f for f in dfiles if f.endswith('.png.txt')]
 
-    for n, f in zip(range(len(files)), files):
+    for n, f in enumerate(files):
         sys.stderr.write("%i / %i Complete\r" % (n, len(files)))
 
         imgname = f[:-len('.txt')]

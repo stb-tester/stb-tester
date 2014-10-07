@@ -9,7 +9,6 @@ import sys
 import time
 from collections import namedtuple
 from contextlib import contextmanager
-from itertools import count, izip
 from os.path import dirname
 
 import cv2
@@ -314,7 +313,7 @@ def v4l2_ctls(device, data=None):
 
 def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\n')
-    for n, v in izip(range(0, total), iterator):
+    for n, v in enumerate(iterator):
         progress = (n * width) // total
         stream.write(
             '[%s] %8d / %d\r' % (
@@ -539,7 +538,7 @@ def setup(source_pipeline):
             sys.stderr.write("No Cameras Detected\n\n")
         else:
             sys.stderr.write("Detected cameras:\n\n")
-        for n, (name, dev_file, source_pipeline) in zip(count(1), cameras):
+        for n, (name, dev_file, source_pipeline) in enumerate(cameras):
             sys.stderr.write(
                 "    %i. %s\n"
                 "\n"
