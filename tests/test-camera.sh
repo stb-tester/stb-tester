@@ -105,7 +105,7 @@ start_fake_video_src() {
         echo "Starting Fake video src"
     fi
 
-    rm gst-shm-socket
+    rm -f gst-shm-socket
     mkfifo uri_playlist
     while cat uri_playlist; do true; done | \
         PYTHONPATH=$testdir/..:$PYTHONPATH "$testdir/fake-video-src.py" "$PWD/gst-shm-socket" &
@@ -133,7 +133,7 @@ start_fake_video_src_launch()
 {
     frame_bytes="$(expr $WIDTH \* $HEIGHT \* 3)"
     shm_size="$(expr $frame_bytes \* 1000)"
-    rm gst-shm-socket
+    rm -f gst-shm-socket
     gst-launch-1.0 "$@" \
         ! video/x-raw,format=RGB,width=$WIDTH,height=$HEIGHT,framerate=25/1 \
         ! queue ! shmsink "wait-for-connection=true" "shm-size=$shm_size" \
