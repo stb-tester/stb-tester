@@ -185,16 +185,16 @@ run_validation() {
 
     skip_if_no_rsvg_plugins
 
-    start_fake_video_src_launch_720 filesrc location=$testdir/$1.png ! pngdec \
+    start_fake_video_src_launch_720 filesrc location="$testdir/$color.png" ! pngdec \
         ! videoconvert ! $extra ! videoconvert \
         ! video/x-raw,width=1280,height=720 ! imagefreeze &&
     set_config global.control none &&
-    stbt --with-experimental camera validate --tv-driver=assume "$1" &&
+    stbt --with-experimental camera validate --tv-driver=assume "$color" &&
     stop_fake_video_src
 }
 
 test_that_validation_passes_on_pristine_input() {
-    run_validation letters-bw "" || fail "Validation failed on pristine input"
+    run_validation letters-bw || fail "Validation failed on pristine input"
 }
 test_that_validation_fails_if_letters_are_offset() {
     run_validation letters-bw "videobox top=-2 left=-2 ! \
