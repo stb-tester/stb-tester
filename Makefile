@@ -155,7 +155,7 @@ check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	nosetests --with-doctest -v --match "^test_" \
+	PYTHONPATH=$(PWD) nosetests --with-doctest -v --match "^test_" \
 	    $(shell git ls-files '*.py' | grep -v tests/test.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
