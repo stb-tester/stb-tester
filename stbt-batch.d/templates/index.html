@@ -291,6 +291,7 @@
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.highlighter.min.js"></script>
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasTextRenderer.min.js"></script>
 <script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jqplot/1.0.8/plugins/jqplot.logAxisRenderer.min.js"></script>
 <script>
   $(document).ready(function() {
     var plot1;
@@ -355,6 +356,7 @@
           }
         },
         yaxis: {
+          renderer: $.jqplot.LogAxisRenderer,
           labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
           labelOptions: {
             fontFamily: 'sans-serif',
