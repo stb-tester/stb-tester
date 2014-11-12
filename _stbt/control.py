@@ -5,7 +5,6 @@ import re
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -17,16 +16,16 @@ from .logging import debug, scoped_debug_level
 __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
 
-def uri_to_remote(uri, display):
+def uri_to_remote(uri, display=None):
     remotes = [
         (r'none', NullRemote),
         (r'test', lambda: VideoTestSrcControl(display)),
-        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', VirtualRemote),
-        (r'samsung:(?P<hostname>[^:]*)(:(?P<port>\d+))?',
+        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
+        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_remote),
-        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          new_tcp_lirc_remote),
-        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          new_local_lirc_remote),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
@@ -44,10 +43,10 @@ def uri_to_remote(uri, display):
 
 def uri_to_remote_recorder(uri):
     remotes = [
-        (r'vr:(?P<hostname>[^:]*)(:(?P<port>\d+))?', virtual_remote_listen),
-        (r'lirc(:(?P<hostname>[^:]*))?:(?P<port>\d+):(?P<control_name>.*)',
+        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          lirc_remote_listen_tcp),
-        (r'lirc:(?P<lircd_socket>[^:]*):(?P<control_name>.*)',
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
         ('file://(?P<filename>.+)', file_remote_recorder),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
@@ -120,9 +119,9 @@ class VirtualRemote(object):
         self.port = int(port or 2033)
         # Connect once so that the test fails immediately if STB not found
         # (instead of failing at the first `press` in the script).
-        debug("VirtualRemote: Connecting to %s:%d" % (hostname, port))
+        debug("VirtualRemote: Connecting to %s:%d" % (hostname, self.port))
         self._connect()
-        debug("VirtualRemote: Connected to %s:%d" % (hostname, port))
+        debug("VirtualRemote: Connected to %s:%d" % (hostname, self.port))
 
     def press(self, key):
         self._connect().sendall(
@@ -149,10 +148,12 @@ class LircRemote(object):
         _read_lircd_reply(s)
         debug("Pressed " + key)
 
+DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
+
 
 def new_local_lirc_remote(lircd_socket, control_name):
     if lircd_socket is None:
-        lircd_socket = '/var/run/lirc/lircd'
+        lircd_socket = DEFAULT_LIRCD_SOCKET
 
     def _connect():
         try:
@@ -175,7 +176,7 @@ def new_local_lirc_remote(lircd_socket, control_name):
     return LircRemote(control_name, _connect)
 
 
-def new_tcp_lirc_remote(hostname, port, control_name):
+def new_tcp_lirc_remote(control_name, hostname=None, port=None):
     """Send a key-press via a LIRC-enabled device through a LIRC TCP listener.
 
         control = new_tcp_lirc_remote("localhost", "8765", "humax")
@@ -183,6 +184,9 @@ def new_tcp_lirc_remote(hostname, port, control_name):
     """
     if hostname is None:
         hostname = 'localhost'
+    if port is None:
+        port = 8765
+
     port = int(port)
 
     def _connect():
@@ -351,6 +355,7 @@ def virtual_remote_listen(address, port=None):
     keypresses."""
     if port is None:
         port = 2033
+    port = int(port)
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind((address, port))
@@ -502,7 +507,7 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     def listener():
         # "* 2" is once for VirtualRemote's __init__ and once for press.
         for _ in range(len(keys) * 2):
-            for k in virtual_remote_listen('localhost', 2033):
+            for k in uri_to_remote_recorder('vr:localhost:2033'):
                 received.append(k)
 
     t = threading.Thread()
@@ -511,47 +516,69 @@ def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
     t.start()
     for k in keys:
         time.sleep(0.1)  # Give listener a chance to start listening (sorry)
-        vr = VirtualRemote('localhost', 2033)
+        vr = uri_to_remote('vr:localhost:2033')
         time.sleep(0.1)
         vr.press(k)
     t.join()
     assert received == keys
 
 
-def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
-    keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
-
-    def fake_lircd(address):
-        # This needs to accept 2 connections (from LircRemote and
-        # lirc_remote_listen) and, on receiving input from the LircRemote
-        # connection, write to the lirc_remote_listen connection.
+@contextmanager
+def _fake_lircd():
+    import multiprocessing
+    # This needs to accept 2 connections (from LircRemote and
+    # lirc_remote_listen) and, on receiving input from the LircRemote
+    # connection, write to the lirc_remote_listen connection.
+    with utils.named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
+        address = tmp + '/lircd'
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
-        s.listen(5)
-        listener, _ = s.accept()
-        # "+ 1" is for LircRemote's __init__.
-        for _ in range(len(keys) + 1):
-            control, _ = s.accept()
-            for cmd in control.makefile():
-                m = re.match(r'SEND_ONCE (?P<control>\w+) (?P<key>\w+)', cmd)
-                if m:
-                    d = m.groupdict()
-                    message = '00000000 0 %s %s\n' % (d['key'], d['control'])
-                    listener.sendall(message)
-                control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+        s.listen(6)
 
-    lircd_socket = tempfile.mktemp()
-    t = threading.Thread()
-    t.daemon = True
-    t.run = lambda: fake_lircd(lircd_socket)
-    t.start()
-    time.sleep(0.01)  # Give it a chance to start listening (sorry)
-    listener = lirc_remote_listen(lircd_socket, 'test')
-    control = new_local_lirc_remote(lircd_socket, 'test')
-    for i in keys:
-        control.press(i)
-        assert listener.next() == i
-    t.join()
+        def listen():
+            import signal
+            signal.signal(signal.SIGTERM, lambda _, __: sys.exit(0))
+
+            listener, _ = s.accept()
+            while True:
+                control, _ = s.accept()
+                for cmd in control.makefile():
+                    m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
+                    if m:
+                        listener.sendall(
+                            '00000000 0 %(key)s %(ctrl)s\n' % m.groupdict())
+                    control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+                control.close()
+
+        t = multiprocessing.Process(target=listen)
+        t.daemon = True
+        t.start()
+        try:
+            yield address
+        finally:
+            t.terminate()
+
+
+def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
+    with _fake_lircd() as lircd_socket:
+        listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
+        control = uri_to_remote('lirc:%s:test' % (lircd_socket))
+        for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
+            control.press(key)
+            assert listener.next() == key
+
+
+def test_that_local_lirc_socket_is_correctly_defaulted():
+    global DEFAULT_LIRCD_SOCKET
+    old_default = DEFAULT_LIRCD_SOCKET
+    try:
+        with _fake_lircd() as lircd_socket:
+            DEFAULT_LIRCD_SOCKET = lircd_socket
+            listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
+            uri_to_remote('lirc::test').press('KEY')
+            assert listener.next() == 'KEY'
+    finally:
+        DEFAULT_LIRCD_SOCKET = old_default
 
 
 def test_samsung_tcp_remote():
@@ -607,7 +634,7 @@ def test_x11_remote():
 
     with utils.named_temporary_directory() as tmp, \
             temporary_x_session() as display:
-        r = uri_to_remote('x11:%s' % display, None)
+        r = uri_to_remote('x11:%s' % display)
 
         subprocess.Popen(
             ['xterm', '-l', '-lf', 'xterm.log'],
@@ -635,14 +662,14 @@ def test_uri_to_remote():
         # pylint: disable=W0621
         def IRNetBoxRemote(hostname, port, output, config):
             return ":".join([hostname, str(port or '10001'), output, config])
-        out = uri_to_remote("irnetbox:localhost:1234:1:conf", None)
+        out = uri_to_remote("irnetbox:localhost:1234:1:conf")
         assert out == "localhost:1234:1:conf", (
             "Failed to parse uri with irnetbox port. Output was '%s'" % out)
-        out = uri_to_remote("irnetbox:localhost:1:conf", None)
+        out = uri_to_remote("irnetbox:localhost:1:conf")
         assert out == "localhost:10001:1:conf", (
             "Failed to parse uri without irnetbox port. Output was '%s'" % out)
         try:
-            uri_to_remote("irnetbox:localhost::1:conf", None)
+            uri_to_remote("irnetbox:localhost::1:conf")
             assert False, "Uri with empty field should have raised"
         except ConfigurationError:
             pass
