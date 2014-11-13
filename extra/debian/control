@@ -36,9 +36,8 @@ Build-Depends: curl,
                tesseract-ocr,
                tesseract-ocr-deu,
                tesseract-ocr-eng,
+               v4l-utils,
                xdotool
-               tesseract-ocr,
-               v4l-utils
 
 Package: stb-tester
 Architecture: any
