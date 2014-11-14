@@ -333,16 +333,12 @@ copr-publish: $(src_rpm)
 
 # stbt camera - Optional Smart TV support
 
-stbt_camera_build_target=$(if $(enable_stbt_camera), \
-	stbt-camera \
-	stbt-camera.d/gst/stbt-gst-plugins.so, \
-	$(info Not building optional plugins for Smart TV support))
-stbt_camera_install_target=$(if $(enable_stbt_camera), \
-	install-stbt-camera, \
-	$(info Not installing optional plugins for Smart TV support))
-
-all : $(stbt_camera_build_target)
-install : $(stbt_camera_install_target)
+ifeq ($(enable_stbt_camera), yes)
+all: stbt-camera stbt-camera.d/gst/stbt-gst-plugins.so
+install: install-stbt-camera
+else
+$(info Smart TV support disabled)
+endif
 
 stbt_camera_files=\
 	_stbt/gst_utils.py \
