@@ -160,9 +160,8 @@ check-nosetests: tests/ocr/menu.png
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
-	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	grep -hEo '^test_[a-zA-Z0-9_]+' $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
@@ -178,6 +177,14 @@ check-bashcompletion:
 	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
 	        ($$t); \
 	    done'
+
+ifeq ($(enable_stbt_camera), yes)
+check: check-cameratests
+check-cameratests: install-for-test
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
+	tests/run-tests.sh -i tests/test-camera.sh
+endif
 
 install-for-test:
 	rm -rf tests/test-install && \
@@ -391,7 +398,7 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
-.PHONY: check-bashcompletion check-hardware check-integrationtests
+.PHONY: check-bashcompletion check-cameratests check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
 .PHONY: FORCE TAGS
