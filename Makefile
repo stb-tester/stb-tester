@@ -59,7 +59,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -74,8 +74,8 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install : install-core
-install-core : stbt.sh stbt.1 defaults.conf
+install: install-core
+install-core: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -190,7 +190,7 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
-tests/ocr/menu.png : %.png : %.svg
+tests/ocr/menu.png: %.png: %.svg
 	rsvg-convert $< >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
@@ -229,13 +229,13 @@ TAGS:
 
 DPKG_OPTS?=
 
-extra/debian/$(debian_base_release)~%/debian/changelog : extra/debian/changelog
+extra/debian/$(debian_base_release)~%/debian/changelog: extra/debian/changelog
 	mkdir -p $(dir $@) && \
 	sed -e "s/@RELEASE@/$(debian_base_release)~$*/g" \
 	    -e "s/@DISTRIBUTION@/$*/g" \
 	    $< >$@
 
-extra/debian/$(debian_base_release)/debian/changelog : extra/debian/changelog
+extra/debian/$(debian_base_release)/debian/changelog: extra/debian/changelog
 	mkdir -p $(dir $@) && \
 	sed -e "s/@RELEASE@/$(debian_base_release)/g" \
 	    -e "s/@DISTRIBUTION@/unstable/g" \
@@ -248,14 +248,14 @@ static_debian_files = \
 	debian/rules \
 	debian/source/format
 
-extra/stb-tester_$(VERSION)-%.debian.tar.xz : \
+extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
 		extra/debian/%/debian/changelog \
 		$(patsubst %,extra/%,$(static_debian_files))
 	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) $(static_debian_files) && \
 	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) debian/changelog && \
 	xz -f $(patsubst %.tar.xz,%.tar,$@)
 
-debian-src-pkg/%/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
+debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
 	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
 	mkdir -p debian-src-pkg/$*~ && \
 	srcdir=$$PWD && \
@@ -277,7 +277,7 @@ debian-src-pkg/%/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSIO
 	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
+stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
@@ -285,16 +285,16 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
-deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
+deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 # Ubuntu PPA
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
+ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
-ppa-publish : $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
+ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
 
 # Fedora Packaging
 
@@ -356,12 +356,12 @@ installed_camera_files=\
 
 CFLAGS?=-O2
 
-%_orc.h : %.orc
+%_orc.h: %.orc
 	orcc --header --internal -o "$@" "$<"
-%_orc.c : %.orc
+%_orc.c: %.orc
 	orcc --implementation --internal -o "$@" "$<"
 
-stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrection.c \
+stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/stbtgeometriccorrection.c \
                                        stbt-camera.d/gst/stbtgeometriccorrection.h \
                                        stbt-camera.d/gst/plugin.c \
                                        stbt-camera.d/gst/stbtcontraststretch.c \
@@ -375,7 +375,7 @@ stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrectio
 		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
 		-DVERSION=\"$(VERSION)\"
 
-install-stbt-camera : $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
+install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
 	@for file in $(stbt_camera_files); \
 	do \
