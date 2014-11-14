@@ -379,7 +379,7 @@ stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrectio
 		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
 		-DVERSION=\"$(VERSION)\"
 
-install-stbt-camera : $(stbt_camera_files)
+install-stbt-camera : $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
 	@for file in $(stbt_camera_files); \
 	do \
