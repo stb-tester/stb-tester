@@ -334,7 +334,7 @@ copr-publish: $(src_rpm)
 # stbt camera - Optional Smart TV support
 
 ifeq ($(enable_stbt_camera), yes)
-all: stbt-camera stbt-camera.d/gst/stbt-gst-plugins.so
+all: stbt-camera.d/gst/stbt-gst-plugins.so
 install: install-stbt-camera
 else
 $(info Smart TV support disabled)
