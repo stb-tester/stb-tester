@@ -92,3 +92,15 @@ def test_that_set_config_creates_directories_if_required():
         assert os.path.isfile(d + '/.config/stbt/stbt.conf')
         _config_init(force=True)
         assert get_config('global', 'test') == 'hello2'
+
+
+def test_that_set_config_writes_to_the_first_stbt_config_file():
+    with _directory_sandbox() as d:
+        filled_cfg = d + '/test.cfg'
+        empty_cfg = d + '/empty.cfg'
+        os.environ['STBT_CONFIG_FILE'] = '%s:%s' % (filled_cfg, empty_cfg)
+        open(filled_cfg, 'w')
+        open(empty_cfg, 'w')
+        set_config('global', 'test', 'goodbye')
+        assert open(filled_cfg).read().startswith('[global]')
+        assert open(empty_cfg).read() == ''
