@@ -30,23 +30,42 @@ sys.argv[1:] = args.args
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
+
+def import_by_filename(filename_):
+    module_dir, module_file = os.path.split(filename_)
+    module_name, module_ext = os.path.splitext(module_file)
+    if module_ext != '.py':
+        raise ImportError("Invalid module filename '%s'" % filename_)
+    sys.path = [os.path.abspath(module_dir)] + sys.path
+    try:
+        return __import__(module_name)
+    finally:
+        sys.path = sys.path[1:]
+
 try:
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
         stbt.get_config('global', 'transformation_pipeline'))
-    # pylint: disable=W0611
-    from stbt import (
-        # For backwards compatibility. We want to encourage people to
-        # explicitly import stbt in their scripts, so don't add new APIs here.
-        press, press_until_match, wait_for_match, wait_for_motion,
-        detect_match, MatchResult, Position, detect_motion, MotionResult,
-        save_frame, get_frame, MatchParameters,
-        debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
-        ConfigurationError)
-    __file__ = args.script
-    sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
-    execfile(args.script)
+
+    if '::' in args.script:
+        filename, function = args.script.split('::', 1)
+        module = import_by_filename(filename)
+        function = getattr(module, function)
+        function()
+    else:
+        # pylint: disable=W0611
+        from stbt import (
+            # For backwards compatibility. We want to encourage people to
+            # explicitly import stbt in their scripts, so don't add new APIs here.
+            press, press_until_match, wait_for_match, wait_for_motion,
+            detect_match, MatchResult, Position, detect_motion, MotionResult,
+            save_frame, get_frame, MatchParameters,
+            debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
+            ConfigurationError)
+        __file__ = args.script
+        sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
+        execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s: %s\n" % (args.script, type(e).__name__, e))
     if hasattr(e, "screenshot") and e.screenshot is not None:
