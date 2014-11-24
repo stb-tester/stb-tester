@@ -118,3 +118,13 @@ test_that_stbt_run_exits_on_ctrl_c() {
         *) fail "Unexpected return code $exit_status";;
     esac
 }
+
+test_that_stbt_run_will_run_a_specific_function() {
+    cat > test.py <<-EOF
+	import stbt
+	def test_that_this_test_is_run():
+	    open("touched", "w").close()
+	EOF
+    stbt run test.py::test_that_this_test_is_run
+    [ -e "touched" ] || fail "Test not run"
+}

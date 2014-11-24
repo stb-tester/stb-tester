@@ -7,7 +7,7 @@ create_test_repo() {
         cd tests &&
         git config user.name "Stb Tester" &&
         git config user.email "test-stbt-batch@stb-tester.com" &&
-        cp "$testdir/test.py" "$testdir/test2.py" \
+        cp "$testdir/test.py" "$testdir/test2.py" "$testdir/test_functions.py" \
            "$testdir"/test_{success,error,failure}.py \
            "$testdir/videotestsrc-checkers-8.png" \
            "$testdir/videotestsrc-gamut.png" . &&
@@ -41,6 +41,14 @@ test_stbt_batch_run_once() {
     grep -q "$expected_commit" index.html || fail "git commit not in index.html"
     grep -q "my label" latest/index.html || fail "extra column not in latest/index.html"
     grep -q "my label" index.html || fail "extra column not in index.html"
+}
+
+test_that_stbt_batch_run_will_run_a_specific_function() {
+    create_test_repo
+    stbt batch run -o results -1 \
+        tests/test_functions.py::test_that_this_test_is_run \
+    || fail "Test failed"
+    [ -e "results/current/touched" ] || fail "Test not run"
 }
 
 test_that_stbt_batch_run_runs_until_failure() {

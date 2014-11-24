@@ -36,6 +36,46 @@ For installation instructions see
 
 ##### User-visible changes since 0.21
 
+* `stbt run` and `stbt batch run` can now run a specific Python function in the
+  test file if you give the testcase name as
+  `test_file_name.py::test_function_name`.
+
+  For example, if you have a file `test.py` that looks like this:
+
+        import stbt
+
+        def test_that_logo_is_shown():
+            stbt.wait_for_match("logo.png")
+
+        def test_that_menu_appears():
+            stbt.press("KEY_MENU")
+            stbt.wait_for_match("menu.png")
+
+  ...then you can run one of the tests like this:
+
+        stbt run test.py::test_that_logo_is_shown
+
+  This has several advantages over the existing one-test-per-file approach:
+
+    * It encourages smaller, more descriptive testcases.
+    * It makes it easier to factor out and share common code between testcases.
+    * You can attach documentation or metadata to testcases (using docstrings,
+      `nose.plugins.attrib.attr`, etc.) which can be queried by importing the
+      test file and inspecting the functions.
+    * It is the same approach used by [nose] and [pytest] which opens doors in
+      the future to make use of facilities that these test frameworks provide.
+      See [our blog post](
+      http://stb-tester.com/blog/2014/09/25/upcoming-features-new-test-runner.html)
+      for some possible future directions.
+
+  This is the format we recommend going forward (of course the old format is
+  still supported). We have used this format exclusively for 6+ months in a
+  client's project and it works well. The *stb-tester <small>ONE</small>*
+  appliance will require this format.
+
+  We recommend that you name your testcase functions to start with "test_", for
+  future compatibility with test frameworks like [nose] and [pytest].
+
 * API: New function `wait_until` runs any given function or lambda expression
   until it succeeds, or until a timeout. This provides the waiting behaviour of
   `wait_for_match`, but more general -- you can use it to look for a match or
@@ -45,6 +85,9 @@ For installation instructions see
 
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
+
+[nose]: https://nose.readthedocs.org/
+[pytest]: http://pytest.org/latest/
 
 ##### Bugfixes and packaging fixes since 0.21
 
