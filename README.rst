@@ -184,6 +184,9 @@ later files taking precedence):
 2. ~/.config/stbt/stbt.conf
 3. $STBT_CONFIG_FILE
 
+$STBT_CONFIG_FILE is a colon-separated list of files where the item specified
+at the beginning takes precedence.
+
 These files are simple ini files with the form::
 
     [global]

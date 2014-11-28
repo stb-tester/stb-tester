@@ -44,11 +44,13 @@ def set_config(section, option, value):
     API.  This is a limitation of Python's ConfigParser which hopefully we can
     solve in the future.
 
-    Writes to `$STBT_CONFIG_FILE` if set falling back to
+    Writes to the first item in `$STBT_CONFIG_FILE` if set falling back to
     `$HOME/stbt/stbt.conf`.
     """
     user_config = '%s/stbt/stbt.conf' % xdg_config_dir()
-    custom_config = os.environ.get('STBT_CONFIG_FILE') or user_config
+    # Write to the config file with the highest precedence
+    custom_config = os.environ.get('STBT_CONFIG_FILE', '').split(':')[0] \
+        or user_config
 
     config = _config_init()
 
@@ -80,14 +82,15 @@ def _config_init(force=False):
         except ConfigParser.NoOptionError:
             # Running `stbt` from source (not installed) location.
             system_config = ''
-        config.read([
-            system_config,
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % xdg_config_dir(),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
+        config.read(
+            [system_config,
+             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+             # directory specification:
+             '%s/stbt/stbt.conf' % xdg_config_dir()] +
+            # Config files specific to the test suite / test run,
+            # with the one at the beginning taking precedence:
+            list(reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
+        )
         _config = config
     return _config
 
