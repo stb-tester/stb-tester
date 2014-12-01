@@ -26,12 +26,14 @@ install:
         python-gobject
         python-jinja2
         python-lxml
+        python-lzma
         python-matplotlib
         python-nose
         python-numpy
         python-opencv
         python-scipy
         python-yaml
+        socat
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng

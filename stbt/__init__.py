@@ -34,6 +34,7 @@ from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 from _stbt import config
 from _stbt import control
 from _stbt import logging
+from _stbt import state_watch
 from _stbt import utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_buffer
