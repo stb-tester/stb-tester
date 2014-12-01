@@ -22,6 +22,16 @@ UNRELEASED.
 
 ##### User-visible changes since 22
 
+* There is new structured logging/tracing infrastructure allowing monitoring
+  what `stbt run` is doing in real-time and saving this data for replay and
+  analysis later.  `stbt run` will write this data to file if it is given the
+  `--save-trace` command-line option and will write it to the unix domain socket
+  given by the `STBT_TRACING_SOCKET` environment variable.
+
+  This is used by the stb-tester ONE to display the current status of the
+  executing test.  The tools for replay have not yet been written.  For more
+  information, including the format definition see `_stbt/state_watch.py`.
+
 ##### Bugfixes and packaging fixes since 22
 
 ##### Developer-visible changes since 22

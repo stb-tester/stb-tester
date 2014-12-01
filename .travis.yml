@@ -27,6 +27,7 @@ install:
         python-gobject
         python-jinja2
         python-lxml
+        python-lzma
         python-matplotlib
         python-nose
         python-numpy
@@ -34,6 +35,7 @@ install:
         python-scipy
         python-serial
         python-yaml
+        socat
         tesseract-ocr
         tesseract-ocr-deu
         tesseract-ocr-eng
