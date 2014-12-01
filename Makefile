@@ -92,6 +92,7 @@ install-core: stbt.sh stbt.1 defaults.conf
 	    _stbt/logging.py \
 	    _stbt/power.py \
 	    _stbt/pylint_plugin.py \
+	    _stbt/state_watch.py \
 	    _stbt/stbt-power.sh \
 	    _stbt/utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt
