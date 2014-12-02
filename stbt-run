@@ -78,16 +78,16 @@ try:
         return tracefunc
 
     if '::' in args.script:
-        filename, funcname = args.script.split('::', 1)
-        module = import_by_filename(filename)
+        _filename, funcname = args.script.split('::', 1)
         _absfilename = os.path.abspath(_filename)
+        module = import_by_filename(_filename)
         function = getattr(module, funcname)
-        _tracer.log_test_starting(args.script, filename, funcname,
+        _tracer.log_test_starting(args.script, _filename, funcname,
                                   function.func_code.co_firstlineno)
         sys.settrace(tracefunc)
         function()
     else:
-        filename = os.path.abspath(args.script)
+        _filename = os.path.abspath(args.script)
         _absfilename = os.path.abspath(_filename)
         _tracer.log_test_starting(args.script, args.script, "", 1)
         sys.settrace(tracefunc)
@@ -102,8 +102,8 @@ try:
             debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
             ConfigurationError)
         __file__ = args.script
-        sys.path.insert(0, os.path.dirname(filename))
-        execfile(filename)
+        sys.path.insert(0, os.path.dirname(_filename))
+        execfile(_filename)
 except Exception as e:  # pylint: disable=W0703
     error_message = str(e)
     if not error_message and isinstance(e, AssertionError):
