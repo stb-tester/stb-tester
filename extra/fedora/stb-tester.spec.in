@@ -45,8 +45,9 @@ BuildRequires: opencv-devel
 BuildRequires: orc-compiler
 BuildRequires: orc-devel
 
-Requires: lighttpd
 Requires: gstreamer1-libav
+Requires: lighttpd
+Requires: stb-tester
 
 %description camera
 Support for using a camera pointed at a TV as input for stb-tester.  This is
@@ -56,21 +57,22 @@ useful for testing apps running on Smart TVs.
 %setup -n stb-tester-@VERSION@
 
 %build
-make prefix=/usr sysconfdir=/etc
+make prefix=/usr sysconfdir=/etc enable_stbt_camera=yes
 
 %install
-make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir=%{_libdir}/gstreamer-1.0 DESTDIR=${RPM_BUILD_ROOT}
+make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir=%{_libdir}/gstreamer-1.0 DESTDIR=${RPM_BUILD_ROOT} enable_stbt_camera=yes
 
 %files
 %defattr(-,root,root,-)
-
 /usr/bin/stbt
 /usr/bin/irnetbox-proxy
 %{_libexecdir}/stbt
+%exclude %{_libexecdir}/stbt/stbt-camera*
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
 
 %files camera
 %{_libexecdir}/stbt/stbt-camera
+%{_libexecdir}/stbt/stbt-camera.d
 %{_libdir}/gstreamer-1.0/stbt-gst-plugins.so
