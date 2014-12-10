@@ -35,8 +35,8 @@ For installation instructions see
   the run failed or errored.  In addition if only a single test was executed a
   single time `stbt batch run` will propogate the exit status through.  This, in
   combination with the `-1` option makes it easier to use from and integrate
-  with external CI systems and makes it possible to use `stbt batch run` just
-  like `stbt run`, but with calling the hooks and producing the HTML report.
+  with external CI systems and makes it possible to use `stbt batch run` as a
+  better `stbt run`.
 
 * `stbt.ConfigurationError` now inherits from `Exception` instead of
   `stbt.UITestError`. (In future we may replace `UITestError` throughout stbt
@@ -45,39 +45,46 @@ For installation instructions see
 ##### User-visible changes since 0.20
 
 * Added new API `stbt.match` which was previously conspicuous in its absence.
-  This, in combination with the ability to treat `MatchResult` as a boolean
-  makes it much easier to compose matching operations in user code.  e.g.:
+  This, in combination with the ability to treat `MatchResult` as a boolean,
+  makes it much easier to compose matching operations in user code. For example:
 
         assert stbt.match('template.png') or stbt.match('template2.png')
 
-* New API: `stbt.match_text`.  It takes a string and returns a
-  `TextMatchResult`, much like how `stbt.match` takes an image template and
-  returns a `MatchResult`.  This provides additional information like the
-  region of the match.  It should be very helpful for UIs which consist of menus
-  of text, which seem to be most UIs.
+* Added new API `stbt.match_text` to match text using OCR. It takes a string
+  and returns a `TextMatchResult`, much like how `stbt.match` takes an image
+  filename and returns a `MatchResult`. The `TextMatchResult` can be treated as
+  a boolean, and it provides additional information such as the region of the
+  match. It should be very helpful for UIs which consist of menus of text,
+  which seem to be most UIs.
 
-* The videos recorded by `stbt batch run` of each test run are now shown inline
-  in the HTML report using the HTML5 video tag. This looks great and makes
-  triage easier.
+* Added experimental support for testing TVs by capturing video from a camera.
+  Install the `stb-tester-camera` package and use `stbt --with-experimental` to
+  enable. We call it "experimental" because in the future we intend to change
+  some aspects of the implementation, the calibration process, the command-line
+  API, and the configuration options. For instructions see
+  <https://github.com/drothlis/stb-tester/blob/master/stbt-camera.d/README.md>.
+
+* The videos recorded by `stbt batch run` are now shown inline in the HTML
+  report using the HTML5 video tag. This looks great and makes triage easier.
 
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
 
-* New API: `Region.ALL` represents the entire 2D frame from -∞ to +∞ in both
-  the x and y directions.  This is useful to pass to functions that take a
-  `region=` parameter to say that we want the whole frame considered.
-
-  In 0.20 `region=None` served the purpose of selecting the whole image for OCR
-  when passed to the `ocr()` function.  This was the default value.
-  `Region.ALL` is the new default value with the same meaning.  Passing
-  `region=None` to `ocr()` is still supported but deprecated and in the future
-  we may change its meaning to mean the empty region for consistency.
-
-* `Region` now has convenience methods `extend()` and `translate()` and the
-  function `intersect()` to make it easier to receive a region, modify it and
+* `Region` now has convenience methods `extend` and `translate` and the
+  function `intersect` to make it easier to receive a region, modify it and
   then pass it to another function.
+
+* `Region.ALL` represents the entire 2D frame from -∞ to +∞ in both the x and y
+  directions. This is useful to pass to functions that take a `region=`
+  parameter to say that we want the whole frame considered.
+
+  In 0.20, `stbt.ocr`'s `region` parameter defaulted to `None`, which meant to
+  use the whole image for OCR. `Region.ALL` is the new default value with the
+  same meaning. Passing `region=None` to `ocr` is still supported but
+  deprecated; in the future we may change its meaning to mean the empty region,
+  for consistency with `Region.intersect`.
 
 ##### Developer-visible changes since 0.20
 
