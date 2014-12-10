@@ -13,7 +13,7 @@
 
 while getopts "lvi" option; do
     case $option in
-        i) test_installation=true;;
+        i) test_the_installed_version=true;;
         l) leave_scratch_dir=true;;
         v) verbose=true;;
         *) grep '^#/' < "$0" | cut -c4- >&2; exit 1;; # Print usage message
@@ -40,7 +40,7 @@ done
 cd "$testdir"
 rm -f ~/.gstreamer-1.0/registry.*
 
-if [[ "$test_installation" != "true" ]]; then
+if [[ "$test_the_installed_version" != "true" ]]; then
     test_installation_prefix="$(mktemp -d -t stbt-test-installation.XXXXXX)" &&
     make -C "$srcdir" install "prefix=$test_installation_prefix" \
          "gstpluginsdir=$test_installation_prefix/lib/gstreamer-1.0/plugins" &&

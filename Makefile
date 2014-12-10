@@ -23,7 +23,7 @@ gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsyste
 
 # Enable building/installing stbt camera (smart TV support) Gstreamer elements
 # by default if the build-dependencies are available
-enable_stbt_camera?=$(filter yes,$(shell pkg-config --exists $(PKG_DEPS) && echo yes))
+enable_stbt_camera?=no
 
 ubuntu_releases ?= saucy trusty
 debian_base_release=1
@@ -59,7 +59,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -74,8 +74,8 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install : install-core
-install-core : stbt.sh stbt.1 defaults.conf
+install: install-core
+install-core: stbt.sh stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -160,9 +160,8 @@ check-nosetests: tests/ocr/menu.png
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
-	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	grep -hEo '^test_[a-zA-Z0-9_]+' $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
@@ -179,6 +178,14 @@ check-bashcompletion:
 	        ($$t); \
 	    done'
 
+ifeq ($(enable_stbt_camera), yes)
+check: check-cameratests
+check-cameratests: install-for-test
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
+	tests/run-tests.sh -i tests/test-camera.sh
+endif
+
 install-for-test:
 	rm -rf tests/test-install && \
 	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir \
@@ -190,7 +197,7 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
-tests/ocr/menu.png : %.png : %.svg
+tests/ocr/menu.png: %.png: %.svg
 	rsvg-convert $< >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
@@ -229,13 +236,13 @@ TAGS:
 
 DPKG_OPTS?=
 
-extra/debian/$(debian_base_release)~%/debian/changelog : extra/debian/changelog
+extra/debian/$(debian_base_release)~%/debian/changelog: extra/debian/changelog
 	mkdir -p $(dir $@) && \
 	sed -e "s/@RELEASE@/$(debian_base_release)~$*/g" \
 	    -e "s/@DISTRIBUTION@/$*/g" \
 	    $< >$@
 
-extra/debian/$(debian_base_release)/debian/changelog : extra/debian/changelog
+extra/debian/$(debian_base_release)/debian/changelog: extra/debian/changelog
 	mkdir -p $(dir $@) && \
 	sed -e "s/@RELEASE@/$(debian_base_release)/g" \
 	    -e "s/@DISTRIBUTION@/unstable/g" \
@@ -248,14 +255,14 @@ static_debian_files = \
 	debian/rules \
 	debian/source/format
 
-extra/stb-tester_$(VERSION)-%.debian.tar.xz : \
+extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
 		extra/debian/%/debian/changelog \
 		$(patsubst %,extra/%,$(static_debian_files))
 	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) $(static_debian_files) && \
 	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) debian/changelog && \
 	xz -f $(patsubst %.tar.xz,%.tar,$@)
 
-debian-src-pkg/%/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
+debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
 	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
 	mkdir -p debian-src-pkg/$*~ && \
 	srcdir=$$PWD && \
@@ -277,7 +284,7 @@ debian-src-pkg/%/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSIO
 	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
+stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
@@ -285,16 +292,16 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb : debian-src-pkg/%/
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
-deb : stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
+deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 # Ubuntu PPA
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish-% : debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
+ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
-ppa-publish : $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
+ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
 
 # Fedora Packaging
 
@@ -333,16 +340,12 @@ copr-publish: $(src_rpm)
 
 # stbt camera - Optional Smart TV support
 
-stbt_camera_build_target=$(if $(enable_stbt_camera), \
-	stbt-camera \
-	stbt-camera.d/gst/stbt-gst-plugins.so, \
-	$(info Not building optional plugins for Smart TV support))
-stbt_camera_install_target=$(if $(enable_stbt_camera), \
-	install-stbt-camera, \
-	$(info Not installing optional plugins for Smart TV support))
-
-all : $(stbt_camera_build_target)
-install : $(stbt_camera_install_target)
+ifeq ($(enable_stbt_camera), yes)
+all: stbt-camera.d/gst/stbt-gst-plugins.so
+install: install-stbt-camera
+else
+$(info Smart TV support disabled)
+endif
 
 stbt_camera_files=\
 	_stbt/gst_utils.py \
@@ -360,12 +363,12 @@ installed_camera_files=\
 
 CFLAGS?=-O2
 
-%_orc.h : %.orc
+%_orc.h: %.orc
 	orcc --header --internal -o "$@" "$<"
-%_orc.c : %.orc
+%_orc.c: %.orc
 	orcc --implementation --internal -o "$@" "$<"
 
-stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrection.c \
+stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/stbtgeometriccorrection.c \
                                        stbt-camera.d/gst/stbtgeometriccorrection.h \
                                        stbt-camera.d/gst/plugin.c \
                                        stbt-camera.d/gst/stbtcontraststretch.c \
@@ -379,7 +382,7 @@ stbt-camera.d/gst/stbt-gst-plugins.so : stbt-camera.d/gst/stbtgeometriccorrectio
 		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
 		-DVERSION=\"$(VERSION)\"
 
-install-stbt-camera : $(stbt_camera_files)
+install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
 	@for file in $(stbt_camera_files); \
 	do \
@@ -395,7 +398,7 @@ install-stbt-camera : $(stbt_camera_files)
 		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
-.PHONY: check-bashcompletion check-hardware check-integrationtests
+.PHONY: check-bashcompletion check-cameratests check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
 .PHONY: FORCE TAGS
