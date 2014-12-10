@@ -23,7 +23,7 @@ gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsyste
 
 # Enable building/installing stbt camera (smart TV support) Gstreamer elements
 # by default if the build-dependencies are available
-enable_stbt_camera?=$(filter yes,$(shell pkg-config --exists $(PKG_DEPS) && echo yes))
+enable_stbt_camera?=no
 
 ubuntu_releases ?= saucy trusty
 debian_base_release=1

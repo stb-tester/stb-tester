@@ -59,4 +59,4 @@ install:
  - make enable_stbt_camera=yes
 
 script:
- - PATH=~/webminspector:$PATH make check
+ - PATH=~/webminspector:$PATH make enable_stbt_camera=yes check
