@@ -45,8 +45,10 @@ For installation instructions see
 ##### User-visible changes since 0.20
 
 * Added new API `stbt.match` which was previously conspicuous in its absence.
-  This, in combination with the ability to treat `MatchResult` as a boolean,
-  makes it much easier to compose matching operations in user code. For example:
+  It checks a single frame of video and returns a `MatchResult`.
+
+  `MatchResult`s can now be treated as a boolean. Together, this makes it much
+  easier to compose matching operations in user code. For example:
 
         assert stbt.match('template.png') or stbt.match('template2.png')
 
@@ -64,13 +66,26 @@ For installation instructions see
   API, and the configuration options. For instructions see
   <https://github.com/drothlis/stb-tester/blob/master/stbt-camera.d/README.md>.
 
+* Added new "x11" remote-control type for sending keypresses to an X display.
+  It can be used with GStreamer's ximagesrc for testing desktop applications
+  and websites. For details see the documentation for `--control` in the
+  [stbt(1) man page](http://stb-tester.com/stbt.html).
+
 * The videos recorded by `stbt batch run` are now shown inline in the HTML
   report using the HTML5 video tag. This looks great and makes triage easier.
+
+* The search/filter functionality of the `stbt batch` html reports is now
+  hooked up to the URL's querystring, so you can share a link to a subset of
+  the report.
 
 * `stbt batch run` has a new `-o` flag to specify the output directory where
   you want the report and test-run logs to be saved. If not specified it
   defaults to the existing behaviour, which is to write to the current working
   directory.
+
+* The `STBT_CONFIG_FILE` environment variable can now specify multiple config
+  files, separated by a colon. Files specified earlier in the list are searched
+  first.
 
 * `Region` now has convenience methods `extend` and `translate` and the
   function `intersect` to make it easier to receive a region, modify it and
@@ -86,6 +101,46 @@ For installation instructions see
   deprecated; in the future we may change its meaning to mean the empty region,
   for consistency with `Region.intersect`.
 
+* The `MatchResult` object returned by `match` and `wait_for_match` now
+  includes the region of the match, not just the top-left position. This makes
+  it convenient to pass the region to other functions, for example to read the
+  text next to an icon:
+
+        m = stbt.wait_for_match('icon.png')
+        text = stbt.ocr(region=m.region.extend(right=200))
+
+* `is_screen_black` logs debug images to `stbt-debug` when additional debugging
+  is enabled with `stbt run -vv`, similar to `wait_for_match` etc.
+
+* The location of the keymap file used by the interactive `stbt control`
+  command can now be specified in the `control.keymap` configuration key.
+  Previously this could only be specified on the `stbt control` command line,
+  with `--keymap`. It still defaults to `~/.config/stbt/control.conf`.
+
+* `stbt.press` and `stbt.draw_text` now draw a black background behind the text
+  drawn to the saved video, so that the text is legible against light
+  backgrounds.
+
+##### Bugfixes and packaging fixes
+
+* `stbt.debug` no longer raises `UnicodeEncodeError` when writing a unicode
+  string and `stbt`'s output is redirected to a file. This was most visible
+  when `stbt.ocr`, which calls `stbt.debug` internally, was finding non-English
+  text.
+
+* Fixed using `stbt.ocr`'s optional `tesseract_config`, `tesseract_user_words`
+  and `tesseract_user_patterns` parameters on Fedora. Previously, attempting
+  to use these would raise a RuntimeError saying "Installation error: Cannot
+  locate tessdata directory".
+
+* Fixed `stbt run` crash when using GStreamer 1.4.
+
+* `stbt batch run` can now store results in a VirtualBox shared folder (or
+  similar filesystems that don't allow fifos).
+
+* The Fedora package now installs `libvpx` if it's missing -- we need it for
+  the videos recorded by `stbt batch run` and `stbt run --save-video`.
+
 ##### Developer-visible changes since 0.20
 
 * The `stbt.py` python module has been split into a python package
@@ -93,6 +148,9 @@ For installation instructions see
   and (in future) flexibility in deployment. Users of the public API (that is,
   test scripts) should continue to use the same API (for example
   `stbt.get_config` not `stbt.config.get_config`).
+
+* `stbt.ocr` now honours the `TESSDATA_PREFIX` environment variable, so you can
+  test a locally-built version of tesseract.
 
 #### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
 
