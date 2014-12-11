@@ -297,7 +297,7 @@ deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 DPUT_HOST?=ppa:stb-tester
 
-ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
+ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
 	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
 ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
