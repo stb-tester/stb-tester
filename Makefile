@@ -143,8 +143,7 @@ update-api-docs:
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh README.rst
 
 clean:
-	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
-	      stbt-camera.d/gst/stbt-gst-plugins.so
+	git clean -Xfd || true
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
