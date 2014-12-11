@@ -24,9 +24,6 @@ gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsyste
 # Enable building/installing stbt camera (smart TV support).
 enable_stbt_camera?=no
 
-ubuntu_releases ?= saucy trusty utopic
-debian_base_release=1
-
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
@@ -232,7 +229,10 @@ TAGS:
 
 # Debian Packaging
 
+ubuntu_releases ?= saucy trusty utopic
 DPKG_OPTS?=
+debian_base_release=1
+debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
 
 extra/debian/$(debian_base_release)~%/debian/changelog: extra/debian/changelog
 	mkdir -p $(dir $@) && \
@@ -281,7 +281,6 @@ debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION
 	rm -Rf "$$tmpdir" && \
 	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
-debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
 stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
