@@ -6,6 +6,12 @@ MAINTAINER David Röthlisberger "david@rothlis.net"
 
 RUN rpm -i http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-20.noarch.rpm
 
+# Build essentials:
+RUN yum install -y copr-cli gcc git make rpm-build wget yum-utils
+
+# Stb-tester build dependencies for building binary RPM:
+RUN yum install -y @BUILDREQUIRES@
+
 RUN adduser stb-tester && \
     echo  "stb-tester	ALL=(ALL)	NOPASSWD: ALL" >>/etc/sudoers && \
     sed -i 's/Defaults.*requiretty//' /etc/sudoers
@@ -13,6 +19,3 @@ RUN adduser stb-tester && \
 USER stb-tester
 ENV HOME /home/stb-tester
 WORKDIR /home/stb-tester
-ENTRYPOINT ["/bin/bash", "-c"]
-
-RUN mkdir rpmbuild
