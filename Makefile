@@ -25,7 +25,7 @@ gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsyste
 # by default if the build-dependencies are available
 enable_stbt_camera?=no
 
-ubuntu_releases ?= saucy trusty
+ubuntu_releases ?= saucy trusty utopic
 debian_base_release=1
 
 INSTALL?=install
