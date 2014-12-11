@@ -212,8 +212,8 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    printf 'Error: "make dist" requires GNU tar ' >&2; \
 	    printf '(use "make dist TAR=gnutar").\n' >&2; \
 	    exit 1; }
-	# Separate tar and gzip so we can pass "-n" for more deterministic tarball
-	# generation
+	# Separate tar and gzip so we can pass "-n" for more deterministic
+	# tarball generation
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
 	         -f stb-tester-$(VERSION).tar $^ && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
