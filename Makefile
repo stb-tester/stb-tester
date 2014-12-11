@@ -140,8 +140,8 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: api-doc.sh stbt/__init__.py _stbt/config.py
-	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
+update-api-docs:
+	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh README.rst
 
 clean:
 	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
@@ -212,8 +212,8 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    printf 'Error: "make dist" requires GNU tar ' >&2; \
 	    printf '(use "make dist TAR=gnutar").\n' >&2; \
 	    exit 1; }
-	# Separate tar and gzip so we can pass "-n" for more deterministic tarball
-	# generation
+	# Separate tar and gzip so we can pass "-n" for more deterministic
+	# tarball generation
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
 	         -f stb-tester-$(VERSION).tar $^ && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
@@ -319,24 +319,13 @@ $(src_rpm): stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	rpmbuild --define "_topdir $(rpm_topdir)" -bs extra/fedora/stb-tester.spec
 	mv $(rpm_topdir)/SRPMS/$(src_rpm) .
 
-# For copr-cli, generate API token from http://copr.fedoraproject.org/api/
-# and paste into ~/.config/copr
+rpm: $(src_rpm)
+	yum-builddep -y $<
+	rpmbuild --define "_topdir $(rpm_topdir)" --rebuild $<
+	mv $(rpm_topdir)/RPMS/*/stb-tester-* .
+
 copr-publish: $(src_rpm)
-	@printf "\n*** Building rpm from src rpm to validate src rpm ***\n"
-	yum-builddep -y $(src_rpm)
-	rpmbuild --define "_topdir $(rpm_topdir)" -bb extra/fedora/stb-tester.spec
-	@printf "\n*** Publishing src rpm to %s ***\n" \
-	    https://github.com/drothlis/stb-tester-srpms
-	rm -rf stb-tester-srpms
-	git clone --depth 1 https://github.com/drothlis/stb-tester-srpms.git
-	cp $(src_rpm) stb-tester-srpms
-	cd stb-tester-srpms && \
-	    git add $(src_rpm) && \
-	    git commit -m "$(src_rpm)" && \
-	    git push origin master
-	@printf "\n*** Publishing package to COPR ***\n"
-	copr-cli build stb-tester \
-	    https://github.com/drothlis/stb-tester-srpms/raw/master/$(src_rpm)
+	extra/fedora/copr-publish.sh $<
 
 # stbt camera - Optional Smart TV support
 
@@ -397,8 +386,9 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
 
-.PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
-.PHONY: check-bashcompletion check-cameratests check-hardware check-integrationtests
+.PHONY: all clean deb dist doc install install-core uninstall update-api-docs
+.PHONY: check check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
-.PHONY: copr-publish ppa-publish srpm
+.PHONY: copr-publish ppa-publish rpm srpm
+.PHONY: check-cameratests install-stbt-camera
 .PHONY: FORCE TAGS
