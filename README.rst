@@ -2,9 +2,9 @@
  stbt
 ======
 
---------------------------------------------------------------------------------------------------
-Automated User Interface Testing for Set-Top Boxes, Smart TVs, Consoles, Android Phones & Tablets.
---------------------------------------------------------------------------------------------------
+--------------------------------------------------------------
+Automated User Interface Testing for Set-Top Boxes & Smart TVs
+--------------------------------------------------------------
 
 .. image:: https://travis-ci.org/drothlis/stb-tester.png?branch=master
    :target: https://travis-ci.org/drothlis/stb-tester
