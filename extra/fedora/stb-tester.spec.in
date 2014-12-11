@@ -38,7 +38,6 @@ command.
 %package camera
 Summary: stb-tester camera support
 
-BuildRequires: gcc
 BuildRequires: gstreamer1-devel
 BuildRequires: gstreamer1-plugins-base-devel
 BuildRequires: opencv-devel
