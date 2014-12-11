@@ -8,7 +8,7 @@ build_deps=$(grep 'BuildRequires:' $this_dir/stb-tester.spec.in | awk '{printf "
 (
 	cat $this_dir/Dockerfile
 	echo
-	echo "RUN sudo yum install -y copr-cli git rpm-build wget yum-utils $build_deps"
+	echo "RUN sudo yum install -y copr-cli git make rpm-build wget yum-utils $build_deps"
 ) | docker build -t stbtester/stb-tester-test-build-fedora-package - &&
 
 docker run -v $stbt_dir:/usr/src/stb-tester:ro \
