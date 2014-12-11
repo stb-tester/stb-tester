@@ -1,49 +1,17 @@
 # Run with ./run-tests.sh
 
-test_that_readme_default_templatematch_values_are_kept_up_to_date() {
-    cat > readme <<-'EOF'
-	unmodified line
-	    `match_method` (str) default: old value
-	unmodified line
-	EOF
-    "$srcdir"/api-doc.sh "$PWD"/readme
+test_that_readme_is_up_to_date() {
+    if git -C "$srcdir" describe --dirty | grep -q dirty; then
+        skip "source directory has uncommitted changes"
+    fi
 
-    cat > expected <<-'EOF'
-	unmodified line
-	    `match_method` (str) default: sqdiff-normed
-	unmodified line
-	EOF
+    git clone "$srcdir" stb-tester &&
+    cd stb-tester &&
+    make update-api-docs ||
+    fail "Failed to run 'update-api-docs'"
 
-    diff -u expected readme
-}
-
-test_that_readme_python_api_docs_are_kept_up_to_date() {
-    cat > readme <<-'EOF'
-	unmodified line
-	
-	.. <start python docs>
-	
-	old lines
-	
-	.. <end python docs>
-	
-	unmodified line
-	EOF
-    "$srcdir"/api-doc.sh "$PWD"/readme
-
-    cat > expected <<-'EOF'
-	unmodified line
-	
-	.. <start python docs>
-	
-	as_precondition(message)
-	    Context manager that replaces UITestFailures with UITestErrors.
-	
-	.. <end python docs>
-	
-	unmodified line
-	EOF
-
-    diff -u <(head -6 expected) <(head -6 readme) &&
-    diff -u <(tail -4 expected) <(tail -4 readme)
+    [[ -z "$(git status --porcelain -- README.rst)" ]] || {
+        git diff
+        fail "README.rst is not up to date; run 'make update-api-docs'"
+    }
 }

@@ -140,8 +140,8 @@ stbt.1: README.rst VERSION
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
-README.rst: api-doc.sh stbt/__init__.py _stbt/config.py
-	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
+update-api-docs:
+	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh README.rst
 
 clean:
 	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
@@ -397,8 +397,8 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
 
-.PHONY: all clean check deb dist doc install install-core uninstall
-.PHONY: check-bashcompletion check-hardware check-integrationtests
+.PHONY: all clean deb dist doc install install-core uninstall update-api-docs
+.PHONY: check check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
 .PHONY: check-cameratests install-stbt-camera
