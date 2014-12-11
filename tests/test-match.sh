@@ -506,9 +506,10 @@ test_match_visualisation() {
 
 test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     cat > test.py <<-EOF &&
-	wait_for_match("$testdir/videotestsrc-redblue.png")
+	wait_for_match("$testdir/videotestsrc-redblue.png", timeout_secs=0)
 	EOF
-    ! stbt run -v --source-pipeline 'videotestsrc pattern=black' test.py &&
+    ! stbt run -v --source-pipeline 'videotestsrc pattern=black is-live=true' \
+        test.py &&
 
     # sqdiff-normed & ccorr-normed give incorrect result on all-black images
     stbt templatematch screenshot.png "$testdir"/black-full-frame.png \
