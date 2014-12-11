@@ -21,8 +21,7 @@ gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/g
 gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
 gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
 
-# Enable building/installing stbt camera (smart TV support) Gstreamer elements
-# by default if the build-dependencies are available
+# Enable building/installing stbt camera (smart TV support).
 enable_stbt_camera?=no
 
 ubuntu_releases ?= saucy trusty utopic
