@@ -276,8 +276,6 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
 
 ### Fedora Packaging #########################################################
 
-COPR_PROJECT?=stbt
-COPR_PACKAGE?=stb-tester
 rpm_topdir?=$(HOME)/rpmbuild
 src_rpm=stb-tester-$(ESCAPED_VERSION)-1.fc20.src.rpm
 
@@ -294,9 +292,6 @@ rpm: $(src_rpm)
 	yum-builddep -y $<
 	rpmbuild --define "_topdir $(rpm_topdir)" --rebuild $<
 	mv $(rpm_topdir)/RPMS/*/stb-tester-* .
-
-copr-publish: $(src_rpm)
-	extra/fedora/copr-publish.sh $<
 
 ### stbt camera - Optional Smart TV support ##################################
 

@@ -6,5 +6,6 @@ my stb-tester working copy.
 To package a new stb-tester release for Fedora:
 
     extra/fedora/fedora-shell.sh -c "make srpm; sudo make rpm"
-    extra/fedora/test-rpm.sh stb-tester-$version.rpm
-    extra/fedora/fedora-shell.sh -c "make copr-publish"
+    extra/fedora/test-rpm.sh stb-tester-$version-1.fc20.x86_64.rpm
+    extra/fedora/fedora-shell.sh -c \
+        "extra/fedora/copr-publish.sh stb-tester-$version-1.fc20.src.rpm"
