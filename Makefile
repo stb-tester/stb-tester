@@ -229,7 +229,7 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags *.py
 
-# Debian Packaging
+### Debian Packaging #########################################################
 
 ubuntu_releases ?= saucy trusty utopic
 DPKG_OPTS?=
@@ -314,7 +314,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 # deb: stb-tester_0.21-1_amd64.deb
 deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
-# Ubuntu PPA
+### Ubuntu PPA ###############################################################
 
 DPUT_HOST?=ppa:stb-tester
 
@@ -326,7 +326,7 @@ ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
 # ppa-publish: ppa-publish-1~saucy ppa-publish-1~trusty [...]
 ppa-publish: $(ubuntu_releases:%=ppa-publish-1~%)
 
-# Fedora Packaging
+### Fedora Packaging #########################################################
 
 COPR_PROJECT?=stbt
 COPR_PACKAGE?=stb-tester
@@ -350,7 +350,7 @@ rpm: $(src_rpm)
 copr-publish: $(src_rpm)
 	extra/fedora/copr-publish.sh $<
 
-# stbt camera - Optional Smart TV support
+### stbt camera - Optional Smart TV support ##################################
 
 ifeq ($(enable_stbt_camera), yes)
 all: stbt-camera.d/gst/stbt-gst-plugins.so
