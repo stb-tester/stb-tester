@@ -21,12 +21,8 @@ gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/g
 gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
 gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
 
-# Enable building/installing stbt camera (smart TV support) Gstreamer elements
-# by default if the build-dependencies are available
+# Enable building/installing stbt camera (smart TV support).
 enable_stbt_camera?=no
-
-ubuntu_releases ?= saucy trusty
-debian_base_release=1
 
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
@@ -59,7 +55,8 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: %: %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: \
+  %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -144,8 +141,7 @@ update-api-docs:
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh README.rst
 
 clean:
-	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
-	      stbt-camera.d/gst/stbt-gst-plugins.so
+	git clean -Xfd || true
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
@@ -161,7 +157,8 @@ check-nosetests: tests/ocr/menu.png
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
-	grep -hEo '^test_[a-zA-Z0-9_]+' $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
+	grep -hEo '^test_[a-zA-Z0-9_]+' \
+	    $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
@@ -232,78 +229,52 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags *.py
 
-# Debian Packaging
+### Debian Packaging #########################################################
 
+ubuntu_releases ?= trusty utopic
 DPKG_OPTS?=
-
-extra/debian/$(debian_base_release)~%/debian/changelog: extra/debian/changelog
-	mkdir -p $(dir $@) && \
-	sed -e "s/@RELEASE@/$(debian_base_release)~$*/g" \
-	    -e "s/@DISTRIBUTION@/$*/g" \
-	    $< >$@
-
-extra/debian/$(debian_base_release)/debian/changelog: extra/debian/changelog
-	mkdir -p $(dir $@) && \
-	sed -e "s/@RELEASE@/$(debian_base_release)/g" \
-	    -e "s/@DISTRIBUTION@/unstable/g" \
-	    $< >$@
-
-static_debian_files = \
-	debian/compat \
-	debian/control \
-	debian/copyright \
-	debian/rules \
-	debian/source/format
-
-extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
-		extra/debian/%/debian/changelog \
-		$(patsubst %,extra/%,$(static_debian_files))
-	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) $(static_debian_files) && \
-	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) debian/changelog && \
-	xz -f $(patsubst %.tar.xz,%.tar,$@)
-
-debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
-	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
-	mkdir -p debian-src-pkg/$*~ && \
-	srcdir=$$PWD && \
-	tmpdir=$$(mktemp -d -t stb-tester-debian-pkg.XXXXXX) && \
-	cd $$tmpdir && \
-	cp $$srcdir/stb-tester-$(VERSION).tar.gz \
-	   stb-tester_$(VERSION).orig.tar.gz && \
-	cp $$srcdir/extra/stb-tester_$(VERSION)-$*.debian.tar.xz . && \
-	tar -xzf stb-tester_$(VERSION).orig.tar.gz && \
-	cd stb-tester-$(VERSION) && \
-	tar -xJf ../stb-tester_$(VERSION)-$*.debian.tar.xz && \
-	LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S $(DPKG_OPTS) && \
-	cd .. && \
-	mv stb-tester_$(VERSION)-$*.dsc stb-tester_$(VERSION)-$*_source.changes \
-	   stb-tester_$(VERSION)-$*.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
-	   "$$srcdir/debian-src-pkg/$*~" && \
-	cd "$$srcdir" && \
-	rm -Rf "$$tmpdir" && \
-	mv debian-src-pkg/$*~ debian-src-pkg/$*
-
+debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
+DPUT_HOST?=ppa:stb-tester/stb-tester
+
+# In the following rules, "%" and "$*" stand for the release number: "1" when
+# building a debian unstable package, or "1~trusty" or "1~utopic" (etc) when
+# building an ubuntu package.
+
+# deb: stb-tester_0.21-1_amd64.deb
+deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
+
+# Build debian source packages for debian unstable and all $(ubuntu_releases).
+debsrc: \
+  debian-packages/stb-tester_$(VERSION)-$(debian_base_release).dsc \
+  $(ubuntu_releases:%=debian-packages/stb-tester_$(VERSION)-$(debian_base_release)~%.dsc)
+
+# Publish all $(ubuntu_releases) source packages to stb-tester PPA
+ppa-publish: $(ubuntu_releases:%=ppa-publish-$(debian_base_release)~%)
+
+ppa-publish-%: debian-packages/stb-tester_$(VERSION)-%.dsc
+	dput $(DPUT_HOST) \
+	    debian-packages/stb-tester_$(VERSION)-$*_source.changes
+
+# Build debian source package
+debian-packages/stb-tester_$(VERSION)-%.dsc: \
+  stb-tester-$(VERSION).tar.gz extra/debian/changelog
+	extra/debian/build-source-package.sh $(VERSION) $*
+
+# Build debian binary package from source package
+stb-tester_0.21-1_amd64.deb: debian-packages/stb-tester_0.21-1.dsc
+
+stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
+  debian-packages/stb-tester_$(VERSION)-%.dsc
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
-	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
+	dpkg-source -x $< $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
-	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
+	 DEB_BUILD_OPTIONS=nocheck \
+	 dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
-deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
-
-# Ubuntu PPA
-
-DPUT_HOST?=ppa:stb-tester
-
-ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
-	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
-
-ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
-
-# Fedora Packaging
+### Fedora Packaging #########################################################
 
 COPR_PROJECT?=stbt
 COPR_PACKAGE?=stb-tester
@@ -327,7 +298,7 @@ rpm: $(src_rpm)
 copr-publish: $(src_rpm)
 	extra/fedora/copr-publish.sh $<
 
-# stbt camera - Optional Smart TV support
+### stbt camera - Optional Smart TV support ##################################
 
 ifeq ($(enable_stbt_camera), yes)
 all: stbt-camera.d/gst/stbt-gst-plugins.so
@@ -347,7 +318,7 @@ stbt_camera_files=\
 	stbt-camera.d/stbt-camera-validate.py
 
 installed_camera_files=\
-	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files)) \
+	$(stbt_camera_files:%=$(DESTDIR)$(libexecdir)/stbt/%) \
 	$(DESTDIR)$(gstpluginsdir)/stbt-gst-plugins.so
 
 CFLAGS?=-O2
