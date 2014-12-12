@@ -231,7 +231,7 @@ TAGS:
 
 ### Debian Packaging #########################################################
 
-ubuntu_releases ?= saucy trusty utopic
+ubuntu_releases ?= trusty utopic
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
