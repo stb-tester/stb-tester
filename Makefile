@@ -257,12 +257,11 @@ static_debian_files = \
 
 extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
   extra/debian/%/debian/changelog \
-  $(patsubst %,extra/%,$(static_debian_files))
-	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) \
-	    $(static_debian_files) && \
-	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) \
+  $(static_debian_files:%=extra/%)
+	$(MKTAR) -c -C extra -f $(@:%.tar.xz=%.tar) $(static_debian_files) && \
+	$(MKTAR) --append -C extra/debian/$*/ -f $(@:%.tar.xz=%.tar) \
 	    debian/changelog && \
-	xz -f $(patsubst %.tar.xz,%.tar,$@)
+	xz -f $(@:%.tar.xz=%.tar)
 
 debian-src-pkg/%/: \
   FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
@@ -308,7 +307,7 @@ ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
 	dput $(DPUT_HOST) \
 	    debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
-ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
+ppa-publish: $(ubuntu_releases:%=ppa-publish-1~%)
 
 # Fedora Packaging
 
@@ -354,7 +353,7 @@ stbt_camera_files=\
 	stbt-camera.d/stbt-camera-validate.py
 
 installed_camera_files=\
-	$(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(stbt_camera_files)) \
+	$(stbt_camera_files:%=$(DESTDIR)$(libexecdir)/stbt/%) \
 	$(DESTDIR)$(gstpluginsdir)/stbt-gst-plugins.so
 
 CFLAGS?=-O2
