@@ -255,6 +255,12 @@ static_debian_files = \
 	debian/rules \
 	debian/source/format
 
+# extra/stb-tester_0.21-1.debian.tar.xz: \
+#   extra/debian/1/debian/changelog \
+#   extra/debian/compat extra/debian/control [...]
+#
+# When called from "make deb": $* is $(debian_base_release)
+# When called from "make ppa-publish": $* is $(debian_base_release)~saucy
 extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
   extra/debian/%/debian/changelog \
   $(static_debian_files:%=extra/%)
@@ -263,6 +269,10 @@ extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
 	    debian/changelog && \
 	xz -f $(@:%.tar.xz=%.tar)
 
+# debian-src-pkg/1/: [...] extra/stb-tester_0.21-1.debian.tar.xz
+#
+# When called from "make deb": $* is $(debian_base_release)
+# When called from "make ppa-publish": $* is $(debian_base_release)~saucy
 debian-src-pkg/%/: \
   FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
 	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
@@ -287,6 +297,10 @@ debian-src-pkg/%/: \
 	rm -Rf "$$tmpdir" && \
 	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
+# stb-tester_0.21-1_amd64.deb: debian-src-pkg/1/
+#
+# When called from "make deb": $* is $(debian_base_release)
+# Not called from "make ppa-publish".
 stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
 	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc \
@@ -297,16 +311,19 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
+# deb: stb-tester_0.21-1_amd64.deb
 deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 # Ubuntu PPA
 
 DPUT_HOST?=ppa:stb-tester
 
+# ppa-publish-1~saucy: debian-src-pkg/1~saucy/ stb-tester-0.21.tar.gz
 ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
 	dput $(DPUT_HOST) \
 	    debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
+# ppa-publish: ppa-publish-1~saucy ppa-publish-1~trusty [...]
 ppa-publish: $(ubuntu_releases:%=ppa-publish-1~%)
 
 # Fedora Packaging
