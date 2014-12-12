@@ -55,7 +55,8 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: %: %.in .stbt-prefix VERSION
+extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: \
+  %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -156,7 +157,8 @@ check-nosetests: tests/ocr/menu.png
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
-	grep -hEo '^test_[a-zA-Z0-9_]+' $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
+	grep -hEo '^test_[a-zA-Z0-9_]+' \
+	    $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
@@ -254,13 +256,16 @@ static_debian_files = \
 	debian/source/format
 
 extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
-		extra/debian/%/debian/changelog \
-		$(patsubst %,extra/%,$(static_debian_files))
-	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) $(static_debian_files) && \
-	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) debian/changelog && \
+  extra/debian/%/debian/changelog \
+  $(patsubst %,extra/%,$(static_debian_files))
+	$(MKTAR) -c -C extra -f $(patsubst %.tar.xz,%.tar,$@) \
+	    $(static_debian_files) && \
+	$(MKTAR) --append -C extra/debian/$*/ -f $(patsubst %.tar.xz,%.tar,$@) \
+	    debian/changelog && \
 	xz -f $(patsubst %.tar.xz,%.tar,$@)
 
-debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
+debian-src-pkg/%/: \
+  FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
 	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
 	mkdir -p debian-src-pkg/$*~ && \
 	srcdir=$$PWD && \
@@ -274,18 +279,22 @@ debian-src-pkg/%/: FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION
 	tar -xJf ../stb-tester_$(VERSION)-$*.debian.tar.xz && \
 	LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S $(DPKG_OPTS) && \
 	cd .. && \
-	mv stb-tester_$(VERSION)-$*.dsc stb-tester_$(VERSION)-$*_source.changes \
-	   stb-tester_$(VERSION)-$*.debian.tar.xz stb-tester_$(VERSION).orig.tar.gz \
-	   "$$srcdir/debian-src-pkg/$*~" && \
+	mv stb-tester_$(VERSION)-$*.dsc \
+	    stb-tester_$(VERSION)-$*_source.changes \
+	    stb-tester_$(VERSION)-$*.debian.tar.xz \
+	    stb-tester_$(VERSION).orig.tar.gz \
+	    "$$srcdir/debian-src-pkg/$*~" && \
 	cd "$$srcdir" && \
 	rm -Rf "$$tmpdir" && \
 	mv debian-src-pkg/$*~ debian-src-pkg/$*
 
 stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
-	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc $$tmpdir/source && \
+	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc \
+	    $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
-	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
+	 DEB_BUILD_OPTIONS=nocheck \
+	 dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
@@ -296,7 +305,8 @@ deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 DPUT_HOST?=ppa:stb-tester
 
 ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
-	dput $(DPUT_HOST) debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
+	dput $(DPUT_HOST) \
+	    debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
 
 ppa-publish: $(patsubst %,ppa-publish-1~%,$(ubuntu_releases))
 
