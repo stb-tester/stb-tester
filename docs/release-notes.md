@@ -11,9 +11,9 @@ endeavour to keep backwards compatibility. The release notes always provide an
 exhaustive list of any changes, along with upgrade instructions where
 necessary.
 
-#### 0.21:
+#### 0.21: Composable API, match_text, stbt camera, triaging improvements
 
-<DATE>
+12 Dec 2014.
 
 For installation instructions see
 [Getting Started](http://stb-tester.com/getting-started.html).
