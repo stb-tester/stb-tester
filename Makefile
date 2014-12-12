@@ -235,7 +235,7 @@ ubuntu_releases ?= saucy trusty utopic
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-DPUT_HOST?=ppa:stb-tester
+DPUT_HOST?=ppa:stb-tester/stb-tester
 
 # In the following rules, "%" and "$*" stand for the release number: "1" when
 # building a debian unstable package, or "1~trusty" or "1~utopic" (etc) when
