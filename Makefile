@@ -235,96 +235,44 @@ ubuntu_releases ?= saucy trusty utopic
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
+DPUT_HOST?=ppa:stb-tester
 
-extra/debian/$(debian_base_release)~%/debian/changelog: extra/debian/changelog
-	mkdir -p $(dir $@) && \
-	sed -e "s/@RELEASE@/$(debian_base_release)~$*/g" \
-	    -e "s/@DISTRIBUTION@/$*/g" \
-	    $< >$@
+# In the following rules, "%" and "$*" stand for the release number: "1" when
+# building a debian unstable package, or "1~trusty" or "1~utopic" (etc) when
+# building an ubuntu package.
 
-extra/debian/$(debian_base_release)/debian/changelog: extra/debian/changelog
-	mkdir -p $(dir $@) && \
-	sed -e "s/@RELEASE@/$(debian_base_release)/g" \
-	    -e "s/@DISTRIBUTION@/unstable/g" \
-	    $< >$@
+# deb: stb-tester_0.21-1_amd64.deb
+deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
-static_debian_files = \
-	debian/compat \
-	debian/control \
-	debian/copyright \
-	debian/rules \
-	debian/source/format
+# Build debian source packages for debian unstable and all $(ubuntu_releases).
+debsrc: \
+  debian-packages/stb-tester_$(VERSION)-$(debian_base_release).dsc \
+  $(ubuntu_releases:%=debian-packages/stb-tester_$(VERSION)-$(debian_base_release)~%.dsc)
 
-# extra/stb-tester_0.21-1.debian.tar.xz: \
-#   extra/debian/1/debian/changelog \
-#   extra/debian/compat extra/debian/control [...]
-#
-# When called from "make deb": $* is $(debian_base_release)
-# When called from "make ppa-publish": $* is $(debian_base_release)~saucy
-extra/stb-tester_$(VERSION)-%.debian.tar.xz: \
-  extra/debian/%/debian/changelog \
-  $(static_debian_files:%=extra/%)
-	$(MKTAR) -c -C extra -f $(@:%.tar.xz=%.tar) $(static_debian_files) && \
-	$(MKTAR) --append -C extra/debian/$*/ -f $(@:%.tar.xz=%.tar) \
-	    debian/changelog && \
-	xz -f $(@:%.tar.xz=%.tar)
+# Publish all $(ubuntu_releases) source packages to stb-tester PPA
+ppa-publish: $(ubuntu_releases:%=ppa-publish-$(debian_base_release)~%)
 
-# debian-src-pkg/1/: [...] extra/stb-tester_0.21-1.debian.tar.xz
-#
-# When called from "make deb": $* is $(debian_base_release)
-# When called from "make ppa-publish": $* is $(debian_base_release)~saucy
-debian-src-pkg/%/: \
-  FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-%.debian.tar.xz
-	rm -rf debian-src-pkg/$* debian-src-pkg/$*~ && \
-	mkdir -p debian-src-pkg/$*~ && \
-	srcdir=$$PWD && \
-	tmpdir=$$(mktemp -d -t stb-tester-debian-pkg.XXXXXX) && \
-	cd $$tmpdir && \
-	cp $$srcdir/stb-tester-$(VERSION).tar.gz \
-	   stb-tester_$(VERSION).orig.tar.gz && \
-	cp $$srcdir/extra/stb-tester_$(VERSION)-$*.debian.tar.xz . && \
-	tar -xzf stb-tester_$(VERSION).orig.tar.gz && \
-	cd stb-tester-$(VERSION) && \
-	tar -xJf ../stb-tester_$(VERSION)-$*.debian.tar.xz && \
-	LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S $(DPKG_OPTS) && \
-	cd .. && \
-	mv stb-tester_$(VERSION)-$*.dsc \
-	    stb-tester_$(VERSION)-$*_source.changes \
-	    stb-tester_$(VERSION)-$*.debian.tar.xz \
-	    stb-tester_$(VERSION).orig.tar.gz \
-	    "$$srcdir/debian-src-pkg/$*~" && \
-	cd "$$srcdir" && \
-	rm -Rf "$$tmpdir" && \
-	mv debian-src-pkg/$*~ debian-src-pkg/$*
+ppa-publish-%: debian-packages/stb-tester_$(VERSION)-%.dsc
+	dput $(DPUT_HOST) \
+	    debian-packages/stb-tester_$(VERSION)-$*_source.changes
 
-# stb-tester_0.21-1_amd64.deb: debian-src-pkg/1/
-#
-# When called from "make deb": $* is $(debian_base_release)
-# Not called from "make ppa-publish".
-stb-tester_$(VERSION)-%_$(debian_architecture).deb: debian-src-pkg/%/
+# Build debian source package
+debian-packages/stb-tester_$(VERSION)-%.dsc: \
+  stb-tester-$(VERSION).tar.gz extra/debian/changelog
+	extra/debian/build-source-package.sh $(VERSION) $*
+
+# Build debian binary package from source package
+stb-tester_0.21-1_amd64.deb: debian-packages/stb-tester_0.21-1.dsc
+
+stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
+  debian-packages/stb-tester_$(VERSION)-%.dsc
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
-	dpkg-source -x debian-src-pkg/$*/stb-tester_$(VERSION)-$*.dsc \
-	    $$tmpdir/source && \
+	dpkg-source -x $< $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck \
 	 dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
-
-# deb: stb-tester_0.21-1_amd64.deb
-deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
-
-### Ubuntu PPA ###############################################################
-
-DPUT_HOST?=ppa:stb-tester
-
-# ppa-publish-1~saucy: debian-src-pkg/1~saucy/ stb-tester-0.21.tar.gz
-ppa-publish-%: debian-src-pkg/%/ stb-tester-$(VERSION).tar.gz
-	dput $(DPUT_HOST) \
-	    debian-src-pkg/$*/stb-tester_$(VERSION)-$*_source.changes
-
-# ppa-publish: ppa-publish-1~saucy ppa-publish-1~trusty [...]
-ppa-publish: $(ubuntu_releases:%=ppa-publish-1~%)
 
 ### Fedora Packaging #########################################################
 

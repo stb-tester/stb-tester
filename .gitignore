@@ -7,9 +7,8 @@
 .stbt-cflags
 .stbt-ldflags
 .stbt-prefix
-debian-src-pkg/*/stb-tester_*
+debian-packages
 defaults.conf
-extra/debian/1
 extra/debian/changelog
 extra/fedora/stb-tester.spec
 extra/stb-tester*.debian.tar.xz
