@@ -14,6 +14,9 @@
     .jqplot-highlighter-tooltip {
       line-height: 1; background-color: rgba(208, 208, 208, 0.9); }
 
+    .uninteresting { background-color: #bbbbbb; color: #666666; }
+    .text-uninteresting { color: #666666; }
+
     /* Border around selected row, opening up like a '{' onto right pane */
     table#testruns { border-collapse: separate; }
     #testruns tr.selected td {
@@ -29,12 +32,15 @@
     #testruns tr.selected.error { background-color: #ffeaea; }
     #testruns tr.selected.success td { background-color: #edffe6; }
     #testruns tr.selected.warning td { background-color: #fffbe6; }
+    #testruns tr.selected.uninteresting td { background-color: #eeeeee; }
     #testruns tr.selected.error td:last-child {
       background: linear-gradient(to right, #ffeaea, #fff); }
     #testruns tr.selected.success td:last-child {
       background: linear-gradient(to right, #edffe6, #fff); }
     #testruns tr.selected.warning td:last-child {
       background: linear-gradient(to right, #fffbe6, #fff); }
+    #testruns tr.selected.uninteresting td:last-child {
+      background: linear-gradient(to right, #eeeeee, #fff); }
   </style>
 </head>
 
@@ -273,6 +279,7 @@
       var num_success = $(".success:visible").length;
       var num_failed = $(".error:visible").length;  // red
       var num_warnings = $(".warning:visible").length;  // yellow
+      var num_uninteresting = $(".uninteresting:visible").length;  // grey
       var num_total = num_success + num_failed + num_warnings;
       var percent_success = 0;
       if (num_total > 0) {
@@ -282,7 +289,8 @@
       $("#totals").html(
         "<span class='text-success'>Passed: " + format_summary(num_success, num_total) + ".</span> " +
         "<span class='text-error'>Failed: " + format_summary(num_failed, num_total) + ".</span> " +
-        "<span class='text-warning'>Errors: " + format_summary(num_warnings, num_total) + ".</span>");
+        "<span class='text-warning'>Errors: " + format_summary(num_warnings, num_total) + ".</span> " +
+        "<span class='text-uninteresting'>Uninteresting: " + format_summary(num_uninteresting, num_total) + ".</span>");
     };
   });
 </script>
@@ -299,7 +307,7 @@
     update_plot();
 
     function update_plot() {
-      plotSeries = [[], [], []];
+      plotSeries = [[], [], [], []];
       $($('#testruns > tbody > tr').filter(":visible").get().reverse()).each(
         function(index, element) {
           var timestamp = element.cells.item(0).textContent;
@@ -313,6 +321,8 @@
             seriesIndex = 1;
           } else if ($(element).hasClass('error')) {
             seriesIndex = 2;
+          } else if ($(element).hasClass('uninteresting')) {
+            seriesIndex = 3;
           } else {  // Test in progress
             return;
           }
@@ -332,9 +342,10 @@
         markerOptions: { size: 5 }
       },
       series: [
-        {color: 'gray'},
+        {color: '#15bb35'},
         {color: 'orange', markerOptions: {style: 'filledSquare'}},
         {color: 'red', markerOptions: {style: 'filledSquare'}},
+        {color: '#666666', markerOptions: {style: 'x'}},
       ],
       highlighter: {
         show: true,
