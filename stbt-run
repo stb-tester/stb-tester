@@ -30,6 +30,20 @@ sys.argv[1:] = args.args
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
+
+def _setup_utf8_output():
+    """
+    Simulates python3's defaulting to utf-8 output so we don't get confusing
+    `UnicodeEncodeError`s when printing unicode characters.
+    """
+    import codecs
+    if sys.stdout.encoding is None:
+        sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    if sys.stderr.encoding is None:
+        sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+
+_setup_utf8_output()
+
 try:
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
