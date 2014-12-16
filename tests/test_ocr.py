@@ -1,9 +1,7 @@
 # coding: utf-8
 
-import codecs
 import distutils
 import re
-import sys
 from textwrap import dedent
 
 import cv2
@@ -11,8 +9,6 @@ from nose.plugins.skip import SkipTest
 from nose.tools import eq_, raises
 
 import stbt
-
-sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
 
 def test_that_ocr_returns_unicode():

@@ -5,6 +5,7 @@ install:
  - sudo apt-get update
  - sudo apt-get install
         expect
+        expect-dev
         gir1.2-gstreamer-1.0
         gir1.2-gudev-1.0
         gstreamer1.0-libav

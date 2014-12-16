@@ -20,6 +20,15 @@ For installation instructions see
 
 ##### Breaking changes since 0.21
 
+* stbt run will now set the encoding of stderr and stdout to utf-8 when writing
+  to a file or pipe (or otherwise not connected to a terminal with `LANG` set)
+  rather than defaulting back to ASCII.  This makes the behaviour more
+  consistent between using `stbt run` (interactively) and `stbt batch run` which
+  logs to a file.  Previously a `UnicodeEncodeError` would be `raise`d when
+  `print`ing a unicode string like `print u"Alfonso Cuarón"`.
+
+  This is the same (sensible) behaviour that Python 3 has by default.
+
 ##### User-visible changes since 0.21
 
 ##### Bugfixes and packaging fixes since 0.21
