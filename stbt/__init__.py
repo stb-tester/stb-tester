@@ -1283,12 +1283,13 @@ def get_frame():
         return frame.copy()
 
 
-def is_screen_black(frame, mask=None, threshold=None):
+def is_screen_black(frame=None, mask=None, threshold=None):
     """Check for the presence of a black screen in a video frame.
 
     `frame` (numpy.array)
-      The video frame to check, in OpenCV format (for example as returned by
-      `frames` and `get_frame`).
+      If this is specified it is used as the video frame to check; otherwise a
+      frame is grabbed from the source video stream. It is a `numpy.array` in
+      OpenCV format (for example as returned by `frames` and `get_frame`).
 
     `mask` (string)
       The filename of a black & white image mask. It must have white pixels for
@@ -1305,7 +1306,10 @@ def is_screen_black(frame, mask=None, threshold=None):
         threshold = get_config('is_screen_black', 'threshold', type_=int)
     if mask:
         mask = _load_mask(mask)
-    greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if frame is None:
+        frame = _display.get_sample()
+    with _numpy_from_sample(frame, readonly=True) as f:
+        greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
     _, greyframe = cv2.threshold(greyframe, threshold, 255, cv2.THRESH_BINARY)
     _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
     if logging.get_debug_level() > 1:
@@ -2223,9 +2227,10 @@ def _log_image(image, name, directory):
     except OSError:
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
-    if image.dtype == numpy.float32:
-        image = cv2.convertScaleAbs(image, alpha=255)
-    cv2.imwrite(os.path.join(d, name) + ".png", image)
+    with _numpy_from_sample(image, readonly=True) as img:
+        if img.dtype == numpy.float32:
+            img = cv2.convertScaleAbs(img, alpha=255)
+        cv2.imwrite(os.path.join(d, name) + ".png", img)
 
 
 def _log_image_descriptions(
