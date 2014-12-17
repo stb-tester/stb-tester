@@ -418,12 +418,13 @@ get_config(section, key, default=None, type_=<type 'str'>)
 get_frame()
     Returns an OpenCV image of the current video frame.
 
-is_screen_black(frame, mask=None, threshold=None)
+is_screen_black(frame=None, mask=None, threshold=None)
     Check for the presence of a black screen in a video frame.
 
     `frame` (numpy.array)
-      The video frame to check, in OpenCV format (for example as returned by
-      `frames` and `get_frame`).
+      If this is specified it is used as the video frame to check; otherwise a
+      frame is grabbed from the source video stream. It is a `numpy.array` in
+      OpenCV format (for example as returned by `frames` and `get_frame`).
 
     `mask` (string)
       The filename of a black & white image mask. It must have white pixels for
