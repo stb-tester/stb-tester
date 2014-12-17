@@ -34,6 +34,7 @@ from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 from _stbt import config
 from _stbt import control
 from _stbt import logging
+from _stbt import state_watch
 from _stbt import utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_buffer
@@ -1283,12 +1284,13 @@ def get_frame():
         return frame.copy()
 
 
-def is_screen_black(frame, mask=None, threshold=None):
+def is_screen_black(frame=None, mask=None, threshold=None):
     """Check for the presence of a black screen in a video frame.
 
     `frame` (numpy.array)
-      The video frame to check, in OpenCV format (for example as returned by
-      `frames` and `get_frame`).
+      If this is specified it is used as the video frame to check; otherwise a
+      frame is grabbed from the source video stream. It is a `numpy.array` in
+      OpenCV format (for example as returned by `frames` and `get_frame`).
 
     `mask` (string)
       The filename of a black & white image mask. It must have white pixels for
@@ -1305,7 +1307,10 @@ def is_screen_black(frame, mask=None, threshold=None):
         threshold = get_config('is_screen_black', 'threshold', type_=int)
     if mask:
         mask = _load_mask(mask)
-    greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if frame is None:
+        frame = _display.get_sample()
+    with _numpy_from_sample(frame, readonly=True) as f:
+        greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
     _, greyframe = cv2.threshold(greyframe, threshold, 255, cv2.THRESH_BINARY)
     _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
     if logging.get_debug_level() > 1:
