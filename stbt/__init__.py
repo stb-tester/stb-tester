@@ -2228,9 +2228,10 @@ def _log_image(image, name, directory):
     except OSError:
         warn("Failed to create directory '%s'; won't save debug images." % d)
         return
-    if image.dtype == numpy.float32:
-        image = cv2.convertScaleAbs(image, alpha=255)
-    cv2.imwrite(os.path.join(d, name) + ".png", image)
+    with _numpy_from_sample(image, readonly=True) as img:
+        if img.dtype == numpy.float32:
+            img = cv2.convertScaleAbs(img, alpha=255)
+        cv2.imwrite(os.path.join(d, name) + ".png", img)
 
 
 def _log_image_descriptions(

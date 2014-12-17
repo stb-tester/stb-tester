@@ -227,6 +227,42 @@ test_that_is_screen_black_respects_passed_in_frame() {
     stbt run -v test.py
 }
 
+test_that_is_screen_black_writes_debugging_information() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.is_screen_black()
+	EOF
+    stbt run -vv \
+        --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
+        test.py \
+    || fail "Test should have detected black"
+    find .
+    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+        || fail "source debug image not written"
+}
+
+test_that_is_screen_black_with_mask_writes_debugging_information() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.is_screen_black(
+	    mask="$testdir/videotestsrc-mask-non-black.png"
+	)
+	EOF
+    stbt run -vv \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
+        test.py
+    || fail "Test should have detected black"
+    find .
+    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/mask.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+        || fail "source debug image not written"
+}
+
 test_that_video_index_is_written_on_eos() {
     which webminspector.py &>/dev/null \
         || skip "webminspector.py not found. See https://chromium.googlesource.com/webm/webminspector/"
