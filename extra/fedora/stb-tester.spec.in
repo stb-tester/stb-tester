@@ -1,6 +1,6 @@
 Name: stb-tester
 Version: @ESCAPED_VERSION@
-Release: 1%{?dist}
+Release: @RELEASE@%{?dist}
 Summary: Automated user interface testing for set-top boxes
 Group: Development/Tools
 URL: http://stb-tester.com
