@@ -291,7 +291,7 @@ $(src_rpm): stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	mv $(rpm_topdir)/SRPMS/$(src_rpm) .
 
 rpm: $(src_rpm)
-	yum-builddep -y $<
+	sudo yum-builddep -y $<
 	rpmbuild --define "_topdir $(rpm_topdir)" --rebuild $<
 	mv $(rpm_topdir)/RPMS/*/stb-tester-* .
 
