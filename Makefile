@@ -279,7 +279,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
 ### Fedora Packaging #########################################################
 
 rpm_topdir?=$(HOME)/rpmbuild
-src_rpm=stb-tester-$(ESCAPED_VERSION)-$(RELEASE).fc20.src.rpm
+src_rpm=stb-tester-$(ESCAPED_VERSION)-$(RELEASE)$(shell rpm -E %dist 2>/dev/null).src.rpm
 
 srpm: $(src_rpm)
 
