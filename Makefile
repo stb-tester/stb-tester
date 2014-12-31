@@ -49,6 +49,7 @@ generate_version := $(shell \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
 ESCAPED_VERSION=$(subst -,_,$(VERSION))
+RELEASE?=1
 
 .DELETE_ON_ERROR:
 
@@ -59,6 +60,7 @@ extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
+	    -e 's,@RELEASE@,$(RELEASE),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
 	    -e "s/@RFC_2822_DATE@/$$(git show -s --format=%aD HEAD)/g" \
@@ -277,7 +279,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
 ### Fedora Packaging #########################################################
 
 rpm_topdir?=$(HOME)/rpmbuild
-src_rpm=stb-tester-$(ESCAPED_VERSION)-1.fc20.src.rpm
+src_rpm=stb-tester-$(ESCAPED_VERSION)-$(RELEASE)$(shell rpm -E %dist 2>/dev/null).src.rpm
 
 srpm: $(src_rpm)
 
@@ -289,7 +291,7 @@ $(src_rpm): stb-tester-$(VERSION).tar.gz extra/fedora/stb-tester.spec
 	mv $(rpm_topdir)/SRPMS/$(src_rpm) .
 
 rpm: $(src_rpm)
-	yum-builddep -y $<
+	sudo yum-builddep -y $<
 	rpmbuild --define "_topdir $(rpm_topdir)" --rebuild $<
 	mv $(rpm_topdir)/RPMS/*/stb-tester-* .
 
