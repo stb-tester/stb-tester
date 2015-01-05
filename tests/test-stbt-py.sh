@@ -150,7 +150,7 @@ EOF
 test_that_is_screen_black_is_true_for_black_pattern() {
     cat > test.py <<-EOF
 	import stbt
-	assert stbt.is_screen_black(stbt.get_frame())
+	assert stbt.is_screen_black()
 	EOF
     stbt run -v \
         --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
@@ -160,7 +160,7 @@ test_that_is_screen_black_is_true_for_black_pattern() {
 test_that_is_screen_black_is_false_for_smpte_pattern() {
     cat > test.py <<-EOF
 	import stbt
-	assert not stbt.is_screen_black(stbt.get_frame())
+	assert not stbt.is_screen_black()
 	EOF
     stbt run -v \
         --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
@@ -171,7 +171,6 @@ test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
     cat > test.py <<-EOF
 	import stbt
 	assert stbt.is_screen_black(
-	    stbt.get_frame(),
 	    mask="$testdir/videotestsrc-mask-non-black.png"
 	)
 	EOF
@@ -183,8 +182,8 @@ test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
 test_is_screen_black_threshold_bounds_for_almost_black_frame() {
     cat > test.py <<-EOF
 	import stbt
-	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
-	assert not stbt.is_screen_black(stbt.get_frame(), threshold=2)
+	assert stbt.is_screen_black(threshold=3)
+	assert not stbt.is_screen_black(threshold=2)
 	EOF
     stbt run -v --control none \
         --source-pipeline \
@@ -196,7 +195,7 @@ test_is_screen_black_threshold_bounds_for_almost_black_frame() {
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
-	assert not stbt.is_screen_black(stbt.get_frame())
+	assert not stbt.is_screen_black()
 	EOF
     stbt run -v --control none \
         --source-pipeline \
@@ -208,13 +207,60 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
 test_that_is_screen_black_threshold_parameter_overrides_default() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
-	assert stbt.is_screen_black(stbt.get_frame(), threshold=3)
+	assert stbt.is_screen_black(threshold=3)
 	EOF
     stbt run -v --control none \
         --source-pipeline \
             "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
         test.py
+}
+
+test_that_is_screen_black_respects_passed_in_frame() {
+    cat > test.py <<-EOF
+	import cv2
+	import stbt
+	almost_black = cv2.imread("$testdir/almost-black.png")
+	assert not stbt.is_screen_black(almost_black, threshold=0)
+	assert stbt.is_screen_black(almost_black, threshold=3)
+	EOF
+    stbt run -v test.py
+}
+
+test_that_is_screen_black_writes_debugging_information() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.is_screen_black()
+	EOF
+    stbt run -vv \
+        --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
+        test.py \
+    || fail "Test should have detected black"
+
+    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+        || fail "source debug image not written"
+}
+
+test_that_is_screen_black_with_mask_writes_debugging_information() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.is_screen_black(
+	    mask="$testdir/videotestsrc-mask-non-black.png"
+	)
+	EOF
+    stbt run -vv \
+        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
+        test.py \
+    || fail "Test should have detected black"
+
+    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/mask.png" ] \
+        || fail "source debug image not written"
+    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+        || fail "source debug image not written"
 }
 
 test_that_video_index_is_written_on_eos() {

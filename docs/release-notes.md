@@ -22,6 +22,9 @@ For installation instructions see
 
 ##### User-visible changes since 0.21
 
+* API: `is_frame_black()` now no longer requires a frame to be passed in.  If
+  one is not specified it will be grabbed from live video, much like `match()`.
+
 ##### Bugfixes and packaging fixes since 0.21
 
 ##### Developer-visible changes since 0.21
