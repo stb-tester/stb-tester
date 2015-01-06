@@ -21,6 +21,7 @@ import re
 import subprocess
 import threading
 import time
+import traceback
 import warnings
 from collections import deque, namedtuple
 from contextlib import contextmanager
@@ -1361,6 +1362,9 @@ def as_precondition(message):
     try:
         yield
     except UITestFailure as e:
+        debug("stbt.as_precondition caught a UITestFailure exception and will "
+              "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
+              % traceback.format_exc(e))
         exc = PreconditionError(message, e)
         if hasattr(e, 'screenshot'):
             exc.screenshot = e.screenshot  # pylint: disable=W0201
