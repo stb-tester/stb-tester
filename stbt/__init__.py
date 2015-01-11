@@ -1930,12 +1930,13 @@ class Display(object):
 
 def _draw_text(numpy_image, text, origin):
     (width, height), _ = cv2.getTextSize(
-        text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0, thickness=1)
+        text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, thickness=1)
     cv2.rectangle(
-        numpy_image, origin, (origin[0] + width, origin[1] - height),
+        numpy_image, (origin[0] - 2, origin[1] + 2),
+        (origin[0] + width + 2, origin[1] - height - 2),
         thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
     cv2.putText(
-        numpy_image, text, origin, cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
+        numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0,
         color=(255, 255, 255))
 
 
