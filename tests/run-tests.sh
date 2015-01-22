@@ -57,13 +57,13 @@ run() {
     export XDG_CONFIG_HOME="$scratchdir/config"
     unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
-    printf "$1... "
+    printf "$(bold $1...) "
     ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
     local status=$?
     case $status in
-        0) echo "OK";;
-        77) status=0; echo "SKIPPED";;
-        *) echo "FAIL";;
+        0) echo "$(green OK)";;
+        77) status=0; echo "$(yellow SKIPPED)";;
+        *) echo "$(red FAIL)";;
     esac
     if [[ "$verbose" = "true" || $status -ne 0 ]]; then
         echo "Showing '$scratchdir/log':"
@@ -75,6 +75,11 @@ run() {
     fi
     [ $status -eq 0 ]
 }
+
+bold() { tput bold; printf "%s" "$*"; tput sgr0; }
+green() { tput setaf 2; printf "%s" "$*"; tput sgr0; }
+red() { tput setaf 1; printf "%s" "$*"; tput sgr0; }
+yellow() { tput setaf 3; printf "%s" "$*"; tput sgr0; }
 
 # Run the tests ############################################################
 ret=0
