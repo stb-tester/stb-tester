@@ -848,6 +848,59 @@ wait_for_motion(timeout_secs=10, consecutive_frames=None, noise_threshold=None, 
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
 
+wait_until(callable_, timeout_secs=10, interval_secs=0)
+    Wait until a condition becomes true, or until a timeout.
+
+    `callable_` is any python callable, such as a function or a lambda
+    expression. It will be called repeatedly (with a delay of `interval_secs`
+    seconds between successive calls) until it succeeds (that is, it returns a
+    truthy value) or until `timeout_secs` seconds have passed. In both cases,
+    `wait_until` returns the value that `callable_` returns.
+
+    After you send a remote-control signal to the system-under-test it usually
+    takes a few frames to react, so a test script like this would probably
+    fail:
+
+        stbt.press("guide")
+        assert match("guide.png")
+
+    Instead, use this:
+
+        stbt.press("guide")
+        assert wait_until(lambda: match("guide.png"))
+
+    Note that instead of the above `assert wait_until(...)` you could use
+    `wait_for_match("guide.png")`. `wait_until` is a generic solution that
+    also works with stbt's other functions, like `match_text` and
+    `is_screen_black`.
+
+    `wait_until` also allows composing more complex conditions, such as:
+
+        # Wait until something disappears
+        assert wait_until(lambda: not match("xyz.png"))
+
+        # Assert that something doesn't appear within 10 seconds
+        assert not wait_until(lambda: match("xyz.png"))
+
+        # Assert that two images are present at the same time:
+        assert wait_until(lambda: match("a.png") and match("b.png"))
+
+        # Wait but don't raise an exception:
+        if not wait_until(lambda: match("xyz.png")):
+            do_something_else()
+
+    There are some drawbacks to using `assert` instead of `wait_for_match`:
+
+    * The exception message won't contain the reason why the match failed
+      (unless you specify it as a second parameter to `assert`, which is
+      tedious and we don't expect you to do it), and
+    * The exception won't have the offending video-frame attached (so the
+      screenshot that `stbt batch run` saves alongside the failing test logs
+      will be a few frames later than the frame that actually caused the test
+      to fail).
+
+    We hope to solve both of the above drawbacks at some point in the future.
+
 
 .. <end python docs>
 

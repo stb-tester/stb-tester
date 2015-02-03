@@ -31,29 +31,17 @@ For installation instructions see
 
 * `stbt run` and `stbt batch run` treat `AssertionError`s as test failures, not
   test errors. Along with the introduction of `match` in stb-tester 0.21 and
-  `wait_until` in this release, (TODO: MAKE SURE THIS HAPPENS IN THIS RELEASE)
-  this provides a more composable API. You can says things like this:
-
-        assert match("xyz.png")
-        assert not match("xyz.png")
-        assert match("a.png") and match("b.png") and not match("c.png")
-        assert wait_until(lambda: not match("xyz.png"))
-        assert match_text("Main menu")
-        # etc.
-
-    There are drawbacks to using `assert` instead of `wait_for_match`:
-
-    * The exception message won't contain the reason why the match
-      failed (unless you specify it as a second parameter to `assert`,
-      which is tedious and we don't expect you to do it), and
-    * The exception won't have the offending video-frame attached (so the
-      screenshot that `stbt batch run` saves alongside the failing test
-      logs will be a few frames later than the frame that actually caused
-      the test to fail).
-
-    We hope to solve both problems at some point in the future.
+  `wait_until` in this release, this provides a more composable API. See the
+  documentation for `wait_until` for more details.
 
 ##### User-visible changes since 0.21
+
+* API: New function `wait_until` runs any given function or lambda expression
+  until it succeeds, or until a timeout. This provides the waiting behaviour of
+  `wait_for_match`, but more general -- you can use it to look for a match or
+  the absence of a match, you can use it with `match_text`, `is_screen_black`,
+  user-defined functions, etc. See the [API documentation](
+  http://stb-tester.com/stbt.html#wait_until) for more details.
 
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
