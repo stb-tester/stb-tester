@@ -67,9 +67,8 @@ __all__ = [
     "press_until_match",
     "Region",
     "save_frame",
+    "TestFailure",
     "TextMatchResult",
-    "UITestError",
-    "UITestFailure",
     "wait_for_match",
     "wait_for_motion",
 ]
@@ -494,11 +493,11 @@ def _load_template(template):
     else:
         template_name = _find_path(template)
         if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % template_name)
+            raise ValueError("No such template file: %s" % template_name)
         image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
-            raise UITestError("Failed to load template file: %s" %
-                              template_name)
+            raise RuntimeError(
+                "Failed to load template file: %s" % template_name)
         return _AnnotatedTemplate(image, template_name)
 
 
@@ -660,7 +659,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         if previous_frame_gray is None:
             if (mask_image is not None and
                     mask_image.shape[:2] != frame_gray.shape[:2]):
-                raise UITestError(
+                raise ValueError(
                     "The dimensions of the mask '%s' %s don't match the video "
                     "frame %s" % (mask, mask_image.shape, frame_gray.shape))
             previous_frame_gray = frame_gray
@@ -1328,16 +1327,16 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 
 @contextmanager
 def as_precondition(message):
-    """Context manager that replaces UITestFailures with UITestErrors.
+    """Context manager that replaces test failures with test errors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `UITestFailure` exceptions) as
-    red results, and unhandled exceptions of any other type as yellow results.
-    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
-    `UITestFailure` (red results) when they detect a failure. By running such
-    functions inside an `as_precondition` context, any `UITestFailure` (red)
-    they raise will be caught, and a `UITestError` (yellow) will be raised
-    instead.
+    generates will show test failures (that is, `stbt.TestFailure` exceptions)
+    as red results, and unhandled exceptions of any other type as yellow
+    results. Note that `wait_for_match`, `wait_for_motion`, and similar
+    functions raise `stbt.TestFailure` (red results) when they detect a
+    failure. By running such functions inside an `as_precondition` context, any
+    `stbt.TestFailure` (red) they raise will be caught, and a
+    `stbt.PreconditionError` (yellow) will be raised instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
@@ -1352,7 +1351,7 @@ def as_precondition(message):
 
     >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
     ...     # Call tune_channels(), which raises:
-    ...     raise UITestFailure("Failed to tune channels")
+    ...     raise TestFailure("Failed to tune channels")
     Traceback (most recent call last):
       ...
     PreconditionError: Didn't meet precondition 'Channels tuned'
@@ -1361,8 +1360,8 @@ def as_precondition(message):
     """
     try:
         yield
-    except UITestFailure as e:
-        debug("stbt.as_precondition caught a UITestFailure exception and will "
+    except TestFailure as e:
+        debug("stbt.as_precondition caught a TestFailure exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
               % traceback.format_exc(e))
         exc = PreconditionError(message, e)
@@ -1371,23 +1370,34 @@ def as_precondition(message):
         raise exc
 
 
-class UITestError(Exception):
+class TestError(Exception):
     """The test script had an unrecoverable error."""
-    pass
+    def __init__(self, *args):
+        super(TestError, self).__init__(*args)
+        warnings.warn(
+            "'TestError' is deprecated and will be removed in a future "
+            "release of stb-tester. Please use a more descriptive exception "
+            "instead (any exception that isn't stbt.TestFailure, including "
+            "built-in exceptions, counts as a test error).",
+            DeprecationWarning, stacklevel=2)
 
 
-class UITestFailure(Exception):
+class TestFailure(Exception):
     """The test failed because the system under test didn't behave as expected.
     """
     pass
 
 
-class NoVideo(UITestFailure):
+UITestError = TestError  # For backwards compatibility
+UITestFailure = TestFailure  # For backwards compatibility
+
+
+class NoVideo(TestFailure):
     """No video available from the source pipeline."""
     pass
 
 
-class MatchTimeout(UITestFailure):
+class MatchTimeout(TestFailure):
     """
     * `screenshot`: An OpenCV image from the source video when the search
       for the expected image timed out.
@@ -1405,7 +1415,7 @@ class MatchTimeout(UITestFailure):
             self.expected, self.timeout_secs)
 
 
-class MotionTimeout(UITestFailure):
+class MotionTimeout(TestFailure):
     """
     * `screenshot`: An OpenCV image from the source video when the search
       for motion timed out.
@@ -1424,7 +1434,7 @@ class MotionTimeout(UITestFailure):
             self.timeout_secs)
 
 
-class PreconditionError(UITestError):
+class PreconditionError(Exception):
     """Exception raised by `as_precondition`."""
     def __init__(self, message, original_exception):
         super(PreconditionError, self).__init__()
@@ -1727,7 +1737,7 @@ class Display(object):
                     pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
             raise NoVideo("No video")
         if isinstance(gst_sample, Exception):
-            raise UITestError(str(gst_sample))
+            raise gst_sample
 
         return gst_sample
 
@@ -1843,7 +1853,7 @@ class Display(object):
             pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
-            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
         _mainloop.quit()
 
     def on_warning(self, _bus, message):
@@ -2391,10 +2401,10 @@ def _load_mask(mask):
     mask_path = _find_path(mask)
     debug("Using mask %s" % mask_path)
     if not os.path.isfile(mask_path):
-        raise UITestError("No such mask file: %s" % mask)
+        raise ValueError("No such mask file: %s" % mask)
     mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
     if mask_image is None:
-        raise UITestError("Failed to load mask file: %s" % mask_path)
+        raise RuntimeError("Failed to load mask file: %s" % mask_path)
     return mask_image
 
 

@@ -29,10 +29,30 @@ For installation instructions see
 
   This is the same (sensible) behaviour that Python 3 has by default.
 
+* API: The `stbt.Precondition` exception now inherits from `Exception`, not
+  `stbt.UITestError`. See the `UITestError` deprecation in the next section for
+  more details.
+
 ##### User-visible changes since 0.21
 
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
+
+* API: `UITestFailure` has been renamed to `TestFailure`, for reasons of
+  simplifying our terminology. The old name remains as an alias for backwards
+  compatibility.
+
+* API: `UITestError` is deprecated. Use any user-defined or built-in exception
+  instead; anything that isn't a `TestFailure` exception is treated as a test
+  error (test errors show up as yellow in the `stbt batch` report instead of
+  red). If you can't find a suitable exception, use `RuntimeError`.
+
+  This change simplifies our API; most stbt functions already raised built-in
+  exceptions anyway (because they call functions from the python standard
+  library and from third-party libraries, and they don't catch all possible
+  exceptions to translate them to `UITestError`s). There is no change to the
+  way `stbt run` or `stbt batch run` handle user-defined or built-in
+  exceptions; they were already treated as test errors.
 
 ##### Bugfixes and packaging fixes since 0.21
 
