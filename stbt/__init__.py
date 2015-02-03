@@ -1328,16 +1328,17 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 
 @contextmanager
 def as_precondition(message):
-    """Context manager that replaces UITestFailures with UITestErrors.
+    """Context manager that replaces test failures with test errors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `UITestFailure` exceptions) as
-    red results, and unhandled exceptions of any other type as yellow results.
-    Note that `wait_for_match`, `wait_for_motion`, and similar functions raise
-    `UITestFailure` (red results) when they detect a failure. By running such
-    functions inside an `as_precondition` context, any `UITestFailure` (red)
-    they raise will be caught, and a `UITestError` (yellow) will be raised
-    instead.
+    generates will show test failures (that is, `stbt.UITestFailure` or
+    `AssertionError` exceptions) as red results, and test errors (that is,
+    unhandled exceptions of any other type) as yellow results. Note that
+    `wait_for_match`, `wait_for_motion`, and similar functions raise a
+    `stbt.UITestFailure` when they detect a failure. By running such functions
+    inside an `as_precondition` context, any `stbt.UITestFailure` or
+    `AssertionError` exceptions they raise will be caught, and a
+    `stbt.PreconditionError` will be raised instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
@@ -1361,10 +1362,10 @@ def as_precondition(message):
     """
     try:
         yield
-    except UITestFailure as e:
-        debug("stbt.as_precondition caught a UITestFailure exception and will "
+    except (UITestFailure, AssertionError) as e:
+        debug("stbt.as_precondition caught a %s exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % traceback.format_exc(e))
+              % (type(e).__name__, traceback.format_exc(e)))
         exc = PreconditionError(message, e)
         if hasattr(e, 'screenshot'):
             exc.screenshot = e.screenshot  # pylint: disable=W0201
