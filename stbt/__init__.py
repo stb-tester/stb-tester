@@ -1330,13 +1330,14 @@ def as_precondition(message):
     """Context manager that replaces test failures with test errors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `stbt.TestFailure` exceptions)
-    as red results, and unhandled exceptions of any other type as yellow
-    results. Note that `wait_for_match`, `wait_for_motion`, and similar
-    functions raise `stbt.TestFailure` (red results) when they detect a
-    failure. By running such functions inside an `as_precondition` context, any
-    `stbt.TestFailure` (red) they raise will be caught, and a
-    `stbt.PreconditionError` (yellow) will be raised instead.
+    generates will show test failures (that is, `stbt.TestFailure` or
+    `AssertionError` exceptions) as red results, and unhandled exceptions of
+    any other type as yellow results. Note that `wait_for_match`,
+    `wait_for_motion`, and similar functions raise `stbt.TestFailure` (red
+    results) when they detect a failure. By running such functions inside an
+    `as_precondition` context, any `stbt.TestFailure` or `AssertionError`
+    exceptions they raise will be caught, and a `stbt.PreconditionError`
+    will be raised instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
@@ -1360,10 +1361,10 @@ def as_precondition(message):
     """
     try:
         yield
-    except TestFailure as e:
-        debug("stbt.as_precondition caught a TestFailure exception and will "
+    except (TestFailure, AssertionError) as e:
+        debug("stbt.as_precondition caught a %s exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % traceback.format_exc(e))
+              % (type(e).__name__, traceback.format_exc(e)))
         exc = PreconditionError(message, e)
         if hasattr(e, 'screenshot'):
             exc.screenshot = e.screenshot  # pylint: disable=W0201
@@ -1377,8 +1378,8 @@ class TestError(Exception):
         warnings.warn(
             "'TestError' is deprecated and will be removed in a future "
             "release of stb-tester. Please use a more descriptive exception "
-            "instead (any exception that isn't stbt.TestFailure, including "
-            "built-in exceptions, counts as a test error).",
+            "instead (any exception that isn't `stbt.TestFailure` or "
+            "`AssertionError` counts as a test error).",
             DeprecationWarning, stacklevel=2)
 
 
