@@ -29,6 +29,30 @@ For installation instructions see
 
   This is the same (sensible) behaviour that Python 3 has by default.
 
+* `stbt run` and `stbt batch run` treat `AssertionError`s as test failures, not
+  test errors. Along with the introduction of `match` in stb-tester 0.21 and
+  `wait_until` in this release, (TODO: MAKE SURE THIS HAPPENS IN THIS RELEASE)
+  this provides a more composable API. You can says things like this:
+
+        assert match("xyz.png")
+        assert not match("xyz.png")
+        assert match("a.png") and match("b.png") and not match("c.png")
+        assert wait_until(lambda: not match("xyz.png"))
+        assert match_text("Main menu")
+        # etc.
+
+    There are drawbacks to using `assert` instead of `wait_for_match`:
+
+    * The exception message won't contain the reason why the match
+      failed (unless you specify it as a second parameter to `assert`,
+      which is tedious and we don't expect you to do it), and
+    * The exception won't have the offending video-frame attached (so the
+      screenshot that `stbt batch run` saves alongside the failing test
+      logs will be a few frames later than the frame that actually caused
+      the test to fail).
+
+    We hope to solve both problems at some point in the future.
+
 * API: The `stbt.Precondition` exception now inherits from `Exception`, not
   `stbt.UITestError`. See the `UITestError` deprecation in the next section for
   more details.
