@@ -53,6 +53,17 @@ test_stbt_run_return_code_on_precondition_error() {
         test.log
 }
 
+test_that_stbt_run_treats_failing_assertions_as_test_errors() {
+    local ret
+    cat > test.py <<-EOF
+	assert False, "My assertion"
+	EOF
+    stbt run -v test.py &> test.log
+    ret=$?
+    [[ $ret == 1 ]] || fail "Unexpected return code $ret (expected 2)"
+    assert grep -q "FAIL: test.py: AssertionError: My assertion" test.log
+}
+
 test_that_stbt_run_saves_screenshot_on_match_timeout() {
     cat > test.py <<-EOF
 	wait_for_match(

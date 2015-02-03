@@ -210,10 +210,11 @@ EXIT STATUS
 0 on success; 1 on test script failure; 2 on any other error.
 
 Test scripts indicate **failure** (the system under test didn't behave as
-expected) by raising an instance of `stbt.TestFailure` (or a subclass
-thereof). Any other exception is considered a test **error** (a logic error in
-the test script, an error in the system under test's environment, or an error
-in the test framework itself).
+expected) by raising an instance of `stbt.TestFailure` (or a subclass thereof)
+or `AssertionError` (which is raised by Python's `assert` statement). Any other
+exception is considered a test **error** (a logic error in the test script, an
+error in the system under test's environment, or an error in the test framework
+itself).
 
 
 HARDWARE REQUIREMENTS
@@ -320,13 +321,14 @@ as_precondition(message)
     Context manager that replaces test failures with test errors.
 
     If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `stbt.TestFailure` exceptions)
-    as red results, and unhandled exceptions of any other type as yellow
-    results. Note that `wait_for_match`, `wait_for_motion`, and similar
-    functions raise `stbt.TestFailure` (red results) when they detect a
-    failure. By running such functions inside an `as_precondition` context, any
-    `stbt.TestFailure` (red) they raise will be caught, and a
-    `stbt.PreconditionError` (yellow) will be raised instead.
+    generates will show test failures (that is, `stbt.TestFailure` or
+    `AssertionError` exceptions) as red results, and unhandled exceptions of
+    any other type as yellow results. Note that `wait_for_match`,
+    `wait_for_motion`, and similar functions raise `stbt.TestFailure` (red
+    results) when they detect a failure. By running such functions inside an
+    `as_precondition` context, any `stbt.TestFailure` or `AssertionError`
+    exceptions they raise will be caught, and a `stbt.PreconditionError`
+    will be raised instead.
 
     When running a single test script hundreds or thousands of times to
     reproduce an intermittent defect, it is helpful to mark unrelated failures
