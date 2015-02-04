@@ -67,7 +67,7 @@ except Exception as e:  # pylint: disable=W0703
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     traceback.print_exc(file=sys.stderr)
-    if isinstance(e, stbt.UITestFailure):
+    if isinstance(e, (stbt.UITestFailure, AssertionError)):
         sys.exit(1)  # Failure
     else:
         sys.exit(2)  # Error
