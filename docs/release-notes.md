@@ -34,6 +34,10 @@ For installation instructions see
   `wait_until` in this release, this provides a more composable API. See the
   documentation for `wait_until` for more details.
 
+* `stbt record` now creates python files with the testcase in a Python function
+  instead of at the top level of the file. See the change to `stbt run` in the
+  next section for more details.
+
 ##### User-visible changes since 0.21
 
 * `stbt run` and `stbt batch run` can now run a specific Python function in the

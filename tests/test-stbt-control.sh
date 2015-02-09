@@ -29,12 +29,13 @@ validate_stbt_record_control_recorder() {
 	import stbt
 	
 	
-	stbt.press('gamut')
-	stbt.wait_for_match('0001-gamut-complete.png')
-	stbt.press('checkers-8')
-	stbt.wait_for_match('0002-checkers-8-complete.png')
-	stbt.press('smpte')
-	stbt.wait_for_match('0003-smpte-complete.png')
+	def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():
+	    stbt.press('gamut')
+	    stbt.wait_for_match('0001-gamut-complete.png')
+	    stbt.press('checkers-8')
+	    stbt.wait_for_match('0002-checkers-8-complete.png')
+	    stbt.press('smpte')
+	    stbt.wait_for_match('0003-smpte-complete.png')
 	EOF
     diff -u expected test.py
 }

@@ -5,6 +5,18 @@ test_record() {
         sleep 1; echo gamut;
         sleep 1; echo checkers-8;
         sleep 1; echo smpte; sleep 1;) &&
+    diff -u - test.py <<-EOF &&
+	import stbt
+	
+	
+	def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():
+	    stbt.press('gamut')
+	    stbt.wait_for_match('0001-gamut-complete.png')
+	    stbt.press('checkers-8')
+	    stbt.wait_for_match('0002-checkers-8-complete.png')
+	    stbt.press('smpte')
+	    stbt.wait_for_match('0003-smpte-complete.png')
+	EOF
     [ -f 0001-gamut-complete.png ] &&
     [ -f 0002-checkers-8-complete.png ] &&
     [ -f 0003-smpte-complete.png ] &&
