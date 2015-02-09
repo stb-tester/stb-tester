@@ -138,16 +138,19 @@ Edit the test script to:
 
     import stbt
 
-    stbt.press('gamut')
-    stbt.wait_for_match('0000-gamut-complete.png')
-    stbt.press('checkers-8')
-    stbt.wait_for_match('0001-checkers-8-complete.png')
-    stbt.press('snow')
-    stbt.wait_for_motion()
+    def test_that_the_video_pattern_changes():
+        stbt.press('gamut')
+        stbt.wait_for_match('0000-gamut-complete.png')
+        stbt.press('checkers-8')
+        stbt.wait_for_match('0001-checkers-8-complete.png')
+        stbt.press('snow')
+        stbt.wait_for_motion()
 
 The test script is written in the Python programming language. You can use any
 Python feature, including Python's standard libraries; you can also use
 third-party Python libraries if you have them installed on your system.
+
+Each test case is a Python function that starts with **test_**.
 
 **stbt.press** takes a string that must be understood by the control specified
 in the configuration file.
@@ -176,7 +179,7 @@ Run `stbt screenshot --help` for details.
 
 Now use **stbt run** to try the test script we just recorded:
 
-    stbt run --verbose test.py
+    stbt run --verbose test.py::test_that_the_video_pattern_changes
 
 Check *stbt*'s exit status (type `echo $?`) for success or failure. Read our
 [Unix Shell tutorial] if you aren't familiar with process exit statuses on
@@ -190,7 +193,7 @@ is stb-tester's bulk test-runner and reporting system:
 
     mkdir results  # Make a directory where you want to store the test results
     cd results
-    stbt batch run /path/to/test.py  # Give the actual path to the test script
+    stbt batch run /path/to/test.py::test_that_the_video_pattern_changes
 
 After the test has run a few times, press Control-C to stop it. Now open
 *index.html* in your web browser. You should see a report somewhat like this:
