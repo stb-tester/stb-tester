@@ -51,10 +51,11 @@ def record(control_recorder, script_out):
     count = itertools.count()
     old_key = None
     script_out.write("import stbt\n\n\n")
+    script_out.write("def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():\n")
     try:
         for key in stbt.control.uri_to_remote_recorder(control_recorder):
             write_wait_for_match(script_out, count.next(), old_key)
-            script_out.write("stbt.press('%s')\n" % key)
+            script_out.write("    stbt.press('%s')\n" % key)
             stbt.press(key)
             old_key = key
     except KeyboardInterrupt:
@@ -68,7 +69,7 @@ def write_wait_for_match(script_out, i, old_key):
         return
     filename = "%04d-%s-complete.png" % (i, old_key)
     stbt.save_frame(stbt.get_frame(), filename)
-    script_out.write("stbt.wait_for_match('%s')\n" % filename)
+    script_out.write("    stbt.wait_for_match('%s')\n" % filename)
 
 
 if __name__ == "__main__":
