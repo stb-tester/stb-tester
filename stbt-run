@@ -20,10 +20,13 @@ parser.add_argument(
     '--save-video', help='Record video to the specified file', metavar='FILE',
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
-    'script', help='The test script to run', metavar='SCRIPT')
+    'script', metavar='FILE[::TESTCASE]', help=(
+        "The python test script to run. Optionally specify a python function "
+        "name to run that function; otherwise only the script's top-level will "
+        "be executed."))
 parser.add_argument(
     'args', nargs=argparse.REMAINDER, metavar='ARG',
-    help='Additional arguments passed on to the SCRIPT')
+    help='Additional arguments passed on to the test script (in sys.argv)')
 
 args = parser.parse_args(sys.argv[1:])
 sys.argv[1:] = args.args
