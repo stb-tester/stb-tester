@@ -42,11 +42,12 @@ _stbt_run() {
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
         --save-video=*) COMPREPLY=($(compgen -f -- "$cur"));;
-        *) COMPREPLY=($(compgen \
-            -f -W "$(_stbt_trailing_space \
+        *) COMPREPLY=(
+                $(compgen -W "$(_stbt_trailing_space \
                         --help --verbose --restart-source --save-video \
                         --control --source-pipeline --sink-pipeline)" \
-            -- "$cur"));;
+                    -- "$cur")
+                $(_stbt_filename_possibly_with_test_functions));;
     esac
 }
 
@@ -70,6 +71,7 @@ _stbt_record() {
 }
 
 _stbt_batch() {
+    _stbt_get_prev
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
     local subcommand="${COMP_WORDS[2]}"
@@ -77,8 +79,10 @@ _stbt_batch() {
         2,*) COMPREPLY=($(compgen \
                 -W "$(_stbt_trailing_space --help run report instaweb)" \
                 -- "$cur"));;
-        3,run) COMPREPLY=($(compgen -W "-h" -f -- "$cur"));;
-        *,run) COMPREPLY=($(compgen -f -- "$cur"));;
+        3,run) COMPREPLY=(
+                    $(compgen -W "-h" -- "$cur")
+                    $(_stbt_filename_possibly_with_test_functions));;
+        *,run) COMPREPLY=($(_stbt_filename_possibly_with_test_functions));;
         *,report) COMPREPLY=($(compgen -d -S "/" -- "$cur"));;
         3,instaweb) COMPREPLY=($(compgen \
                         -W "$(_stbt_trailing_space \
@@ -294,6 +298,51 @@ _stbt_power_outlet_outlet() {
 ## Helper functions
 ############################################################################
 
+# When you type a python filename that doesn't have any functions named "test_",
+# completes the filename followed by a space;
+# otherwise completes the filename followed by "::" followed by the function
+# name followed by a space.
+#
+# Before you've typed ":":
+# * cur == the filename you've typed so far (e.g. test_something.p)
+#
+# After you've typed ":" or "::":
+# * prev = filename name + ":" or "::" (e.g. test_something.py::)
+# * cur = the function name you've typed so far
+#
+# See test cases in _stbt_test_filename_possibly_with_test_functions, below.
+# Note that COMP_WORDBREAKS by default includes "=" and ":".
+_stbt_filename_possibly_with_test_functions() {
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    local test_re='^def test_.*( *) *:'
+    local filename
+
+    [[ "$prev" =~ \.py::?$ ]] && filename="$prev" || filename="$cur"
+    filename=${filename%:}; filename=${filename%:}  # abc.py:: => abc.py
+
+    {
+        # Files with test functions:
+        _stbt_trailing_space $(
+            compgen -f -X '!*.py' -- "$filename" |
+            xargs --no-run-if-empty grep -H "$test_re" |
+            sed -e 's/:def */::/' -e 's/ *( *) *:.*//')
+
+        # Files without test functions:
+        _stbt_trailing_space $(
+            compgen -f -X '!*.py' -- "$filename" |
+            xargs --no-run-if-empty grep -L "$test_re")
+
+        # Directories:
+        compgen -d -S/ -- "$filename"
+    } |
+    if [[ "$prev" =~ \.py::?$ ]]; then
+        sed -n "s,^$prev$cur,$cur,p"
+    else
+        cat
+    fi
+}
+
 # Walks backward from the current word, collecting the entire preceding
 # flag and its argument:
 #     "stbt run --control lirc::name..." => _stbt_prev="--control=lirc::"
@@ -364,6 +413,16 @@ _stbt_assert_get_prev() {
 }
 
 _stbt_test_get_prev() {
+    # User types "file.py"
+    COMP_WORDS=(stbt run tests/test_functions.py); COMP_CWORD=2; _stbt_get_prev
+    _stbt_assert_get_prev "" tests/test_functions.py
+
+    COMP_WORDS=(stbt run tests/test_functions.py : :); COMP_CWORD=4; _stbt_get_prev
+    _stbt_assert_get_prev tests/test_functions.py:: ""
+
+    COMP_WORDS=(stbt run tests/test_functions.py ::); COMP_CWORD=3; _stbt_get_prev
+    _stbt_assert_get_prev tests/test_functions.py:: ""
+
     # User types "--control "
     COMP_WORDS=(stbt run --control ""); COMP_CWORD=3; _stbt_get_prev
     _stbt_assert_get_prev --control= ""
@@ -421,6 +480,44 @@ _stbt_test_get_prev() {
     COMP_WORDS=(stbt templatematch frame.png template.png match_method = sqdiff);
     COMP_CWORD=6; _stbt_get_prev
     _stbt_assert_get_prev match_method= sqdiff
+}
+
+_stbt_test_filename_possibly_with_test_functions() {
+    diff - <(_stbt_cur="tests/test_succ" \
+                _stbt_filename_possibly_with_test_functions) <<-EOF ||
+	tests/test_success.py 
+	EOF
+    _stbt_fail "unexpected completions for file without 'test_' functions"
+    echo _stbt_filename_possibly_with_test_functions: ok
+
+    diff - <(_stbt_cur="tests/test_func" \
+                _stbt_filename_possibly_with_test_functions) <<-EOF ||
+	tests/test_functions.py::test_that_this_test_is_run 
+	tests/test_functions.py::test_that_does_nothing 
+	EOF
+    _stbt_fail "unexpected completions for file with 'test_' functions"
+    echo _stbt_filename_possibly_with_test_functions: ok
+
+    diff <(printf "") \
+         <(_stbt_cur="tests/idontexist" \
+            _stbt_filename_possibly_with_test_functions) ||
+    _stbt_fail "unexpected completions for nonexistent file"
+    echo _stbt_filename_possibly_with_test_functions: ok
+
+    diff - <(_stbt_prev="tests/test_functions.py::" _stbt_cur="test_that_" \
+                _stbt_filename_possibly_with_test_functions) <<-EOF ||
+	test_that_this_test_is_run 
+	test_that_does_nothing 
+EOF
+    _stbt_fail "unexpected completions for file + ambiguous function prefix"
+    echo _stbt_filename_possibly_with_test_functions: ok
+
+    diff - <(_stbt_prev="tests/test_functions.py::" _stbt_cur="test_that_this" \
+                _stbt_filename_possibly_with_test_functions) <<-EOF ||
+	test_that_this_test_is_run 
+EOF
+    _stbt_fail "unexpected completions for file + unambiguous function prefix"
+    echo _stbt_filename_possibly_with_test_functions: ok
 }
 
 _stbt_config_for_tests() {
