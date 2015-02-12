@@ -136,6 +136,7 @@ doc: stbt.1
 stbt.1: README.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
 	sed -e '/\.\. image::/,/^$$/ d' |\
+	sed -e 's/(callable_,/(`callable_`,/' |\
 	rst2man > $@
 
 # Ensure the docs for python functions are kept in sync with the code
