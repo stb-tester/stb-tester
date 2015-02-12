@@ -874,7 +874,7 @@ wait_until(callable_, timeout_secs=10, interval_secs=0)
     also works with stbt's other functions, like `match_text` and
     `is_screen_black`.
 
-    `wait_until` also allows composing more complex conditions, such as:
+    `wait_until` also allows composing more complex conditions, such as::
 
         # Wait until something disappears
         assert wait_until(lambda: not match("xyz.png"))
