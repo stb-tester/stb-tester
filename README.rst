@@ -22,7 +22,7 @@ SYNOPSIS
 
 stbt record [options]
 
-stbt run [options] [script]
+stbt run [options] script[::testcase]
 
 
 DESCRIPTION
@@ -36,10 +36,11 @@ You then (manually) crop the screenshots to the region of interest.
 (Optionally) you manually edit the generated test script, which will look
 something like this::
 
-    press("MENU")
-    wait_for_match("Guide.png")
-    press("OK")
-    wait_for_match("BBC One.png")
+    def test_that_i_can_tune_to_bbc_one_from_the_guide():
+        press("MENU")
+        wait_for_match("Guide.png")
+        press("OK")
+        wait_for_match("BBC One.png")
 
 **stbt run** will play back the given test script, returning an exit status of
 success or failure for easy integration with your existing test reporting
