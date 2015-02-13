@@ -1881,6 +1881,9 @@ class Display(object):
 
     def draw(self, obj, duration_secs):
         if type(obj) in (str, unicode):
+            obj = (
+                datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
+                ': ' + obj)
             self.text_annotations.append((obj, duration_secs, None))
         elif type(obj) is MatchResult:
             if obj.timestamp is not None:
@@ -1907,6 +1910,9 @@ class Display(object):
                 matches.append(match_result)
             if now >= match_result.timestamp:
                 self.match_annotations.remove(match_result)
+
+        now = datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4]
+        texts = texts + [(now, 0, 0),]
 
         if texts or matches:  # Draw the annotations.
             sample = _gst_sample_make_writable(sample)
