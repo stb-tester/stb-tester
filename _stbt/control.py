@@ -33,6 +33,7 @@ def uri_to_remote(uri, display=None):
              :(?P<output>\d+)
              :(?P<config>[^:]+)''', IRNetBoxRemote),
         (r'x11:(?P<display>.+)?', _X11Remote),
+        (r'user:(?P<module>[^\.]+)\.(?P<attributes>.+)', new_user_remote),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -199,6 +200,19 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
     debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
     return LircRemote(control_name, _connect)
+
+
+def new_user_remote(module, attributes):
+    """Use a remote control from an external module."""
+    return _get_last_attr(__import__(module), attributes.split("."))()
+
+
+def _get_last_attr(obj, names):
+    """
+    >>> _get_last_attr(os, ["path", "join", "func_code", "co_name"])
+    'join'
+    """
+    return _get_last_attr(getattr(obj, names[0]), names[1:]) if names else obj
 
 
 class IRNetBoxRemote(object):

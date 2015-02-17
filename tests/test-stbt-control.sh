@@ -61,3 +61,20 @@ test_stbt_control_as_stbt_record_control_recorder__keymap_from_config() {
     set_config control.keymap "$testdir/stbt-control.keymap" &&
     validate_stbt_record_control_recorder stbt-control
 }
+
+test_stbt_control_with_user_defined_control_type() {
+    cat > usercontrol.py <<-EOF &&
+	class UserControl(object):
+	    def press(self, key):
+	        print("UserControl: %s" % key)
+	EOF
+
+    cat > test.py <<-EOF &&
+	import stbt
+	stbt.press("ok")
+	EOF
+
+    PYTHONPATH="$PWD:$PYTHONPATH" stbt run -v \
+        --control "user:usercontrol.UserControl" test.py &&
+    cat log | grep "UserControl: ok"
+}
