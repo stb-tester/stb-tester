@@ -80,6 +80,11 @@ For installation instructions see
   We recommend that you name your testcase functions to start with "test_", for
   future compatibility with test frameworks like [nose] and [pytest].
 
+* The video that is saved by `stbt run --save-video` and `stbt batch run` now
+  displays the wall-clock time at the top of each frame. This makes it easier
+  to relate timestamps from the logfiles with the video. (Thanks to Dariusz
+  Wiatrak, Máté Szendrő, and YouView for the patch.)
+
 * API: New function `wait_until` runs any given function or lambda expression
   until it succeeds, or until a timeout. This provides the waiting behaviour of
   `wait_for_match`, but more general -- you can use it to look for a match or
