@@ -69,6 +69,7 @@ Depends: ${shlibs:Depends},
          python-opencv,
          python-serial,
          snmp,
+         socat,
          tesseract-ocr,
          tesseract-ocr-eng,
          xdotool
