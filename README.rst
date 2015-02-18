@@ -109,6 +109,12 @@ Global options
     `--source-pipeline=videotestsrc`. A script like `press("18")` will change
     videotestsrc's pattern property (see `gst-inspect videotestsrc`).
 
+  user:<module>[.<attributes>].<callable>
+    A user-defined remote control from an external Python module.
+    `callable` is either a remote control class or a factory function that
+    returns a remote control instance. The remote control instance must provide
+    a `press(key)` method; `key` is passed from `stbt.press`.
+
   x11:<display>
     Send keypresses to a given X display using the xtest extension. Can be used
     with GStreamer's ximagesrc for testing desktop applications and websites.
