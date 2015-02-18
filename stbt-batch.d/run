@@ -170,7 +170,7 @@ run() {
   echo "$STBT_VERSION" > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
-  "$runner"/report --classify-only . >/dev/null
+  STBT_TRACING_SOCKET="" "$runner"/report --classify-only . >/dev/null
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || stop=true; }
 
