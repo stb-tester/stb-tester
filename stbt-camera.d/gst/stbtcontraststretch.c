@@ -146,30 +146,32 @@ stbt_contrast_stretch_finalize (GObject * object)
 static GstSample*
 stbt_contrast_stretch_load_png (const gchar *filename, const GstCaps *caps)
 {
-  GstElement *src, *sink;
-  GstSample *out;
-  GstElement *pipeline = gst_parse_launch (
-    "filesrc name=src ! pngdec ! videoconvert ! appsink name=sink", NULL);
+  GstElement *src = NULL, *sink = NULL;
+  GstSample *out = NULL;
+  GstElement *pipeline = NULL;
 
-  g_return_val_if_fail (pipeline, NULL);
+  pipeline = gst_parse_launch (
+    "filesrc name=src ! pngdec ! videoconvert ! appsink name=sink", NULL);
+  if (!pipeline)
+    goto exit;
 
   src = gst_bin_get_by_name(GST_BIN(pipeline), "src");
   sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
-
-  g_return_val_if_fail (src && sink, NULL);
+  if ((src == NULL) || (sink == NULL))
+    goto exit;
   g_object_set(src, "location", filename, NULL);
   g_object_set(sink, "caps", caps, NULL);
 
   gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
 
-  /* FIXME: deal with error conditions like missing file, etc. */
   out = gst_app_sink_pull_preroll(GST_APP_SINK (sink));
 
-  gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
-
-  g_object_unref(G_OBJECT(src));
-  g_object_unref(G_OBJECT(sink));
-  g_object_unref(G_OBJECT(pipeline));
+exit:
+  if (pipeline)
+    gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+  g_clear_object(&src);
+  g_clear_object(&sink);
+  g_clear_object(&pipeline);
 
   return out;
 }
