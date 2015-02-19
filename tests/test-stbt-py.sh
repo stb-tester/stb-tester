@@ -396,6 +396,43 @@ test_press_visualisation() {
         verify.py
 }
 
+test_clock_visualisation() {
+    cat > test.py <<-EOF &&
+	import time
+	time.sleep(60)
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        test.py &
+    test_script=$!
+    trap "kill $test_script; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	import datetime, time, stbt
+	def read_time():
+	    s = stbt.ocr(
+	        stbt.get_frame(), mode=stbt.OcrMode.SINGLE_LINE,
+	        tesseract_config={"tessedit_char_whitelist": "1234567890:"},
+	        region=stbt.Region(x=5, y=5, right=200, bottom=35)).replace(" ", "")
+	    d = datetime.date.today()
+	    return datetime.datetime(
+	        d.year, d.month, d.day, int(s[0:2]), int(s[3:5]), int(s[6:8]),
+	        int(s[9]) * 100000)
+	seconds = lambda n: datetime.timedelta(seconds=n)
+	start = read_time()
+	time.sleep(1)
+	end = read_time()
+	diff = end - start
+	assert seconds(0.9) < diff < seconds(2), \
+	    "Unexpected time diff %s between %s and %s" % (diff, end, start)
+	EOF
+    stbt run -v --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py
+}
+
 test_draw_text() {
     cat > draw-text.py <<-EOF &&
 	import stbt
