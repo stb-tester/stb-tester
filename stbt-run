@@ -54,10 +54,7 @@ def import_by_filename(filename_):
     if module_ext != '.py':
         raise ImportError("Invalid module filename '%s'" % filename_)
     sys.path = [os.path.abspath(module_dir)] + sys.path
-    try:
-        return __import__(module_name)
-    finally:
-        sys.path = sys.path[1:]
+    return __import__(module_name)
 
 try:
     # pylint: disable=W0611
