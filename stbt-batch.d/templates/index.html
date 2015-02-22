@@ -140,7 +140,7 @@
 
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
 <script src="http://cdn.jsdelivr.net/sorttable/2/sorttable.js"></script>
-<script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.5/tablequery.min.js"></script>
+<script src="http://cdn.jsdelivr.net/jquery.tablequeryjs/0.1.8/tablequery.min.js"></script>
 <script>
   $(document).ready(function() {
     $("#testruns tbody tr").not(".muted").on("click", select_testrun);
@@ -153,9 +153,7 @@
     update_totals();
     var search_string = decodeURIComponent(window.location.search.substring(1));
     if (search_string) {
-      $("#testruns_search_text").val(search_string);
-      // Hack until https://github.com/asimihsan/tablequeryjs/issues/18 fixed:
-      tablequery._table_search_text_on_keyup({}, search_string);
+      tablequery.set_filter(search_string);
     }
 
     function set_details_height() {
