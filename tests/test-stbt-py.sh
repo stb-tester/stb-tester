@@ -404,6 +404,7 @@ test_clock_visualisation() {
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v \
+        --source-pipeline 'videotestsrc pattern=black is-live=true' \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
         test.py &
     test_script=$!
@@ -414,7 +415,7 @@ test_clock_visualisation() {
 	def read_time():
 	    s = stbt.ocr(
 	        stbt.get_frame(), mode=stbt.OcrMode.SINGLE_LINE,
-	        tesseract_config={"tessedit_char_whitelist": "1234567890:"},
+	        tesseract_user_patterns=["\d\d:\d\d:\d\d:\d\d"],
 	        region=stbt.Region(x=5, y=5, right=200, bottom=35)).replace(" ", "")
 	    d = datetime.date.today()
 	    return datetime.datetime(
