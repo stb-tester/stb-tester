@@ -128,3 +128,18 @@ test_that_stbt_run_will_run_a_specific_function() {
     stbt run test.py::test_that_this_test_is_run
     [ -e "touched" ] || fail "Test not run"
 }
+
+test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
+    mkdir tests
+    cat >tests/helpers.py <<-EOF
+	def my_helper():
+	    open("touched", "w").close()
+	EOF
+    cat >tests/test.py <<-EOF
+	def test_that_this_test_is_run():
+	    import helpers
+	    helpers.my_helper()
+	EOF
+    stbt run tests/test.py::test_that_this_test_is_run
+    [ -e "touched" ] || fail "Test not run"
+}
