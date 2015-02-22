@@ -230,7 +230,7 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 	fi
 
 TAGS:
-	etags *.py
+	etags stbt/**.py _stbt/**.py
 
 ### Debian Packaging #########################################################
 
