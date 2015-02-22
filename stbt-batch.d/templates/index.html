@@ -83,20 +83,6 @@
         {% endfor %}
       </tr>
       </thead>
-      <!-- hidden row with unambiguous types for tablequeryjs: -->
-      <thead>
-      <tr style="display:none">
-        <td>1900-01-01 00:00:00</td>
-        <td>I hope this will only be interpreted as text</td>
-        <td>I hope this will only be interpreted as text</td>
-        <td>I hope this will only be interpreted as text</td>
-        <td>I hope this will only be interpreted as text</td>
-        <td>28:00:00</td>
-        {% for column in extra_columns %}
-          <td>I hope this will only be interpreted as text</td>
-        {% endfor %}
-      </tr>
-      </thead>
       <tbody>
       {% for run in runs %}
       <tr class="{{run.css_class()}}">
