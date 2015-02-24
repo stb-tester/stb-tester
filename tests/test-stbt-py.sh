@@ -252,7 +252,7 @@ test_that_is_screen_black_with_mask_writes_debugging_information() {
 	EOF
     stbt run -vv \
         --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
-        test.py
+        test.py \
     || fail "Test should have detected black"
     find .
     [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
