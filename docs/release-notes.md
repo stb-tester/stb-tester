@@ -128,7 +128,7 @@ UNRELEASED.
 
 * `stbt.ConfigurationError` now inherits from `Exception` instead of
   `stbt.UITestError`. (In future we may replace `UITestError` throughout stbt
-  -- see <https://github.com/drothlis/stb-tester/pull/86>.)
+  -- see <https://github.com/stb-tester/stb-tester/pull/86>.)
 
 ##### User-visible changes since 0.20
 
@@ -152,7 +152,7 @@ UNRELEASED.
   enable. We call it "experimental" because in the future we intend to change
   some aspects of the implementation, the calibration process, the command-line
   API, and the configuration options. For instructions see
-  <https://github.com/drothlis/stb-tester/blob/master/stbt-camera.d/README.md>.
+  <https://github.com/stb-tester/stb-tester/blob/master/stbt-camera.d/README.md>.
 
 * Added new "x11" remote-control type for sending keypresses to an X display.
   It can be used with GStreamer's ximagesrc for testing desktop applications
@@ -288,7 +288,7 @@ Changes to the Python API:
 Changes to the command-line tools:
 
 * Improve `stbt run` latency on slow computers and after video-capture device
-  restarts ([issue #137](https://github.com/drothlis/stb-tester/issues/137),
+  restarts ([issue #137](https://github.com/stb-tester/stb-tester/issues/137),
   introduced in 0.19).
 * `stbt power` supports the ATEN brand of network-controlled power distribution
   units (thanks to Aiman Baharna).
@@ -398,7 +398,7 @@ that version.
 ##### Configuration changes
 
 See
-["Porting from GStreamer 0.10 to GStreamer 1.0"](https://github.com/drothlis/stb-tester/blob/master/docs/backwards-compatibility.md#porting-from-gstreamer-010-to-gstreamer-10)
+["Porting from GStreamer 0.10 to GStreamer 1.0"](https://github.com/stb-tester/stb-tester/blob/master/docs/backwards-compatibility.md#porting-from-gstreamer-010-to-gstreamer-10)
 in the stb-tester documentation.
 
 ##### Known issues
@@ -410,7 +410,7 @@ gstreamer1-plugins-good packages for Fedora 19 and 20 at the above Copr
 repository.
 
 See also the [list of known issues on github](
-https://github.com/drothlis/stb-tester/issues?labels=0.19).
+https://github.com/stb-tester/stb-tester/issues?labels=0.19).
 
 ##### Breaking changes
 
@@ -423,7 +423,7 @@ https://github.com/drothlis/stb-tester/issues?labels=0.19).
     GStreamer 1 isn't ABI or API compatible with GStreamer 0.10, but the only
     thing that stb-tester users need to change is their `source_pipeline`
     configuration. See
-    ["Porting from GStreamer 0.10 to GStreamer 1.0"](https://github.com/drothlis/stb-tester/blob/master/docs/backwards-compatibility.md#porting-from-gstreamer-010-to-gstreamer-10)
+    ["Porting from GStreamer 0.10 to GStreamer 1.0"](https://github.com/stb-tester/stb-tester/blob/master/docs/backwards-compatibility.md#porting-from-gstreamer-010-to-gstreamer-10)
     in the stb-tester documentation.
 
 * `stbt run` passes optional arguments after script name to the script.
@@ -499,7 +499,7 @@ New tool `stbt batch` runs stb-tester scripts (once, or repeatedly if
 you want a soak test) and generates an interactive html report. For
 documentation and an example of the report see
 <http://stb-tester.com/runner.html>; see also `stbt batch --help` and
-<https://github.com/drothlis/stb-tester/blob/0.18/stbt-batch.d/README.rst>.
+<https://github.com/stb-tester/stb-tester/blob/0.18/stbt-batch.d/README.rst>.
 This was previously available in the source distribution under
 `extra/runner`; now it is installed as `stbt batch` by `make install`
 and the RPM.
@@ -512,7 +512,7 @@ New python function
 [`stbt.is_screen_black`](http://stb-tester.com/stbt.html#is_screen_black)
 checks for a black screen (with an optional mask). This is useful for
 measuring the time between channel changes. See the unit test
-[test_using_frames_to_measure_black_screen](https://github.com/drothlis/stb-tester/blob/0.18/tests/test-stbt-py.sh#L96)
+[test_using_frames_to_measure_black_screen](https://github.com/stb-tester/stb-tester/blob/0.18/tests/test-stbt-py.sh#L96)
 for an example of usage.
 
 New python function
@@ -736,14 +736,14 @@ Minor user-visible fixes:
 Additionally, the following scripts are available from the source
 repository:
 
--   [extra/vm](https://github.com/drothlis/stb-tester/tree/master/extra/vm)
+-   [extra/vm](https://github.com/stb-tester/stb-tester/tree/master/extra/vm)
     contains scripts to set up a virtual machine with Ubuntu and
     stb-tester installed. These scripts use
     [vagrant](http://www.vagrantup.com), a tool for automatically
     provisioning virtual machines. See
-    [extra/vm/README.rst](https://github.com/drothlis/stb-tester/blob/master/extra/vm/README.rst)
+    [extra/vm/README.rst](https://github.com/stb-tester/stb-tester/blob/master/extra/vm/README.rst)
     for instructions.
--   [extra/runner](https://github.com/drothlis/stb-tester/tree/master/extra/runner)
+-   [extra/runner](https://github.com/stb-tester/stb-tester/tree/master/extra/runner)
     contains scripts that will run a set of stb-tester test scripts
     and generate an html report. See ["extra/runner: Bulk test running
     & reporting"](http://stb-tester.com/runner.html).
@@ -756,7 +756,7 @@ repository:
 the OpenCV format (i.e. a numpy array). This allows a user's script to
 perform arbitrary image processing using the OpenCV python bindings. For
 an example see the self-test
-["test_using_frames_to_measure_black_screen"](https://github.com/drothlis/stb-tester/blob/0.14/tests/test-stbt-py.sh#L96).
+["test_using_frames_to_measure_black_screen"](https://github.com/stb-tester/stb-tester/blob/0.14/tests/test-stbt-py.sh#L96).
 Note that *detect_match*, *wait_for_match*, *detect_motion*, etc.
 are now implemented on top of *frames*. *get_frame* and *save_frame*
 also return/operate on the OpenCV format.

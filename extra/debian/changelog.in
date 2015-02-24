@@ -1,5 +1,5 @@
 stb-tester (@VERSION@-@RELEASE@) @DISTRIBUTION@; urgency=medium
 
-  * Created from stb-tester git repo http://github.com/drothlis/stb-tester
+  * Created from stb-tester git repo http://github.com/stb-tester/stb-tester
 
  -- @USER_NAME@ <@USER_EMAIL@>  @RFC_2822_DATE@

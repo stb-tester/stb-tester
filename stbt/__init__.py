@@ -5,7 +5,7 @@ See `man stbt` and http://stb-tester.com for documentation.
 
 Copyright 2012-2013 YouView TV Ltd and contributors.
 License: LGPL v2.1 or (at your option) any later version (see
-https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 from __future__ import absolute_import

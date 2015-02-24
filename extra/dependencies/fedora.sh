@@ -36,7 +36,7 @@ yum-builddep -y $rpm_topdir/SRPMS/gstreamer1-plugins-good-$GST_VERSION.stbtester
 rpmbuild --define "_topdir $rpm_topdir" -bb gstreamer1-plugins-good.spec
 
 # Host SRPM on webserver so that Copr buildsystem can find it
-git clone git@github.com:drothlis/stb-tester-srpms.git
+git clone git@github.com:stb-tester/stb-tester-srpms.git
 cd stb-tester-srpms
 mv ~/rpmbuild/SRPMS/gstreamer1-plugins-good-$GST_VERSION.stbtester1.src.rpm .
 git add gstreamer1-plugins-good-$GST_VERSION.stbtester1.src.rpm

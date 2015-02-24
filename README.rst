@@ -6,8 +6,8 @@
 Automated User Interface Testing for Set-Top Boxes & Smart TVs
 --------------------------------------------------------------
 
-.. image:: https://travis-ci.org/drothlis/stb-tester.png?branch=master
-   :target: https://travis-ci.org/drothlis/stb-tester
+.. image:: https://travis-ci.org/stb-tester/stb-tester.png?branch=master
+   :target: https://travis-ci.org/stb-tester/stb-tester
 
 :Copyright: Copyright (C) 2013-2014 Stb-tester.com Ltd,
             2012-2014 YouView TV Ltd. and other contributors
@@ -942,7 +942,7 @@ SEE ALSO
 ========
 
 * http://stb-tester.com/
-* http://github.com/drothlis/stb-tester
+* http://github.com/stb-tester/stb-tester
 
 
 AUTHORS

@@ -370,8 +370,8 @@ of lines of output).
 [Copr]: https://copr.fedoraproject.org/coprs/stbt/stb-tester/
 [Personal Package Archive (PPA)]: https://launchpad.net/~stb-tester/+archive/stb-tester
 [stb-tester 0.19 release notes]: http://stb-tester.com/release-notes.html#0.19
-[github]: https://github.com/drothlis/stb-tester
-[extra/vm/]: https://github.com/drothlis/stb-tester/tree/master/extra/vm
+[github]: https://github.com/stb-tester/stb-tester
+[extra/vm/]: https://github.com/stb-tester/stb-tester/tree/master/extra/vm
 ["Options" in the stbt(1) man page]: http://stb-tester.com/stbt.html#options
 ["Test script format" in the stbt(1) man page]: stbt.html#test-script-format
 [Unix Shell tutorial]: http://stb-tester.com/shell.html

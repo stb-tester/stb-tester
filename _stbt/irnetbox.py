@@ -5,7 +5,7 @@
 Author: David Rothlisberger <david@rothlis.net>
 Copyright 2012 YouView TV Ltd and contributors.
 License: LGPL v2.1 or (at your option) any later version (see
-https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
+https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 The irNetBox is a network-controlled infrared emitter:
 http://www.redrat.co.uk/products/irnetbox.html
