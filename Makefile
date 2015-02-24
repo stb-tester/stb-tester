@@ -152,7 +152,7 @@ check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	PYTHONPATH=$(PWD) nosetests --with-doctest -v --match "^test_" \
+	PYTHONPATH=$$PWD nosetests --with-doctest -v --match "^test_" \
 	    $(shell git ls-files '*.py' | grep -v tests/test.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
@@ -166,7 +166,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
-	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
+	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
