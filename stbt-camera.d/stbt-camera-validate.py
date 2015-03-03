@@ -1,5 +1,6 @@
 #!/usr/bin/python -u
 # coding: utf-8
+from __future__ import unicode_literals
 
 import argparse
 import math
@@ -26,15 +27,15 @@ Coord = namedtuple('Coord', 'x y')
 
 SQUARES = [Coord(_x, _y) for _y in range(0, 9) for _x in range(0, 16)]
 GLYPHS = list(
-    u'ABCDEFGHIJKLMNOP' +
-    u'QRSTUVWXYZ012345' +
-    u'6789abcdefghijkm' +
-    u'nopqrstuvwxyzΓΔΘ' +
-    u'ΛΞΠΣΦΨΩαβγδεζηθι' +
-    u'κλμνξπρςστυφχψωб' +
-    u'джзйлптфцчшщъыьэ' +
-    u'юя@#~!£$%+-¶()?[' +
-    u']¿÷«»©®℠℗™&<>^/*')
+    'ABCDEFGHIJKLMNOP' +
+    'QRSTUVWXYZ012345' +
+    '6789abcdefghijkm' +
+    'nopqrstuvwxyzΓΔΘ' +
+    'ΛΞΠΣΦΨΩαβγδεζηθι' +
+    'κλμνξπρςστυφχψωб' +
+    'джзйлптфцчшщъыьэ' +
+    'юя@#~!£$%+-¶()?[' +
+    ']¿÷«»©®℠℗™&<>^/*')
 
 
 def square_to_pos(square):
@@ -46,19 +47,19 @@ def distance(a, b):
 
 
 def off_to_arrow(off):
-    u"""
+    """
     >>> print off_to_arrow((1, 1))
     ↗
     >>> print off_to_arrow((-1, 0))
     ←
     """
-    arrows = list(u'→↗↑↖←↙↓↘')
+    arrows = list('→↗↑↖←↙↓↘')
     if numpy.linalg.norm(off) > 0.5:
         angle = math.atan2(off[1], off[0])
         return arrows[int(angle / 2 / math.pi * len(arrows) + len(arrows) + 0.5)
                       % len(arrows)]
     else:
-        return u'O'
+        return 'O'
 
 
 # ANSI colour codes for printing progress.
@@ -149,8 +150,7 @@ def validate(video, driver, validate_match=True):
             match_parameters=stbt.MatchParameters(match_method="ccoeff-normed"))
             .next())
         sys.stdout.write(
-            ("%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)], char))
-            .encode('utf-8'))
+            "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)], char))
         if square.x == 15:
             sys.stdout.write('\n')
         sys.stdout.flush()
@@ -163,9 +163,8 @@ def validate(video, driver, validate_match=True):
         off = Coord(result.position[0] - expected.x,
                     result.position[1] - expected.y)
         sys.stdout.write(
-            (u"%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)],
+            "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)],
                         off_to_arrow(off)))
-            .encode('utf-8'))
         if square.x == 15:
             sys.stdout.write('\n')
     sys.stdout.write(ENDC)
@@ -179,8 +178,7 @@ def validate(video, driver, validate_match=True):
                 rating = 1 if result.first_pass_result > 0.9 else 0
             quality = "0123456789"[int(result.first_pass_result * 10)]
             sys.stdout.write(
-                (u"%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
-                .encode('utf-8'))
+                "%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
             if square.x == 15:
                 sys.stdout.write('\n')
         sys.stdout.write(ENDC)
@@ -199,12 +197,11 @@ def validate(video, driver, validate_match=True):
             expected = square_to_pos(square)
             off = Coord(result.position[0] - expected.x,
                         result.position[1] - expected.y)
-            sys.stdout.write(('%s%s\t(%i, %i)\t(%i, %i)\t%02f\t%s\n' %
-                              ([FAIL, WARNING, OKGREEN][rate(square, result)],
-                               char, square.x, square.y, off.x, off.y,
-                               distance(expected, result.position),
-                               "MATCH" if result.match else "NO MATCH"))
-                             .encode('utf-8'))
+            sys.stdout.write('%s%s\t(%i, %i)\t(%i, %i)\t%02f\t%s\n' %
+                             ([FAIL, WARNING, OKGREEN][rate(square, result)],
+                              char, square.x, square.y, off.x, off.y,
+                              distance(expected, result.position),
+                              "MATCH" if result.match else "NO MATCH"))
     sys.stdout.write(ENDC)
     sys.stdout.flush()
     return is_bad
