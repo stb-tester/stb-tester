@@ -100,6 +100,10 @@ UNRELEASED.
 
 ##### Bugfixes and packaging fixes since 0.21
 
+* `stbt camera calibrate` no longer hangs during colour calibration ([#264])
+
+[#264]: https://github.com/stb-tester/stb-tester/issues/264
+
 ##### Developer-visible changes since 0.21
 
 #### 0.21: Composable API, match_text, stbt camera, triaging improvements
