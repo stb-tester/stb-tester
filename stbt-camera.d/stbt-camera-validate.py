@@ -149,8 +149,7 @@ def validate(video, driver, validate_match=True):
             match_parameters=stbt.MatchParameters(match_method="ccoeff-normed"))
             .next())
         sys.stdout.write(
-            ("%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)], char))
-            .encode('utf-8'))
+            "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)], char))
         if square.x == 15:
             sys.stdout.write('\n')
         sys.stdout.flush()
@@ -163,9 +162,8 @@ def validate(video, driver, validate_match=True):
         off = Coord(result.position[0] - expected.x,
                     result.position[1] - expected.y)
         sys.stdout.write(
-            (u"%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)],
+            "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)],
                         off_to_arrow(off)))
-            .encode('utf-8'))
         if square.x == 15:
             sys.stdout.write('\n')
     sys.stdout.write(ENDC)
@@ -179,8 +177,7 @@ def validate(video, driver, validate_match=True):
                 rating = 1 if result.first_pass_result > 0.9 else 0
             quality = "0123456789"[int(result.first_pass_result * 10)]
             sys.stdout.write(
-                (u"%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
-                .encode('utf-8'))
+                "%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
             if square.x == 15:
                 sys.stdout.write('\n')
         sys.stdout.write(ENDC)
@@ -199,12 +196,11 @@ def validate(video, driver, validate_match=True):
             expected = square_to_pos(square)
             off = Coord(result.position[0] - expected.x,
                         result.position[1] - expected.y)
-            sys.stdout.write(('%s%s\t(%i, %i)\t(%i, %i)\t%02f\t%s\n' %
-                              ([FAIL, WARNING, OKGREEN][rate(square, result)],
-                               char, square.x, square.y, off.x, off.y,
-                               distance(expected, result.position),
-                               "MATCH" if result.match else "NO MATCH"))
-                             .encode('utf-8'))
+            sys.stdout.write('%s%s\t(%i, %i)\t(%i, %i)\t%02f\t%s\n' %
+                             ([FAIL, WARNING, OKGREEN][rate(square, result)],
+                              char, square.x, square.y, off.x, off.y,
+                              distance(expected, result.position),
+                              "MATCH" if result.match else "NO MATCH"))
     sys.stdout.write(ENDC)
     sys.stdout.flush()
     return is_bad
