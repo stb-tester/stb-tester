@@ -468,3 +468,17 @@ test_stbt_batch_printing_unicode_characters_in_scripts() {
     LANG=en_GB.utf8 unbuffer bash -c 'stbt run tests/test.py 2>/dev/null' &&
     stbt batch run -1 tests/test.py
 }
+
+test_that_tests_reading_from_stdin_dont_mess_up_batch_run_test_list() {
+    cat >test.py <<-EOF
+		import sys
+		in_text = sys.stdin.read()
+		assert in_text == "", "Stdin said \"%s\"" % in_text
+		EOF
+
+    stbt batch run -1 test.py test.py \
+    || fail "Expected test to pass"
+
+    ls -d ????-??-??_??.??.??* > testruns
+    [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
+}
