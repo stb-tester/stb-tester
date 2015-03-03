@@ -1,5 +1,6 @@
 #!/usr/bin/python -u
 # coding: utf-8
+from __future__ import unicode_literals
 
 import argparse
 import math
@@ -26,15 +27,15 @@ Coord = namedtuple('Coord', 'x y')
 
 SQUARES = [Coord(_x, _y) for _y in range(0, 9) for _x in range(0, 16)]
 GLYPHS = list(
-    u'ABCDEFGHIJKLMNOP' +
-    u'QRSTUVWXYZ012345' +
-    u'6789abcdefghijkm' +
-    u'nopqrstuvwxyzΓΔΘ' +
-    u'ΛΞΠΣΦΨΩαβγδεζηθι' +
-    u'κλμνξπρςστυφχψωб' +
-    u'джзйлптфцчшщъыьэ' +
-    u'юя@#~!£$%+-¶()?[' +
-    u']¿÷«»©®℠℗™&<>^/*')
+    'ABCDEFGHIJKLMNOP' +
+    'QRSTUVWXYZ012345' +
+    '6789abcdefghijkm' +
+    'nopqrstuvwxyzΓΔΘ' +
+    'ΛΞΠΣΦΨΩαβγδεζηθι' +
+    'κλμνξπρςστυφχψωб' +
+    'джзйлптфцчшщъыьэ' +
+    'юя@#~!£$%+-¶()?[' +
+    ']¿÷«»©®℠℗™&<>^/*')
 
 
 def square_to_pos(square):
@@ -46,19 +47,19 @@ def distance(a, b):
 
 
 def off_to_arrow(off):
-    u"""
+    """
     >>> print off_to_arrow((1, 1))
     ↗
     >>> print off_to_arrow((-1, 0))
     ←
     """
-    arrows = list(u'→↗↑↖←↙↓↘')
+    arrows = list('→↗↑↖←↙↓↘')
     if numpy.linalg.norm(off) > 0.5:
         angle = math.atan2(off[1], off[0])
         return arrows[int(angle / 2 / math.pi * len(arrows) + len(arrows) + 0.5)
                       % len(arrows)]
     else:
-        return u'O'
+        return 'O'
 
 
 # ANSI colour codes for printing progress.
