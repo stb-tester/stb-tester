@@ -67,7 +67,7 @@ main() {
   while true; do
     while IFS=$'\t' read -a test; do
       run_count=$((run_count+1))
-      run "${test[@]}";
+      run "${test[@]}" </dev/null;
       last_exit_status=$?
       [ "$last_exit_status" = 0 ] || failure_count=$((failure_count+1))
       should_i_continue || break 2
