@@ -314,6 +314,8 @@ def v4l2_ctls(device, data=None):
 def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\n')
     for n, v in enumerate(iterator):
+        if n == total:
+            break
         progress = (n * width) // total
         stream.write(
             '[%s] %8d / %d\r' % (
