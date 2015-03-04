@@ -38,6 +38,16 @@ UNRELEASED.
   instead of at the top level of the file. See the change to `stbt run` in the
   next section for more details.
 
+* `MatchResult.image` now returns the template image name as passed to
+  `stbt.match`, rather than the absolute path to the template.  This is the
+  previously documented behaviour and allows constructs like:
+
+        m = stbt.wait_until(
+            lambda: stbt.match("success.png") or stbt.match("error.png"))
+        assert m
+        if m.image == "error.png":
+            recover()
+
 ##### User-visible changes since 0.21
 
 * `stbt run` and `stbt batch run` can now run a specific Python function in the
