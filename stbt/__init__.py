@@ -469,8 +469,8 @@ class MatchResult(object):
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
-                self.image if isinstance(self.image, numpy.ndarray)
-                else "<Custom Image>"))
+                "<Custom Image>" if isinstance(self.image, numpy.ndarray)
+                else repr(self.image)))
 
     @property
     def position(self):
