@@ -584,8 +584,7 @@ class MatchResult
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     * `frame`: The video frame that was searched, in OpenCV format.
-    * `image`: The template image that was searched for, as given to
-      `wait_for_match` or `detect_match`.
+    * `image`: The template image that was searched for, as given to `match`.
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
 

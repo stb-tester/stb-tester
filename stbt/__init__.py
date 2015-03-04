@@ -430,8 +430,7 @@ class MatchResult(object):
     * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of the two-pass templatematch algorithm.
     * `frame`: The video frame that was searched, in OpenCV format.
-    * `image`: The template image that was searched for, as given to
-      `wait_for_match` or `detect_match`.
+    * `image`: The template image that was searched for, as given to `match`.
     * `position`: `Position` of the match, the same as in `region`. Included
       for backwards compatibility; we recommend using `region` instead.
     """
@@ -470,8 +469,8 @@ class MatchResult(object):
                 "None" if self.frame is None else "%dx%dx%d" % (
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
-                self.image if isinstance(self.image, numpy.ndarray)
-                else "<Custom Image>"))
+                "<Custom Image>" if isinstance(self.image, numpy.ndarray)
+                else repr(self.image)))
 
     @property
     def position(self):
@@ -481,7 +480,8 @@ class MatchResult(object):
         return self.match
 
 
-class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate', 'image filename')):
+class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate',
+                                    'image name filename')):
     @property
     def friendly_name(self):
         return self.filename or '<Custom Image>'
@@ -491,7 +491,7 @@ def _load_template(template):
     if isinstance(template, _AnnotatedTemplate):
         return template
     if isinstance(template, numpy.ndarray):
-        return _AnnotatedTemplate(template, None)
+        return _AnnotatedTemplate(template, None, None)
     else:
         template_name = _find_path(template)
         if not os.path.isfile(template_name):
@@ -500,7 +500,7 @@ def _load_template(template):
         if image is None:
             raise UITestError("Failed to load template file: %s" %
                               template_name)
-        return _AnnotatedTemplate(image, template_name)
+        return _AnnotatedTemplate(image, template, template_name)
 
 
 def _crop(frame, region):
@@ -560,7 +560,7 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
         result = MatchResult(
             _get_frame_timestamp(frame), matched, match_region,
             first_pass_certainty, numpy.copy(npframe),
-            (template.filename or template.image))
+            (template.name or template.image))
 
     if grabbed_from_live:
         _display.draw(result, None)
