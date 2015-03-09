@@ -96,7 +96,9 @@ install-core: stbt.sh stbt.1 defaults.conf
 	    _stbt/gst_hacks.py \
 	    _stbt/irnetbox.py \
 	    _stbt/logging.py \
+	    _stbt/power.py \
 	    _stbt/pylint_plugin.py \
+	    _stbt/stbt-power.sh \
 	    _stbt/utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt
 	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(libexecdir)/stbt/stbt
