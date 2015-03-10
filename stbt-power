@@ -20,11 +20,15 @@ def main(argv):
                aten:<hostname>:<outlet> - For ATEN network controlled PDU
                ipp:<hostname>:<outlet> - For IP Power 9258 network controlled PDU
                pdu:<hostname>:<outlet> - For PDUeX KWX network controlled PDU
+               aviosys-8800-pro[:<serial device>] - For Aviosys 8800 Pro USB
+                   controlled outlets
              where
                <hostname>       The device's network address.
                <outlet>         Address of the individual power outlet on
                                 the device. Allowed values depend on the
                                 specific device model.
+               <serial device>  The device name of the serial device that the
+                                8800 Pro exposes.  Defaults to /dev/ttyACM0
              This URI defaults to from stbt.conf's "global.power_outlet" if not
              specified on the command line.
              """))

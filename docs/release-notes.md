@@ -109,6 +109,9 @@ UNRELEASED.
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
 
+* `stbt power`: Added support for "Aviosys USB Net Power 8800 Pro"
+  USB-controlled power outlets.
+
 [nose]: https://nose.readthedocs.org/
 [pytest]: http://pytest.org/latest/
 
