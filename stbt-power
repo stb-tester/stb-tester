@@ -1,183 +1,56 @@
-#!/bin/bash
+#!/usr/bin/python
 
-# WARNING: DON'T ADD SUPPORT FOR NEW POWER DEVICES TO THIS SCRIPT.
-# WE WANT TO PORT IT TO PYTHON FIRST. SEE
-# https://groups.google.com/d/msg/stb-tester/0wFNSIimHn0/317YMmc4CesJ
+import argparse
+import sys
+from textwrap import dedent
 
-#/ usage: stbt power [--help] [--power-outlet <uri>] on|off|status
-#/
-#/ Send commands to network-controllable power switch.
-#/
-#/ Options:
-#/   -h, --help    Print this help message and exit.
-#/   --power-outlet <uri>
-#/                 Address of the power device and the outlet on the device.
-#/                 The format of <uri> is: (ipp|pdu):<hostname>:<outlet>
-#/                   aten|ipp|pdu  Model of the controllable power supply:
-#/                                 * aten: ATEN (all models)
-#/                                 * ipp: IP Power 9258
-#/                                 * pdu: PDUeX KWX
-#/                   <hostname>    The device's network address.
-#/                   <outlet>      Address of the individual power outlet on
-#/                                 the device. Allowed values depend on the
-#/                                 specific device model. Optional for the
-#/                                 "status" command.
-#/                 Taken from stbt.conf's "global.power_outlet" if not
-#/                 specified on the command line.
+from _stbt.config import get_config
+from _stbt.power import uri_to_power_outlet
 
-set -o pipefail
 
-usage() { grep '^#/' "$0" | cut -c4-; }  # Print the above usage message.
-die() { echo "stbt power: error: $*" >&2; exit 1; }
+def main(argv):
+    parser = argparse.ArgumentParser(
+        description="Control and query a computer controllable power outlet",
+        formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument(
+        "--power-outlet", metavar="URI",
+        default=get_config("global", "power_outlet", ""), help=dedent("""\
+             Address of the power device and the outlet on the device.
+             The format of <uri> is either:
+               aten:<hostname>:<outlet> - For ATEN network controlled PDU
+               ipp:<hostname>:<outlet> - For IP Power 9258 network controlled PDU
+               pdu:<hostname>:<outlet> - For PDUeX KWX network controlled PDU
+               aviosys-8800-pro[:<serial device>] - For Aviosys 8800 Pro USB
+                   controlled outlets
+             where
+               <hostname>       The device's network address.
+               <outlet>         Address of the individual power outlet on
+                                the device. Allowed values depend on the
+                                specific device model.
+               <serial device>  The device name of the serial device that the
+                                8800 Pro exposes.  Defaults to /dev/ttyACM0
+             This URI defaults to from stbt.conf's "global.power_outlet" if not
+             specified on the command line.
+             """))
 
-main() {
-    [ $# -eq 0 ] && { usage >&2; exit 1; }
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -h|--help) usage; exit 0;;
-            --power-outlet) uri="$2"; shift;;
-            --power-outlet=*) uri="${1#--power-outlet=}";;
-            *) break;;
-        esac
-        shift
-    done
-    command="$1"
-    [[ "$command" =~ ^(on|off|status)$ ]] || die "invalid command '$command'"
+    parser.add_argument(
+        "command", choices=["on", "off", "status"], metavar="command",
+        help=dedent("""\
+            on|off:  Turn power on or off
+            status:  Prints ON if the outlet is powered, otherwise prints OFF
+            """))
+    args = parser.parse_args(argv[1:])
 
-    [[ -z "$uri" ]] && {
-        uri=$("$(dirname "$0")"/stbt-config "global.power_outlet" 2>/dev/null) ||
-            die "no power-outlet specified on command line or in config file"
-    }
-    model=$(uri model "$uri") || die "invalid power-outlet uri '$uri'"
-    hostname=$(uri hostname "$uri") || die "invalid power-outlet uri '$uri'"
-    outlet=$(uri outlet "$uri") || die "invalid power-outlet uri '$uri'"
-    [[ -z "$outlet" && $command != status ]] &&
-        die "missing outlet from uri '$uri'"
+    outlet = uri_to_power_outlet(args.power_outlet)
 
-    $model $command $hostname "$outlet"
-}
+    if args.command == "on":
+        outlet.set(True)
+    elif args.command == "off":
+        outlet.set(False)
+    elif args.command == "status":
+        sys.stdout.write("ON\n" if outlet.get() else "OFF\n")
+    else:
+        assert False
 
-uri() {
-    local regex='^(?<model>pdu|ipp|aten):(?<hostname>[^: ]+)(:(?<outlet>[^: ]+))?$'
-    echo "$2" | perl -ne \
-        "if (/$regex/) { print $+{$1} ? $+{$1} : ''; }
-         else { exit 1; }"
-}
-
-aten() {
-    local command=$1 hostname=$2 outlet=$3 status
-    aten_command $command $hostname $outlet
-    if [[ $command =~ ^(on|off)$ ]]; then
-        # ATEN PE6108G outlets take between 4-8 seconds to power on
-        for _ in {1..12}; do
-            sleep 1
-            status=$(aten_command status $hostname $outlet)
-            [[ "${status,,}" == $command ]] && return
-        done
-        die "timed out waiting for outlet to power $command"
-    fi
-}
-aten_command() {
-    local command=$1 hostname=$2 outlet=$3 snmp_command
-    local outlet_oid="enterprises.21317.1.3.2.2.2.2.$((1 + outlet)).0"
-    local snmp_param="-Oq -v 2c -c administrator $hostname $outlet_oid"
-
-    case $command in
-        on) snmp_command="snmpset $snmp_param int 2" ;;
-        off) snmp_command="snmpset $snmp_param int 1" ;;
-        status) snmp_command="snmpget $snmp_param" ;;
-    esac
-    output="$($snmp_command)" || die "failed to connect to '$hostname'"
-    echo "$output" | grep -q 'No Such Object available' &&
-        die "invalid outlet '$outlet' or unsupported device"
-    [[ $command == status ]] &&
-        echo "$output" | cut -d' ' -f2 | sed -e 's/1/OFF/' -e 's/2/ON/'
-}
-
-ipp() {
-    local command=$1 hostname=$2 outlet="$3" output
-
-    output=$(
-        curl --silent --fail http://admin:12345678@$hostname/Set.cmd?CMD=$(
-            ipp_command $command "$outlet")
-    ) || die "failed to connect to '$hostname'"
-
-    echo "$output" | grep -q BADPARAM &&
-        die "invalid outlet '$outlet' (hint: use the 'status' command)"
-
-    # Prettify the output from the device
-    echo "$output" |
-    sed 's|</*html>||g' |
-    tr "," "\n" |
-    sed -e 's|=1| = ON|g' -e 's|=0| = OFF|g' |
-    ipp_filteroutlet "$outlet" |
-    head -4  # IP Power device prints 8 outlet names, but only has 4.
-}
-ipp_command() {
-    local command=$1 outlet="$2"
-    case "$1" in
-        on) echo "SetPower+$outlet=1";;
-        off) echo "SetPower+$outlet=0";;
-        status) echo "GetPower";;
-    esac
-}
-ipp_filteroutlet() {
-    local outlet="$1"
-    if [ -z "$outlet" ]; then
-        cat
-    else
-        grep "$outlet" ||
-            die "invalid outlet '$outlet' (hint: use the 'status' command)"
-    fi
-}
-
-pdu() {
-    local command=$1 hostname=$2 outlet="$3" pdu_error command_ids data _
-
-    pdu_error="Failed to execute command '$command' on PDU '$hostname' "
-    pdu_error+="outlet '${outlet:-all}'"
-
-    if [[ $command == status ]]; then
-        if [[ -n $outlet ]]; then
-            pdu_status $hostname "$outlet" || die "$pdu_error"
-        else
-            { pdu_status $hostname '1-A[0-9]+' || die "$pdu_error"; } | \
-                awk '{ printf("1-A%d: %s\n", NR, $0) }'  # Add outlet addresses
-        fi
-    else
-        declare -A command_ids=([on]=1 [off]=2)
-
-        # 2 attempts to minimise failure rate
-        for _ in 1 2; do
-            data="selOutlet=%3F$(pdu_outlet_no "$outlet")&"
-            data+="ctrl_all=${command_ids[$command]}"
-            _curl -d "$data" \
-                http://admin:admin@$hostname/Forms/index_3 >/dev/null
-
-            # The above HTTP POST always succeeds, but doesn't always switch
-            # the power outlet. Check by querying the new outlet status,
-            # allowing up to 8 seconds for it to take effect.
-            for _ in {1..8}; do
-                sleep 1
-                pdu_status $hostname "$outlet" | grep -iq "$command" && return
-            done
-        done
-
-        die "$pdu_error"
-    fi
-}
-pdu_status() {
-    local hostname=$1 outlet="$2"
-    _curl http://admin:admin@$hostname | awk "/$outlet/,/<\/ul>/" | \
-        grep -Eo 'ON|OFF'
-}
-pdu_outlet_no() {
-    echo $1 | sed 's/^1-A//'
-}
-_curl() {
-    # 2 attempts to minimise failure rate
-    curl --anyauth --fail --silent "$@" ||
-    curl --anyauth --fail --show-error --silent "$@"
-}
-
-main "$@"
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

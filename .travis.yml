@@ -32,6 +32,7 @@ install:
         python-numpy
         python-opencv
         python-scipy
+        python-serial
         python-yaml
         tesseract-ocr
         tesseract-ocr-deu

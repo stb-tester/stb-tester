@@ -23,6 +23,7 @@ Requires: opencv-python
 Requires: openssh-clients
 Requires: pygobject3
 Requires: pylint
+Requires: pyserial
 Requires: python >= 2.7
 Requires: python-flask
 Requires: python-jinja2

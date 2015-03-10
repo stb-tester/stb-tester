@@ -48,6 +48,10 @@ UNRELEASED.
         if m.image == "error.png":
             recover()
 
+* `stbt power status` now always requires the outlet to be explicitly specified
+  for network controlled PDUs, rather than printing the statuses of each outlet
+  in some implementation-dependent format.
+
 ##### User-visible changes since 0.21
 
 * `stbt run` and `stbt batch run` can now run a specific Python function in the
@@ -105,6 +109,9 @@ UNRELEASED.
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
 
+* `stbt power`: Added support for "Aviosys USB Net Power 8800 Pro"
+  USB-controlled power outlets.
+
 [nose]: https://nose.readthedocs.org/
 [pytest]: http://pytest.org/latest/
 
@@ -115,6 +122,12 @@ UNRELEASED.
 [#264]: https://github.com/stb-tester/stb-tester/issues/264
 
 ##### Developer-visible changes since 0.21
+
+* `stbt power` is now implemented in Python rather than bash, although for the
+  time being it still calls back into the bash implementation to control/query
+  the ATEN, IP Power 9258 and PDUeX KWX outlets.  Users of these PDUs are
+  encouraged to contribute Python implementations and automated tests for these
+  devices.
 
 #### 0.21: Composable API, match_text, stbt camera, triaging improvements
 
