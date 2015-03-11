@@ -164,7 +164,7 @@ def validate(video, driver, validate_match=True):
                     result.position[1] - expected.y)
         sys.stdout.write(
             "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)],
-                        off_to_arrow(off)))
+                      off_to_arrow(off)))
         if square.x == 15:
             sys.stdout.write('\n')
     sys.stdout.write(ENDC)
