@@ -24,7 +24,7 @@ def uri_to_power_outlet(uri):
 
 class _NoOutlet(object):
     def set(self, power):
-        if power == False:
+        if not power:
             raise RuntimeError(
                 "Cannot disable power: no power outlet configured")
 
