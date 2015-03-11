@@ -320,12 +320,18 @@ class Region(namedtuple('Region', 'x y right bottom')):
         Region(x=1, y=1, width=3, height=2)
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
-        assert x is not None and (width is None) != (right is None)
-        assert y is not None and (height is None) != (bottom is None)
+        if (width is None) == (right is None):
+            raise ValueError("You must specify either 'width' or 'right'")
+        if (height is None) == (bottom is None):
+            raise ValueError("You must specify either 'height' or 'bottom'")
         if right is None:
             right = x + width
         if bottom is None:
             bottom = y + height
+        if right <= x:
+            raise ValueError("'right' must be greater than 'x'")
+        if bottom <= y:
+            raise ValueError("'bottom' must be greater than 'y'")
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
     def __unicode__(self):
@@ -348,7 +354,6 @@ class Region(namedtuple('Region', 'x y right bottom')):
     def from_extents(x, y, right, bottom):
         """Create a Region using right and bottom extents rather than width and
         height."""
-        assert x < right and y < bottom
         return Region(x, y, right=right, bottom=bottom)
 
     @staticmethod
@@ -504,7 +509,8 @@ def _load_template(template):
 
 
 def _crop(frame, region):
-    assert _image_region(frame).contains(region)
+    if not _image_region(frame).contains(region):
+        raise ValueError("'frame' doesn't contain 'region'")
     return frame[region.y:region.bottom, region.x:region.right]
 
 
@@ -1039,13 +1045,19 @@ def _tesseract(frame, region=Region.ALL,
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
 
         if user_words:
-            assert 'user_words_suffix' not in _config
+            if 'user_words_suffix' in _config:
+                raise ValueError(
+                    "You cannot specify 'user_words' and " +
+                    "'_config[\"user_words_suffix\"]' at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(user_words).encode('utf-8'))
             _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
-            assert 'user_patterns_suffix' not in _config
+            if 'user_patterns_suffix' in _config:
+                raise ValueError(
+                    "You cannot specify 'user_patterns' and " +
+                    "'_config[\"user_patterns_suffix\"]' at the same time")
             if _tesseract_version() < LooseVersion('3.03'):
                 raise RuntimeError(
                     'tesseract version >=3.03 is required for user_patterns.  '
@@ -2195,8 +2207,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
         certainty = max_value
         best_match_position = Position(*max_location)
     else:
-        assert False, (
-            "Invalid matchTemplate method '%s'" % method)
+        raise ValueError("Invalid matchTemplate method '%s'" % method)
 
     _, new_roi_mask = cv2.threshold(
         matches_heatmap,
