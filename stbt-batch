@@ -11,7 +11,7 @@
 #/     report      Re-generate the report for previous test runs
 #/     instaweb    Start a web server to view & edit the report
 #/
-#/ For help on a specific subcommand do 'stbt batch <subcommand> --help'.
+#/ For help on a specific subcommand do 'stbt batch <subcommand> -h'.
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
