@@ -88,7 +88,7 @@ class _HTTPVideoServer(object):
                                      e.output)
                     raise
         # lighttpd writes its pidfile out after forking rather than before
-        # casuing a race.  The real fix is to patch lighttpd to support socket
+        # causing a race.  The real fix is to patch lighttpd to support socket
         # passing and then open the listening socket ourselves.
         while os.fstat(pidfile.fileno()).st_size == 0:
             sleep(0.1)
