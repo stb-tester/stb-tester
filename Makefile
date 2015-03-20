@@ -157,7 +157,10 @@ check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD nosetests --with-doctest -v --match "^test_" \
-	    $(shell git ls-files '*.py' | grep -v tests/test.py) \
+	    $(shell git ls-files '*.py' |\
+	      grep -v -e tests/test.py \
+	              -e tests/test2.py \
+	              -e tests/test_functions.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test

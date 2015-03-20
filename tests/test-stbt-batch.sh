@@ -482,3 +482,9 @@ test_that_tests_reading_from_stdin_dont_mess_up_batch_run_test_list() {
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
 }
+
+test_that_stbt_batch_failure_reason_shows_the_failing_assert_statement() {
+    create_test_repo
+    stbt batch run -1 tests/test_functions.py::test_that_asserts_the_impossible
+    assert grep -q "AssertionError: assert 1 + 1 == 3" latest/failure-reason
+}
