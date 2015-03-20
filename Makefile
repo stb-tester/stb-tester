@@ -45,6 +45,7 @@ tools += stbt-tv
 # VERSION file included in the dist tarball otherwise.
 generate_version := $(shell \
 	GIT_DIR=.git git describe --always --dirty > VERSION.now 2>/dev/null && \
+	sed --in-place "s/^v//g" VERSION.now && \
 	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
 	rm -f VERSION.now)
 VERSION?=$(shell cat VERSION)
