@@ -14,9 +14,14 @@ necessary.
 For installation instructions see
 [Getting Started](http://stb-tester.com/getting-started.html).
 
-#### 0.22:
+#### 22:
 
 UNRELEASED.
+
+Note: The version numbering scheme has changed from this release onwards.
+Instead of this being version 0.22 it is version 22.  stb-tester has been
+usable, stable, backwards-compatible software for years now so carrying a "0."
+would be misleading and adds no information.
 
 ##### Breaking changes since 0.21
 
