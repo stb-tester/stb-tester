@@ -64,6 +64,14 @@ test_that_stbt_run_treats_failing_assertions_as_test_errors() {
     assert grep -q "FAIL: test.py: AssertionError: My assertion" test.log
 }
 
+test_that_stbt_run_prints_assert_statement_if_no_assertion_message_given() {
+    cat > test.py <<-EOF
+	assert 1 + 1 == 3
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q "FAIL: test.py: AssertionError: assert 1 + 1 == 3" test.log
+}
+
 test_that_stbt_run_saves_screenshot_on_match_timeout() {
     cat > test.py <<-EOF
 	wait_for_match(

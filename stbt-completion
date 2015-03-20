@@ -494,6 +494,7 @@ _stbt_test_filename_possibly_with_test_functions() {
                 _stbt_filename_possibly_with_test_functions) <<-EOF ||
 	tests/test_functions.py::test_that_this_test_is_run 
 	tests/test_functions.py::test_that_does_nothing 
+	tests/test_functions.py::test_that_asserts_the_impossible 
 	EOF
     _stbt_fail "unexpected completions for file with 'test_' functions"
     echo _stbt_filename_possibly_with_test_functions: ok
@@ -508,6 +509,7 @@ _stbt_test_filename_possibly_with_test_functions() {
                 _stbt_filename_possibly_with_test_functions) <<-EOF ||
 	test_that_this_test_is_run 
 	test_that_does_nothing 
+	test_that_asserts_the_impossible 
 EOF
     _stbt_fail "unexpected completions for file + ambiguous function prefix"
     echo _stbt_filename_possibly_with_test_functions: ok
