@@ -32,7 +32,9 @@ UNRELEASED.
 * `stbt run` and `stbt batch run` treat `AssertionError`s as test failures, not
   test errors. Along with the introduction of `match` in stb-tester 0.21 and
   `wait_until` in this release, this provides a more composable API. See the
-  documentation for `wait_until` for more details.
+  documentation for `wait_until` for more details.  `stbt` functions now
+  (correctly) raise `ValueError` if the arguments passed are incorrect rather
+  than checking for correctness with `assert`.
 
 * `stbt record` now creates python files with the testcase in a Python function
   instead of at the top level of the file. See the change to `stbt run` in the
@@ -99,12 +101,27 @@ UNRELEASED.
   to relate timestamps from the logfiles with the video. (Thanks to Dariusz
   Wiatrak, Máté Szendrő, and YouView for the patch.)
 
+* The text drawn on the video that is saved by `stbt run --save-video` and
+  `stbt batch run` now uses a more legible font and background, to make it
+  easier to read.  (Thanks to Máté Szendrő for this.)
+
 * API: New function `wait_until` runs any given function or lambda expression
   until it succeeds, or until a timeout. This provides the waiting behaviour of
   `wait_for_match`, but more general -- you can use it to look for a match or
   the absence of a match, you can use it with `match_text`, `is_screen_black`,
   user-defined functions, etc. See the [API documentation](
   http://stb-tester.com/stbt.html#wait_until) for more details.
+
+* report: The `stbt batch run` report now uses a logarithmic y-axis for test
+  duration, so the graph is still readable when there are very long test runs
+  alongside shorter ones.
+
+* report: Improved table layout so that it doesn't overflow into the right-hand
+  details pane if the window is too small. We don't allow table rows to
+  overflow, so the row height for each testrun is consistent and neater. We
+  also truncate the cell contents (such as the failure-reason column) using
+  CSS instead of truncating it in the HTML; this allows the full text of the
+  table cell to be searchable from the search box at the top of the report.
 
 * API: `is_frame_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
@@ -118,6 +135,12 @@ UNRELEASED.
 ##### Bugfixes and packaging fixes since 0.21
 
 * `stbt camera calibrate` no longer hangs during colour calibration ([#264])
+
+* report: Fixed filtering results for columns where the first row could be
+  confused as a date, because the date matching regex was too broad.
+
+* `stbt batch run` will no longer skip tests if the test-script reads data on
+  stdin.
 
 [#264]: https://github.com/stb-tester/stb-tester/issues/264
 
