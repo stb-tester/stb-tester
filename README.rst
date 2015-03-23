@@ -859,12 +859,12 @@ wait_until(callable_, timeout_secs=10, interval_secs=0)
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
-    fail:
+    fail::
 
         stbt.press("guide")
         assert match("guide.png")
 
-    Instead, use this:
+    Instead, use this::
 
         stbt.press("guide")
         assert wait_until(lambda: match("guide.png"))
