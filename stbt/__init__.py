@@ -994,11 +994,9 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
-               _config=None, user_patterns=None, user_words=None):
-    if lang is None:
-        lang = 'eng'
+def _tesseract(frame, region, mode, lang, _config,
+               user_patterns=None, user_words=None):
+
     if _config is None:
         _config = {}
 
@@ -1084,7 +1082,7 @@ def _tesseract(frame, region=Region.ALL,
 
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None, tesseract_config=None, tesseract_user_words=None,
+        lang="eng", tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None):
     """Return the text present in the video frame as a Unicode string.
 
@@ -1133,7 +1131,7 @@ def ocr(frame=None, region=Region.ALL,
         region = Region.ALL
 
     text, region = _tesseract(
-        frame, region, mode, lang, _config=tesseract_config,
+        frame, region, mode, lang, tesseract_config,
         user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
@@ -1212,7 +1210,7 @@ class TextMatchResult(namedtuple(
 
 
 def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
                tesseract_config=None):
     """Search the screen for the given text.
 
@@ -1249,7 +1247,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
     ts = _get_frame_timestamp(frame)
 
-    xml, region = _tesseract(frame, region, mode, lang, _config=_config)
+    xml, region = _tesseract(frame, region, mode, lang, _config)
     if xml == '':
         return TextMatchResult(ts, False, None, frame, text)
     hocr = lxml.etree.fromstring(xml)

@@ -467,7 +467,7 @@ match(image, frame=None, match_parameters=None, region=Region.ALL)
     `region` (stbt.Region) default: Region.ALL
       Only search within the specified region of the video frame.
 
-match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None)
+match_text(text, frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang='eng', tesseract_config=None)
     Search the screen for the given text.
 
     Can be used as an alternative to `match`, etc. searching for text
@@ -607,7 +607,7 @@ class MotionTimeout(UITestFailure)
 class NoVideo(UITestFailure)
     No video available from the source pipeline.
 
-ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None, tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
+ocr(frame=None, region=Region.ALL, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang='eng', tesseract_config=None, tesseract_user_words=None, tesseract_user_patterns=None)
     Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
