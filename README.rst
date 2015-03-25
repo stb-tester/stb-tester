@@ -302,8 +302,9 @@ INSTALLING FROM SOURCE
 
 Run "make install" from the stb-tester source directory.
 
-See http://stb-tester.com/getting-started.html for the required dependencies
-and configuration.
+See
+https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
+for the required dependencies and configuration.
 
 
 TEST SCRIPT FORMAT
