@@ -30,6 +30,7 @@ from distutils.version import LooseVersion
 import cv2
 import gi
 import numpy
+from enum import IntEnum
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 from _stbt import config
@@ -887,7 +888,7 @@ def wait_for_motion(
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
-class OcrMode(object):
+class OcrMode(IntEnum):
     """Options to control layout analysis and assume a certain form of image.
 
     For a (brief) description of each option, see the tesseract(1) man page:
@@ -904,6 +905,10 @@ class OcrMode(object):
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
     SINGLE_CHARACTER = 10
+
+    # For nicer formatting of `ocr` signature in generated API documentation:
+    def __repr__(self):
+        return str(self)
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
@@ -1032,7 +1037,7 @@ def _tesseract(frame, region, mode, lang, _config,
         os.mkdir(outdir)
 
         cmd = ["tesseract", '-l', lang, tmp + '/input.png',
-               outdir + '/output', "-psm", str(mode)]
+               outdir + '/output', "-psm", str(int(mode))]
 
         tessenv = os.environ.copy()
 
