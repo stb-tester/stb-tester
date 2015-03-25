@@ -335,15 +335,12 @@ class Region(namedtuple('Region', 'x y right bottom')):
             raise ValueError("'bottom' must be greater than 'y'")
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
-    def __unicode__(self):
-        if self == Region.ALL:
-            return u'Region.ALL'
-        else:
-            return u'Region(x=%s, y=%s, width=%s, height=%s)' \
-                % (self.x, self.y, self.width, self.height)
-
     def __str__(self):
-        return str(unicode(self))
+        if self == Region.ALL:
+            return 'Region.ALL'
+        else:
+            return 'Region(x=%s, y=%s, width=%s, height=%s)' \
+                % (self.x, self.y, self.width, self.height)
 
     def __repr__(self):
         if self == Region.ALL:
