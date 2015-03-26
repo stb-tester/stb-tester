@@ -16,12 +16,16 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 22
 
+Support for testcases as Python functions and using *assert* in testcases; new
+*wait_until* function; improved report formatting; support for the *Aviosys USB
+Net Power 8800 Pro* power outlet.
+
 UNRELEASED.
 
 Note: The version numbering scheme has changed from this release onwards.
-Instead of this being version 0.22 it is version 22.  stb-tester has been
-usable, stable, backwards-compatible software for years now so carrying a "0."
-would be misleading and adds no information.
+Instead of "0.22" this is version "22". Stb-tester has been usable, stable,
+backwards-compatible software for years now so carrying a "0." is misleading
+and adds no information.
 
 ##### Breaking changes since 0.21
 
@@ -96,7 +100,7 @@ would be misleading and adds no information.
   This is the format we recommend going forward (of course the old format is
   still supported). We have used this format exclusively for 6+ months in a
   client's project and it works well. The *stb-tester <small>ONE</small>*
-  appliance will require this format.
+  appliance requires this format.
 
   We recommend that you name your testcase functions to start with "test_", for
   future compatibility with test frameworks like [nose] and [pytest].
@@ -108,7 +112,7 @@ would be misleading and adds no information.
 
 * The text drawn on the video that is saved by `stbt run --save-video` and
   `stbt batch run` now uses a more legible font and background, to make it
-  easier to read.  (Thanks to Máté Szendrő for this.)
+  easier to read.  (Thanks to Máté Szendrő and YouView.)
 
 * API: New function `wait_until` runs any given function or lambda expression
   until it succeeds, or until a timeout. This provides the waiting behaviour of
