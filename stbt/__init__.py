@@ -30,6 +30,7 @@ from distutils.version import LooseVersion
 import cv2
 import gi
 import numpy
+from enum import IntEnum
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 from _stbt import config
@@ -89,18 +90,18 @@ warnings.filterwarnings(
 def press(key, interpress_delay_secs=None):
     """Send the specified key-press to the system under test.
 
-    The mechanism used to send the key-press depends on what you've configured
-    with `--control`.
+    :param str key:
+        The name of the key/button (as specified in your remote-control
+        configuration file).
 
-    `key` is a string. The allowed values depend on the control you're using:
-    If that's lirc, then `key` is a key name from your lirc config file.
+    :type interpress_delay_secs: int or float
+    :param interpress_delay_secs:
+        The minimum time to wait after a previous key-press, in order to
+        accommodate the responsiveness of the device-under-test.
 
-    `interpress_delay_secs` (float) default: From stbt.conf
-      Specifies a minimum time to wait after the preceding key press, in order
-      to accommodate the responsiveness of the device under test.
-
-      The global default for `interpress_delay_secs` can be set in the
-      configuration file, in section `press`.
+        This defaults to 0.3. You can override the global default value by
+        setting ``interpress_delay_secs`` in the ``[press]`` section of
+        stbt.conf.
     """
     if interpress_delay_secs is None:
         interpress_delay_secs = get_config(
@@ -124,94 +125,91 @@ def press(key, interpress_delay_secs=None):
 
 
 def draw_text(text, duration_secs=3):
-    """Write the specified `text` to the video output.
+    """Write the specified text to the output video.
 
-    `duration_secs` is the number of seconds that the text should be displayed.
+    :param str text: The text to write.
+
+    :param duration_secs: The number of seconds to display the text.
+    :type duration_secs: int or float
     """
     _display.draw(text, duration_secs)
 
 
 class MatchParameters(object):
     """Parameters to customise the image processing algorithm used by
-    `match`, `wait_for_match`, `detect_match`, and `press_until_match`.
+    `match`, `wait_for_match`, and `press_until_match`.
 
-    You can change the default values for these parameters by setting
-    a key (with the same name as the corresponding python parameter)
-    in the `[match]` section of your stbt.conf configuration file.
+    You can change the default values for these parameters by setting a key
+    (with the same name as the corresponding python parameter) in the `[match]`
+    section of stbt.conf. But we strongly recommend that you don't change the
+    default values from what is documented here.
 
-    `match_method` (str) default: From stbt.conf
-      The method that is used by the OpenCV `cvMatchTemplate` algorithm to find
-      likely locations of the "template" image within the larger source image.
+    You should only need to change these parameters when you're trying to match
+    a template image that isn't actually a perfect match -- for example if
+    there's a translucent background with live TV visible behind it; or if you
+    have a template image of a button's background and you want it to match even
+    if the text on the button doesn't match.
 
-      Allowed values are ``"sqdiff-normed"``, ``"ccorr-normed"``, and
-      ``"ccoeff-normed"``. For the meaning of these parameters, see the OpenCV
-      `cvMatchTemplate` reference documentation and tutorial:
+    :param str match_method:
+      The method to be used by the first pass of stb-tester's image matching
+      algorithm, to find the most likely location of the "template" image
+      within the larger source image.
 
-      * http://docs.opencv.org/modules/imgproc/doc/object_detection.html
-      * http://docs.opencv.org/doc/tutorials/imgproc/histograms/
-                                       template_matching/template_matching.html
+      Allowed values are "sqdiff-normed", "ccorr-normed", and "ccoeff-normed".
+      For the meaning of these parameters, see OpenCV's `cvMatchTemplate
+      <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`_.
 
-    `match_threshold` (float) default: From stbt.conf
-      How strong a result from `cvMatchTemplate` must be, to be considered a
-      match. A value of 0 will mean that anything is considered to match,
-      whilst a value of 1 means that the match has to be pixel perfect. (In
-      practice, a value of 1 is useless because of the way `cvMatchTemplate`
-      works, and due to limitations in the storage of floating point numbers in
-      binary.)
+      We recommend that you don't change this from its default value of
+      "sqdiff-normed".
 
-    `confirm_method` (str) default: From stbt.conf
-      The result of the previous `cvMatchTemplate` algorithm often gives false
-      positives (it reports a "match" for an image that shouldn't match).
-      `confirm_method` specifies an algorithm to be run just on the region of
-      the source image that `cvMatchTemplate` identified as a match, to confirm
-      or deny the match.
+    :param float match_threshold:
+      How strong a result from the first pass must be, to be considered a
+      match. Valid values range from 0 (anything is considered to match)
+      to 1 (the match has to be pixel perfect). This defaults to 0.8.
 
+    :param str confirm_method:
+      The method to be used by the second pass of stb-tester's image matching
+      algorithm, to confirm that the region identified by the first pass is a
+      good match.
+
+      The first pass often gives false positives (it reports a "match" for an
+      image that shouldn't match). The second pass is more CPU-intensive, but
+      it only checks the position of the image that the first pass identified.
       The allowed values are:
 
-      "``none``"
-          Do not confirm the match. Assume that the potential match found is
-          correct.
+      :"none":
+        Do not confirm the match. Assume that the potential match found is
+        correct.
 
-      "``absdiff``" (absolute difference)
-          The absolute difference between template and source Region of
-          Interest (ROI) is calculated; thresholded and eroded to account for
-          potential noise; and if any white pixels remain then the match is
-          deemed false.
+      :"absdiff":
+        Compare the absolute difference of each pixel from the template image
+        against its counterpart from the candidate region in the source video
+        frame.
 
-      "``normed-absdiff``" (normalized absolute difference)
-          As with ``absdiff`` but both template and ROI are normalized before
-          the absolute difference is calculated. This has the effect of
-          exaggerating small differences between images with similar, small
-          ranges of pixel brightnesses (luminance).
+      :"normed-absdiff":
+        Normalise the pixel values from both the template image and the
+        candidate region in the source video frame, then compare the absolute
+        difference as with "absdiff".
 
-          This method is more accurate than ``absdiff`` at reporting true and
-          false matches when there is noise involved, particularly aliased
-          text. However it will, in general, require a greater
-          confirm_threshold than the equivalent match with absdiff.
+        This gives better results with low-contrast images. We recommend setting
+        this as the default `confirm_method` in stbt.conf, with a
+        `confirm_threshold` of 0.30.
 
-          When matching solid regions of colour, particularly where there are
-          regions of either black or white, ``absdiff`` is better than
-          ``normed-absdiff`` because it does not alter the luminance range,
-          which can lead to false matches. For example, an image which is half
-          white and half grey, once normalised, will match a similar image
-          which is half white and half black because the grey becomes
-          normalised to black so that the maximum luminance range of [0..255]
-          is occupied. However, if the images are dissimilar enough in
-          luminance, they will have failed to match the `cvMatchTemplate`
-          algorithm and won't have reached the "confirm" stage.
+    :param float confirm_threshold:
+      The maximum allowed difference between any given pixel from the template
+      image and its counterpart from the candidate region in the source video
+      frame, as a fraction of the pixel's total luminance range.
 
-    `confirm_threshold` (float) default: From stbt.conf
-      Increase this value to avoid false negatives, at the risk of increasing
-      false positives (a value of 1.0 will report a match every time).
+      Valid values range from 0 (more strict) to 1.0 (less strict).
+      Useful values tend to be around 0.16 for the "absdiff" method, and 0.30
+      for the "normed-absdiff" method.
 
-    `erode_passes` (int) default: From stbt.conf
-      The number of erode steps in the `absdiff` and `normed-absdiff` confirm
-      algorithms. Increasing the number of erode steps makes your test less
-      sensitive to noise and small variances, at the cost of being more likely
-      to report a false positive.
+    :param int erode_passes:
+      After the "absdiff" or "normed-absdiff" absolute difference is taken,
+      stb-tester runs an erosion algorithm that removes single-pixel differences
+      to account for noise. Useful values are 1 (the default) and 0 (to disable
+      this step).
 
-    Please let us know if you are having trouble with image matches so that we
-    can further improve the matching algorithm.
     """
 
     def __init__(self, match_method=None, match_threshold=None,
@@ -253,15 +251,13 @@ class Position(namedtuple('Position', 'x y')):
 
 
 class Region(namedtuple('Region', 'x y right bottom')):
-    u"""Rectangular region within the video frame.
+    u"""
+    ``Region(x, y, width=width, height=height)`` or
+    ``Region(x, y, right=right, bottom=bottom)``
 
-    `x` and `y` are the coordinates of the top left corner of the region,
-    measured in pixels from the top left of the video frame. The `width` and
-    `height` of the rectangle are also measured in pixels.
+    Rectangular region within the video frame.
 
-    Example:
-
-    regions a, b and c::
+    For example, given the following regions a, b, and c::
 
         - 01234567890123
         0 ░░░░░░░░
@@ -275,49 +271,65 @@ class Region(namedtuple('Region', 'x y right bottom')):
         8     ░░░░░░b░░
         9     ░░░░░░░░░
 
-        >>> a = Region(0, 0, 8, 8)
-        >>> b = Region.from_extents(4, 4, 13, 10)
-        >>> print b
-        Region(x=4, y=4, width=9, height=6)
-        >>> c = Region(10, 4, 3, 2)
-        >>> a.right
-        8
-        >>> b.bottom
-        10
-        >>> b.contains(c)
-        True
-        >>> a.contains(b)
-        False
-        >>> c.contains(b)
-        False
-        >>> b.extend(x=6, bottom=-4) == c
-        True
-        >>> a.extend(right=5).contains(c)
-        True
-        >>> a.extend(x=3).width
-        5
-        >>> a.extend(right=-3).width
-        5
-        >>> print Region.intersect(a, b)
-        Region(x=4, y=4, width=4, height=4)
-        >>> Region.intersect(c, b) == c
-        True
-        >>> print Region.intersect(a, c)
-        None
-        >>> print Region.intersect(None, a)
-        None
-        >>> quadrant2 = Region(x=float("-inf"), y=float("-inf"),
-        ...                    right=0, bottom=0)
-        >>> quadrant2.translate(2, 2)
-        Region(x=-inf, y=-inf, right=2, bottom=2)
-        >>> Region.intersect(Region.ALL, c) == c
-        True
-        >>> Region.ALL
-        Region.ALL
-        >>> print Region.ALL
-        Region.ALL
-        >>> print c.translate(x=-9, y=-3)
-        Region(x=1, y=1, width=3, height=2)
+    >>> a = Region(0, 0, width=8, height=8)
+    >>> b = Region(4, 4, right=13, bottom=10)
+    >>> c = Region(10, 4, width=3, height=2)
+    >>> a.right
+    8
+    >>> b.bottom
+    10
+    >>> b.contains(c), a.contains(b), c.contains(b)
+    (True, False, False)
+    >>> b.extend(x=6, bottom=-4) == c
+    True
+    >>> a.extend(right=5).contains(c)
+    True
+    >>> a.width, a.extend(x=3).width, a.extend(right=-3).width
+    (8, 5, 5)
+    >>> print Region.intersect(a, b)
+    Region(x=4, y=4, width=4, height=4)
+    >>> Region.intersect(a, b) == Region.intersect(b, a)
+    True
+    >>> Region.intersect(c, b) == c
+    True
+    >>> print Region.intersect(a, c)
+    None
+    >>> print Region.intersect(None, a)
+    None
+    >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
+    >>> quadrant.translate(2, 2)
+    Region(x=-inf, y=-inf, right=2, bottom=2)
+    >>> print c.translate(x=-9, y=-3)
+    Region(x=1, y=1, width=3, height=2)
+    >>> Region.intersect(Region.ALL, c) == c
+    True
+    >>> Region.ALL
+    Region.ALL
+    >>> print Region.ALL
+    Region.ALL
+
+    .. py:attribute:: x
+
+        The x coordinate of the left edge of the region, measured in pixels
+        from the left of the video frame (inclusive).
+
+    .. py:attribute:: y
+
+        The y coordinate of the top edge of the region, measured in pixels from
+        the top of the video frame (inclusive).
+
+    .. py:attribute:: right
+
+        The x coordinate of the right edge of the region, measured in pixels
+        from the left of the video frame (exclusive).
+
+    .. py:attribute:: bottom
+
+        The y coordinate of the bottom edge of the region, measured in pixels
+        from the top of the video frame (exclusive).
+
+    ``x``, ``y``, ``right``, and ``bottom`` can be infinite -- that is,
+    ``float("inf")`` or ``-float("inf")``.
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         if (width is None) == (right is None):
@@ -334,15 +346,12 @@ class Region(namedtuple('Region', 'x y right bottom')):
             raise ValueError("'bottom' must be greater than 'y'")
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
-    def __unicode__(self):
-        if self == Region.ALL:
-            return u'Region.ALL'
-        else:
-            return u'Region(x=%s, y=%s, width=%s, height=%s)' \
-                % (self.x, self.y, self.width, self.height)
-
     def __str__(self):
-        return str(unicode(self))
+        if self == Region.ALL:
+            return 'Region.ALL'
+        else:
+            return 'Region(x=%s, y=%s, width=%s, height=%s)' \
+                % (self.x, self.y, self.width, self.height)
 
     def __repr__(self):
         if self == Region.ALL:
@@ -350,18 +359,39 @@ class Region(namedtuple('Region', 'x y right bottom')):
         else:
             return super(Region, self).__repr__()
 
+    @property
+    def width(self):
+        """The width of the region, measured in pixels."""
+        return self.right - self.x
+
+    @property
+    def height(self):
+        """The height of the region, measured in pixels."""
+        return self.bottom - self.y
+
     @staticmethod
     def from_extents(x, y, right, bottom):
         """Create a Region using right and bottom extents rather than width and
-        height."""
+        height.
+
+        Deprecated since we added ``right`` and ``bottom`` to Region
+        constructor.
+
+        >>> b = Region.from_extents(4, 4, 13, 10)
+        >>> print b
+        Region(x=4, y=4, width=9, height=6)
+        """
         return Region(x, y, right=right, bottom=bottom)
 
     @staticmethod
     def intersect(a, b):
-        """Returns the intersection of the regions a and b.  If the regions
-        don't intersect returns None.  Either a or b can also be None so
-        intersect is commutative and associative so can behave like an
-        operator."""
+        """
+        :returns: The intersection of regions ``a`` and ``b``, or ``None`` if
+            the regions don't intersect.
+
+        Either ``a`` or ``b`` can be ``None`` so intersect is commutative and
+        associative.
+        """
         if a is None or b is None:
             return None
         else:
@@ -372,30 +402,24 @@ class Region(namedtuple('Region', 'x y right bottom')):
             else:
                 return None
 
-    @property
-    def width(self):
-        """The width of the region"""
-        return self.right - self.x
-
-    @property
-    def height(self):
-        """The height of the region"""
-        return self.bottom - self.y
-
     def contains(self, other):
-        """Checks whether other is entirely contained within self"""
+        """:returns: True if ``other`` is entirely contained within self."""
         return (other and self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
 
     def extend(self, x=0, y=0, right=0, bottom=0):
-        """Returns a new region with the positions of the edges of the region
-        adjusted by the given amounts."""
+        """
+        :returns: A new region with the edges of the region adjusted by the
+            given amounts.
+        """
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
     def translate(self, x=0, y=0):
-        """Returns a new region with the position of the region adjusted by the
-        given amounts."""
+        """
+        :returns: A new region with the position of the region adjusted by the
+            given amounts.
+        """
         return Region.from_extents(self.x + x, self.y + y,
                                    self.right + x, self.bottom + y)
 
@@ -427,17 +451,18 @@ def _bounding_box(a, b):
 
 
 class MatchResult(object):
-    """
-    * `timestamp`: Video stream timestamp.
-    * `match`: Boolean result, the same as evaluating `MatchResult` as a bool.
-      e.g: `if match_result:` will behave the same as `if match_result.match`.
-    * `region`: The `Region` in the video frame where the image was found.
-    * `first_pass_result`: Value between 0 (poor) and 1.0 (excellent match)
-      from the first pass of the two-pass templatematch algorithm.
-    * `frame`: The video frame that was searched, in OpenCV format.
-    * `image`: The template image that was searched for, as given to `match`.
-    * `position`: `Position` of the match, the same as in `region`. Included
-      for backwards compatibility; we recommend using `region` instead.
+    """The result from `match`.
+
+    * ``timestamp``: Video stream timestamp.
+    * ``match``: Boolean result, the same as evaluating `MatchResult` as a bool.
+      That is, ``if match_result:`` will behave the same as
+      ``if match_result.match:``.
+    * ``region``: The `Region` in the video frame where the image was found.
+    * ``first_pass_result``: Value between 0 (poor) and 1.0 (excellent match)
+      from the first pass of stb-tester's two-pass image matching algorithm
+      (see `MatchParameters` for details).
+    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``image``: The template image that was searched for, as given to `match`.
     """
     # pylint: disable=W0621
     def __init__(
@@ -520,31 +545,35 @@ def _image_region(image):
 
 def match(image, frame=None, match_parameters=None, region=Region.ALL):
     """
-    Search for `image` in a single frame of the source video stream.
-    Returns a `MatchResult`.
+    Search for an image in a single video frame.
 
-    `image` (string or numpy.array)
-      The image used as the template during matching. It can either be the
-      filename of a png file on disk or a numpy array containing the pixel data
-      in 8-bit BGR format.
+    :type image: string or numpy.ndarray
+    :param image:
+      The image to search for. It can be the filename of a png file on disk, or
+      a numpy array containing the pixel data in 8-bit BGR format.
 
       8-bit BGR numpy arrays are the same format that OpenCV uses for images.
       This allows generating templates on the fly (possibly using OpenCV) or
-      searching for images captured from the system under test earlier in the
+      searching for images captured from the system-under-test earlier in the
       test script.
 
-    `frame` (numpy.array) default: None
+    :param numpy.ndarray frame:
       If this is specified it is used as the video frame to search in;
-      otherwise a frame is grabbed from the source video stream. It is a
-      `numpy.array` in OpenCV format (for example as returned by `frames` and
+      otherwise a new frame is grabbed from the system-under-test. This is an
+      image in OpenCV format (for example as returned by `frames` and
       `get_frame`).
 
-    `match_parameters` (stbt.MatchParameters) default: MatchParameters()
-      Customise the image matching algorithm. See the documentation for
-      `MatchParameters` for details.
+    :param match_parameters:
+      Customise the image matching algorithm. See `MatchParameters` for details.
+    :type match_parameters: `MatchParameters`
 
-    `region` (stbt.Region) default: Region.ALL
+    :param region:
       Only search within the specified region of the video frame.
+    :type region: `Region`
+
+    :returns:
+      A `MatchResult`, which will evaluate to true if a match was found,
+      false otherwise.
     """
     if match_parameters is None:
         match_parameters = MatchParameters()
@@ -582,7 +611,7 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
-    processed from the source video stream.
+    processed from the system-under-test's video stream.
 
     `image` is the image used as the template during matching.  See `stbt.match`
     for more information.
@@ -619,7 +648,8 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
 
 
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
-    """
+    """The result from `detect_motion`.
+
     * `timestamp`: Video stream timestamp.
     * `motion`: Boolean result.
     """
@@ -628,23 +658,32 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
 
 def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
-    processed from the source video stream.
+    processed from the system-under-test's video stream.
 
-    Returns after `timeout_secs` seconds. (Note that the caller can also choose
-    to stop iterating over this function's results at any time.)
+    The `MotionResult` indicates whether any motion was detected -- that is,
+    any difference between two consecutive frames.
 
-    `noise_threshold` (float) default: From stbt.conf
-      `noise_threshold` is a parameter used by the motiondetect algorithm.
-      Increase `noise_threshold` to avoid false negatives, at the risk of
-      increasing false positives (a value of 0.0 will never report motion).
-      This is particularly useful with noisy analogue video sources.
-      The default value is read from `motion.noise_threshold` in your
-      configuration file.
+    :type timeout_secs: int or float or None
+    :param timeout_secs:
+        A timeout in seconds. After this timeout the iterator will be exhausted.
+        Thas is, a ``for`` loop like ``for m in detect_motion(timeout_secs=10)``
+        will terminate after 10 seconds. If ``timeout_secs`` is ``None`` then
+        the iterator will yield frames forever. Note that you can stop
+        iterating (for example with ``break``) at any time.
 
-    `mask` (str) default: None
-      A mask is a black and white image that specifies which part of the image
-      to search for motion. White pixels select the area to search; black
-      pixels the area to ignore.
+    :param float noise_threshold:
+        The amount of noise to ignore. This is only useful with noisy analogue
+        video sources. Valid values range from 0 (all differences are
+        considered noise; a value of 0 will never report motion) to 1.0 (any
+        difference is considered motion).
+
+        This defaults to 0.84. You can override the global default value by
+        setting ``noise_threshold`` in the ``[motion]`` section of stbt.conf.
+
+    :param str mask:
+        The filename of a black & white image that specifies which part of the
+        image to search for motion. White pixels select the area to search;
+        black pixels select the area to ignore.
     """
 
     if noise_threshold is None:
@@ -715,25 +754,25 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    noise_threshold=None, match_parameters=None):
-    """Search for `image` in the source video stream.
+    """Search for an image in the system-under-test's video stream.
 
-    Returns `MatchResult` when `image` is found.
-    Raises `MatchTimeout` if no match is found after `timeout_secs` seconds.
+    :param image: The image to search for. See `match`.
 
-    `image` is the image used as the template during matching.  See `match`
-    for more information.
+    :type timeout_secs: int or float or None
+    :param timeout_secs:
+        A timeout in seconds. This function will raise `MatchTimeout` if no
+        match is found within this time.
 
-    `consecutive_matches` forces this function to wait for several consecutive
-    frames with a match found at the same x,y position. Increase
-    `consecutive_matches` to avoid false positives due to noise.
+    :param int consecutive_matches:
+        Forces this function to wait for several consecutive frames with a
+        match found at the same x,y position. Increase ``consecutive_matches``
+        to avoid false positives due to noise, or to wait for a moving
+        selection to stop moving.
 
-    The templatematch parameter `noise_threshold` is marked for deprecation
-    but appears in the args for backward compatibility with positional
-    argument syntax. It will be removed in a future release; please use
-    `match_parameters.confirm_threshold` instead.
+    :param match_parameters: See `match`.
 
-    Specify `match_parameters` to customise the image matching algorithm. See
-    the documentation for `MatchParameters` for details.
+    :returns: `MatchResult` when the image is found.
+    :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
     """
 
     if match_parameters is None:
@@ -771,27 +810,31 @@ def press_until_match(
         noise_threshold=None,
         max_presses=None,
         match_parameters=None):
-    """Calls `press` as many times as necessary to find the specified `image`.
+    """Call `press` as many times as necessary to find the specified image.
 
-    Returns `MatchResult` when `image` is found.
-    Raises `MatchTimeout` if no match is found after `max_presses` times.
+    :param key: See `press`.
 
-    `interval_secs` (int) default: From stbt.conf
-      The number of seconds to wait for a match before pressing again.
+    :param image: See `match`.
 
-    `max_presses` (int) default: From stbt.conf
-      The number of times to try pressing the key and looking for the image
-      before giving up and throwing `MatchTimeout`
+    :type interval_secs: int or float
+    :param interval_secs:
+        The number of seconds to wait for a match before pressing again.
+        Defaults to 3.
 
-    `noise_threshold` (string) DEPRECATED
-      `noise_threshold` is marked for deprecation but appears in the args for
-      backward compatibility with positional argument syntax. It will be
-      removed in a future release; please use
-      `match_parameters.confirm_threshold` instead.
+        You can override the global default value by setting ``interval_secs``
+        in the ``[press_until_match]`` section of stbt.conf.
 
-    `match_parameters` (MatchParameters) default: MatchParameters()
-      Customise the image matching algorithm. See the documentation for
-      `MatchParameters` for details.
+    :param int max_presses:
+        The number of times to try pressing the key and looking for the image
+        before giving up and raising `MatchTimeout`. Defaults to 10.
+
+        You can override the global default value by setting ``max_presses``
+        in the ``[press_until_match]`` section of stbt.conf.
+
+    :param match_parameters: See `match`.
+
+    :returns: `MatchResult` when the image is found.
+    :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
     """
     if interval_secs is None:
         # Should this be float?
@@ -828,34 +871,34 @@ def press_until_match(
 def wait_for_motion(
         timeout_secs=10, consecutive_frames=None,
         noise_threshold=None, mask=None):
-    """Search for motion in the source video stream.
+    """Search for motion in the system-under-test's video stream.
 
-    Returns `MotionResult` when motion is detected.
-    Raises `MotionTimeout` if no motion is detected after `timeout_secs`
-    seconds.
+    "Motion" is difference in pixel values between two consecutive frames.
 
-    `consecutive_frames` (str) default: From stbt.conf
-      Considers the video stream to have motion if there were differences
-      between the specified number of `consecutive_frames`, which can be:
+    :type timeout_secs: int or float or None
+    :param timeout_secs:
+        A timeout in seconds. This function will raise `MotionTimeout` if no
+        motion is detected within this time.
 
-      * a positive integer value, or
-      * a string in the form "x/y", where `x` is the number of frames with
-        motion detected out of a sliding window of `y` frames.
+    :type consecutive_frames: int or str
+    :param consecutive_frames:
+        Considers the video stream to have motion if there were differences
+        between the specified number of consecutive frames. This can be:
 
-      The default value is read from `motion.consecutive_frames` in your
-      configuration file.
+        * a positive integer value, or
+        * a string in the form "x/y", where "x" is the number of frames with
+          motion detected out of a sliding window of "y" frames.
 
-    `noise_threshold` (float) default: From stbt.conf
-      Increase `noise_threshold` to avoid false negatives, at the risk of
-      increasing false positives (a value of 0.0 will never report motion).
-      This is particularly useful with noisy analogue video sources.
-      The default value is read from `motion.noise_threshold` in your
-      configuration file.
+        This defaults to "10/20". You can override the global default value by
+        setting ``consecutive_frames`` in the ``[motion]`` section of stbt.conf.
 
-    `mask` (str) default: None
-      A mask is a black and white image that specifies which part of the image
-      to search for motion. White pixels select the area to search; black
-      pixels the area to ignore.
+    :param float noise_threshold: See `detect_motion`.
+
+    :param str mask: See `detect_motion`.
+
+    :returns: `MotionResult` when motion is detected.
+    :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
+        seconds.
     """
 
     if consecutive_frames is None:
@@ -887,11 +930,12 @@ def wait_for_motion(
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
-class OcrMode(object):
+class OcrMode(IntEnum):
     """Options to control layout analysis and assume a certain form of image.
 
-    For a (brief) description of each option, see the tesseract(1) man page:
-    http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html
+    For a (brief) description of each option, see the `tesseract(1)
+    <http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_options>`_
+    man page.
     """
     ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
     PAGE_SEGMENTATION_WITH_OSD = 1
@@ -904,6 +948,10 @@ class OcrMode(object):
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
     SINGLE_CHARACTER = 10
+
+    # For nicer formatting of `ocr` signature in generated API documentation:
+    def __repr__(self):
+        return str(self)
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
@@ -994,11 +1042,9 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
-               _config=None, user_patterns=None, user_words=None):
-    if lang is None:
-        lang = 'eng'
+def _tesseract(frame, region, mode, lang, _config,
+               user_patterns=None, user_words=None):
+
     if _config is None:
         _config = {}
 
@@ -1034,7 +1080,7 @@ def _tesseract(frame, region=Region.ALL,
         os.mkdir(outdir)
 
         cmd = ["tesseract", '-l', lang, tmp + '/input.png',
-               outdir + '/output', "-psm", str(mode)]
+               outdir + '/output', "-psm", str(int(mode))]
 
         tessenv = os.environ.copy()
 
@@ -1084,42 +1130,61 @@ def _tesseract(frame, region=Region.ALL,
 
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None, tesseract_config=None, tesseract_user_words=None,
+        lang="eng", tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None):
-    """Return the text present in the video frame as a Unicode string.
+    r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
-    open-source OCR engine, which must be installed on your system.
+    open-source OCR engine.
 
-    If `frame` isn't specified, take a frame from the source video stream.
-    If `region` is specified, only process that region of the frame; otherwise
-    process the entire frame.
+    :param frame:
+        The video frame to process. If not specified, take a frame from the
+        system-under-test.
 
-    `lang` is the three letter ISO-639-3 language code of the language you are
-    attempting to read.  e.g. "eng" for English or "deu" for German.  More than
-    one language can be specified if joined with '+'.  e.g. lang="eng+deu" means
-    that the text to be read may be in a mixture of English and German.  To read
-    a language you must have the corresponding tesseract language pack
-    installed.  This language code is passed directly down to the tesseract OCR
-    engine.  For more information see the tesseract documentation.  `lang`
-    defaults to English.
+    :param region: Only search within the specified region of the video frame.
+    :type region: `Region`
 
-    `tesseract_config` (dict)
-      Allows passing configuration down to the underlying OCR engine.  See the
-      tesseract documentation for details:
-      https://code.google.com/p/tesseract-ocr/wiki/ControlParams
+    :param mode: Tesseract's layout analysis mode.
+    :type mode: `OcrMode`
 
-    `tesseract_user_words` (list of unicode strings)
-      List of words to be added to the tesseract dictionary.  Can help matching.
-      To replace the tesseract system dictionary set
-      `tesseract_config['load_system_dawg'] = False` and
-      `tesseract_config['load_freq_dawg'] = False`.
+    :param str lang:
+        The three-letter
+        `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`_
+        language code of the language you are attempting to read; for example
+        "eng" for English or "deu" for German. More than one language can be
+        specified by joining with '+'; for example "eng+deu" means that the
+        text to be read may be in a mixture of English and German. Defaults to
+        English.
 
-    `tesseract_user_patterns` (list of unicode strings)
-      List of patterns to be considered as if they had been added to the
-      tesseract dictionary.  Can aid matching.  See the tesseract documentation
-      for information on the format of the patterns:
-      http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_config_files_and_augmenting_with_user_data
+    :param dict tesseract_config:
+        Allows passing configuration down to the underlying OCR engine.
+        See the `tesseract documentation
+        <https://code.google.com/p/tesseract-ocr/wiki/ControlParams>`_
+        for details.
+
+    :type tesseract_user_words: list of unicode strings
+    :param tesseract_user_words:
+        List of words to be added to the tesseract dictionary. To replace the
+        tesseract system dictionary altogether, also set
+        ``tesseract_config={'load_system_dawg': False, 'load_freq_dawg':
+        False}``.
+
+    :type tesseract_user_patterns: list of unicode strings
+    :param tesseract_user_patterns:
+        List of patterns to add to the tesseract dictionary. The tesseract
+        pattern language corresponds roughly to the following regular
+        expressions::
+
+            tesseract  regex
+            =========  ===========
+            \c         [a-zA-Z]
+            \d         [0-9]
+            \n         [a-zA-Z0-9]
+            \p         [:punct:]
+            \a         [a-z]
+            \A         [A-Z]
+            \*         *
+
     """
     if frame is None:
         frame = _display.get_sample()
@@ -1133,7 +1198,7 @@ def ocr(frame=None, region=Region.ALL,
         region = Region.ALL
 
     text, region = _tesseract(
-        frame, region, mode, lang, _config=tesseract_config,
+        frame, region, mode, lang, tesseract_config,
         user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
@@ -1187,13 +1252,18 @@ def _hocr_elem_region(elem):
 
 class TextMatchResult(namedtuple(
         "TextMatchResult", "timestamp match region frame text")):
-    """Return type of `match_text`.
 
-    timestamp: Timestamp of the frame matched against
-    match (bool): Whether the text was found or not
-    region (Region): The bounding box of the text found or None if no text found
-    frame: The video frame matched against
-    text (unicode): The text searched for
+    """The result from `match_text`.
+
+    * ``timestamp``: Video stream timestamp.
+    * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
+      bool. That is, ``if result:`` will behave the same as
+      ``if result.match:``.
+    * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
+      no text was found.
+    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``text``: The text (unicode string) that was searched for, as given to
+      `match_text`.
     """
     # pylint: disable=E1101
     def __nonzero__(self):
@@ -1212,33 +1282,32 @@ class TextMatchResult(namedtuple(
 
 
 def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
                tesseract_config=None):
-    """Search the screen for the given text.
+    """Search for the specified text in a single video frame.
 
-    Can be used as an alternative to `match`, etc. searching for text
-    instead of an image.
+    This can be used as an alternative to `match`, searching for text instead
+    of an image.
 
-    Args:
-        text (unicode): Text to search for.
+    :param unicode text: The text to search for.
+    :param frame: See `ocr`.
+    :param region: See `ocr`.
+    :param mode: See `ocr`.
+    :param lang: See `ocr`.
+    :param tesseract_config: See `ocr`.
 
-    Kwargs:
-        Refer to the arguments to `ocr()`.
+    :returns:
+      A `TextMatchResult`, which will evaluate to True if the text was found,
+      false otherwise.
 
-    Returns:
-        TextMatchResult.  Will evaluate to True if text matched, false
-        otherwise.
+    For example, to select a button in a vertical menu by name (in this case
+    "TV Guide")::
 
-    Example:
-
-    Select a button in a vertical menu by name.  In this case "TV Guide".
-
-    ::
-
-        m = stbt.match_text(u"TV Guide", match('button-background.png').region)
+        m = stbt.match_text("TV Guide")
         assert m.match
         while not stbt.match('selected-button.png').region.contains(m.region):
-            press('KEY_DOWN')
+            stbt.press('KEY_DOWN')
+
     """
     import lxml.etree
     if frame is None:
@@ -1249,7 +1318,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
     ts = _get_frame_timestamp(frame)
 
-    xml, region = _tesseract(frame, region, mode, lang, _config=_config)
+    xml, region = _tesseract(frame, region, mode, lang, _config)
     if xml == '':
         return TextMatchResult(ts, False, None, frame, text)
     hocr = lxml.etree.fromstring(xml)
@@ -1270,14 +1339,19 @@ def match_text(text, frame=None, region=Region.ALL,
 
 
 def frames(timeout_secs=None):
-    """Generator that yields frames captured from the GStreamer pipeline.
+    """Generator that yields video frames captured from the system-under-test.
 
-    "timeout_secs" is in seconds elapsed, from the method call. Note that
-    you can also simply stop iterating over the sequence yielded by this
-    method.
+    :type timeout_secs: int or float or None
+    :param timeout_secs:
+      A timeout in seconds. After this timeout the iterator will be exhausted.
+      That is, a ``for`` loop like ``for f, t in frames(timeout_secs=10)`` will
+      terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the default)
+      then the iterator will yield frames forever. Note that you can stop
+      iterating (for example with ``break``) at any time.
 
-    Returns an (image, timestamp) tuple for every frame captured, where
-    "image" is in OpenCV format.
+    :returns:
+      An ``(image, timestamp)`` tuple for each video frame, where ``image`` is
+      a `numpy.ndarray` object (that is, an OpenCV image).
     """
     return _display.frames(timeout_secs)
 
@@ -1292,7 +1366,7 @@ def save_frame(image, filename):
 
 
 def get_frame():
-    """Returns an OpenCV image of the current video frame."""
+    """:returns: The latest video frame in OpenCV format (`numpy.ndarray`)."""
     with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
         return frame.copy()
 
@@ -1300,21 +1374,21 @@ def get_frame():
 def is_screen_black(frame=None, mask=None, threshold=None):
     """Check for the presence of a black screen in a video frame.
 
-    `frame` (numpy.array)
+    :param numpy.ndarray frame:
       If this is specified it is used as the video frame to check; otherwise a
-      frame is grabbed from the source video stream. It is a `numpy.array` in
+      new frame is grabbed from the system-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).
 
-    `mask` (string)
+    :param str mask:
       The filename of a black & white image mask. It must have white pixels for
       parts of the frame to check and black pixels for any parts to ignore.
 
-    `threshold` (int) default: From stbt.conf
+    :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
       is not always 0. To differentiate almost-black from non-black pixels, a
-      binary threshold is applied to the frame. The `threshold` value is
-      in the range 0 (black) to 255 (white). The global default can be changed
-      by setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
+      binary threshold is applied to the frame. The `threshold` value is in the
+      range 0 (black) to 255 (white). The global default can be changed by
+      setting `threshold` in the `[is_screen_black]` section of stbt.conf.
     """
     if threshold is None:
         threshold = get_config('is_screen_black', 'threshold', type_=int)
@@ -1342,22 +1416,22 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 def wait_until(callable_, timeout_secs=10, interval_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
-    `callable_` is any python callable, such as a function or a lambda
-    expression. It will be called repeatedly (with a delay of `interval_secs`
+    ``callable_`` is any python callable, such as a function or a lambda
+    expression. It will be called repeatedly (with a delay of ``interval_secs``
     seconds between successive calls) until it succeeds (that is, it returns a
-    truthy value) or until `timeout_secs` seconds have passed. In both cases,
-    `wait_until` returns the value that `callable_` returns.
+    truthy value) or until ``timeout_secs`` seconds have passed. In both cases,
+    ``wait_until`` returns the value that ``callable_`` returns.
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
     fail::
 
-        stbt.press("guide")
+        press("KEY_EPG")
         assert match("guide.png")
 
     Instead, use this::
 
-        stbt.press("guide")
+        press("KEY_EPG")
         assert wait_until(lambda: match("guide.png"))
 
     Note that instead of the above `assert wait_until(...)` you could use
@@ -1365,12 +1439,12 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
     also works with stbt's other functions, like `match_text` and
     `is_screen_black`.
 
-    `wait_until` also allows composing more complex conditions, such as::
+    `wait_until` allows composing more complex conditions, such as::
 
-        # Wait until something disappears
+        # Wait until something disappears:
         assert wait_until(lambda: not match("xyz.png"))
 
-        # Assert that something doesn't appear within 10 seconds
+        # Assert that something doesn't appear within 10 seconds:
         assert not wait_until(lambda: match("xyz.png"))
 
         # Assert that two images are present at the same time:
@@ -1386,9 +1460,8 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
       (unless you specify it as a second parameter to `assert`, which is
       tedious and we don't expect you to do it), and
     * The exception won't have the offending video-frame attached (so the
-      screenshot that `stbt batch run` saves alongside the failing test logs
-      will be a few frames later than the frame that actually caused the test
-      to fail).
+      screenshot in the test-run artifacts will be a few frames later than the
+      frame that actually caused the test to fail).
 
     We hope to solve both of the above drawbacks at some point in the future.
     """
@@ -1425,34 +1498,42 @@ def _callable_description(callable_):
 def as_precondition(message):
     """Context manager that replaces test failures with test errors.
 
-    If you run your test scripts with stb-tester's batch runner, the reports it
-    generates will show test failures (that is, `stbt.UITestFailure` or
+    Stb-tester's reports show test failures (that is, `UITestFailure` or
     `AssertionError` exceptions) as red results, and test errors (that is,
     unhandled exceptions of any other type) as yellow results. Note that
     `wait_for_match`, `wait_for_motion`, and similar functions raise a
-    `stbt.UITestFailure` when they detect a failure. By running such functions
-    inside an `as_precondition` context, any `stbt.UITestFailure` or
+    `UITestFailure` when they detect a failure. By running such functions
+    inside an `as_precondition` context, any `UITestFailure` or
     `AssertionError` exceptions they raise will be caught, and a
-    `stbt.PreconditionError` will be raised instead.
+    `PreconditionError` will be raised instead.
 
-    When running a single test script hundreds or thousands of times to
-    reproduce an intermittent defect, it is helpful to mark unrelated failures
-    as test errors (yellow) rather than test failures (red), so that you can
-    focus on diagnosing the failures that are most likely to be the particular
-    defect you are interested in.
+    When running a single testcase hundreds or thousands of times to reproduce
+    an intermittent defect, it is helpful to mark unrelated failures as test
+    errors (yellow) rather than test failures (red), so that you can focus on
+    diagnosing the failures that are most likely to be the particular defect
+    you are looking for. For more details see `Test failures vs. errors
+    <http://stb-tester.com/preconditions>`_.
 
-    `message` is a string describing the precondition (it is not the error
-    message if the precondition fails).
+    :param str message:
+        A description of the precondition. Word this positively: "Channels
+        tuned", not "Failed to tune channels".
 
-    For example:
+    :raises:
+        `PreconditionError` if the wrapped code block raises a `UITestFailure`
+        or `AssertionError`.
 
-    >>> with as_precondition("Channels tuned"):  #doctest:+NORMALIZE_WHITESPACE
-    ...     # Call tune_channels(), which raises:
-    ...     raise UITestFailure("Failed to tune channels")
-    Traceback (most recent call last):
-      ...
-    PreconditionError: Didn't meet precondition 'Channels tuned'
-    (original exception was: Failed to tune channels)
+    Example::
+
+        def test_that_the_on_screen_id_is_shown_after_booting():
+            channel = 100
+
+            with stbt.as_precondition("Tuned to channel %s" % channel):
+                mainmenu.close_any_open_menu()
+                channels.goto_channel(channel)
+                power.cold_reboot()
+                assert channels.is_on_channel(channel)
+
+            stbt.wait_for_match("on-screen-id.png")
 
     """
     try:
@@ -1474,6 +1555,8 @@ class UITestError(Exception):
 
 class UITestFailure(Exception):
     """The test failed because the system under test didn't behave as expected.
+
+    Inherit from this if you need to define your own test-failure exceptions.
     """
     pass
 
@@ -1484,11 +1567,12 @@ class NoVideo(UITestFailure):
 
 
 class MatchTimeout(UITestFailure):
-    """
-    * `screenshot`: An OpenCV image from the source video when the search
-      for the expected image timed out.
-    * `expected`: Filename of the image that was being searched for.
-    * `timeout_secs`: Number of seconds that the image was searched for.
+    """Exception raised by `wait_for_match`.
+
+    * ``screenshot``: The last video frame that `wait_for_match` checked before
+      timing out.
+    * ``expected``: Filename of the image that was being searched for.
+    * ``timeout_secs``: Number of seconds that the image was searched for.
     """
     def __init__(self, screenshot, expected, timeout_secs):
         super(MatchTimeout, self).__init__()
@@ -1502,11 +1586,12 @@ class MatchTimeout(UITestFailure):
 
 
 class MotionTimeout(UITestFailure):
-    """
-    * `screenshot`: An OpenCV image from the source video when the search
-      for motion timed out.
-    * `mask`: Filename of the mask that was used (see `wait_for_motion`).
-    * `timeout_secs`: Number of seconds that motion was searched for.
+    """Exception raised by `wait_for_motion`.
+
+    * ``screenshot``: The last video frame that `wait_for_motion` checked before
+      timing out.
+    * ``mask``: Filename of the mask that was used, if any.
+    * ``timeout_secs``: Number of seconds that motion was searched for.
     """
     def __init__(self, screenshot, mask, timeout_secs):
         super(MotionTimeout, self).__init__()
