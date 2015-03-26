@@ -14,7 +14,7 @@ necessary.
 For installation instructions see
 [Getting Started](http://stb-tester.com/getting-started.html).
 
-#### 22:
+#### 22
 
 UNRELEASED.
 
@@ -157,7 +157,9 @@ would be misleading and adds no information.
   encouraged to contribute Python implementations and automated tests for these
   devices.
 
-#### 0.21: Composable API, match_text, stbt camera, triaging improvements
+#### 0.21
+
+Composable API, match_text, stbt camera, triaging improvements
 
 12 Dec 2014.
 
@@ -295,7 +297,9 @@ would be misleading and adds no information.
 * `stbt.ocr` now honours the `TESSDATA_PREFIX` environment variable, so you can
   test a locally-built version of tesseract.
 
-#### 0.20: Stb-tester ported to GStreamer 1; OCR accuracy improvements
+#### 0.20
+
+Stb-tester ported to GStreamer 1; OCR accuracy improvements
 
 6 Jun 2014.
 
@@ -392,14 +396,18 @@ Other changes:
   dist` twice should now result in tarballs with the same checksum --
   at least when running `make dist` on the same machine).
 
-#### 0.19.1 BETA RELEASE: Packaging fixes to 0.19
+#### 0.19.1
+
+BETA RELEASE: Packaging fixes to 0.19
 
 9 Apr 2014.
 
 The 0.19 pre-built package wouldn't install on Fedora 19. Fedora 20 users are
 unaffected.
 
-#### 0.19 BETA RELEASE: Stb-tester ported to GStreamer 1.
+#### 0.19
+
+BETA RELEASE: Stb-tester ported to GStreamer 1.
 
 4 Apr 2014.
 
@@ -546,7 +554,9 @@ https://github.com/stb-tester/stb-tester/issues?labels=0.19).
 Thanks to Lewis Haley, Máté Szendrő, and Pete Hemery for their contributions to
 this release.
 
-#### 0.18 Bulk test runner & reporting; text recognition (OCR)
+#### 0.18
+
+Bulk test runner & reporting; text recognition (OCR)
 
 28 Jan 2014.
 
@@ -599,7 +609,11 @@ Minor changes:
 - The tab-completion for `stbt templatematch` correctly completes the
   possible values for the `match_method` and `confirm_method` arguments.
 
-#### 0.17 Image matching optimisation; support for Teradek VidiU; `stbt.press_until_match` configuration; html summary of debug images; `stbt lint`; `stbt tv -l`.
+#### 0.17
+
+Image matching optimisation; support for Teradek VidiU;
+`stbt.press_until_match` configuration; html summary of debug images; `stbt
+lint`; `stbt tv -l`.
 
 17 Dec 2013.
 
@@ -695,7 +709,10 @@ Changes visible to developers of stb-tester:
 
 - Fixed some race conditions in the self-tests.
 
-#### 0.16 *stbt.wait_for_motion* configuration; *stbt.draw_text*; *stbt.press* error handling; *stbt run --restart-source* flag; irNetBox proxy
+#### 0.16
+
+*stbt.wait_for_motion* configuration; *stbt.draw_text*; *stbt.press* error
+handling; *stbt run --restart-source* flag; irNetBox proxy
 
 4 October 2013.
 
@@ -736,7 +753,10 @@ Python scripts run with *stbt run* can now access their real path in
 (the same behaviour you get when you run a python script directly with
 *python*).
 
-#### 0.15 *stbt power*; *stbt control* can be used with *stbt record*; test scripts can take command-line arguments; *stbt.press* shows key pressed in output video
+#### 0.15
+
+*stbt power*; *stbt control* can be used with *stbt record*; test scripts can
+take command-line arguments; *stbt.press* shows key pressed in output video
 
 19 August 2013.
 
@@ -803,7 +823,10 @@ repository:
     and generate an html report. See ["extra/runner: Bulk test running
     & reporting"](http://stb-tester.com/runner.html).
 
-#### 0.14 Arbitrary image processing in user scripts; *stbt control*; *--save-video*; miscellaneous improvements
+#### 0.14
+
+Arbitrary image processing in user scripts; *stbt control*; *--save-video*;
+miscellaneous improvements
 
 9 July 2013.
 
@@ -882,7 +905,9 @@ Major changes under the covers (not visible to end users):
 -   *make check* runs the self-tests in parallel if you have GNU
     *parallel* installed (On Fedora: yum install parallel).
 
-#### 0.13 Image-matching algorithm is more configurable; changes to configuration API
+#### 0.13
+
+Image-matching algorithm is more configurable; changes to configuration API
 
 21 May 2013.
 
@@ -957,7 +982,10 @@ This will only affect users who have written command-line tools that use
 *stbt config* to access the *stbt.conf* configuration file. See commit
 [f1670cbc] for details.
 
-#### 0.12 New command-line tools; new *stbt.get_config* function; *wait_for_motion* non-consecutive frames
+#### 0.12
+
+New command-line tools; new *stbt.get_config* function; *wait_for_motion*
+non-consecutive frames
 
 14 March 2013.
 
@@ -983,7 +1011,10 @@ parameter can now take a fraction given as a string, e.g. "10/20" looks
 for at least 10 frames with motion out of a sliding window of 20. In a
 future release we will probably make "10/20" the default.
 
-#### 0.11 Support for RedRat irNetBox-II; improved robustness after video loss; improved exception output
+#### 0.11
+
+Support for RedRat irNetBox-II; improved robustness after video loss; improved
+exception output
 
 27 February 2013.
 
@@ -1006,7 +1037,9 @@ run* to hang. See commit [53d5ecf3] for details.
 trace. Since version 0.10, *stbt* wasn't printing this information for
 non-*MatchTimeout* exceptions.
 
-#### 0.10.1 Fix irNetBox connection retry
+#### 0.10.1
+
+Fix irNetBox connection retry
 
 14 February 2013.
 
@@ -1015,7 +1048,9 @@ but in fact broke it for everyone. This release fixes that, and also
 adds static analysis to "make check" so that this type of error doesn't
 happen again.
 
-#### 0.10 Fix irNetBox connection retry on Linux; other minor fixes
+#### 0.10
+
+Fix irNetBox connection retry on Linux; other minor fixes
 
 11 February 2013.
 
@@ -1039,7 +1074,9 @@ Other minor fixes:
 -   Better build system error messages.
 -   Minor fixes to the bash tab-completion script.
 
-#### 0.9 Support for RedRat irNetBox; *wait_for_motion* more tolerant to noise
+#### 0.9
+
+Support for RedRat irNetBox; *wait_for_motion* more tolerant to noise
 
 7 January 2013.
 
@@ -1073,7 +1110,10 @@ Other minor changes:
 -   Minor fixes to the tab-completion script, self-tests and
     documentation.
 
-#### 0.8 Bugfixes; *wait_for_match* returns the *MatchResult*; adds *get_frame*, *save_frame*, *debug*
+#### 0.8
+
+Bugfixes; *wait_for_match* returns the *MatchResult*; adds *get_frame*,
+*save_frame*, *debug*
 
 21 November 2012.
 
@@ -1102,7 +1142,10 @@ Other minor changes:
 -   *make install* will rebuild *stbt* if given a different *prefix*
     directory than the *prefix* given to *make stbt*.
 
-#### 0.7 Exposes *detect_match* and *detect_motion*; removes *directory* argument, changes image search path
+#### 0.7
+
+Exposes *detect_match* and *detect_motion*; removes *directory* argument,
+changes image search path
 
 21 October 2012.
 
@@ -1159,7 +1202,10 @@ Bugfixes and minor changes:
     failing intermittently.
 -   RPM spec file in extras/
 
-#### 0.6 Improves templatematch, adds *--verbose* flag, *certainty* renamed to *noise_threshold*
+#### 0.6
+
+Improves templatematch, adds *--verbose* flag, *certainty* renamed to
+*noise_threshold*
 
 5 September 2012.
 
@@ -1203,14 +1249,18 @@ Other non-user-visible and trivial changes since 0.5:
 -   Fix "unknown property debugDirectory" warning from
     *stbt-templatematch* element.
 
-#### 0.5 *make install* installs stbt{-run,-record,.py} into \$libexecdir
+#### 0.5
+
+*make install* installs stbt{-run,-record,.py} into \$libexecdir
 
 14 August 2012.
 
 The only difference from 0.4 is this change to install locations, for
 the benefit of packagers.
 
-#### 0.4 Adds gstreamer plugin, improved templatematch, motion detection
+#### 0.4
+
+Adds gstreamer plugin, improved templatematch, motion detection
 
 14 August 2012.
 
@@ -1235,7 +1285,9 @@ Other changes since 0.3:
     to schedule stbt tests and report on their results. See commit
     message [d5e7983] for instructions.
 
-#### 0.3 Fixes *stbt run* freezing on loss of input video.
+#### 0.3
+
+Fixes *stbt run* freezing on loss of input video.
 
 24 July 2012.
 
@@ -1252,7 +1304,9 @@ Other changes since 0.2:
 -   *man stbt* documents the optional arguments to *wait_for_match*
     and *press_until_match*.
 
-#### 0.2 Adds configurability, IR blaster support.
+#### 0.2
+
+Adds configurability, IR blaster support.
 
 6 July 2012.
 
@@ -1265,13 +1319,17 @@ Major changes since 0.1.1:
 -   Handle gstreamer errors.
 -   Automated self-tests.
 
-#### 0.1.1 Initial internal release, with packaging fixes.
+#### 0.1.1
+
+Initial internal release, with packaging fixes.
 
 21 June 2012.
 
 The difference from 0.1 is that *make install* now works correctly from
 a dist tarball.
 
-#### 0.1 Initial internal release.
+#### 0.1
+
+Initial internal release.
 
 21 June 2012.
