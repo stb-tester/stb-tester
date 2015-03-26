@@ -11,8 +11,8 @@ endeavour to keep backwards compatibility. The release notes always provide an
 exhaustive list of any changes, along with upgrade instructions where
 necessary.
 
-For installation instructions see
-[Getting Started](http://stb-tester.com/getting-started.html).
+For installation instructions see [Getting Started](
+https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 22
 
