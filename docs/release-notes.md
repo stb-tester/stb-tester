@@ -59,6 +59,10 @@ and adds no information.
         if m.image == "error.png":
             recover()
 
+* Removed the `noise_threshold` parameter of `wait_for_match`, `detect_match`
+  and `press_until_match`. This parameter had been deprecated for almost two
+  years, since stb-tester 0.13.
+
 * `stbt power status` now always requires the outlet to be explicitly specified
   for network controlled PDUs, rather than printing the statuses of each outlet
   in some implementation-dependent format.

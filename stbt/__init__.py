@@ -608,8 +608,7 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     return result
 
 
-def detect_match(image, timeout_secs=10, noise_threshold=None,
-                 match_parameters=None):
+def detect_match(image, timeout_secs=10, match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the system-under-test's video stream.
 
@@ -619,23 +618,9 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
     Returns after `timeout_secs` seconds. (Note that the caller can also choose
     to stop iterating over this function's results at any time.)
 
-    The templatematch parameter `noise_threshold` is marked for deprecation
-    but appears in the args for backward compatibility with positional
-    argument syntax. It will be removed in a future release; please use
-    `match_parameters.confirm_threshold` intead.
-
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
-    if noise_threshold is not None:
-        warnings.warn(
-            "noise_threshold is deprecated and will be removed in a future "
-            "release of stb-tester. Please use "
-            "match_parameters.confirm_threshold instead.",
-            DeprecationWarning, stacklevel=2)
-        match_parameters = match_parameters or MatchParameters()
-        match_parameters.confirm_threshold = noise_threshold
-
     template = _load_template(image)
 
     debug("Searching for " + template.friendly_name)
@@ -753,7 +738,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   noise_threshold=None, match_parameters=None):
+                   match_parameters=None):
     """Search for an image in the system-under-test's video stream.
 
     :param image: The image to search for. See `match`.
@@ -778,14 +763,6 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     if match_parameters is None:
         match_parameters = MatchParameters()
 
-    if noise_threshold is not None:
-        warnings.warn(
-            "noise_threshold is deprecated and will be removed in a future "
-            "release of stb-tester. Please use "
-            "match_parameters.confirm_threshold instead.",
-            DeprecationWarning, stacklevel=2)
-        match_parameters.confirm_threshold = noise_threshold
-
     match_count = 0
     last_pos = Position(0, 0)
     image = _load_template(image)
@@ -807,7 +784,6 @@ def press_until_match(
         key,
         image,
         interval_secs=None,
-        noise_threshold=None,
         max_presses=None,
         match_parameters=None):
     """Call `press` as many times as necessary to find the specified image.
@@ -845,14 +821,6 @@ def press_until_match(
 
     if match_parameters is None:
         match_parameters = MatchParameters()
-
-    if noise_threshold is not None:
-        warnings.warn(
-            "noise_threshold is deprecated and will be removed in a future "
-            "release of stb-tester. Please use "
-            "match_parameters.confirm_threshold instead.",
-            DeprecationWarning, stacklevel=2)
-        match_parameters.confirm_threshold = noise_threshold
 
     i = 0
 

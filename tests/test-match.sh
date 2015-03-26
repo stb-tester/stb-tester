@@ -47,14 +47,6 @@ test_wait_for_match_opencv_image_can_be_used_as_template() {
     stbt run -v --control none test.py
 }
 
-test_wait_for_match_noise_threshold_raises_warning() {
-    cat > test.py <<-EOF
-	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", noise_threshold=0.2)
-	EOF
-    stbt run -v test.py 2>&1 | grep 'DeprecationWarning'
-}
-
 test_wait_for_match_match_method_param_affects_first_pass() {
     # This works on the fact that match_method="ccorr-normed" registers a
     # first_pass_result greater than 0.80 which is then falsely confirmed as
