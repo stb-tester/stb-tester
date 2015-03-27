@@ -136,7 +136,7 @@ and adds no information.
   CSS instead of truncating it in the HTML; this allows the full text of the
   table cell to be searchable from the search box at the top of the report.
 
-* API: `is_frame_black()` now no longer requires a frame to be passed in.  If
+* API: `is_screen_black()` now no longer requires a frame to be passed in.  If
   one is not specified it will be grabbed from live video, much like `match()`.
 
 * `stbt power`: Added support for "Aviosys USB Net Power 8800 Pro"
