@@ -1,6 +1,8 @@
 #!/bin/bash
 
 rpm=$1
+[[ -n "$rpm" ]] || { echo "error: rpm file not specified" >&2; exit 1; }
+
 this_dir=$(dirname $0)
 stbt_dir=$(cd $this_dir/../.. && pwd)
 set -x
