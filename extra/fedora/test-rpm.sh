@@ -1,7 +1,6 @@
 #!/bin/bash
 
-rpm=$1
-[[ -n "$rpm" ]] || { echo "error: rpm file not specified" >&2; exit 1; }
+[[ $# -gt 0 ]] || { echo "error: No rpm files specified" >&2; exit 1; }
 
 this_dir=$(dirname $0)
 stbt_dir=$(cd $this_dir/../.. && pwd)
@@ -10,12 +9,14 @@ set -x
 docker rm -f test-stb-tester-fedora-rpm &>/dev/null
 docker run -t \
     --name test-stb-tester-fedora-rpm \
-    -v $(pwd)/$rpm:/tmp/$rpm:ro \
+    $(for rpm in "$@"; do
+        echo "-v $PWD/$rpm:/tmp/$rpm:ro"
+      done | tr '\n' ' ') \
     -v $stbt_dir:/usr/src/stb-tester:ro \
     fedora:20 \
     /bin/bash -c "
         set -x &&
-        sudo yum install -y /tmp/$rpm &&
+        sudo yum install -y ${*/#/tmp/} &&
         stbt --version &&
         stbt --help &&
         man stbt | cat &&
