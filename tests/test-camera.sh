@@ -2,7 +2,17 @@
 
 skip_if_no_rsvg_plugins() {
     if ! gst-inspect-1.0 rsvg 2>&1 >/dev/null; then
-        skip "rsvg plugins not installed"
+        skip "rsvg GStreamer plugins not installed"
+    fi
+}
+skip_if_no_stbt_camera() {
+    if ! stbt --with-experimental camera -h &>/dev/null; then
+        skip "stbt camera is not installed"
+    fi
+}
+skip_if_no_stbt_plugins() {
+    if ! gst-inspect-1.0 stbt &>/dev/null; then
+        skip "stbt GStreamer plugins not installed"
     fi
 }
 
@@ -29,6 +39,7 @@ create_stb_tester_logo_template() {
 }
 
 test_that_stbtgeometriccorrection_scales_by_default() {
+    skip_if_no_stbt_plugins
     skip_if_no_rsvg_plugins
 
     start_fake_video_src_launch_1080 $stb_tester_logo_src_1080p &&
@@ -56,6 +67,7 @@ wp_matricies='
 wp_props="$(echo "$wp_matricies" | tr '\n' ' ')"
 
 test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
+    skip_if_no_stbt_plugins
     skip_if_no_rsvg_plugins
 
     create_stb_tester_logo_template &&
@@ -70,6 +82,8 @@ test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
 }
 
 test_that_stbt_camera_calibrate_corrects_for_geometric_distortion() {
+    skip_if_no_stbt_plugins
+
     set_config camera.tv_driver assume
     set_config global.control none
 
@@ -183,6 +197,7 @@ run_validation() {
     color="$1"
     extra=${2:-identity}
 
+    skip_if_no_stbt_camera
     skip_if_no_rsvg_plugins
 
     start_fake_video_src_launch_720 filesrc location="$testdir/$color.png" ! pngdec \
@@ -250,6 +265,8 @@ test_that_validation_video_served_over_http_is_correct() {
     # The test listens for instructions from stbt camera validate's stderr and
     # instructs fakevideosrc.py to display URIs before telling stbt camera
     # validate to proceed by pressing enter on it's stdin
+
+    skip_if_no_stbt_camera
     skip_if_no_rsvg_plugins
 
     start_fake_video_src
@@ -282,7 +299,9 @@ test_that_validation_video_served_over_http_is_correct() {
 # Test illumination compensation
 
 test_illumination_compensation() {
+    skip_if_no_stbt_camera
     skip_if_no_rsvg_plugins
+
     export STBT_TEST_VALIDATION_WAIT_TIMEOUT=60
 
     set_config global.control none
