@@ -25,7 +25,7 @@ Requires: pygobject3
 Requires: pylint
 Requires: pyserial
 Requires: python >= 2.7
-Requires: python-enum
+Requires: python-enum34
 Requires: python-flask
 Requires: python-jinja2
 Requires: python-lxml
