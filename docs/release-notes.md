@@ -20,7 +20,7 @@ Support for testcases as Python functions and using *assert* in testcases; new
 *wait_until* function; improved report formatting; support for the *Aviosys USB
 Net Power 8800 Pro* power outlet.
 
-UNRELEASED.
+27 March 2015.
 
 Note: The version numbering scheme has changed from this release onwards.
 Instead of "0.22" this is version "22". Stb-tester has been usable, stable,
