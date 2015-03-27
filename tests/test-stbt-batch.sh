@@ -1,7 +1,7 @@
 # Run with ./run-tests.sh
 
 create_test_repo() {
-    which git || skip "git is not installed"
+    which git &>/dev/null || skip "git is not installed"
     (
         git init tests &&
         cd tests &&
@@ -446,7 +446,7 @@ test_stbt_batch_output_dir() {
 }
 
 test_stbt_batch_printing_unicode_characters_in_scripts() {
-    which unbuffer || skip "unbuffer is not installed"
+    which unbuffer &>/dev/null || skip "unbuffer is not installed"
 
     create_test_repo
     cat >tests/test.py <<-EOF

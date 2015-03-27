@@ -62,7 +62,7 @@ run() {
     local status=$?
     case $status in
         0) echo "$(green OK)";;
-        77) status=0; echo "$(yellow SKIPPED)";;
+        77) status=0; echo "$(yellow SKIPPED)"; cat "$scratchdir/log";;
         *) echo "$(red FAIL)";;
     esac
     if [[ "$verbose" = "true" || $status -ne 0 ]]; then

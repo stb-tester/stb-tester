@@ -5,7 +5,7 @@ test_that_stbt_control_sends_a_single_key() {
 }
 
 validate_stbt_record_control_recorder() {
-    which expect || skip "expect is not installed"
+    which expect &>/dev/null || skip "expect is not installed"
     control_uri=$1
 
     cat > test.expect <<-EOF &&
