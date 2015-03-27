@@ -20,4 +20,4 @@ docker run -t \
         stbt --help &&
         man stbt | cat &&
         cd /usr/src/stb-tester &&
-        ./tests/run-tests.sh -i tests/test-match.sh"
+        ./tests/run-tests.sh -i"
