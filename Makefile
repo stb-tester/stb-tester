@@ -247,7 +247,7 @@ DPUT_HOST?=ppa:stb-tester/stb-tester
 # building a debian unstable package, or "1~trusty" or "1~utopic" (etc) when
 # building an ubuntu package.
 
-# deb: stb-tester_0.21-1_amd64.deb
+# deb: stb-tester_22-1_amd64.deb
 deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
 
 # Build debian source packages for debian unstable and all $(ubuntu_releases).
@@ -268,8 +268,7 @@ debian-packages/stb-tester_$(VERSION)-%.dsc: \
 	extra/debian/build-source-package.sh $(VERSION) $*
 
 # Build debian binary package from source package
-stb-tester_0.21-1_amd64.deb: debian-packages/stb-tester_0.21-1.dsc
-
+# stb-tester_22-1_amd64.deb: debian-packages/stb-tester_22-1.dsc
 stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
   debian-packages/stb-tester_$(VERSION)-%.dsc
 	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
