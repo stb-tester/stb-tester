@@ -12,10 +12,6 @@ mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
-user_name?=$(shell git config user.name || \
-                   getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
-user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
-
 # Support installing GStreamer elements under $HOME
 gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/gstreamer-1.0/plugins
 gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
@@ -57,16 +53,13 @@ RELEASE?=1
 
 all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
 
-extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh: \
+extra/fedora/stb-tester.spec stbt.sh: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@RELEASE@,$(RELEASE),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
-	    -e "s/@RFC_2822_DATE@/$$(git show -s --format=%aD HEAD)/g" \
-	    -e 's,@USER_NAME@,$(user_name),g' \
-	    -e 's,@USER_EMAIL@,$(user_email),g' \
 	     $< > $@
 
 defaults.conf: stbt.conf .stbt-prefix
@@ -264,7 +257,7 @@ ppa-publish-%: debian-packages/stb-tester_$(VERSION)-%.dsc
 
 # Build debian source package
 debian-packages/stb-tester_$(VERSION)-%.dsc: \
-  stb-tester-$(VERSION).tar.gz extra/debian/changelog
+  stb-tester-$(VERSION).tar.gz extra/debian/changelog.in
 	extra/debian/build-source-package.sh $(VERSION) $*
 
 # Build debian binary package from source package

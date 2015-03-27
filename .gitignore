@@ -9,7 +9,6 @@
 .stbt-prefix
 debian-packages
 defaults.conf
-extra/debian/changelog
 extra/fedora/stb-tester.spec
 extra/stb-tester*.debian.tar.xz
 extra/vm/.vagrant

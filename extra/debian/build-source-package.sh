@@ -53,8 +53,14 @@ cp $srcdir/extra/debian/compat \
     $srcdir/extra/debian/rules \
     $builddir/stb-tester-$version/debian
 cp $srcdir/extra/debian/source/format $builddir/stb-tester-$version/debian/source
-sed -e "s/@RELEASE@/$release/g" -e "s/@DISTRIBUTION@/$distribution/g" \
-    $srcdir/extra/debian/changelog > $builddir/stb-tester-$version/debian/changelog
+sed -e "s/@VERSION@/$version/g" \
+    -e "s/@RELEASE@/$release/g" \
+    -e "s/@DISTRIBUTION@/$distribution/g" \
+    -e "s/@RFC_2822_DATE@/$(git -C "$srcdir" show -s --format=%aD HEAD)/g" \
+    -e "s/@USER_NAME@/$(git -C "$srcdir" config user.name)/g" \
+    -e "s/@USER_EMAIL@/$(git -C "$srcdir" config user.email)/g" \
+    $srcdir/extra/debian/changelog.in \
+    > $builddir/stb-tester-$version/debian/changelog
 
 # .dsc & .debian.tar.gz (both created by debuild).
 (cd $builddir/stb-tester-$version &&
