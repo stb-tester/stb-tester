@@ -397,10 +397,14 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    python -c "import stbt, distutils, sys; sys.exit( \
+    PYTHONPATH="$srcdir" python -c "import stbt, distutils, sys; sys.exit( \
         0 if stbt._tesseract_version() >= distutils.version.LooseVersion('3.03')
-        else 1)" \
-    || skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'"
+        else 77)"
+    case $? in
+        0) true;;
+        77) skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'";;
+        *) fail "Probing tesseract version failed";;
+    esac
 
     cat > test.py <<-EOF &&
 	import time
