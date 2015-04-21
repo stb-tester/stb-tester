@@ -138,8 +138,8 @@ run_state_test() {
 	EOF
 
     cat > expected_states <<-EOF
-		{"test_run": {"current_line": {}, "test": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
-		{"test_run": {"current_line": {"file": "$PWD/test.py", "line": 1}, "test": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
+		{"test_run": {"current_line": {}, "test_case": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
+		{"test_run": {"current_line": {"file": "$PWD/test.py", "line": 1}, "test_case": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
 		{"test_run": {}}
 		EOF
 
