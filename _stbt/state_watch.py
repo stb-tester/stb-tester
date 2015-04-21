@@ -21,7 +21,7 @@ class StateSender(object):
                     "file": "tests/my_file.py",
                     "line": 123,
                 },
-                "test": {
+                "test_case": {
                     "name": "tests/my_file.py::test_that_this_rocks",
                     "file": "tests/my_file.py",
                     "function": "test_that_this_rocks,
@@ -108,7 +108,7 @@ class StateSender(object):
     def log_test_starting(self, name, file_, function, line):
         self.set({"test_run": {
             "current_line": {},
-            "test": {
+            "test_case": {
                 "name": name,
                 "file": file_,
                 "function": function,
