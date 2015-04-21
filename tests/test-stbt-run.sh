@@ -147,7 +147,7 @@ run_state_test() {
 }
 
 test_that_stbt_run_tracing_is_written_to_file() {
-    run_state_test --tracing=trace.jsonl.xz || fail "Test failed"
+    run_state_test --save-trace=trace.jsonl.xz || fail "Test failed"
     [ -e "trace.jsonl.xz" ] || fail "Trace not written"
     xzcat "trace.jsonl.xz" | grep -q "state_change" || fail "state_change not written"
     diff expected_states <(xzcat "trace.jsonl.xz" | state_printer)
