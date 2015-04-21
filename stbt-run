@@ -21,8 +21,8 @@ parser.add_argument(
     '--save-video', help='Record video to the specified file', metavar='FILE',
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
-    '--tracing', help='Write system state and updates to this file',
-    metavar='FILE', default=None)
+    '--save-trace', metavar='FILE', default=None,
+    help='Write state to this file, as xz compressed newline-seperated JSON')
 parser.add_argument(
     'script', metavar='FILE[::TESTCASE]', help=(
         "The python test script to run. Optionally specify a python function "
@@ -68,7 +68,7 @@ try:
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
         stbt.get_config('global', 'transformation_pipeline'))
-    _tracer = new_state_sender(args.tracing)  # pylint: disable=W0212
+    _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
 
     _absfilename = None
 
