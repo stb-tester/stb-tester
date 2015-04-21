@@ -43,7 +43,7 @@ class StateSender(object):
 
         {
             "state_change": {
-                "time": {"$date": "2014-11-28T20:55:26.092343Z"},
+                "time": "2014-11-28T20:55:26.092343Z",
                 "changes": {
                     "test_job.current_line": {
                         "file": "tests/my_file.py",
@@ -62,11 +62,8 @@ class StateSender(object):
 
     * The state_change message has two keys:
 
-        * "time" which is the time of the change using mongodb style date
-          format `{"$date": "2014-11-28T20:55:26.092343Z"}`.  The date timestamp
-          is in ISO8601 format.  The fact that this is an object rather than
-          just a string may seem a little odd but JSON has no native datetime
-          type so this is necessary to specify the type.
+        * "time" which is the time of the change as a ISO8601 formatted string
+          e.g `"2014-11-28T20:55:26.092343Z"`.
 
         * "changes" is a dictionary of changes made to the state of the system.
           The keys identify the value that is changing, and the values are the
