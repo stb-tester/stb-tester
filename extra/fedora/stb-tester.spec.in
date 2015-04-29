@@ -17,13 +17,13 @@ Requires: gstreamer1-plugins-good
 Requires: libvpx
 Requires: lsof
 Requires: moreutils
-Requires: net-snmp-utils
 Requires: opencv
 Requires: opencv-python
 Requires: openssh-clients
 Requires: pygobject3
 Requires: pylint
 Requires: pyserial
+Requires: pysnmp
 Requires: python >= 2.7
 Requires: python-enum34
 Requires: python-flask
