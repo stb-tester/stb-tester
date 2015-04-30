@@ -443,7 +443,7 @@ test_that_stbt_batch_reports_results_directory() {
       sleep 0.1
     done
 
-    stbt batch run -1 tests/test.py tests/test2.py \
+    stbt batch run -1vv tests/test.py tests/test2.py \
         || fail "Tests should succeed"
 
     [ "$(grep active_results_directory trace.log | wc -l)" = 4 ] \
