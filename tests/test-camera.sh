@@ -82,12 +82,11 @@ test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
 }
 
 test_that_stbt_camera_calibrate_corrects_for_geometric_distortion() {
-    skip_if_no_stbt_plugins
+    skip_if_no_stbt_camera
+    skip_if_no_rsvg_plugins
 
     set_config camera.tv_driver assume
     set_config global.control none
-
-    skip_if_no_rsvg_plugins
 
     start_fake_video_src_launch_1080 \
         uridecodebin "uri=file://$testdir/capture-chessboard.png" \
