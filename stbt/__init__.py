@@ -1762,9 +1762,11 @@ class Display(object):
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
+        self.tearing_down = False
+
+        self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.match_annotations = []
-        self.tearing_down = False
 
         self.restart_source_enabled = restart_source
 
@@ -1946,34 +1948,36 @@ class Display(object):
         self.last_sample.put_nowait(sample_or_exception)
 
     def draw(self, obj, duration_secs):
-        if type(obj) in (str, unicode):
-            obj = (
-                datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
-                ' ' + obj)
-            self.text_annotations.append(
-                {"text": obj, "duration": duration_secs * Gst.SECOND})
-        elif type(obj) is MatchResult:
-            if obj.timestamp is not None:
-                self.match_annotations.append(obj)
-        else:
-            raise TypeError(
-                "Can't draw object of type '%s'" % type(obj).__name__)
+        with self.annotations_lock:
+            if type(obj) in (str, unicode):
+                obj = (
+                    datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
+                    ' ' + obj)
+                self.text_annotations.append(
+                    {"text": obj, "duration": duration_secs * Gst.SECOND})
+            elif type(obj) is MatchResult:
+                if obj.timestamp is not None:
+                    self.match_annotations.append(obj)
+            else:
+                raise TypeError(
+                    "Can't draw object of type '%s'" % type(obj).__name__)
 
     def push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.get_buffer().pts
-        texts = self.text_annotations
+        texts = []
         matches = []
-        for x in list(texts):
-            x.setdefault('start_time', now)
-
-            if now >= x['start_time'] + x['duration']:
-                self.text_annotations.remove(x)
-        for match_result in list(self.match_annotations):
-            if match_result.timestamp == now:
-                matches.append(match_result)
-            if now >= match_result.timestamp:
-                self.match_annotations.remove(match_result)
+        with self.annotations_lock:
+            for x in self.text_annotations:
+                x.setdefault('start_time', now)
+                if now < x['start_time'] + x['duration']:
+                    texts.append(x)
+            self.text_annotations = texts[:]
+            for match_result in list(self.match_annotations):
+                if match_result.timestamp == now:
+                    matches.append(match_result)
+                if now >= match_result.timestamp:
+                    self.match_annotations.remove(match_result)
 
         sample = _gst_sample_make_writable(sample)
         with _numpy_from_sample(sample) as img:
