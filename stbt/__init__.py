@@ -1977,18 +1977,17 @@ class Display(object):
             if now >= match_result.timestamp:
                 self.match_annotations.remove(match_result)
 
-        now = datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4]
-        texts = texts + [(now, 0, 0)]
-
-        if texts or matches:  # Draw the annotations.
-            sample = _gst_sample_make_writable(sample)
-            with _numpy_from_sample(sample) as img:
-                for i in range(len(texts)):
-                    text, _, _ = texts[len(texts) - i - 1]
-                    origin = (10, (i + 1) * 30)
-                    _draw_text(img, text, origin)
-                for match_result in matches:
-                    _draw_match(img, match_result.region, match_result.match)
+        sample = _gst_sample_make_writable(sample)
+        with _numpy_from_sample(sample) as img:
+            _draw_text(
+                img, datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4],
+                (10, 30))
+            for i in range(len(texts)):
+                text, _, _ = texts[len(texts) - i - 1]
+                origin = (10, (i + 2) * 30)
+                _draw_text(img, text, origin)
+            for match_result in matches:
+                _draw_match(img, match_result.region, match_result.match)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
