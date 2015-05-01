@@ -1983,10 +1983,12 @@ class Display(object):
         with _numpy_from_sample(sample) as img:
             _draw_text(
                 img, datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4],
-                (10, 30))
+                (10, 30), (255, 255, 255))
             for i, x in enumerate(reversed(texts)):
                 origin = (10, (i + 2) * 30)
-                _draw_text(img, x['text'], origin)
+                age = float(now - x['start_time']) / (3 * Gst.SECOND)
+                color = (int(255 * max([1 - age, 0.5])),) * 3
+                _draw_text(img, x['text'], origin, color)
             for match_result in matches:
                 _draw_match(img, match_result.region, match_result.match)
 
@@ -2084,7 +2086,7 @@ class Display(object):
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-def _draw_text(numpy_image, text, origin):
+def _draw_text(numpy_image, text, origin, color):
     (width, height), _ = cv2.getTextSize(
         text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, thickness=1)
     cv2.rectangle(
@@ -2093,7 +2095,7 @@ def _draw_text(numpy_image, text, origin):
         thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0,
-        color=(255, 255, 255))
+        color=color)
 
 
 def _draw_match(numpy_image, region, match_, thickness=3):
