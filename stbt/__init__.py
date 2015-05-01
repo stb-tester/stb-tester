@@ -1964,13 +1964,13 @@ class Display(object):
         texts = self.text_annotations
         matches = []
         for x in list(texts):
-            text, duration, end_time = x
-            if end_time is None:
-                end_time = now + (duration * Gst.SECOND)
-                texts.remove(x)
-                texts.append((text, duration, end_time))
-            elif now > end_time:
-                texts.remove(x)
+            text, duration, start_time = x
+            if start_time is None:
+                self.text_annotations.remove(x)
+                self.text_annotations.append((text, duration, now))
+
+            if now >= start_time + (duration * Gst.SECOND):
+                self.text_annotations.remove(x)
         for match_result in list(self.match_annotations):
             if match_result.timestamp == now:
                 matches.append(match_result)
