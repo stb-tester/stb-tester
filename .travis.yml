@@ -46,7 +46,9 @@ install:
  - sudo pip install
         astroid==1.2.1
         isort==3.9.0
+        mock
         pylint==1.3.1
+        pysnmp
         rednose
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - |
