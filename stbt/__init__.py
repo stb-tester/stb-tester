@@ -1951,7 +1951,7 @@ class Display(object):
                 datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
                 ' ' + obj)
             self.text_annotations.append(
-                (obj, duration_secs * Gst.SECOND, None))
+                {"text": obj, "duration": duration_secs * Gst.SECOND})
         elif type(obj) is MatchResult:
             if obj.timestamp is not None:
                 self.match_annotations.append(obj)
@@ -1965,12 +1965,9 @@ class Display(object):
         texts = self.text_annotations
         matches = []
         for x in list(texts):
-            text, duration, start_time = x
-            if start_time is None:
-                self.text_annotations.remove(x)
-                self.text_annotations.append((text, duration, now))
+            x.setdefault('start_time', now)
 
-            if now >= start_time + duration:
+            if now >= x['start_time'] + x['duration']:
                 self.text_annotations.remove(x)
         for match_result in list(self.match_annotations):
             if match_result.timestamp == now:
@@ -1983,10 +1980,9 @@ class Display(object):
             _draw_text(
                 img, datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4],
                 (10, 30))
-            for i in range(len(texts)):
-                text, _, _ = texts[len(texts) - i - 1]
+            for i, x in enumerate(reversed(texts)):
                 origin = (10, (i + 2) * 30)
-                _draw_text(img, text, origin)
+                _draw_text(img, x['text'], origin)
             for match_result in matches:
                 _draw_match(img, match_result.region, match_result.match)
 
