@@ -161,16 +161,19 @@ def add_argparse_argument(argparser):
              default=get_config("camera", "tv_driver", "manual"))
 
 
-def create_from_args(args, video_generator):
-    desc = args.tv_driver
-    video_server = _HTTPVideoServer(
+def make_video_server(video_generator):
+    return _HTTPVideoServer(
         video_generator,
         video_format=get_config('camera', 'video_format'))
+
+
+def create_from_args(args, video_generator):
+    desc = args.tv_driver
     if desc == 'assume':
         return _AssumeTvDriver()
     elif desc.startswith('fake:'):
-        return _FakeTvDriver(desc[5:], video_server)
+        return _FakeTvDriver(desc[5:], make_video_server(video_generator))
     elif desc == 'manual':
-        return _ManualTvDriver(video_server)
+        return _ManualTvDriver(make_video_server(video_generator))
     else:
         raise RuntimeError("Unknown video driver requested: %s" % desc)
