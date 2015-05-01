@@ -1950,7 +1950,8 @@ class Display(object):
             obj = (
                 datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
                 ' ' + obj)
-            self.text_annotations.append((obj, duration_secs, None))
+            self.text_annotations.append(
+                (obj, duration_secs * Gst.SECOND, None))
         elif type(obj) is MatchResult:
             if obj.timestamp is not None:
                 self.match_annotations.append(obj)
@@ -1969,7 +1970,7 @@ class Display(object):
                 self.text_annotations.remove(x)
                 self.text_annotations.append((text, duration, now))
 
-            if now >= start_time + (duration * Gst.SECOND):
+            if now >= start_time + duration:
                 self.text_annotations.remove(x)
         for match_result in list(self.match_annotations):
             if match_result.timestamp == now:
