@@ -1982,7 +1982,7 @@ class Display(object):
         sample = _gst_sample_make_writable(sample)
         with _numpy_from_sample(sample) as img:
             _draw_text(
-                img, datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4],
+                img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
                 (10, 30), (255, 255, 255))
             for i, x in enumerate(reversed(texts)):
                 origin = (10, (i + 2) * 30)
