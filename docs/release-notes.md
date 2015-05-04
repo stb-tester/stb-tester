@@ -32,6 +32,10 @@ UNRELEASED.
   executing test.  The tools for replay have not yet been written.  For more
   information, including the format definition see `_stbt/state_watch.py`.
 
+* The text drawn by `stbt.draw_text` and `stbt.press` on the recorded video now
+  fades out over a few seconds. This makes it easier to distinguish the new
+  messages from the old messages.
+
 ##### Bugfixes and packaging fixes since 22
 
 ##### Developer-visible changes since 22

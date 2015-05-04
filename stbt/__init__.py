@@ -1762,9 +1762,11 @@ class Display(object):
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
+        self.tearing_down = False
+
+        self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.match_annotations = []
-        self.tearing_down = False
 
         self.restart_source_enabled = restart_source
 
@@ -1946,49 +1948,49 @@ class Display(object):
         self.last_sample.put_nowait(sample_or_exception)
 
     def draw(self, obj, duration_secs):
-        if type(obj) in (str, unicode):
-            obj = (
-                datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
-                ' ' + obj)
-            self.text_annotations.append((obj, duration_secs, None))
-        elif type(obj) is MatchResult:
-            if obj.timestamp is not None:
-                self.match_annotations.append(obj)
-        else:
-            raise TypeError(
-                "Can't draw object of type '%s'" % type(obj).__name__)
+        with self.annotations_lock:
+            if type(obj) in (str, unicode):
+                obj = (
+                    datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
+                    ' ' + obj)
+                self.text_annotations.append(
+                    {"text": obj, "duration": duration_secs * Gst.SECOND})
+            elif type(obj) is MatchResult:
+                if obj.timestamp is not None:
+                    self.match_annotations.append(obj)
+            else:
+                raise TypeError(
+                    "Can't draw object of type '%s'" % type(obj).__name__)
 
     def push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.get_buffer().pts
-        texts = self.text_annotations
+        texts = []
         matches = []
-        for x in list(texts):
-            text, duration, end_time = x
-            if end_time is None:
-                end_time = now + (duration * Gst.SECOND)
-                texts.remove(x)
-                texts.append((text, duration, end_time))
-            elif now > end_time:
-                texts.remove(x)
-        for match_result in list(self.match_annotations):
-            if match_result.timestamp == now:
-                matches.append(match_result)
-            if now >= match_result.timestamp:
-                self.match_annotations.remove(match_result)
+        with self.annotations_lock:
+            for x in self.text_annotations:
+                x.setdefault('start_time', now)
+                if now < x['start_time'] + x['duration']:
+                    texts.append(x)
+            self.text_annotations = texts[:]
+            for match_result in list(self.match_annotations):
+                if match_result.timestamp == now:
+                    matches.append(match_result)
+                if now >= match_result.timestamp:
+                    self.match_annotations.remove(match_result)
 
-        now = datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4]
-        texts = texts + [(now, 0, 0)]
-
-        if texts or matches:  # Draw the annotations.
-            sample = _gst_sample_make_writable(sample)
-            with _numpy_from_sample(sample) as img:
-                for i in range(len(texts)):
-                    text, _, _ = texts[len(texts) - i - 1]
-                    origin = (10, (i + 1) * 30)
-                    _draw_text(img, text, origin)
-                for match_result in matches:
-                    _draw_match(img, match_result.region, match_result.match)
+        sample = _gst_sample_make_writable(sample)
+        with _numpy_from_sample(sample) as img:
+            _draw_text(
+                img, datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4],
+                (10, 30), (255, 255, 255))
+            for i, x in enumerate(reversed(texts)):
+                origin = (10, (i + 2) * 30)
+                age = float(now - x['start_time']) / (3 * Gst.SECOND)
+                color = (int(255 * max([1 - age, 0.5])),) * 3
+                _draw_text(img, x['text'], origin, color)
+            for match_result in matches:
+                _draw_match(img, match_result.region, match_result.match)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -2084,7 +2086,7 @@ class Display(object):
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-def _draw_text(numpy_image, text, origin):
+def _draw_text(numpy_image, text, origin, color):
     (width, height), _ = cv2.getTextSize(
         text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, thickness=1)
     cv2.rectangle(
@@ -2093,7 +2095,7 @@ def _draw_text(numpy_image, text, origin):
         thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0,
-        color=(255, 255, 255))
+        color=color)
 
 
 def _draw_match(numpy_image, region, match_, thickness=3):
