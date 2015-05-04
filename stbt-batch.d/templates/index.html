@@ -277,10 +277,6 @@
       var num_failed = $(".error:visible").length;  // red
       var num_warnings = $(".warning:visible").length;  // yellow
       var num_total = num_success + num_failed + num_warnings;
-      var percent_success = 0;
-      if (num_total > 0) {
-        percent_success = parseInt(num_success / num_total * 100);
-      }
 
       $("#totals").html(
         "<span class='text-success'>Passed: " + format_summary(num_success, num_total) + ".</span> " +
