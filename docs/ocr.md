@@ -13,6 +13,29 @@ Tesseract uses a dictionary to help choose the correct word even if individual
 characters were misread. This is helpful when reading real words but it can get
 in the way when reading characters and words with a different structure.
 
+## General tips
+
+* Crop the region in which you are performing OCR tight to the text using the
+  `region` parameter to `ocr` and `match_text`
+
+## Matching some known text
+
+* Use the `tesseract_user_words` or `tesseract_user_patterns` parameters to
+  `ocr` and `match_text` to tell the OCR engine what you're expecting.
+* Use fuzzy matching to check if the returned text matches what you were
+  expecting.  e.g. a function like:
+
+        def fuzzy_match(string1, string2, threshold=0.8):
+            import difflib
+            return difflib.SequenceMatcher(None, string1, string2).ratio() >= threshold
+
+### Example
+
+Looking for the text "EastEnders":
+
+    text = stbt.ocr(region=stbt.Region(52, 34, 120, 50))
+    assert fuzzy_match(text, "EastEnders)
+
 ## Matching serial numbers
 
 For example, here is a code generated at random by one user's set-top box, for
