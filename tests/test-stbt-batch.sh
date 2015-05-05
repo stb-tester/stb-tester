@@ -29,8 +29,6 @@ test_stbt_batch_run_once() {
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
     [[ $(cat latest/git-commit) == "$expected_commit" ]] || fail "wrong latest/git-commit"
     [[ $(cat latest/test-name) == test.py ]] || fail "wrong latest/test-name"
-    diff -u <(cat "$srcdir"/VERSION) latest/stbt-version.log ||
-        fail "Wrong latest/stbt-version.log"
     [[ -f latest/video.webm ]] || fail "latest/video.webm not created"
     [[ -f latest/thumbnail.jpg ]] || fail "test/thumbnail.jpg not created"
     [[ -f latest/index.html ]] || fail "latest/index.html not created"

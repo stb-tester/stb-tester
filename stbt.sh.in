@@ -27,7 +27,7 @@
 
 usage() { grep '^#/' "$0" | cut -c4-; }
 
-export STBT_VERSION="@VERSION@"
+export STBT_VERSION="@VERSION@-@RELEASE@"
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 

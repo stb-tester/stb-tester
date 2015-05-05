@@ -37,16 +37,11 @@ tools += stbt-screenshot
 tools += stbt-templatematch
 tools += stbt-tv
 
-# Generate version from 'git describe' when in git repository, and from
-# VERSION file included in the dist tarball otherwise.
-generate_version := $(shell \
-	GIT_DIR=.git git describe --always --dirty > VERSION.now 2>/dev/null && \
-	sed --in-place "s/^v//g" VERSION.now && \
-	{ cmp VERSION.now VERSION 2>/dev/null || mv VERSION.now VERSION; }; \
-	rm -f VERSION.now)
-VERSION?=$(shell cat VERSION)
+VERSION?=22-youview
 ESCAPED_VERSION=$(subst -,_,$(VERSION))
 RELEASE?=1
+
+generate_version := $(shell echo $(VERSION) > VERSION)
 
 .DELETE_ON_ERROR:
 
