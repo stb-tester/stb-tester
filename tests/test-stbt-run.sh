@@ -60,7 +60,7 @@ test_that_stbt_run_treats_failing_assertions_as_test_errors() {
 	EOF
     stbt run -v test.py &> test.log
     ret=$?
-    [[ $ret == 1 ]] || fail "Unexpected return code $ret (expected 2)"
+    [[ $ret == 2 ]] || fail "Unexpected return code $ret (expected 2)"
     assert grep -q "FAIL: test.py: AssertionError: My assertion" test.log
 }
 
