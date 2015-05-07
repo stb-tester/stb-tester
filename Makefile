@@ -175,6 +175,13 @@ check-bashcompletion:
 	        ($$t); \
 	    done'
 
+coverage:
+	rm -rf .coverage .coveragerc htmlcov
+	./extra/coverage/setup-coverage.sh
+	COVERAGE_PROCESS_START=$$PWD/.coveragerc make -k check-integrationtests check-nosetests || true
+	python-coverage combine
+	python-coverage html
+
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
 check-cameratests: install-for-test
