@@ -425,7 +425,7 @@ test_stbt_batch_output_dir() {
     grep -q test2.py "my-results"/*/test-name || fail "Second test's results not in 'my-results'"
 }
 
-test_stbt_batch_printing_unicode_characters_in_scripts() {
+test_printing_unicode_characters_in_scripts() {
     which unbuffer &>/dev/null || skip "unbuffer is not installed"
 
     create_test_repo
