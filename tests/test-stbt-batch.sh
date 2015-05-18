@@ -449,6 +449,30 @@ test_stbt_batch_printing_unicode_characters_in_scripts() {
     stbt batch run -1 tests/test.py
 }
 
+test_that_stbt_batch_run_can_print_exceptions_with_unicode_characters() {
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, u"ü"
+	EOF
+    stbt batch run -1 test.py
+    cat latest/combined.log latest/failure-reason
+    grep -E 'FAIL: .*test.py: AssertionError: ü' latest/combined.log || fail
+    grep 'assert False, u"ü"' latest/combined.log || fail
+    grep 'AssertionError: ü' latest/failure-reason || fail
+}
+
+test_that_stbt_batch_run_can_print_exceptions_with_encoded_utf8_string() {
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, u"ü".encode("utf-8")
+	EOF
+    stbt batch run -1 test.py
+    cat latest/combined.log latest/failure-reason
+    grep -E 'FAIL: .*test.py: AssertionError: ü' latest/combined.log || fail
+    grep 'assert False, u"ü"' latest/combined.log || fail
+    grep 'AssertionError: ü' latest/failure-reason || fail
+}
+
 test_that_tests_reading_from_stdin_dont_mess_up_batch_run_test_list() {
     cat >test.py <<-EOF
 		import sys

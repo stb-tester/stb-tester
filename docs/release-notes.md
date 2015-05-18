@@ -38,6 +38,9 @@ UNRELEASED
   to the issue seen.  We now save the last frame that the test-script saw
   rather than just saving a screenshot after the end of the test-run.
 
+* `stbt run` will no longer fail if your test script raises an exception with
+  unicode characters in the exception's message.
+
 * `stbt lint` will complain if you don't use the return value from
   `is_screen_black`, `match`, `match_text`, `ocr`, or `wait_until`. When the
   return value from `wait_until` isn't used in an `if` statement or assigned to
