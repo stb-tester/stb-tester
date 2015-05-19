@@ -1951,7 +1951,7 @@ class Display(object):
         with self.annotations_lock:
             if type(obj) in (str, unicode):
                 obj = (
-                    datetime.datetime.now().strftime("%H:%M:%S:%f")[:-4] +
+                    datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs * Gst.SECOND})
