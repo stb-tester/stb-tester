@@ -42,6 +42,8 @@ from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_buffer
 from _stbt.logging import debug, ddebug, warn
 
+gi.require_version("Gst", "1.0")
+
 __all__ = [
     "as_precondition",
     "ConfigurationError",
