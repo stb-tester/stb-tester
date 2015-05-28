@@ -17,6 +17,12 @@ gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/g
 gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
 gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
 
+# Enable building/installing man page
+enable_docs:=$(shell which rst2man >/dev/null 2>&1 && echo yes || echo no)
+ifeq ($(enable_docs), no)
+ $(info Not building/installing documentation because 'rst2man' was not found)
+endif
+
 # Enable building/installing stbt camera (smart TV support).
 enable_stbt_camera?=no
 
@@ -51,7 +57,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
+all: stbt.sh defaults.conf extra/fedora/stb-tester.spec
 
 extra/fedora/stb-tester.spec stbt.sh: \
   %: %.in .stbt-prefix VERSION
@@ -68,7 +74,7 @@ defaults.conf: stbt.conf .stbt-prefix
 	    $< > $@
 
 install: install-core
-install-core: stbt.sh stbt.1 defaults.conf
+install-core: stbt.sh defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -77,7 +83,6 @@ install-core: stbt.sh stbt.1 defaults.conf
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates \
-	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
@@ -112,7 +117,6 @@ install-core: stbt.sh stbt.1 defaults.conf
 	    stbt-batch.d/templates/index.html \
 	    stbt-batch.d/templates/testrun.html \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
-	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -126,15 +130,6 @@ uninstall:
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/bash_completion.d
-
-doc: stbt.1
-
-# Requires python-docutils
-stbt.1: README.rst VERSION
-	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
-	sed -e '/\.\. image::/,/^$$/ d' |\
-	sed -e 's/(callable_,/(`callable_`,/' |\
-	rst2man > $@
 
 clean:
 	git clean -Xfd || true
@@ -228,6 +223,26 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 TAGS:
 	etags stbt/**.py _stbt/**.py
+
+### Documentation ############################################################
+
+doc: stbt.1
+
+# Requires python-docutils
+stbt.1: README.rst VERSION
+	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
+	sed -e '/\.\. image::/,/^$$/ d' |\
+	sed -e 's/(callable_,/(`callable_`,/' |\
+	rst2man > $@
+
+ifeq ($(enable_docs), yes)
+ all: stbt.1
+ install: install-docs
+endif
+
+install-docs: stbt.1
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 
 ### Debian Packaging #########################################################
 
