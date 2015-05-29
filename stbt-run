@@ -95,21 +95,5 @@ except Exception as e:  # pylint: disable=W0703
         sys.exit(1)  # Failure
     else:
         sys.exit(2)  # Error
-else:
-    try:
-        from common import failures
-        from classify_tools import add_extra_column, set_failure_reason
-    except ImportError:
-        pass  # uitests library is not in PYTHONPATH
-    else:
-        if len(failures) > 0:
-            print "Summary: %s failure(s) ignored earlier:" % len(failures)
-            print "\n".join([
-                "  %s: %s" % (label, failure_reason)
-                for label, failure_reason in failures])
-            add_extra_column("Failure count", len(failures))
-            set_failure_reason(
-                "\n".join([failure_reason for _, failure_reason in failures]))
-            sys.exit(1)  # Failure
 finally:
     stbt.teardown_run()
