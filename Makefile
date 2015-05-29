@@ -147,7 +147,8 @@ check-nosetests: tests/ocr/menu.png
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/test.py \
 	              -e tests/test2.py \
-	              -e tests/test_functions.py) \
+	              -e tests/test_functions.py \
+	              -e _stbt/failure_reporting.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
