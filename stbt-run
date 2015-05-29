@@ -56,6 +56,50 @@ def import_by_filename(filename_):
     sys.path = [os.path.abspath(module_dir)] + sys.path
     return __import__(module_name)
 
+
+def report_exception(script_name, exc, message):
+    """Print the script's failing exception."""
+    sys.stdout.write("FAIL: %s: %s: %s\n" % (
+        script_name, type(exc).__name__, message))
+
+
+def report_failures():
+    """Print a list of failures which were registered during test execution.
+
+    If failures have been registered, a UITestFailure exception is created and
+    returned to the caller along with an integer representing a exit code which
+    can be raised to indicate that failures were registered during test
+    execution and the nature of the failures.
+
+    If no failures have been registered, the return is (None, 0).
+
+    :rtype: (Exception, int)
+    """
+    ret_exception = None
+    exit_codes = []
+    for i, failure in enumerate(stbt.get_registered_failures()):
+        if i == 0:  # First loop only
+            sys.stderr.write("Failures registered during test execution:\n")
+
+        sys.stderr.write("%s\n" % failure)
+
+        if failure.screenshot is not None:
+            screenshot_file = "%s.png" % failure.classification
+            sys.stderr.write("Saved screenshot to '%s'.\n" % screenshot_file)
+            stbt.save_frame(failure.screenshot, screenshot_file)
+
+        exit_codes.append(failure.exit_status)
+        if ret_exception is None:
+            ret_exception = failure.exception if failure.exception is not None \
+                else stbt.UITestFailure(
+                    "Encountered a single failure during test execution.")
+        else:
+            ret_exception = stbt.UITestFailure(
+                "Encountered multiple failures during test execution.")
+
+    return ret_exception, min(exit_codes or (0,))
+
+
 try:
     # pylint: disable=W0611
 
@@ -82,11 +126,11 @@ try:
         sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
         execfile(args.script)
 except Exception as e:  # pylint: disable=W0703
+    report_failures()
     error_message = str(e)
     if not error_message and isinstance(e, AssertionError):
         error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-    sys.stdout.write("FAIL: %s: %s: %s\n" % (
-        args.script, type(e).__name__, error_message))
+    report_exception(args.script, e, error_message)
     if hasattr(e, "screenshot") and e.screenshot is not None:
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
@@ -95,5 +139,10 @@ except Exception as e:  # pylint: disable=W0703
         sys.exit(1)  # Failure
     else:
         sys.exit(2)  # Error
+else:
+    exception, exit_code = report_failures()
+    if exception is not None:
+        report_exception(args.script, exception, str(exception))
+    sys.exit(exit_code)
 finally:
     stbt.teardown_run()
