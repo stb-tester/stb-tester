@@ -84,7 +84,12 @@ def report_failures():
         sys.stderr.write("%s\n" % failure)
 
         if failure.screenshot is not None:
-            screenshot_file = "%s.png" % failure.classification
+            screenshot_file = "%s_%s.png" % (
+                # Is it sensible to assume that push failures *won't* occur
+                # in the same second? It seems redundant to add milliseconds
+                # but there's nothing to stop this from happening.
+                failure.timestamp.strftime("%Y-%m-%d_%H.%M.%S"),
+                failure.classification)
             sys.stderr.write("Saved screenshot to '%s'.\n" % screenshot_file)
             stbt.save_frame(failure.screenshot, screenshot_file)
 

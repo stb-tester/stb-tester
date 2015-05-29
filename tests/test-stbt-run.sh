@@ -266,7 +266,7 @@ test_that_registered_failures_without_screenshots_grab_from_live() {
 	stbt.push_test_failure('MYBUG-ABC', 'bad thing happened')
 	EOF
     stbt run -v test.py
-    [ -f MYBUG-ABC.png ] ||
+    [ -f *_MYBUG-ABC.png ] ||
     fail "Screenshots not found. Directory contains: $(ls -1)"
 }
 
@@ -280,8 +280,24 @@ test_that_registered_failures_with_screenshots_are_saved() {
 	raise stbt.MatchTimeout(stbt.get_frame(), 'nothing', 0)
 	EOF
     stbt run -v test.py
-    [ -f MYBUG-123.png ] &&
-    [ -f MYBUG-456.png ] &&
+    [ -f *_MYBUG-123.png ] &&
+    [ -f *_MYBUG-456.png ] &&
     [ -f screenshot.png ] ||
+    fail "Screenshots not found. Directory contains: $(ls -1)"
+}
+
+test_that_registered_failures_with_screenshots_dont_clobber() {
+    failure='MYBUG-XYZ'
+    cat > test.py <<-EOF
+	import time, stbt
+	failure = 'MYBUG-XYZ'
+	stbt.push_test_failure(
+	    failure, 'bad thing happened', screenshot=stbt.get_frame())
+	time.sleep(1)
+	stbt.push_test_failure(
+	    failure, 'the same bad thing happened', screenshot=stbt.get_frame())
+	EOF
+    stbt run -v test.py
+    [ $(ls *_${failure}.png | wc -l) -eq 2 ] ||
     fail "Screenshots not found. Directory contains: $(ls -1)"
 }
