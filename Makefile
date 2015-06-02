@@ -39,7 +39,7 @@ tools += stbt-tv
 
 VERSION?=22-youview
 ESCAPED_VERSION=$(subst -,_,$(VERSION))
-RELEASE?=1
+RELEASE?=2
 
 generate_version := $(shell echo $(VERSION) > VERSION)
 
