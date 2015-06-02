@@ -151,3 +151,153 @@ test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
     stbt run tests/test.py::test_that_this_test_is_run
     [ -e "touched" ] || fail "Test not run"
 }
+
+test_that_registered_failures_are_reported_on_success() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id-1', 'my description-1')
+	stbt.push_test_failure('my-bug-id-2', 'my description-2')
+	print "End of test reached."
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q "Failure: (@.*) my-bug-id-1 - my description-1" test.log
+    assert grep -q "Failure: (@.*) my-bug-id-2 - my description-2" test.log
+    assert grep -q "End of test reached." test.log
+}
+
+test_that_no_registered_failures_on_success_has_no_effect() {
+    cat > test.py <<-EOF
+	print "Everything worked! Isn't that great?"
+	EOF
+    stbt run -v test.py &> test.log
+    exit_status=${?}
+    assert [ ${exit_status} -eq 0 ]
+    assert grep -qv "Failure (@.*)" test.log
+}
+
+test_that_registered_failures_determine_exit_status_on_success() {
+    cat > test_1.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id', 'my description')
+	EOF
+    stbt run -v test_1.py
+    exit_status=${?}
+    assert [ ${exit_status} -eq 1 ]
+
+    cat > test_2.py <<-EOF
+	import stbt
+	stbt.push_test_error('my-bug-id', 'my description')
+	EOF
+    stbt run -v test_2.py
+    exit_status=${?}
+    assert [ ${exit_status} -eq 2 ]
+}
+
+test_that_one_registered_failure_determines_exception_raised_on_success() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id', 'my description')
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q \
+        "FAIL: test.py: UITestFailure: "\
+        "Encountered a single failure during test execution." test.log
+}
+
+test_that_one_registered_failure_with_exception_determines_exception_raised_on_success() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure(
+	    'my-bug-id', 'my description', exception=RuntimeError("It didn't work"))
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q \
+        "FAIL: test.py: RuntimeError: It didn't work" test.log
+}
+
+test_that_multiple_registered_failures_determine_exit_status_on_success() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id', 'my description')
+	stbt.push_test_error('my-bug-id', 'my description')
+	EOF
+    stbt run -v test.py
+    exit_status=${?}
+    assert [ ${exit_status} -eq 1 ]
+}
+
+test_that_registered_failures_are_reported_on_failure() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id-1', 'my description-1')
+	stbt.push_test_failure('my-bug-id-2', 'my description-2')
+	raise stbt.UITestFailure("Unanticipated failure")
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q "Failure: (@.*) my-bug-id-1 - my description-1" test.log
+    assert grep -q "Failure: (@.*) my-bug-id-2 - my description-2" test.log
+}
+
+test_that_registered_failures_dont_determine_exit_status_on_failure() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_error('my-bug-id', 'my-description')
+	raise stbt.UITestFailure("Unanticipated failure")
+	EOF
+    stbt run -v test.py &> test.log
+    exit_status=${?}
+    assert [ ${exit_status} -eq 1 ]
+}
+
+test_that_registered_failures_dont_determine_exception_raised_on_failure() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('my-bug-id', 'my-description')
+	raise stbt.UITestFailure("Unanticipated failure")
+	EOF
+    stbt run -v test.py &> test.log
+    assert grep -q "FAIL: test.py: "\
+        "UITestFailure: Unanticipated failure" test.log
+}
+
+test_that_registered_failures_without_screenshots_grab_from_live() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure('MYBUG-ABC', 'bad thing happened')
+	EOF
+    stbt run -v test.py
+    [ -f *_MYBUG-ABC.png ] ||
+    fail "Screenshots not found. Directory contains: $(ls -1)"
+}
+
+test_that_registered_failures_with_screenshots_are_saved() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.push_test_failure(
+	    'MYBUG-123', 'bad thing happened', screenshot=stbt.get_frame())
+	stbt.push_test_failure(
+	    'MYBUG-456', 'other bad thing happened', screenshot=stbt.get_frame())
+	raise stbt.MatchTimeout(stbt.get_frame(), 'nothing', 0)
+	EOF
+    stbt run -v test.py
+    [ -f *_MYBUG-123.png ] &&
+    [ -f *_MYBUG-456.png ] &&
+    [ -f screenshot.png ] ||
+    fail "Screenshots not found. Directory contains: $(ls -1)"
+}
+
+test_that_registered_failures_with_screenshots_dont_clobber() {
+    failure='MYBUG-XYZ'
+    cat > test.py <<-EOF
+	import time, stbt
+	failure = 'MYBUG-XYZ'
+	stbt.push_test_failure(
+	    failure, 'bad thing happened', screenshot=stbt.get_frame())
+	time.sleep(1)
+	stbt.push_test_failure(
+	    failure, 'the same bad thing happened', screenshot=stbt.get_frame())
+	EOF
+    stbt run -v test.py
+    [ $(ls *_${failure}.png | wc -l) -eq 2 ] ||
+    fail "Screenshots not found. Directory contains: $(ls -1)"
+}

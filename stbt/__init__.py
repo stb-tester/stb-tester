@@ -40,6 +40,8 @@ from _stbt import utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_buffer
 from _stbt.logging import debug, ddebug, warn
+from _stbt.failure_reporting import (
+    get_registered_failures, push_test_error, push_test_failure)
 
 __all__ = [
     "as_precondition",
@@ -51,6 +53,7 @@ __all__ = [
     "frames",
     "get_config",
     "get_frame",
+    "get_registered_failures",
     "is_screen_black",
     "match",
     "match_text",
@@ -66,6 +69,8 @@ __all__ = [
     "PreconditionError",
     "press",
     "press_until_match",
+    "push_test_error",
+    "push_test_failure",
     "Region",
     "save_frame",
     "TextMatchResult",

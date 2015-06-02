@@ -40,6 +40,7 @@ main() {
           return 0
         }
         classify > failure-reason
+        get_registered_failures > registered-failures
         LC_ALL=C sort --merge stdout.log stderr.log > combined.log
         user_command classify
         echo "$rundir: $(cat failure-reason)"
@@ -89,6 +90,12 @@ classify() {
   else
     echo unknown
   fi
+}
+
+get_registered_failures() {
+    grep '\(Failure\|Error\): (@.*)' stderr.log | \
+      grep -v Registering | \
+      cut -d' ' -f4-
 }
 
 signalname() {

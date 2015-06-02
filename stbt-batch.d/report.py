@@ -76,6 +76,7 @@ class Run(object):
 
         self.duration = self.read_seconds("duration")
         self.failure_reason = self.read("failure-reason")
+        self.registered_failures = self.read("registered-failures").splitlines()
         self.git_commit = self.read("git-commit")
         self.notes = self.read("notes")
         self.test_args = self.read("test-args")
@@ -92,6 +93,7 @@ class Run(object):
                     "exit-status",
                     "extra-columns",
                     "failure-reason",
+                    "registered-failures",
                     "git-commit",
                     "test-args",
                     "test-name",

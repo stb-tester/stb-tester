@@ -42,6 +42,14 @@
 {% if run.exit_status > 0 %}
   <p><b>Failure reason:</b></p>
   <p id="failure-reason">{{run.failure_reason}}</p>
+  {% if run.registered_failures %}
+  <p><b>Registered failures:</b></p>
+  <ul>
+    {% for failure in run.registered_failures %}
+    <li>{{failure}}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 {% endif %}
 
 {% for key in run.extra_columns %}

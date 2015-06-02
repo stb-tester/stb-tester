@@ -82,6 +82,7 @@ install-core: stbt.sh stbt.1 defaults.conf
 	    _stbt/__init__.py \
 	    _stbt/config.py \
 	    _stbt/control.py \
+	    _stbt/failure_reporting.py \
 	    _stbt/gst_hacks.py \
 	    _stbt/irnetbox.py \
 	    _stbt/logging.py \
@@ -141,12 +142,13 @@ check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	PYTHONPATH="$$PWD:$$PYTHONPATH" NOSE_REDNOSE=1 \
+	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
 	nosetests --with-doctest -v --match "^test_" \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/test.py \
 	              -e tests/test2.py \
-	              -e tests/test_functions.py) \
+	              -e tests/test_functions.py \
+	              -e _stbt/failure_reporting.py) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
@@ -159,7 +161,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
-	| PYTHONPATH="$$PWD:$$PYTHONPATH" $(parallel) extra/pylint.sh
+	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
