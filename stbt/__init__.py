@@ -106,6 +106,10 @@ def press(key, interpress_delay_secs=None):
         setting ``interpress_delay_secs`` in the ``[press]`` section of
         stbt.conf.
     """
+    if _control is None:
+        raise RuntimeError("Can't send keypress to the device under test: " +
+                           "Control not initialised")
+
     if interpress_delay_secs is None:
         interpress_delay_secs = get_config(
             "press", "interpress_delay_secs", type_=float)
@@ -1338,6 +1342,9 @@ def save_frame(image, filename):
 
 def get_frame():
     """:returns: The latest video frame in OpenCV format (`numpy.ndarray`)."""
+    if _display is None:
+        raise RuntimeError("Can't get frame from device under test: " +
+                           "Video source not initialised")
     with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
         return frame.copy()
 
@@ -1622,13 +1629,16 @@ def argparser():
 
 
 def init_run(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False, transformation_pipeline='identity'):
+        gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
+        save_video=False, restart_source=False,
+        transformation_pipeline='identity'):
     global _display, _control
     _display = Display(
-        gst_source_pipeline, gst_sink_pipeline,
+        gst_source_pipeline or get_config('global', 'source_pipeline'),
+        gst_sink_pipeline or get_config('global', 'sink_pipeline'),
         save_video, restart_source, transformation_pipeline)
-    _control = control.uri_to_remote(control_uri, _display)
+    _control = control.uri_to_remote(
+        control_uri or get_config('global', 'control'), _display)
 
 
 def teardown_run():
