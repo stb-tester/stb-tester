@@ -106,6 +106,10 @@ def press(key, interpress_delay_secs=None):
         setting ``interpress_delay_secs`` in the ``[press]`` section of
         stbt.conf.
     """
+    if _control is None:
+        raise RuntimeError("Can't send keypress to the device under test: " +
+                           "Control not initialised")
+
     if interpress_delay_secs is None:
         interpress_delay_secs = get_config(
             "press", "interpress_delay_secs", type_=float)
@@ -1338,6 +1342,9 @@ def save_frame(image, filename):
 
 def get_frame():
     """:returns: The latest video frame in OpenCV format (`numpy.ndarray`)."""
+    if _display is None:
+        raise RuntimeError("Can't get frame from device under test: " +
+                           "Video source not initialised")
     with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
         return frame.copy()
 
