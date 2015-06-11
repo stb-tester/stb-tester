@@ -68,7 +68,7 @@ __all__ = [
     "wait_until",
 ]
 
-_dut = _stbt.core
+_dut = _stbt.core.DeviceUnderTest()
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -427,13 +427,16 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
         restart_source=False, transformation_pipeline='identity'):
-    _stbt.core._display = _stbt.core.Display(
+    from _stbt.control import uri_to_remote
+    global _dut
+    display = _stbt.core.Display(
         gst_source_pipeline, gst_sink_pipeline,
         save_video, restart_source, transformation_pipeline)
-    _stbt.core._control = _stbt.core.control.uri_to_remote(
-        control_uri, _display)
+    _dut = _stbt.core.DeviceUnderTest(
+        display=display, control=uri_to_remote(control_uri, display))
 
 
 def teardown_run():
-    if _stbt.core._display:
-        _stbt.core._display.teardown()
+    # pylint: disable=W0212
+    if _dut._display:
+        _dut._display.teardown()

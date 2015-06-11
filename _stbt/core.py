@@ -33,7 +33,7 @@ import numpy
 from enum import IntEnum
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
-from _stbt import control, logging, utils
+from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_buffer
 from _stbt.logging import ddebug, debug, warn
@@ -524,320 +524,326 @@ class TextMatchResult(namedtuple(
                 repr(self.text)))
 
 
-def press(key, interpress_delay_secs=None):
-    if interpress_delay_secs is None:
-        interpress_delay_secs = get_config(
-            "press", "interpress_delay_secs", type_=float)
-    if getattr(press, 'time_of_last_press', None):
-        # `sleep` is inside a `while` loop because the actual suspension time
-        # of `sleep` may be less than that requested.
-        while True:
-            seconds_to_wait = (
-                press.time_of_last_press - datetime.datetime.now() +
-                datetime.timedelta(seconds=interpress_delay_secs)
-            ).total_seconds()
-            if seconds_to_wait > 0:
-                time.sleep(seconds_to_wait)
-            else:
-                break
+class DeviceUnderTest(object):
+    def __init__(self, display=None, control=None):
+        self._time_of_last_press = None
+        self._display = display
+        self._control = control
 
-    _control.press(key)
-    press.time_of_last_press = datetime.datetime.now()
-    draw_text(key, duration_secs=3)
+    def press(self, key, interpress_delay_secs=None):
+        if interpress_delay_secs is None:
+            interpress_delay_secs = get_config(
+                "press", "interpress_delay_secs", type_=float)
+        if self._time_of_last_press is not None:
+            # `sleep` is inside a `while` loop because the actual suspension
+            # time of `sleep` may be less than that requested.
+            while True:
+                seconds_to_wait = (
+                    self._time_of_last_press - datetime.datetime.now() +
+                    datetime.timedelta(seconds=interpress_delay_secs)
+                ).total_seconds()
+                if seconds_to_wait > 0:
+                    time.sleep(seconds_to_wait)
+                else:
+                    break
 
+        self._control.press(key)
+        self._time_of_last_press = datetime.datetime.now()
+        self.draw_text(key, duration_secs=3)
 
-def draw_text(text, duration_secs=3):
-    _display.draw(text, duration_secs)
+    def draw_text(self, text, duration_secs=3):
+        self._display.draw(text, duration_secs)
 
+    def match(self, image, frame=None, match_parameters=None,
+              region=Region.ALL):
 
-def match(image, frame=None, match_parameters=None, region=Region.ALL):
-    if match_parameters is None:
-        match_parameters = MatchParameters()
+        if match_parameters is None:
+            match_parameters = MatchParameters()
 
-    template = _load_template(image)
+        template = _load_template(image)
 
-    grabbed_from_live = (frame is None)
-    if grabbed_from_live:
-        frame = _display.get_sample()
+        grabbed_from_live = (frame is None)
+        if grabbed_from_live:
+            frame = self._display.get_sample()
 
-    with _numpy_from_sample(frame, readonly=True) as npframe:
-        region = Region.intersect(_image_region(npframe), region)
+        with _numpy_from_sample(frame, readonly=True) as npframe:
+            region = Region.intersect(_image_region(npframe), region)
 
-        matched, match_region, first_pass_certainty = _match(
-            _crop(npframe, region), template.image, match_parameters,
-            template.friendly_name)
+            matched, match_region, first_pass_certainty = _match(
+                _crop(npframe, region), template.image, match_parameters,
+                template.friendly_name)
 
-        match_region = match_region.translate(region.x, region.y)
-        result = MatchResult(
-            _get_frame_timestamp(frame), matched, match_region,
-            first_pass_certainty, numpy.copy(npframe),
-            (template.name or template.image))
+            match_region = match_region.translate(region.x, region.y)
+            result = MatchResult(
+                _get_frame_timestamp(frame), matched, match_region,
+                first_pass_certainty, numpy.copy(npframe),
+                (template.name or template.image))
 
-    if grabbed_from_live:
-        _display.draw(result, None)
+        if grabbed_from_live:
+            self._display.draw(result, None)
 
-    if result.match:
-        debug("Match found: %s" % str(result))
-    else:
-        debug("No match found. Closest match: %s" % str(result))
+        if result.match:
+            debug("Match found: %s" % str(result))
+        else:
+            debug("No match found. Closest match: %s" % str(result))
 
-    return result
+        return result
 
+    def detect_match(self, image, timeout_secs=10, match_parameters=None):
+        template = _load_template(image)
 
-def detect_match(image, timeout_secs=10, match_parameters=None):
-    template = _load_template(image)
+        debug("Searching for " + template.friendly_name)
 
-    debug("Searching for " + template.friendly_name)
+        for sample in self._display.gst_samples(timeout_secs):
+            result = self.match(
+                template, frame=sample, match_parameters=match_parameters)
+            self._display.draw(result, None)
+            yield result
 
-    for sample in _display.gst_samples(timeout_secs):
-        result = match(
-            template, frame=sample, match_parameters=match_parameters)
-        _display.draw(result, None)
-        yield result
+    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
+        if noise_threshold is None:
+            noise_threshold = get_config(
+                'motion', 'noise_threshold', type_=float)
 
+        debug("Searching for motion")
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
-    if noise_threshold is None:
-        noise_threshold = get_config('motion', 'noise_threshold', type_=float)
+        mask_image = None
+        if mask:
+            mask_image = _load_mask(mask)
 
-    debug("Searching for motion")
+        previous_frame_gray = None
+        log = functools.partial(
+            _log_image, directory="stbt-debug/detect_motion")
 
-    mask_image = None
-    if mask:
-        mask_image = _load_mask(mask)
+        for sample in self._display.gst_samples(timeout_secs):
+            with _numpy_from_sample(sample, readonly=True) as frame:
+                frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            log(frame_gray, "source")
 
-    previous_frame_gray = None
-    log = functools.partial(_log_image, directory="stbt-debug/detect_motion")
+            if previous_frame_gray is None:
+                if (mask_image is not None and
+                        mask_image.shape[:2] != frame_gray.shape[:2]):
+                    raise UITestError(
+                        "The dimensions of the mask '%s' %s don't match the "
+                        "video frame %s" % (
+                            mask, mask_image.shape, frame_gray.shape))
+                previous_frame_gray = frame_gray
+                continue
 
-    for sample in _display.gst_samples(timeout_secs):
-        with _numpy_from_sample(sample, readonly=True) as frame:
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        log(frame_gray, "source")
-
-        if previous_frame_gray is None:
-            if (mask_image is not None and
-                    mask_image.shape[:2] != frame_gray.shape[:2]):
-                raise UITestError(
-                    "The dimensions of the mask '%s' %s don't match the video "
-                    "frame %s" % (mask, mask_image.shape, frame_gray.shape))
+            absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
             previous_frame_gray = frame_gray
-            continue
+            log(absdiff, "absdiff")
 
-        absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
-        previous_frame_gray = frame_gray
-        log(absdiff, "absdiff")
+            if mask_image is not None:
+                absdiff = cv2.bitwise_and(absdiff, mask_image)
+                log(mask_image, "mask")
+                log(absdiff, "absdiff_masked")
 
-        if mask_image is not None:
-            absdiff = cv2.bitwise_and(absdiff, mask_image)
-            log(mask_image, "mask")
-            log(absdiff, "absdiff_masked")
+            _, thresholded = cv2.threshold(
+                absdiff, int((1 - noise_threshold) * 255), 255,
+                cv2.THRESH_BINARY)
+            eroded = cv2.erode(
+                thresholded,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+            log(thresholded, "absdiff_threshold")
+            log(eroded, "absdiff_threshold_erode")
 
-        _, thresholded = cv2.threshold(
-            absdiff, int((1 - noise_threshold) * 255), 255, cv2.THRESH_BINARY)
-        eroded = cv2.erode(
-            thresholded,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-        log(thresholded, "absdiff_threshold")
-        log(eroded, "absdiff_threshold_erode")
+            motion = (cv2.countNonZero(eroded) > 0)
 
-        motion = (cv2.countNonZero(eroded) > 0)
+            # Visualisation: Highlight in red the areas where we detected motion
+            if motion:
+                with _numpy_from_sample(sample) as frame:
+                    cv2.add(
+                        frame,
+                        numpy.multiply(
+                            numpy.ones(frame.shape, dtype=numpy.uint8),
+                            (0, 0, 255),  # bgr
+                            dtype=numpy.uint8),
+                        mask=cv2.dilate(
+                            thresholded,
+                            cv2.getStructuringElement(
+                                cv2.MORPH_ELLIPSE, (3, 3)),
+                            iterations=1),
+                        dst=frame)
 
-        # Visualisation: Highlight in red the areas where we detected motion
-        if motion:
-            with _numpy_from_sample(sample) as frame:
-                cv2.add(
-                    frame,
-                    numpy.multiply(
-                        numpy.ones(frame.shape, dtype=numpy.uint8),
-                        (0, 0, 255),  # bgr
-                        dtype=numpy.uint8),
-                    mask=cv2.dilate(
-                        thresholded,
-                        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
-                        iterations=1),
-                    dst=frame)
+            result = MotionResult(sample.get_buffer().pts, motion)
+            debug("%s found: %s" % (
+                "Motion" if motion else "No motion", str(result)))
+            yield result
 
-        result = MotionResult(sample.get_buffer().pts, motion)
-        debug("%s found: %s" % (
-            "Motion" if motion else "No motion", str(result)))
-        yield result
+    def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
+                       match_parameters=None):
 
+        if match_parameters is None:
+            match_parameters = MatchParameters()
 
-def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   match_parameters=None):
-
-    if match_parameters is None:
-        match_parameters = MatchParameters()
-
-    match_count = 0
-    last_pos = Position(0, 0)
-    image = _load_template(image)
-    for res in detect_match(
-            image, timeout_secs, match_parameters=match_parameters):
-        if res.match and (match_count == 0 or res.position == last_pos):
-            match_count += 1
-        else:
-            match_count = 0
-        last_pos = res.position
-        if match_count == consecutive_matches:
-            debug("Matched " + image.friendly_name)
-            return res
-
-    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
-
-
-def press_until_match(
-        key,
-        image,
-        interval_secs=None,
-        max_presses=None,
-        match_parameters=None):
-
-    if interval_secs is None:
-        # Should this be float?
-        interval_secs = get_config(
-            "press_until_match", "interval_secs", type_=int)
-    if max_presses is None:
-        max_presses = get_config("press_until_match", "max_presses", type_=int)
-
-    if match_parameters is None:
-        match_parameters = MatchParameters()
-
-    i = 0
-
-    while True:
-        try:
-            return wait_for_match(image, timeout_secs=interval_secs,
-                                  match_parameters=match_parameters)
-        except MatchTimeout:
-            if i < max_presses:
-                press(key)
-                i += 1
+        match_count = 0
+        last_pos = Position(0, 0)
+        image = _load_template(image)
+        for res in self.detect_match(
+                image, timeout_secs, match_parameters=match_parameters):
+            if res.match and (match_count == 0 or res.position == last_pos):
+                match_count += 1
             else:
-                raise
+                match_count = 0
+            last_pos = res.position
+            if match_count == consecutive_matches:
+                debug("Matched " + image.friendly_name)
+                return res
 
+        raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
 
-def wait_for_motion(
-        timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=None):
+    def press_until_match(
+            self,
+            key,
+            image,
+            interval_secs=None,
+            max_presses=None,
+            match_parameters=None):
 
-    if consecutive_frames is None:
-        consecutive_frames = get_config('motion', 'consecutive_frames')
+        if interval_secs is None:
+            # Should this be float?
+            interval_secs = get_config(
+                "press_until_match", "interval_secs", type_=int)
+        if max_presses is None:
+            max_presses = get_config(
+                "press_until_match", "max_presses", type_=int)
 
-    consecutive_frames = str(consecutive_frames)
-    if '/' in consecutive_frames:
-        motion_frames = int(consecutive_frames.split('/')[0])
-        considered_frames = int(consecutive_frames.split('/')[1])
-    else:
-        motion_frames = int(consecutive_frames)
-        considered_frames = int(consecutive_frames)
+        if match_parameters is None:
+            match_parameters = MatchParameters()
 
-    if motion_frames > considered_frames:
-        raise ConfigurationError(
-            "`motion_frames` exceeds `considered_frames`")
+        i = 0
 
-    debug("Waiting for %d out of %d frames with motion" % (
-        motion_frames, considered_frames))
+        while True:
+            try:
+                return self.wait_for_match(image, timeout_secs=interval_secs,
+                                           match_parameters=match_parameters)
+            except MatchTimeout:
+                if i < max_presses:
+                    self.press(key)
+                    i += 1
+                else:
+                    raise
 
-    matches = deque(maxlen=considered_frames)
-    for res in detect_motion(timeout_secs, noise_threshold, mask):
-        matches.append(res.motion)
-        if matches.count(True) >= motion_frames:
-            debug("Motion detected.")
-            return res
+    def wait_for_motion(
+            self, timeout_secs=10, consecutive_frames=None,
+            noise_threshold=None, mask=None):
 
-    screenshot = get_frame()
-    raise MotionTimeout(screenshot, mask, timeout_secs)
+        if consecutive_frames is None:
+            consecutive_frames = get_config('motion', 'consecutive_frames')
 
-
-def ocr(frame=None, region=Region.ALL,
-        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang="eng", tesseract_config=None, tesseract_user_words=None,
-        tesseract_user_patterns=None):
-
-    if frame is None:
-        frame = _display.get_sample()
-
-    if region is None:
-        warnings.warn(
-            "Passing region=None to ocr is deprecated since 0.21 and the "
-            "meaning will change in a future version.  To OCR an entire video "
-            "frame pass region=Region.ALL instead",
-            DeprecationWarning, stacklevel=2)
-        region = Region.ALL
-
-    text, region = _tesseract(
-        frame, region, mode, lang, tesseract_config,
-        user_patterns=tesseract_user_patterns, user_words=tesseract_user_words)
-    text = text.decode('utf-8').strip().translate(_ocr_transtab)
-    debug(u"OCR in region %s read '%s'." % (region, text))
-    return text
-
-
-def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
-               tesseract_config=None):
-
-    import lxml.etree
-    if frame is None:
-        frame = get_frame()
-
-    _config = dict(tesseract_config or {})
-    _config['tessedit_create_hocr'] = 1
-
-    ts = _get_frame_timestamp(frame)
-
-    xml, region = _tesseract(frame, region, mode, lang, _config)
-    if xml == '':
-        return TextMatchResult(ts, False, None, frame, text)
-    hocr = lxml.etree.fromstring(xml)
-    p = _hocr_find_phrase(hocr, text.split())
-    if p:
-        # Find bounding box
-        box = None
-        for _, elem in p:
-            box = _bounding_box(box, _hocr_elem_region(elem))
-        # _tesseract crops to region and scales up by a factor of 3 so we must
-        # undo this transformation here.
-        box = Region.from_extents(
-            region.x + box.x // 3, region.y + box.y // 3,
-            region.x + box.right // 3, region.y + box.bottom // 3)
-        return TextMatchResult(ts, True, box, frame, text)
-    else:
-        return TextMatchResult(ts, False, None, frame, text)
-
-
-def frames(timeout_secs=None):
-    return _display.frames(timeout_secs)
-
-
-def get_frame():
-    with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
-        return frame.copy()
-
-
-def is_screen_black(frame=None, mask=None, threshold=None):
-    if threshold is None:
-        threshold = get_config('is_screen_black', 'threshold', type_=int)
-    if mask:
-        mask = _load_mask(mask)
-    if frame is None:
-        frame = _display.get_sample()
-    with _numpy_from_sample(frame, readonly=True) as f:
-        greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
-    _, greyframe = cv2.threshold(greyframe, threshold, 255, cv2.THRESH_BINARY)
-    _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
-    if logging.get_debug_level() > 1:
-        _log_image(frame, 'source', 'stbt-debug/is_screen_black')
-        if mask is not None:
-            _log_image(mask, 'mask', 'stbt-debug/is_screen_black')
-            _log_image(numpy.bitwise_and(greyframe, mask),
-                       'non-black-regions-after-masking',
-                       'stbt-debug/is_screen_black')
+        consecutive_frames = str(consecutive_frames)
+        if '/' in consecutive_frames:
+            motion_frames = int(consecutive_frames.split('/')[0])
+            considered_frames = int(consecutive_frames.split('/')[1])
         else:
-            _log_image(greyframe, 'non-black-regions-after-masking',
-                       'stbt-debug/is_screen_black')
-    return maxVal == 0
+            motion_frames = int(consecutive_frames)
+            considered_frames = int(consecutive_frames)
+
+        if motion_frames > considered_frames:
+            raise ConfigurationError(
+                "`motion_frames` exceeds `considered_frames`")
+
+        debug("Waiting for %d out of %d frames with motion" % (
+            motion_frames, considered_frames))
+
+        matches = deque(maxlen=considered_frames)
+        for res in self.detect_motion(timeout_secs, noise_threshold, mask):
+            matches.append(res.motion)
+            if matches.count(True) >= motion_frames:
+                debug("Motion detected.")
+                return res
+
+        screenshot = self.get_frame()
+        raise MotionTimeout(screenshot, mask, timeout_secs)
+
+    def ocr(self, frame=None, region=Region.ALL,
+            mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+            lang="eng", tesseract_config=None, tesseract_user_words=None,
+            tesseract_user_patterns=None):
+
+        if frame is None:
+            frame = self._display.get_sample()
+
+        if region is None:
+            warnings.warn(
+                "Passing region=None to ocr is deprecated since 0.21 and the "
+                "meaning will change in a future version.  To OCR an entire "
+                "video frame pass region=Region.ALL instead",
+                DeprecationWarning, stacklevel=2)
+            region = Region.ALL
+
+        text, region = _tesseract(
+            frame, region, mode, lang, tesseract_config,
+            user_patterns=tesseract_user_patterns,
+            user_words=tesseract_user_words)
+        text = text.decode('utf-8').strip().translate(_ocr_transtab)
+        debug(u"OCR in region %s read '%s'." % (region, text))
+        return text
+
+    def match_text(self, text, frame=None, region=Region.ALL,
+                   mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
+                   tesseract_config=None):
+
+        import lxml.etree
+        if frame is None:
+            frame = self.get_frame()
+
+        _config = dict(tesseract_config or {})
+        _config['tessedit_create_hocr'] = 1
+
+        ts = _get_frame_timestamp(frame)
+
+        xml, region = _tesseract(frame, region, mode, lang, _config)
+        if xml == '':
+            return TextMatchResult(ts, False, None, frame, text)
+        hocr = lxml.etree.fromstring(xml)
+        p = _hocr_find_phrase(hocr, text.split())
+        if p:
+            # Find bounding box
+            box = None
+            for _, elem in p:
+                box = _bounding_box(box, _hocr_elem_region(elem))
+            # _tesseract crops to region and scales up by a factor of 3 so we
+            # must undo this transformation here.
+            box = Region.from_extents(
+                region.x + box.x // 3, region.y + box.y // 3,
+                region.x + box.right // 3, region.y + box.bottom // 3)
+            return TextMatchResult(ts, True, box, frame, text)
+        else:
+            return TextMatchResult(ts, False, None, frame, text)
+
+    def frames(self, timeout_secs=None):
+        return self._display.frames(timeout_secs)
+
+    def get_frame(self):
+        with _numpy_from_sample(
+                self._display.get_sample(), readonly=True) as frame:
+            return frame.copy()
+
+    def is_screen_black(self, frame=None, mask=None, threshold=None):
+        if threshold is None:
+            threshold = get_config('is_screen_black', 'threshold', type_=int)
+        if mask:
+            mask = _load_mask(mask)
+        if frame is None:
+            frame = self._display.get_sample()
+        with _numpy_from_sample(frame, readonly=True) as f:
+            greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
+        _, greyframe = cv2.threshold(
+            greyframe, threshold, 255, cv2.THRESH_BINARY)
+        _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
+        if logging.get_debug_level() > 1:
+            _log_image(frame, 'source', 'stbt-debug/is_screen_black')
+            if mask is not None:
+                _log_image(mask, 'mask', 'stbt-debug/is_screen_black')
+                _log_image(numpy.bitwise_and(greyframe, mask),
+                           'non-black-regions-after-masking',
+                           'stbt-debug/is_screen_black')
+            else:
+                _log_image(greyframe, 'non-black-regions-after-masking',
+                           'stbt-debug/is_screen_black')
+        return maxVal == 0
 
 # Utility functions
 # ===========================================================================
@@ -1100,9 +1106,6 @@ else:
     # Ctrl-C is broken on 12.04 and threading will behave differently on Travis
     # than on our supported systems.
     _mainloop = GLib.MainLoop()
-
-_display = None
-_control = None
 
 
 def _gst_sample_make_writable(sample):
@@ -2233,28 +2236,28 @@ def _hocr_elem_region(elem):
 
 
 def test_wait_for_motion_half_motion_str_2of4():
-    with _fake_frames_at_half_motion():
-        wait_for_motion(consecutive_frames='2/4')
+    with _fake_frames_at_half_motion() as dut:
+        dut.wait_for_motion(consecutive_frames='2/4')
 
 
 def test_wait_for_motion_half_motion_str_2of3():
-    with _fake_frames_at_half_motion():
-        wait_for_motion(consecutive_frames='2/3')
+    with _fake_frames_at_half_motion() as dut:
+        dut.wait_for_motion(consecutive_frames='2/3')
 
 
 def test_wait_for_motion_half_motion_str_3of4():
-    with _fake_frames_at_half_motion():
+    with _fake_frames_at_half_motion() as dut:
         try:
-            wait_for_motion(consecutive_frames='3/4')
+            dut.wait_for_motion(consecutive_frames='3/4')
             assert False, "wait_for_motion succeeded unexpectedly"
         except MotionTimeout:
             pass
 
 
 def test_wait_for_motion_half_motion_int():
-    with _fake_frames_at_half_motion():
+    with _fake_frames_at_half_motion() as dut:
         try:
-            wait_for_motion(consecutive_frames=2)
+            dut.wait_for_motion(consecutive_frames=2)
             assert False, "wait_for_motion succeeded unexpectedly"
         except MotionTimeout:
             pass
@@ -2275,14 +2278,9 @@ def _fake_frames_at_half_motion():
                     Gst.Sample.new(buf, Gst.Caps.from_string(
                         'video/x-raw,format=BGR,width=2,height=2'), None, None))
 
-    def _get_frame():
-        return None
-
-    global _display, get_frame  # pylint: disable=W0601
-    orig_display, orig_get_frame = _display, get_frame
-    _display, get_frame = FakeDisplay(), _get_frame
-    yield
-    _display, get_frame = orig_display, orig_get_frame
+    dut = DeviceUnderTest(display=FakeDisplay())
+    dut.get_frame = lambda: None
+    yield dut
 
 
 def test_ocr_on_static_images():
@@ -2297,7 +2295,7 @@ def test_ocr_on_static_images():
         kwargs = {"region": region}
         if mode is not None:
             kwargs["mode"] = mode
-        text = ocr(
+        text = DeviceUnderTest().ocr(
             cv2.imread(os.path.join(
                 os.path.dirname(__file__), "..", "tests", "ocr", image)),
             **kwargs)
