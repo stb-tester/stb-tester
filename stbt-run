@@ -11,10 +11,11 @@ import os
 import sys
 import traceback
 
+import _stbt.core
 import stbt
 from _stbt.state_watch import new_state_sender
 
-parser = stbt.argparser()
+parser = _stbt.core.argparser()
 parser.prog = 'stbt run'
 parser.description = 'Run an stb-tester test script'
 parser.add_argument(

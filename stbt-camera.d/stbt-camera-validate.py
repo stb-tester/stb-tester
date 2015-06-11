@@ -85,7 +85,7 @@ def length(vec):
 
 
 def svg_to_array(svg):
-    from stbt import _numpy_from_sample
+    from _stbt.core import _numpy_from_sample
     pipeline = Gst.parse_launch(
         'appsrc name="src" caps="image/svg" ! rsvgdec ! '
         'videoconvert ! appsink caps="video/x-raw,format=BGR" name="sink"')

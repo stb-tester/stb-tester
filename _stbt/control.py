@@ -73,10 +73,15 @@ class VideoTestSrcControl(object):
     """
 
     def __init__(self, display):
-        self.videosrc = display.source_pipeline.get_by_name("videotestsrc0")
-        if not self.videosrc:
+        self.display = display
+
+    @property
+    def videosrc(self):
+        videosrc = self.display.source_pipeline.get_by_name("videotestsrc0")
+        if not videosrc:
             raise ConfigurationError('The "test" control can only be used '
                                      'with source-pipeline = "videotestsrc"')
+        return videosrc
 
     def press(self, key):
         if key not in [
