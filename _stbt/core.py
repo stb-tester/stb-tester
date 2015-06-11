@@ -51,31 +51,6 @@ warnings.filterwarnings(
 # Functions available to stbt scripts
 # ===========================================================================
 
-def press(key, interpress_delay_secs=None):
-    if interpress_delay_secs is None:
-        interpress_delay_secs = get_config(
-            "press", "interpress_delay_secs", type_=float)
-    if getattr(press, 'time_of_last_press', None):
-        # `sleep` is inside a `while` loop because the actual suspension time
-        # of `sleep` may be less than that requested.
-        while True:
-            seconds_to_wait = (
-                press.time_of_last_press - datetime.datetime.now() +
-                datetime.timedelta(seconds=interpress_delay_secs)
-            ).total_seconds()
-            if seconds_to_wait > 0:
-                time.sleep(seconds_to_wait)
-            else:
-                break
-
-    _control.press(key)
-    press.time_of_last_press = datetime.datetime.now()
-    draw_text(key, duration_secs=3)
-
-
-def draw_text(text, duration_secs=3):
-    _display.draw(text, duration_secs)
-
 
 class MatchParameters(object):
     """Parameters to customise the image processing algorithm used by
@@ -485,6 +460,96 @@ def _image_region(image):
     return Region(0, 0, image.shape[1], image.shape[0])
 
 
+class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
+    """The result from `detect_motion`.
+
+    * `timestamp`: Video stream timestamp.
+    * `motion`: Boolean result.
+    """
+    pass
+
+
+class OcrMode(IntEnum):
+    """Options to control layout analysis and assume a certain form of image.
+
+    For a (brief) description of each option, see the `tesseract(1)
+    <http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_options>`_
+    man page.
+    """
+    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
+    PAGE_SEGMENTATION_WITH_OSD = 1
+    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
+    PAGE_SEGMENTATION_WITHOUT_OSD = 3
+    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
+    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
+    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
+    SINGLE_LINE = 7
+    SINGLE_WORD = 8
+    SINGLE_WORD_IN_A_CIRCLE = 9
+    SINGLE_CHARACTER = 10
+
+    # For nicer formatting of `ocr` signature in generated API documentation:
+    def __repr__(self):
+        return str(self)
+
+
+class TextMatchResult(namedtuple(
+        "TextMatchResult", "timestamp match region frame text")):
+
+    """The result from `match_text`.
+
+    * ``timestamp``: Video stream timestamp.
+    * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
+      bool. That is, ``if result:`` will behave the same as
+      ``if result.match:``.
+    * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
+      no text was found.
+    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``text``: The text (unicode string) that was searched for, as given to
+      `match_text`.
+    """
+    # pylint: disable=E1101
+    def __nonzero__(self):
+        return self.match
+
+    def __str__(self):
+        return (
+            "TextMatchResult(timestamp=%s, match=%s, region=%s, frame=%s, "
+            "text=%s)" % (
+                self.timestamp,
+                self.match,
+                self.region,
+                "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
+                              self.frame.shape[2]),
+                repr(self.text)))
+
+
+def press(key, interpress_delay_secs=None):
+    if interpress_delay_secs is None:
+        interpress_delay_secs = get_config(
+            "press", "interpress_delay_secs", type_=float)
+    if getattr(press, 'time_of_last_press', None):
+        # `sleep` is inside a `while` loop because the actual suspension time
+        # of `sleep` may be less than that requested.
+        while True:
+            seconds_to_wait = (
+                press.time_of_last_press - datetime.datetime.now() +
+                datetime.timedelta(seconds=interpress_delay_secs)
+            ).total_seconds()
+            if seconds_to_wait > 0:
+                time.sleep(seconds_to_wait)
+            else:
+                break
+
+    _control.press(key)
+    press.time_of_last_press = datetime.datetime.now()
+    draw_text(key, duration_secs=3)
+
+
+def draw_text(text, duration_secs=3):
+    _display.draw(text, duration_secs)
+
+
 def match(image, frame=None, match_parameters=None, region=Region.ALL):
     if match_parameters is None:
         match_parameters = MatchParameters()
@@ -529,15 +594,6 @@ def detect_match(image, timeout_secs=10, match_parameters=None):
             template, frame=sample, match_parameters=match_parameters)
         _display.draw(result, None)
         yield result
-
-
-class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
-    """The result from `detect_motion`.
-
-    * `timestamp`: Video stream timestamp.
-    * `motion`: Boolean result.
-    """
-    pass
 
 
 def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
@@ -694,204 +750,6 @@ def wait_for_motion(
     raise MotionTimeout(screenshot, mask, timeout_secs)
 
 
-class OcrMode(IntEnum):
-    """Options to control layout analysis and assume a certain form of image.
-
-    For a (brief) description of each option, see the `tesseract(1)
-    <http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_options>`_
-    man page.
-    """
-    ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
-    PAGE_SEGMENTATION_WITH_OSD = 1
-    PAGE_SEGMENTATION_WITHOUT_OSD_OR_OCR = 2
-    PAGE_SEGMENTATION_WITHOUT_OSD = 3
-    SINGLE_COLUMN_OF_TEXT_OF_VARIABLE_SIZES = 4
-    SINGLE_UNIFORM_BLOCK_OF_VERTICALLY_ALIGNED_TEXT = 5
-    SINGLE_UNIFORM_BLOCK_OF_TEXT = 6
-    SINGLE_LINE = 7
-    SINGLE_WORD = 8
-    SINGLE_WORD_IN_A_CIRCLE = 9
-    SINGLE_CHARACTER = 10
-
-    # For nicer formatting of `ocr` signature in generated API documentation:
-    def __repr__(self):
-        return str(self)
-
-
-# Tesseract sometimes has a hard job distinguishing certain glyphs such as
-# ligatures and different forms of the same punctuation.  We strip out this
-# superfluous information improving matching accuracy with minimal effect on
-# meaning.  This means that stbt.ocr give much more consistent results.
-_ocr_replacements = {
-    # Ligatures
-    u'ﬀ': u'ff',
-    u'ﬁ': u'fi',
-    u'ﬂ': u'fl',
-    u'ﬃ': u'ffi',
-    u'ﬄ': u'ffl',
-    u'ﬅ': u'ft',
-    u'ﬆ': u'st',
-    # Punctuation
-    u'“': u'"',
-    u'”': u'"',
-    u'‘': u'\'',
-    u'’': u'\'',
-    # These are actually different glyphs!:
-    u'‐': u'-',
-    u'‑': u'-',
-    u'‒': u'-',
-    u'–': u'-',
-    u'—': u'-',
-    u'―': u'-',
-}
-_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
-
-
-def _find_tessdata_dir():
-    from distutils.spawn import find_executable
-
-    tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
-    if tessdata_prefix:
-        tessdata = tessdata_prefix + '/tessdata'
-        if os.path.exists(tessdata):
-            return tessdata
-        else:
-            raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
-
-    tess_prefix_share = os.path.normpath(
-        find_executable('tesseract') + '/../../share/')
-    for suffix in [
-            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
-        if os.path.exists(tess_prefix_share + suffix):
-            return tess_prefix_share + suffix
-    raise RuntimeError('Installation error: Cannot locate tessdata directory')
-
-
-def _symlink_copy_dir(a, b):
-    """Behaves like `cp -rs` with GNU cp but is portable and doesn't require
-    execing another process.  Tesseract requires files in the "tessdata"
-    directory to be modified to set config options.  tessdata may be on a
-    read-only system directory so we use this to work around that limitation.
-    """
-    from os.path import basename, join, relpath
-    newroot = join(b, basename(a))
-    for dirpath, dirnames, filenames in os.walk(a):
-        for name in dirnames:
-            if name not in ['.', '..']:
-                rel = relpath(join(dirpath, name), a)
-                os.mkdir(join(newroot, rel))
-        for name in filenames:
-            rel = relpath(join(dirpath, name), a)
-            os.symlink(join(a, rel), join(newroot, rel))
-
-_memoise_tesseract_version = None
-
-
-def _tesseract_version(output=None):
-    r"""Different versions of tesseract have different bugs.  This function
-    allows us to tell the user if what they want isn't going to work.
-
-    >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
-    ...  _tesseract_version('tesseract 3.02\n'))
-    True
-    """
-    global _memoise_tesseract_version
-    if output is None:
-        if _memoise_tesseract_version is None:
-            _memoise_tesseract_version = subprocess.check_output(
-                ['tesseract', '--version'], stderr=subprocess.STDOUT)
-        output = _memoise_tesseract_version
-
-    line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
-    return LooseVersion(line.split()[1])
-
-
-def _tesseract(frame, region, mode, lang, _config,
-               user_patterns=None, user_words=None):
-
-    if _config is None:
-        _config = {}
-
-    with _numpy_from_sample(frame, readonly=True) as f:
-        frame_region = Region(0, 0, f.shape[1], f.shape[0])
-        intersection = Region.intersect(frame_region, region)
-        if intersection is None:
-            warn("Requested OCR in region %s which doesn't overlap with "
-                 "the frame %s" % (str(region), frame_region))
-            return ('', None)
-        else:
-            region = intersection
-
-        # We scale image up 3x before feeding it to tesseract as this
-        # significantly reduces the error rate by more than 6x in tests.  This
-        # uses bilinear interpolation which produces the best results.  See
-        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-        outsize = (region.width * 3, region.height * 3)
-        subframe = cv2.resize(_crop(f, region), outsize,
-                              interpolation=cv2.INTER_LINEAR)
-
-    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
-    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
-
-    # The second argument to tesseract is "output base" which is a filename to
-    # which tesseract will append an extension. Unfortunately this filename
-    # isn't easy to predict in advance across different versions of tesseract.
-    # If you give it "hello" the output will be written to "hello.txt", but in
-    # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
-    # (tesseract 3.03). We work around this with a temporary directory:
-    with utils.named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
-        outdir = tmp + '/output'
-        os.mkdir(outdir)
-
-        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
-               outdir + '/output', "-psm", str(int(mode))]
-
-        tessenv = os.environ.copy()
-
-        if _config or user_words or user_patterns:
-            tessdata_dir = tmp + '/tessdata'
-            os.mkdir(tessdata_dir)
-            _symlink_copy_dir(_find_tessdata_dir(), tmp)
-            tessenv['TESSDATA_PREFIX'] = tmp + '/'
-
-        if user_words:
-            if 'user_words_suffix' in _config:
-                raise ValueError(
-                    "You cannot specify 'user_words' and " +
-                    "'_config[\"user_words_suffix\"]' at the same time")
-            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(user_words).encode('utf-8'))
-            _config['user_words_suffix'] = 'user-words'
-
-        if user_patterns:
-            if 'user_patterns_suffix' in _config:
-                raise ValueError(
-                    "You cannot specify 'user_patterns' and " +
-                    "'_config[\"user_patterns_suffix\"]' at the same time")
-            if _tesseract_version() < LooseVersion('3.03'):
-                raise RuntimeError(
-                    'tesseract version >=3.03 is required for user_patterns.  '
-                    'version %s is currently installed' % _tesseract_version())
-            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(user_patterns).encode('utf-8'))
-            _config['user_patterns_suffix'] = 'user-patterns'
-
-        if _config:
-            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
-                for k, v in _config.iteritems():
-                    if isinstance(v, bool):
-                        cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
-                    else:
-                        cfg.write((u"%s %s\n" % (k, unicode(v)))
-                                  .encode('utf-8'))
-            cmd += ['stbtester']
-
-        cv2.imwrite(tmp + '/input.png', subframe)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
-        with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return (outfile.read(), region)
-
-
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang="eng", tesseract_config=None, tesseract_user_words=None,
@@ -914,82 +772,6 @@ def ocr(frame=None, region=Region.ALL,
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
-
-
-def _hocr_iterate(hocr):
-    started = False
-    need_space = False
-    for elem in hocr.iterdescendants():
-        if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
-            yield (u'\n', elem)
-            need_space = False
-        if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
-                'ocr_line' in elem.get('class').split() and started:
-            yield (u'\n', elem)
-            need_space = False
-        for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
-            if t:
-                if t.strip():
-                    if need_space and started:
-                        yield (u' ', None)
-                    need_space = False
-                    yield (unicode(t).strip(), e)
-                    started = True
-                else:
-                    need_space = True
-
-
-def _hocr_find_phrase(hocr, phrase):
-    l = list(_hocr_iterate(hocr))
-    words_only = [(w, elem) for w, elem in l if w.strip() != u'']
-
-    # Dumb and poor algorithmic complexity but succint and simple
-    if len(phrase) <= len(words_only):
-        for x in range(0, len(words_only)):
-            sublist = words_only[x:x + len(phrase)]
-            if all(w[0].lower() == p.lower() for w, p in zip(sublist, phrase)):
-                return sublist
-    return None
-
-
-def _hocr_elem_region(elem):
-    while elem is not None:
-        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
-        if m:
-            extents = [int(x) for x in m.groups()]
-            return Region.from_extents(*extents)
-        elem = elem.getparent()
-
-
-class TextMatchResult(namedtuple(
-        "TextMatchResult", "timestamp match region frame text")):
-
-    """The result from `match_text`.
-
-    * ``timestamp``: Video stream timestamp.
-    * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
-      bool. That is, ``if result:`` will behave the same as
-      ``if result.match:``.
-    * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
-      no text was found.
-    * ``frame``: The video frame that was searched, in OpenCV format.
-    * ``text``: The text (unicode string) that was searched for, as given to
-      `match_text`.
-    """
-    # pylint: disable=E1101
-    def __nonzero__(self):
-        return self.match
-
-    def __str__(self):
-        return (
-            "TextMatchResult(timestamp=%s, match=%s, region=%s, frame=%s, "
-            "text=%s)" % (
-                self.timestamp,
-                self.match,
-                self.region,
-                "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
-                              self.frame.shape[2]),
-                repr(self.text)))
 
 
 def match_text(text, frame=None, region=Region.ALL,
@@ -1029,15 +811,6 @@ def frames(timeout_secs=None):
     return _display.frames(timeout_secs)
 
 
-def save_frame(image, filename):
-    """Saves an OpenCV image to the specified file.
-
-    Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
-    """
-    cv2.imwrite(filename, image)
-
-
 def get_frame():
     with _numpy_from_sample(_display.get_sample(), readonly=True) as frame:
         return frame.copy()
@@ -1065,6 +838,18 @@ def is_screen_black(frame=None, mask=None, threshold=None):
             _log_image(greyframe, 'non-black-regions-after-masking',
                        'stbt-debug/is_screen_black')
     return maxVal == 0
+
+# Utility functions
+# ===========================================================================
+
+
+def save_frame(image, filename):
+    """Saves an OpenCV image to the specified file.
+
+    Takes an image obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
+    """
+    cv2.imwrite(filename, image)
 
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0):
@@ -2225,8 +2010,227 @@ def _load_mask(mask):
     return mask_image
 
 
+# Tesseract sometimes has a hard job distinguishing certain glyphs such as
+# ligatures and different forms of the same punctuation.  We strip out this
+# superfluous information improving matching accuracy with minimal effect on
+# meaning.  This means that stbt.ocr give much more consistent results.
+_ocr_replacements = {
+    # Ligatures
+    u'ﬀ': u'ff',
+    u'ﬁ': u'fi',
+    u'ﬂ': u'fl',
+    u'ﬃ': u'ffi',
+    u'ﬄ': u'ffl',
+    u'ﬅ': u'ft',
+    u'ﬆ': u'st',
+    # Punctuation
+    u'“': u'"',
+    u'”': u'"',
+    u'‘': u'\'',
+    u'’': u'\'',
+    # These are actually different glyphs!:
+    u'‐': u'-',
+    u'‑': u'-',
+    u'‒': u'-',
+    u'–': u'-',
+    u'—': u'-',
+    u'―': u'-',
+}
+_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
+
+
+def _find_tessdata_dir():
+    from distutils.spawn import find_executable
+
+    tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
+    if tessdata_prefix:
+        tessdata = tessdata_prefix + '/tessdata'
+        if os.path.exists(tessdata):
+            return tessdata
+        else:
+            raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
+
+    tess_prefix_share = os.path.normpath(
+        find_executable('tesseract') + '/../../share/')
+    for suffix in [
+            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
+        if os.path.exists(tess_prefix_share + suffix):
+            return tess_prefix_share + suffix
+    raise RuntimeError('Installation error: Cannot locate tessdata directory')
+
+
+def _symlink_copy_dir(a, b):
+    """Behaves like `cp -rs` with GNU cp but is portable and doesn't require
+    execing another process.  Tesseract requires files in the "tessdata"
+    directory to be modified to set config options.  tessdata may be on a
+    read-only system directory so we use this to work around that limitation.
+    """
+    from os.path import basename, join, relpath
+    newroot = join(b, basename(a))
+    for dirpath, dirnames, filenames in os.walk(a):
+        for name in dirnames:
+            if name not in ['.', '..']:
+                rel = relpath(join(dirpath, name), a)
+                os.mkdir(join(newroot, rel))
+        for name in filenames:
+            rel = relpath(join(dirpath, name), a)
+            os.symlink(join(a, rel), join(newroot, rel))
+
+_memoise_tesseract_version = None
+
+
+def _tesseract_version(output=None):
+    r"""Different versions of tesseract have different bugs.  This function
+    allows us to tell the user if what they want isn't going to work.
+
+    >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
+    ...  _tesseract_version('tesseract 3.02\n'))
+    True
+    """
+    global _memoise_tesseract_version
+    if output is None:
+        if _memoise_tesseract_version is None:
+            _memoise_tesseract_version = subprocess.check_output(
+                ['tesseract', '--version'], stderr=subprocess.STDOUT)
+        output = _memoise_tesseract_version
+
+    line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
+    return LooseVersion(line.split()[1])
+
+
+def _tesseract(frame, region, mode, lang, _config,
+               user_patterns=None, user_words=None):
+
+    if _config is None:
+        _config = {}
+
+    with _numpy_from_sample(frame, readonly=True) as f:
+        frame_region = Region(0, 0, f.shape[1], f.shape[0])
+        intersection = Region.intersect(frame_region, region)
+        if intersection is None:
+            warn("Requested OCR in region %s which doesn't overlap with "
+                 "the frame %s" % (str(region), frame_region))
+            return ('', None)
+        else:
+            region = intersection
+
+        # We scale image up 3x before feeding it to tesseract as this
+        # significantly reduces the error rate by more than 6x in tests.  This
+        # uses bilinear interpolation which produces the best results.  See
+        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+        outsize = (region.width * 3, region.height * 3)
+        subframe = cv2.resize(_crop(f, region), outsize,
+                              interpolation=cv2.INTER_LINEAR)
+
+    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
+    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
+
+    # The second argument to tesseract is "output base" which is a filename to
+    # which tesseract will append an extension. Unfortunately this filename
+    # isn't easy to predict in advance across different versions of tesseract.
+    # If you give it "hello" the output will be written to "hello.txt", but in
+    # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
+    # (tesseract 3.03). We work around this with a temporary directory:
+    with utils.named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
+        outdir = tmp + '/output'
+        os.mkdir(outdir)
+
+        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
+               outdir + '/output', "-psm", str(int(mode))]
+
+        tessenv = os.environ.copy()
+
+        if _config or user_words or user_patterns:
+            tessdata_dir = tmp + '/tessdata'
+            os.mkdir(tessdata_dir)
+            _symlink_copy_dir(_find_tessdata_dir(), tmp)
+            tessenv['TESSDATA_PREFIX'] = tmp + '/'
+
+        if user_words:
+            if 'user_words_suffix' in _config:
+                raise ValueError(
+                    "You cannot specify 'user_words' and " +
+                    "'_config[\"user_words_suffix\"]' at the same time")
+            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_words).encode('utf-8'))
+            _config['user_words_suffix'] = 'user-words'
+
+        if user_patterns:
+            if 'user_patterns_suffix' in _config:
+                raise ValueError(
+                    "You cannot specify 'user_patterns' and " +
+                    "'_config[\"user_patterns_suffix\"]' at the same time")
+            if _tesseract_version() < LooseVersion('3.03'):
+                raise RuntimeError(
+                    'tesseract version >=3.03 is required for user_patterns.  '
+                    'version %s is currently installed' % _tesseract_version())
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
+                f.write('\n'.join(user_patterns).encode('utf-8'))
+            _config['user_patterns_suffix'] = 'user-patterns'
+
+        if _config:
+            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
+                for k, v in _config.iteritems():
+                    if isinstance(v, bool):
+                        cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
+                    else:
+                        cfg.write((u"%s %s\n" % (k, unicode(v)))
+                                  .encode('utf-8'))
+            cmd += ['stbtester']
+
+        cv2.imwrite(tmp + '/input.png', subframe)
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
+            return (outfile.read(), region)
+
+
+def _hocr_iterate(hocr):
+    started = False
+    need_space = False
+    for elem in hocr.iterdescendants():
+        if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
+            yield (u'\n', elem)
+            need_space = False
+        if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
+                'ocr_line' in elem.get('class').split() and started:
+            yield (u'\n', elem)
+            need_space = False
+        for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
+            if t:
+                if t.strip():
+                    if need_space and started:
+                        yield (u' ', None)
+                    need_space = False
+                    yield (unicode(t).strip(), e)
+                    started = True
+                else:
+                    need_space = True
+
+
+def _hocr_find_phrase(hocr, phrase):
+    l = list(_hocr_iterate(hocr))
+    words_only = [(w, elem) for w, elem in l if w.strip() != u'']
+
+    # Dumb and poor algorithmic complexity but succint and simple
+    if len(phrase) <= len(words_only):
+        for x in range(0, len(words_only)):
+            sublist = words_only[x:x + len(phrase)]
+            if all(w[0].lower() == p.lower() for w, p in zip(sublist, phrase)):
+                return sublist
+    return None
+
+
+def _hocr_elem_region(elem):
+    while elem is not None:
+        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
+        if m:
+            extents = [int(x) for x in m.groups()]
+            return Region.from_extents(*extents)
+        elem = elem.getparent()
+
 # Tests
 # ===========================================================================
+
 
 def test_wait_for_motion_half_motion_str_2of4():
     with _fake_frames_at_half_motion():
