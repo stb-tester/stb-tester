@@ -8,6 +8,7 @@ import cv2
 from nose.plugins.skip import SkipTest
 from nose.tools import eq_, raises
 
+import _stbt.core
 import stbt
 
 
@@ -66,7 +67,7 @@ def test_that_passing_patterns_helps_reading_serial_codes():
         mode=stbt.OcrMode.SINGLE_WORD)
 
     # pylint: disable=W0212
-    if stbt._tesseract_version() < distutils.version.LooseVersion('3.03'):
+    if _stbt.core._tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
@@ -79,7 +80,8 @@ def test_that_passing_patterns_helps_reading_serial_codes():
 @raises(RuntimeError)
 def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
     # pylint: disable=W0212
-    if stbt._tesseract_version() >= distutils.version.LooseVersion('3.03'):
+    if (_stbt.core._tesseract_version()
+            >= distutils.version.LooseVersion('3.03')):
         raise SkipTest('tesseract is too new')
 
     stbt.ocr(

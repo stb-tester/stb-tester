@@ -15,6 +15,7 @@ import cv2
 import numpy
 from gi.repository import Gst  # pylint: disable=E0611
 
+import _stbt.core
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
@@ -159,14 +160,16 @@ def _find_chessboard(appsink, timeout=10):
     endtime = time.time() + timeout
     while not success and time.time() < endtime:
         sample = appsink.emit("pull-sample")
-        with stbt._numpy_from_sample(sample, readonly=True) as input_image:
+        with _stbt.core._numpy_from_sample(sample, readonly=True) \
+                as input_image:
             success, corners = cv2.findChessboardCorners(
                 input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
 
     if success:
         # Refine the corner measurements (not sure why this isn't built into
         # findChessboardCorners?
-        with stbt._numpy_from_sample(sample, readonly=True) as input_image:
+        with _stbt.core._numpy_from_sample(sample, readonly=True) \
+                as input_image:
             grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
 
         cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),
@@ -197,14 +200,14 @@ def geometric_calibration(tv, interactive=True):
     sys.stdout.write("Performing Geometric Calibration\n")
 
     undistorted_appsink = \
-        stbt._display.source_pipeline.get_by_name('undistorted_appsink')
+        stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
     ideal, corners = _find_chessboard(undistorted_appsink)
 
     undistort = calculate_distortion(ideal, corners, (1920, 1080))
     unperspect = calculate_perspective_transformation(
         ideal, undistort.do(corners))
 
-    geometriccorrection = stbt._display.source_pipeline.get_by_name(
+    geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
         'geometric_correction')
     geometriccorrection_params = undistort.describe() + unperspect.describe()
     for key, value in geometriccorrection_params:
@@ -482,7 +485,7 @@ def calibrate_illumination(tv):
     await_blank(0)
     _create_reference_png(props['black-reference-image'])
 
-    contraststretch = stbt._display.source_pipeline.get_by_name(
+    contraststretch = stbt._dut._display.source_pipeline.get_by_name(
         'illumination_correction')
     for k, v in reversed(props.items()):
         contraststretch.set_property(k, v)
@@ -571,7 +574,7 @@ defaults = {
 
 
 def parse_args(argv):
-    parser = stbt.argparser()
+    parser = _stbt.core.argparser()
     tv_driver.add_argparse_argument(parser)
     parser.add_argument(
         '--noninteractive', action="store_false", dest="interactive",
@@ -615,8 +618,8 @@ def main(argv):
     sink_pipeline = ('textoverlay text="After correction" ! ' +
                      args.sink_pipeline)
 
-    stbt.init_run(args.source_pipeline, sink_pipeline, 'none', False,
-                  False, transformation_pipeline)
+    stbt.init_run(args.source_pipeline, sink_pipeline, 'none', False, False,
+                  transformation_pipeline)
 
     tv = tv_driver.create_from_args(args, videos)
 

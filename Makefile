@@ -92,6 +92,7 @@ install-core: stbt.sh defaults.conf
 	    _stbt/__init__.py \
 	    _stbt/config.py \
 	    _stbt/control.py \
+	    _stbt/core.py \
 	    _stbt/gst_hacks.py \
 	    _stbt/irnetbox.py \
 	    _stbt/logging.py \

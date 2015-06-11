@@ -9,11 +9,13 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import itertools
 import sys
 
+import _stbt.control
+import _stbt.core
 import stbt
 
 
 def main(argv):
-    parser = stbt.argparser()
+    parser = _stbt.core.argparser()
     parser.prog = 'stbt record'
     parser.description = 'Create an stb-tester test script'
     parser.add_argument(
@@ -53,7 +55,7 @@ def record(control_recorder, script_out):
     script_out.write("import stbt\n\n\n")
     script_out.write("def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():\n")
     try:
-        for key in stbt.control.uri_to_remote_recorder(control_recorder):
+        for key in _stbt.control.uri_to_remote_recorder(control_recorder):
             write_wait_for_match(script_out, count.next(), old_key)
             script_out.write("    stbt.press('%s')\n" % key)
             stbt.press(key)

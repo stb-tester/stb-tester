@@ -13,6 +13,7 @@ from contextlib import contextmanager
 
 import cv2
 
+import _stbt.logging
 import stbt
 
 
@@ -68,7 +69,7 @@ if source_image is None:
 def noop_contextmanager():
     yield
 
-with (stbt.logging.scoped_debug_level(2) if args.verbose
+with (_stbt.logging.scoped_debug_level(2) if args.verbose
       else noop_contextmanager()):
     try:
         result = stbt.match(

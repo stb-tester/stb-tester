@@ -347,7 +347,7 @@ test_that_verbose_command_line_argument_overrides_config_file() {
 test_that_restart_source_option_is_read() {
     cat > test.py <<-EOF &&
 	import stbt
-	print "value: %s" % stbt._display.restart_source_enabled
+	print "value: %s" % stbt._dut._display.restart_source_enabled
 	EOF
     # Read from the command line
     stbt run -v --restart-source --control none test.py &&
@@ -397,9 +397,9 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" python -c "import stbt, distutils, sys; sys.exit( \
-        0 if stbt._tesseract_version() >= distutils.version.LooseVersion('3.03')
-        else 77)"
+    PYTHONPATH="$srcdir" python -c "import stbt, _stbt.core, distutils, sys; \
+        sys.exit(0 if (_stbt.core._tesseract_version() \
+                       >= distutils.version.LooseVersion('3.03')) else 77)"
     case $? in
         0) true;;
         77) skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'";;

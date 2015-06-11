@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 
+import _stbt.control
 import stbt
 
 SPECIAL_CHARS = {
@@ -40,7 +41,7 @@ def main(argv):
     if args.help_keymap:
         sys.exit(show_help_keymap())
 
-    remote = stbt.control.uri_to_remote(args.control, None)
+    remote = _stbt.control.uri_to_remote(args.control, None)
 
     if args.remote_control_key:  # Send a single key and exit
         remote.press(args.remote_control_key)
