@@ -40,6 +40,10 @@ UNRELEASED.
 
 ##### Developer-visible changes since 22
 
+* Much of the code has moved from `stbt/__init__.py` to `_stbt/core.py`. This
+  is part of the work in progress to allow `stbt` to be used as a library from
+  other Python code without having to use `stbt run`.
+
 #### 22
 
 Support for testcases as Python functions and using *assert* in testcases; new
