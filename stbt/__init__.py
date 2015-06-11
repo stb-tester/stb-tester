@@ -427,16 +427,12 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
         restart_source=False, transformation_pipeline='identity'):
-    from _stbt.control import uri_to_remote
     global _dut
-    display = _stbt.core.Display(
-        gst_source_pipeline, gst_sink_pipeline,
-        save_video, restart_source, transformation_pipeline)
-    _dut = _stbt.core.DeviceUnderTest(
-        display=display, control=uri_to_remote(control_uri, display))
+    _dut = _stbt.core.new_device_under_test_from_config(
+        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video,
+        restart_source, transformation_pipeline)
+    _dut.__enter__()
 
 
 def teardown_run():
-    # pylint: disable=W0212
-    if _dut._display:
-        _dut._display.teardown()
+    _dut.__exit__(None, None, None)

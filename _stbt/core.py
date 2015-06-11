@@ -524,11 +524,45 @@ class TextMatchResult(namedtuple(
                 repr(self.text)))
 
 
+def new_device_under_test_from_config(
+        gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
+        save_video=False, restart_source=None, transformation_pipeline=None):
+    from _stbt.control import uri_to_remote
+
+    if gst_source_pipeline is None:
+        gst_source_pipeline = get_config('global', 'source_pipeline')
+    if gst_sink_pipeline is None:
+        gst_sink_pipeline = get_config('global', 'sink_pipeline')
+    if control_uri is None:
+        control_uri = get_config('global', 'control')
+    if restart_source is None:
+        restart_source = get_config('global', 'restart_source')
+    if transformation_pipeline is None:
+        gst_sink_pipeline = get_config('global', 'transformation_pipeline')
+
+    display = Display(
+        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source,
+        transformation_pipeline)
+    return DeviceUnderTest(
+        display=display, control=uri_to_remote(control_uri, display))
+
+
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None):
         self._time_of_last_press = None
         self._display = display
         self._control = control
+
+    def __enter__(self):
+        if self._display:
+            self._display.startup()
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        if self._display:
+            self._display.teardown()
+            self._display = None
+        self._control = None
 
     def press(self, key, interpress_delay_secs=None):
         if interpress_delay_secs is None:
@@ -1286,12 +1320,8 @@ class Display(object):
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
 
-        self.source_pipeline.set_state(Gst.State.PLAYING)
-        self.sink_pipeline.set_state(Gst.State.PLAYING)
-
         self.mainloop_thread = threading.Thread(target=_mainloop.run)
         self.mainloop_thread.daemon = True
-        self.mainloop_thread.start()
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
@@ -1315,6 +1345,7 @@ class Display(object):
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
 
+    def set_source_pipeline_playing(self):
         if (self.source_pipeline.set_state(Gst.State.PAUSED)
                 == Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
@@ -1322,6 +1353,8 @@ class Display(object):
                 .set_property('leaky', 'downstream')
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
+
+        self.source_pipeline.set_state(Gst.State.PLAYING)
 
     def get_sample(self, timeout_secs=10):
         try:
@@ -1507,7 +1540,7 @@ class Display(object):
             return False
         warn("Restarting source pipeline...")
         self.create_source_pipeline()
-        self.source_pipeline.set_state(Gst.State.PLAYING)
+        self.set_source_pipeline_playing()
         warn("Restarted source pipeline")
         if self.restart_source_enabled:
             self.underrun_timeout.start()
@@ -1524,6 +1557,12 @@ class Display(object):
         d = appsink.get_property('eos') or done.wait(timeout)
         appsink.disconnect(hid)
         return d
+
+    def startup(self):
+        self.set_source_pipeline_playing()
+        self.sink_pipeline.set_state(Gst.State.PLAYING)
+
+        self.mainloop_thread.start()
 
     def teardown(self):
         self.tearing_down = True
