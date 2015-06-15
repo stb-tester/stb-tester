@@ -17,8 +17,8 @@ def main(argv):
     runner = os.path.dirname(os.path.abspath(__file__))
 
     parser = argparse.ArgumentParser(usage=(
-        "stbt batch run [options] test.py [test.py ...]\n"
-        "stbt batch run [options] test.py arg [arg ...] -- "
+        "\n  stbt batch run [options] test.py [test.py ...]"
+        "\n  stbt batch run [options] test.py arg [arg ...] -- "
         "test.py arg [arg ...] [-- ...])"))
     parser.add_argument(
         '-1', '--run-once', action="store_true", help=(
@@ -37,7 +37,7 @@ def main(argv):
         '-v', '--verbose', action="count", default=0, help=(
             'Verbose. Provide this argument once to print stbt standard '
             'output. Provide this argument twice to also print stbt stderr '
-            'output'))
+            'output.'))
     parser.add_argument(
         '-o', '--output', default=os.curdir, help=(
             'Output directory to save the report and test-run logs under '
