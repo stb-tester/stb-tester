@@ -97,11 +97,12 @@ def main(argv):
             child = None
             try:
                 child = subprocess.Popen(
-                    ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv)
+                    ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv,
+                    preexec_fn=lambda: os.setpgid(0, 0))
                 last_exit_status = child.wait()
             except SystemExit:
                 if child:
-                    child.terminate()
+                    os.kill(-child.pid, signal.SIGTERM)
                     child.wait()
                 raise
 

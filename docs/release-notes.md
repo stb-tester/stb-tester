@@ -47,6 +47,9 @@ UNRELEASED.
 * `stbt batch run` has been partially rewritten in Python for better
   maintainability and extendability.
 
+* `stbt batch run` now uses process groups to keep track of its children, rather
+  than just using the process heirarchy.
+
 #### 22
 
 Support for testcases as Python functions and using *assert* in testcases; new
