@@ -96,37 +96,6 @@ test_stbt_batch_run_when_test_script_isnt_in_git_repo() {
     grep -q tests/test.py index.html || fail "test name not in index.html"
 }
 
-test_stbt_batch_run_parse_test_args() {
-    sed -n '/^parse_test_args() {/,/^}/ p' "$srcdir"/stbt-batch.d/run \
-        > parse_test_args.sh &&
-    . parse_test_args.sh &&
-    declare -f parse_test_args || fail "'parse_test_args' not defined"
-
-    parse_test_args "test 1.py" test2.py test3.py |
-    tee /dev/stderr |  # print to log
-    while IFS=$'\t' read -a test; do echo "$test"; done > output1.log
-    cat > expected1.log <<-EOF
-	test 1.py
-	test2.py
-	test3.py
-	EOF
-    diff -u expected1.log output1.log ||
-    fail "Unexpected output from 'parse_test_args' without '--'"
-
-    parse_test_args test1.py "arg 1" arg2 -- test2.py arg -- test3.py |
-    tee /dev/stderr |  # print to log
-    while IFS=$'\t' read -a test; do
-        for x in "${test[@]}"; do printf "'$x' "; done; printf "\n"
-    done > output2.log
-    cat > expected2.log <<-EOF
-	'test1.py' 'arg 1' 'arg2' 
-	'test2.py' 'arg' 
-	'test3.py' 
-	EOF
-    diff -u expected2.log output2.log ||
-    fail "Unexpected output from 'parse_test_args' with '--'"
-}
-
 test_signalname() {
     sed -n '/^signalname()/,/^}/ p' "$srcdir"/stbt-batch.d/report \
         > signalname.sh &&

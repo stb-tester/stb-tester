@@ -1,131 +1,183 @@
-#!/usr/bin/env bash
-#                                                    -*- sh-basic-offset: 2 -*-
+#!/usr/bin/env python
 
-# Copyright 2013 YouView TV Ltd.
+# Copyright 2015 stb-tester.com Ltd.
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
-#/ Usage:
-#/   stbt batch run [options] test.py [test.py ...]
-#/   stbt batch run [options] test.py arg [arg ...] -- test.py arg [arg ...] [-- ...]
-#/
-#/ Options:
-#/   -1    Run once. The default behaviour is to run the test
-#/         repeatedly as long as it passes.
-#/   -k    Continue running after "uninteresting" failures.
-#/   -kk   Continue running after any failure (except those
-#/         that would prevent any further test from passing).
-#/
-#/   -d    Enable "stbt-debug" dump of intermediate images.
-#/   -v    Verbose. Print stbt standard output.
-#/   -vv   Extra verbose. Print stbt standard error output.
-#/
-#/   -o    Output directory to save the report and test-run
-#/         logs under (defaults to the current directory).
-#/   -t <tag>  Tag to add to test run directory names (useful
-#/         to differentiate directories when you intend to
-#/         merge test results from multiple machines).
 
-usage() { grep '^#/' "$0" | cut -c4-; }
-die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
+import argparse
+import os
+import signal
+import subprocess
+import sys
+from distutils.spawn import find_executable
 
-main() {
-  runner=$(dirname "$(realpath "$0")")
-  export PYTHONUNBUFFERED=x
 
-  keep_going=0
-  outputdir="$PWD"
-  run_once=false
-  stop=false
-  tag=
-  v=-v
-  verbose=0
-  failure_count=0
-  while getopts ":1dhko:t:v" option; do
-    case $option in
-      1) run_once=true;;
-      d) v=-vv;;
-      h) usage; exit 0;;
-      k) keep_going=$((keep_going + 1));;
-      o) outputdir=$(realpath "$OPTARG");;
-      t) tag=-$OPTARG;;
-      v) verbose=$((verbose + 1));;
-      *) die "Invalid option '-$OPTARG'. Use '-h' for help.";;
-    esac
-  done
-  shift $((OPTIND - 1))
-  [[ $# -gt 0 ]] || { usage >&2; exit 1; }
+def main(argv):
+    runner = os.path.dirname(os.path.abspath(__file__))
 
-  which ts &>/dev/null ||
-    die "No 'ts' command found; please install 'moreutils' package"
+    parser = argparse.ArgumentParser(usage=(
+        "stbt batch run [options] test.py [test.py ...]\n"
+        "stbt batch run [options] test.py arg [arg ...] -- "
+        "test.py arg [arg ...] [-- ...])"))
+    parser.add_argument(
+        '-1', '--run-once', action="store_true", help=(
+            'Run once. The default behaviour is to run the test repeatedly as '
+            'long as it passes.'))
+    parser.add_argument(
+        '-k', '--keep-going', action="count", help=(
+            'Continue running after failures.  Provide this argument once to '
+            'continue running after "uninteresting" failures, and twice to '
+            'continue running after any failure (except those that would '
+            'prevent any further test from passing).'))
+    parser.add_argument(
+        '-d', '--debug', action="store_true", help=(
+            'Enable "stbt-debug" dump of intermediate images.'))
+    parser.add_argument(
+        '-v', '--verbose', action="count", default=0, help=(
+            'Verbose. Provide this argument once to print stbt standard '
+            'output. Provide this argument twice to also print stbt stderr '
+            'output'))
+    parser.add_argument(
+        '-o', '--output', default=os.curdir, help=(
+            'Output directory to save the report and test-run logs under '
+            '(defaults to the current directory).'))
+    parser.add_argument(
+        '-t', '--tag', help=(
+            'Tag to add to test run directory names (useful to differentiate '
+            'directories when you intend to merge test results from multiple '
+            'machines).'))
+    parser.add_argument('test_name', nargs=argparse.REMAINDER)
+    args = parser.parse_args(argv[1:])
 
-  run_count=0
-  while true; do
-    while IFS=$'\t' read -a test; do
-      run_count=$((run_count+1))
-      run "${test[@]}" </dev/null;
-      last_exit_status=$?
-      [ "$last_exit_status" = 0 ] || failure_count=$((failure_count+1))
-      if [ -e "$outputdir/latest$tag/unrecoverable-error" ]; then
-        stop=true
-      fi
-      should_i_continue || break 2
-    done < <(parse_test_args "$@")
-    $run_once && break
-  done
+    if args.tag is not None:
+        tag = '-' + args.tag
+    else:
+        tag = ""
 
-  if [ "$run_count" = 1 ]; then
-    # If we only run a single test a single time propagate the result through
-    exit "$last_exit_status"
-  elif [ "$failure_count" = 0 ]; then
-    exit 0
-  else
-    exit 1
-  fi
-}
+    os.environ['PYTHONUNBUFFERED'] = 'x'
 
-trap on_kill1 sigint sigterm
-on_kill1() {
-  printf "\nReceived interrupt; waiting for current test to complete.\n" >&2
-  stop=true
-  trap on_kill2 sigint sigterm
-}
-on_kill2() {
-  echo "Received interrupt; exiting." >&2
-}
+    term_count = [0]
 
-should_i_continue() {
-  $stop && return 1;
-  [[ $exit_status -eq 0 ]] ||
-  # "Uninteresting" failures due to the test infrastructure
-  [[ $keep_going -gt 0 && $exit_status -gt 1 ]] ||
-  # Failures due to the system under test
-  [[ $keep_going -gt 1 ]]
-}
+    def on_term(_signo, _frame):
+        term_count[0] += 1
+        if term_count[0] == 1:
+            sys.stderr.write(
+                "\nReceived interrupt; waiting for current test to complete.\n")
+        else:
+            sys.stderr.write("Received interrupt; exiting.\n")
+            sys.exit(1)
 
-# Input:
-#   test1.py arg1 arg2 -- test2.py arg -- test3.py
-# Output (suitable as input to `IFS=$'\t' read -a`):
-#   test1.py\targ1\targ2
-#   test2.py\targ
-#   test3.py
-parse_test_args() {
-  if [[ "$*" =~ -- ]]; then
-    [[ "$1" == -- ]] && shift
-    while [[ $# -gt 0 ]]; do
-      printf "%s" "$1"; shift
-      while [[ $# -gt 0 && "$1" != -- ]]; do printf "\t%s" "$1"; shift; done
-      printf "\n"
-      [[ "$1" == -- ]] && shift
-    done
-  else  # No "--": Each command-line argument is a test script.
-    printf "%s\n" "$@"
-  fi
-}
+    signal.signal(signal.SIGINT, on_term)
+    signal.signal(signal.SIGTERM, on_term)
 
-# Portable implementation of GNU "readlink -f" to support BSD/OSX.
-realpath() {
-  python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
-}
+    stop = [False]
+    failure_count = 0
+    last_exit_status = 0
 
-main "$@"
+    if not find_executable('ts'):
+        sys.stderr.write(
+            "No 'ts' command found; please install 'moreutils' package\n")
+        return 1
+
+    tests = parse_test_args(args.test_name)
+
+    DEVNULL_R = open('/dev/null', 'r')
+    run_count = 0
+    while not stop[0] and term_count[0] == 0:
+        for test in tests:
+            if stop[0] or term_count[0] > 0:
+                break
+            run_count += 1
+            subenv = dict(os.environ)
+            subenv['tag'] = tag
+            subenv['v'] = '-vv' if args.debug else '-v'
+            subenv['verbose'] = str(args.verbose)
+            subenv['outputdir'] = args.output
+            child = None
+            try:
+                child = subprocess.Popen(
+                    ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv)
+                last_exit_status = child.wait()
+            except SystemExit:
+                if child:
+                    child.terminate()
+                    child.wait()
+                raise
+
+            if last_exit_status != 0:
+                failure_count += 1
+            if os.path.exists(
+                    "%s/latest%s/unrecoverable-error" % (args.output, tag)):
+                stop[0] = True
+
+            if last_exit_status == 0:
+                continue
+            elif last_exit_status >= 2 and args.keep_going > 0:
+                # "Uninteresting" failures due to the test infrastructure
+                continue
+            elif args.keep_going >= 2:
+                continue
+            else:
+                stop[0] = True
+
+        if args.run_once:
+            break
+
+    if run_count == 1:
+        # If we only run a single test a single time propagate the result
+        # through
+        return last_exit_status
+    elif failure_count == 0:
+        return 0
+    else:
+        return 1
+
+
+def listsplit(l, v):
+    """
+    A bit like str.split, but for lists
+
+    >>> listsplit(['test 1', '--', 'test 2', 'arg1', '--', 'test3'], '--')
+    [['test 1'], ['test 2', 'arg1'], ['test3']]
+    """
+    out = []
+    sublist = []
+    for x in l:
+        if x == v:
+            if sublist:
+                out.append(sublist)
+            sublist = []
+        else:
+            sublist.append(x)
+    if sublist:
+        out.append(sublist)
+    return out
+
+
+def parse_test_args(args):
+    """
+    >>> parse_test_args(['test 1.py', 'test2.py', 'test3.py'])
+    [['test 1.py'], ['test2.py'], ['test3.py']]
+    >>> parse_test_args(['test1.py', 'test2.py'])
+    [['test1.py'], ['test2.py']]
+    >>> parse_test_args(['test1.py', '--'])
+    [['test1.py']]
+    >>> parse_test_args(['test1.py', '--', 'test2.py'])
+    [['test1.py'], ['test2.py']]
+    >>> parse_test_args(['test1.py', '--', 'test2.py', '--'])
+    [['test1.py'], ['test2.py']]
+    >>> parse_test_args(['test1.py', 'test2.py'])
+    [['test1.py'], ['test2.py']]
+    >>> parse_test_args(
+    ...     ['test1.py', 'arg1', 'arg2', '--', 'test2.py', 'arg', '--',
+    ...      'test3.py'])
+    [['test1.py', 'arg1', 'arg2'], ['test2.py', 'arg'], ['test3.py']]
+    """
+    if '--' in args:
+        return listsplit(args, '--')
+    else:
+        return [[x] for x in args]
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
