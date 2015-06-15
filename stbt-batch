@@ -16,11 +16,15 @@
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
-case "$1" in
+cmd="$1"
+shift
+case "$cmd" in
     -h|--help)
         usage; exit 0;;
-    run|report|instaweb)
-        exec "$(dirname "$0")"/stbt-batch.d/"$@";;
+    run)
+        exec "$(dirname "$0")"/stbt-batch.d/run.py "$@";;
+    report|instaweb)
+        exec "$(dirname "$0")"/stbt-batch.d/$cmd "$@";;
     *)
         usage >&2; exit 1;;
 esac
