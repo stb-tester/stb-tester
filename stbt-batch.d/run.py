@@ -71,7 +71,6 @@ def main(argv):
     signal.signal(signal.SIGINT, on_term)
     signal.signal(signal.SIGTERM, on_term)
 
-    stop = [False]
     failure_count = 0
     last_exit_status = 0
 
@@ -80,49 +79,47 @@ def main(argv):
             "No 'ts' command found; please install 'moreutils' package\n")
         return 1
 
-    tests = parse_test_args(args.test_name)
+    test_cases = parse_test_args(args.test_name)
 
     DEVNULL_R = open('/dev/null', 'r')
     run_count = 0
-    while not stop[0] and term_count[0] == 0:
-        for test in tests:
-            if stop[0] or term_count[0] > 0:
-                break
-            run_count += 1
-            subenv = dict(os.environ)
-            subenv['tag'] = tag
-            subenv['v'] = '-vv' if args.debug else '-v'
-            subenv['verbose'] = str(args.verbose)
-            subenv['outputdir'] = args.output
-            child = None
-            try:
-                child = subprocess.Popen(
-                    ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv,
-                    preexec_fn=lambda: os.setpgid(0, 0))
-                last_exit_status = child.wait()
-            except SystemExit:
-                if child:
-                    os.kill(-child.pid, signal.SIGTERM)
-                    child.wait()
-                raise
+    test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
-            if last_exit_status != 0:
-                failure_count += 1
-            if os.path.exists(
-                    "%s/latest%s/unrecoverable-error" % (args.output, tag)):
-                stop[0] = True
+    for test in test_generator:
+        if term_count[0] > 0:
+            break
+        run_count += 1
+        subenv = dict(os.environ)
+        subenv['tag'] = tag
+        subenv['v'] = '-vv' if args.debug else '-v'
+        subenv['verbose'] = str(args.verbose)
+        subenv['outputdir'] = args.output
+        child = None
+        try:
+            child = subprocess.Popen(
+                ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv,
+                preexec_fn=lambda: os.setpgid(0, 0))
+            last_exit_status = child.wait()
+        except SystemExit:
+            if child:
+                os.kill(-child.pid, signal.SIGTERM)
+                child.wait()
+            raise
 
-            if last_exit_status == 0:
-                continue
-            elif last_exit_status >= 2 and args.keep_going > 0:
-                # "Uninteresting" failures due to the test infrastructure
-                continue
-            elif args.keep_going >= 2:
-                continue
-            else:
-                stop[0] = True
+        if last_exit_status != 0:
+            failure_count += 1
+        if os.path.exists(
+                "%s/latest%s/unrecoverable-error" % (args.output, tag)):
+            break
 
-        if args.run_once:
+        if last_exit_status == 0:
+            continue
+        elif last_exit_status >= 2 and args.keep_going > 0:
+            # "Uninteresting" failures due to the test infrastructure
+            continue
+        elif args.keep_going >= 2:
+            continue
+        else:
             break
 
     if run_count == 1:
@@ -179,6 +176,14 @@ def parse_test_args(args):
         return listsplit(args, '--')
     else:
         return [[x] for x in args]
+
+
+def loop_tests(test_cases, repeat=True):
+    while True:
+        for test in test_cases:
+            yield test
+        if not repeat:
+            return
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
