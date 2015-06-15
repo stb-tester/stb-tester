@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+#                                                    -*- sh-basic-offset: 2 -*-
+
+# Copyright 2013 YouView TV Ltd.
+#           2013-2015 stb-tester.com Ltd.
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
+#
+# Input command-line arguments:
+#
+# * testname [args...]
+#
+# Input environment variables:
+#
+# * $tag
+# * $v
+# * $verbose
+# * $outputdir
+#
+# File descriptors:
+#
+# * 3 - Send timestamped stdout here
+# * 4 - Send timestamped stderr here
+#
+# Outputs:
+#
+# * A test-run directory under $outputdir
+# * $outputdir/latest pointing to this directory
+#
+
+
+die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
+
+main() {
+  runner=$(dirname "$(realpath "$0")")
+  local test testpath tmpdir rundir
+
+  test="$1" && shift &&
+  testpath=$(realpath "$test") &&
+  mkdir -p "$outputdir" &&
+  pushd "$outputdir" >/dev/null &&
+  rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
+  mkdir "$rundir" &&
+  send_state_change active_results_directory "\"$outputdir/$rundir\"" &&
+  rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
+  cd "$rundir" &&
+  tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
+  mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
+  die "Failed to set up test-run directory '$outputdir/$rundir'."
+
+  [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
+
+  ( cd "$(dirname "$testpath")" &&
+    git describe --always --dirty 2>/dev/null
+  ) > git-commit || rm -f git-commit
+
+  ( cd "$(dirname "$testpath")" &&
+    gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir 2>/dev/null)")") &&
+    echo "${testpath#$gitdir/}" || echo "$testpath"
+  ) > test-name
+
+  printf "%s\n" "$@" > test-args
+
+  "$runner"/report --html-only . >/dev/null
+
+  user_command pre_run start
+
+  [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
+  "$runner"/../stbt-run $v --save-video "video.webm" "$testpath" -- "$@" \
+    >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
+  stbtpid=$!
+  local start_time=$(date +%s)
+  ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawout | tee stdout.log >&3 &
+  ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawerr | tee stderr.log >&4 &
+
+  wait $stbtpid
+  exit_status=$?
+
+  [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
+
+  # Data that must be collected ASAP
+  echo $(( $(date +%s) - $start_time )) > duration
+  which sensors &>/dev/null && sensors &> sensors.log
+  [[ -f screenshot.png ]] || "$runner"/../stbt-screenshot &>/dev/null
+  echo $exit_status > exit-status
+
+  cat <<-EOF | python &&
+		import cv2
+		im = cv2.imread('screenshot.png')
+		if im is not None:
+		    cv2.imwrite(
+		        'thumbnail.jpg',
+		        cv2.resize(im, (640, 640 * im.shape[0] // im.shape[1])),
+		        [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
+		EOF
+  [[ $exit_status -eq 0 ]] && rm -f screenshot.png
+
+  user_command post_run stop
+
+  rm "$tmpdir"/rawout "$tmpdir"/rawerr
+  rmdir "$tmpdir"
+  echo "$STBT_VERSION" > stbt-version.log
+  grep -q "FAIL: .*: MatchTimeout" stdout.log && template
+  [ -f core* ] && backtrace core*
+  STBT_TRACING_SOCKET="" "$runner"/report --classify-only . >/dev/null
+  grep -q "FAIL: .*: NoVideo" stdout.log && {
+    check_capture_hardware || touch unrecoverable-error; }
+
+  if [[ $exit_status -ne 0 ]]; then
+    user_command recover || touch unrecoverable-error
+  fi
+
+  "$runner"/report --html-only . >/dev/null
+
+  cd ..
+  send_state_change active_results_directory null
+  rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
+  popd >/dev/null
+  return $exit_status
+}
+
+send_state_change() {
+  if [ -z "$STBT_TRACING_SOCKET" ]; then
+    return
+  fi
+
+  date='"'$(date --iso-8601=ns)'"'
+  echo '{"state_change": {"changes": {"'"$1"'": '"$2"'}, "time": '"$date"'}}' \
+    | socat STDIN "UNIX-CONNECT:$STBT_TRACING_SOCKET"
+  true
+}
+
+template() {
+  local template=$(
+    sed -n 's,^.*stbt-run: Searching for \(.*\.png\)$,\1,p' stderr.log |
+    tail -1)
+  [ -f "$template" ] && cp "$template" template.png
+}
+
+backtrace() {
+  local gdbcommand corefile=$1
+  gdbcommand=$(mktemp -t report.XXX) || die "Failed to create temp file"
+  echo "thread apply all bt" > $gdbcommand
+  gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
+  rm -f $gdbcommand
+}
+
+user_command() {
+  local c=$("$runner"/../stbt-config batch.$1 2>/dev/null)
+  [[ -z "$c" ]] && return
+  "$c" $2 </dev/null
+}
+
+check_capture_hardware() {
+  case "$("$runner"/../stbt-config global.source_pipeline | awk '{print $1}')" in
+    v4l2src)
+      if grep -q "Cannot identify device '/dev/v" failure-reason; then
+        echo "v4l2 device not found; exiting."
+        return 1
+      fi
+      ;;
+
+    decklinksrc)
+      ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
+        GST_DEBUG=decklinksrc:5 GST_DEBUG_NO_COLOR=1 \
+        "$runner"/../stbt-run --sink-pipeline='fakesink sync=false' \
+          <(echo "import time; time.sleep(1)") 2>&1
+      ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
+
+      if grep -q "enable video input failed" decklinksrc.log; then
+        local subdevice=$(
+          "$runner"/../stbt-config global.source_pipeline |
+          grep -o device-number=. | awk -F= '{print $2}')
+        local users=$(
+          lsof -F Lnc \
+            /dev/blackmagic${subdevice:-0} \
+            /dev/blackmagic/dv${subdevice:-0} \
+            2>/dev/null |
+          # Example `lsof` output:
+          # p70752
+          # cgst-launch-0.10
+          # Lstb-tester
+          # n/dev/blackmagic0
+          awk '/^p/ { printf "\n" }
+                    { sub(/^./, ""); printf $0 " " }')
+        echo "Blackmagic card in use: $users" > failure-reason
+        cp failure-reason failure-reason.manual
+        echo "Blackmagic card in use; exiting."
+        return 1
+
+      # Even if the card has no video connected to its input you see
+      # "VideoInputFrameArrived: Frame received - No input signal detected"
+      elif ! grep -q VideoInputFrameArrived decklinksrc.log; then
+        echo "Blackmagic card froze" > failure-reason
+        cp failure-reason failure-reason.manual
+        echo "Blackmagic card froze; exiting."
+        return 1
+      fi
+      ;;
+  esac
+}
+
+# Portable implementation of GNU "readlink -f" to support BSD/OSX.
+realpath() {
+  python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
+}
+
+main "$@"

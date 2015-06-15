@@ -127,15 +127,6 @@ test_stbt_batch_run_parse_test_args() {
     fail "Unexpected output from 'parse_test_args' with '--'"
 }
 
-test_stbt_batch_run_killtree() {
-    sed -n '/^killtree()/,/^}/ p' "$srcdir"/stbt-batch.d/run > killtree.sh &&
-    . killtree.sh &&
-    declare -f killtree || fail "'killtree' not defined"
-
-    . "$testdir"/test-run-tests.sh
-    test_killtree
-}
-
 test_signalname() {
     sed -n '/^signalname()/,/^}/ p' "$srcdir"/stbt-batch.d/report \
         > signalname.sh &&
