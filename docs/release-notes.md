@@ -44,6 +44,12 @@ UNRELEASED.
   is part of the work in progress to allow `stbt` to be used as a library from
   other Python code without having to use `stbt run`.
 
+* `stbt batch run` has been partially rewritten in Python for better
+  maintainability and extendability.
+
+* `stbt batch run` now uses process groups to keep track of its children, rather
+  than just using the process heirarchy.
+
 #### 22
 
 Support for testcases as Python functions and using *assert* in testcases; new

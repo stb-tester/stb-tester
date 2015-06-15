@@ -105,7 +105,8 @@ install-core: stbt.sh defaults.conf
 	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
-	    stbt-batch.d/run \
+	    stbt-batch.d/run.py \
+	    stbt-batch.d/run-one \
 	    stbt-batch.d/report \
 	    stbt-batch.d/instaweb \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d

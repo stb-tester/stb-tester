@@ -2,101 +2,36 @@
 #                                                    -*- sh-basic-offset: 2 -*-
 
 # Copyright 2013 YouView TV Ltd.
+#           2013-2015 stb-tester.com Ltd.
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
+#
+# Input command-line arguments:
+#
+# * testname [args...]
+#
+# Input environment variables:
+#
+# * $tag
+# * $v
+# * $verbose
+# * $outputdir
+#
+# Outputs:
+#
+# * A test-run directory under $outputdir
+# * $outputdir/latest pointing to this directory
+#
+# IPC:
+#
+# * SIGTERM signal says stop this test
+#
 
-#/ Usage:
-#/   stbt batch run [options] test.py [test.py ...]
-#/   stbt batch run [options] test.py arg [arg ...] -- test.py arg [arg ...] [-- ...]
-#/
-#/ Options:
-#/   -1    Run once. The default behaviour is to run the test
-#/         repeatedly as long as it passes.
-#/   -k    Continue running after "uninteresting" failures.
-#/   -kk   Continue running after any failure (except those
-#/         that would prevent any further test from passing).
-#/
-#/   -d    Enable "stbt-debug" dump of intermediate images.
-#/   -v    Verbose. Print stbt standard output.
-#/   -vv   Extra verbose. Print stbt standard error output.
-#/
-#/   -o    Output directory to save the report and test-run
-#/         logs under (defaults to the current directory).
-#/   -t <tag>  Tag to add to test run directory names (useful
-#/         to differentiate directories when you intend to
-#/         merge test results from multiple machines).
 
-usage() { grep '^#/' "$0" | cut -c4-; }
-die() { echo "$(basename "$0"): error: $*" >&2; exit 1; }
+die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
   runner=$(dirname "$(realpath "$0")")
-  export PYTHONUNBUFFERED=x
-
-  keep_going=0
-  outputdir="$PWD"
-  run_once=false
-  stop=false
-  tag=
-  v=-v
-  verbose=0
-  failure_count=0
-  while getopts ":1dhko:t:v" option; do
-    case $option in
-      1) run_once=true;;
-      d) v=-vv;;
-      h) usage; exit 0;;
-      k) keep_going=$((keep_going + 1));;
-      o) outputdir=$(realpath "$OPTARG");;
-      t) tag=-$OPTARG;;
-      v) verbose=$((verbose + 1));;
-      *) die "Invalid option '-$OPTARG'. Use '-h' for help.";;
-    esac
-  done
-  shift $((OPTIND - 1))
-  [[ $# -gt 0 ]] || { usage >&2; exit 1; }
-
-  which ts &>/dev/null ||
-    die "No 'ts' command found; please install 'moreutils' package"
-
-  exec 3>/dev/null 4>/dev/null
-  [ $verbose -gt 0 ] && exec 3>&1
-  [ $verbose -gt 1 ] && exec 4>&1
-
-  run_count=0
-  while true; do
-    while IFS=$'\t' read -a test; do
-      run_count=$((run_count+1))
-      run "${test[@]}" </dev/null;
-      last_exit_status=$?
-      [ "$last_exit_status" = 0 ] || failure_count=$((failure_count+1))
-      should_i_continue || break 2
-    done < <(parse_test_args "$@")
-    $run_once && break
-  done
-
-  if [ "$run_count" = 1 ]; then
-    # If we only run a single test a single time propagate the result through
-    exit "$last_exit_status"
-  elif [ "$failure_count" = 0 ]; then
-    exit 0
-  else
-    exit 1
-  fi
-}
-
-send_state_change() {
-  if [ -z "$STBT_TRACING_SOCKET" ]; then
-    return
-  fi
-
-  date='"'$(date --iso-8601=ns)'"'
-  echo '{"state_change": {"changes": {"'"$1"'": '"$2"'}, "time": '"$date"'}}' \
-    | socat STDIN "UNIX-CONNECT:$STBT_TRACING_SOCKET"
-  true
-}
-
-run() {
   local test testpath tmpdir rundir
 
   test="$1" && shift &&
@@ -134,15 +69,16 @@ run() {
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
+
+  exec 3>/dev/null 4>/dev/null
+  [ $verbose -gt 0 ] && exec 3>&1
+  [ $verbose -gt 1 ] && exec 4>&1
+
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawout | tee stdout.log >&3 &
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawerr | tee stderr.log >&4 &
 
-  while true; do
-    interrupted=false
-    wait $stbtpid
-    exit_status=$?
-    $interrupted || break
-  done
+  wait $stbtpid
+  exit_status=$?
 
   [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
 
@@ -172,10 +108,10 @@ run() {
   [ -f core* ] && backtrace core*
   STBT_TRACING_SOCKET="" "$runner"/report --classify-only . >/dev/null
   grep -q "FAIL: .*: NoVideo" stdout.log && {
-    check_capture_hardware || stop=true; }
+    check_capture_hardware || touch unrecoverable-error; }
 
   if [[ $exit_status -ne 0 ]]; then
-    user_command recover || stop=true
+    user_command recover || touch unrecoverable-error
   fi
 
   "$runner"/report --html-only . >/dev/null
@@ -187,25 +123,15 @@ run() {
   return $exit_status
 }
 
-trap on_kill1 sigint sigterm
-on_kill1() {
-  printf "\nReceived interrupt; waiting for current test to complete.\n" >&2
-  interrupted=true stop=true
-  trap on_kill2 sigint sigterm
-}
-on_kill2() {
-  echo "Received interrupt; exiting." >&2
-  interrupted=true stop=true
-  killtree $stbtpid
-}
+send_state_change() {
+  if [ -z "$STBT_TRACING_SOCKET" ]; then
+    return
+  fi
 
-should_i_continue() {
-  $stop && return 1;
-  [[ $exit_status -eq 0 ]] ||
-  # "Uninteresting" failures due to the test infrastructure
-  [[ $keep_going -gt 0 && $exit_status -gt 1 ]] ||
-  # Failures due to the system under test
-  [[ $keep_going -gt 1 ]]
+  date='"'$(date --iso-8601=ns)'"'
+  echo '{"state_change": {"changes": {"'"$1"'": '"$2"'}, "time": '"$date"'}}' \
+    | socat STDIN "UNIX-CONNECT:$STBT_TRACING_SOCKET"
+  true
 }
 
 template() {
@@ -278,33 +204,11 @@ check_capture_hardware() {
   esac
 }
 
-# Input:
-#   test1.py arg1 arg2 -- test2.py arg -- test3.py
-# Output (suitable as input to `IFS=$'\t' read -a`):
-#   test1.py\targ1\targ2
-#   test2.py\targ
-#   test3.py
-parse_test_args() {
-  if [[ "$*" =~ -- ]]; then
-    [[ "$1" == -- ]] && shift
-    while [[ $# -gt 0 ]]; do
-      printf "%s" "$1"; shift
-      while [[ $# -gt 0 && "$1" != -- ]]; do printf "\t%s" "$1"; shift; done
-      printf "\n"
-      [[ "$1" == -- ]] && shift
-    done
-  else  # No "--": Each command-line argument is a test script.
-    printf "%s\n" "$@"
-  fi
-}
-
-# http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes
-killtree() {
-  local parent=$1 child
-  for child in $(ps -o ppid= -o pid= | awk "\$1==$parent {print \$2}"); do
-    killtree $child
-  done
-  kill $parent
+trap on_term sigterm
+on_term() {
+    # Ignore SIGTERM.  It will have been sent to the whole process group, but we
+    # want this process to finish running to write out the right results files.
+    true;
 }
 
 # Portable implementation of GNU "readlink -f" to support BSD/OSX.
