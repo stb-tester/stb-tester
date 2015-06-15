@@ -17,11 +17,6 @@
 # * $verbose
 # * $outputdir
 #
-# File descriptors:
-#
-# * 3 - Send timestamped stdout here
-# * 4 - Send timestamped stderr here
-#
 # Outputs:
 #
 # * A test-run directory under $outputdir
@@ -70,6 +65,11 @@ main() {
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
+
+  exec 3>/dev/null 4>/dev/null
+  [ $verbose -gt 0 ] && exec 3>&1
+  [ $verbose -gt 1 ] && exec 4>&1
+
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawout | tee stdout.log >&3 &
   ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawerr | tee stderr.log >&4 &
 
