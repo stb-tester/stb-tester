@@ -47,6 +47,10 @@ def main(argv):
             'Tag to add to test run directory names (useful to differentiate '
             'directories when you intend to merge test results from multiple '
             'machines).'))
+    parser.add_argument(
+        '--shuffle', action="store_true", help=(
+            "Run the test cases in a random order attempting to spend the same "
+            "total amount of time executing each test case."))
     parser.add_argument('test_name', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
 
@@ -83,7 +87,11 @@ def main(argv):
 
     DEVNULL_R = open('/dev/null', 'r')
     run_count = 0
-    test_generator = loop_tests(test_cases, repeat=not args.run_once)
+
+    if args.shuffle:
+        test_generator = shuffle(test_cases, repeat=not args.run_once)
+    else:
+        test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
     for test in test_generator:
         if term_count[0] > 0:
@@ -184,6 +192,105 @@ def loop_tests(test_cases, repeat=True):
             yield test
         if not repeat:
             return
+
+
+def weighted_choice(choices):
+    """
+    See http://stackoverflow.com/questions/3679694/
+    """
+    import random
+    total = sum(w for c, w in choices)
+    r = random.uniform(0, total)
+    upto = 0
+    for c, w in choices:
+        if upto + w > r:
+            return c
+        upto += w
+    assert False, "Shouldn't get here"
+
+
+def shuffle(test_cases, repeat=True):
+    import random
+    import time
+    test_cases = test_cases[:]
+    random.shuffle(test_cases)
+    timings = {test: [0.0, 0] for test in test_cases}
+
+    # Run all the tests first time round:
+    for test in test_cases:
+        start_time = time.time()
+        yield test
+        timings[test][0] += time.time() - start_time
+        timings[test][1] += 1
+
+    if not repeat:
+        return
+
+    while True:
+        test = weighted_choice([(k, v[1] / v[0]) for k, v in timings.items()])
+        start_time = time.time()
+        yield test
+        timings[test][0] += time.time() - start_time
+        timings[test][1] += 1
+
+
+def test_that_shuffle_runs_through_all_tests_initially_with_repeat():
+    from itertools import islice
+
+    test_cases = range(20)
+    out = list(islice(shuffle(test_cases), 20))
+
+    # They must be randomised:
+    assert test_cases != out
+
+    # But all of them must have been run
+    assert test_cases == sorted(out)
+
+
+def test_that_shuffle_runs_through_all_tests_no_repeat():
+    test_cases = range(20)
+    out = list(shuffle(test_cases, repeat=False))
+
+    # They must be randomised:
+    assert test_cases != out
+
+    # But all of them must have been run
+    assert test_cases == sorted(out)
+
+
+def test_that_shuffle_equalises_time_across_tests():
+    from mock import patch
+    faketime = [0.0]
+
+    def mytime():
+        return faketime[0]
+
+    test_cases = [
+        ("test1", 20),
+        ("test2", 10),
+        ("test3", 5),
+    ]
+
+    time_spent_in_test = {
+        "test1": 0,
+        "test2": 0,
+        "test3": 0,
+    }
+
+    def fake_run_test(testcase):
+        time_spent_in_test[testcase[0]] += testcase[1]
+        faketime[0] += testcase[1]
+
+    with patch('time.time', mytime):
+        generator = shuffle(test_cases)
+        while faketime[0] < 100000:
+            fake_run_test(generator.next())
+
+    print time_spent_in_test
+
+    assert 30000 < time_spent_in_test["test1"] < 36000
+    assert 30000 < time_spent_in_test["test2"] < 36000
+    assert 30000 < time_spent_in_test["test3"] < 36000
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
