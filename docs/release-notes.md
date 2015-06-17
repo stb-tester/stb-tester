@@ -22,6 +22,27 @@ UNRELEASED.
 
 ##### User-visible changes since 22
 
+* `stbt batch run` learned a new option: `--shuffle`. The `--shuffle` option
+  runs the given test cases in a random order.  This can be useful if you have
+  structured your test pack as a large number of short targeted tests.  You can
+  then use:
+
+        stbt batch run --shuffle \
+            epg.py::test1 epg.py::test2 menu.py::test1 menu.py::test2 ...
+
+  to attempt a random walk of different journeys though your set-top-box UI.
+  This can be particularly effective at finding hard to trigger bugs and get
+  more value out of the test-cases you have written.
+
+  Some tests may take much longer than other tests, which will then use up a
+  disproportionate amount of your soaking time.  To work around that we measure
+  how long each test takes the first time it is run, and use that as a weighting
+  when choosing the next test to run attempting to equalise the time spent in
+  each test case.
+
+  This makes it reasonable to include both tests that take 10s and tests that
+  take 10min in the same random soak.
+
 * There is new structured logging/tracing infrastructure allowing monitoring
   what `stbt run` is doing in real-time and saving this data for replay and
   analysis later.  `stbt run` will write this data to file if it is given the
