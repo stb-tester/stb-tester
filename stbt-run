@@ -62,9 +62,19 @@ def import_by_filename(filename_):
     return __import__(module_name)
 
 
-def parse_function_kwargs(argv):
+def parse_function_kwargs(test_case_function, argv):
+    import inspect
     import json
-    p = argparse.ArgumentParser(prog=argv[0])
+
+    docs = "%s%s" % (
+        test_case_function.__name__,
+        inspect.formatargspec(*inspect.getargspec(test_case_function)))
+    if test_case_function.__doc__:
+        docs += "\n\n%s" % inspect.getdoc(test_case_function)
+
+    p = argparse.ArgumentParser(
+        prog=argv[0],
+        epilog=docs, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument(
         '--kwargs', help=(
             "A JSON formatted dictionary of arguments to pass to the\n"
@@ -99,7 +109,7 @@ try:
         module = import_by_filename(_filename)
         function = getattr(module, funcname)
         kwargs = parse_function_kwargs(
-            ["stbt run %s" % args.script] + sys.argv[1:])
+            function, ["stbt run %s" % args.script] + sys.argv[1:])
 
         _tracer.log_test_starting(args.script, _filename, funcname,
                                   function.func_code.co_firstlineno)
