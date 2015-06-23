@@ -468,3 +468,12 @@ test_that_stbt_batch_failure_reason_shows_the_failing_assert_statement() {
     stbt batch run -1 tests/test_functions.py::test_that_asserts_the_impossible
     assert grep -q "AssertionError: assert 1 + 1 == 3" latest/failure-reason
 }
+
+test_that_stbt_batch_run_shuffle_runs_tests() {
+    create_test_repo
+    stbt batch run -1 --shuffle \
+        tests/test_functions.py::test_that_does_nothing \
+        tests/test_functions.py::test_that_this_test_is_run
+    ls -d ????-??-??_??.??.??* > testruns
+    [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
+}
