@@ -61,6 +61,21 @@ def import_by_filename(filename_):
     sys.path = [os.path.abspath(module_dir)] + sys.path
     return __import__(module_name)
 
+
+def parse_function_kwargs(argv):
+    import json
+    p = argparse.ArgumentParser(prog=argv[0])
+    p.add_argument(
+        '--kwargs', help=(
+            "A JSON formatted dictionary of arguments to pass to the\n"
+            "test case function.  Defaults to {}"))
+    test_case_args, _ = p.parse_known_args(argv[1:])
+
+    if test_case_args.kwargs is not None:
+        return json.loads(test_case_args.kwargs)
+    else:
+        return {}
+
 _tracer = None
 try:
     # pylint: disable=W0611
@@ -83,10 +98,13 @@ try:
         _absfilename = os.path.abspath(_filename)
         module = import_by_filename(_filename)
         function = getattr(module, funcname)
+        kwargs = parse_function_kwargs(
+            ["stbt run %s" % args.script] + sys.argv[1:])
+
         _tracer.log_test_starting(args.script, _filename, funcname,
                                   function.func_code.co_firstlineno)
         sys.settrace(tracefunc)
-        function()
+        function(**kwargs)
     else:
         _filename = os.path.abspath(args.script)
         _absfilename = os.path.abspath(_filename)

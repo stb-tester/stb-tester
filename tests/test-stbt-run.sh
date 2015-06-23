@@ -137,6 +137,24 @@ test_that_stbt_run_will_run_a_specific_function() {
     [ -e "touched" ] || fail "Test not run"
 }
 
+test_that_stbt_run_will_pass_json_kwargs_to_function() {
+    cat > test.py <<-EOF
+	import stbt
+	def test_that_this_test_is_run(my_number, my_string):
+	    print "number: %i" % my_number
+	    print "string: %s" % my_string
+	EOF
+
+    cat > expected_output <<-EOF
+	number: 3
+	string: hello
+	EOF
+
+    stbt run test.py::test_that_this_test_is_run \
+        --kwargs='{"my_number": 3, "my_string": "hello"}' >stdout.log
+    diff expected_output stdout.log || fail "Args not passed successfully"
+}
+
 test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
     mkdir tests
     cat >tests/helpers.py <<-EOF

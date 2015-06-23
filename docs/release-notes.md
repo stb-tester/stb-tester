@@ -43,6 +43,28 @@ UNRELEASED.
   This makes it reasonable to include both tests that take 10s and tests that
   take 10min in the same random soak.
 
+* `stbt run` can now take pass arguments to test case functions with the
+  `--kwargs` option.
+
+  Example: with this test case in `tests/channel_test.py`:
+
+        def change_channel(channel_number):
+            print "Changing channel to %i" % channel_number
+
+  you can pass the channel number 3 with:
+
+        stbt run tests/channel_test.py::change_channel \
+            --kwargs='{"channel_number": 3}'
+
+  Note: the `--kwargs` option takes a JSON formatted string and is passed as an
+  argument **after** the test case name. This means that you can also pass the
+  `--kwargs` option on the `stbt batch` command line for each test case:
+
+        stbt batch run \
+            tests/channel_test.py::change_channel --kwargs='{"channel_number": 2}' -- \
+            tests/channel_test.py::change_channel --kwargs='{"channel_number": 3}' --
+
+
 * There is new structured logging/tracing infrastructure allowing monitoring
   what `stbt run` is doing in real-time and saving this data for replay and
   analysis later.  `stbt run` will write this data to file if it is given the
