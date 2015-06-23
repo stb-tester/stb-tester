@@ -105,7 +105,7 @@ def main(argv):
         child = None
         try:
             child = subprocess.Popen(
-                ["%s/run-one" % runner] + test, stdin=DEVNULL_R, env=subenv,
+                ("%s/run-one" % runner,) + test, stdin=DEVNULL_R, env=subenv,
                 preexec_fn=lambda: os.setpgid(0, 0))
             last_exit_status = child.wait()
         except SystemExit:
@@ -164,26 +164,26 @@ def listsplit(l, v):
 def parse_test_args(args):
     """
     >>> parse_test_args(['test 1.py', 'test2.py', 'test3.py'])
-    [['test 1.py'], ['test2.py'], ['test3.py']]
+    [('test 1.py',), ('test2.py',), ('test3.py',)]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [['test1.py'], ['test2.py']]
+    [('test1.py',), ('test2.py',)]
     >>> parse_test_args(['test1.py', '--'])
-    [['test1.py']]
+    [('test1.py',)]
     >>> parse_test_args(['test1.py', '--', 'test2.py'])
-    [['test1.py'], ['test2.py']]
+    [('test1.py',), ('test2.py',)]
     >>> parse_test_args(['test1.py', '--', 'test2.py', '--'])
-    [['test1.py'], ['test2.py']]
+    [('test1.py',), ('test2.py',)]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [['test1.py'], ['test2.py']]
+    [('test1.py',), ('test2.py',)]
     >>> parse_test_args(
     ...     ['test1.py', 'arg1', 'arg2', '--', 'test2.py', 'arg', '--',
     ...      'test3.py'])
-    [['test1.py', 'arg1', 'arg2'], ['test2.py', 'arg'], ['test3.py']]
+    [('test1.py', 'arg1', 'arg2'), ('test2.py', 'arg'), ('test3.py',)]
     """
     if '--' in args:
-        return listsplit(args, '--')
+        return [tuple(x) for x in listsplit(args, '--')]
     else:
-        return [[x] for x in args]
+        return [(x,) for x in args]
 
 
 def loop_tests(test_cases, repeat=True):
