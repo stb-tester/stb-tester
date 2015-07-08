@@ -16,9 +16,9 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 23
 
-UNRELEASED.
+New `stbt batch run --shuffle` option to run test cases in a random order.
 
-##### Breaking changes since 22
+8 July 2015.
 
 ##### User-visible changes since 22
 
@@ -57,8 +57,6 @@ UNRELEASED.
   fades out over a few seconds. This makes it easier to distinguish the new
   messages from the old messages.
 
-##### Bugfixes and packaging fixes since 22
-
 ##### Developer-visible changes since 22
 
 * Much of the code has moved from `stbt/__init__.py` to `_stbt/core.py`. This
@@ -70,6 +68,9 @@ UNRELEASED.
 
 * `stbt batch run` now uses process groups to keep track of its children, rather
   than just using the process heirarchy.
+
+* Support for the ATEN network-controlled power supply has been rewritten in
+  Python (from bash). (Thanks to Martyn Jarvis and YouView for the patch.)
 
 #### 22
 
