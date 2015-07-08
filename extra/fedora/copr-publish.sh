@@ -16,9 +16,9 @@ trap "rm -rf $tmpdir" EXIT &&
 git clone --depth 1 git@github.com:stb-tester/stb-tester-srpms.git \
     $tmpdir/stb-tester-srpms &&
 cp $src_rpm $tmpdir/stb-tester-srpms &&
-git -C $tmpdir add $src_rpm &&
-git -C $tmpdir commit -m "$src_rpm" &&
-git -C $tmpdir push origin master &&
+git -C $tmpdir/stb-tester-srpms add $src_rpm &&
+git -C $tmpdir/stb-tester-srpms commit -m "$src_rpm" &&
+git -C $tmpdir/stb-tester-srpms push origin master &&
 echo "Published srpm to https://github.com/stb-tester/stb-tester-srpms" &&
 "$(dirname "$0")"/fedora-shell.sh -c "copr-cli build stb-tester \
     https://github.com/stb-tester/stb-tester-srpms/raw/master/$src_rpm" &&
