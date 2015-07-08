@@ -6,9 +6,6 @@
 Automated User Interface Testing for Set-Top Boxes & Smart TVs
 --------------------------------------------------------------
 
-.. image:: https://travis-ci.org/stb-tester/stb-tester.png?branch=master
-   :target: https://travis-ci.org/stb-tester/stb-tester
-
 :Copyright: Copyright (C) 2013-2014 Stb-tester.com Ltd,
             2012-2014 YouView TV Ltd. and other contributors
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
@@ -286,36 +283,6 @@ Linux server
 
 An 8-core machine will be able to drive 4 set-top boxes simultaneously with at
 least 1 frame per second per set-top box.
-
-
-SOFTWARE REQUIREMENTS
-=====================
-
-* A Unixy operating system (we have only tested on Linux and Mac OS X).
-
-* Drivers for any required hardware components.
-
-* GStreamer 1.0 (multimedia framework) + gstreamer-plugins-base +
-  gstreamer-plugins-good.
-
-* python 2.7 + pygst + docutils (for building the documentation) + nose (for
-  the self-tests).
-
-* OpenCV (image processing library) version >= 2.0.0, and the OpenCV python
-  bindings.
-
-* For the Hauppauge video capture device you'll need the gstreamer-libav
-  package (e.g. from the rpmfusion-free repository) for H.264 decoding.
-
-
-INSTALLING FROM SOURCE
-======================
-
-Run "make install" from the stb-tester source directory.
-
-See
-https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
-for the required dependencies and configuration.
 
 
 TEST SCRIPT FORMAT
