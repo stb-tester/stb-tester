@@ -29,6 +29,7 @@ Requires: python-enum34
 Requires: python-flask
 Requires: python-jinja2
 Requires: python-lxml
+Requires: socat
 Requires: tesseract
 
 %description
