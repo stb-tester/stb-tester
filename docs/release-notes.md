@@ -18,7 +18,7 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 New `stbt batch run --shuffle` option to run test cases in a random order.
 
-8 July 2015.
+10 July 2015.
 
 ##### User-visible changes since 22
 
