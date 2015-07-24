@@ -14,6 +14,31 @@ necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
+#### 24
+
+UNRELEASED
+
+##### Breaking changes since 23
+
+* `stbt lint` no longer works with pylint < 1.0. If your distro provides an
+  older pylint, we recommend installing a newer pylint from PyPI.
+
+##### User-visible changes since 23
+
+* `stbt lint` will complain if you don't use the return value from
+  `is_screen_black`, `match`, `match_text`, `ocr`, or `wait_until`. When the
+  return value from `wait_until` isn't used in an `if` statement or assigned to
+  a variable, you've probably forgotten to use `assert`.
+
+* `stbt lint` will complain if its argument isn't callable (such as a function
+  or a lambda expression). This will catch mistakes like
+  `wait_until(is_screen_black())` when you meant to say
+  `wait_until(is_screen_black)`.
+
+##### Bugfixes and packaging fixes since 23
+
+##### Developer-visible changes since 23
+
 #### 23
 
 New `stbt batch run --shuffle` option to run test cases in a random order.
