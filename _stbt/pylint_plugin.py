@@ -8,7 +8,7 @@ Intended to be used by "stbt lint".
 
 Documentation on Abstract Syntax Tree traversal with python/pylint:
 
-* http://www.logilab.org/card/pylint_manual#writing-your-own-checker
+* http://docs.pylint.org/extend.html#writing-your-own-checker
 * http://hg.logilab.org/review/pylint/file/default/examples/custom.py
 * http://docs.python.org/2/library/ast.html
 
