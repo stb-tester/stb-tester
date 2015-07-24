@@ -17,18 +17,9 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 import os
 import re
 
+from astroid.node_classes import BinOp, CallFunc, Discard, Getattr
 from pylint.checkers import BaseChecker
-
-# Install `pylint` to get `logilab.astng` or `astroid` modules.
-
-# pylint: disable=E0611,F0401
-try:  # >= pylint 1.0
-    from pylint.interfaces import IAstroidChecker
-    from astroid.node_classes import BinOp, CallFunc, Discard, Getattr
-except ImportError:  # < pylint 1.0
-    from pylint.interfaces import IASTNGChecker as IAstroidChecker
-    from logilab.astng.node_classes import BinOp, CallFunc, Discard, Getattr
-# pylint: enable=E0611,F0401
+from pylint.interfaces import IAstroidChecker
 
 
 class StbtChecker(BaseChecker):
@@ -37,6 +28,7 @@ class StbtChecker(BaseChecker):
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
         'E7001': ('Image "%s" not found on disk',
+                  'stbt-missing-image',
                   'Used when the image path given to `stbt.wait_for_match` '
                   '(and similar functions) does not exist on disk.'),
         'E7002': ('"wait_until" return value not used (missing "assert"?)',
