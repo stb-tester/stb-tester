@@ -74,6 +74,7 @@ def _in_whitelisted_functions(node):
     return (
         type(node.parent) is CallFunc and
         node.parent.func.as_string() in (
+            "cv2.imwrite",
             "re.match",
             "re.search",
             "stbt.save_frame",

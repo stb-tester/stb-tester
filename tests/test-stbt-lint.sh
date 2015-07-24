@@ -38,8 +38,9 @@ test_that_stbt_lint_ignores_regular_expressions() {
 
 test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     cat > test.py <<-EOF &&
-	import stbt
+	import cv2, stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
+	cv2.imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
     stbt lint --errors-only test.py
 }
