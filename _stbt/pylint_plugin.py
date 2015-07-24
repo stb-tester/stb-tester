@@ -1,6 +1,8 @@
 """pylint plugin to do static analysis on stbt scripts
 
 * Identifies broken image links in parameters to `stbt.wait_for_match` etc.
+* Identifies calls to `wait_until` whose return value isn't used (probably
+  missing an `assert`).
 
 Intended to be used by "stbt lint".
 
@@ -22,10 +24,10 @@ from pylint.checkers import BaseChecker
 # pylint: disable=E0611,F0401
 try:  # >= pylint 1.0
     from pylint.interfaces import IAstroidChecker
-    from astroid.node_classes import BinOp, CallFunc, Getattr
+    from astroid.node_classes import BinOp, CallFunc, Discard, Getattr
 except ImportError:  # < pylint 1.0
     from pylint.interfaces import IASTNGChecker as IAstroidChecker
-    from logilab.astng.node_classes import BinOp, CallFunc, Getattr
+    from logilab.astng.node_classes import BinOp, CallFunc, Discard, Getattr
 # pylint: enable=E0611,F0401
 
 
@@ -37,6 +39,11 @@ class StbtChecker(BaseChecker):
         'E7001': ('Image "%s" not found on disk',
                   'Used when the image path given to `stbt.wait_for_match` '
                   '(and similar functions) does not exist on disk.'),
+        'E7002': ('"wait_until" return value not used (missing "assert"?)',
+                  'stbt-bare-wait-until',
+                  "When the return value from 'wait_until' isn't used in an "
+                  "'if' statement or assigned to a variable, you've probably "
+                  "forgotten to use 'assert'."),
     }
 
     def visit_const(self, node):
@@ -48,6 +55,11 @@ class StbtChecker(BaseChecker):
                 not _in_whitelisted_functions(node) and
                 not _file_exists(node.value, node)):
             self.add_message('E7001', node=node, args=node.value)
+
+    def visit_callfunc(self, node):
+        if re.search(r"\bwait_until$", node.func.as_string()):
+            if type(node.parent) == Discard:
+                self.add_message('E7002', node=node)
 
 
 def _is_calculated_value(node):

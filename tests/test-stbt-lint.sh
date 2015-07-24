@@ -49,3 +49,22 @@ test_pylint_plugin_on_itself() {
     # as a pylint plugin across your entire project, not just for stbt scripts.
     stbt lint --errors-only "$srcdir"/stbt_pylint_plugin.py
 }
+
+test_that_stbt_lint_checks_uses_of_wait_until_return_value() {
+    cat > test.py <<-EOF &&
+	from stbt import wait_until
+	
+	def test_something():
+	    assert wait_until(lambda: True)      # ok
+	    some_var = wait_until(lambda: True)  # ok
+	    if wait_until(lambda: True): pass    # ok
+	    wait_until(lambda: True)             # bad
+	EOF
+    stbt lint --errors-only test.py > lint.log
+
+    cat > lint.expected <<-'EOF'
+	************* Module test
+	E:  7, 4: "wait_until" return value not used (missing "assert"?) (stbt-bare-wait-until)
+	EOF
+    diff -u lint.expected lint.log
+}
