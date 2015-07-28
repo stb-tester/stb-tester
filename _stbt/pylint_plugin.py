@@ -34,10 +34,9 @@ class StbtChecker(BaseChecker):
                   '(and similar functions) does not exist on disk.'),
         'E7002': ('"%s" return value not used (missing "assert"?)',
                   'stbt-unused-return-value',
-                  "When the return value from stbt's "
-                  "wait_until/match/is_screen_black isn't used in an 'if' "
-                  "statement or assigned to a variable, you've probably "
-                  "forgotten to use 'assert'."),
+                  "This function does not raise an exception on failure but "
+                  "you aren't using its return value. Perhaps you've forgotten "
+                  'to use "assert".'),
         'E7003': ('"wait_until" argument "%s" isn\'t callable',
                   'stbt-wait-until-callable',
                   '"wait_until" takes a callable (such as a function or a '
