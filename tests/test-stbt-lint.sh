@@ -98,6 +98,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 
     cat > lint.expected <<-'EOF'
 	************* Module test
+	E:  9,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
 	E: 11,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
 	E: 13,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
 	EOF

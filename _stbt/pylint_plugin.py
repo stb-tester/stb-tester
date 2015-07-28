@@ -66,7 +66,8 @@ class StbtChecker(BaseChecker):
                 for inferred in arg.infer():
                     # Note that when `infer()` fails it returns `YES` which
                     # returns True to everything (including `callable()`).
-                    if inferred.callable():
+                    if inferred.callable() and not (
+                            type(arg) is CallFunc and inferred == YES):
                         break
                 else:
                     self.add_message('E7003', node=node, args=arg.as_string())
