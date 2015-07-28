@@ -57,7 +57,10 @@ class StbtChecker(BaseChecker):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
                      node.func.as_string()):
             if type(node.parent) == Discard:
-                self.add_message('E7002', node=node, args=node.func.as_string())
+                for inferred in node.func.infer():
+                    if inferred.root().name in ('stbt', '_stbt.core'):
+                        self.add_message(
+                            'E7002', node=node, args=node.func.as_string())
 
         if re.search(r"\bwait_until", node.func.as_string()):
             if node.args:
