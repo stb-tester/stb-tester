@@ -77,3 +77,29 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	EOF
     diff -u lint.expected lint.log
 }
+
+test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
+    cat > test.py <<-EOF &&
+	from stbt import is_screen_black, press, wait_until
+	
+	def return_a_function():
+	    return lambda: True
+	
+	def test_something():
+	    press('KEY_POWER')
+	    assert wait_until(is_screen_black)
+	    assert wait_until(is_screen_black())
+	    assert wait_until(return_a_function())
+	    assert wait_until(return_a_function()())
+	    assert wait_until(lambda: True)
+	    assert wait_until((lambda: True)())
+	EOF
+    stbt lint --errors-only test.py > lint.log
+
+    cat > lint.expected <<-'EOF'
+	************* Module test
+	E: 11,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
+	E: 13,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
+	EOF
+    diff -u lint.expected lint.log
+}

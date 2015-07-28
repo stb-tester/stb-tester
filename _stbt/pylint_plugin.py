@@ -17,6 +17,7 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 import os
 import re
 
+from astroid import YES
 from astroid.node_classes import BinOp, CallFunc, Discard, Getattr
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
@@ -37,6 +38,10 @@ class StbtChecker(BaseChecker):
                   "wait_until/match/is_screen_black isn't used in an 'if' "
                   "statement or assigned to a variable, you've probably "
                   "forgotten to use 'assert'."),
+        'E7003': ('"wait_until" argument "%s" isn\'t callable',
+                  'stbt-wait-until-callable',
+                  '"wait_until" takes a callable (such as a function or a '
+                  'lambda expression'),
     }
 
     def visit_const(self, node):
@@ -54,6 +59,17 @@ class StbtChecker(BaseChecker):
                      node.func.as_string()):
             if type(node.parent) == Discard:
                 self.add_message('E7002', node=node, args=node.func.as_string())
+
+        if re.search(r"\bwait_until", node.func.as_string()):
+            if node.args:
+                arg = node.args[0]
+                for inferred in arg.infer():
+                    # Note that when `infer()` fails it returns `YES` which
+                    # returns True to everything (including `callable()`).
+                    if inferred.callable():
+                        break
+                else:
+                    self.add_message('E7003', node=node, args=arg.as_string())
 
 
 def _is_calculated_value(node):
