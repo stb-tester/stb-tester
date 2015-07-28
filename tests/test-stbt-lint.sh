@@ -51,21 +51,29 @@ test_pylint_plugin_on_itself() {
     stbt lint --errors-only "$srcdir"/stbt_pylint_plugin.py
 }
 
-test_that_stbt_lint_checks_uses_of_wait_until_return_value() {
+test_that_stbt_lint_checks_uses_of_stbt_return_values() {
     cat > test.py <<-EOF &&
-	from stbt import wait_until
+	import stbt
+	from stbt import match, press, wait_until
 	
 	def test_something():
-	    assert wait_until(lambda: True)      # ok
-	    some_var = wait_until(lambda: True)  # ok
-	    if wait_until(lambda: True): pass    # ok
-	    wait_until(lambda: True)             # bad
+	    assert wait_until(lambda: True)
+	    some_var = wait_until(lambda: True)
+	    if wait_until(lambda: True): pass
+	    wait_until(lambda: True)
+	    stbt.wait_until(lambda: True)
+	    something_else_that_ends_in_wait_until()  # pylint:disable=E0602
+	    assert match('$testdir/videotestsrc-redblue.png')
+	    match('$testdir/videotestsrc-redblue.png')
+	    press('KEY_OK')
 	EOF
     stbt lint --errors-only test.py > lint.log
 
     cat > lint.expected <<-'EOF'
 	************* Module test
-	E:  7, 4: "wait_until" return value not used (missing "assert"?) (stbt-bare-wait-until)
+	E:  8, 4: "wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E:  9, 4: "stbt.wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 12, 4: "match" return value not used (missing "assert"?) (stbt-unused-return-value)
 	EOF
     diff -u lint.expected lint.log
 }

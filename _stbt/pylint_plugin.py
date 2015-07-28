@@ -31,10 +31,11 @@ class StbtChecker(BaseChecker):
                   'stbt-missing-image',
                   'Used when the image path given to `stbt.wait_for_match` '
                   '(and similar functions) does not exist on disk.'),
-        'E7002': ('"wait_until" return value not used (missing "assert"?)',
-                  'stbt-bare-wait-until',
-                  "When the return value from 'wait_until' isn't used in an "
-                  "'if' statement or assigned to a variable, you've probably "
+        'E7002': ('"%s" return value not used (missing "assert"?)',
+                  'stbt-unused-return-value',
+                  "When the return value from stbt's "
+                  "wait_until/match/is_screen_black isn't used in an 'if' "
+                  "statement or assigned to a variable, you've probably "
                   "forgotten to use 'assert'."),
     }
 
@@ -49,9 +50,10 @@ class StbtChecker(BaseChecker):
             self.add_message('E7001', node=node, args=node.value)
 
     def visit_callfunc(self, node):
-        if re.search(r"\bwait_until$", node.func.as_string()):
+        if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
+                     node.func.as_string()):
             if type(node.parent) == Discard:
-                self.add_message('E7002', node=node)
+                self.add_message('E7002', node=node, args=node.func.as_string())
 
 
 def _is_calculated_value(node):
