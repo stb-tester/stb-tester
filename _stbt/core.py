@@ -841,6 +841,8 @@ class DeviceUnderTest(object):
 
         _config = dict(tesseract_config or {})
         _config['tessedit_create_hocr'] = 1
+        if _tesseract_version() >= LooseVersion('3.04'):
+            _config['tessedit_create_txt'] = 0
 
         ts = _get_frame_timestamp(frame)
 

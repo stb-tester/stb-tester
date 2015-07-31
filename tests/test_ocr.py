@@ -54,8 +54,17 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
+    from _stbt.core import _tesseract_version
+    if _tesseract_version() >= distutils.version.LooseVersion('3.04'):
+        hocr_mode_config = {
+            "tessedit_create_txt": 0,
+            "tessedit_create_hocr": 1}
+    else:
+        hocr_mode_config = {
+            "tessedit_create_hocr": 1}
+
     assert (stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png'),
-                     tesseract_config={"tessedit_create_hocr": 1}) !=
+                     tesseract_config=hocr_mode_config) !=
             stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png')))
 
 
