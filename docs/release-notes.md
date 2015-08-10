@@ -30,8 +30,8 @@ UNRELEASED
   return value from `wait_until` isn't used in an `if` statement or assigned to
   a variable, you've probably forgotten to use `assert`.
 
-* `stbt lint` will complain if its argument isn't callable (such as a function
-  or a lambda expression). This will catch mistakes like
+* `stbt lint` will complain if the argument to `wait_until` isn't callable
+  (such as a function or a lambda expression). This will catch mistakes like
   `wait_until(is_screen_black())` when you meant to say
   `wait_until(is_screen_black)`.
 
