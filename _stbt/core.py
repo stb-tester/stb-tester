@@ -203,6 +203,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> a.width, a.extend(x=3).width, a.extend(right=-3).width
     (8, 5, 5)
+    >>> print c.replace(bottom=10)
+    Region(x=10, y=4, width=3, height=6)
     >>> print Region.intersect(a, b)
     Region(x=4, y=4, width=4, height=4)
     >>> Region.intersect(a, b) == Region.intersect(b, a)
@@ -331,6 +333,20 @@ class Region(namedtuple('Region', 'x y right bottom')):
         """
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
+
+    def replace(self, x=None, y=None, right=None, bottom=None):
+        """
+        :returns: A new region with the edges of the region set to the given
+            coordinates.
+
+        This is similar to `extend`, but it takes absolute coordinates within
+        the image instead of adjusting by a relative number of pixels.
+        """
+        kwargs = dict(
+            (k, v) for k, v in [
+                ("x", x), ("y", y), ("right", right), ("bottom", bottom)]
+            if v is not None)
+        return self._replace(**kwargs)
 
     def translate(self, x=0, y=0):
         """

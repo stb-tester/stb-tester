@@ -25,6 +25,11 @@ UNRELEASED
 
 ##### User-visible changes since 23
 
+* Added new API `stbt.Region.replace` to set any of the edges of a region to
+  the given coordinates. It is similar to `Region.extend`, but it takes
+  absolute coordinates within the image instead of adjusting the edge by a
+  relative number of pixels.
+
 * `stbt lint` will complain if you don't use the return value from
   `is_screen_black`, `match`, `match_text`, `ocr`, or `wait_until`. When the
   return value from `wait_until` isn't used in an `if` statement or assigned to
