@@ -503,7 +503,7 @@ test_that_press_reads_default_delay_from_stbt_conf() {
 	time1 = datetime.datetime.now()
 	stbt.press('OK')
 	time2 = datetime.datetime.now()
-	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
+	assert time2 - time1 >= datetime.timedelta(seconds=0.45), (
 	    "Expected: >= 0:00:00.5, got: %s between presses" % (time2 - time1))
 	EOF
     stbt run -v --control none test.py
