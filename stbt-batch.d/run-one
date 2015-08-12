@@ -39,7 +39,10 @@ main() {
   mkdir -p "$outputdir" &&
   pushd "$outputdir" >/dev/null &&
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
-  mkdir "$rundir" &&
+  { mkdir "$rundir" ||
+    # Avoid directory name clashes if the previous test took <1s to run
+    { sleep 1 && mkdir "$rundir"; }
+  } &&
   send_state_change active_results_directory "\"$outputdir/$rundir\"" &&
   rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
   cd "$rundir" &&
