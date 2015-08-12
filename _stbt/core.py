@@ -1224,7 +1224,7 @@ def _numpy_from_sample(sample, readonly=False):
         yield array
 
 
-def _test_that_mapping_a_sample_readonly_gives_a_readonly_array():
+def test_that_mapping_a_sample_readonly_gives_a_readonly_array():
     Gst.init([])
     s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
                        Gst.Caps.from_string("video/x-raw"), None, None)
@@ -1237,13 +1237,13 @@ def _test_that_mapping_a_sample_readonly_gives_a_readonly_array():
             pass
 
 
-def _test_passing_a_numpy_ndarray_as_sample_is_a_noop():
+def test_passing_a_numpy_ndarray_as_sample_is_a_noop():
     a = numpy.ndarray((5, 2))
     with _numpy_from_sample(a) as m:
         assert a is m
 
 
-def _test_that_dimensions_of_array_are_according_to_caps():
+def test_that_dimensions_of_array_are_according_to_caps():
     s = Gst.Sample.new(Gst.Buffer.new_wrapped(
         "row 1 4 px  row 2 4 px  row 3 4 px  "),
         Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
