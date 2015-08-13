@@ -40,6 +40,9 @@ UNRELEASED
   `wait_until(is_screen_black())` when you meant to say
   `wait_until(is_screen_black)`.
 
+* Updated `stbt.ocr` and `stbt.match_text` to work with tesseract 3.04 (which
+  seems to have been released sometime around 10 July 2015).
+
 ##### Bugfixes and packaging fixes since 23
 
 ##### Developer-visible changes since 23
