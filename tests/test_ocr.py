@@ -2,6 +2,7 @@
 
 import distutils
 import re
+import time
 from textwrap import dedent
 
 import cv2
@@ -193,3 +194,57 @@ def test_that_match_text_gives_tesseract_a_hint():
     if "ITV Player" not in stbt.ocr(frame=frame, tesseract_user_words=["ITV"]):
         raise SkipTest("Giving tesseract a hint doesn't help")
     assert stbt.match_text("ITV Player", frame=frame)
+
+
+def test_that_ocr_and_match_text_are_memoised():
+    def timeit(f, filename, region=stbt.Region.ALL,
+               expect_already_memoized=False):
+        frame1 = cv2.imread(filename)
+        start1 = time.time()
+        result1 = f(frame=frame1, region=region)
+        end1 = time.time()
+
+        frame2 = cv2.imread(filename)  # Same image, but different python object
+        start2 = time.time()
+        result2 = f(frame=frame2, region=region)
+        end2 = time.time()
+
+        assert result1 == result2
+        elapsed1 = end1 - start1
+        elapsed2 = end2 - start2
+        print "Filename: %s; expect already memoized: %s" % (
+            filename, expect_already_memoized)
+        print "  first time: %fs; second time: %fs" % (elapsed1, elapsed2)
+        if expect_already_memoized:
+            assert elapsed1 < 10 * elapsed2
+        else:
+            assert elapsed1 > 10 * elapsed2
+
+        return result1
+
+    def test(f):
+        timeit(f, "tests/ocr/dialog-great--world-peace.png")
+
+        # Change the frame, but using a region where both frames have identical
+        # content. This region contains the dialog (which says "This set-top
+        # box is great" in both frames) but it doesn't contain the background
+        # (which varies: "BREAKING NEWS: World Peace" vs "BREAKING NEWS: Free
+        # bunnies").
+        r1 = stbt.Region(x=350, y=190, right=950, bottom=510)
+        text1 = timeit(f, "tests/ocr/dialog-great--world-peace.png", r1)
+        text2 = timeit(f, "tests/ocr/dialog-great--free-bunnies.png", r1, True)
+        assert text1 == text2
+
+        # Change the frame
+        text3 = timeit(f, "tests/ocr/dialog-fabulous--world-peace.png", r1)
+        assert text3 != text1
+
+        # Change the region
+        r2 = stbt.Region(x=0, y=640, right=1280, bottom=720)
+        timeit(f, "tests/ocr/dialog-fabulous--world-peace.png", r2)
+
+    def match_text(**kwargs):
+        return stbt.match_text("fabulous", **kwargs).match
+
+    yield test, stbt.ocr
+    yield test, match_text

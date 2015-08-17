@@ -2208,7 +2208,9 @@ def _symlink_copy_dir(a, b):
             rel = relpath(join(dirpath, name), a)
             os.symlink(join(a, rel), join(newroot, rel))
 
+
 _memoise_tesseract_version = None
+_memoise_tesseract_output = (None, (None, None))  # (hash, (text, region))
 
 
 def _tesseract_version(output=None):
@@ -2232,6 +2234,29 @@ def _tesseract_version(output=None):
 
 def _tesseract(frame, region, mode, lang, _config,
                user_patterns=None, user_words=None):
+    """Cache the OCR result of the most recent frame so that you can call
+    `match_text` multiple times on the same frame, cheaply.
+    """
+    global _memoise_tesseract_output
+    h = unicode(hash(
+        (0, '_tesseract', _memoise_tesseract_version,
+         _image_hash(frame), region, mode, lang,
+         None if _config is None else tuple(_config.items()),
+         None if user_patterns is None else tuple(user_patterns),
+         None if user_words is None else tuple(user_words))))
+    if h != _memoise_tesseract_output[0]:
+        print "Calling tesseract"
+        text, out_region = _tesseract_impl(
+            frame, region, mode, lang, _config, user_patterns, user_words)
+        _memoise_tesseract_output = (h, (text, out_region))
+    else:
+        print "Returning memoised text"
+    text, out_region = _memoise_tesseract_output[1]
+    return (text, out_region)
+
+
+def _tesseract_impl(frame, region, mode, lang, _config,
+                    user_patterns=None, user_words=None):
 
     if _config is None:
         _config = {}
@@ -2313,6 +2338,13 @@ def _tesseract(frame, region, mode, lang, _config,
         subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
+
+
+def _image_hash(image):
+    try:
+        return hash(buffer(image.data))
+    except AttributeError:
+        return hash(buffer(numpy.ascontiguousarray(image).data))
 
 
 def _hocr_iterate(hocr):
