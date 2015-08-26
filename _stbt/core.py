@@ -334,7 +334,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
-    def replace(self, x=None, y=None, right=None, bottom=None):
+    def replace(self, x=None, y=None, width=None, height=None, right=None,
+                bottom=None):
         """
         :returns: A new region with the edges of the region set to the given
             coordinates.
@@ -342,11 +343,30 @@ class Region(namedtuple('Region', 'x y right bottom')):
         This is similar to `extend`, but it takes absolute coordinates within
         the image instead of adjusting by a relative number of pixels.
         """
-        kwargs = dict(
-            (k, v) for k, v in [
-                ("x", x), ("y", y), ("right", right), ("bottom", bottom)]
-            if v is not None)
-        return self._replace(**kwargs)
+        def norm_coords(name_x, name_width, name_right,
+                        x, width, right,  # or y, height, bottom
+                        default_x, _default_width, default_right):
+            if all(z is not None for z in (x, width, right)):
+                raise ValueError(
+                    "Region.replace: Argument conflict: you may only specify "
+                    "two of %s, %s and %s.  You specified %s=%s, %s=%s and "
+                    "%s=%s" % (name_x, name_width, name_right,
+                               name_x, x, name_width, width, name_right, right))
+            if x is None:
+                if width is not None and right is not None:
+                    x = right - width
+                else:
+                    x = default_x
+            if right is None:
+                right = x + width if width is not None else default_right
+            return x, right
+
+        x, right = norm_coords('x', 'width', 'right', x, width, right,
+                               self.x, self.width, self.right)
+        y, bottom = norm_coords('y', 'height', 'bottom', y, height, bottom,
+                                self.y, self.height, self.bottom)
+
+        return Region(x=x, y=y, right=right, bottom=bottom)
 
     def translate(self, x=0, y=0):
         """
@@ -2358,3 +2378,33 @@ def test_ocr_on_static_images():
             **kwargs)
         assert text == expected_text, (
             "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
+
+
+def test_region_replace():
+    from nose.tools import eq_, raises
+
+    r = Region(x=10, y=20, width=20, height=30)
+
+    def t(kwargs, expected):
+        eq_(r.replace(**kwargs), expected)
+
+    @raises(ValueError)
+    def e(kwargs):
+        r.replace(**kwargs)
+
+    # No change
+    yield t, dict(x=10), r
+    yield t, dict(x=10, width=20), r
+    yield t, dict(x=10, right=30), r
+
+    # Not allowed
+    yield e, dict(x=1, width=2, right=3)
+    yield e, dict(y=1, height=2, bottom=3)
+
+    # Allowed  # pylint:disable=C0301
+    yield t, dict(x=11), Region(x=11, y=r.y, width=19, height=r.height)
+    yield t, dict(width=19), Region(x=10, y=r.y, width=19, height=r.height)
+    yield t, dict(right=29), Region(x=10, y=r.y, width=19, height=r.height)
+    yield t, dict(x=11, width=20), Region(x=11, y=r.y, width=20, height=r.height)
+    yield t, dict(x=11, right=21), Region(x=11, y=r.y, width=10, height=r.height)
+    yield t, dict(x=11, right=21, y=0, height=5), Region(x=11, y=0, width=10, height=5)
