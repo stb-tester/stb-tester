@@ -1,49 +1,53 @@
 language: c
+sudo: false  # use travis's container-based infrastructure
+
+addons:
+  apt:
+    # TODO: sources: ppa:gstreamer-developers/ppa
+    packages:
+      - expect
+      - expect-dev
+      - gir1.2-gstreamer-1.0
+      - gir1.2-gudev-1.0
+      - gstreamer1.0-libav
+      - gstreamer1.0-plugins-bad
+      - gstreamer1.0-plugins-base
+      - gstreamer1.0-plugins-good
+      - gstreamer1.0-tools
+      - gstreamer1.0-x
+      - libgstreamer1.0-dev
+      - libgstreamer-plugins-base1.0-dev
+      - libopencv-dev
+      - liborc-0.4-dev
+      - librsvg2-bin
+      - lighttpd
+      - moreutils
+      - pep8
+      - python-docutils
+      - python-flask
+      - python-gobject
+      - python-jinja2
+      - python-lxml
+      - python-lzma
+      - python-matplotlib
+      - python-nose
+      - python-numpy
+      - python-opencv
+      - python-scipy
+      - python-serial
+      - python-yaml
+      - socat
+      - tesseract-ocr
+      - tesseract-ocr-deu
+      - tesseract-ocr-eng
+      - v4l-utils
+      - xdotool
+      - xserver-xorg-video-dummy
+      - xterm
 
 install:
- - sudo add-apt-repository -y ppa:gstreamer-developers/ppa
- - sudo apt-get update
- - sudo apt-get install
-        expect
-        expect-dev
-        gir1.2-gstreamer-1.0
-        gir1.2-gudev-1.0
-        gstreamer1.0-libav
-        gstreamer1.0-plugins-bad
-        gstreamer1.0-plugins-base
-        gstreamer1.0-plugins-good
-        gstreamer1.0-tools
-        gstreamer1.0-x
-        libgstreamer1.0-dev
-        libgstreamer-plugins-base1.0-dev
-        libopencv-dev
-        liborc-0.4-dev
-        librsvg2-bin
-        lighttpd
-        moreutils
-        pep8
-        python-docutils
-        python-flask
-        python-gobject
-        python-jinja2
-        python-lxml
-        python-lzma
-        python-matplotlib
-        python-nose
-        python-numpy
-        python-opencv
-        python-scipy
-        python-serial
-        python-yaml
-        socat
-        tesseract-ocr
-        tesseract-ocr-deu
-        tesseract-ocr-eng
-        v4l-utils
-        xdotool
-        xserver-xorg-video-dummy
-        xterm
- - sudo pip install
+ - cat /etc/os-release
+ - pip install --user
         astroid==1.2.1
         isort==3.9.0
         mock
@@ -59,9 +63,9 @@ install:
      } &&
      tar -xvf parallel-20140522.tar.bz2 &&
      cd parallel-20140522/ &&
-     ./configure --prefix=/usr/local &&
+     ./configure --prefix=$HOME/.local &&
      make &&
-     sudo make install &&
+     make install &&
      cd .. &&
      rm -Rf parallel-20140522/ &&
      mkdir $HOME/.parallel &&
@@ -69,4 +73,4 @@ install:
  - make enable_stbt_camera=yes
 
 script:
- - PATH=~/webminspector:$PATH make enable_stbt_camera=yes check
+ - PATH=~/webminspector:~/.local/bin:$PATH make enable_stbt_camera=yes check
