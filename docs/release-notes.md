@@ -45,6 +45,13 @@ UNRELEASED
       real hardware.  This approach can be particularly useful to reduce the
       cost of test maintainance.
 
+* New command `stbt docker`.  This is intended to make it easier to run stbt
+  when physical hardware is not required.  This makes it easier to run
+  selftests on your test-packs in CI using Jenkins and to make it easier to use
+  `stbt auto-selftest` and other development tools on Microsoft Windows and
+  Mac OS X.  It is intended to be copied into the test-packs themselves and only
+  depends on a working Python and docker installation.
+
 * The `stbt templatematch` command-line tool has been renamed to `stbt match`
   (for consistency with the Python API terminology). The old name remains as an
   alias, for backwards compatibility.

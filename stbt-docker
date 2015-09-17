@@ -1,0 +1,192 @@
+#!/usr/bin/env python
+
+#
+# This file is a part of stb-tester but it is intended to be distributed
+# independently checked into test-packs.  See
+# https://github.com/stb-tester/stb-tester/ for the canonical source.
+#
+# Copyright 2015-16 stb-tester.com Ltd.
+#
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
+#
+
+"""
+Runs the stbt command in a docker container, set-up like an stb-tester ONE but
+without video capture or IR control.  This is intended to be used as the "stbt"
+command on MacOS and Windows allowing people to do local development and testing
+(pylint, running selftests, etc.) when video-capture is not needed.
+
+Usage:
+
+    $ stbt-docker stbt lint tests/tests.py
+    ********** module tests
+    E: 22, 4: No name '_load_template' in module 'stbt' (no-name-in-module)
+
+    $ stbt-docker python -m doctest tests/tests.py
+    ...
+
+    $ stbt-docker
+    Python 2.7.6 (default, Jun 22 2015, 17:58:13)
+    [GCC 4.8.2] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import stbt
+    >>> stbt.match(...)
+
+Environment variables:
+
+* `DOCKER` - The location of the `docker` binary defaults to "`docker`"
+* `DOCKER_OPTS` - provide additional arguments to `docker run`.  For instance
+  `DOCKER_OPTS="--memory=2g"` will limit stbt to using 2GB of memory.  Shell
+  escaping is used to allow specifiying arguments with spaces in.
+
+This program is built with portability in mind so it should run on Mac OS and
+Windows.  The only dependencies are Python and docker.  It is also
+self-contained and relocatable so it can be deployed as a single file with no
+dependency on anything else in stbt.
+"""
+
+import argparse
+import ConfigParser
+import errno
+import hashlib
+import os
+import pipes
+import shlex
+import subprocess
+import sys
+import tarfile
+import tempfile
+from cStringIO import StringIO
+
+DOCKER = os.environ.get("DOCKER", "docker")
+
+
+def find_test_pack_root():
+    root = os.getcwd()
+    while root != '/':
+        if os.path.exists(os.path.join(root, '.stbt.conf')):
+            return root
+        root = os.path.split(root)[0]
+
+
+def dict_to_tarball(d):
+    with tempfile.NamedTemporaryFile() as tarball:
+        with tarfile.open(fileobj=tarball, mode='w') as t:
+            for filename, contents in d.items():
+                ti = tarfile.TarInfo(name=filename)
+                ti.size = len(contents)
+                t.addfile(ti, StringIO(contents))
+        return open(tarball.name, 'r')
+
+DOCKERFILE = """
+FROM {base_image}
+
+RUN mkdir -p /var/lib/stbt/test-pack/config/setup
+ADD setup /var/lib/stbt/test-pack/config/setup/setup
+RUN cd /var/lib/stbt/test-pack && \\
+    sudo chown stb-tester:stb-tester config/setup/setup && \\
+    chmod a+x config/setup/setup && \\
+    config/setup/setup
+"""
+
+
+class DockerNotInstalledError(RuntimeError):
+    pass
+
+
+def build_docker_image(test_pack):
+    cp = ConfigParser.ConfigParser()
+    cp.read(os.path.join(test_pack, '.stbt.conf'))
+    stbt_version = cp.get('test_pack', 'stbt_version')
+
+    base_image = "stbtester/stbt-one-test-pack-base-%s:v24.4" % stbt_version
+    try:
+        with open(os.path.join(test_pack, 'config/setup/setup')) as f:
+            setup = f.read()
+    except IOError as e:
+        if e.errno in [errno.EEXIST, errno.ENOENT]:
+            # No customisation of docker container required
+            return base_image
+        else:
+            raise
+
+    dockerfile = DOCKERFILE.format(base_image=base_image)
+    md5 = hashlib.md5()
+    md5.update(stbt_version)
+    md5.update(setup)
+    docker_image = "stb-tester-test-pack-%s" % md5.hexdigest()
+
+    try:
+        subprocess.check_output([DOCKER, 'inspect', docker_image],
+                                stderr=subprocess.STDOUT)
+        # Customised docker container is already cached
+        return docker_image
+    except subprocess.CalledProcessError:
+        pass
+    except OSError:
+        raise DockerNotInstalledError()
+
+    docker_build_context = {
+        'Dockerfile': dockerfile,
+        'setup': setup,
+    }
+    with dict_to_tarball(docker_build_context) as f:
+        subprocess.check_call(
+            [DOCKER, 'build', '-t', docker_image, '-'],
+            stdout=sys.stderr, stdin=f)
+
+    return docker_image
+
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command', nargs='?')
+    parser.add_argument('argument', nargs=argparse.REMAINDER)
+    args = parser.parse_args(argv[1:])
+
+    root = find_test_pack_root()
+    if root is None:
+        sys.stderr.write(
+            "This command must be run within a test pack.  Couldn't find a "
+            ".stbt.conf in this or any parent directory.\n")
+        return 1
+
+    try:
+        docker_image = build_docker_image(root)
+    except DockerNotInstalledError:
+        sys.stderr.write(
+            "%s failed:\n%s requires docker.  Install docker, or if it is "
+            "already installed set $DOCKER to the location of the docker "
+            "executable.\n" % (" ".join(argv), os.path.basename(argv[0])))
+        return 1
+
+    if args.command is None:
+        cmd = ['python']
+    else:
+        cmd = [args.command] + args.argument
+
+    try:
+        os.makedirs(os.path.join(root, '.stbt/cache'))
+    except OSError:
+        # Directory already exists
+        pass
+
+    tty_arg = ['-t'] if sys.stdin.isatty() else []
+
+    innerdir = '/var/lib/stbt/test-pack/' + os.path.relpath(os.curdir, root)
+
+    # We use /bin/dash here because many programs (including make) get confused
+    # if they are running as pid 1.
+    os.execvp(
+        DOCKER,
+        [DOCKER, 'run', '-i', '--rm',
+         '-v', '%s:/var/lib/stbt/.cache' % os.path.join(root, '.stbt/cache'),
+         '-v', '%s:/var/lib/stbt/test-pack' % root,
+         '-e', 'STBT_CONFIG_FILE=/var/lib/stbt/test-pack/.stbt.conf'] + tty_arg
+        + shlex.split(os.environ.get('DOCKER_OPTS', '')) +
+        [docker_image, '/bin/dash', '-c',
+         'cd {cwd} && "$0" "$@"'.format(cwd=pipes.quote(innerdir))] + cmd)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
