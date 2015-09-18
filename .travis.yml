@@ -28,7 +28,7 @@ install:
         pep8
         python-docutils
         python-flask
-        python-gobject
+        python-gi
         python-jinja2
         python-lxml
         python-lzma
