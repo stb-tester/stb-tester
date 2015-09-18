@@ -7,9 +7,15 @@ skip_if_no_docker() {
 
 load_test_pack() {
     skip_if_no_docker
+    if [ -n "$2" ]; then
+        outdir=$2
+    else
+        outdir=.
+    fi
 
-    cp -r "$testdir/test-packs/$1" . &&
-    cd "$1" || fail "Loading test pack $1 failed"
+    mkdir -p "$outdir"
+    cp -r "$testdir/test-packs/$1" "$outdir" &&
+    cd "$outdir/$1" || fail "Loading test pack $1 failed"
 }
 
 test_stbt_docker_fails_with_no_test_pack() {
@@ -69,4 +75,23 @@ test_that_stbt_docker_with_no_arguments_gives_python_interpreter() {
 		print "hello",
 		EOF
     [ "$(cat output)" = "hello" ] || fail "Not Python interpreter"
+}
+
+test_that_with_different_uid_we_still_have_permissions_to_files() {
+    [ -n "$TRAVIS" ] || skip "Test will only run on Travis because it involves changing system state"
+
+    sudo adduser --gecos "" test-user &&
+    sudo chmod 777 ~test-user &&
+    sudo cp $testdir/../stbt-docker /usr/bin/stbt-docker &&
+    sudo chmod a+rx /usr/bin/stbt-docker &&
+    sudo adduser test-user docker &&
+    load_test_pack setup-script ~test-user &&
+    sudo chown -R test-user:test-user . &&
+    sudo chmod 700 ~test-user || fail "Test setup failed"
+
+    sudo -u test-user bash <<-'EOF'
+		stbt-docker bash -c 'touch hello'
+		[ "$(ls -l hello | awk '{ print $3 }')" == 'test-user' ]
+		EOF
+    [ "$?" == 0 ] || fail "UID switching broken"
 }

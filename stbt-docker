@@ -58,6 +58,7 @@ import sys
 import tarfile
 import tempfile
 from cStringIO import StringIO
+from textwrap import dedent
 
 DOCKER = os.environ.get("DOCKER", "docker")
 
@@ -180,13 +181,20 @@ def main(argv):
     # if they are running as pid 1.
     os.execvp(
         DOCKER,
-        [DOCKER, 'run', '-i', '--rm',
+        [DOCKER, 'run', '-i', '--rm', '-u', '0:0',
          '-v', '%s:/var/lib/stbt/.cache' % os.path.join(root, '.stbt/cache'),
          '-v', '%s:/var/lib/stbt/test-pack' % root,
          '-e', 'STBT_CONFIG_FILE=/var/lib/stbt/test-pack/.stbt.conf'] + tty_arg
         + shlex.split(os.environ.get('DOCKER_OPTS', '')) +
-        [docker_image, '/bin/dash', '-c',
-         'cd {cwd} && "$0" "$@"'.format(cwd=pipes.quote(innerdir))] + cmd)
+        [docker_image, '/bin/dash', '-c', dedent("""\
+         find /var/lib/stbt -xdev -path /var/lib/stbt/test-pack -prune \\
+              -o -print0 | xargs -0 chown -f {uid}:{gid} &&
+         sed -i s/stb-tester:x:1000:1000/stb-tester:x:{uid}:{gid}/ /etc/passwd &&
+         sed -i s/stb-tester:x:1000/stb-tester:x:{gid}/ /etc/group &&
+         cd {cwd} &&
+         sudo -u stb-tester -E -- "$0" "$@" """).format(
+            uid=os.getuid(), gid=os.getgid(), cwd=pipes.quote(innerdir))]
+        + cmd)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
