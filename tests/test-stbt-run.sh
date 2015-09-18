@@ -92,6 +92,26 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
     [ -f screenshot.png ]
 }
 
+test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
+    cat > test.py <<-EOF
+	import stbt
+	from time import sleep
+	my_frame = stbt.get_frame()
+	stbt.save_frame(my_frame, "grabbed-frame.png")
+	sleep(0.1)  # Long enough for videotestsrc to produce more frames
+	assert False
+	EOF
+    ! stbt run -v test.py &&
+    [ -f screenshot.png ] &&
+    python <<-EOF
+	import cv2, numpy
+	ss = cv2.imread('screenshot.png')
+	gf = cv2.imread('grabbed-frame.png')
+	assert ss is not None and gf is not None
+	assert numpy.all(ss == gf)
+	EOF
+}
+
 test_that_stbt_run_exits_on_ctrl_c() {
     # Enable job control, otherwise bash prevents sigint to background command.
     set -m

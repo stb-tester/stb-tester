@@ -30,6 +30,14 @@ UNRELEASED
   absolute coordinates within the image instead of adjusting the edge by a
   relative number of pixels.
 
+* `stbt run` will now save a screenshot at the end of all failing test runs,
+  rather than just those which failed due to an exception with a screenshot
+  attached.
+
+* The screenshot that `stbt batch run` saves is now more likely to be relevant
+  to the issue seen.  We now save the last frame that the test-script saw
+  rather than just saving a screenshot after the end of the test-run.
+
 * `stbt lint` will complain if you don't use the return value from
   `is_screen_black`, `match`, `match_text`, `ocr`, or `wait_until`. When the
   return value from `wait_until` isn't used in an `if` statement or assigned to
