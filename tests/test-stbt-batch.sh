@@ -443,9 +443,9 @@ test_stbt_batch_printing_unicode_characters_in_scripts() {
     ! LANG=C unbuffer bash -c 'stbt run tests/test.py' \
         || fail "stbt run should have failed to write to non-utf8 capable tty"
 
-    LANG=en_GB.utf8 unbuffer bash -c 'stbt run tests/test.py' &&
-    LANG=en_GB.utf8 unbuffer bash -c 'stbt run tests/test.py >/dev/null' &&
-    LANG=en_GB.utf8 unbuffer bash -c 'stbt run tests/test.py 2>/dev/null' &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py' &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py >/dev/null' &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py 2>/dev/null' &&
     stbt batch run -1 tests/test.py
 }
 
