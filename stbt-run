@@ -112,7 +112,14 @@ except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s: %s\n" % (
         args.script, type(e).__name__, error_message))
     if hasattr(e, "screenshot") and e.screenshot is not None:
-        stbt.save_frame(e.screenshot, "screenshot.png")
+        screenshot = e.screenshot
+    elif stbt._dut._display:  # pylint: disable=W0212
+        screenshot = stbt._dut._display.last_used_sample  # pylint: disable=W0212
+    else:
+        screenshot = None
+
+    if screenshot is not None:
+        stbt.save_frame(screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     traceback.print_exc(file=sys.stderr)
     if isinstance(e, (stbt.UITestFailure, AssertionError)):

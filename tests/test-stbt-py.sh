@@ -12,7 +12,8 @@ test_invalid_source_pipeline() {
     stbt run -v --source-pipeline viddily-boo test.py &> stbt.log
     tail -n1 stbt.log | grep -q 'no element "viddily-boo"' ||
         fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
-            "expected 'no element \"viddily-boo\"'"
+            "expected 'no element \"viddily-boo\"', " \
+            "it was '$(tail -n1 stbt.log)'"
 }
 
 test_get_frame_and_save_frame() {

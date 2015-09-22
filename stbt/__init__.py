@@ -428,10 +428,11 @@ def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
         restart_source=False, transformation_pipeline='identity'):
     global _dut
-    _dut = _stbt.core.new_device_under_test_from_config(
+    dut = _stbt.core.new_device_under_test_from_config(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video,
         restart_source, transformation_pipeline)
-    _dut.__enter__()
+    dut.__enter__()
+    _dut = dut
 
 
 def teardown_run():

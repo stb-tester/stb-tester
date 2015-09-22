@@ -927,7 +927,8 @@ def save_frame(image, filename):
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
     """
-    cv2.imwrite(filename, image)
+    with _numpy_from_sample(image, readonly=True) as imagebuf:
+        cv2.imwrite(filename, imagebuf)
 
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0):
@@ -1289,6 +1290,7 @@ class Display(object):
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
+        self.last_used_sample = None
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
@@ -1409,6 +1411,9 @@ class Display(object):
             raise NoVideo("No video")
         if isinstance(gst_sample, Exception):
             raise UITestError(str(gst_sample))
+
+        if isinstance(gst_sample, Gst.Sample):
+            self.last_used_sample = gst_sample
 
         return gst_sample
 
