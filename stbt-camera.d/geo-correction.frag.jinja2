@@ -1,0 +1,116 @@
+//#version 120
+precision mediump float;
+
+/*
+ * The point in the output video that we need to provide a colour for.  Ranges
+ * between (0.0, 0.0) to (1.0, 1.0) corresponding to (0, 0), (1280, 720):
+ */
+varying vec2 v_texcoord;
+
+/*
+ * The input video frame
+ */
+uniform sampler2D tex;
+
+struct Camera {
+    /*
+     * Variables describing the camera matrix:
+     *
+     * [ fx   0   cx ]
+     * [ 0    fy  cy ]
+     * [ 0    0    1 ]
+     */
+    vec2 f;
+    vec2 c;
+
+    /*
+     * The distortion coefficients further describing the camera:
+     *
+     * [ k1, k2, p1, p2, k3 ]
+     */
+    vec3 k;
+    vec2 p;
+
+    /*
+     * The inverse homography matrix describing the location of the TV in the
+     * image.
+     */
+    mat3 inv_homography;
+};
+
+const Camera camera = Camera(
+    /* f = */ vec2({{ c.geometric_params.fx }}, {{ c.geometric_params.fy }}),
+    /* c = */ vec2({{ c.geometric_params.cx }}, {{ c.geometric_params.cy }}),
+    /* k = */ vec3({{ c.geometric_params.k1 }}, {{ c.geometric_params.k2 }}, {{ c.geometric_params.k3 }}),
+    /* p = */ vec2({{ c.geometric_params.p1 }}, {{ c.geometric_params.p2 }}),
+
+    /* inv_homography = */
+    mat3(
+        {{ c.geometric_params.ihm11 }}, {{ c.geometric_params.ihm12 }}, {{ c.geometric_params.ihm13 }},
+        {{ c.geometric_params.ihm21 }}, {{ c.geometric_params.ihm22 }}, {{ c.geometric_params.ihm23 }},
+        {{ c.geometric_params.ihm31 }}, {{ c.geometric_params.ihm32 }}, {{ c.geometric_params.ihm33 }}));
+
+vec2 world_to_camera(vec3 v, vec2 f, vec2 c)
+{
+    mat3 camera_matrix = mat3(
+        f.x, 0.0, 0.0,
+        0.0, f.y, 0.0,
+        c.x, c.y, 1.0);
+
+    vec3 o = camera_matrix * v;
+    return vec2(o[0], o[1]);
+}
+
+vec2 perspective_transform(vec2 src, mat3 m)
+{
+    vec3 v =  m * vec3(src, 1.0);
+
+    float w = v[2];
+    if( w != 0. ) {
+        v /= w;
+        return vec2(v[0], v[1]);
+    } else
+        return vec2(0.0, 0.0);
+}
+
+vec2 apply_camera_distortion(vec2 src, vec3 k, vec2 p)
+{
+    float r2 = dot(src, src);
+    float r4 = r2 * r2;
+    float r6 = r2 * r2 * r2;
+
+    float radial_factor = 1.0 + dot(k, vec3(r2, r4, r6));
+
+    return vec2(
+        src.x * radial_factor
+        + 2.0 * p[0] * src.x * src.y
+        + p[1] * (r2 + 2.0 * src.x * src.x),
+        src.y * radial_factor
+        + 2.0 * p[1] * src.x * src.y
+        + p[0] * (r2 + 2.0 * src.y * src.y));
+}
+
+/*
+ * Transform a pixel location in the output 1280x720 image into a pixel location
+ * in the input 1920x1080 image.
+ */
+vec2 transform_coordinates(vec2 in_coord, Camera camera)
+{
+    in_coord = perspective_transform(in_coord, camera.inv_homography);
+
+    vec2 distorted = apply_camera_distortion(in_coord, camera.k, camera.p);
+    return world_to_camera(vec3(distorted, 1.0), camera.f, camera.c);
+}
+
+void main()
+{
+    vec2 in_coord = vec2(v_texcoord[0] * 1280.0, v_texcoord[1] * 720.0);
+    vec2 coord = transform_coordinates(in_coord, camera);
+
+    gl_FragColor = texture2D(tex, vec2(
+            coord[0] / 1920.0,
+            coord[1] / 1088.0));
+
+    return;
+}
+

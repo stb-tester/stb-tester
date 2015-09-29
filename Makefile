@@ -417,6 +417,7 @@ stbt_camera_files=\
 	_stbt/tv_driver.py \
 	stbt-camera \
 	stbt-camera.d/colours.svg \
+	stbt-camera.d/geometric-correction.frag \
 	stbt-camera.d/glyphs.svg.jinja2 \
 	stbt-camera.d/stbt_camera_calibrate.py \
 	stbt-camera.d/stbt_camera_validate.py

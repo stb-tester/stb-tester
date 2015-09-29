@@ -16,6 +16,16 @@ skip_if_no_stbt_plugins() {
     fi
 }
 
+setup_stbt_camera() {
+    if [ -n "$1" ]; then
+        local preset="preset=$1"
+    fi
+    set_config global.transformation_pipeline \
+        "glupload \
+        ! glshader location=$srcdir/stbt-camera.d/geometric-correction.frag \
+        $preset ! gldownload ! video/x-raw,width=1280,height=720"
+}
+
 stb_tester_logo_src_1080p="\
     videotestsrc pattern=solid-color \
     ! video/x-raw,width=1280,height=720 \
@@ -39,11 +49,10 @@ create_stb_tester_logo_template() {
 }
 
 test_that_stbtgeometriccorrection_scales_by_default() {
-    skip_if_no_stbt_plugins
     skip_if_no_rsvg_plugins
 
     start_fake_video_src_launch_1080 $stb_tester_logo_src_1080p &&
-    set_config global.transformation_pipeline "stbtgeometriccorrection" &&
+    setup_stbt_camera &&
     set_config global.control "none" &&
 
     create_stb_tester_logo_template &&
@@ -51,28 +60,12 @@ test_that_stbtgeometriccorrection_scales_by_default() {
     stbt run -v test.py
 }
 
-# Properties to be passed to stbtgeometriccorrection to flatten capture-logo.png.
-# capture-logo.png was taken with a Logitech C920 webcam.
-wp_matricies='
-    camera-matrix="1491.1536435672558    0.0             929.63729425798135
-                      0.0             1490.0565740887305 569.55885903330557
-                      0.0                0.0               1.0"
-
-    distortion-coefficients="0.12152211775145583 -0.28102519335279752
-        0.00020128754517049412 3.738779032027093e-05 0.08124443207970744"
-
-    inv-homography-matrix="0.00078482598991913902 -3.0756177190069151e-05 -0.48720520841063641
-                           3.731138534585565e-05   0.00078626284743211832 -0.33698755050692453
-                          -7.8645779307294576e-05  6.6181312307411495e-05  1.0236834039817024"'
-wp_props="$(echo "$wp_matricies" | tr '\n' ' ')"
-
 test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
-    skip_if_no_stbt_plugins
     skip_if_no_rsvg_plugins
 
     create_stb_tester_logo_template &&
     start_fake_video_src_launch_1080 uridecodebin "uri=file://$testdir/capture-logo.png" ! videoconvert ! imagefreeze &&
-    set_config global.transformation_pipeline "stbtgeometriccorrection $wp_props" &&
+    setup_stbt_camera "$testdir/capture-logo-presets.frag"
     set_config global.control "none" &&
 
     create_stb_tester_logo_template &&
