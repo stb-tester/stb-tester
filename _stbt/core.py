@@ -35,7 +35,7 @@ from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
 
 from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_hacks import gst_iterate, map_gst_buffer
+from _stbt.gst_hacks import gst_iterate, map_gst_sample
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -1237,7 +1237,7 @@ def _numpy_from_sample(sample, readonly=False):
     if not readonly:
         flags |= Gst.MapFlags.WRITE
 
-    with map_gst_buffer(sample.get_buffer(), flags) as buf:
+    with map_gst_sample(sample, flags) as buf:
         array = numpy.frombuffer((buf), dtype=numpy.uint8)
         array.flags.writeable = not readonly
         if caps.get_structure(0).get_value('format') in ['BGR', 'RGB']:
