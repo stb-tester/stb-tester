@@ -433,9 +433,7 @@ CFLAGS?=-O2
 %_orc.c: %.orc
 	orcc --implementation --internal -o "$@" "$<"
 
-stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/stbtgeometriccorrection.c \
-                                       stbt-camera.d/gst/stbtgeometriccorrection.h \
-                                       stbt-camera.d/gst/plugin.c \
+stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/plugin.c \
                                        stbt-camera.d/gst/stbtcontraststretch.c \
                                        stbt-camera.d/gst/stbtcontraststretch.h \
                                        stbt-camera.d/gst/stbtcontraststretch_orc.c \
