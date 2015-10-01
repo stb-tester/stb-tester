@@ -157,6 +157,10 @@ def calculate_perspective_transformation(ideal, measured_points):
         transform_perspective, untransform_perspective, describe)
 
 
+class NoChessboardError(Exception):
+    pass
+
+
 def _find_chessboard(appsink, timeout=10):
     sys.stderr.write("Searching for chessboard\n")
     success = False
@@ -192,16 +196,25 @@ def _find_chessboard(appsink, timeout=10):
 
         return ideal, corners
     else:
-        raise RuntimeError("Couldn't find Chessboard")
+        raise NoChessboardError
 
 
 def geometric_calibration(tv, interactive=True):
-    if interactive:
-        raw_input("Please line up camera and press <ENTER> when ready")
     tv.show('chessboard')
 
     sys.stdout.write("Performing Geometric Calibration\n")
 
+    chessboard_calibration()
+    if interactive:
+        while prompt_for_adjustment():
+            try:
+                chessboard_calibration()
+            except NoChessboardError:
+                tv.show('chessboard')
+                chessboard_calibration()
+
+
+def chessboard_calibration():
     undistorted_appsink = \
         stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
     ideal, corners = _find_chessboard(undistorted_appsink)
@@ -317,6 +330,27 @@ def v4l2_ctls(device, data=None):
         yield (vals[0], dict([v.split('=', 2) for v in vals[3:]]))
 
 
+def prompt_for_adjustment():
+    device = stbt.get_config('global', 'v4l2_device')
+
+    # Allow adjustment
+    subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
+    if cmd.startswith('set'):
+        _, var, val = cmd.split()
+        subprocess.check_call(
+            ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
+
+    set_config('global', 'v4l2_ctls', ','.join(
+        ["%s=%s" % (c, a['value'])
+         for c, a in dict(v4l2_ctls(device)).items()]))
+
+    if cmd.startswith('y') or cmd == '':
+        return False  # We're done
+    else:
+        return True  # Continue looping
+
+
 def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\n')
     for n, v in enumerate(iterator):
@@ -413,25 +447,10 @@ def _can_show_graphs():
 
 def adjust_levels(tv):
     tv.show("colours")
-    happy = "no"
-    device = stbt.get_config('global', 'v4l2_device')
     with colour_graph() as update_graph:
-        while not happy.startswith('y'):
+        update_graph()
+        while prompt_for_adjustment():
             update_graph()
-
-            # Allow adjustment
-            subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
-            cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
-            if cmd.startswith('set'):
-                _, var, val = cmd.split()
-                subprocess.check_call(
-                    ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
-            if cmd.startswith('y') or cmd == '':
-                break
-
-    set_config('global', 'v4l2_ctls', ','.join(
-        ["%s=%s" % (c, a['value'])
-         for c, a in dict(v4l2_ctls(device)).items()]))
 
 
 #
