@@ -3,6 +3,7 @@
 # pylint: disable=W0212
 
 import math
+import readline
 import string
 import subprocess
 import sys
@@ -330,11 +331,50 @@ def v4l2_ctls(device, data=None):
         yield (vals[0], dict([v.split('=', 2) for v in vals[3:]]))
 
 
+def setup_tab_completion(completer):
+    next_ = [None]
+    generator = [None]
+
+    def readline_completer(text, state):
+        if state == 0:
+            generator[0] = iter(completer(text))
+            next_[0] = 0
+
+        assert state == next_[0]
+        next_[0] += 1
+
+        try:
+            return generator[0].next()
+        except StopIteration:
+            return None
+
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer_delims("")
+    readline.set_completer(readline_completer)
+
+
 def prompt_for_adjustment():
     device = stbt.get_config('global', 'v4l2_device')
 
     # Allow adjustment
     subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    ctls = dict(v4l2_ctls(device))
+
+    def v4l_completer(text):
+        if text == '':
+            return ['yes', 'no', 'set']
+        if text.startswith('set '):
+            return ['set ' + x + ' '
+                    for x in ctls.keys() if x.startswith(text[4:])]
+        if "set ".startswith(text.lower()):
+            return ["set "]
+        if 'yes'.startswith(text.lower()):
+            return ["yes"]
+        if 'no'.startswith(text.lower()):
+            return ["no"]
+
+    setup_tab_completion(v4l_completer)
+
     cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
     if cmd.startswith('set'):
         _, var, val = cmd.split()
