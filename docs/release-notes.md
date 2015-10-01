@@ -18,6 +18,10 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 UNRELEASED
 
+##### New features
+
+* `stbt camera` learnt how to control Android TVs over adb for calibration.
+
 ##### Breaking changes since 24
 
 ##### New features

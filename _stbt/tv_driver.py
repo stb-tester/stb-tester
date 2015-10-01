@@ -101,6 +101,13 @@ class _HTTPVideoServer(object):
         self._lighttpd_pid = int(pidfile.read())
         self._base_url = "http://%s:%i/" % (_get_external_ip(), port)
 
+    @property
+    def mime_type(self):
+        return {
+            'mp4': 'video/mp4',
+            'ts': 'video/MP2T',
+        }[self._video_format]
+
     def __del__(self):
         from signal import SIGTERM
         from os import kill
@@ -155,6 +162,26 @@ class _ManualTvDriver(object):
         sys.stderr.write("Please return TV back to original state\n")
 
 
+class _AdbTvDriver(object):
+    def __init__(self, video_server, adb_cmd=None):
+        if adb_cmd is None:
+            adb_cmd = ['adb']
+        self.adb_cmd = adb_cmd
+        self.video_server = video_server
+
+    def show(self, video):
+        import subprocess
+        cmd = self.adb_cmd + [
+            'shell', 'am', 'start',
+            '-a', 'android.intent.action.VIEW',
+            '-d', self.video_server.get_url(video),
+            '-t', self.video_server.mime_type]
+        subprocess.check_call(cmd, close_fds=True)
+
+    def stop(self):
+        pass
+
+
 def add_argparse_argument(argparser):
     argparser.add_argument(
         "--tv-driver",
@@ -162,7 +189,8 @@ def add_argparse_argument(argparser):
              "    manual - Prompt the user then wait for confirmation.\n"
              "    assume - Assume the video is already playing (useful for "
              "scripting when passing a single test to be run).\n"
-             "    fake:pipe_name - Used for testing",
+             "    fake:pipe_name - Used for testing\n"
+             "    adb[:adb_command] - Control an android device over adb",
              default=get_config("camera", "tv_driver", "manual"))
 
 
@@ -180,5 +208,10 @@ def create_from_args(args, video_generator):
         return _FakeTvDriver(desc[5:], make_video_server())
     elif desc == 'manual':
         return _ManualTvDriver(make_video_server())
+    elif desc == 'adb':
+        return _AdbTvDriver(make_video_server())
+    elif desc.startswith('adb:'):
+        import shlex
+        return _AdbTvDriver(make_video_server(), shlex.split(desc[4:]))
     else:
         raise RuntimeError("Unknown video driver requested: %s" % desc)
