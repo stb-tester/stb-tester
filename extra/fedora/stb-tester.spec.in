@@ -57,6 +57,7 @@ BuildRequires: orc-devel
 
 Requires: gstreamer1-libav
 Requires: lighttpd
+Requires: python-qrcode
 Requires: stb-tester
 
 %description camera

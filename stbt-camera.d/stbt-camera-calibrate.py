@@ -242,15 +242,28 @@ def chessboard_calibration():
 #
 
 
+def qrc(data):
+    import cStringIO
+    import qrcode
+    import qrcode.image.svg
+
+    out = cStringIO.StringIO()
+    qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage).save(out)
+    qrsvg = out.getvalue()
+
+    return re.search('d="(.*?)"', qrsvg).group(1)
+
+
 def generate_colours_video():
     import random
     template_svg = open(dirname(__file__) + '/colours.svg', 'r').read()
     for _ in range(0, 10 * 60 * 8):
-        svg = template_svg.replace(
-            '#c0ffee', '#%06x' % random.randint(0, 256 ** 3))
+        colour = '#%06x' % random.randint(0, 256 ** 3)
+        svg = template_svg.replace('#c0ffee', colour)
+        svg = svg.replace("m 0,0 26,0 0,26 -26,0 z", qrc(colour))
         yield (svg, 1.0 / 8 * Gst.SECOND)
 
-videos['colours'] = ('image/svg', generate_colours_video)
+videos['colours2'] = ('image/svg', generate_colours_video)
 
 
 def analyse_colours_video(number=None):
@@ -489,7 +502,7 @@ def _can_show_graphs():
 
 
 def adjust_levels(tv):
-    tv.show("colours")
+    tv.show("colours2")
     with colour_graph() as update_graph:
         update_graph()
         while prompt_for_adjustment():

@@ -137,5 +137,27 @@
          id="tspan3782"
          x="640"
          y="605">#c0ffee</tspan></text>
+    <path
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 0,0 26,0 0,26 -26,0 z"
+       transform="matrix(5.8, 0, 0, 5.8, 300, 20)"
+       id="qr1" width="150" height="150" />
+    <path
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 0,0 26,0 0,26 -26,0 z"
+       transform="matrix(5.8, 0, 0, 5.8, 830, 550)"
+       id="qr2" />
+    <path
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 0,0 26,0 0,26 -26,0 z"
+       transform="matrix(5.8, 0, 0, 5.8, 830, 20)"
+       id="qr3"
+       width="150"
+       height="150" />
+    <path
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 0,0 26,0 0,26 -26,0 z"
+       transform="matrix(5.8, 0, 0, 5.8, 300, 550)"
+       id="qr4" />
   </g>
 </svg>

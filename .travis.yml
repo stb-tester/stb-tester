@@ -41,6 +41,7 @@ install:
         python-numpy
         python-opencv
         python-pysnmp4
+        python-qrcode
         python-requests
         python-scipy
         python-serial
