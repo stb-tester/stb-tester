@@ -47,7 +47,7 @@ def set_config(section, option, value):
     Writes to the first item in `$STBT_CONFIG_FILE` if set falling back to
     `$HOME/stbt/stbt.conf`.
     """
-    user_config = '%s/stbt/stbt.conf' % xdg_config_dir()
+    user_config = xdg_config_dir('stbt/stbt.conf')
     # Write to the config file with the highest precedence
     custom_config = os.environ.get('STBT_CONFIG_FILE', '').split(':')[0] \
         or user_config
@@ -93,7 +93,7 @@ def _config_init(force=False):
             [system_config,
              # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
              # directory specification:
-             '%s/stbt/stbt.conf' % xdg_config_dir()] +
+             xdg_config_dir('stbt/stbt.conf')] +
             # Config files specific to the test suite / test run,
             # with the one at the beginning taking precedence:
             list(reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
@@ -102,8 +102,10 @@ def _config_init(force=False):
     return _config
 
 
-def xdg_config_dir():
-    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
+def xdg_config_dir(subdir=''):
+    config_dir = os.environ.get(
+        'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
+    return os.path.join(config_dir, subdir)
 
 
 @contextmanager
