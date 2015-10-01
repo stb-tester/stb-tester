@@ -377,9 +377,13 @@ def prompt_for_adjustment():
 
     cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
     if cmd.startswith('set'):
-        _, var, val = cmd.split()
-        subprocess.check_call(
-            ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
+        x = cmd.split(None, 2)
+        if len(x) != 3:
+            print "Didn't understand command %r" % x
+        else:
+            _, var, val = x
+            subprocess.check_call(
+                ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
 
     set_config('global', 'v4l2_ctls', ','.join(
         ["%s=%s" % (c, a['value'])
