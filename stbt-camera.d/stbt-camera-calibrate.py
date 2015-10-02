@@ -3,6 +3,7 @@
 # pylint: disable=W0212
 
 import math
+import re
 import readline
 import string
 import subprocess
@@ -266,31 +267,38 @@ def generate_colours_video():
 videos['colours2'] = ('image/svg', generate_colours_video)
 
 
+class QRScanner(object):
+    def __init__(self):
+        import zbar
+        self.scanner = zbar.ImageScanner()
+        self.scanner.parse_config('enable')
+
+    def read_qr_codes(self, image):
+        import zbar
+        zimg = zbar.Image(image.shape[1], image.shape[0], 'Y800',
+                          cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).tostring())
+        self.scanner.scan(zimg)
+        return [s.data for s in zimg]
+
+
 def analyse_colours_video(number=None):
     """RGB!"""
     errors_in_a_row = 0
     n = 0
+    qrscanner = QRScanner()
     for frame, _ in stbt.frames():
         if number is not None and n >= number:
             return
-        colour_hex = ''
         n = n + 1
-
-        def read_hex(region, frame_=frame):
-            return stbt.ocr(
-                frame_, region, stbt.OcrMode.SINGLE_LINE, tesseract_config={
-                    'tessedit_char_whitelist': '#0123456789abcdef'},
-                tesseract_user_patterns=['#\n\n\n\n\n\n']).replace(' ', '')
 
         # The colour is written above and below the rectangle because we want
         # to be sure that the top of the colour box is from the same frame as
         # the bottom.
-        colour_hex = read_hex(stbt.Region(490, 100, 300, 70))
-        colour_hex_bottom = read_hex(stbt.Region(490, 550, 300, 70))
+        codes = qrscanner.read_qr_codes(frame)
 
-        if (len(colour_hex) >= 7 and colour_hex[0] == '#' and
-                all(c in string.hexdigits for c in colour_hex[1:7]) and
-                colour_hex == colour_hex_bottom):
+        if (len(codes) == 4 and re.match('#[0-9a-f]{6}', codes[0])
+                and all(c == codes[0] for c in codes)):
+            colour_hex = codes[0]
             desired = numpy.array((
                 int(colour_hex[1:3], 16),
                 int(colour_hex[3:5], 16),

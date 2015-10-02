@@ -46,6 +46,7 @@ install:
         python-scipy
         python-serial
         python-yaml
+        python-zbar
         ratpoison
         socat
         tesseract-ocr
