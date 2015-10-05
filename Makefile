@@ -333,8 +333,8 @@ stbt_camera_files=\
 	stbt-camera.d/chessboard-720p-40px-border-white.png \
 	stbt-camera.d/colours.svg \
 	stbt-camera.d/glyphs.svg.jinja2 \
-	stbt-camera.d/stbt-camera-calibrate.py \
-	stbt-camera.d/stbt-camera-validate.py
+	stbt-camera.d/stbt_camera_calibrate.py \
+	stbt-camera.d/stbt_camera_validate.py
 
 installed_camera_files=\
 	$(stbt_camera_files:%=$(DESTDIR)$(libexecdir)/stbt/%) \
