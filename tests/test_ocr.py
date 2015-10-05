@@ -184,3 +184,12 @@ def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame():
 def test_that_match_text_returns_no_match_for_non_matching_text():
     frame = cv2.imread("tests/ocr/menu.png")
     assert not stbt.match_text(u"Noodle Soup", frame=frame)
+
+
+def test_that_match_text_gives_tesseract_a_hint():
+    frame = cv2.imread("tests/ocr/itv-player.png")
+    if "ITV Player" in stbt.ocr(frame=frame):
+        raise SkipTest("Tesseract doesn't need a hint")
+    if "ITV Player" not in stbt.ocr(frame=frame, tesseract_user_words=["ITV"]):
+        raise SkipTest("Giving tesseract a hint doesn't help")
+    assert stbt.match_text("ITV Player", frame=frame)
