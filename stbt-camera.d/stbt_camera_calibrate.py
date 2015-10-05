@@ -5,7 +5,6 @@
 import math
 import re
 import readline
-import string
 import subprocess
 import sys
 import time
