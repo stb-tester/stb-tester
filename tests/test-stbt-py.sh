@@ -422,21 +422,27 @@ test_clock_visualisation() {
 
     cat > verify.py <<-EOF &&
 	import datetime, time, stbt
-	def read_time():
+	
+	def read_time(frame):
 	    s = stbt.ocr(
-	        stbt.get_frame(), mode=stbt.OcrMode.SINGLE_LINE,
+	        frame, mode=stbt.OcrMode.SINGLE_LINE,
 	        tesseract_user_patterns=["\d\d:\d\d:\d\d.\d\d"],
 	        region=stbt.Region(x=5, y=5, right=200, bottom=35)).replace(" ", "")
 	    d = datetime.date.today()
 	    return datetime.datetime(
 	        d.year, d.month, d.day, int(s[0:2]), int(s[3:5]), int(s[6:8]),
 	        int(s[9]) * 100000)
+	
 	seconds = lambda n: datetime.timedelta(seconds=n)
-	start = read_time()
+	
+	frame = stbt.get_frame()
+	pre_ocr = time.time()
+	start = read_time(frame)
+	ocr_duration = time.time() - pre_ocr  # ocr can take >1s to run.
 	time.sleep(1)
-	end = read_time()
+	end = read_time(stbt.get_frame())
 	diff = end - start
-	assert seconds(0.9) < diff < seconds(2), \
+	assert seconds(0.9) < diff < seconds(2 + ocr_duration), \
 	    "Unexpected time diff %s between %s and %s" % (diff, end, start)
 	EOF
     stbt run -v --control none \
