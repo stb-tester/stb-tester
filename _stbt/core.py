@@ -1289,6 +1289,7 @@ class Display(object):
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
+        self.received_eos = threading.Event()
 
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
@@ -1538,7 +1539,6 @@ class Display(object):
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
-        _mainloop.quit()
 
     def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
@@ -1554,7 +1554,7 @@ class Display(object):
 
     def on_eos_from_sink_pipeline(self, _bus, _message):
         debug("Got EOS")
-        _mainloop.quit()
+        self.received_eos.set()
 
     def on_underrun(self, _element):
         if self.underrun_timeout:
@@ -1606,6 +1606,7 @@ class Display(object):
     def startup(self):
         self.set_source_pipeline_playing()
         self.sink_pipeline.set_state(Gst.State.PLAYING)
+        self.received_eos.clear()
 
         self.mainloop_thread.start()
 
@@ -1623,6 +1624,9 @@ class Display(object):
         if not self.novideo:
             debug("teardown: Sending eos")
             self.appsrc.emit("end-of-stream")
+            if not self.received_eos.wait(10):
+                debug("Timeout waiting for sink EOS")
+            _mainloop.quit()
             self.mainloop_thread.join(10)
             debug("teardown: Exiting (GLib mainloop %s)" % (
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
