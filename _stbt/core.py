@@ -577,8 +577,8 @@ def new_device_under_test_from_config(
         gst_sink_pipeline = get_config('global', 'transformation_pipeline')
 
     display = Display(
-        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source,
-        transformation_pipeline)
+        gst_source_pipeline, gst_sink_pipeline, _mainloop(), save_video,
+        restart_source, transformation_pipeline)
     return DeviceUnderTest(
         display=display, control=uri_to_remote(control_uri, display))
 
@@ -1172,7 +1172,22 @@ def argparser():
 # Internal
 # ===========================================================================
 
-_mainloop = GLib.MainLoop.new(context=None, is_running=False)
+
+@contextmanager
+def _mainloop():
+    mainloop = GLib.MainLoop.new(context=None, is_running=False)
+
+    thread = threading.Thread(target=mainloop.run)
+    thread.daemon = True
+    thread.start()
+
+    try:
+        yield
+    finally:
+        mainloop.quit()
+        thread.join(10)
+        debug("teardown: Exiting (GLib mainloop %s)" % (
+              "is still alive!" if thread.isAlive() else "ok"))
 
 
 def _gst_sample_make_writable(sample):
@@ -1278,7 +1293,7 @@ def _get_frame_timestamp(frame):
 
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline,
-                 save_video,
+                 mainloop, save_video="",
                  restart_source=False,
                  transformation_pipeline='identity'):
         self.novideo = False
@@ -1354,9 +1369,7 @@ class Display(object):
 
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
-
-        self.mainloop_thread = threading.Thread(target=_mainloop.run)
-        self.mainloop_thread.daemon = True
+        self.mainloop = mainloop
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
@@ -1608,7 +1621,7 @@ class Display(object):
         self.sink_pipeline.set_state(Gst.State.PLAYING)
         self.received_eos.clear()
 
-        self.mainloop_thread.start()
+        self.mainloop.__enter__()
 
     def teardown(self):
         self.tearing_down = True
@@ -1626,10 +1639,8 @@ class Display(object):
             self.appsrc.emit("end-of-stream")
             if not self.received_eos.wait(10):
                 debug("Timeout waiting for sink EOS")
-            _mainloop.quit()
-            self.mainloop_thread.join(10)
-            debug("teardown: Exiting (GLib mainloop %s)" % (
-                "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
+
+        self.mainloop.__exit__(None, None, None)
 
 
 def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
