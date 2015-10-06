@@ -1636,9 +1636,11 @@ class Display(object):
             source = None
         if not self.novideo:
             debug("teardown: Sending eos")
-            self.appsrc.emit("end-of-stream")
-            if not self.received_eos.wait(10):
-                debug("Timeout waiting for sink EOS")
+            if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+                if not self.received_eos.wait(10):
+                    debug("Timeout waiting for sink EOS")
+            else:
+                debug("Sending EOS to sink pipeline failed")
 
         self.mainloop.__exit__(None, None, None)
 
