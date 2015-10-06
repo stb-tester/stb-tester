@@ -1641,6 +1641,7 @@ class Display(object):
                     debug("Timeout waiting for sink EOS")
             else:
                 debug("Sending EOS to sink pipeline failed")
+            self.sink_pipeline.set_state(Gst.State.NULL)
 
         self.mainloop.__exit__(None, None, None)
 
