@@ -1,7 +1,11 @@
 language: c
+sudo: required
+services:
+  - docker
 
 install:
- - sudo add-apt-repository -y ppa:gstreamer-developers/ppa
+ - cat /etc/os-release
+ - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
  - sudo apt-get update
  - sudo apt-get install
         expect
@@ -24,7 +28,7 @@ install:
         pep8
         python-docutils
         python-flask
-        python-gobject
+        python-gi
         python-jinja2
         python-lxml
         python-lzma
@@ -69,4 +73,4 @@ install:
  - make enable_stbt_camera=yes
 
 script:
- - PATH=~/webminspector:$PATH make enable_stbt_camera=yes check
+ - PATH=~/webminspector:$PATH make enable_stbt_camera=no check

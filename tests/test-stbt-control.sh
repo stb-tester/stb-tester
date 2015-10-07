@@ -9,6 +9,7 @@ validate_stbt_record_control_recorder() {
     control_uri=$1
 
     cat > test.expect <<-EOF &&
+	set stty_init "rows 50 cols 80"
 	spawn stbt record --control-recorder=$control_uri
 	expect "stbt-control.keymap"
 	send "f"
