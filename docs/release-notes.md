@@ -51,6 +51,9 @@ UNRELEASED
 * Updated `stbt.match_text` to work with tesseract 3.04 (which seems to have
   been released sometime around 10 July 2015).
 
+* `stbt.match_text` now adds the requested text to tesseract's dictionary,
+  which fixes some false negatives.
+
 ##### Bugfixes and packaging fixes since 23
 
 * Fixed "stb-tester fails with PyGObject 3.13" #305.  This will allow

@@ -866,7 +866,8 @@ class DeviceUnderTest(object):
 
         ts = _get_frame_timestamp(frame)
 
-        xml, region = _tesseract(frame, region, mode, lang, _config)
+        xml, region = _tesseract(frame, region, mode, lang, _config,
+                                 user_words=text.split())
         if xml == '':
             return TextMatchResult(ts, False, None, frame, text)
         hocr = lxml.etree.fromstring(xml)
