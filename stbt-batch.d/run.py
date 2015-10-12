@@ -101,7 +101,7 @@ def main(argv):
         subenv['tag'] = tag
         subenv['v'] = '-vv' if args.debug else '-v'
         subenv['verbose'] = str(args.verbose)
-        subenv['outputdir'] = args.output
+        subenv['outputdir'] = os.path.abspath(args.output)
         child = None
         try:
             child = subprocess.Popen(
