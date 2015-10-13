@@ -1491,13 +1491,13 @@ class Display(object):
 
     def draw(self, obj, duration_secs):
         with self.annotations_lock:
-            if type(obj) in (str, unicode):
+            if isinstance(obj, str) or isinstance(obj, unicode):
                 obj = (
                     datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs * Gst.SECOND})
-            elif type(obj) is MatchResult:
+            elif isinstance(obj, MatchResult):
                 if obj.timestamp is not None:
                     self.match_annotations.append(obj)
             else:
