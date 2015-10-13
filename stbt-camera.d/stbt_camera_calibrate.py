@@ -200,14 +200,14 @@ def _find_chessboard(appsink, timeout=10):
         raise NoChessboardError
 
 
-def geometric_calibration(tv, interactive=True):
+def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 
     sys.stdout.write("Performing Geometric Calibration\n")
 
     chessboard_calibration()
     if interactive:
-        while prompt_for_adjustment():
+        while prompt_for_adjustment(device):
             try:
                 chessboard_calibration()
             except NoChessboardError:
@@ -373,9 +373,7 @@ def setup_tab_completion(completer):
     readline.set_completer(readline_completer)
 
 
-def prompt_for_adjustment():
-    device = stbt.get_config('global', 'v4l2_device')
-
+def prompt_for_adjustment(device):
     # Allow adjustment
     subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
     ctls = dict(v4l2_ctls(device))
@@ -510,11 +508,11 @@ def _can_show_graphs():
         return False
 
 
-def adjust_levels(tv):
+def adjust_levels(tv, device):
     tv.show("colours2")
     with colour_graph() as update_graph:
         update_graph()
-        while prompt_for_adjustment():
+        while prompt_for_adjustment(device):
             update_graph()
 
 
@@ -638,8 +636,8 @@ def setup(source_pipeline):
                 "        v4l2_device = %s\n"
                 "        source_pipeline = %s\n\n"
                 % (n, name, dev_file, source_pipeline))
-        return False
-    return True
+        return None
+    return stbt.get_config('global', 'v4l2_device')
 
 #
 # main
@@ -679,7 +677,8 @@ def parse_args(argv):
 def main(argv):
     args = parse_args(argv)
 
-    if not setup(args.source_pipeline):
+    device = setup(args.source_pipeline)
+    if device is None:
         return 1
 
     if args.skip_geometric:
@@ -712,9 +711,9 @@ def main(argv):
     tv = tv_driver.create_from_args(args, videos)
 
     if not args.skip_geometric:
-        geometric_calibration(tv, interactive=args.interactive)
+        geometric_calibration(tv, device, interactive=args.interactive)
     if args.interactive:
-        adjust_levels(tv)
+        adjust_levels(tv, device)
     if not args.skip_illumination:
         calibrate_illumination(tv)
 
