@@ -24,6 +24,7 @@ from _stbt.config import set_config, xdg_config_dir
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
+COLOUR_SAMPLES = 50
 videos = {}
 
 #
@@ -426,9 +427,6 @@ def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\r' + ' ' * (total + 28) + '\r')
 
 
-COLOUR_SAMPLES = 50
-
-
 def fit_fn(ideals, measureds):
     """
     >>> f = fit_fn([120, 240, 150, 18, 200],
@@ -474,7 +472,7 @@ def colour_graph():
         pyplot.grid()
 
         for n, ideal, measured in pop_with_progress(
-                analyse_colours_video(), 50):
+                analyse_colours_video(), COLOUR_SAMPLES):
             pyplot.draw()
             for c in [0, 1, 2]:
                 ideals[c].append(ideal[c])
