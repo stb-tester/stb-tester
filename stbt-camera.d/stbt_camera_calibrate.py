@@ -491,8 +491,10 @@ def colour_graph():
                     range(0, 256), [fits[2](x) for x in range(0, 256)], 'b-')
         pyplot.draw()
 
-    yield update
-    pyplot.close()
+    try:
+        yield update
+    finally:
+        pyplot.close()
 
 
 def _can_show_graphs():
