@@ -360,7 +360,13 @@ stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/stbtgeometriccorrection
                                        stbt-camera.d/gst/stbtcontraststretch_orc.h \
                                        VERSION
 	@if ! pkg-config --exists $(PKG_DEPS); then \
-		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
+		printf "Please install packages $(PKG_DEPS)\n"; \
+		if which apt-file >/dev/null 2>&1; then \
+			PACKAGES=$$(printf "/%s.pc\n" $(PKG_DEPS) | apt-file search -fl) ; \
+			echo Try apt install $$PACKAGES; \
+		fi; \
+		exit 1; \
+	fi
 	gcc -shared -o $@ $(filter %.c %.o,$^) -fPIC  -Wall -Werror $(CFLAGS) \
 		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
 		-DVERSION=\"$(VERSION)\"
