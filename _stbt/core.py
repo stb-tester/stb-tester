@@ -1547,8 +1547,9 @@ class Display(object):
 
     def on_error(self, pipeline, _bus, message):
         assert message.type == Gst.MessageType.ERROR
-        Gst.debug_bin_to_dot_file_with_ts(
-            pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
+        if pipeline is not None:
+            Gst.debug_bin_to_dot_file_with_ts(
+                pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
