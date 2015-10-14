@@ -1525,6 +1525,14 @@ class Display(object):
                 color = (int(255 * max([1 - age, 0.5])),) * 3
                 _draw_text(img, x['text'], origin, color)
             for match_result in matches:
+                if isinstance(match_result.image, numpy.ndarray):
+                    label = '<Custom Image>'
+                else:
+                    label = os.path.basename(match_result.image)
+                # Slightly above the match annotation
+                label_loc = (match_result.region.x, match_result.region.y - 10)
+                _draw_text(
+                    img, label, label_loc, (255, 255, 255), font_scale=0.5)
                 _draw_match(img, match_result.region, match_result.match)
 
         self.appsrc.props.caps = sample.get_caps()
@@ -1627,16 +1635,17 @@ class Display(object):
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-def _draw_text(numpy_image, text, origin, color):
+def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
     (width, height), _ = cv2.getTextSize(
-        text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, thickness=1)
+        text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale,
+        thickness=1)
     cv2.rectangle(
         numpy_image, (origin[0] - 2, origin[1] + 2),
         (origin[0] + width + 2, origin[1] - height - 2),
         thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
     cv2.putText(
-        numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0,
-        color=color)
+        numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX,
+        fontScale=font_scale, color=color, lineType=cv2.CV_AA)
 
 
 def _draw_match(numpy_image, region, match_, thickness=3):

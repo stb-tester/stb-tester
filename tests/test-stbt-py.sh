@@ -450,6 +450,58 @@ test_clock_visualisation() {
         verify.py
 }
 
+test_template_annotation_labels() {
+    cat > test.py <<-EOF &&
+	import stbt
+	for _ in stbt.detect_match("${testdir}/videotestsrc-checkers-8.png"):
+	    pass
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --source-pipeline 'videotestsrc is-live=true' \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        test.py &
+    test_script=$!
+    trap "kill $test_script; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	import stbt
+	stbt.wait_for_match("${testdir}/videotestsrc-checkers-8-label.png")
+	EOF
+    stbt run -v --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py
+}
+
+test_template_annotation_with_ndarray_template() {
+    cat > test.py <<-EOF &&
+	import stbt, numpy as np
+	template = np.ones(shape=(100, 100, 3), dtype=np.uint8)
+	template *= [0, 255, 0]  # green
+	stbt.save_frame(template, 'template.png')
+	for _ in stbt.detect_match(template):
+	    pass
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --source-pipeline 'videotestsrc is-live=true' \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        test.py &
+    test_script=$!
+    trap "kill $test_script; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	import stbt
+	stbt.save_frame(stbt.get_frame(), "test.png")
+	stbt.wait_for_match("${testdir}/custom-image-label.png")
+	EOF
+    stbt run -v --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py
+}
+
 test_draw_text() {
     cat > draw-text.py <<-EOF &&
 	import stbt
