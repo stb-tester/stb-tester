@@ -32,9 +32,7 @@ Here are a few guidelines to keep in mind when submitting a pull request:
       `make check enable_stbt_camera=yes`.
 
     * We use the [Travis CI] service to automatically run `make check` on all
-      pull requests. However, Travis uses Ubuntu 12.04 which is missing some
-      of our dependencies, so it won't run *all* of our self-tests. So it's
-      still important that you run `make check` yourself.
+      pull requests.
 
       If you would like Travis to test your branches on your own fork of
       stb-tester before you raise a pull request, follow steps 1 and 2 of the
