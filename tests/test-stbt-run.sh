@@ -124,10 +124,6 @@ test_that_stbt_run_exits_on_ctrl_c() {
 	    print "%i bottles of beer on the wall" % c
 	    time.sleep(1)
 	print "No beer left"
-	
-	if not hasattr(GLib.MainLoop, "new"):
-	    print "Ignore test failure on PyGObject <3.7.2 (e.g. Ubuntu 12.04)"
-	    sys.exit(77)  # skip
 	EOF
     stbt run test.py &
     STBT_PID=$!

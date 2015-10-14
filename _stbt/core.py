@@ -1172,14 +1172,7 @@ def argparser():
 # Internal
 # ===========================================================================
 
-if hasattr(GLib.MainLoop, 'new'):
-    _mainloop = GLib.MainLoop.new(context=None, is_running=False)
-else:
-    # Ubuntu 12.04 (Travis) support: PyGObject <3.7.2 doesn't expose the "new"
-    # constructor we'd like to be using, so fall back to __init__.  This means
-    # Ctrl-C is broken on 12.04 and threading will behave differently on Travis
-    # than on our supported systems.
-    _mainloop = GLib.MainLoop()
+_mainloop = GLib.MainLoop.new(context=None, is_running=False)
 
 
 def _gst_sample_make_writable(sample):
