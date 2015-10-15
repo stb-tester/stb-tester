@@ -1674,7 +1674,7 @@ def _match(image, template, match_parameters, template_name):
         raise ValueError("Source image must be larger than template image")
     if any(template.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Template image must contain some data")
-    if template.shape[2] != 3:
+    if len(template.shape) != 3 or template.shape[2] != 3:
         raise ValueError("Template image must be 3 channel BGR")
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
