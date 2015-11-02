@@ -1635,14 +1635,14 @@ class Display(object):
                 debug("teardown: Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
-        if not self.novideo:
-            debug("teardown: Sending eos")
-            if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
-                if not self.received_eos.wait(10):
-                    debug("Timeout waiting for sink EOS")
-            else:
-                debug("Sending EOS to sink pipeline failed")
-            self.sink_pipeline.set_state(Gst.State.NULL)
+
+        debug("teardown: Sending eos")
+        if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+            if not self.received_eos.wait(10):
+                debug("Timeout waiting for sink EOS")
+        else:
+            debug("Sending EOS to sink pipeline failed")
+        self.sink_pipeline.set_state(Gst.State.NULL)
 
         self.mainloop.__exit__(None, None, None)
 
