@@ -577,8 +577,8 @@ def new_device_under_test_from_config(
         gst_sink_pipeline = get_config('global', 'transformation_pipeline')
 
     display = Display(
-        gst_source_pipeline, gst_sink_pipeline, save_video, restart_source,
-        transformation_pipeline)
+        gst_source_pipeline, gst_sink_pipeline, _mainloop(), save_video,
+        restart_source, transformation_pipeline)
     return DeviceUnderTest(
         display=display, control=uri_to_remote(control_uri, display))
 
@@ -1172,7 +1172,22 @@ def argparser():
 # Internal
 # ===========================================================================
 
-_mainloop = GLib.MainLoop.new(context=None, is_running=False)
+
+@contextmanager
+def _mainloop():
+    mainloop = GLib.MainLoop.new(context=None, is_running=False)
+
+    thread = threading.Thread(target=mainloop.run)
+    thread.daemon = True
+    thread.start()
+
+    try:
+        yield
+    finally:
+        mainloop.quit()
+        thread.join(10)
+        debug("teardown: Exiting (GLib mainloop %s)" % (
+              "is still alive!" if thread.isAlive() else "ok"))
 
 
 def _gst_sample_make_writable(sample):
@@ -1278,7 +1293,7 @@ def _get_frame_timestamp(frame):
 
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline,
-                 save_video,
+                 mainloop, save_video="",
                  restart_source=False,
                  transformation_pipeline='identity'):
         self.novideo = False
@@ -1289,6 +1304,7 @@ class Display(object):
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
+        self.received_eos = threading.Event()
 
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
@@ -1353,9 +1369,7 @@ class Display(object):
 
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
-
-        self.mainloop_thread = threading.Thread(target=_mainloop.run)
-        self.mainloop_thread.daemon = True
+        self.mainloop = mainloop
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
@@ -1477,13 +1491,13 @@ class Display(object):
 
     def draw(self, obj, duration_secs):
         with self.annotations_lock:
-            if type(obj) in (str, unicode):
+            if isinstance(obj, str) or isinstance(obj, unicode):
                 obj = (
                     datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs * Gst.SECOND})
-            elif type(obj) is MatchResult:
+            elif isinstance(obj, MatchResult):
                 if obj.timestamp is not None:
                     self.match_annotations.append(obj)
             else:
@@ -1533,12 +1547,12 @@ class Display(object):
 
     def on_error(self, pipeline, _bus, message):
         assert message.type == Gst.MessageType.ERROR
-        Gst.debug_bin_to_dot_file_with_ts(
-            pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
+        if pipeline is not None:
+            Gst.debug_bin_to_dot_file_with_ts(
+                pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
-        _mainloop.quit()
 
     def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
@@ -1554,7 +1568,7 @@ class Display(object):
 
     def on_eos_from_sink_pipeline(self, _bus, _message):
         debug("Got EOS")
-        _mainloop.quit()
+        self.received_eos.set()
 
     def on_underrun(self, _element):
         if self.underrun_timeout:
@@ -1606,8 +1620,9 @@ class Display(object):
     def startup(self):
         self.set_source_pipeline_playing()
         self.sink_pipeline.set_state(Gst.State.PLAYING)
+        self.received_eos.clear()
 
-        self.mainloop_thread.start()
+        self.mainloop.__enter__()
 
     def teardown(self):
         self.tearing_down = True
@@ -1620,12 +1635,16 @@ class Display(object):
                 debug("teardown: Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
-        if not self.novideo:
-            debug("teardown: Sending eos")
-            self.appsrc.emit("end-of-stream")
-            self.mainloop_thread.join(10)
-            debug("teardown: Exiting (GLib mainloop %s)" % (
-                "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
+
+        debug("teardown: Sending eos")
+        if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+            if not self.received_eos.wait(10):
+                debug("Timeout waiting for sink EOS")
+        else:
+            debug("Sending EOS to sink pipeline failed")
+        self.sink_pipeline.set_state(Gst.State.NULL)
+
+        self.mainloop.__exit__(None, None, None)
 
 
 def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
