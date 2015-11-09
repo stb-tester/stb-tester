@@ -63,7 +63,7 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-INSTALL_FILES = \
+INSTALL_CORE_FILES = \
     _stbt/__init__.py \
     _stbt/config.py \
     _stbt/control.py \
@@ -77,6 +77,8 @@ INSTALL_FILES = \
     _stbt/stbt-power.sh \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
+    _stbt/x11.py \
+    _stbt/xorg.conf.in \
     stbt/__init__.py \
     stbt-batch \
     stbt-batch.d/instaweb \
@@ -98,20 +100,31 @@ INSTALL_FILES = \
     stbt-templatematch \
     stbt-tv
 
-install: install-core
-install-core: stbt.sh defaults.conf $(INSTALL_FILES)
+INSTALL_VSTB_FILES = \
+    stbt_virtual_stb.py
+
+install: install-core install-virtual-stb
+install-core: stbt.sh defaults.conf $(INSTALL_CORE_FILES)
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_FILES))))
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
-	for filename in $(INSTALL_FILES); do \
+	for filename in $(INSTALL_CORE_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	done
+
+install-virtual-stb: $(INSTALL_VSTB_FILES)
+	$(INSTALL) -m 0755 -d \
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_VSTB_FILES))))
+	for filename in $(INSTALL_VSTB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
@@ -143,7 +156,8 @@ check-nosetests: tests/ocr/menu.png
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/test.py \
 	              -e tests/test2.py \
-	              -e tests/test_functions.py) \
+	              -e tests/test_functions.py \
+	              -e tests/vstb-example-html5/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test

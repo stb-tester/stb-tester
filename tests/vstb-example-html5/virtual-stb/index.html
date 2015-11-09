@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Example stb</title>
+  <script>
+    function rotate(obj, rotation) {
+      obj.style.webkitTransform = "rotate(" + rotation + "deg)";
+      obj.style.transform = "rotate(" + rotation + "deg)";
+    }
+    function keypress(event) {
+      logo = document.getElementById('logo');
+      switch (event.keyIdentifier) {
+      case "Left":
+        rotate(logo, 207);
+        break;
+      case "Right":
+        rotate(logo, 27);
+        break;
+      case "Down":
+        rotate(logo, 117);
+        break;
+      case "Up":
+        rotate(logo, 297);
+        break;
+      case "Enter":
+        rotate(logo, 0);
+        break;
+      }
+    }
+  </script>
+</head>
+<body onkeyup="keypress(event)">
+<div style="line-height:720px; text-align:center;">
+  <img id="logo" src="stb-tester-350px.png" style="vertical-align:middle;">
+</div>
+</body>
+</html>

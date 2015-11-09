@@ -9,6 +9,7 @@ install:
  - export DEBIAN_FRONTEND=noninteractive
  - sudo apt-get update
  - sudo apt-get -y install
+        chromium-browser
         expect
         expect-dev
         gir1.2-gstreamer-1.0
@@ -44,6 +45,7 @@ install:
         python-scipy
         python-serial
         python-yaml
+        ratpoison
         socat
         tesseract-ocr
         tesseract-ocr-deu

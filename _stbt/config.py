@@ -56,18 +56,25 @@ def set_config(section, option, value):
 
     parser = ConfigParser.SafeConfigParser()
     parser.read([custom_config])
-    if not parser.has_section(section):
-        parser.add_section(section)
-    parser.set(section, option, value)
+    if value is not None:
+        if not parser.has_section(section):
+            parser.add_section(section)
+        parser.set(section, option, value)
+    else:
+        try:
+            parser.remove_option(section, option)
+        except ConfigParser.NoSectionError:
+            pass
 
     d = os.path.dirname(custom_config)
     utils.mkdir_p(d)
     with _sponge(custom_config) as f:
         parser.write(f)
 
-    if not config.has_section(section):
-        config.add_section(section)
-    config.set(section, option, value)
+    if value is not None:
+        if not config.has_section(section):
+            config.add_section(section)
+        config.set(section, option, value)
 
 
 def _config_init(force=False):

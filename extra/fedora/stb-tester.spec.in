@@ -63,6 +63,17 @@ Requires: stb-tester
 Support for using a camera pointed at a TV as input for stb-tester.  This is
 useful for testing apps running on Smart TVs.
 
+%package virtual-stb
+Summary: stb-tester virtual-stb support
+
+Requires: stb-tester
+Requires: xdotool
+Requires: xorg-x11-drv-dummy
+
+%description virtual-stb
+Support for "virtual" set-top boxes where the stb software runs on the host PC
+rather than on specific hardware.
+
 %prep
 %setup -n stb-tester-@VERSION@
 
@@ -78,6 +89,7 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir
 /usr/bin/irnetbox-proxy
 %{_libexecdir}/stbt
 %exclude %{_libexecdir}/stbt/stbt-camera*
+%exclude %{_libexecdir}/stbt/stbt-virtual-stb*
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
@@ -86,3 +98,6 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir
 %{_libexecdir}/stbt/stbt-camera
 %{_libexecdir}/stbt/stbt-camera.d
 %{_libdir}/gstreamer-1.0/stbt-gst-plugins.so
+
+%files virtual-stb
+%{_libexecdir}/stbt/stbt-virtual-stb.d

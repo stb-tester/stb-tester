@@ -22,6 +22,18 @@ UNRELEASED
 
 ##### New features
 
+* New command `stbt virtual-stb`.  It configures stb-tester to control and get
+  its video from a program running on the local PC. This can be used to test
+  set-top box software running in emulators, or HTML5 UIs running in a browser.
+  This can be used:
+  
+    * To test STB UIs during early development when the real hardware is not yet
+      available
+    * As a first stage test in a continuous integration pipeline to build
+      confidence in both your implementation and your tests before testing with
+      real hardware.  This approach can be particularly useful to reduce the
+      cost of test maintainance.
+
 * New `roku` remote control that uses the [Roku HTTP control protocol].
   Stb-tester's [standard key names] (like "KEY_HOME") will be converted to the
   corresponding Roku key name, or you can use the [Roku key names] directly.
@@ -32,8 +44,7 @@ UNRELEASED
 
 * The `x11` remote control now converts stb-tester's [standard key names] (like
   "KEY_UP") to the key names that `xdotool` expects.  You can also now specify a
-  custom mapping of key names.  This makes it easier to use the same test cases
-  to test an STB implementation running under X as on real hardware via lirc.
+  custom mapping of key names.  This was done to support `stbt virtual-stb`.
 
 ##### Bugfixes and packaging fixes
 
