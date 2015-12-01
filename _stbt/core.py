@@ -1005,15 +1005,13 @@ def _callable_description(callable_):
     '    lambda: stbt.press("OK"))\\n'
     >>> _callable_description(functools.partial(int, base=2))
     'int'
+    >>> _callable_description(functools.partial(functools.partial(int, base=2),
+    ...                                         x='10'))
+    'int'
     """
-    try:
-        d = callable_.__name__
-    except AttributeError:
-        if isinstance(callable_, functools.partial):
-            # functools.partial wraps the original function
-            d = callable_.func.__name__
-        else:
-            raise
+    if isinstance(callable_, functools.partial):
+        return _callable_description(callable_.func)
+    d = callable_.__name__
     if d == "<lambda>":
         try:
             d = inspect.getsource(callable_)
