@@ -59,6 +59,10 @@ UNRELEASED
 * Fixed "stb-tester fails with PyGObject 3.13" #305.  This will allow
   stb-tester to work out of the box on Ubuntu >= 14.10 and Fedora >= 21.
 
+* `wait_until` no longer raises an exception if you passed a
+  `functools.partial` object and `wait_until` timed out. Thanks to Martyn
+  Jarvis for the patch.
+
 ##### Developer-visible changes since 23
 
 #### 23
