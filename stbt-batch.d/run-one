@@ -37,6 +37,7 @@ main() {
 
   test="$1" && shift &&
   testpath=$(realpath "$test") &&
+  test_script_dir=$(dirname "$testpath") &&
   mkdir -p "$outputdir" &&
   pushd "$outputdir" >/dev/null &&
   rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
@@ -53,11 +54,13 @@ main() {
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
-  ( cd "$(dirname "$testpath")" &&
-    git describe --always --dirty 2>/dev/null
-  ) > git-commit || rm -f git-commit
+  git -C "$test_script_dir" describe --always --dirty 2>/dev/null \
+    > git-commit || rm -f git-commit
 
-  ( cd "$(dirname "$testpath")" &&
+  git -C "$test_script_dir" rev-parse HEAD \
+    > git-commit-sha || rm -f git-commit-sha
+
+  ( cd "$test_script_dir" &&
     gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir 2>/dev/null)")") &&
     echo "${testpath#$gitdir/}" || echo "$testpath"
   ) > test-name
