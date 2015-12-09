@@ -154,6 +154,8 @@ has stbt installed.
 
 3 June 2016.
 
+* `stbt camera` learnt how to control Raspberry Pis over SSH for calibration.
+
 ##### Breaking changes since 24
 
 * The `frame` parameter of the `MatchResult` returned from `stbt.match`,

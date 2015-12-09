@@ -1,4 +1,6 @@
 import os
+import pipes
+import subprocess
 import sys
 from time import sleep
 
@@ -51,7 +53,6 @@ class _HTTPVideoServer(object):
     def _start(self):
         from textwrap import dedent
         from tempfile import NamedTemporaryFile
-        from subprocess import CalledProcessError, check_output, STDOUT
         from random import randint
         video_cache_dir = _gen_video_cache_dir()
         mkdir_p(video_cache_dir)
@@ -82,10 +83,11 @@ class _HTTPVideoServer(object):
                       ".ts" => "video/MP2T"
                     )""") % (video_cache_dir, try_port, pidfile.name))
                 lighttpd_config_file.flush()
-                check_output(['lighttpd', '-f', lighttpd_config_file.name],
-                             close_fds=True, stderr=STDOUT)
+                subprocess.check_output(
+                    ['lighttpd', '-f', lighttpd_config_file.name],
+                    close_fds=True, stderr=subprocess.STDOUT)
                 port = try_port
-            except CalledProcessError as e:
+            except subprocess.CalledProcessError as e:
                 if e.output.find('Address already in use') != -1:
                     pass
                 else:
@@ -169,7 +171,6 @@ class _AdbTvDriver(object):
         self.video_server = video_server
 
     def show(self, video):
-        import subprocess
         cmd = self.adb_cmd + [
             'shell', 'am', 'start',
             '-a', 'android.intent.action.VIEW',
@@ -181,6 +182,38 @@ class _AdbTvDriver(object):
         pass
 
 
+class _RaspberryPiTvDriver(object):
+    """
+    Uses omxplayer on a SSH accessible Raspberry Pi to play the video.
+    """
+    def __init__(self, video_server, hostname):
+        self.video_server = video_server
+        self.proc = None
+        self.hostname = hostname
+        try:
+            subprocess.check_output(['ssh', 'pi@%s' % self.hostname, 'true'],
+                                    stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print "ssh to raspberry pi failed: %s" % e.output
+            raise
+
+    def show(self, video):
+        self.stop()
+        cmd = ['ssh', 'pi@%s' % self.hostname,
+               'omxplayer -o hdmi -p -b --loop %s'
+               % pipes.quote(self.video_server.get_url(video))]
+        with open('/dev/null') as devnull:
+            self.proc = subprocess.Popen(cmd, stdin=devnull)
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.kill()
+        with open('/dev/null') as devnull:
+            subprocess.call(
+                ['ssh', 'pi@%s' % self.hostname, 'killall omxplayer.bin'],
+                stdin=devnull)
+
+
 def add_argparse_argument(argparser):
     from .config import get_config
     argparser.add_argument(
@@ -190,7 +223,8 @@ def add_argparse_argument(argparser):
              "    assume - Assume the video is already playing (useful for "
              "scripting when passing a single test to be run).\n"
              "    fake:pipe_name - Used for testing\n"
-             "    adb[:adb_command] - Control an android device over adb",
+             "    adb[:adb_command] - Control an android device over adb"
+             "    rpi:hostname - Control a Raspberry Pi over SSH",
              default=get_config("camera", "tv_driver", "manual"))
 
 
@@ -215,5 +249,7 @@ def create_from_description(desc, video_generator, video_format):
     elif desc.startswith('adb:'):
         import shlex
         return _AdbTvDriver(make_video_server(), shlex.split(desc[4:]))
+    elif desc.startswith('rpi:'):
+        return _RaspberryPiTvDriver(make_video_server(), hostname=desc[4:])
     else:
         raise RuntimeError("Unknown video driver requested: %s" % desc)
