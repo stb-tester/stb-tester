@@ -42,12 +42,18 @@ def _get_external_ip():
 
 class _HTTPVideoServer(object):
     def __init__(self, video_generators, video_format):
+        self._video_generators = dict(video_generators)
+        self._video_format = video_format
+        self._lighttpd_pid = None
+        self._base_url = None
+
+        self._start()
+
+    def _start(self):
         from textwrap import dedent
         from tempfile import NamedTemporaryFile
         from subprocess import CalledProcessError, check_output, STDOUT
         from random import randint
-        self.lighttpd_pid = None
-        self.video_generators = dict(video_generators)
         video_cache_dir = _gen_video_cache_dir()
         mkdir_p(video_cache_dir)
         lighttpd_config_file = NamedTemporaryFile(
@@ -92,20 +98,19 @@ class _HTTPVideoServer(object):
         # passing and then open the listening socket ourselves.
         while os.fstat(pidfile.fileno()).st_size == 0:
             sleep(0.1)
-        self.lighttpd_pid = int(pidfile.read())
-        self.base_url = "http://%s:%i/" % (_get_external_ip(), port)
-        self.video_format = video_format
+        self._lighttpd_pid = int(pidfile.read())
+        self._base_url = "http://%s:%i/" % (_get_external_ip(), port)
 
     def __del__(self):
         from signal import SIGTERM
         from os import kill
-        if self.lighttpd_pid:
-            kill(self.lighttpd_pid, SIGTERM)
+        if self._lighttpd_pid:
+            kill(self._lighttpd_pid, SIGTERM)
 
     def get_url(self, video):
-        _generate_video_if_not_exists(video, self.video_generators,
-                                      self.video_format)
-        return "%s%s.%s" % (self.base_url, video, self.video_format)
+        _generate_video_if_not_exists(video, self._video_generators,
+                                      self._video_format)
+        return "%s%s.%s" % (self._base_url, video, self._video_format)
 
 
 class _AssumeTvDriver(object):
