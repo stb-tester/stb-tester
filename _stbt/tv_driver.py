@@ -195,8 +195,10 @@ def add_argparse_argument(argparser):
 
 
 def create_from_args(args, video_generator):
-    desc = args.tv_driver
+    return create_from_description(args.tv_driver, video_generator)
 
+
+def create_from_description(desc, video_generator):
     def make_video_server():
         return _HTTPVideoServer(
             video_generator,
