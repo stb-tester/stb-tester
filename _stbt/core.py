@@ -659,14 +659,16 @@ class DeviceUnderTest(object):
 
         return result
 
-    def detect_match(self, image, timeout_secs=10, match_parameters=None):
+    def detect_match(self, image, timeout_secs=10, match_parameters=None,
+                     region=Region.ALL):
         template = _load_template(image)
 
         debug("Searching for " + template.friendly_name)
 
         for sample in self._display.gst_samples(timeout_secs):
             result = self.match(
-                template, frame=sample, match_parameters=match_parameters)
+                template, frame=sample, match_parameters=match_parameters,
+                region=region)
             self._display.draw(result, None)
             yield result
 
@@ -742,7 +744,7 @@ class DeviceUnderTest(object):
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
-                       match_parameters=None):
+                       match_parameters=None, region=Region.ALL):
 
         if match_parameters is None:
             match_parameters = MatchParameters()
@@ -751,7 +753,8 @@ class DeviceUnderTest(object):
         last_pos = Position(0, 0)
         image = _load_template(image)
         for res in self.detect_match(
-                image, timeout_secs, match_parameters=match_parameters):
+                image, timeout_secs, match_parameters=match_parameters,
+                region=region):
             if res.match and (match_count == 0 or res.position == last_pos):
                 match_count += 1
             else:

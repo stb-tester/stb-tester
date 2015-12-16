@@ -350,7 +350,7 @@ test_match_searches_in_provided_frame() {
 
 test_match_searches_in_provided_region() {
     cat > test.py <<-EOF
-	from stbt import match, Region
+	from stbt import match, MatchTimeout, Region, wait_for_match
 	for search_area in [Region.ALL, Region(228, 0, 92, 160),
 	                    Region(200, 0, 300, 400), Region(200, 0, 300, 400),
 	                    Region(-200, -100, 600, 800)]:
@@ -358,12 +358,21 @@ test_match_searches_in_provided_region() {
 	    match_result = match("$testdir/videotestsrc-redblue.png",
 	                         region=search_area)
 	    assert match_result and match_result.region == Region(228, 0, 92, 160)
+	    match_result = wait_for_match("$testdir/videotestsrc-redblue.png",
+	                                  region=search_area)
+	    assert match_result and match_result.region == Region(228, 0, 92, 160)
 	
 	for search_area in [Region(228, 3, 92, 260), Region(10, 0, 300, 200),
 	                    Region(-210, -23, 400, 200)]:
 	    print "Search Area:", search_area
 	    assert not match("$testdir/videotestsrc-redblue.png",
 	                     region=search_area)
+	    try:
+	        wait_for_match("$testdir/videotestsrc-redblue.png",
+	                       region=search_area, timeout_secs=1)
+	        assert False
+	    except MatchTimeout:
+	        pass
 	EOF
     stbt run -v test.py
 }

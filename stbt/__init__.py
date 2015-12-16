@@ -139,7 +139,8 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     return _dut.match(image, frame, match_parameters, region)
 
 
-def detect_match(image, timeout_secs=10, match_parameters=None):
+def detect_match(image, timeout_secs=10, match_parameters=None,
+                 region=Region.ALL):
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the system-under-test's video stream.
 
@@ -152,7 +153,7 @@ def detect_match(image, timeout_secs=10, match_parameters=None):
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
-    return _dut.detect_match(image, timeout_secs, match_parameters)
+    return _dut.detect_match(image, timeout_secs, match_parameters, region)
 
 
 def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
@@ -188,7 +189,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   match_parameters=None):
+                   match_parameters=None, region=Region.ALL):
     """Search for an image in the system-under-test's video stream.
 
     :param image: The image to search for. See `match`.
@@ -205,12 +206,13 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
         selection to stop moving.
 
     :param match_parameters: See `match`.
+    :param region: See `match`.
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
     """
     return _dut.wait_for_match(
-        image, timeout_secs, consecutive_matches, match_parameters)
+        image, timeout_secs, consecutive_matches, match_parameters, region)
 
 
 def press_until_match(
