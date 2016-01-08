@@ -510,6 +510,7 @@ v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
 
 
 def list_cameras():
+    gi.require_version('GUdev', '1.0')
     from gi.repository import GUdev  # pylint: disable=E0611
     client = GUdev.Client.new(['video4linux/usb_device'])
     devices = client.query_by_subsystem('video4linux')
