@@ -9,7 +9,10 @@ import sys
 from collections import namedtuple
 from os.path import abspath, dirname
 
+import gi
 import numpy
+
+gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # pylint: disable=E0611
 
 from _stbt import tv_driver

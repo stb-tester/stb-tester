@@ -1,5 +1,8 @@
 import sys
 
+import gi
+
+gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst  # pylint: disable=E0611
 
 Gst.init([])

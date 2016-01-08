@@ -12,7 +12,10 @@ from contextlib import contextmanager
 from os.path import dirname
 
 import cv2
+import gi
 import numpy
+
+gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # pylint: disable=E0611
 
 import _stbt.core

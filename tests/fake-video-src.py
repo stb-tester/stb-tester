@@ -5,6 +5,9 @@ import os
 import sys
 import threading
 
+import gi
+
+gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
 from _stbt import gst_utils, utils

@@ -3,6 +3,9 @@ import platform
 from contextlib import contextmanager
 from os.path import dirname
 
+import gi
+
+gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # pylint: disable=E0611
 
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
