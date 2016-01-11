@@ -1008,16 +1008,23 @@ def _callable_description(callable_):
     >>> _callable_description(functools.partial(functools.partial(int, base=2),
     ...                                         x='10'))
     'int'
+    >>> class T(object):
+    ...     def __call__(self): return True;
+    >>> _callable_description(T())
+    '<_stbt.core.T object at 0x...>'
     """
-    if isinstance(callable_, functools.partial):
+    if hasattr(callable_, "__name__"):
+        name = callable_.__name__
+        if name == "<lambda>":
+            try:
+                name = inspect.getsource(callable_)
+            except IOError:
+                pass
+        return name
+    elif isinstance(callable_, functools.partial):
         return _callable_description(callable_.func)
-    d = callable_.__name__
-    if d == "<lambda>":
-        try:
-            d = inspect.getsource(callable_)
-        except IOError:
-            pass
-    return d
+    else:
+        return repr(callable_)
 
 
 @contextmanager
