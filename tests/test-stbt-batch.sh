@@ -426,27 +426,59 @@ test_stbt_batch_output_dir() {
 }
 
 test_printing_unicode_characters_in_scripts() {
+    # This testcase documents the current behaviour when printing non-ascii
+    # byte strings, which isn't necessarily the desired behaviour.
+
     which unbuffer &>/dev/null || skip "unbuffer is not installed"
 
     create_test_repo
-    cat >tests/test.py <<-EOF
+    cat >tests/unicode.py <<-EOF
 		# coding: utf-8
 		import sys
-		print u"Röthlisberger"
-		sys.stderr.write(u"Röthlisberger")
+		print u"  Röthlisberger"
+		sys.stderr.write(u"  Röthlisberger\n")
+		EOF
+
+    cat >tests/utf8bytestring.py <<-EOF
+		# coding: utf-8
+		import sys
+		s = u"  Röthlisberger\n".encode("utf-8")
+		print s
+		sys.stderr.write(s)
 		EOF
 
     unset LC_ALL LC_CTYPE LANG
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
-    ! LANG=C unbuffer bash -c 'stbt run tests/test.py' \
+
+    echo "This should fail (non-utf8 capable tty):"
+    ! LANG=C unbuffer bash -c 'stbt run tests/unicode.py' \
         || fail "stbt run should have failed to write to non-utf8 capable tty"
 
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py' &&
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py >/dev/null' &&
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/test.py 2>/dev/null' &&
-    stbt batch run -1 tests/test.py
+    echo "To terminal:" &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/unicode.py' &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py' &&
+
+    echo "stdout to /dev/null:" &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/unicode.py >/dev/null' &&
+    ! LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py >/dev/null' &&
+
+    echo "stderr to /dev/null:" &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/unicode.py 2>/dev/null' &&
+    ! LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py 2>/dev/null' &&
+
+    echo "stdout to file:" &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/unicode.py >mylog1' &&
+    ! LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py >mylog2' &&
+
+    echo "stderr to file:" &&
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/unicode.py 2>mylog3' &&
+    ! LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py 2>mylog4' &&
+
+    echo "stbt batch run:" &&
+    stbt batch run -1 tests/unicode.py
+    ! stbt batch run -1 tests/utf8bytestring.py
 }
 
 test_that_stbt_batch_run_can_print_exceptions_with_unicode_characters() {
