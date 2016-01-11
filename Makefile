@@ -248,7 +248,7 @@ install-docs: stbt.1
 
 ### Debian Packaging #########################################################
 
-ubuntu_releases ?= trusty utopic
+ubuntu_releases ?= trusty vivid wily
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
