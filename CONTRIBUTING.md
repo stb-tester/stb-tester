@@ -85,8 +85,11 @@ Here are a few guidelines to keep in mind when submitting a pull request:
 
         * Debian:
 
-            * Build the package with `make deb`. (TODO: Docker script to build
-              the deb if your host system isn't Debian/Ubuntu.)
+            * Build the package with `make deb`. If you don't have an Ubuntu
+              14.04 host you can use `extra/debian/ubuntu-shell.sh -c "make
+              deb"` which spins up an Ubuntu container using docker (it will
+              leave the packages in `debian-packages/` under the stb-tester git
+              checkout on the host.
 
             * Test the deb package by running `make check-ubuntu`. It will use
               docker to install the deb package inside a pristine Ubuntu

@@ -1,0 +1,17 @@
+# Docker container running Ubuntu 14.04 for building & testing stb-tester debs
+# on Ubuntu.
+
+FROM ubuntu:14.04
+MAINTAINER David Röthlisberger "david@stb-tester.com"
+
+# Build dependencies:
+RUN apt-get update && \
+    apt-get install -y build-essential devscripts @BUILDDEPENDS@
+
+RUN adduser --gecos "" stb-tester && \
+    echo  "stb-tester	ALL=(ALL:ALL)	NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
+
+USER stb-tester
+ENV HOME /home/stb-tester
+ENV LANG C.UTF-8
+WORKDIR /home/stb-tester
