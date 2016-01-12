@@ -32,13 +32,13 @@ import gi
 import numpy
 from enum import IntEnum
 
-gi.require_version("Gst", "1.0")
-from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
-
 from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate, map_gst_sample
 from _stbt.logging import ddebug, debug, warn
+
+gi.require_version("Gst", "1.0")
+from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()

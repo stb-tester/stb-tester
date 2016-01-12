@@ -15,13 +15,13 @@ import cv2
 import gi
 import numpy
 
-gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # pylint: disable=E0611
-
 import _stbt.core
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
+
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
 videos = {}
 
