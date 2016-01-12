@@ -53,6 +53,25 @@ def _setup_utf8_output():
 _setup_utf8_output()
 
 
+def _print_exc_utf8(file_=None):
+    r"""
+    This is a hack to allow printing exceptions that have unicode messages
+    attached to them.  The default behaviour of Python 2.7 is to replace
+    unicode charactors with \x023-like backslash escapes.  Instead we format
+    them as utf-8 bytes.
+
+    This is not thread-safe, but will only be called at the end of execution.
+    """
+    # pylint: disable=W0212
+    from kitchen.text.converters import to_bytes
+    _old_some_str = traceback._some_str
+    try:
+        traceback._some_str = to_bytes
+        traceback.print_exc(file=file_)
+    finally:
+        traceback._some_str = _old_some_str
+
+
 def import_by_filename(filename_):
     module_dir, module_file = os.path.split(filename_)
     module_name, module_ext = os.path.splitext(module_file)
@@ -122,7 +141,7 @@ except Exception as e:  # pylint: disable=W0703
     if screenshot is not None:
         stbt.save_frame(screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
-    traceback.print_exc(file=sys.stderr)
+    _print_exc_utf8(file_=sys.stderr)
     if isinstance(e, (stbt.UITestFailure, AssertionError)):
         sys.exit(1)  # Failure
     else:
