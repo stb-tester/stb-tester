@@ -69,7 +69,7 @@ Here are a few guidelines to keep in mind when submitting a pull request:
         * Fedora:
 
             * Build the rpm with `make srpm && sudo make rpm` (it needs sudo to
-              run [yum-builddep]). If you don't have a Fedora host you can use
+              run [dnf builddep]). If you don't have a Fedora host you can use
               `extra/fedora/fedora-shell.sh -c "make srpm && sudo make rpm"`
               which spins up a Fedora container using docker (it will leave the
               built rpm package in the current directory on the host).
@@ -107,4 +107,4 @@ really do appreciate your contribution.
 [GitHub branches view]: https://github.com/stb-tester/stb-tester/branches
 [Ubuntu current releases]: https://wiki.ubuntu.com/Releases#Current
 [Fedora current releases]: https://fedoraproject.org/wiki/Releases#Current_Supported_Releases
-[yum-builddep]: http://linuxmanpages.net/manpages/fedora21/man1/yum-builddep.1.html
+[dnf builddep]: https://dnf-plugins-core.readthedocs.org/en/latest/builddep.html

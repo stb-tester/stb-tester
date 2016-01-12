@@ -1,14 +1,15 @@
-# Docker container running Fedora 20 for building & testing stb-tester RPMs on
+# Docker container running Fedora for building & testing stb-tester RPMs on
 # Fedora.
 
-FROM fedora:20
+FROM fedora:23
 MAINTAINER David Röthlisberger "david@rothlis.net"
 
 # Build essentials:
-RUN yum install -y copr-cli gcc git make rpm-build wget yum-utils
+RUN dnf install -y \
+    copr-cli "dnf-command(builddep)" gcc git make rpm-build sudo wget
 
 # Stb-tester build dependencies for building binary RPM:
-RUN yum install -y @BUILDREQUIRES@
+RUN dnf install -y @BUILDREQUIRES@
 
 RUN adduser stb-tester && \
     echo  "stb-tester	ALL=(ALL)	NOPASSWD: ALL" >>/etc/sudoers && \

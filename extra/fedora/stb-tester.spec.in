@@ -6,7 +6,10 @@ Group: Development/Tools
 URL: http://stb-tester.com
 License: LGPL-2.1+
 Source: %{name}-@VERSION@.tar.gz
+%define debug_package %{nil}
+
 BuildRequires: python-docutils
+BuildRequires: which
 
 Requires: curl
 Requires: gstreamer1
@@ -32,6 +35,7 @@ Requires: python-kitchen
 Requires: python-lxml
 Requires: socat
 Requires: tesseract
+Requires: which
 
 %description
 stb-tester tests a set-top-box by issuing commands to it using a remote-control
