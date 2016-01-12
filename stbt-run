@@ -44,13 +44,32 @@ def _setup_utf8_output():
     Simulates python3's defaulting to utf-8 output so we don't get confusing
     `UnicodeEncodeError`s when printing unicode characters.
     """
-    import codecs
+    from kitchen.text.converters import getwriter
     if sys.stdout.encoding is None:
-        sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+        sys.stdout = getwriter('utf8')(sys.stdout)
     if sys.stderr.encoding is None:
-        sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+        sys.stderr = getwriter('utf8')(sys.stderr)
 
 _setup_utf8_output()
+
+
+def _print_exc_utf8(file_=None):
+    r"""
+    This is a hack to allow printing exceptions that have unicode messages
+    attached to them.  The default behaviour of Python 2.7 is to replace
+    unicode charactors with \x023-like backslash escapes.  Instead we format
+    them as utf-8 bytes.
+
+    This is not thread-safe, but will only be called at the end of execution.
+    """
+    # pylint: disable=W0212
+    from kitchen.text.converters import to_bytes
+    _old_some_str = traceback._some_str
+    try:
+        traceback._some_str = to_bytes
+        traceback.print_exc(file=file_)
+    finally:
+        traceback._some_str = _old_some_str
 
 
 def import_by_filename(filename_):
@@ -106,7 +125,8 @@ try:
         sys.path.insert(0, os.path.dirname(_filename))
         execfile(_filename)
 except Exception as e:  # pylint: disable=W0703
-    error_message = str(e)
+    from kitchen.text.converters import exception_to_bytes
+    error_message = exception_to_bytes(e)
     if not error_message and isinstance(e, AssertionError):
         error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
     sys.stdout.write("FAIL: %s: %s: %s\n" % (
@@ -121,7 +141,7 @@ except Exception as e:  # pylint: disable=W0703
     if screenshot is not None:
         stbt.save_frame(screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
-    traceback.print_exc(file=sys.stderr)
+    _print_exc_utf8(file_=sys.stderr)
     if isinstance(e, (stbt.UITestFailure, AssertionError)):
         sys.exit(1)  # Failure
     else:

@@ -31,6 +31,7 @@ import cv2
 import gi
 import numpy
 from enum import IntEnum
+from kitchen.text.converters import to_bytes
 
 from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
@@ -2276,7 +2277,7 @@ def _tesseract(frame, region, mode, lang, _config,
                     "You cannot specify 'user_words' and " +
                     "'_config[\"user_words_suffix\"]' at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(user_words).encode('utf-8'))
+                f.write('\n'.join(to_bytes(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
@@ -2289,7 +2290,7 @@ def _tesseract(frame, region, mode, lang, _config,
                     'tesseract version >=3.03 is required for user_patterns.  '
                     'version %s is currently installed' % _tesseract_version())
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(user_patterns).encode('utf-8'))
+                f.write('\n'.join(to_bytes(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
         if _config:
@@ -2298,8 +2299,7 @@ def _tesseract(frame, region, mode, lang, _config,
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
-                        cfg.write((u"%s %s\n" % (k, unicode(v)))
-                                  .encode('utf-8'))
+                        cfg.write("%s %s\n" % (k, to_bytes(v)))
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', subframe)

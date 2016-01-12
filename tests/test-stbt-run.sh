@@ -215,3 +215,52 @@ test_that_stbt_run_tracing_is_written_to_socket() {
     grep -q "state_change" "trace.jsonl" || fail "state_change not written"
     diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
 }
+
+assert_correct_unicode_error() {
+    cat >expected.log <<-EOF
+		FAIL: test.py: AssertionError: ü
+		Traceback (most recent call last):
+		  File ".../stbt-run", line ..., in <module>
+		    execfile(_filename)
+		  File "...", line 2, in <module>
+		    assert False, $u"ü"
+		AssertionError: ü
+		EOF
+    diff -u <(grep -v -e File expected.log) \
+            <(grep -v -e 'libdc1394 error: Failed to initialize libdc1394' \
+                      -e File mylog) || fail
+}
+
+test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
+    which unbuffer &>/dev/null || skip "unbuffer is not installed"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, u"ü"
+	EOF
+
+    stbt run test.py &> mylog
+    u="u" assert_correct_unicode_error
+
+    # We use unbuffer here to provide a tty to `stbt run` to simulate
+    # interactive use.
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    u="u" assert_correct_unicode_error
+}
+
+test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
+    which unbuffer &>/dev/null || skip "unbuffer is not installed"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, "ü"
+	EOF
+
+    stbt run test.py &> mylog
+    assert_correct_unicode_error
+
+    # We use unbuffer here to provide a tty to `stbt run` to simulate
+    # interactive use.
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    assert_correct_unicode_error
+}

@@ -31,6 +31,7 @@ install:
         python-flask
         python-gi
         python-jinja2
+        python-kitchen
         python-lxml
         python-lzma
         python-matplotlib
