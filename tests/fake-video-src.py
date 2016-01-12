@@ -5,9 +5,12 @@ import os
 import sys
 import threading
 
-from gi.repository import Gst
+import gi
 
 from _stbt import gst_utils, utils
+
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst  # isort:skip
 
 Gst.init([])
 

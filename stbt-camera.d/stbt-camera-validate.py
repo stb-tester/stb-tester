@@ -9,10 +9,13 @@ import sys
 from collections import namedtuple
 from os.path import abspath, dirname
 
+import gi
 import numpy
-from gi.repository import Gst  # pylint: disable=E0611
 
 from _stbt import tv_driver
+
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
 DATA_DIR = dirname(abspath(__file__))
 

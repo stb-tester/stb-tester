@@ -12,13 +12,16 @@ from contextlib import contextmanager
 from os.path import dirname
 
 import cv2
+import gi
 import numpy
-from gi.repository import Gst  # pylint: disable=E0611
 
 import _stbt.core
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
+
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
 videos = {}
 
@@ -507,6 +510,7 @@ v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
 
 
 def list_cameras():
+    gi.require_version('GUdev', '1.0')
     from gi.repository import GUdev  # pylint: disable=E0611
     client = GUdev.Client.new(['video4linux/usb_device'])
     devices = client.query_by_subsystem('video4linux')

@@ -118,6 +118,7 @@ test_that_stbt_run_exits_on_ctrl_c() {
 
     cat > test.py <<-EOF
 	import sys, time, gi
+	gi.require_version("Gst", "1.0")
 	from gi.repository import GLib
 	
 	for c in range(5, 0, -1):
