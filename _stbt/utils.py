@@ -27,3 +27,12 @@ def named_temporary_directory(
         yield dirname
     finally:
         rmtree(dirname)
+
+
+def safe_unicode(obj):
+    try:
+        return unicode(obj)
+    except UnicodeDecodeError:
+        # e.g. byte string with UTF-8 bytes.
+        s = str(obj).decode('utf-8', 'backslashreplace')
+        return unicode(s)

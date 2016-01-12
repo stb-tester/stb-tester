@@ -215,3 +215,41 @@ test_that_stbt_run_tracing_is_written_to_socket() {
     grep -q "state_change" "trace.jsonl" || fail "state_change not written"
     diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
 }
+
+test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
+    which unbuffer &>/dev/null || skip "unbuffer is not installed"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, u"ü"
+	EOF
+
+    stbt run test.py &> mylog
+    grep "FAIL: test.py: AssertionError: ü" mylog &>/dev/null || fail
+    grep 'assert False, u"ü"' mylog &>/dev/null || fail
+
+    # We use unbuffer here to provide a tty to `stbt run` to simulate
+    # interactive use.
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    grep "FAIL: test.py: AssertionError: ü" log &>/dev/null || fail a
+    grep 'assert False, u"ü"' log &>/dev/null || fail b
+}
+
+test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
+    which unbuffer &>/dev/null || skip "unbuffer is not installed"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	assert False, u"ü".encode("utf-8")
+	EOF
+
+    stbt run test.py &> mylog
+    grep "FAIL: test.py: AssertionError: ü" mylog &>/dev/null || fail a
+    grep 'assert False, u"ü"' mylog &>/dev/null || fail b
+
+    # We use unbuffer here to provide a tty to `stbt run` to simulate
+    # interactive use.
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    grep "FAIL: test.py: AssertionError: ü" log &>/dev/null || fail a
+    grep 'assert False, u"ü"' log &>/dev/null || fail b
+}
