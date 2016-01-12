@@ -12,6 +12,7 @@
 #
 # Input environment variables:
 #
+# * $do_html_report ("true" or "false")
 # * $tag
 # * $v
 # * $verbose
@@ -63,7 +64,9 @@ main() {
 
   printf "%s\n" "$@" > test-args
 
-  "$runner"/report --html-only . >/dev/null
+  if $do_html_report; then
+    "$runner"/report --html-only . >/dev/null
+  fi
 
   user_command pre_run start
 
@@ -117,7 +120,9 @@ main() {
     user_command recover || touch unrecoverable-error
   fi
 
-  "$runner"/report --html-only . >/dev/null
+  if $do_html_report; then
+    "$runner"/report --html-only . >/dev/null
+  fi
 
   cd ..
   send_state_change active_results_directory null
