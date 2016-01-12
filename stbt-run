@@ -45,11 +45,11 @@ def _setup_utf8_output():
     Simulates python3's defaulting to utf-8 output so we don't get confusing
     `UnicodeEncodeError`s when printing unicode characters.
     """
-    import codecs
+    from kitchen.text.converters import getwriter
     if sys.stdout.encoding is None:
-        sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+        sys.stdout = getwriter('utf8')(sys.stdout)
     if sys.stderr.encoding is None:
-        sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+        sys.stderr = getwriter('utf8')(sys.stderr)
 
 _raw_sys_stderr = sys.stderr
 _setup_utf8_output()
