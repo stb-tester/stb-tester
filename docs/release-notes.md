@@ -30,6 +30,9 @@ UNRELEASED
   absolute coordinates within the image instead of adjusting the edge by a
   relative number of pixels.
 
+* `stbt.wait_for_match` and `stbt.detect_match` take an optional `region`
+  parameter, just like `stbt.match` already did.
+
 * `stbt run` will now save a screenshot at the end of all failing test runs,
   rather than just those which failed due to an exception with a screenshot
   attached.
