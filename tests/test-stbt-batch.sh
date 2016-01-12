@@ -37,18 +37,19 @@ validate_testrun_dir() {
 
 validate_html_report() {
     local d="$1" testname="$2" commit="$3" commit_sha="$4" extra_column="$5"
+    local results_root=$(dirname "$d")
 
     [[ -f "$d/index.html" ]] || fail "$d/index.html not created"
-    [[ -f index.html ]] || fail "index.html not created"
+    [[ -f "$results_root/index.html" ]] || fail "$results_root/index.html not created"
     grep -q "$testname" "$d/index.html" || fail "test name not in $d/index.html"
-    grep -q "$testname" index.html || fail "test name not in index.html"
+    grep -q "$testname" "$results_root/index.html" || fail "test name not in $results_root/index.html"
     if [[ -n "$commit" ]]; then
         grep -q "$commit" "$d/index.html" || fail "git commit not in $d/index.html"
-        grep -q "$commit" index.html || fail "git commit not in index.html"
+        grep -q "$commit" "$results_root/index.html" || fail "git commit not in $results_root/index.html"
     fi
     if [[ -n "$extra_column" ]]; then
         grep -q "$extra_column" "$d/index.html" || fail "extra column not in $d/index.html"
-        grep -q "$extra_column" index.html || fail "extra column not in index.html"
+        grep -q "$extra_column" "$results_root/index.html" || fail "extra column not in $results_root/index.html"
     fi
 }
 
@@ -457,14 +458,16 @@ test_that_stbt_batch_reports_results_directory() {
 
 test_stbt_batch_output_dir() {
     create_test_repo
-    mkdir "my results"
-    stbt batch run -1 -o "my-results" tests/test.py tests/test2.py \
+    stbt batch run -1 -o "my results" tests/test.py tests/test2.py \
         || fail "Tests should succeed"
 
-    [[ -f "my-results"/index.html ]] || fail "'my-results/index.html' not created"
+    [[ -f "my results"/index.html ]] || fail "'my results/index.html' not created"
     ! [[ -f index.html ]] || fail "index.html created in current directory"
-    grep -q test.py "my-results"/*/test-name || fail "First test's results not in 'my-results'"
-    grep -q test2.py "my-results"/*/test-name || fail "Second test's results not in 'my-results'"
+    grep -q test.py "my results"/*/test-name || fail "First test's results not in 'my results'"
+    grep -q test2.py "my results"/*/test-name || fail "Second test's results not in 'my results'"
+
+    validate_testrun_dir "my results/latest" test2.py
+    validate_html_report "my results/latest" test2.py
 }
 
 test_printing_unicode_characters_in_scripts() {

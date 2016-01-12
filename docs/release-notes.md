@@ -69,6 +69,9 @@ UNRELEASED
   `functools.partial` object and `wait_until` timed out. Thanks to Martyn
   Jarvis for the patch.
 
+* `stbt batch run` wasn't generating HTML reports if you gave it an `--output`
+  directory name with spaces.
+
 ##### Developer-visible changes since 23
 
 #### 23
