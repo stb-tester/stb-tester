@@ -16,7 +16,10 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 24
 
-UNRELEASED
+Updated to work with Ubuntu >= 14.10 and Fedora >=21; and many small additions,
+bugfixes, and improvements.
+
+13 January 2016.
 
 ##### Breaking changes since 23
 
@@ -25,24 +28,59 @@ UNRELEASED
 
 ##### User-visible changes since 23
 
-* Added new API `stbt.Region.replace` to set any of the edges of a region to
-  the given coordinates. It is similar to `Region.extend`, but it takes
-  absolute coordinates within the image instead of adjusting the edge by a
-  relative number of pixels.
+* Work around a regression in PyGObject 3.13 (#305). This will allow stb-tester
+  to work out of the box on Ubuntu >= 14.10 and Fedora >= 21.
 
-* `stbt.wait_for_match` and `stbt.detect_match` take an optional `region`
-  parameter, just like `stbt.match` already did.
+* Updated `stbt.match_text` to work with tesseract 3.04 (Ubuntu >= 15.10 and
+  Fedora >= 23).
+
+* Python API: New method `stbt.Region.replace` to set any of the edges of a
+  region to the given coordinates. It is similar to `stbt.Region.extend`, but
+  it takes absolute coordinates within the image instead of adjusting the edge
+  by a relative number of pixels.
+
+* Python API: `stbt.wait_for_match` and `stbt.detect_match` take an optional
+  `region` parameter, just like `stbt.match` already did.
+
+* Python API: `stbt.match_text` now adds the expected text to tesseract's
+  dictionary, which fixes some false negatives.
+
+* Python API: Bug fix: `stbt.wait_until` no longer raises an exception if you
+  passed a `functools.partial` object (or an instance of a class with a
+  `__call__` method) and `wait_until` timed out. Thanks to Martyn Jarvis for
+  the patch.
+
+* Python API: You can now raise an exception with unicode in the exception's
+  message. Previously the testrun's failure reason would show a
+  "UnicodeEncodeError" instead of your actual exception message.
+
+* The video-recording of a test run will show the name of the image that
+  `stbt.wait_for_match` is searching for. Thanks to Lewis Haley for the patch.
 
 * `stbt run` will now save a screenshot at the end of all failing test runs,
   rather than just those which failed due to an exception with a screenshot
   attached.
 
-* The screenshot that `stbt batch run` saves is now more likely to be relevant
-  to the issue seen.  We now save the last frame that the test-script saw
-  rather than just saving a screenshot after the end of the test-run.
+* The screenshot that `stbt batch run` saves is more likely to be relevant to
+  the issue seen. Now we save the last frame that the test-script saw;
+  previously we took a new screenshot at some point soon after the test-run had
+  completed.
 
-* `stbt run` will no longer fail if your test script raises an exception with
-  unicode characters in the exception's message.
+* `stbt batch run`: New `--no-html-report` option to disable HTML report
+  generation. Normally `stbt batch run` generates an HTML report before each
+  testrun (so that the report shows a "running..." row for the current test)
+  and again after the testrun (to update that row with the test's result). This
+  report generation gets slower as you have more results because it scans all
+  the results in the output directory each time. If you have your own reporting
+  system, this report generation is superfluous. Apart from the "index.html"
+  inside the testrun directory and the "index.html" one directory above it (at
+  the root of the output directory), no other files are affected. That is, the
+  result format on disk won't change (this on-disk result format is a public,
+  stable API). You can still generate the HTML reports afterwards with `stbt
+  batch report`.
+
+* `stbt batch run` wasn't generating HTML reports if you gave it an `--output`
+  directory name with spaces.
 
 * `stbt lint` will complain if you don't use the return value from
   `is_screen_black`, `match`, `match_text`, `ocr`, or `wait_until`. When the
@@ -54,25 +92,8 @@ UNRELEASED
   `wait_until(is_screen_black())` when you meant to say
   `wait_until(is_screen_black)`.
 
-* Updated `stbt.match_text` to work with tesseract 3.04 (which seems to have
-  been released sometime around 10 July 2015).
-
-* `stbt.match_text` now adds the requested text to tesseract's dictionary,
-  which fixes some false negatives.
-
-##### Bugfixes and packaging fixes since 23
-
-* Fixed "stb-tester fails with PyGObject 3.13" #305.  This will allow
-  stb-tester to work out of the box on Ubuntu >= 14.10 and Fedora >= 21.
-
-* `wait_until` no longer raises an exception if you passed a
-  `functools.partial` object and `wait_until` timed out. Thanks to Martyn
-  Jarvis for the patch.
-
-* `stbt batch run` wasn't generating HTML reports if you gave it an `--output`
-  directory name with spaces.
-
-##### Developer-visible changes since 23
+* `stbt lint` no longer complains if the filename given to `cv2.imwrite`
+  doesn't exist.
 
 #### 23
 
