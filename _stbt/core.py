@@ -1008,21 +1008,26 @@ def _callable_description(callable_):
     '    lambda: stbt.press("OK"))\\n'
     >>> _callable_description(functools.partial(int, base=2))
     'int'
+    >>> _callable_description(functools.partial(functools.partial(int, base=2),
+    ...                                         x='10'))
+    'int'
+    >>> class T(object):
+    ...     def __call__(self): return True;
+    >>> _callable_description(T())
+    '<_stbt.core.T object at 0x...>'
     """
-    try:
-        d = callable_.__name__
-    except AttributeError:
-        if isinstance(callable_, functools.partial):
-            # functools.partial wraps the original function
-            d = callable_.func.__name__
-        else:
-            raise
-    if d == "<lambda>":
-        try:
-            d = inspect.getsource(callable_)
-        except IOError:
-            pass
-    return d
+    if hasattr(callable_, "__name__"):
+        name = callable_.__name__
+        if name == "<lambda>":
+            try:
+                name = inspect.getsource(callable_)
+            except IOError:
+                pass
+        return name
+    elif isinstance(callable_, functools.partial):
+        return _callable_description(callable_.func)
+    else:
+        return repr(callable_)
 
 
 @contextmanager
