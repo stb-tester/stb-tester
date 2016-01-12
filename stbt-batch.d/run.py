@@ -51,6 +51,12 @@ def main(argv):
         '--shuffle', action="store_true", help=(
             "Run the test cases in a random order attempting to spend the same "
             "total amount of time executing each test case."))
+    parser.add_argument(
+        '--no-html-report', action='store_true', help="""
+            Don't generate an HTML report after each testrun; generating the
+            report can be slow if there are many results in the output
+            directory. You can still generate the HTML reports afterwards with
+            'stbt batch report'.""")
     parser.add_argument('test_name', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
 
@@ -98,6 +104,7 @@ def main(argv):
             break
         run_count += 1
         subenv = dict(os.environ)
+        subenv['do_html_report'] = "false" if args.no_html_report else "true"
         subenv['tag'] = tag
         subenv['v'] = '-vv' if args.debug else '-v'
         subenv['verbose'] = str(args.verbose)

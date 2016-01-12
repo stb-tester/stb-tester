@@ -16,6 +16,40 @@ create_test_repo() {
     ) >/dev/null 2>&1 || fail "Failed to set up git repo"
 }
 
+validate_testrun_dir() {
+    local d="$1" testname="$2" commit="$3" extra_column="$4"
+
+    [[ -f "$d/combined.log" ]] || fail "$d/combined.log not created"
+    [[ $(cat "$d/exit-status") == 0 ]] || fail "wrong $d/exit-status"
+    [[ $(cat "$d/test-name") == "$testname" ]] || fail "wrong $d/test-name"
+    diff -u <(cat "$srcdir"/VERSION) "$d/stbt-version.log" || fail "Wrong $d/stbt-version.log"
+    [[ -f "$d/video.webm" ]] || fail "$d/video.webm not created"
+    [[ -f "$d/thumbnail.jpg" ]] || fail "$d/thumbnail.jpg not created"
+    if [[ -n "$commit" ]]; then
+        [[ $(cat "$d/git-commit") == "$commit" ]] || fail "wrong $d/git-commit"
+    fi
+    if [[ -n "$extra_column" ]]; then
+        grep -q "$extra_column" "$d/extra-columns" || fail "extra column not in $d/extra-columns"
+    fi
+}
+
+validate_html_report() {
+    local d="$1" testname="$2" commit="$3" extra_column="$4"
+
+    [[ -f "$d/index.html" ]] || fail "$d/index.html not created"
+    [[ -f index.html ]] || fail "index.html not created"
+    grep -q "$testname" "$d/index.html" || fail "test name not in $d/index.html"
+    grep -q "$testname" index.html || fail "test name not in index.html"
+    if [[ -n "$commit" ]]; then
+        grep -q "$commit" "$d/index.html" || fail "git commit not in $d/index.html"
+        grep -q "$commit" index.html || fail "git commit not in index.html"
+    fi
+    if [[ -n "$extra_column" ]]; then
+        grep -q "$extra_column" "$d/index.html" || fail "extra column not in $d/index.html"
+        grep -q "$extra_column" index.html || fail "extra column not in index.html"
+    fi
+}
+
 test_stbt_batch_run_once() {
     create_test_repo
     { stbt batch run -1 -t "my label" tests/test.py ||
@@ -24,23 +58,8 @@ test_stbt_batch_run_once() {
 
     local expected_commit="$(cd tests && git describe --always)"
 
-    mv "latest-my label" latest
-    [[ -f latest/combined.log ]] || fail "latest/combined.log not created"
-    [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
-    [[ $(cat latest/git-commit) == "$expected_commit" ]] || fail "wrong latest/git-commit"
-    [[ $(cat latest/test-name) == test.py ]] || fail "wrong latest/test-name"
-    diff -u <(cat "$srcdir"/VERSION) latest/stbt-version.log ||
-        fail "Wrong latest/stbt-version.log"
-    [[ -f latest/video.webm ]] || fail "latest/video.webm not created"
-    [[ -f latest/thumbnail.jpg ]] || fail "test/thumbnail.jpg not created"
-    [[ -f latest/index.html ]] || fail "latest/index.html not created"
-    [[ -f index.html ]] || fail "index.html not created"
-    grep -q test.py latest/index.html || fail "test name not in latest/index.html"
-    grep -q test.py index.html || fail "test name not in index.html"
-    grep -q "$expected_commit" latest/index.html || fail "git commit not in latest/index.html"
-    grep -q "$expected_commit" index.html || fail "git commit not in index.html"
-    grep -q "my label" latest/index.html || fail "extra column not in latest/index.html"
-    grep -q "my label" index.html || fail "extra column not in index.html"
+    validate_testrun_dir "latest-my label" test.py "$expected_commit" "my label"
+    validate_html_report "latest-my label" test.py "$expected_commit" "my label"
 }
 
 test_that_stbt_batch_run_will_run_a_specific_function() {
@@ -213,6 +232,26 @@ test_stbt_batch_run_with_custom_classifier() {
 
     grep -q 'Intentional failure' index.html ||
         fail "Custom failure reason missing from report"
+}
+
+test_stbt_batch_run_without_html_reports() {
+    create_test_repo
+    set_config batch.classify "$PWD/my-classifier"
+    cat > my-classifier <<-'EOF'
+	#!/bin/bash
+	touch my-classifier-ran
+	EOF
+    chmod u+x my-classifier
+
+    timeout 60 stbt batch run -1 --no-html-report tests/test.py
+    [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
+
+    validate_testrun_dir latest test.py
+    ! [[ -f "latest/index.html" ]] || fail "latest/index.html shouldn't exist"
+    ! [[ -f index.html ]] || fail "index.html shouldn't exist"
+
+    # classify should still run.
+    [[ -f latest/my-classifier-ran ]] || fail "Custom classifier didn't run"
 }
 
 test_stbt_batch_run_with_custom_recovery_script() {
