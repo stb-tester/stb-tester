@@ -17,7 +17,7 @@ create_test_repo() {
 }
 
 validate_testrun_dir() {
-    local d="$1" testname="$2" commit="$3" extra_column="$4"
+    local d="$1" testname="$2" commit="$3" commit_sha="$4" extra_column="$5"
 
     [[ -f "$d/combined.log" ]] || fail "$d/combined.log not created"
     [[ $(cat "$d/exit-status") == 0 ]] || fail "wrong $d/exit-status"
@@ -27,6 +27,8 @@ validate_testrun_dir() {
     [[ -f "$d/thumbnail.jpg" ]] || fail "$d/thumbnail.jpg not created"
     if [[ -n "$commit" ]]; then
         [[ $(cat "$d/git-commit") == "$commit" ]] || fail "wrong $d/git-commit"
+        [[ $(cat "$d/git-commit-sha") == "$expected_commit_sha" ]] \
+            || fail "wrong $d/git-commit-sha"
     fi
     if [[ -n "$extra_column" ]]; then
         grep -q "$extra_column" "$d/extra-columns" || fail "extra column not in $d/extra-columns"
@@ -34,7 +36,7 @@ validate_testrun_dir() {
 }
 
 validate_html_report() {
-    local d="$1" testname="$2" commit="$3" extra_column="$4"
+    local d="$1" testname="$2" commit="$3" commit_sha="$4" extra_column="$5"
 
     [[ -f "$d/index.html" ]] || fail "$d/index.html not created"
     [[ -f index.html ]] || fail "index.html not created"
@@ -56,10 +58,11 @@ test_stbt_batch_run_once() {
         fail "stbt batch run failed"
     } | sed 's/^/stbt batch run: /'
 
-    local expected_commit="$(cd tests && git describe --always)"
+    local expected_commit="$(git -C tests describe --always)"
+    local expected_commit_sha="$(git -C tests rev-parse HEAD)"
 
-    validate_testrun_dir "latest-my label" test.py "$expected_commit" "my label"
-    validate_html_report "latest-my label" test.py "$expected_commit" "my label"
+    validate_testrun_dir "latest-my label" test.py "$expected_commit" "$expected_commit_sha" "my label"
+    validate_html_report "latest-my label" test.py "$expected_commit" "$expected_commit_sha" "my label"
 }
 
 test_that_stbt_batch_run_will_run_a_specific_function() {
