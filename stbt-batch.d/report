@@ -12,6 +12,8 @@
 #/ Generates a detailed report in <testrun directory>/index.html
 #/ and a summary report in <testrun directory>/../index.html.
 
+IFS=$'\n'
+
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 main() {
