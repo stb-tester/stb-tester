@@ -198,6 +198,8 @@ run_state_test() {
 }
 
 test_that_stbt_run_tracing_is_written_to_file() {
+    which xzcat &>/dev/null || skip "xzcat is not installed"
+
     run_state_test --save-trace=trace.jsonl.xz || fail "Test failed"
     [ -e "trace.jsonl.xz" ] || fail "Trace not written"
     xzcat "trace.jsonl.xz" | grep -q "state_change" || fail "state_change not written"
