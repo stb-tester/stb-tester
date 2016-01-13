@@ -13,10 +13,10 @@ docker run -t \
         echo "-v $PWD/$rpm:/tmp/$rpm:ro"
       done | tr '\n' ' ') \
     -v $stbt_dir:/usr/src/stb-tester:ro \
-    fedora:20 \
+    fedora:23 \
     /bin/bash -c "
         set -x &&
-        sudo yum install -y ${*/#/tmp/} &&
+        dnf install -y man ${*/#/tmp/} &&
         stbt --version &&
         stbt --help &&
         man stbt | cat &&
