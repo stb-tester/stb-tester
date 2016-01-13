@@ -378,6 +378,6 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
-.PHONY: copr-publish ppa-publish rpm srpm
+.PHONY: ppa-publish rpm srpm
 .PHONY: check-cameratests install-stbt-camera
 .PHONY: FORCE TAGS
