@@ -343,6 +343,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         This is similar to `extend`, but it takes absolute coordinates within
         the image instead of adjusting by a relative number of pixels.
+
+        ``Region.replace`` was added in stb-tester v24.
         """
         def norm_coords(name_x, name_width, name_right,
                         x, width, right,  # or y, height, bottom
@@ -987,6 +989,8 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
       frame that actually caused the test to fail).
 
     We hope to solve both of the above drawbacks at some point in the future.
+
+    ``wait_until`` was added in stb-tester v22.
     """
     expiry_time = time.time() + timeout_secs
     while True:

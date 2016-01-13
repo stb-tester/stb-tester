@@ -210,6 +210,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
+
+    The ``region`` parameter to ``wait_for_match`` was added in stb-tester v24.
     """
     return _dut.wait_for_match(
         image, timeout_secs, consecutive_matches, match_parameters, region)
@@ -422,6 +424,9 @@ def is_screen_black(frame=None, mask=None, threshold=None):
       binary threshold is applied to the frame. The `threshold` value is in the
       range 0 (black) to 255 (white). The global default can be changed by
       setting `threshold` in the `[is_screen_black]` section of stbt.conf.
+
+    Before stb-tester v22, the ``frame`` parameter had to be passed in
+    explicitly by the caller.
     """
     return _dut.is_screen_black(frame, mask, threshold)
 
