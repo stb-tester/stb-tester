@@ -153,7 +153,11 @@ class _NullFile(object):
 
 
 def new_state_sender(filename=None):
-    from lzma import LZMAFile
+    try:
+        from lzma import LZMAFile
+    except ImportError:
+        from backports.lzma import LZMAFile  # pylint:disable=E0611,F0401
+
     socket_ = None
     if filename is not None:
         fsfile_ = LZMAFile(filename, 'wb')
