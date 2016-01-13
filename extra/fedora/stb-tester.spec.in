@@ -12,6 +12,7 @@ BuildRequires: python-docutils
 BuildRequires: which
 
 Requires: curl
+Requires: git
 Requires: gstreamer1
 Requires: gstreamer1-plugins-bad-free
 Requires: gstreamer1-plugins-bad-free-extras
