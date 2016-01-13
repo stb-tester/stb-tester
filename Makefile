@@ -240,7 +240,7 @@ stbt.1: README.rst VERSION
 
 ifeq ($(enable_docs), yes)
  all: stbt.1
- install: install-docs
+ install-core: install-docs
 endif
 
 install-docs: stbt.1
