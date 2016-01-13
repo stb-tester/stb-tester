@@ -89,9 +89,10 @@ Here are a few guidelines to keep in mind when submitting a pull request:
               leave the packages in `debian-packages/` under the stb-tester git
               checkout on the host.
 
-            * Test the deb package by running `make check-ubuntu`. It will use
-              docker to install the deb package inside a pristine Ubuntu
-              container, and run stb-tester's self-tests.
+            * Test the deb package by running `extra/debian/test-deb.sh
+              <filenames of the new debs>`. It will use docker to install the
+              deb package inside a pristine Ubuntu container, and run
+              stb-tester's self-tests.
 
     * You'll also need to list the new dependencies in `.travis.yml`, if they
       are required by any self-tests (and if they aren't: Why not?).

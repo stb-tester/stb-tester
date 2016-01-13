@@ -291,18 +291,6 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
-check-ubuntu:
-	$(MAKE) deb
-	docker run --rm -ti -v $$PWD:/tmp/stb-tester:ro ubuntu:14.04 \
-	    /bin/bash -c "\
-	    apt-get update && \
-	    { dpkg -i /tmp/stb-tester/stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb; \
-	      dpkg -i /tmp/stb-tester/stb-tester-camera_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb; \
-	      true; } && \
-	    apt-get --fix-broken -y install && \
-	    PYTHONPATH=/usr/lib/stbt:$$PYTHONPATH \
-	        /tmp/stb-tester/tests/run-tests.sh -i"
-
 ### Fedora Packaging #########################################################
 
 rpm_topdir?=$(HOME)/rpmbuild
@@ -390,6 +378,6 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
-.PHONY: check-ubuntu copr-publish ppa-publish rpm srpm
+.PHONY: copr-publish ppa-publish rpm srpm
 .PHONY: check-cameratests install-stbt-camera
 .PHONY: FORCE TAGS
