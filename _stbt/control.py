@@ -18,20 +18,20 @@ __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
 def uri_to_remote(uri, display=None):
     remotes = [
-        (r'none', NullRemote),
-        (r'test', lambda: VideoTestSrcControl(display)),
-        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
-        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
-         _new_samsung_tcp_remote),
-        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
-         new_tcp_lirc_remote),
-        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
-         new_local_lirc_remote),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
              (:(?P<port>\d+))?
              :(?P<output>\d+)
              :(?P<config>[^:]+)''', IRNetBoxRemote),
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
+         new_tcp_lirc_remote),
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
+         new_local_lirc_remote),
+        (r'none', NullRemote),
+        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
+         _new_samsung_tcp_remote),
+        (r'test', lambda: VideoTestSrcControl(display)),
+        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>.+)?', _X11Remote),
     ]
     for regex, factory in remotes:
@@ -43,13 +43,13 @@ def uri_to_remote(uri, display=None):
 
 def uri_to_remote_recorder(uri):
     remotes = [
-        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
+        ('file://(?P<filename>.+)', file_remote_recorder),
         (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          lirc_remote_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
-        ('file://(?P<filename>.+)', file_remote_recorder),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
+        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
     ]
 
     for regex, factory in remotes:
