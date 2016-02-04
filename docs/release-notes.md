@@ -14,6 +14,18 @@ necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
+#### 25
+
+UNRELEASED
+
+##### Breaking changes since 24
+
+##### New features
+
+##### Bugfixes and packaging fixes
+
+##### Developer-visible changes
+
 #### 24
 
 Updated to work with Ubuntu >= 14.10 and Fedora >=21; and many small additions,
