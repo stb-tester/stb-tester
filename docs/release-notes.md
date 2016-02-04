@@ -22,6 +22,14 @@ UNRELEASED
 
 ##### New features
 
+* New `roku` remote control that uses the [Roku HTTP control protocol].
+  Stb-tester's [standard key names] (like "KEY_HOME") will be converted to the
+  corresponding Roku key name, or you can use the [Roku key names] directly.
+
+[Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
+[standard key names]: https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names
+[Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
+
 ##### Bugfixes and packaging fixes
 
 ##### Developer-visible changes

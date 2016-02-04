@@ -91,6 +91,11 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
+  roku:<hostname>
+    Controls Roku players using the Roku's HTTP control protocol. Stb-tester's
+    standard key names (like "KEY_HOME") will be converted to the corresponding
+    Roku key name, or you can use the Roku key names directly.
+
   samsung:<hostname>[:<port>]
     Can be used to control Samsung Smart TVs using the same TCP network
     protocol that their mobile phone app uses.  Tested against a Samsung

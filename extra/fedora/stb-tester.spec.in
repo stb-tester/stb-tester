@@ -35,6 +35,7 @@ Requires: python-flask
 Requires: python-jinja2
 Requires: python-kitchen
 Requires: python-lxml
+Requires: python-requests
 Requires: socat
 Requires: tesseract
 Requires: which
