@@ -14,6 +14,26 @@ necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
+#### 25
+
+UNRELEASED
+
+##### Breaking changes since 24
+
+##### New features
+
+* New `roku` remote control that uses the [Roku HTTP control protocol].
+  Stb-tester's [standard key names] (like "KEY_HOME") will be converted to the
+  corresponding Roku key name, or you can use the [Roku key names] directly.
+
+[Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
+[standard key names]: https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names
+[Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
+
+##### Bugfixes and packaging fixes
+
+##### Developer-visible changes
+
 #### 24
 
 Updated to work with Ubuntu >= 14.10 and Fedora >=21; and many small additions,

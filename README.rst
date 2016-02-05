@@ -91,15 +91,15 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
+  roku:<hostname>
+    Controls Roku players using the Roku's HTTP control protocol. Stb-tester's
+    standard key names (like "KEY_HOME") will be converted to the corresponding
+    Roku key name, or you can use the Roku key names directly.
+
   samsung:<hostname>[:<port>]
     Can be used to control Samsung Smart TVs using the same TCP network
     protocol that their mobile phone app uses.  Tested against a Samsung
     UE32F5370 but will probably work with all recent Samsung Smart TVs.
-
-  vr:<hostname>[:<port>]
-    A "virtual remote" that communicates with the set-top box over TCP.
-    Requires a virtual remote listener (which we haven't released yet) running
-    on the set-top box.
 
   none
     Ignores key press commands.
@@ -154,11 +154,6 @@ Additional options to stbt record
   lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
     A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
     Control) daemon. Parameters are as for `--control`.
-
-  vr:<hostname>:<port>
-    Listens on the socket <hostname>:<port> for a connection and reads a
-    "virtual remote" stream (which we haven't documented yet, but we'll
-    probably change it soon to be compatible with LIRC's protocol).
 
   file://<filename>
     Reads remote control keypresses from a newline-separated list of key names.

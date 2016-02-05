@@ -18,20 +18,21 @@ __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
 def uri_to_remote(uri, display=None):
     remotes = [
-        (r'none', NullRemote),
-        (r'test', lambda: VideoTestSrcControl(display)),
-        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
-        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
-         _new_samsung_tcp_remote),
-        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
-         new_tcp_lirc_remote),
-        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
-         new_local_lirc_remote),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
              (:(?P<port>\d+))?
              :(?P<output>\d+)
              :(?P<config>[^:]+)''', IRNetBoxRemote),
+        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
+         new_tcp_lirc_remote),
+        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
+         new_local_lirc_remote),
+        (r'none', NullRemote),
+        (r'roku:(?P<hostname>[^:]+)', RokuHttpControl),
+        (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
+         _new_samsung_tcp_remote),
+        (r'test', lambda: VideoTestSrcControl(display)),
+        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>.+)?', _X11Remote),
     ]
     for regex, factory in remotes:
@@ -43,13 +44,13 @@ def uri_to_remote(uri, display=None):
 
 def uri_to_remote_recorder(uri):
     remotes = [
-        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
+        ('file://(?P<filename>.+)', file_remote_recorder),
         (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
          lirc_remote_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
-        ('file://(?P<filename>.+)', file_remote_recorder),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
+        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
     ]
 
     for regex, factory in remotes:
@@ -240,6 +241,52 @@ class IRNetBoxRemote(object):
                 self.hostname, e)),)
             e.strerror = e.args[0]
             raise
+
+
+class RokuHttpControl(object):
+    """Send a key-press via Roku remote control protocol.
+
+    See https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
+    """
+
+    # Map our recommended keynames (from linux input-event-codes.h) to the
+    # equivalent Roku keyname.
+    _KEYNAMES = {
+        "KEY_HOME": "Home",
+        "KEY_REWIND": "Rev",
+        "KEY_FASTFORWARD": "Fwd",
+        "KEY_PLAY": "Play",
+        "KEY_PAUSE": "Play",
+        "KEY_PLAYPAUSE": "Play",
+        "KEY_OK": "Select",
+        "KEY_LEFT": "Left",
+        "KEY_RIGHT": "Right",
+        "KEY_DOWN": "Down",
+        "KEY_UP": "Up",
+        "KEY_BACK": "Back",
+        "KEY_AGAIN": "InstantReplay",
+        "KEY_INFO": "Info",
+        "KEY_BACKSPACE": "Backspace",
+        "KEY_SEARCH": "Search",
+        # Enter is for completing keyboard entry fields, such as search fields
+        # (it is not the same as Select).
+        "KEY_ENTER": "Enter",
+        "KEY_VOLUMEDOWN": "VolumeDown",
+        "KEY_MUTE": "VolumeMute",
+        "KEY_VOLUMEUP": "VolumeUp",
+    }
+
+    def __init__(self, hostname):
+        self.hostname = hostname
+
+    def press(self, key):
+        import requests
+
+        roku_keyname = self._KEYNAMES.get(key, key)
+        response = requests.post("http://%s:8060/keypress/%s"
+                                 % (self.hostname, roku_keyname))
+        response.raise_for_status()
+        debug("Pressed " + key)
 
 
 class _SamsungTCPRemote(object):
@@ -584,6 +631,26 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
             assert listener.next() == 'KEY'
     finally:
         DEFAULT_LIRCD_SOCKET = old_default
+
+
+def test_roku_http_control():
+    import responses
+    from nose.tools import assert_raises  # pylint:disable=no-name-in-module
+    from requests.exceptions import HTTPError
+
+    control = uri_to_remote('roku:192.168.1.3')
+    with responses.RequestsMock() as mock:
+        # This raises if the URL was not accessed.
+        mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
+        control.press("KEY_HOME")
+    with responses.RequestsMock() as mock:
+        mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
+        control.press("Home")
+    with assert_raises(HTTPError):
+        with responses.RequestsMock() as mock:
+            mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Homeopathy',
+                     status=400)
+            control.press("Homeopathy")
 
 
 def test_samsung_tcp_remote():
