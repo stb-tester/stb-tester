@@ -109,13 +109,29 @@ Global options
     `--source-pipeline=videotestsrc`. A script like `press("18")` will change
     videotestsrc's pattern property (see `gst-inspect videotestsrc`).
 
-  x11:<display>
+  x11:[<display>][,<key_mapping_file>]
     Send keypresses to a given X display using the xtest extension. Can be used
-    with GStreamer's ximagesrc for testing desktop applications and websites.
-    The key names are X keysyms, i.e. "a", "b", "comma", "space", etc.  For a
-    full list see http://www.cl.cam.ac.uk/~mgk25/ucs/keysyms.txt .
+    with GStreamer's ximagesrc for testing desktop applications, websites and
+    set-top box software running on a PC.
 
-    Requires that `xdotool` is installed.
+    The (optional) key_mapping_file is used to translate between the stb-tester
+    keynames that you use in your test-scripts and X keysyms that X understands.
+    The file looks like::
+
+        # This is a comment
+
+        KEY_FASTFORWARD   parenright
+        KEY_REWIND        parenleft
+
+    The column on the left is the key name you'll be using in your test-cases,
+    the column on the right is the X keysym that that key will be translated to.
+    For a full list of X keysyms see
+    http://www.cl.cam.ac.uk/~mgk25/ucs/keysyms.txt .
+
+    stbt provides some sensible default mappings when there is an obvious match
+    for our `standard key names<https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names>`_.
+
+    The x11 control requires that `xdotool` is installed.
 
 --source-pipeline=<pipeline>
   A GStreamer pipeline providing a video stream to use as video output from the

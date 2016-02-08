@@ -30,6 +30,11 @@ UNRELEASED
 [standard key names]: https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names
 [Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
 
+* The `x11` remote control now converts stb-tester's [standard key names] (like
+  "KEY_UP") to the key names that `xdotool` expects.  You can also now specify a
+  custom mapping of key names.  This makes it easier to use the same test cases
+  to test an STB implementation running under X as on real hardware via lirc.
+
 ##### Bugfixes and packaging fixes
 
 ##### Developer-visible changes

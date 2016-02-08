@@ -34,7 +34,7 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
-        (r'x11:(?P<display>.+)?', _X11Remote),
+        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -342,19 +342,33 @@ def _new_samsung_tcp_remote(hostname, port):
     return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
 
 
+def _load_key_mapping(filename):
+    out = {}
+    with open(filename, 'r') as mapfile:
+        for line in mapfile:
+            s = line.strip().split()
+            if len(s) == 2 and not s[0].startswith('#'):
+                out[s[0]] = s[1]
+    return out
+
+
 class _X11Remote(object):
     """Simulate key presses using xdotool.
     """
-    def __init__(self, display=None):
+    def __init__(self, display=None, mapping=None):
         self.display = display
         if find_executable('xdotool') is None:
             raise Exception("x11 control: xdotool not installed")
+        self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
+        if mapping is not None:
+            self.mapping.update(_load_key_mapping(mapping))
 
     def press(self, key):
         e = os.environ.copy()
         if self.display is not None:
             e['DISPLAY'] = self.display
-        subprocess.check_call(['xdotool', 'key', key], env=e)
+        subprocess.check_call(
+            ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed " + key)
 
 
@@ -719,8 +733,10 @@ def test_x11_remote():
 
         # Can't be sure how long xterm will take to get ready:
         for _ in range(0, 20):
-            for keysym in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o',
-                           'd', 'Return']:
+            for keysym in ['KEY_T', 'KEY_O', 'KEY_U', 'KEY_C', 'KEY_H',
+                           'KEY_SPACE',
+                           'g', 'o', 'o', 'd',
+                           'KEY_OK']:
                 r.press(keysym)
             if os.path.exists(tmp + '/good'):
                 break

@@ -76,6 +76,7 @@ INSTALL_FILES = \
     _stbt/state_watch.py \
     _stbt/stbt-power.sh \
     _stbt/utils.py \
+    _stbt/x-key-mapping.conf \
     stbt/__init__.py \
     stbt-batch \
     stbt-batch.d/instaweb \
