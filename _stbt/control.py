@@ -698,32 +698,14 @@ def test_samsung_tcp_remote():
         b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
 
 
-@contextmanager
-def temporary_x_session():
-    from nose.plugins.skip import SkipTest
-    if os.path.exists('/tmp/.X11-unix/X99'):
-        raise SkipTest("There is already a display server running on :99")
-    with utils.named_temporary_directory() as tmp:
-        x11 = subprocess.Popen(
-            ['Xorg', '-logfile', './99.log', '-config',
-             _find_file('../tests/xorg.conf'), ':99'],
-            cwd=tmp, stderr=open('/dev/null', 'w'))
-        while not os.path.exists('/tmp/.X11-unix/X99'):
-            assert x11.poll() is None
-            time.sleep(0.1)
-        try:
-            yield ':99'
-        finally:
-            x11.terminate()
-
-
 def test_x11_remote():
     from nose.plugins.skip import SkipTest
+    from .x11 import x_server
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")
 
     with utils.named_temporary_directory() as tmp, \
-            temporary_x_session() as display:
+            x_server(320, 240) as display:
         r = uri_to_remote('x11:%s' % display)
 
         subprocess.Popen(
