@@ -78,8 +78,7 @@ Depends: ${shlibs:Depends},
          python-serial,
          socat,
          tesseract-ocr,
-         tesseract-ocr-eng,
-         xdotool
+         tesseract-ocr-eng
 Description: Automated User Interface testing for set-top boxes. 
  stb-tester tests a set-top-box by issuing commands to it using a remote-control
  and checking that it has done the right thing by analysing what is on screen.

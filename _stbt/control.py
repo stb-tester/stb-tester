@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from contextlib import contextmanager
+from distutils.spawn import find_executable
 
 from . import irnetbox, utils
 from .config import ConfigurationError
@@ -342,6 +343,8 @@ class _X11Remote(object):
     """
     def __init__(self, display=None):
         self.display = display
+        if find_executable('xdotool') is None:
+            raise Exception("x11 control: xdotool not installed")
 
     def press(self, key):
         e = os.environ.copy()
@@ -700,7 +703,6 @@ def temporary_x_session():
 
 def test_x11_remote():
     from nose.plugins.skip import SkipTest
-    from distutils.spawn import find_executable
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")
 
