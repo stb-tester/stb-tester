@@ -56,17 +56,17 @@ def set_config_test():
 def test_that_set_config_modifies_config_value():
     with set_config_test():
         set_config('global', 'test', 'goodbye')
-        assert get_config('global', 'test', 'goodbye')
+        assert get_config('global', 'test') == 'goodbye'
         _config_init(force=True)
-        assert get_config('global', 'test', 'goodbye')
+        assert get_config('global', 'test') == 'goodbye'
 
 
 def test_that_set_config_creates_new_sections_if_required():
     with set_config_test():
         set_config('non_existent_section', 'test', 'goodbye')
-        assert get_config('non_existent_section', 'test', 'goodbye')
+        assert get_config('non_existent_section', 'test') == 'goodbye'
         _config_init(force=True)
-        assert get_config('non_existent_section', 'test', 'goodbye')
+        assert get_config('non_existent_section', 'test') == 'goodbye'
 
 
 def test_that_set_config_preserves_file_comments_and_formatting():
