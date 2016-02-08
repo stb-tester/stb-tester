@@ -114,6 +114,10 @@ class VideoTestSrcControl(object):
         debug("Pressed %s" % key)
 
 
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)
+
+
 class VirtualRemote(object):
     """Send a key-press to a set-top box running a VirtualRemote listener.
 
@@ -454,9 +458,8 @@ def stbt_control_listen(keymap_file):
     """Returns an iterator yielding keypresses received from `stbt control`.
     """
     import imp
-    tool_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '..', 'stbt-control')
-    stbt_control = imp.load_source('stbt_control', tool_path)
+    stbt_control = imp.load_source(
+        'stbt_control', _find_file('../stbt-control'))
 
     with scoped_debug_level(0):
         # Don't mess up printed keymap with debug messages
@@ -689,8 +692,7 @@ def temporary_x_session():
     with utils.named_temporary_directory() as tmp:
         x11 = subprocess.Popen(
             ['Xorg', '-logfile', './99.log', '-config',
-             os.path.join(os.path.dirname(__file__), '../tests/xorg.conf'),
-             ':99'],
+             _find_file('../tests/xorg.conf'), ':99'],
             cwd=tmp, stderr=open('/dev/null', 'w'))
         while not os.path.exists('/tmp/.X11-unix/X99'):
             assert x11.poll() is None
