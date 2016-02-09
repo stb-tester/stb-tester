@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from contextlib import contextmanager
+from distutils.spawn import find_executable
 
 from . import irnetbox, utils
 from .config import ConfigurationError
@@ -33,7 +34,7 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
-        (r'x11:(?P<display>.+)?', _X11Remote),
+        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -111,6 +112,10 @@ class VideoTestSrcControl(object):
                 'Key "%s" not valid for the "test" control' % key)
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)
 
 
 class VirtualRemote(object):
@@ -337,17 +342,33 @@ def _new_samsung_tcp_remote(hostname, port):
     return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
 
 
+def _load_key_mapping(filename):
+    out = {}
+    with open(filename, 'r') as mapfile:
+        for line in mapfile:
+            s = line.strip().split()
+            if len(s) == 2 and not s[0].startswith('#'):
+                out[s[0]] = s[1]
+    return out
+
+
 class _X11Remote(object):
     """Simulate key presses using xdotool.
     """
-    def __init__(self, display=None):
+    def __init__(self, display=None, mapping=None):
         self.display = display
+        if find_executable('xdotool') is None:
+            raise Exception("x11 control: xdotool not installed")
+        self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
+        if mapping is not None:
+            self.mapping.update(_load_key_mapping(mapping))
 
     def press(self, key):
         e = os.environ.copy()
         if self.display is not None:
             e['DISPLAY'] = self.display
-        subprocess.check_call(['xdotool', 'key', key], env=e)
+        subprocess.check_call(
+            ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed " + key)
 
 
@@ -451,9 +472,8 @@ def stbt_control_listen(keymap_file):
     """Returns an iterator yielding keypresses received from `stbt control`.
     """
     import imp
-    tool_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '..', 'stbt-control')
-    stbt_control = imp.load_source('stbt_control', tool_path)
+    stbt_control = imp.load_source(
+        'stbt_control', _find_file('../stbt-control'))
 
     with scoped_debug_level(0):
         # Don't mess up printed keymap with debug messages
@@ -678,34 +698,14 @@ def test_samsung_tcp_remote():
         b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
 
 
-@contextmanager
-def temporary_x_session():
-    from nose.plugins.skip import SkipTest
-    if os.path.exists('/tmp/.X11-unix/X99'):
-        raise SkipTest("There is already a display server running on :99")
-    with utils.named_temporary_directory() as tmp:
-        x11 = subprocess.Popen(
-            ['Xorg', '-logfile', './99.log', '-config',
-             os.path.join(os.path.dirname(__file__), '../tests/xorg.conf'),
-             ':99'],
-            cwd=tmp, stderr=open('/dev/null', 'w'))
-        while not os.path.exists('/tmp/.X11-unix/X99'):
-            assert x11.poll() is None
-            time.sleep(0.1)
-        try:
-            yield ':99'
-        finally:
-            x11.terminate()
-
-
 def test_x11_remote():
     from nose.plugins.skip import SkipTest
-    from distutils.spawn import find_executable
+    from .x11 import x_server
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")
 
     with utils.named_temporary_directory() as tmp, \
-            temporary_x_session() as display:
+            x_server(320, 240) as display:
         r = uri_to_remote('x11:%s' % display)
 
         subprocess.Popen(
@@ -715,8 +715,10 @@ def test_x11_remote():
 
         # Can't be sure how long xterm will take to get ready:
         for _ in range(0, 20):
-            for keysym in ['t', 'o', 'u', 'c', 'h', 'space', 'g', 'o', 'o',
-                           'd', 'Return']:
+            for keysym in ['KEY_T', 'KEY_O', 'KEY_U', 'KEY_C', 'KEY_H',
+                           'KEY_SPACE',
+                           'g', 'o', 'o', 'd',
+                           'KEY_OK']:
                 r.press(keysym)
             if os.path.exists(tmp + '/good'):
                 break

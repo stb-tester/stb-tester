@@ -78,8 +78,7 @@ Depends: ${shlibs:Depends},
          python-serial,
          socat,
          tesseract-ocr,
-         tesseract-ocr-eng,
-         xdotool
+         tesseract-ocr-eng
 Description: Automated User Interface testing for set-top boxes. 
  stb-tester tests a set-top-box by issuing commands to it using a remote-control
  and checking that it has done the right thing by analysing what is on screen.
@@ -97,3 +96,14 @@ Recommends: python-matplotlib,
             python-scipy
 Description: Support for using a camera pointed at a TV as input for
  stb-tester.  This is useful for testing apps running on Smart TVs.
+
+Package: stb-tester-virtual-stb
+Architecture: any
+Depends: stb-tester (>> ${source:Upstream-Version}),
+         gstreamer1.0-x,
+         ratpoison,
+         xdotool,
+         xserver-xorg-input-void,
+         xserver-xorg-video-dummy
+Description: Support for "virtual" set-top boxes where the stb software runs on
+ the host PC rather than on specific hardware.

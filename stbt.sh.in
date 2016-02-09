@@ -17,6 +17,7 @@
 #/     screenshot     Capture a single screenshot
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
+#/     virtual-stb    Configure stbt to use an STB emulator
 #/
 #/ Experimental commands. These may change in the future in a backwards-
 #/ incompatible way. They require passing the '--with-experimental' flag:
@@ -58,6 +59,14 @@ case "$1" in
             exit 1
         fi
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
+    virtual-stb)
+        shift
+        export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
+        if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
+            echo "stbt virtual-stb is not installed." >&2
+            exit 1
+        fi
+        exec @LIBEXECDIR@/stbt/stbt_virtual_stb.py "$@";;
     *)
         usage >&2; exit 1;;
 esac

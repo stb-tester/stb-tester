@@ -32,16 +32,6 @@ MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
 
-tools = stbt-run
-tools += stbt-record
-tools += stbt-batch
-tools += stbt-config
-tools += stbt-control
-tools += stbt-lint
-tools += stbt-power
-tools += stbt-screenshot
-tools += stbt-templatematch
-tools += stbt-tv
 
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
@@ -73,55 +63,71 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: install-core
-install-core: stbt.sh defaults.conf
+INSTALL_CORE_FILES = \
+    _stbt/__init__.py \
+    _stbt/config.py \
+    _stbt/control.py \
+    _stbt/core.py \
+    _stbt/gst_hacks.py \
+    _stbt/irnetbox.py \
+    _stbt/logging.py \
+    _stbt/power.py \
+    _stbt/pylint_plugin.py \
+    _stbt/state_watch.py \
+    _stbt/stbt-power.sh \
+    _stbt/utils.py \
+    _stbt/x-key-mapping.conf \
+    _stbt/x11.py \
+    _stbt/xorg.conf.in \
+    stbt/__init__.py \
+    stbt-batch \
+    stbt-batch.d/instaweb \
+    stbt-batch.d/report \
+    stbt-batch.d/report.py \
+    stbt-batch.d/run.py \
+    stbt-batch.d/run-one \
+    stbt-batch.d/static/edit-testrun.js \
+    stbt-batch.d/templates/directory-index.html \
+    stbt-batch.d/templates/index.html \
+    stbt-batch.d/templates/testrun.html \
+    stbt-config \
+    stbt-control \
+    stbt-lint \
+    stbt-power \
+    stbt-record \
+    stbt-run \
+    stbt-screenshot \
+    stbt-templatematch \
+    stbt-tv
+
+INSTALL_VSTB_FILES = \
+    stbt_virtual_stb.py
+
+install: install-core install-virtual-stb
+install-core: stbt.sh defaults.conf $(INSTALL_CORE_FILES)
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
-	    $(DESTDIR)$(libexecdir)/stbt \
-	    $(DESTDIR)$(libexecdir)/stbt/_stbt \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates \
 	    $(DESTDIR)$(sysconfdir)/stbt \
-	    $(DESTDIR)$(sysconfdir)/bash_completion.d
+	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
-	$(INSTALL) -m 0644 \
-	    _stbt/__init__.py \
-	    _stbt/config.py \
-	    _stbt/control.py \
-	    _stbt/core.py \
-	    _stbt/gst_hacks.py \
-	    _stbt/irnetbox.py \
-	    _stbt/logging.py \
-	    _stbt/power.py \
-	    _stbt/pylint_plugin.py \
-	    _stbt/state_watch.py \
-	    _stbt/stbt-power.sh \
-	    _stbt/utils.py \
-	    $(DESTDIR)$(libexecdir)/stbt/_stbt
-	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(libexecdir)/stbt/stbt
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0755 \
-	    stbt-batch.d/run.py \
-	    stbt-batch.d/run-one \
-	    stbt-batch.d/report \
-	    stbt-batch.d/instaweb \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
-	$(INSTALL) -m 0644 stbt-batch.d/report.py \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
-	$(INSTALL) -m 0644 stbt-batch.d/static/edit-testrun.js \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static
-	$(INSTALL) -m 0644 \
-	    stbt-batch.d/templates/directory-index.html \
-	    stbt-batch.d/templates/index.html \
-	    stbt-batch.d/templates/testrun.html \
-	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
+	for filename in $(INSTALL_CORE_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	done
+
+install-virtual-stb: $(INSTALL_VSTB_FILES)
+	$(INSTALL) -m 0755 -d \
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_VSTB_FILES))))
+	for filename in $(INSTALL_VSTB_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	done
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
@@ -150,7 +156,8 @@ check-nosetests: tests/ocr/menu.png
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/test.py \
 	              -e tests/test2.py \
-	              -e tests/test_functions.py) \
+	              -e tests/test_functions.py \
+	              -e tests/vstb-example-html5/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
