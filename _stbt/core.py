@@ -480,8 +480,8 @@ def _load_template(template):
         return _AnnotatedTemplate(template, None, None)
     else:
         template_name = _find_path(template)
-        if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % template_name)
+        if not template_name or not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % template)
         image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
             raise UITestError("Failed to load template file: %s" %
@@ -2124,14 +2124,17 @@ def _find_path(image):
             return os.path.abspath(caller_image)
 
     # Fall back to image from cwd, for convenience of the selftests
-    return os.path.abspath(image)
+    if os.path.isfile(image):
+        return os.path.abspath(image)
+
+    return None
 
 
 def _load_mask(mask):
     """Loads the given mask file and returns it as an OpenCV image."""
     mask_path = _find_path(mask)
     debug("Using mask %s" % mask_path)
-    if not os.path.isfile(mask_path):
+    if not mask_path or not os.path.isfile(mask_path):
         raise UITestError("No such mask file: %s" % mask)
     mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
     if mask_image is None:

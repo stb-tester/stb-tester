@@ -34,7 +34,10 @@ test_wait_for_match_nonexistent_template() {
     cat > test.py <<-EOF
 	wait_for_match("idontexist.png")
 	EOF
-    ! stbt run -v test.py
+    ! stbt run -v test.py &> test.log || fail "Test should have failed"
+    grep -q "No such template file: idontexist.png" test.log ||
+        fail "Expected 'No such template file: idontexist.png' but saw '$(
+            grep 'No such template file' test.log | head -n1)'"
 }
 
 test_wait_for_match_opencv_image_can_be_used_as_template() {
