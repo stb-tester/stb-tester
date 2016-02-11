@@ -121,10 +121,9 @@ FROM {base_image}
 
 RUN mkdir -p /var/lib/stbt/test-pack/config/setup
 ADD setup /var/lib/stbt/test-pack/config/setup/setup
-RUN cd /var/lib/stbt/test-pack && \\
-    sudo chown stb-tester:stb-tester config/setup/setup && \\
-    chmod a+x config/setup/setup && \\
-    config/setup/setup
+RUN sudo chown stb-tester:stb-tester /var/lib/stbt/test-pack/config/setup/setup
+RUN chmod a+x /var/lib/stbt/test-pack/config/setup/setup
+RUN /var/lib/stbt/test-pack/config/setup/setup
 """
 
 
