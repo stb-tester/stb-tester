@@ -63,6 +63,7 @@ from cStringIO import StringIO
 from textwrap import dedent
 
 DOCKER = shlex.split(os.environ.get("DOCKER", "docker"))
+STBT_VERSION_WHITELIST = {"0.21", "22", "23", "24"}
 
 
 def which_docker_container_am_i_running_in():
@@ -131,11 +132,7 @@ class DockerNotInstalledError(RuntimeError):
     pass
 
 
-def build_docker_image(test_pack):
-    cp = ConfigParser.ConfigParser()
-    cp.read(os.path.join(test_pack, '.stbt.conf'))
-    stbt_version = cp.get('test_pack', 'stbt_version')
-
+def build_docker_image(test_pack, stbt_version):
     base_image = "stbtester/stbt-one-test-pack-base-%s:v24.4" % stbt_version
     try:
         with open(os.path.join(test_pack, 'config/setup/setup')) as f:
@@ -185,11 +182,27 @@ def main(argv):
     if root is None:
         sys.stderr.write(
             "This command must be run within a test pack.  Couldn't find a "
-            ".stbt.conf in this or any parent directory.\n")
+            ".stbt.conf in this or any parent directory.\n"
+            "\n"
+            "To create a new test pack run:\n"
+            "\n"
+            "    git clone -o pristine "
+            "https://github.com/stb-tester/stb-tester-test-pack\n")
+        return 1
+
+    cp = ConfigParser.ConfigParser()
+    cp.read(os.path.join(root, '.stbt.conf'))
+    stbt_version = cp.get('test_pack', 'stbt_version')
+    if not stbt_version in STBT_VERSION_WHITELIST:
+        sys.stderr.write(
+            "This version of stbt-docker does not support stbt_version %r.  "
+            "Update to a newer version with:\n"
+            "\n"
+            "    curl -f -o %s https://stb-tester.com/stbt-docker\n")
         return 1
 
     try:
-        docker_image = build_docker_image(root)
+        docker_image = build_docker_image(root, stbt_version)
     except DockerNotInstalledError:
         sys.stderr.write(
             "%s failed:\n%s requires docker.  Install docker, or if it is "
