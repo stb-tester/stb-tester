@@ -111,6 +111,8 @@ def dict_to_tarball(d):
             for filename, contents in d.items():
                 ti = tarfile.TarInfo(name=filename)
                 ti.size = len(contents)
+                ti.uid = os.getuid()
+                ti.gid = os.getgid()
                 t.addfile(ti, StringIO(contents))
         return open(tarball.name, 'r')
 
