@@ -15,7 +15,6 @@ import _stbt.core
 from _stbt.core import \
     as_precondition, \
     debug, \
-    get_config, \
     ConfigurationError, \
     MatchParameters, \
     MatchResult, \
@@ -429,6 +428,18 @@ def is_screen_black(frame=None, mask=None, threshold=None):
     explicitly by the caller.
     """
     return _dut.is_screen_black(frame, mask, threshold)
+
+
+def get_config(section, key, default=None, type_=str):
+    """Read the value of `key` from `section` of the stbt config file.
+
+    See 'CONFIGURATION' in the stbt(1) man page for the config file search
+    path.
+
+    Raises `ConfigurationError` if the specified `section` or `key` is not
+    found, unless `default` is specified (in which case `default` is returned).
+    """
+    return _dut.get_config(section, key, default, type_)
 
 
 def init_run(
