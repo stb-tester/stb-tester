@@ -1191,6 +1191,56 @@ def argparser():
     return parser
 
 
+class FrameObject(object):
+    def __init__(self, frame):
+        property_names = sorted([
+            p for p in dir(self.__class__)
+            if isinstance(getattr(self.__class__, p), property)])
+        assert 'is_visible' in property_names
+        self.__attrs = ["is_visible"] + sorted(
+            x for x in property_names
+            if x != "is_visible" and not x.startswith('_'))
+
+        if frame is None:
+            raise ValueError("FrameObject: frame must not be None")
+        self._frame = frame
+
+    def __repr__(self):
+        args = ", ".join(("%s=%r" % x) for x in self._iter_attrs())
+        return "%s(%s)" % (self.__class__.__name__, args)
+
+    def _iter_attrs(self):
+        if self:
+            for x in self.__attrs:
+                yield x, getattr(self, x)
+        else:
+            yield "is_visible", False
+
+    def __nonzero__(self):
+        return bool(self.is_visible)
+
+    def __cmp__(self, other):
+        # pylint: disable=protected-access
+        from itertools import izip_longest
+        if isinstance(other, self.__class__):
+            for s, o in izip_longest(self._iter_attrs(), other._iter_attrs()):
+                v = cmp(s[1], o[1])
+                if v != 0:
+                    return v
+            return 0
+        else:
+            return NotImplemented
+
+    def __hash__(self):
+        return hash(tuple(v for _, v in self._iter_attrs()))
+
+    @property
+    def is_visible(self):
+        raise NotImplementedError(
+            "Objects deriving from FrameObject must define an is_visible "
+            "property")
+
+
 # Internal
 # ===========================================================================
 

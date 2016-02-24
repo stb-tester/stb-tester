@@ -41,6 +41,7 @@ __all__ = [
     "detect_motion",
     "draw_text",
     "frames",
+    "FrameObject",
     "get_config",
     "get_frame",
     "is_screen_black",
@@ -429,6 +430,269 @@ def is_screen_black(frame=None, mask=None, threshold=None):
     explicitly by the caller.
     """
     return _dut.is_screen_black(frame, mask, threshold)
+
+
+class FrameObject(_stbt.core.FrameObject):
+    # pylint: disable=line-too-long,abstract-method
+    r'''
+    The Frame Object pattern is used to simplify test-case development and
+    maintainance.  Frame Objects are a layer of abstraction between your
+    test-cases and the stbt image processing APIs.  They are easy to write and
+    cheap to maintain.
+
+    A Frame Object class extracts information from a frame of video, typically
+    by calling `stbt.ocr()` or `stbt.match()`. All of your test-cases use these
+    objects rather than using `ocr()` or `match()` directly . A Frame Object
+    translates from the vocabulary of low-level image processing functions and
+    regions (like `stbt.ocr(region=stbt.Region(213, 23, 200, 36)))` to the
+    vocabulary of high-level features and user-facing concepts (like
+    `programme_title`).
+
+    This base class is provided to make creating well-behaved Frame Objects
+    easier.  It defines:
+
+    * `__init__` - optionally taking a frame in the constructor
+    * `__nonzero__` - based on the property is_visible which derived classes
+      must define.  This means the class will only be considered `True` if
+      it's visible, and so the other properties are valid.  This makes it easy
+      to use with `wait_until`.
+    * `__repr__` - including all the user-defined properties.  This makes using
+      the object in doctests convenient
+    * `__hash__` and `__cmp__` - If all the properties match between two
+      instances of a `FrameObject` then they are considered equal, even if the
+      underlying frame is different.  This can be useful for detecting changes
+      or waiting for a frame to stop changing before interrogating it.
+
+    **Example Usage**
+
+    This demonstrates basic `FrameObject` usage.  The class below corresponds to
+    the dialog box we see in this image that we've captured from our set-top
+    box:
+
+    .. figure:: _images/frame-object-with-dialog.png
+       :alt: screenshot of dialog box
+       :figwidth: 80%
+       :align: center
+
+    We create a `class` deriving from the `FrameObject` base class.  The base
+    class provides a `self._frame` member.  The we define a set of properties,
+    each one extracting some information of interest from that frame.
+
+    >>> class Dialog(FrameObject):
+    ...     @property
+    ...     def is_visible(self):
+    ...         """
+    ...         All FrameObjects must define the `is_visible` property.  It will
+    ...         determine the truthiness of the object.  Returning True from
+    ...         this property indicates that this FrameObject class can be used
+    ...         with the provided frame and that the values of the other
+    ...         properties are likely to be valid.
+    ...
+    ...         In this example we only return True if we see the info icon
+    ...         that appears on each dialog box.
+    ...
+    ...         It's a good idea to return simple types from these properties
+    ...         rather than `MatchResult`s to make the ``__repr__`` cleaner and
+    ...         to preserve equality properties.
+    ...         """
+    ...         return bool(self._info)
+    ...
+    ...     @property
+    ...     def title(self):
+    ...         """
+    ...         This property demonstrates an advantage of Frame Objects over
+    ...         just including the code in the test directly.  Test code can now
+    ...         write:
+    ...
+    ...             assert Dialog().title == "Information"
+    ...
+    ...         rather than:
+    ...
+    ...             assert (stbt.ocr(region=stbt.Region(396, 249, 500, 50)) ==
+    ...                     "Information"
+    ...
+    ...         A lot more intention revealing, and if the position of the title
+    ...         moves there is just one place in your test-pack that needs to be
+    ...         updated.
+    ...         """
+    ...         return ocr(region=Region(396, 249, 500, 50), frame=self._frame)
+    ...
+    ...     @property
+    ...     def message(self):
+    ...         """
+    ...         This property demonstrates an advantage of Frame Objects over
+    ...         helper functions.  We are using the position of the info icon to
+    ...         find this message.  Because the private `_info` property is
+    ...         shared between this property and `is_visible` we don't need to
+    ...         compute it twice.
+    ...
+    ...         When defining Frame Objects you must take care to pass
+    ...         `self._frame` into every call to an image processing function.
+    ...         """
+    ...         right_of_info = Region(
+    ...             x=self._info.region.right, y=self._info.region.y,
+    ...             width=390, height=self._info.region.height)
+    ...         return (ocr(region=right_of_info, frame=self._frame)
+    ...                 .replace('\n', ' '))
+    ...
+    ...     @property
+    ...     def _info(self):
+    ...         """
+    ...         This is a private property because its name starts with `_`.  It
+    ...         will not appear in `__repr__` or count toward equality
+    ...         comparisons, but the result from it will still be memoized.
+    ...         This is useful to share intermediate values between your public
+    ...         properties, particularly if they are expensive to calculate.  In
+    ...         this instance we will be sharing the result between `is_visible`
+    ...         and `message`.
+    ...
+    ...         You wouldn't want this to be a public property because it
+    ...         returns a `MatchResult` which incorporates the whole of the
+    ...         frame passed into `match`.
+    ...         """
+    ...         return match('../tests/info.png', frame=self._frame)
+
+    In the examples below we always pass a frame into the constructor.  In
+    practice you're unlikely to do so: the base class will just grab one from
+    stbt.  This allows constructions like::
+
+        dialog = wait_until(Dialog)
+        assert 'great' in dialog.message
+
+    But we can also explicitly pass in a frame.  The examples below will make
+    use of these example frames:
+
+    >>> from tests.test_frame_object import _load_frame
+    >>> dialog = Dialog(frame=_load_frame('with-dialog'))
+    >>> dialog_fab = Dialog(frame=_load_frame('with-dialog2'))
+    >>> no_dialog = Dialog(frame=_load_frame('without-dialog'))
+    >>> dialog_bunnies = Dialog(_load_frame('with-dialog-different-background'))
+    >>> no_dialog_bunnies = Dialog(_load_frame(
+    ...     'without-dialog-different-background'))
+
+    .. |dialog| image:: _images/frame-object-with-dialog.png
+       :alt: screenshot of dialog box
+       :width: 250px
+
+    .. |dialog_fab| image:: _images/frame-object-with-dialog2.png
+       :alt: screenshot of dialog box
+       :width: 250px
+
+    .. |no_dialog| image:: _images/frame-object-without-dialog.png
+       :alt: screenshot of dialog box
+       :width: 250px
+
+    .. |dialog_bunnies| image:: _images/frame-object-with-dialog-different-background.png
+       :alt: screenshot of dialog box
+       :width: 250px
+
+    .. |no_dialog_bunnies| image:: _images/frame-object-without-dialog-different-background.png
+       :alt: screenshot of dialog box
+       :width: 250px
+
+    +---------------------+---------------------+
+    | dialog              | no_dialog           |
+    |                     |                     |
+    | |dialog|            | |no_dialog|         |
+    +---------------------+---------------------+
+    | dialog_bunnies      | no_dialog_bunnies   |
+    |                     |                     |
+    | |dialog_bunnies|    | |no_dialog_bunnies| |
+    +---------------------+---------------------+
+    | dialog_fab          |                     |
+    |                     |                     |
+    | |dialog_fab|        |                     |
+    +---------------------+---------------------+
+
+    Some basic operations:
+
+    >>> print dialog.message
+    This set-top box is great
+    >>> print dialog_fab.message
+    This set-top box is fabulous
+
+    `FrameObject` defines truthiness of your objects based on the mandatory
+    `is_visible` property:
+
+    >>> bool(dialog)
+    True
+    >>> bool(no_dialog)
+    False
+
+    And if `is_visible` is `False` all the rest of the properties will be
+    `None`.
+
+    >>> print no_dialog.message
+    None
+
+    This enables usage like::
+
+        assert wait_until(lambda: Dialog().title == 'Information')
+
+    FrameObject defines `__repr__` so you don't have to:
+
+    >>> dialog
+    Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')
+    >>> dialog_fab
+    Dialog(is_visible=True, message=u'This set-top box is fabulous', title=u'Information')
+    >>> no_dialog
+    Dialog(is_visible=False)
+
+    Making doctests far more convenient to write (or generate).
+
+    Frame Objects with identical property values are equal, even if the backing
+    images are not:
+
+    >>> assert dialog == dialog
+    >>> assert dialog == Dialog(_load_frame('with-dialog'))
+    >>> assert dialog == dialog_bunnies
+    >>> assert dialog != dialog_fab
+    >>> assert dialog != no_dialog
+
+    And all `False` ish frame objects of the same type are equal:
+
+    >>> assert no_dialog == no_dialog
+    >>> assert no_dialog == no_dialog_bunnies
+
+    FrameObject defines `__hash__` too so you can store them in a `set`:
+
+    >>> {dialog}
+    set([Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')])
+    >>> len({no_dialog, dialog, dialog, dialog_bunnies})
+    2
+
+    And it defines ordering for you:
+
+    >>> dialog < dialog_bunnies
+    False
+    >>> dialog_bunnies < dialog
+    False
+    >>> dialog_fab < dialog
+    True
+
+    As Frame Objects only extract information from a given frame and the frame
+    cannot change Frame Objects are immutable.  This means that every time a
+    property is consulted it will give the same result.  The `FrameObject` base
+    class takes advantage of this and will remember the values of each of the
+    properties so they only have to be calculated once.  This allows writing
+    test cases in a natural way while expensive operations like ``ocr`` will
+    only have to be done once per frame.
+
+    **Frame Object Checklist**
+
+    1. Derive from ``FrameObject``.
+    2. Define an `is_visible` property returning either ``True`` or ``False``.
+    3. Define Python properties extracting information from ``self._frame``
+    4. Take care to pass `self._frame` into any image processing function you
+       call
+
+    For more background information on Frame Objects see
+    `Improve black-box testing agility: meet the Frame Object pattern <https://stb-tester.com/blog/2015/09/08/meet-the-frame-object-pattern>`_.
+    '''
+    def __init__(self, frame=None):
+        if frame is None:
+            frame = _dut.get_frame()
+        super(FrameObject, self).__init__(frame)
 
 
 def init_run(
