@@ -1,9 +1,9 @@
 import errno
 import os
+import sys
 import tempfile
 from contextlib import contextmanager
 from shutil import rmtree
-import sys
 
 
 def mkdir_p(d):
