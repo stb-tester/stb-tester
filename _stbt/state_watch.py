@@ -5,6 +5,11 @@ import socket
 import sys
 from cStringIO import StringIO
 
+from _stbt import utils
+
+
+_TRACER = None
+
 
 class StateSender(object):
     """
@@ -209,6 +214,36 @@ class StateReceiver(object):
             except StandardError as e:
                 sys.stderr.write(
                     "Error processing state change: %s" % str(e))
+
+
+def activate(test_script, trace_file=None):
+    """Activate the state-watch tracer."""
+    global _TRACER
+    _TRACER = new_state_sender(trace_file)  # pylint: disable=W0212
+
+    absfilepath, funcname, function = utils.parse_test_uri(test_script)
+
+    def tracefunc(frame_, event, _):
+        if event == "line" and frame_.f_code.co_filename == absfilepath:
+            _TRACER.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
+        return tracefunc
+
+    sys.settrace(tracefunc)
+    _TRACER.log_test_starting(
+        test_script, os.path.relpath(absfilepath), funcname,
+        function.func_code.co_firstlineno if function is not None else 1)
+
+
+def deactivate():
+    """Deactivate the state-watch tracer.
+
+
+    If the tracer has not been `activate`d, this function is a no-op.
+    """
+    if _TRACER is not None:
+        sys.settrace(None)
+        _TRACER.log_test_ended()
+        _TRACER.close()
 
 
 def test_statereceiver():

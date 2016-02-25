@@ -13,8 +13,10 @@ import traceback
 
 import _stbt.core
 import stbt
-from _stbt.state_watch import new_state_sender
+from _stbt import state_watch
 from _stbt.utils import parse_test_uri
+
+TO_SOCKET = 'TO_SOCKET'
 
 parser = _stbt.core.argparser()
 parser.prog = 'stbt run'
@@ -23,7 +25,7 @@ parser.add_argument(
     '--save-video', help='Record video to the specified file', metavar='FILE',
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
-    '--save-trace', metavar='FILE', default=None,
+    '--save-trace', metavar='FILE', nargs='?', const=TO_SOCKET,
     help='Write state to this file, as xz compressed newline-seperated JSON')
 parser.add_argument(
     'script', metavar='FILE[::TESTCASE]', help=(
@@ -73,7 +75,6 @@ def _print_exc_utf8(file_=None):
         traceback._some_str = _old_some_str
 
 
-_tracer = None
 try:
     # pylint: disable=W0611
 
@@ -81,24 +82,17 @@ try:
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
         stbt.get_config('global', 'transformation_pipeline'))
-    _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
 
     _absfilename, funcname, function = parse_test_uri(args.script)
 
-    def tracefunc(frame_, event, _):
-        if event == "line" and frame_.f_code.co_filename == _absfilename:
-            _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
-        return tracefunc
+    if args.save_trace:
+        trace_file = \
+            args.save_trace if args.save_trace is not TO_SOCKET else None
+        state_watch.activate(args.script, trace_file=trace_file)
 
     if function is not None:
-        _tracer.log_test_starting(args.script, _absfilename, funcname,
-                                  function.func_code.co_firstlineno)
-        sys.settrace(tracefunc)
         function()
     else:
-        _tracer.log_test_starting(args.script, args.script, "", 1)
-        sys.settrace(tracefunc)
-
         # pylint: disable=W0612
         from stbt import (
             # For backwards compatibility. We want to encourage people to expli-
@@ -134,8 +128,5 @@ except Exception as e:  # pylint: disable=W0703
     else:
         sys.exit(2)  # Error
 finally:
-    sys.settrace(None)
-    if _tracer:
-        _tracer.log_test_ended()
-        _tracer.close()
+    state_watch.deactivate()
     stbt.teardown_run()

@@ -212,7 +212,7 @@ test_that_stbt_run_tracing_is_written_to_socket() {
     SOCAT_PID=$!
     sleep 1
 
-    run_state_test || fail "Test failed"
+    run_state_test --save-trace -- || fail "Test failed"
     kill "$SOCAT_PID"
     grep -q "state_change" "trace.jsonl" || fail "state_change not written"
     diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
