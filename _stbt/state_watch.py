@@ -7,7 +7,6 @@ from cStringIO import StringIO
 
 from _stbt import utils
 
-
 _TRACER = None
 
 
