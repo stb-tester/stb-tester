@@ -14,6 +14,7 @@ import traceback
 import _stbt.core
 import stbt
 from _stbt.state_watch import new_state_sender
+from _stbt.utils import parse_test_uri
 
 parser = _stbt.core.argparser()
 parser.prog = 'stbt run'
@@ -72,14 +73,6 @@ def _print_exc_utf8(file_=None):
         traceback._some_str = _old_some_str
 
 
-def import_by_filename(filename_):
-    module_dir, module_file = os.path.split(filename_)
-    module_name, module_ext = os.path.splitext(module_file)
-    if module_ext != '.py':
-        raise ImportError("Invalid module filename '%s'" % filename_)
-    sys.path = [os.path.abspath(module_dir)] + sys.path
-    return __import__(module_name)
-
 _tracer = None
 try:
     # pylint: disable=W0611
@@ -90,25 +83,19 @@ try:
         stbt.get_config('global', 'transformation_pipeline'))
     _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
 
-    _absfilename = None
+    _absfilename, funcname, function = parse_test_uri(args.script)
 
     def tracefunc(frame_, event, _):
         if event == "line" and frame_.f_code.co_filename == _absfilename:
             _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
         return tracefunc
 
-    if '::' in args.script:
-        _filename, funcname = args.script.split('::', 1)
-        _absfilename = os.path.abspath(_filename)
-        module = import_by_filename(_filename)
-        function = getattr(module, funcname)
-        _tracer.log_test_starting(args.script, _filename, funcname,
+    if function is not None:
+        _tracer.log_test_starting(args.script, _absfilename, funcname,
                                   function.func_code.co_firstlineno)
         sys.settrace(tracefunc)
         function()
     else:
-        _filename = os.path.abspath(args.script)
-        _absfilename = os.path.abspath(_filename)
         _tracer.log_test_starting(args.script, args.script, "", 1)
         sys.settrace(tracefunc)
 
@@ -122,8 +109,8 @@ try:
             debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
             ConfigurationError)
         __file__ = args.script
-        sys.path.insert(0, os.path.dirname(_filename))
-        execfile(_filename)
+        sys.path.insert(0, os.path.dirname(_absfilename))
+        execfile(_absfilename)
 except Exception as e:  # pylint: disable=W0703
     from kitchen.text.converters import exception_to_bytes
     error_message = exception_to_bytes(e)

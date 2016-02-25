@@ -223,7 +223,7 @@ assert_correct_unicode_error() {
 		FAIL: test.py: AssertionError: ü
 		Traceback (most recent call last):
 		  File ".../stbt-run", line ..., in <module>
-		    execfile(_filename)
+		    execfile(_absfilename)
 		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
