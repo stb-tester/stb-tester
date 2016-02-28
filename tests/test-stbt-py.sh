@@ -291,9 +291,6 @@ test_that_wait_until_times_out() {
 }
 
 test_that_video_index_is_written_on_eos() {
-    which webminspector.py &>/dev/null \
-        || skip "webminspector.py not found. See https://chromium.googlesource.com/webm/webminspector/"
-
     _test_that_video_index_is_written_on_eos 5 && return
     echo "Failed with 5s video; trying again with 20s video"
     _test_that_video_index_is_written_on_eos 20
@@ -307,7 +304,7 @@ _test_that_video_index_is_written_on_eos() {
         --sink-pipeline \
             "queue ! vp8enc cpu-used=6 ! webmmux ! filesink location=video.webm" \
         test.py &&
-    webminspector.py video.webm &> webminspector.log &&
+    "$testdir"/webminspector/webminspector.py video.webm &> webminspector.log &&
     grep "Cue Point" webminspector.log || {
       cat webminspector.log
       echo "error: Didn't find 'Cue Point' in $scratchdir/webminspector.log"
