@@ -223,60 +223,10 @@ test framework itself).
 HARDWARE REQUIREMENTS
 =====================
 
-The test rig consists of a Linux server, with:
-
-* A video-capture card (for capturing the output from the system under test)
-* An infrared receiver (for recording the system-under-test's infrared
-  protocol)
-* An infrared emitter (for controlling the system under test)
-
-Video capture card
-------------------
-
-You'll need a capture card with drivers supporting the V4L2 API
-(Video-for-Linux 2). We recommend a capture card with mature open-source
-drivers, preferably drivers already present in recent versions of the Linux
-kernel.
-
-The Hauppauge HD PVR works well (and works out of the box on recent versions of
-Fedora), though it doesn't support 1080p. If you need an HDCP stripper, try the
-HD Fury III.
-
-Infra-red emitter and receiver
-------------------------------
-
-An IR emitter+receiver such as the RedRat3, plus a LIRC configuration file
-with the key codes for your set-top box's remote control.
-
-Using software components instead
----------------------------------
-
-If you don't mind instrumenting the system under test, you don't even need the
-above hardware components.
-
-stb-tester uses GStreamer, an open source multimedia framework. Instead of a
-video-capture card you can use any GStreamer video-source element. For example:
-
-* If you run tests against a VM running the set-top box software instead
-  of a physical set-top box, you could use the ximagesrc GStreamer
-  element to capture video from the VM's X Window.
-
-* If your set-top box uses DirectFB, you could install the DirectFBSource
-  GStreamer element (https://bugzilla.gnome.org/show_bug.cgi?id=685877) on the
-  set-top box to stream video to a updsrc GStreamer element on the test rig.
-
-Instead of a hardware infra-red receiver + emitter, you can use a software
-equivalent (for example a server running on the set-top box that listens on
-a TCP socket instead of listening for infra-red signals, and your own
-application for emulating remote-control keypresses). Using a software remote
-control avoids all issues of IR interference in rigs testing multiple set-top
-boxes at once.
-
-Linux server
-------------
-
-An 8-core machine will be able to drive 4 set-top boxes simultaneously with at
-least 1 frame per second per set-top box.
+Use the **stb-tester ONE** (sold by Stb-tester.com Ltd., the maintainers of the
+stb-tester project; see https://stb-tester.com) or see the stb-tester wiki for
+consumer video-capture & infrared hardware if you want to build your own rig:
+https://github.com/stb-tester/stb-tester/wiki
 
 
 TEST SCRIPT FORMAT
@@ -286,49 +236,8 @@ Testcases are written in Python, using the ``stbt`` API documented at
 https://stb-tester.com/stb-tester-one/rev2015.1/python-api
 
 
-TEST SCRIPT BEST PRACTICES
-==========================
-
-* When cropping images to be matched by a test case, you must select a region
-  that will *not* be present when the test case fails, and that does *not*
-  contain *any* elements that might be absent when the test case succeeds. For
-  example, you must not include any part of a live TV stream (which will be
-  different each time the test case is run), nor translucent menu overlays with
-  live TV showing through.
-
-* Crop template images as tightly as possible. For example if you're looking
-  for a button, don't include the background outside of the button. (This is
-  particularly important if your system-under-test is still under development
-  and minor aesthetic changes to the UI are common.)
-
-* Always follow a `press` with a `wait_for_match` -- don't assume that
-  the `press` worked.
-
-* Use `press_until_match` instead of assuming that the position of a menu item
-  will never change within that menu.
-
-* Use the `timeout_secs` parameter of `wait_for_match` and `wait_for_motion`
-  instead of using `time.sleep`.
-
-* Rename the template images captured by `stbt record` to a name that explains
-  the contents of the image.
-
-* Extract common navigation patterns into separate python functions. It is
-  useful to start each test script by calling a function that brings the
-  system-under-test to a known state.
-
-
 SEE ALSO
 ========
 
-* http://stb-tester.com/
-* http://github.com/stb-tester/stb-tester
-
-
-AUTHORS
-=======
-
-* Will Manley <will@williammanley.net>
-* David Rothlisberger <david@rothlis.net>
-* Hubert Lacote <hubert.lacote@gmail.com>
-* and contributors
+* https://stb-tester.com/
+* https://github.com/stb-tester/stb-tester
