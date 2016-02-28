@@ -17,33 +17,26 @@ Automated User Interface Testing for Set-Top Boxes & Smart TVs
 SYNOPSIS
 ========
 
-stbt record [options]
-
 stbt run [options] script[::testcase]
 
 
 DESCRIPTION
 ===========
 
-**stbt record** will record a test case by listening for remote-control
-keypresses, taking screenshots from the set-top box as it goes.
+**stbt run** will run the given testcase, using the live video-stream captured
+from the system-under-test as input, and a remote control (usually an infrared
+transmitter) to control the system-under-test.
 
-You then (manually) crop the screenshots to the region of interest.
-
-(Optionally) you manually edit the generated test script, which will look
-something like this::
+Testcases are written in the Python programming language. They look like this::
 
     def test_that_i_can_tune_to_bbc_one_from_the_guide():
-        press("MENU")
-        wait_for_match("Guide.png")
-        press("OK")
-        wait_for_match("BBC One.png")
+        stbt.press("KEY_EPG")
+        stbt.wait_for_match("Guide.png")
+        stbt.press("KEY_OK")
+        stbt.wait_for_match("BBC One.png")
 
-**stbt run** will play back the given test script, returning an exit status of
-success or failure for easy integration with your existing test reporting
-system.
-
-**stbt** has other auxiliary sub-commands; run `stbt --help` for details.
+``stbt`` has other commands apart from ``run``; see ``stbt --help`` for
+details.
 
 
 OPTIONS
@@ -216,7 +209,8 @@ underscores.
 EXIT STATUS
 ===========
 
-0 on success; 1 on test script failure; 2 on any other error.
+**stbt run** returns 0 on success; 1 on test script failure; 2 on any other
+error.
 
 Test scripts indicate **failure** (the system under test didn't behave as
 expected) by raising an instance of `stbt.UITestFailure` (or a subclass
@@ -288,13 +282,8 @@ least 1 frame per second per set-top box.
 TEST SCRIPT FORMAT
 ==================
 
-The test scripts produced and run by **stbt record** and **stbt run**,
-respectively, are actually python scripts, so you can use the full power of
-python. Don't get too carried away, though; aim for simplicity, readability,
-and maintainability.
-
-See the Python API documentation at
-http://stb-tester.com/stb-tester-one/rev2015.1/python-api
+Testcases are written in Python, using the ``stbt`` API documented at
+https://stb-tester.com/stb-tester-one/rev2015.1/python-api
 
 
 TEST SCRIPT BEST PRACTICES
