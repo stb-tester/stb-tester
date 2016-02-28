@@ -1,0 +1,11 @@
+* webm.py 0.9.4
+ -. handled ebml level one element gracefully
+    so no recursive limit error in python
+
+* webm.py 0.9.3
+ -. handled an invalid webm file gracefully with the questionable code
+ -. adds VOID global element in meta seek information in ebml_header.py
+
+* webm.py 0.9.2
+ -. showed VP8 information(keyframe, version, showframe,
+    the size of the first partition) in video
