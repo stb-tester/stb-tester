@@ -8,12 +8,12 @@
 #/
 #/ Available commands are:
 #/     run            Run a testcase
-#/     record         Record a testcase
 #/     batch          Run testcases repeatedly, create html report
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of testcases
 #/     power          Control networked power switch
+#/     record         Record a testcase
 #/     screenshot     Capture a single screenshot
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
