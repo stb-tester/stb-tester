@@ -6,7 +6,7 @@
 Automated User Interface Testing for Set-Top Boxes & Smart TVs
 --------------------------------------------------------------
 
-:Copyright: Copyright (C) 2013-2014 Stb-tester.com Ltd,
+:Copyright: Copyright (C) 2013-2016 Stb-tester.com Ltd,
             2012-2014 YouView TV Ltd. and other contributors
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
           the source distribution for details)
