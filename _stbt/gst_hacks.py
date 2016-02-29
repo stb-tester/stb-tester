@@ -1,5 +1,4 @@
 import ctypes
-import platform
 from contextlib import contextmanager
 from os.path import dirname
 
@@ -29,10 +28,8 @@ class _GstMapInfo(ctypes.Structure):
 
 _GstMapInfo_p = ctypes.POINTER(_GstMapInfo)
 
-if platform.system() == "Darwin":
-    _libgst = ctypes.CDLL(dirname(Gst.__path__) + "/../libgstreamer-1.0.dylib")
-else:
-    _libgst = ctypes.CDLL("libgstreamer-1.0.so.0")
+_libgst = ctypes.CDLL(ctypes.util.find_library("gstreamer-1.0"))
+
 _libgst.gst_buffer_map.argtypes = [ctypes.c_void_p, _GstMapInfo_p, ctypes.c_int]
 _libgst.gst_buffer_map.restype = ctypes.c_int
 
