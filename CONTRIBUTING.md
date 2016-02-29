@@ -64,35 +64,8 @@ Here are a few guidelines to keep in mind when submitting a pull request:
       (if it's needed to build stb-tester or to run the self-tests) *and*
       under "Depends" (if it's needed at run-time).
 
-    * If you really want to do a thorough job, test the new deb/rpm packages:
-
-        * Fedora:
-
-            * Build the rpm with `make srpm && sudo make rpm` (it needs sudo to
-              run [dnf builddep]). If you don't have a Fedora host you can use
-              `extra/fedora/fedora-shell.sh -c "make srpm && sudo make rpm"`
-              which spins up a Fedora container using docker (it will leave the
-              built rpm package in the current directory on the host).
-
-            * Then test the rpm by running `extra/fedora/test-rpm.sh <filename
-              of the new rpm>`. It will use docker to install the rpm inside a
-              pristine Fedora container, and run stb-tester's self-tests. Even
-              if your host system is running Fedora, there is value in testing
-              the rpm in a docker container to make sure that it doesn't have
-              undeclared dependencies that you happen to have installed.
-
-        * Debian:
-
-            * Build the package with `make deb`. If you don't have an Ubuntu
-              14.04 host you can use `extra/debian/ubuntu-shell.sh -c "make
-              deb"` which spins up an Ubuntu container using docker (it will
-              leave the packages in `debian-packages/` under the stb-tester git
-              checkout on the host.
-
-            * Test the deb package by running `extra/debian/test-deb.sh
-              <filenames of the new debs>`. It will use docker to install the
-              deb package inside a pristine Ubuntu container, and run
-              stb-tester's self-tests.
+    * If you really want to do a thorough job, test the new deb/rpm packages
+      by following the instructions in [MAINTAINERS.md].
 
     * You'll also need to list the new dependencies in `.travis.yml`, if they
       are required by any self-tests (and if they aren't: Why not?).
@@ -108,4 +81,4 @@ really do appreciate your contribution.
 [GitHub branches view]: https://github.com/stb-tester/stb-tester/branches
 [Ubuntu current releases]: https://wiki.ubuntu.com/Releases#Current
 [Fedora current releases]: https://fedoraproject.org/wiki/Releases#Current_Supported_Releases
-[dnf builddep]: https://dnf-plugins-core.readthedocs.org/en/latest/builddep.html
+[MAINTAINERS.md]: https://github.com/stb-tester/stb-tester/blob/master/MAINTAINERS.md

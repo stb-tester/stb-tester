@@ -6,10 +6,7 @@
 Automated User Interface Testing for Set-Top Boxes & Smart TVs
 --------------------------------------------------------------
 
-.. image:: https://travis-ci.org/stb-tester/stb-tester.png?branch=master
-   :target: https://travis-ci.org/stb-tester/stb-tester
-
-:Copyright: Copyright (C) 2013-2014 Stb-tester.com Ltd,
+:Copyright: Copyright (C) 2013-2016 Stb-tester.com Ltd,
             2012-2014 YouView TV Ltd. and other contributors
 :License: LGPL v2.1 or (at your option) any later version (see LICENSE file in
           the source distribution for details)
@@ -20,33 +17,26 @@ Automated User Interface Testing for Set-Top Boxes & Smart TVs
 SYNOPSIS
 ========
 
-stbt record [options]
-
 stbt run [options] script[::testcase]
 
 
 DESCRIPTION
 ===========
 
-**stbt record** will record a test case by listening for remote-control
-keypresses, taking screenshots from the set-top box as it goes.
+**stbt run** will run the given testcase, using the live video-stream captured
+from the system-under-test as input, and a remote control (usually an infrared
+transmitter) to control the system-under-test.
 
-You then (manually) crop the screenshots to the region of interest.
-
-(Optionally) you manually edit the generated test script, which will look
-something like this::
+Testcases are written in the Python programming language. They look like this::
 
     def test_that_i_can_tune_to_bbc_one_from_the_guide():
-        press("MENU")
-        wait_for_match("Guide.png")
-        press("OK")
-        wait_for_match("BBC One.png")
+        stbt.press("KEY_EPG")
+        stbt.wait_for_match("Guide.png")
+        stbt.press("KEY_OK")
+        stbt.wait_for_match("BBC One.png")
 
-**stbt run** will play back the given test script, returning an exit status of
-success or failure for easy integration with your existing test reporting
-system.
-
-**stbt** has other auxiliary sub-commands; run `stbt --help` for details.
+``stbt`` has other commands apart from ``run``; see ``stbt --help`` for
+details.
 
 
 OPTIONS
@@ -129,7 +119,7 @@ Global options
     http://www.cl.cam.ac.uk/~mgk25/ucs/keysyms.txt .
 
     stbt provides some sensible default mappings when there is an obvious match
-    for our `standard key names<https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names>`_.
+    for our `standard key names <https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names>`_.
 
     The x11 control requires that `xdotool` is installed.
 
@@ -219,7 +209,8 @@ underscores.
 EXIT STATUS
 ===========
 
-0 on success; 1 on test script failure; 2 on any other error.
+**stbt run** returns 0 on success; 1 on test script failure; 2 on any other
+error.
 
 Test scripts indicate **failure** (the system under test didn't behave as
 expected) by raising an instance of `stbt.UITestFailure` (or a subclass
@@ -232,147 +223,21 @@ test framework itself).
 HARDWARE REQUIREMENTS
 =====================
 
-The test rig consists of a Linux server, with:
-
-* A video-capture card (for capturing the output from the system under test)
-* An infrared receiver (for recording the system-under-test's infrared
-  protocol)
-* An infrared emitter (for controlling the system under test)
-
-Video capture card
-------------------
-
-You'll need a capture card with drivers supporting the V4L2 API
-(Video-for-Linux 2). We recommend a capture card with mature open-source
-drivers, preferably drivers already present in recent versions of the Linux
-kernel.
-
-The Hauppauge HD PVR works well (and works out of the box on recent versions of
-Fedora), though it doesn't support 1080p. If you need an HDCP stripper, try the
-HD Fury III.
-
-Infra-red emitter and receiver
-------------------------------
-
-An IR emitter+receiver such as the RedRat3, plus a LIRC configuration file
-with the key codes for your set-top box's remote control.
-
-Using software components instead
----------------------------------
-
-If you don't mind instrumenting the system under test, you don't even need the
-above hardware components.
-
-stb-tester uses GStreamer, an open source multimedia framework. Instead of a
-video-capture card you can use any GStreamer video-source element. For example:
-
-* If you run tests against a VM running the set-top box software instead
-  of a physical set-top box, you could use the ximagesrc GStreamer
-  element to capture video from the VM's X Window.
-
-* If your set-top box uses DirectFB, you could install the DirectFBSource
-  GStreamer element (https://bugzilla.gnome.org/show_bug.cgi?id=685877) on the
-  set-top box to stream video to a updsrc GStreamer element on the test rig.
-
-Instead of a hardware infra-red receiver + emitter, you can use a software
-equivalent (for example a server running on the set-top box that listens on
-a TCP socket instead of listening for infra-red signals, and your own
-application for emulating remote-control keypresses). Using a software remote
-control avoids all issues of IR interference in rigs testing multiple set-top
-boxes at once.
-
-Linux server
-------------
-
-An 8-core machine will be able to drive 4 set-top boxes simultaneously with at
-least 1 frame per second per set-top box.
-
-
-SOFTWARE REQUIREMENTS
-=====================
-
-* A Unixy operating system (we have only tested on Linux and Mac OS X).
-
-* Drivers for any required hardware components.
-
-* GStreamer 1.0 (multimedia framework) + gstreamer-plugins-base +
-  gstreamer-plugins-good.
-
-* python 2.7 + pygst + docutils (for building the documentation) + nose (for
-  the self-tests).
-
-* OpenCV (image processing library) version >= 2.0.0, and the OpenCV python
-  bindings.
-
-* For the Hauppauge video capture device you'll need the gstreamer-libav
-  package (e.g. from the rpmfusion-free repository) for H.264 decoding.
-
-
-INSTALLING FROM SOURCE
-======================
-
-Run "make install" from the stb-tester source directory.
-
-See
-https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
-for the required dependencies and configuration.
+Use the **stb-tester ONE** (sold by Stb-tester.com Ltd., the maintainers of the
+stb-tester project; see https://stb-tester.com) or see the stb-tester wiki for
+consumer video-capture & infrared hardware if you want to build your own rig:
+https://github.com/stb-tester/stb-tester/wiki
 
 
 TEST SCRIPT FORMAT
 ==================
 
-The test scripts produced and run by **stbt record** and **stbt run**,
-respectively, are actually python scripts, so you can use the full power of
-python. Don't get too carried away, though; aim for simplicity, readability,
-and maintainability.
-
-See the Python API documentation at
-http://stb-tester.com/stb-tester-one/rev2015.1/python-api
-
-
-TEST SCRIPT BEST PRACTICES
-==========================
-
-* When cropping images to be matched by a test case, you must select a region
-  that will *not* be present when the test case fails, and that does *not*
-  contain *any* elements that might be absent when the test case succeeds. For
-  example, you must not include any part of a live TV stream (which will be
-  different each time the test case is run), nor translucent menu overlays with
-  live TV showing through.
-
-* Crop template images as tightly as possible. For example if you're looking
-  for a button, don't include the background outside of the button. (This is
-  particularly important if your system-under-test is still under development
-  and minor aesthetic changes to the UI are common.)
-
-* Always follow a `press` with a `wait_for_match` -- don't assume that
-  the `press` worked.
-
-* Use `press_until_match` instead of assuming that the position of a menu item
-  will never change within that menu.
-
-* Use the `timeout_secs` parameter of `wait_for_match` and `wait_for_motion`
-  instead of using `time.sleep`.
-
-* Rename the template images captured by `stbt record` to a name that explains
-  the contents of the image.
-
-* Extract common navigation patterns into separate python functions. It is
-  useful to start each test script by calling a function that brings the
-  system-under-test to a known state.
+Testcases are written in Python, using the ``stbt`` API documented at
+https://stb-tester.com/stb-tester-one/rev2015.1/python-api
 
 
 SEE ALSO
 ========
 
-* http://stb-tester.com/
-* http://github.com/stb-tester/stb-tester
-
-
-AUTHORS
-=======
-
-* Will Manley <will@williammanley.net>
-* David Rothlisberger <david@rothlis.net>
-* Hubert Lacote <hubert.lacote@gmail.com>
-* and contributors
+* https://stb-tester.com/
+* https://github.com/stb-tester/stb-tester

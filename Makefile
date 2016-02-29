@@ -237,23 +237,22 @@ TAGS:
 
 ### Documentation ############################################################
 
-doc: stbt.1
+doc: docs/stbt.1
 
 # Requires python-docutils
-stbt.1: README.rst VERSION
+docs/stbt.1: docs/stbt.1.rst VERSION
 	sed -e 's/@VERSION@/$(VERSION)/g' $< |\
-	sed -e '/\.\. image::/,/^$$/ d' |\
 	sed -e 's/(callable_,/(`callable_`,/' |\
 	rst2man > $@
 
 ifeq ($(enable_docs), yes)
- all: stbt.1
+ all: docs/stbt.1
  install-core: install-docs
 endif
 
-install-docs: stbt.1
+install-docs: docs/stbt.1
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(man1dir)
-	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 0644 docs/stbt.1 $(DESTDIR)$(man1dir)
 
 ### Debian Packaging #########################################################
 
