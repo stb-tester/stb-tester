@@ -144,7 +144,7 @@ clean:
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
-           | sort | uniq)
+           | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: tests/ocr/menu.png
@@ -157,7 +157,8 @@ check-nosetests: tests/ocr/menu.png
 	      grep -v -e tests/test.py \
 	              -e tests/test2.py \
 	              -e tests/test_functions.py \
-	              -e tests/vstb-example-html5/) \
+	              -e tests/vstb-example-html5/ \
+	              -e tests/webminspector/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
