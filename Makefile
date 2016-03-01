@@ -150,7 +150,7 @@ check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
+	PYTHONPATH=$$PWD:$$PYTHONPATH NOSE_REDNOSE=1 \
 	nosetests --with-doctest -v --match "^test_" \
 	    --doctest-options=+ELLIPSIS \
 	    $(shell git ls-files '*.py' |\
@@ -171,7 +171,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
-	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
+	| PYTHONPATH=$$PWD:$$PYTHONPATH $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests
 	@bash -c ' \
@@ -234,6 +234,18 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 TAGS:
 	etags stbt/**.py _stbt/**.py
+
+shell:
+	pip install --root=$(CURDIR)/pip \
+	    astroid==1.2.1 \
+	    isort==3.9.0 \
+	    pylint==1.3.1 \
+	    rednose \
+	    responses==0.5.1
+	PATH=$(CURDIR)/pip/usr/local/bin:$$PATH \
+	PYTHONPATH=$(CURDIR)/pip/usr/local/lib/python2.7/dist-packages/:$$PYTHONPATH \
+	exec bash -i
+
 
 ### Documentation ############################################################
 
