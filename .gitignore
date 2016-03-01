@@ -20,6 +20,7 @@ extra/stb-tester*.debian.tar.xz
 extra/vm/.vagrant
 irnetbox-proxyc
 nosetest-issue-49-workaround-stbt-control.py
+pip/
 rpmbuild
 stb-tester-*.tar.gz
 stb-tester_*.deb

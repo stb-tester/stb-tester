@@ -179,7 +179,7 @@ check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	PYTHONPATH=$$PWD \
+	PYTHONPATH=$$PWD:$$PYTHONPATH \
 	py.test -v --doctest-modules \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
@@ -207,7 +207,7 @@ check-hardware: install-for-test
 check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
-	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
+	| PYTHONPATH=$$PWD:$$PYTHONPATH $(parallel) extra/pylint.sh
 
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
@@ -307,6 +307,17 @@ vendor/.submodules-checked-out : .gitmodules
 	git submodule sync && \
 	git submodule update && \
 	touch $@
+
+shell:
+	pip install --root=$(CURDIR)/pip \
+	    astroid==1.2.1 \
+	    isort==3.9.0 \
+	    pylint==1.3.1 \
+	    rednose \
+	    responses==0.5.1
+	PATH=$(CURDIR)/pip/usr/local/bin:$$PATH \
+	PYTHONPATH=$(CURDIR)/pip/usr/local/lib/python2.7/dist-packages/:$$PYTHONPATH \
+	exec bash -i
 
 ### Documentation ############################################################
 
