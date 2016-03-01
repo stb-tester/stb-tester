@@ -133,11 +133,18 @@ def calculate_distortion(ideal, measured_points, resolution):
                                  cameraMatrix, distCoeffs)[0]
 
     def describe():
-        return [
-            ('camera-matrix',
-             ' '.join([' '.join([repr(v) for v in l]) for l in cameraMatrix])),
-            ('distortion-coefficients',
-             ' '.join([repr(x) for x in distCoeffs[0]]))]
+        return {
+            'fx': cameraMatrix[0, 0],
+            'fy': cameraMatrix[1, 1],
+            'cx': cameraMatrix[0, 2],
+            'cy': cameraMatrix[1, 2],
+
+            'k1': distCoeffs[0, 0],
+            'k2': distCoeffs[0, 1],
+            'p1': distCoeffs[0, 2],
+            'p2': distCoeffs[0, 3],
+            'k3': distCoeffs[0, 4],
+        }
     return ReversibleTransformation(undistort, distort, describe)
 
 
@@ -154,8 +161,11 @@ def calculate_perspective_transformation(ideal, measured_points):
         return cv2.perspectiveTransform(points, inv)
 
     def describe():
-        return [('inv-homography-matrix',
-                 ' '.join([' '.join([repr(x) for x in l]) for l in inv]))]
+        out = {}
+        for col in range(3):
+            for row in range(3):
+                out['ihm%i%i' % (col + 1, row + 1)] = inv[row][col]
+        return out
     return ReversibleTransformation(
         transform_perspective, untransform_perspective, describe)
 
@@ -226,8 +236,19 @@ def chessboard_calibration():
 
     geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
         'geometric_correction')
-    geometriccorrection_params = undistort.describe() + unperspect.describe()
-    for key, value in geometriccorrection_params:
+
+    params = dict(undistort.describe().items() + unperspect.describe().items())
+    geometriccorrection_params = {
+        'camera-matrix': ('{fx}    0 {cx}'
+                          '   0 {fy} {cy}'
+                          '   0    0    1').format(**params),
+        'distortion-coefficients': '{k1} {k2} {p1} {p2} {k3}'.format(**params),
+        'inv-homography-matrix': (
+            '{ihm11} {ihm21} {ihm31} '
+            '{ihm12} {ihm22} {ihm32} '
+            '{ihm13} {ihm23} {ihm33}').format(**params),
+    }
+    for key, value in geometriccorrection_params.items():
         geometriccorrection.set_property(key, value)
 
     validate_transformation(
@@ -235,7 +256,7 @@ def chessboard_calibration():
 
     set_config(
         'global', 'geometriccorrection_params',
-        ' '.join('%s="%s"' % v for v in geometriccorrection_params))
+        ' '.join('%s="%s"' % v for v in geometriccorrection_params.items()))
 
 #
 # Colour Measurement
