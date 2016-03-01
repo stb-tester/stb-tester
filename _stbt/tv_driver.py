@@ -28,6 +28,7 @@ def _generate_video_if_not_exists(video, video_generator, format_):
         frame_caps, frame_generator = video_generator[video]
         frames_to_video(
             tf.name, frame_generator(), caps=frame_caps, container=format_)
+        os.chmod(tf.name, 0o0644)
         os.rename(tf.name, filename)
 
         sys.stderr.write("Test video generation complete.\n")
@@ -114,6 +115,32 @@ class _HTTPVideoServer(object):
         from os import kill
         if self._lighttpd_pid:
             kill(self._lighttpd_pid, SIGTERM)
+
+    def get_url(self, video):
+        _generate_video_if_not_exists(video, self._video_generators,
+                                      self._video_format)
+        return "%s%s.%s" % (self._base_url, video, self._video_format)
+
+
+class _AlreadyHTTPVideoServer(object):
+    def __init__(self, video_generators, video_format, base_url):
+        import requests
+
+        self._video_generators = dict(video_generators)
+        self._video_format = video_format
+        self._base_url = base_url
+
+        with open('%s/test.txt' % _gen_video_cache_dir(), 'w') as f:
+            f.write('ok')
+        if requests.get(base_url + 'test.txt').text != 'ok':
+            raise Exception("AlreadyHTTPVideoServer not set up correctly")
+
+    @property
+    def mime_type(self):
+        return {
+            'mp4': 'video/mp4',
+            'ts': 'video/MP2T',
+        }[self._video_format]
 
     def get_url(self, video):
         _generate_video_if_not_exists(video, self._video_generators,
@@ -236,7 +263,11 @@ def create_from_args(args, video_generator):
 
 def create_from_description(desc, video_generator, video_format):
     def make_video_server():
-        return _HTTPVideoServer(video_generator, video_format=video_format)
+        if os.environ.get('STBT_VIDEO_SERVER_BASE_URL'):
+            return _AlreadyHTTPVideoServer(
+                video_generator, video_format, os.environ['STBT_VIDEO_SERVER_BASE_URL'])
+        else:
+            return _HTTPVideoServer(video_generator, video_format=video_format)
 
     if desc == 'assume':
         return _AssumeTvDriver()
