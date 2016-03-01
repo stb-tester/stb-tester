@@ -31,9 +31,10 @@ videos = {}
 # Geometric calibration
 #
 
-videos['chessboard'] = ('image/png', lambda: [(
+CHESSBOARD_VIDEO = ('image/png', lambda: [(
     open('%s/chessboard-720p-40px-border-white.png' % dirname(__file__))
     .read(), 60 * Gst.SECOND)])
+videos['chessboard'] = CHESSBOARD_VIDEO
 
 arrows = list(u'←↙↓↘→↗↑↖')
 
@@ -92,14 +93,6 @@ def print_error_map(outstream, ideal_points, measured_points):
             .encode('utf-8'))
         oldx = ideal[0]
     outstream.write("\n" + ENDC)
-
-
-def validate_transformation(measured_points, ideal_points, transformation):
-    """Use the created homography matrix on the measurements to see how well
-    they map"""
-    print_error_map(
-        sys.stderr, ideal_points,
-        [z[0] for z in transformation(measured_points)])
 
 
 def build_remapping(reverse_transformation_fn, res):
@@ -174,40 +167,64 @@ class NoChessboardError(Exception):
     pass
 
 
-def _find_chessboard(appsink, timeout=10):
-    from _stbt.gst_utils import array_from_sample
+def _find_chessboard(input_image):
+    success, corners = cv2.findChessboardCorners(
+        input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
 
-    sys.stderr.write("Searching for chessboard\n")
-    success = False
-    endtime = time.time() + timeout
-    while not success and time.time() < endtime:
-        sample = appsink.emit("pull-sample")
-        input_image = array_from_sample(sample)
-        success, corners = cv2.findChessboardCorners(
-            input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
+    if not success:
+        raise NoChessboardError()
 
-    if success:
-        # Refine the corner measurements (not sure why this isn't built into
-        # findChessboardCorners?
-        grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
-        cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),
-                         (cv2.TERM_CRITERIA_COUNT, 100, 0.1))
+    # Refine the corner measurements (not sure why this isn't built into
+    # findChessboardCorners?
+    grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
 
-        # Chessboard could have been recognised either way up.  Match it.
-        if corners[0][0][0] < corners[1][0][0]:
-            ideal = numpy.array(
-                [[x * 40 - 0.5, y * 40 - 0.5]
-                 for y in range(2, 17) for x in range(2, 31)],
-                dtype=numpy.float32)
-        else:
-            ideal = numpy.array(
-                [[x * 40 - 0.5, y * 40 - 0.5]
-                 for y in range(16, 1, -1) for x in range(30, 1, -1)],
-                dtype=numpy.float32)
+    cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),
+                     (cv2.TERM_CRITERIA_COUNT, 100, 0.1))
 
-        return ideal, corners
+    # Chessboard could have been recognised either way up.  Match it.
+    if corners[0][0][0] < corners[1][0][0]:
+        ideal = numpy.array(
+            [[x * 40 - 0.5, y * 40 - 0.5]
+             for y in range(2, 17) for x in range(2, 31)],
+            dtype=numpy.float32)
     else:
-        raise NoChessboardError
+        ideal = numpy.array(
+            [[x * 40 - 0.5, y * 40 - 0.5]
+             for y in range(16, 1, -1) for x in range(30, 1, -1)],
+            dtype=numpy.float32)
+
+    return ideal, corners
+
+
+def calculate_chessboard_calibration_params(frame):
+    ideal, corners = _find_chessboard(frame)
+
+    undistort = calculate_distortion(ideal, corners, (1920, 1080))
+    unperspect = calculate_perspective_transformation(
+        ideal, undistort.do(corners))
+
+    return dict(undistort.describe().items() + unperspect.describe().items())
+
+
+def apply_geometric_correction(params, points):
+    # Undistort
+    camera_matrix = numpy.array([[params['fx'], 0, params['cx']],
+                                 [0, params['fy'], params['cy']],
+                                 [0, 0, 1]])
+    dist_coeffs = numpy.array(
+        [params['k1'], params['k2'], params['p1'], params['p2'], params['k3']])
+    points = cv2.undistortPoints(points, camera_matrix, dist_coeffs)
+
+    # Apply perspective transformation:
+    mat = numpy.array([[params['ihm11'], params['ihm21'], params['ihm31']],
+                       [params['ihm12'], params['ihm22'], params['ihm32']],
+                       [params['ihm13'], params['ihm23'], params['ihm33']]])
+    return cv2.perspectiveTransform(points, numpy.linalg.inv(mat))[:,0,:]
+
+
+def find_corrected_chessboard_corners(params, frame):
+    ideal, corners = _find_chessboard(frame)
+    return ideal, apply_geometric_correction(params, corners)
 
 
 def geometric_calibration(tv, device, interactive=True):
@@ -225,19 +242,27 @@ def geometric_calibration(tv, device, interactive=True):
                 chessboard_calibration()
 
 
-def chessboard_calibration():
+def chessboard_calibration(timeout=10):
+    from _stbt.gst_utils import array_from_sample
+
     undistorted_appsink = \
         stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
-    ideal, corners = _find_chessboard(undistorted_appsink)
 
-    undistort = calculate_distortion(ideal, corners, (1920, 1080))
-    unperspect = calculate_perspective_transformation(
-        ideal, undistort.do(corners))
+    sys.stderr.write("Searching for chessboard\n")
+    endtime = time.time() + timeout
+    while time.time() < endtime:
+        sample = undistorted_appsink.emit('pull-sample')
+        try:
+            input_image = array_from_sample(sample)
+            params = calculate_chessboard_calibration_params(input_image)
+            break
+        except NoChessboardError:
+            if time.time() > endtime:
+                raise
 
     geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
         'geometric_correction')
 
-    params = dict(undistort.describe().items() + unperspect.describe().items())
     geometriccorrection_params = {
         'camera-matrix': ('{fx}    0 {cx}'
                           '   0 {fy} {cy}'
@@ -251,8 +276,9 @@ def chessboard_calibration():
     for key, value in geometriccorrection_params.items():
         geometriccorrection.set_property(key, value)
 
-    validate_transformation(
-        corners, ideal, lambda points: unperspect.do(undistort.do(points)))
+    print_error_map(
+        sys.stderr,
+        *find_corrected_chessboard_corners(params, input_image))
 
     set_config(
         'global', 'geometriccorrection_params',
