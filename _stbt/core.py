@@ -732,7 +732,7 @@ class DeviceUnderTest(object):
                         frame,
                         numpy.multiply(
                             numpy.ones(frame.shape, dtype=numpy.uint8),
-                            (0, 0, 255),  # bgr
+                            numpy.array((0, 0, 255), dtype=numpy.uint8),  # bgr
                             dtype=numpy.uint8),
                         mask=cv2.dilate(
                             thresholded,
