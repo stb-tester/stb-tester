@@ -235,7 +235,22 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt/**.py _stbt/**.py
 
-shell:
+pip/usr/local/bin/parallel:
+	cd pip && \
+	{ \
+	    wget http://ftpmirror.gnu.org/parallel/parallel-20140522.tar.bz2 || \
+	    wget http://ftp.gnu.org/gnu/parallel/parallel-20140522.tar.bz2 || \
+	    exit 0; \
+	} && \
+	tar -xvf parallel-20140522.tar.bz2 && \
+	cd parallel-20140522/ && \
+	./configure --prefix=$(CURDIR)/pip/usr/local && \
+	make && \
+	make install && \
+	rm -rf $(CURDIR)/pip/parallel-20140522.tar.bz2 $(CURDIR)/pip/parallel-20140522 && \
+	parallel --bibtex
+
+shell: pip/usr/local/bin/parallel
 	pip install --root=$(CURDIR)/pip \
 	    astroid==1.2.1 \
 	    isort==3.9.0 \
