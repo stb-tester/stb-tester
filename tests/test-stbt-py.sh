@@ -475,7 +475,7 @@ test_template_annotation_with_ndarray_template() {
     cat > test.py <<-EOF &&
 	import stbt, numpy as np
 	template = np.ones(shape=(100, 100, 3), dtype=np.uint8)
-	template *= [0, 255, 0]  # green
+	template *= np.array([0, 255, 0], dtype=np.uint8)  # green
 	stbt.save_frame(template, 'template.png')
 	for _ in stbt.detect_match(template):
 	    pass
