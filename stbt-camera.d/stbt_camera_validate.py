@@ -178,7 +178,7 @@ def validate(video, driver, validate_match=True):
                 rating = 2
             else:
                 rating = 1 if result.first_pass_result > 0.9 else 0
-            quality = "0123456789"[int(result.first_pass_result * 10)]
+            quality = "01234567899"[int(result.first_pass_result * 10)]
             sys.stdout.write(
                 "%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
             if square.x == 15:

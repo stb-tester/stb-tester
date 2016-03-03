@@ -145,16 +145,17 @@ def calculate_perspective_transformation(ideal, measured_points):
     ideal_2d = numpy.array([[[x, y]] for x, y in ideal],
                            dtype=numpy.float32)
     mat, _ = cv2.findHomography(measured_points, ideal_2d)
+    inv = numpy.linalg.inv(mat)
 
     def transform_perspective(points):
         return cv2.perspectiveTransform(points, mat)
 
     def untransform_perspective(points):
-        return cv2.perspectiveTransform(points, numpy.linalg.inv(mat))
+        return cv2.perspectiveTransform(points, inv)
 
     def describe():
-        return [('homography-matrix',
-                 ' '.join([' '.join([repr(x) for x in l]) for l in mat]))]
+        return [('inv-homography-matrix',
+                 ' '.join([' '.join([repr(x) for x in l]) for l in inv]))]
     return ReversibleTransformation(
         transform_perspective, untransform_perspective, describe)
 
