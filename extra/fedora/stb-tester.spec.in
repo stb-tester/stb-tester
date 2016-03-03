@@ -57,7 +57,9 @@ BuildRequires: orc-devel
 
 Requires: gstreamer1-libav
 Requires: lighttpd
+Requires: python-qrcode
 Requires: stb-tester
+Requires: zbar-pygtk
 
 %description camera
 Support for using a camera pointed at a TV as input for stb-tester.  This is

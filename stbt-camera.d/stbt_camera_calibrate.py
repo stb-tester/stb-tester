@@ -3,7 +3,8 @@
 # pylint: disable=W0212
 
 import math
-import string
+import re
+import readline
 import subprocess
 import sys
 import time
@@ -23,6 +24,7 @@ from _stbt.config import set_config, xdg_config_dir
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
+COLOUR_SAMPLES = 50
 videos = {}
 
 #
@@ -157,6 +159,10 @@ def calculate_perspective_transformation(ideal, measured_points):
         transform_perspective, untransform_perspective, describe)
 
 
+class NoChessboardError(Exception):
+    pass
+
+
 def _find_chessboard(appsink, timeout=10):
     sys.stderr.write("Searching for chessboard\n")
     success = False
@@ -192,16 +198,25 @@ def _find_chessboard(appsink, timeout=10):
 
         return ideal, corners
     else:
-        raise RuntimeError("Couldn't find Chessboard")
+        raise NoChessboardError
 
 
-def geometric_calibration(tv, interactive=True):
-    if interactive:
-        raw_input("Please line up camera and press <ENTER> when ready")
+def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 
     sys.stdout.write("Performing Geometric Calibration\n")
 
+    chessboard_calibration()
+    if interactive:
+        while prompt_for_adjustment(device):
+            try:
+                chessboard_calibration()
+            except NoChessboardError:
+                tv.show('chessboard')
+                chessboard_calibration()
+
+
+def chessboard_calibration():
     undistorted_appsink = \
         stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
     ideal, corners = _find_chessboard(undistorted_appsink)
@@ -228,42 +243,62 @@ def geometric_calibration(tv, interactive=True):
 #
 
 
+def qrc(data):
+    import cStringIO
+    import qrcode
+    import qrcode.image.svg
+
+    out = cStringIO.StringIO()
+    qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage).save(out)
+    qrsvg = out.getvalue()
+
+    return re.search('d="(.*?)"', qrsvg).group(1)
+
+
 def generate_colours_video():
     import random
     template_svg = open(dirname(__file__) + '/colours.svg', 'r').read()
     for _ in range(0, 10 * 60 * 8):
-        svg = template_svg.replace(
-            '#c0ffee', '#%06x' % random.randint(0, 256 ** 3))
+        colour = '#%06x' % random.randint(0, 256 ** 3)
+        svg = template_svg.replace('#c0ffee', colour)
+        svg = svg.replace("m 0,0 26,0 0,26 -26,0 z", qrc(colour))
         yield (svg, 1.0 / 8 * Gst.SECOND)
 
-videos['colours'] = ('image/svg', generate_colours_video)
+videos['colours2'] = ('image/svg', generate_colours_video)
+
+
+class QRScanner(object):
+    def __init__(self):
+        import zbar
+        self.scanner = zbar.ImageScanner()
+        self.scanner.parse_config('enable')
+
+    def read_qr_codes(self, image):
+        import zbar
+        zimg = zbar.Image(image.shape[1], image.shape[0], 'Y800',
+                          cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).tostring())
+        self.scanner.scan(zimg)
+        return [s.data for s in zimg]
 
 
 def analyse_colours_video(number=None):
     """RGB!"""
     errors_in_a_row = 0
     n = 0
+    qrscanner = QRScanner()
     for frame, _ in stbt.frames():
         if number is not None and n >= number:
             return
-        colour_hex = ''
         n = n + 1
-
-        def read_hex(region, frame_=frame):
-            return stbt.ocr(
-                frame_, region, stbt.OcrMode.SINGLE_LINE, tesseract_config={
-                    'tessedit_char_whitelist': '#0123456789abcdef'},
-                tesseract_user_patterns=['#\n\n\n\n\n\n']).replace(' ', '')
 
         # The colour is written above and below the rectangle because we want
         # to be sure that the top of the colour box is from the same frame as
         # the bottom.
-        colour_hex = read_hex(stbt.Region(490, 100, 300, 70))
-        colour_hex_bottom = read_hex(stbt.Region(490, 550, 300, 70))
+        codes = qrscanner.read_qr_codes(frame)
 
-        if (len(colour_hex) >= 7 and colour_hex[0] == '#' and
-                all(c in string.hexdigits for c in colour_hex[1:7]) and
-                colour_hex == colour_hex_bottom):
+        if (len(codes) == 4 and re.match('#[0-9a-f]{6}', codes[0])
+                and all(c == codes[0] for c in codes)):
+            colour_hex = codes[0]
             desired = numpy.array((
                 int(colour_hex[1:3], 16),
                 int(colour_hex[3:5], 16),
@@ -317,6 +352,68 @@ def v4l2_ctls(device, data=None):
         yield (vals[0], dict([v.split('=', 2) for v in vals[3:]]))
 
 
+def setup_tab_completion(completer):
+    next_ = [None]
+    generator = [None]
+
+    def readline_completer(text, state):
+        if state == 0:
+            generator[0] = iter(completer(text))
+            next_[0] = 0
+
+        assert state == next_[0]
+        next_[0] += 1
+
+        try:
+            return generator[0].next()
+        except StopIteration:
+            return None
+
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer_delims("")
+    readline.set_completer(readline_completer)
+
+
+def prompt_for_adjustment(device):
+    # Allow adjustment
+    subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    ctls = dict(v4l2_ctls(device))
+
+    def v4l_completer(text):
+        if text == '':
+            return ['yes', 'no', 'set']
+        if text.startswith('set '):
+            return ['set ' + x + ' '
+                    for x in ctls.keys() if x.startswith(text[4:])]
+        if "set ".startswith(text.lower()):
+            return ["set "]
+        if 'yes'.startswith(text.lower()):
+            return ["yes"]
+        if 'no'.startswith(text.lower()):
+            return ["no"]
+
+    setup_tab_completion(v4l_completer)
+
+    cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
+    if cmd.startswith('set'):
+        x = cmd.split(None, 2)
+        if len(x) != 3:
+            print "Didn't understand command %r" % x
+        else:
+            _, var, val = x
+            subprocess.check_call(
+                ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
+
+    set_config('global', 'v4l2_ctls', ','.join(
+        ["%s=%s" % (c, a['value'])
+         for c, a in dict(v4l2_ctls(device)).items()]))
+
+    if cmd.startswith('y') or cmd == '':
+        return False  # We're done
+    else:
+        return True  # Continue looping
+
+
 def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\n')
     for n, v in enumerate(iterator):
@@ -330,14 +427,12 @@ def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
     stream.write('\r' + ' ' * (total + 28) + '\r')
 
 
-COLOUR_SAMPLES = 50
-
-
 def fit_fn(ideals, measureds):
     """
-    >>> f = fit_fn([120 , 240, 150, 18, 200], [0, 0, 0, 0, 0])
+    >>> f = fit_fn([120, 240, 150, 18, 200],
+    ...            [120, 240, 150, 18, 200])
     >>> print f(0), f(56)
-    0.0 0.0
+    0.0 56.0
     """
     from scipy.optimize import curve_fit  # pylint: disable=E0611
     from scipy.interpolate import interp1d  # pylint: disable=E0611
@@ -345,11 +440,11 @@ def fit_fn(ideals, measureds):
     xs = [n * 255.0 / (POINTS + 1) for n in range(0, POINTS + 2)]
 
     def fn(x, ys):
-        return interp1d(xs, numpy.array([0] + ys + [0]))(x)
+        return interp1d(xs, numpy.array([0] + ys + [255]))(x)
 
     ys, _ = curve_fit(  # pylint:disable=W0632
         lambda x, *args: fn(x, list(args)), ideals, measureds, [0.0] * POINTS)
-    return interp1d(xs, numpy.array([0] + ys.tolist() + [0]))
+    return interp1d(xs, numpy.array([0] + ys.tolist() + [255]))
 
 
 @contextmanager
@@ -365,37 +460,37 @@ def colour_graph():
     pyplot.ion()
 
     ideals = [[], [], []]
-    deltas = [[], [], []]
+    measureds = [[], [], []]
 
     pyplot.figure()
 
     def update():
         pyplot.cla()
-        pyplot.axis([0, 255, -128, 128])
-        pyplot.ylabel("Error (higher means too bright)")
+        pyplot.axis([0, 255, 0, 255])
+        pyplot.ylabel("Measured colour")
         pyplot.xlabel("Ideal colour")
         pyplot.grid()
 
-        delta = [0, 0, 0]
         for n, ideal, measured in pop_with_progress(
-                analyse_colours_video(), 50):
+                analyse_colours_video(), COLOUR_SAMPLES):
             pyplot.draw()
             for c in [0, 1, 2]:
                 ideals[c].append(ideal[c])
-                delta[c] = measured[c] - ideal[c]
-                deltas[c].append(delta[c])
-            pyplot.plot([ideal[0]], [delta[0]], 'rx',
-                        [ideal[1]], [delta[1]], 'gx',
-                        [ideal[2]], [delta[2]], 'bx')
+                measureds[c].append(measured[c])
+            pyplot.plot([ideal[0]], [measured[0]], 'rx',
+                        [ideal[1]], [measured[1]], 'gx',
+                        [ideal[2]], [measured[2]], 'bx')
 
-        fits = [fit_fn(ideals[n], deltas[n]) for n in [0, 1, 2]]
+        fits = [fit_fn(ideals[n], measureds[n]) for n in [0, 1, 2]]
         pyplot.plot(range(0, 256), [fits[0](x) for x in range(0, 256)], 'r-',
                     range(0, 256), [fits[1](x) for x in range(0, 256)], 'g-',
                     range(0, 256), [fits[2](x) for x in range(0, 256)], 'b-')
         pyplot.draw()
 
-    yield update
-    pyplot.close()
+    try:
+        yield update
+    finally:
+        pyplot.close()
 
 
 def _can_show_graphs():
@@ -411,27 +506,12 @@ def _can_show_graphs():
         return False
 
 
-def adjust_levels(tv):
-    tv.show("colours")
-    happy = "no"
-    device = stbt.get_config('global', 'v4l2_device')
+def adjust_levels(tv, device):
+    tv.show("colours2")
     with colour_graph() as update_graph:
-        while not happy.startswith('y'):
+        update_graph()
+        while prompt_for_adjustment(device):
             update_graph()
-
-            # Allow adjustment
-            subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
-            cmd = raw_input("Happy? [Y/n/set] ").strip().lower()
-            if cmd.startswith('set'):
-                _, var, val = cmd.split()
-                subprocess.check_call(
-                    ['v4l2-ctl', '-d', device, "-c", "%s=%s" % (var, val)])
-            if cmd.startswith('y') or cmd == '':
-                break
-
-    set_config('global', 'v4l2_ctls', ','.join(
-        ["%s=%s" % (c, a['value'])
-         for c, a in dict(v4l2_ctls(device)).items()]))
 
 
 #
@@ -554,8 +634,8 @@ def setup(source_pipeline):
                 "        v4l2_device = %s\n"
                 "        source_pipeline = %s\n\n"
                 % (n, name, dev_file, source_pipeline))
-        return False
-    return True
+        return None
+    return stbt.get_config('global', 'v4l2_device')
 
 #
 # main
@@ -595,7 +675,8 @@ def parse_args(argv):
 def main(argv):
     args = parse_args(argv)
 
-    if not setup(args.source_pipeline):
+    device = setup(args.source_pipeline)
+    if device is None:
         return 1
 
     if args.skip_geometric:
@@ -628,9 +709,9 @@ def main(argv):
     tv = tv_driver.create_from_args(args, videos)
 
     if not args.skip_geometric:
-        geometric_calibration(tv, interactive=args.interactive)
+        geometric_calibration(tv, device, interactive=args.interactive)
     if args.interactive:
-        adjust_levels(tv)
+        adjust_levels(tv, device)
     if not args.skip_illumination:
         calibrate_illumination(tv)
 

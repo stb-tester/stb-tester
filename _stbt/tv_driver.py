@@ -2,7 +2,6 @@ import os
 import sys
 from time import sleep
 
-from _stbt.config import get_config
 from _stbt.utils import mkdir_p
 
 
@@ -42,12 +41,18 @@ def _get_external_ip():
 
 class _HTTPVideoServer(object):
     def __init__(self, video_generators, video_format):
+        self._video_generators = dict(video_generators)
+        self._video_format = video_format
+        self._lighttpd_pid = None
+        self._base_url = None
+
+        self._start()
+
+    def _start(self):
         from textwrap import dedent
         from tempfile import NamedTemporaryFile
         from subprocess import CalledProcessError, check_output, STDOUT
         from random import randint
-        self.lighttpd_pid = None
-        self.video_generators = dict(video_generators)
         video_cache_dir = _gen_video_cache_dir()
         mkdir_p(video_cache_dir)
         lighttpd_config_file = NamedTemporaryFile(
@@ -92,20 +97,26 @@ class _HTTPVideoServer(object):
         # passing and then open the listening socket ourselves.
         while os.fstat(pidfile.fileno()).st_size == 0:
             sleep(0.1)
-        self.lighttpd_pid = int(pidfile.read())
-        self.base_url = "http://%s:%i/" % (_get_external_ip(), port)
-        self.video_format = video_format
+        self._lighttpd_pid = int(pidfile.read())
+        self._base_url = "http://%s:%i/" % (_get_external_ip(), port)
+
+    @property
+    def mime_type(self):
+        return {
+            'mp4': 'video/mp4',
+            'ts': 'video/MP2T',
+        }[self._video_format]
 
     def __del__(self):
         from signal import SIGTERM
         from os import kill
-        if self.lighttpd_pid:
-            kill(self.lighttpd_pid, SIGTERM)
+        if self._lighttpd_pid:
+            kill(self._lighttpd_pid, SIGTERM)
 
     def get_url(self, video):
-        _generate_video_if_not_exists(video, self.video_generators,
-                                      self.video_format)
-        return "%s%s.%s" % (self.base_url, video, self.video_format)
+        _generate_video_if_not_exists(video, self._video_generators,
+                                      self._video_format)
+        return "%s%s.%s" % (self._base_url, video, self._video_format)
 
 
 class _AssumeTvDriver(object):
@@ -150,24 +161,48 @@ class _ManualTvDriver(object):
         sys.stderr.write("Please return TV back to original state\n")
 
 
+class _AdbTvDriver(object):
+    def __init__(self, video_server, adb_cmd=None):
+        if adb_cmd is None:
+            adb_cmd = ['adb']
+        self.adb_cmd = adb_cmd
+        self.video_server = video_server
+
+    def show(self, video):
+        import subprocess
+        cmd = self.adb_cmd + [
+            'shell', 'am', 'start',
+            '-a', 'android.intent.action.VIEW',
+            '-d', self.video_server.get_url(video),
+            '-t', self.video_server.mime_type]
+        subprocess.check_call(cmd, close_fds=True)
+
+    def stop(self):
+        pass
+
+
 def add_argparse_argument(argparser):
+    from .config import get_config
     argparser.add_argument(
         "--tv-driver",
         help="Determines how to display videos on TV.\n\n"
              "    manual - Prompt the user then wait for confirmation.\n"
              "    assume - Assume the video is already playing (useful for "
              "scripting when passing a single test to be run).\n"
-             "    fake:pipe_name - Used for testing",
+             "    fake:pipe_name - Used for testing\n"
+             "    adb[:adb_command] - Control an android device over adb",
              default=get_config("camera", "tv_driver", "manual"))
 
 
 def create_from_args(args, video_generator):
-    desc = args.tv_driver
+    from .config import get_config
+    return create_from_description(
+        args.tv_driver, video_generator, get_config('camera', 'video_format'))
 
+
+def create_from_description(desc, video_generator, video_format):
     def make_video_server():
-        return _HTTPVideoServer(
-            video_generator,
-            video_format=get_config('camera', 'video_format'))
+        return _HTTPVideoServer(video_generator, video_format=video_format)
 
     if desc == 'assume':
         return _AssumeTvDriver()
@@ -175,5 +210,10 @@ def create_from_args(args, video_generator):
         return _FakeTvDriver(desc[5:], make_video_server())
     elif desc == 'manual':
         return _ManualTvDriver(make_video_server())
+    elif desc == 'adb':
+        return _AdbTvDriver(make_video_server())
+    elif desc.startswith('adb:'):
+        import shlex
+        return _AdbTvDriver(make_video_server(), shlex.split(desc[4:]))
     else:
         raise RuntimeError("Unknown video driver requested: %s" % desc)

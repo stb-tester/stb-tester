@@ -41,10 +41,12 @@ install:
         python-numpy
         python-opencv
         python-pysnmp4
+        python-qrcode
         python-requests
         python-scipy
         python-serial
         python-yaml
+        python-zbar
         ratpoison
         socat
         tesseract-ocr

@@ -18,6 +18,14 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 UNRELEASED
 
+##### New features
+
+* The `stbt camera` calibration videos have been modified to use QR codes
+  rather than text and OCR.  This makes calibration faster, but will require
+  the videos to be re-generated on first use.
+
+* `stbt camera` learnt how to control Android TVs over adb for calibration.
+
 ##### Breaking changes since 24
 
 ##### New features
