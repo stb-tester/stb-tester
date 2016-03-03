@@ -37,3 +37,15 @@ test_that_virtual_stb_stop_clears_up()
     ! kill -0 "$VSTB_PID" || fail "virtual-stb wasn't killed"
     [ -z "$(stbt config global.vstb_pid)" ] || fail "Config wasn't reset"
 }
+
+# Regression test:
+test_that_virtual_stb_works_with_keymap_file_at_relative_path()
+{
+    cp $testdir/vstb-example-html5/key-mapping.conf . &&
+    with_html5_vstb --x-keymap=key-mapping.conf &&
+
+    mkdir subdir &&
+    cd subdir &&
+    stbt run $rotate_py::wait_for_vstb_startup &&
+    stbt run $rotate_py::test_that_image_is_rotated_by_arrows
+}
