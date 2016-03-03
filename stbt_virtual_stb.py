@@ -40,6 +40,14 @@ from _stbt.x11 import x_server
 
 @contextmanager
 def virtual_stb(command, x_keymap=None, verbose=False):
+    config = {}
+    if x_keymap is not None:
+        if not os.path.exists(x_keymap):
+            raise IOError("x keymap file %r does not exist" % x_keymap)
+        config['x_keymap'] = os.path.abspath(x_keymap)
+    else:
+        config['x_keymap'] = ""
+
     with x_server(1280, 720, verbose=verbose) as display:
         subprocess.Popen(
             ['ratpoison', '-d', display], close_fds=True,
@@ -50,16 +58,15 @@ def virtual_stb(command, x_keymap=None, verbose=False):
         child = subprocess.Popen(command)
 
         try:
-            config = {
+            config.update({
                 "control": "x11:%(x_display)s,%(x_keymap)s",
-                "x_keymap": x_keymap if x_keymap is not None else "",
                 "source_pipeline": (
                     'ximagesrc use-damage=false remote=true show-pointer=false '
                     'display-name=%(x_display)s ! video/x-raw,framerate=24/1'),
                 "x_display": display,
                 "vstb_child_pid": str(child.pid),
                 "vstb_pid": str(os.getpid()),
-            }
+            })
             yield (child, config)
         finally:
             if child.poll() is None:
