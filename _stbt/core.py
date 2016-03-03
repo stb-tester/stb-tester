@@ -33,8 +33,9 @@ import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
+import _stbt.config
 from _stbt import logging, utils
-from _stbt.config import ConfigurationError, get_config
+from _stbt.config import ConfigurationError
 from _stbt.gst_hacks import gst_iterate, map_gst_sample
 from _stbt.logging import ddebug, debug, warn
 
@@ -133,23 +134,10 @@ class MatchParameters(object):
     def __init__(self, match_method=None, match_threshold=None,
                  confirm_method=None, confirm_threshold=None,
                  erode_passes=None):
-        if match_method is None:
-            match_method = get_config('match', 'match_method')
-        if match_threshold is None:
-            match_threshold = get_config(
-                'match', 'match_threshold', type_=float)
-        if confirm_method is None:
-            confirm_method = get_config('match', 'confirm_method')
-        if confirm_threshold is None:
-            confirm_threshold = get_config(
-                'match', 'confirm_threshold', type_=float)
-        if erode_passes is None:
-            erode_passes = get_config('match', 'erode_passes', type_=int)
-
         if match_method not in (
-                "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
+                None, "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
             raise ValueError("Invalid match_method '%s'" % match_method)
-        if confirm_method not in ("none", "absdiff", "normed-absdiff"):
+        if confirm_method not in (None, "none", "absdiff", "normed-absdiff"):
             raise ValueError("Invalid confirm_method '%s'" % confirm_method)
 
         self.match_method = match_method
@@ -157,6 +145,25 @@ class MatchParameters(object):
         self.confirm_method = confirm_method
         self.confirm_threshold = confirm_threshold
         self.erode_passes = erode_passes
+
+
+def _complete_match_parameters(match_parameters, config):
+    if match_parameters is None:
+        match_parameters = MatchParameters()
+    if match_parameters.match_method is None:
+        match_parameters.match_method = config.get_config('match', 'match_method')
+    if match_parameters.match_threshold is None:
+        match_parameters.match_threshold = config.get_config(
+            'match', 'match_threshold', type_=float)
+    if match_parameters.confirm_method is None:
+        match_parameters.confirm_method = config.get_config('match', 'confirm_method')
+    if match_parameters.confirm_threshold is None:
+        match_parameters.confirm_threshold = config.get_config(
+            'match', 'confirm_threshold', type_=float)
+    if match_parameters.erode_passes is None:
+        match_parameters.erode_passes = config.get_config(
+            'match', 'erode_passes', type_=int)
+    return match_parameters
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -565,19 +572,23 @@ class TextMatchResult(namedtuple(
 
 def new_device_under_test_from_config(
         gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
-        save_video=False, restart_source=None, transformation_pipeline=None):
+        save_video=False, restart_source=None, transformation_pipeline=None,
+        config=None):
     from _stbt.control import uri_to_remote
+    if config is None:
+        config = _stbt.config
 
     if gst_source_pipeline is None:
-        gst_source_pipeline = get_config('global', 'source_pipeline')
+        gst_source_pipeline = config.get_config('global', 'source_pipeline')
     if gst_sink_pipeline is None:
-        gst_sink_pipeline = get_config('global', 'sink_pipeline')
+        gst_sink_pipeline = config.get_config('global', 'sink_pipeline')
     if control_uri is None:
-        control_uri = get_config('global', 'control')
+        control_uri = config.get_config('global', 'control')
     if restart_source is None:
-        restart_source = get_config('global', 'restart_source')
+        restart_source = config.get_config('global', 'restart_source')
     if transformation_pipeline is None:
-        gst_sink_pipeline = get_config('global', 'transformation_pipeline')
+        gst_sink_pipeline = config.get_config(
+            'global', 'transformation_pipeline')
 
     display = Display(
         gst_source_pipeline, gst_sink_pipeline, _mainloop(), save_video,
@@ -587,10 +598,12 @@ def new_device_under_test_from_config(
 
 
 class DeviceUnderTest(object):
-    def __init__(self, display=None, control=None):
+    def __init__(self, display=None, control=None, config=None):
         self._time_of_last_press = None
         self._display = display
         self._control = control
+        if config is None:
+            self._config = _stbt.config
 
     def __enter__(self):
         if self._display:
@@ -605,7 +618,7 @@ class DeviceUnderTest(object):
 
     def press(self, key, interpress_delay_secs=None):
         if interpress_delay_secs is None:
-            interpress_delay_secs = get_config(
+            interpress_delay_secs = self._config.get_config(
                 "press", "interpress_delay_secs", type_=float)
         if self._time_of_last_press is not None:
             # `sleep` is inside a `while` loop because the actual suspension
@@ -630,8 +643,8 @@ class DeviceUnderTest(object):
     def match(self, image, frame=None, match_parameters=None,
               region=Region.ALL):
 
-        if match_parameters is None:
-            match_parameters = MatchParameters()
+        match_parameters = _complete_match_parameters(
+            match_parameters, self._config)
 
         template = _load_template(image)
 
@@ -644,7 +657,8 @@ class DeviceUnderTest(object):
 
             matched, match_region, first_pass_certainty = _match(
                 _crop(npframe, region), template.image, match_parameters,
-                template.friendly_name)
+                template.friendly_name,
+                self._config.get_config('match', 'pyramid_levels', 3, int))
 
             match_region = match_region.translate(region.x, region.y)
             result = MatchResult(
@@ -677,7 +691,7 @@ class DeviceUnderTest(object):
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
         if noise_threshold is None:
-            noise_threshold = get_config(
+            noise_threshold = self._config.get_config(
                 'motion', 'noise_threshold', type_=float)
 
         debug("Searching for motion")
@@ -749,9 +763,6 @@ class DeviceUnderTest(object):
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
                        match_parameters=None, region=Region.ALL):
 
-        if match_parameters is None:
-            match_parameters = MatchParameters()
-
         match_count = 0
         last_pos = Position(0, 0)
         image = _load_template(image)
@@ -779,17 +790,13 @@ class DeviceUnderTest(object):
 
         if interval_secs is None:
             # Should this be float?
-            interval_secs = get_config(
+            interval_secs = self._config.get_config(
                 "press_until_match", "interval_secs", type_=int)
         if max_presses is None:
-            max_presses = get_config(
+            max_presses = self._config.get_config(
                 "press_until_match", "max_presses", type_=int)
 
-        if match_parameters is None:
-            match_parameters = MatchParameters()
-
         i = 0
-
         while True:
             try:
                 return self.wait_for_match(image, timeout_secs=interval_secs,
@@ -806,7 +813,7 @@ class DeviceUnderTest(object):
             noise_threshold=None, mask=None):
 
         if consecutive_frames is None:
-            consecutive_frames = get_config('motion', 'consecutive_frames')
+            consecutive_frames = self.get_config('motion', 'consecutive_frames')
 
         consecutive_frames = str(consecutive_frames)
         if '/' in consecutive_frames:
@@ -902,7 +909,8 @@ class DeviceUnderTest(object):
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
-            threshold = get_config('is_screen_black', 'threshold', type_=int)
+            threshold = self.get_config(
+                'is_screen_black', 'threshold', type_=int)
         if mask:
             mask = _load_mask(mask)
         if frame is None:
@@ -923,6 +931,9 @@ class DeviceUnderTest(object):
                 _log_image(greyframe, 'non-black-regions-after-masking',
                            'stbt-debug/is_screen_black')
         return maxVal == 0
+
+    def get_config(self, section, key, default=None, type_=str):
+        return self._config.get_config(section, key, default, type_)
 
 # Utility functions
 # ===========================================================================
@@ -1710,7 +1721,7 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
-def _match(image, template, match_parameters, template_name):
+def _match(image, template, match_parameters, template_name, pyramid_levels=3):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
     if any(template.shape[x] < 1 for x in (0, 1)):
@@ -1721,7 +1732,7 @@ def _match(image, template, match_parameters, template_name):
         raise ValueError("Template image must be 8-bits per channel")
 
     first_pass_matched, position, first_pass_certainty = _find_match(
-        image, template, match_parameters)
+        image, template, match_parameters, pyramid_levels)
     matched = (
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters))
@@ -1741,7 +1752,7 @@ def _match(image, template, match_parameters, template_name):
     return matched, region, first_pass_certainty
 
 
-def _find_match(image, template, match_parameters):
+def _find_match(image, template, match_parameters, pyramid_levels=3):
     """Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -1751,16 +1762,15 @@ def _find_match(image, template, match_parameters):
     http://docs.opencv.org/modules/imgproc/doc/object_detection.html
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
+    if pyramid_levels <= 0:
+        raise ConfigurationError("'match.pyramid_levels' must be > 0")
 
     log = functools.partial(_log_image, directory="stbt-debug/detect_match")
     log(image, "source")
     log(template, "template")
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    levels = get_config("match", "pyramid_levels", type_=int)
-    if levels <= 0:
-        raise ConfigurationError("'match.pyramid_levels' must be > 0")
-    template_pyramid = _build_pyramid(template, levels)
+    template_pyramid = _build_pyramid(template, pyramid_levels)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
