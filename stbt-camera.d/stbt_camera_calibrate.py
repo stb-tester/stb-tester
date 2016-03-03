@@ -35,18 +35,18 @@ videos['chessboard'] = ('image/png', lambda: [(
     open('%s/chessboard-720p-40px-border-white.png' % dirname(__file__))
     .read(), 60 * Gst.SECOND)])
 
-arrows = list(u'→↗↑↖←↙↓↘')
+arrows = list(u'←↙↓↘→↗↑↖')
 
 
 def off_to_arrow(off):
     u"""
     >>> print off_to_arrow((1, 1))
-    ↗
+    ↘
     >>> print off_to_arrow((-1, 0))
     ←
     """
     if numpy.linalg.norm(off) > 0.5:
-        angle = math.atan2(off[1], off[0])
+        angle = math.atan2(off[1], -off[0])
         return arrows[int(angle / 2 / math.pi * len(arrows) + len(arrows) + 0.5)
                       % len(arrows)]
     else:

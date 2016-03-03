@@ -52,13 +52,13 @@ def distance(a, b):
 def off_to_arrow(off):
     """
     >>> print off_to_arrow((1, 1))
-    ↗
+    ↘
     >>> print off_to_arrow((-1, 0))
     ←
     """
-    arrows = list('→↗↑↖←↙↓↘')
+    arrows = list('←↙↓↘→↗↑↖')
     if numpy.linalg.norm(off) > 0.5:
-        angle = math.atan2(off[1], off[0])
+        angle = math.atan2(off[1], -off[0])
         return arrows[int(angle / 2 / math.pi * len(arrows) + len(arrows) + 0.5)
                       % len(arrows)]
     else:
