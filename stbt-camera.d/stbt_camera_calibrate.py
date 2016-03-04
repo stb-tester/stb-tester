@@ -92,15 +92,6 @@ def print_error_map(outstream, ideal_points, measured_points):
     outstream.write("\n" + ENDC)
 
 
-def build_remapping(reverse_transformation_fn, res):
-    a = numpy.zeros((res[1], res[0], 2), dtype=numpy.float32)
-    for x in range(0, res[0]):
-        for y in range(0, res[1]):
-            a[y][x][0] = x
-            a[y][x][1] = y
-    return reverse_transformation_fn(a)
-
-
 def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 

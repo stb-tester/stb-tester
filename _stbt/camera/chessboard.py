@@ -1,4 +1,3 @@
-from collections import namedtuple
 from os.path import dirname
 
 import cv2
@@ -27,12 +26,41 @@ def calculate_calibration_params(frame):
     If a chessboard cannot be found in frame this raises `NoChessboardError`.
     """
     ideal, corners = _find_chessboard(frame)
+    resolution = (frame.shape[1], frame.shape[0])
 
-    undistort = calculate_distortion(ideal, corners, (1920, 1080))
-    unperspect = calculate_perspective_transformation(
-        ideal, undistort.do(corners))
+    out = {}
 
-    return dict(undistort.describe().items() + unperspect.describe().items())
+    # Calculate distortion:
+    ideal_3d = numpy.array([[[x, y, 0]] for x, y in ideal],
+                           dtype=numpy.float32)
+    _, cameraMatrix, distCoeffs, _, _ = cv2.calibrateCamera(
+        [ideal_3d], [corners], resolution)
+
+    out.update({
+        'fx': cameraMatrix[0, 0],
+        'fy': cameraMatrix[1, 1],
+        'cx': cameraMatrix[0, 2],
+        'cy': cameraMatrix[1, 2],
+
+        'k1': distCoeffs[0, 0],
+        'k2': distCoeffs[0, 1],
+        'p1': distCoeffs[0, 2],
+        'p2': distCoeffs[0, 3],
+        'k3': distCoeffs[0, 4],
+    })
+
+    # Calculate perspective:
+    undistorted_corners = cv2.undistortPoints(corners, cameraMatrix, distCoeffs)
+    ideal_2d = numpy.array([[[x, y]] for x, y in ideal],
+                           dtype=numpy.float32)
+    mat, _ = cv2.findHomography(undistorted_corners, ideal_2d)
+    ihm = numpy.linalg.inv(mat)
+
+    for col in range(3):
+        for row in range(3):
+            out['ihm%i%i' % (col + 1, row + 1)] = ihm[row][col]
+
+    return out
 
 
 def find_corrected_corners(params, frame):
@@ -48,66 +76,7 @@ def find_corrected_corners(params, frame):
     If a chessboard cannot be found in frame this raises `NoChessboardError`.
     """
     ideal, corners = _find_chessboard(frame)
-    return ideal, apply_geometric_correction(params, corners)
-
-
-ReversibleTransformation = namedtuple(
-    'ReversibleTransformation', 'do reverse describe')
-
-
-def calculate_distortion(ideal, measured_points, resolution):
-    ideal_3d = numpy.array([[[x, y, 0]] for x, y in ideal],
-                           dtype=numpy.float32)
-    _, cameraMatrix, distCoeffs, _, _ = cv2.calibrateCamera(
-        [ideal_3d], [measured_points], resolution)
-
-    def undistort(points):
-        # pylint: disable=E1101
-        return cv2.undistortPoints(points, cameraMatrix, distCoeffs)
-
-    def distort(points):
-        points = points.reshape((-1, 2))
-        points_3d = numpy.zeros((len(points), 3))
-        points_3d[:, 0:2] = points
-        return cv2.projectPoints(points_3d, (0, 0, 0), (0, 0, 0),
-                                 cameraMatrix, distCoeffs)[0]
-
-    def describe():
-        return {
-            'fx': cameraMatrix[0, 0],
-            'fy': cameraMatrix[1, 1],
-            'cx': cameraMatrix[0, 2],
-            'cy': cameraMatrix[1, 2],
-
-            'k1': distCoeffs[0, 0],
-            'k2': distCoeffs[0, 1],
-            'p1': distCoeffs[0, 2],
-            'p2': distCoeffs[0, 3],
-            'k3': distCoeffs[0, 4],
-        }
-    return ReversibleTransformation(undistort, distort, describe)
-
-
-def calculate_perspective_transformation(ideal, measured_points):
-    ideal_2d = numpy.array([[[x, y]] for x, y in ideal],
-                           dtype=numpy.float32)
-    mat, _ = cv2.findHomography(measured_points, ideal_2d)
-    inv = numpy.linalg.inv(mat)
-
-    def transform_perspective(points):
-        return cv2.perspectiveTransform(points, mat)
-
-    def untransform_perspective(points):
-        return cv2.perspectiveTransform(points, inv)
-
-    def describe():
-        out = {}
-        for col in range(3):
-            for row in range(3):
-                out['ihm%i%i' % (col + 1, row + 1)] = inv[row][col]
-        return out
-    return ReversibleTransformation(
-        transform_perspective, untransform_perspective, describe)
+    return ideal, _apply_geometric_correction(params, corners)
 
 
 def _find_chessboard(input_image):
@@ -139,7 +108,7 @@ def _find_chessboard(input_image):
     return ideal, corners
 
 
-def apply_geometric_correction(params, points):
+def _apply_geometric_correction(params, points):
     # Undistort
     camera_matrix = numpy.array([[params['fx'], 0, params['cx']],
                                  [0, params['fy'], params['cy']],
