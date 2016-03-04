@@ -395,9 +395,12 @@ $(info Smart TV support disabled)
 endif
 
 stbt_camera_files=\
+	_stbt/camera/__init__.py \
+	_stbt/camera/chessboard-720p-40px-border-white.png \
+	_stbt/camera/chessboard.py \
+	_stbt/gst_utils.py \
 	_stbt/tv_driver.py \
 	stbt-camera \
-	stbt-camera.d/chessboard-720p-40px-border-white.png \
 	stbt-camera.d/colours.svg \
 	stbt-camera.d/glyphs.svg.jinja2 \
 	stbt-camera.d/stbt_camera_calibrate.py \
