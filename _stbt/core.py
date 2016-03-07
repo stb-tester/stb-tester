@@ -1191,6 +1191,16 @@ def argparser():
     return parser
 
 
+def _memoize_property_fn(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        # pylint: disable=protected-access
+        if fn not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn] = fn(self)
+        return self._FrameObject__frame_object_cache[fn]
+    return inner
+
+
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
@@ -1210,6 +1220,7 @@ class _FrameObjectMeta(type):
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                f = _memoize_property_fn(f)
                 if k != 'is_visible' and not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
@@ -1233,6 +1244,7 @@ class FrameObject(object):
     def __init__(self, frame):
         if frame is None:
             raise ValueError("FrameObject: frame must not be None")
+        self.__frame_object_cache = {}
         self._frame = frame
 
     def __repr__(self):
