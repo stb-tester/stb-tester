@@ -1191,7 +1191,31 @@ def argparser():
     return parser
 
 
+def _noneify_property_fn(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        if self:
+            return fn(self)
+        else:
+            return None
+    return inner
+
+
 class _FrameObjectMeta(type):
+    def __new__(mcs, name, parents, dct):
+        for k, v in dct.iteritems():
+            if isinstance(v, property):
+                if v.fset is not None:
+                    raise Exception(
+                        "FrameObjects must be immutable but this property has "
+                        "a setter")
+                f = v.fget
+                if k != 'is_visible' and not k.startswith('_'):
+                    f = _noneify_property_fn(f)
+                dct[k] = property(f)
+
+        return super(_FrameObjectMeta, mcs).__new__(mcs, name, parents, dct)
+
     def __init__(cls, name, parents, dct):
         property_names = sorted([
             p for p in dir(cls)
