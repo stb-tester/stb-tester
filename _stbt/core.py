@@ -1191,16 +1191,22 @@ def argparser():
     return parser
 
 
-class FrameObject(object):
-    def __init__(self, frame):
+class _FrameObjectMeta(type):
+    def __init__(cls, name, parents, dct):
         property_names = sorted([
-            p for p in dir(self.__class__)
-            if isinstance(getattr(self.__class__, p), property)])
+            p for p in dir(cls)
+            if isinstance(getattr(cls, p), property)])
         assert 'is_visible' in property_names
-        self.__attrs = ["is_visible"] + sorted(
+        cls._FrameObject__attrs = ["is_visible"] + sorted(
             x for x in property_names
             if x != "is_visible" and not x.startswith('_'))
+        super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
+
+class FrameObject(object):
+    __metaclass__ = _FrameObjectMeta
+
+    def __init__(self, frame):
         if frame is None:
             raise ValueError("FrameObject: frame must not be None")
         self._frame = frame
@@ -1211,7 +1217,8 @@ class FrameObject(object):
 
     def _iter_attrs(self):
         if self:
-            for x in self.__attrs:
+            # pylint: disable=protected-access,no-member
+            for x in self.__class__.__attrs:
                 yield x, getattr(self, x)
         else:
             yield "is_visible", False
