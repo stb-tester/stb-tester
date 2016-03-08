@@ -474,61 +474,19 @@ class FrameObject(_stbt.core.FrameObject):
        :figwidth: 80%
        :align: center
 
-    We create a `class` deriving from the `FrameObject` base class.  The base
-    class provides a `self._frame` member.  The we define a set of properties,
-    each one extracting some information of interest from that frame.
+    Here's our Frame Object class:
 
     >>> class Dialog(FrameObject):
     ...     @property
     ...     def is_visible(self):
-    ...         """
-    ...         All FrameObjects must define the `is_visible` property.  It will
-    ...         determine the truthiness of the object.  Returning True from
-    ...         this property indicates that this FrameObject class can be used
-    ...         with the provided frame and that the values of the other
-    ...         properties are likely to be valid.
-    ...
-    ...         In this example we only return True if we see the info icon
-    ...         that appears on each dialog box.
-    ...
-    ...         It's a good idea to return simple types from these properties
-    ...         rather than `MatchResult`s to make the ``__repr__`` cleaner and
-    ...         to preserve equality properties.
-    ...         """
     ...         return bool(self._info)
     ...
     ...     @property
     ...     def title(self):
-    ...         """
-    ...         This property demonstrates an advantage of Frame Objects over
-    ...         just including the code in the test directly.  Test code can now
-    ...         write:
-    ...
-    ...             assert Dialog().title == "Information"
-    ...
-    ...         rather than:
-    ...
-    ...             assert (stbt.ocr(region=stbt.Region(396, 249, 500, 50)) ==
-    ...                     "Information"
-    ...
-    ...         A lot more intention revealing, and if the position of the title
-    ...         moves there is just one place in your test-pack that needs to be
-    ...         updated.
-    ...         """
     ...         return ocr(region=Region(396, 249, 500, 50), frame=self._frame)
     ...
     ...     @property
     ...     def message(self):
-    ...         """
-    ...         This property demonstrates an advantage of Frame Objects over
-    ...         helper functions.  We are using the position of the info icon to
-    ...         find this message.  Because the private `_info` property is
-    ...         shared between this property and `is_visible` we don't need to
-    ...         compute it twice.
-    ...
-    ...         When defining Frame Objects you must take care to pass
-    ...         `self._frame` into every call to an image processing function.
-    ...         """
     ...         right_of_info = Region(
     ...             x=self._info.region.right, y=self._info.region.y,
     ...             width=390, height=self._info.region.height)
@@ -537,20 +495,86 @@ class FrameObject(_stbt.core.FrameObject):
     ...
     ...     @property
     ...     def _info(self):
-    ...         """
-    ...         This is a private property because its name starts with `_`.  It
-    ...         will not appear in `__repr__` or count toward equality
-    ...         comparisons, but the result from it will still be memoized.
-    ...         This is useful to share intermediate values between your public
-    ...         properties, particularly if they are expensive to calculate.  In
-    ...         this instance we will be sharing the result between `is_visible`
-    ...         and `message`.
-    ...
-    ...         You wouldn't want this to be a public property because it
-    ...         returns a `MatchResult` which incorporates the whole of the
-    ...         frame passed into `match`.
-    ...         """
     ...         return match('../tests/info.png', frame=self._frame)
+
+    Lets take this line-by-line::
+
+        class Dialog(FrameObject):
+
+    We create a `class` deriving from the `FrameObject` base class.::
+
+        @property
+        def is_visible(self):
+            return bool(self._info)
+
+    All FrameObjects must define the `is_visible` property.  It will determine
+    the truthiness of the object.  Returning `True` from this property indicates
+    that this `FrameObject` class can be used with the provided frame and that
+    the values of the other properties are likely to be valid.
+
+    In this example we only return True if we see the info icon that appears on
+    each dialog box.  The actual work is delegated to the private property
+    `_info` defined below.
+
+    It's a good idea to return simple types from these properties rather than
+    `MatchResult` s to make the `__repr__` cleaner and to preserve equality
+    properties.::
+
+        @property
+        def title(self):
+            return ocr(region=Region(396, 249, 500, 50), frame=self._frame)
+
+    The base class provides a `self._frame` member.  Here we're using `stbt.ocr`
+    to interrogate this frame extracting the dialog title text.  This is the
+    basic form that many FrameObject properties will take.
+
+    This property demonstrates an advantage of Frame Objects over just including
+    the code in the test directly.  Test code can now write::
+
+        assert Dialog().title == "Information"
+
+    rather than::
+
+        assert (stbt.ocr(region=stbt.Region(396, 249, 500, 50)) ==
+                "Information"
+
+    This is a lot more intention revealing, and if the position of the title
+    moves there is just one place in your test-pack that needs to be updated.
+
+    When defining Frame Objects you must take care to pass `self._frame` into
+    every call to an image processing function.  Otherwise the return values
+    won't correspond to the frame you were expecting and you won't be able to
+    test the class in isolation.::
+
+        @property
+        def message(self):
+            right_of_info = Region(
+                x=self._info.region.right, y=self._info.region.y,
+                width=390, height=self._info.region.height)
+            return (ocr(region=right_of_info, frame=self._frame)
+                    .replace('\n', ' '))
+
+    This property demonstrates an advantage of Frame Objects over helper
+    functions.  We are using the position of the info icon to find this message.
+    Because the private `_info` property is shared between this property and
+    `is_visible` we don't need to compute it twice - the `FrameObject` base
+    class will remember the value from the first time it was computed.::
+
+        @property
+        def _info(self):
+            return match('../tests/info.png', frame=self._frame)
+
+    This is a private property because its name starts with `_`.  It will not
+    appear in `__repr__` nor count toward equality comparisons, but the result
+    from it will still be memoized.  This is useful to share intermediate values
+    between your public properties, particularly if they are expensive to
+    calculate.  In this instance we will be sharing the result between
+    `is_visible` and `message`.
+
+    You wouldn't want this to be a public property because it returns a
+    `MatchResult` which incorporates the whole of the frame passed into `match`.
+
+    **Using our new Frame Object class**
 
     In the examples below we always pass a frame into the constructor.  In
     practice you're unlikely to do so: the base class will just grab one from
