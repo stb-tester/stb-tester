@@ -80,6 +80,7 @@ INSTALL_CORE_FILES = \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     stbt/__init__.py \
+    stbt_auto_selftest.py \
     stbt-batch \
     stbt-batch.d/instaweb \
     stbt-batch.d/report \

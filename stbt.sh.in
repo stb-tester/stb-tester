@@ -8,6 +8,7 @@
 #/
 #/ Available commands are:
 #/     run            Run a testcase
+#/     auto-selftest  Test your test-cases against saved screenshots
 #/     batch          Run testcases repeatedly, create html report
 #/     config         Print configuration value
 #/     control        Send remote control signals
@@ -39,16 +40,21 @@ else
     experimental=0
 fi
 
-case "$1" in
+cmd=$1
+shift
+
+case "$cmd" in
     -h|--help)
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
+    auto-selftest)
+        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
-        exec @LIBEXECDIR@/stbt/stbt-"$@";;
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     # Experimental sub-commands:
     camera)
-        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$1" ]; then
+        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
             echo "stb-tester camera support is not installed." 1>&2
             exit 1
         fi
@@ -58,9 +64,8 @@ case "$1" in
             echo "want to proceed use 'stbt --with-experimental'." 1>&2
             exit 1
         fi
-        exec @LIBEXECDIR@/stbt/stbt-"$@";;
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     virtual-stb)
-        shift
         export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
         if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
             echo "stbt virtual-stb is not installed." >&2
