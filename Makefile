@@ -155,7 +155,8 @@ check-nosetests: tests/ocr/menu.png
 	nosetests --with-doctest -v --match "^test_" \
 	    --doctest-options=+ELLIPSIS \
 	    $(shell git ls-files '*.py' |\
-	      grep -v -e tests/test.py \
+	      grep -v -e tests/auto_selftest_bare.py \
+		      -e tests/test.py \
 	              -e tests/test2.py \
 	              -e tests/test_functions.py \
 	              -e tests/vstb-example-html5/ \
