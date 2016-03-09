@@ -435,33 +435,69 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 class FrameObject(_stbt.core.FrameObject):
     # pylint: disable=line-too-long,abstract-method
     r'''
-    The Frame Object pattern is used to simplify test-case development and
-    maintainance.  Frame Objects are a layer of abstraction between your
-    test-cases and the stbt image processing APIs.  They are easy to write and
+    The Frame Object pattern is used to simplify testcase development and
+    maintenance. Frame Objects are a layer of abstraction between your
+    testcases and the stbt image processing APIs. They are easy to write and
     cheap to maintain.
 
-    A Frame Object class extracts information from a frame of video, typically
-    by calling `stbt.ocr()` or `stbt.match()`. All of your test-cases use these
-    objects rather than using `ocr()` or `match()` directly . A Frame Object
-    translates from the vocabulary of low-level image processing functions and
-    regions (like `stbt.ocr(region=stbt.Region(213, 23, 200, 36)))` to the
-    vocabulary of high-level features and user-facing concepts (like
-    `programme_title`).
+    A Frame Object extracts information from a frame of video, typically by
+    calling `stbt.ocr` or `stbt.match`. All of your testcases use these objects
+    rather than using ``ocr`` or ``match`` directly. A Frame Object translates
+    from the vocabulary of low-level image processing functions and regions
+    (like ``stbt.ocr(region=stbt.Region(213, 23, 200, 36))``) to the vocabulary
+    of high-level features and user-facing concepts (like ``programme_title``).
 
-    This base class is provided to make creating well-behaved Frame Objects
-    easier.  It defines:
+    ``FrameObject`` is a base class that makes it easier to create well-behaved
+    Frame Objects. Your own Frame Object classes should:
 
-    * `__init__` - optionally taking a frame in the constructor
-    * `__nonzero__` - based on the property is_visible which derived classes
-      must define.  This means the class will only be considered `True` if
-      it's visible, and so the other properties are valid.  This makes it easy
-      to use with `wait_until`.
-    * `__repr__` - including all the user-defined properties.  This makes using
-      the object in doctests convenient
-    * `__hash__` and `__cmp__` - If all the properties match between two
+    * Derive from ``FrameObject``.
+    * Define a property (using Python's ``@property`` decorator) called
+      ``is_visible`` that returns ``True`` or ``False``.
+    * Implement any other properties (using Python's ``@property`` decorator)
+      for information that you want to extract from the frame.
+    * Pass ``self._frame`` into any image-processing functions you call. For
+      example: ``stbt.match("my-image.png", frame=self._frame)``.
+
+    A Frame Object instance is considered "truthy" if it is visible. Any other
+    properties (apart from ``is_visible``) will return ``None`` if the object
+    isn't visible.
+
+    Frame Objects are immutable, because they represent information about a
+    specific frame of video. If you define any methods that change the state
+    of the device-under-test, they should return a new Frame Object instead of
+    modifying ``self``.
+
+    Each property will be cached the first time is is referenced. This allows
+    writing test cases in a natural way while expensive operations like ``ocr``
+    will only be done once per frame.
+
+    Each property is automatically used when generating a string representation
+    of the Frame Object, or when calculating the equality, hash, or order
+    between two Frame Objects. To define a property that doesn't contribute to
+    the string/equality/hash/ordering, start the property name with a leading
+    underscore.
+
+    The ``FrameObject`` base class defines the following methods:
+
+    * ``__init__`` – A default constructor that takes an optional frame; if the
+      frame is not provided, it will grab a frame from the device-under-test
+      when you create an instance of the Frame Object. If you want your
+      constructor to take other parameters, you can override ``__init__`` but
+      the first parameter must be an optional ``frame``, and you must remember
+      to call the base class's ``__init__`` passing it the ``frame``.
+    * ``__nonzero__`` – Delegates to ``is_visible`` as described above.
+    * ``__repr__`` – The object's string representation includes all the
+      user-defined properties. This makes it convenient to use doctests for
+      unit-testing your Frame Objects.
+    * ``__hash__`` and ``__cmp__`` – If all the properties match between two
       instances of a `FrameObject` then they are considered equal, even if the
       underlying frame is different.  This can be useful for detecting changes
-      or waiting for a frame to stop changing before interrogating it.
+      in the UI (while ignoring live TV in the background) or waiting for the
+      UI to stop changing before interrogating it.
+
+    For more background information on Frame Objects see
+    `Improve black-box testing agility: meet the Frame Object pattern
+    <https://stb-tester.com/blog/2015/09/08/meet-the-frame-object-pattern>`_.
 
     **Example Usage**
 
@@ -554,7 +590,7 @@ class FrameObject(_stbt.core.FrameObject):
 
     In the examples below we always pass a frame into the constructor.  In
     practice you're unlikely to do so: the base class will just grab one from
-    stbt.  This allows constructions like::
+    the device-under-test.  This allows constructions like::
 
         dialog = wait_until(Dialog)
         assert 'great' in dialog.message
@@ -669,25 +705,6 @@ class FrameObject(_stbt.core.FrameObject):
     False
     >>> dialog_fab < dialog
     True
-
-    As Frame Objects only extract information from a given frame and the frame
-    cannot change Frame Objects are immutable.  This means that every time a
-    property is consulted it will give the same result.  The `FrameObject` base
-    class takes advantage of this and will remember the values of each of the
-    properties so they only have to be calculated once.  This allows writing
-    test cases in a natural way while expensive operations like ``ocr`` will
-    only have to be done once per frame.
-
-    **Frame Object Checklist**
-
-    1. Derive from ``FrameObject``.
-    2. Define an `is_visible` property returning either ``True`` or ``False``.
-    3. Define Python properties extracting information from ``self._frame``
-    4. Take care to pass `self._frame` into any image processing function you
-       call
-
-    For more background information on Frame Objects see
-    `Improve black-box testing agility: meet the Frame Object pattern <https://stb-tester.com/blog/2015/09/08/meet-the-frame-object-pattern>`_.
     '''
     def __init__(self, frame=None):
         if frame is None:
