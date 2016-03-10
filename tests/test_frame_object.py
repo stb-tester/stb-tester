@@ -16,6 +16,41 @@ class TruthyFrameObject(stbt.FrameObject):
         return True
 
 
+class OrderedFrameObject(stbt.FrameObject):
+    """
+    FrameObject defines a default sort order based on the values of the
+    public properties (in lexicographical order by property name; that is, in
+    this example the `color` value is compared before `size`):
+
+    >>> import numpy
+    >>> red = OrderedFrameObject(numpy.array([[[0, 0, 255]]]))
+    >>> bigred = OrderedFrameObject(numpy.array([[[0, 0, 255], [0, 0, 255]]]))
+    >>> green = OrderedFrameObject(numpy.array([[[0, 255, 0]]]))
+    >>> blue = OrderedFrameObject(numpy.array([[[255, 0, 0]]]))
+    >>> print sorted([red, green, blue, bigred])
+    [...'blue'..., ...'green'..., ...'red', size=1..., ...'red', size=2)]
+    """
+
+    @property
+    def is_visible(self):
+        return True
+
+    @property
+    def size(self):
+        return self._frame.shape[0] * self._frame.shape[1]
+
+    @property
+    def color(self):
+        if self._frame[0, 0, 0] == 255:
+            return "blue"
+        elif self._frame[0, 0, 1] == 255:
+            return "green"
+        elif self._frame[0, 0, 2] == 255:
+            return "red"
+        else:
+            return "grey?"
+
+
 class PrintingFrameObject(stbt.FrameObject):
     """
     This is a very naughty FrameObject.  It's properties cause side-effects so
