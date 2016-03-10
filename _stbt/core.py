@@ -1191,6 +1191,99 @@ def argparser():
     return parser
 
 
+def _memoize_property_fn(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        # pylint: disable=protected-access
+        if fn not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn] = fn(self)
+        return self._FrameObject__frame_object_cache[fn]
+    return inner
+
+
+def _noneify_property_fn(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        if self:
+            return fn(self)
+        else:
+            return None
+    return inner
+
+
+class _FrameObjectMeta(type):
+    def __new__(mcs, name, parents, dct):
+        for k, v in dct.iteritems():
+            if isinstance(v, property):
+                if v.fset is not None:
+                    raise Exception(
+                        "FrameObjects must be immutable but this property has "
+                        "a setter")
+                f = v.fget
+                f = _memoize_property_fn(f)
+                if k != 'is_visible' and not k.startswith('_'):
+                    f = _noneify_property_fn(f)
+                dct[k] = property(f)
+
+        return super(_FrameObjectMeta, mcs).__new__(mcs, name, parents, dct)
+
+    def __init__(cls, name, parents, dct):
+        property_names = sorted([
+            p for p in dir(cls)
+            if isinstance(getattr(cls, p), property)])
+        assert 'is_visible' in property_names
+        cls._FrameObject__attrs = ["is_visible"] + sorted(
+            x for x in property_names
+            if x != "is_visible" and not x.startswith('_'))
+        super(_FrameObjectMeta, cls).__init__(name, parents, dct)
+
+
+class FrameObject(object):
+    __metaclass__ = _FrameObjectMeta
+
+    def __init__(self, frame):
+        if frame is None:
+            raise ValueError("FrameObject: frame must not be None")
+        self.__frame_object_cache = {}
+        self._frame = frame
+
+    def __repr__(self):
+        args = ", ".join(("%s=%r" % x) for x in self._iter_attrs())
+        return "%s(%s)" % (self.__class__.__name__, args)
+
+    def _iter_attrs(self):
+        if self:
+            # pylint: disable=protected-access,no-member
+            for x in self.__class__.__attrs:
+                yield x, getattr(self, x)
+        else:
+            yield "is_visible", False
+
+    def __nonzero__(self):
+        return bool(self.is_visible)
+
+    def __cmp__(self, other):
+        # pylint: disable=protected-access
+        from itertools import izip_longest
+        if isinstance(other, self.__class__):
+            for s, o in izip_longest(self._iter_attrs(), other._iter_attrs()):
+                v = cmp(s[1], o[1])
+                if v != 0:
+                    return v
+            return 0
+        else:
+            return NotImplemented
+
+    def __hash__(self):
+        return hash(tuple(v for _, v in self._iter_attrs()))
+
+    @property
+    def is_visible(self):
+        raise NotImplementedError(
+            "Objects deriving from FrameObject must define an is_visible "
+            "property")
+
+
 # Internal
 # ===========================================================================
 

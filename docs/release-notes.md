@@ -20,6 +20,9 @@ UNRELEASED
 
 ##### New features
 
+* Python API: New base-class `stbt.FrameObject` has been added to make it
+  easier to structure your test-pack according to the Frame Object pattern.
+
 * The `stbt camera` calibration videos have been modified to use QR codes
   rather than text and OCR.  This makes calibration faster, but will require
   the videos to be re-generated on first use.
