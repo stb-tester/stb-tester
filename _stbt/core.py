@@ -2196,6 +2196,13 @@ def _log_image_descriptions(
         ))
 
 
+def _iter_frames(depth=1):
+    frame = inspect.currentframe(depth + 1)
+    while frame:
+        yield frame
+        frame = frame.f_back
+
+
 def _find_path(image):
     """Searches for the given filename and returns the full path.
 
@@ -2209,9 +2216,9 @@ def _find_path(image):
     # stack()[0] is _find_path;
     # stack()[1] is _find_path's caller, e.g. detect_match;
     # stack()[2] is detect_match's caller (the user script).
-    for caller in inspect.stack()[2:]:
+    for caller in _iter_frames(depth=2):
         caller_image = os.path.join(
-            os.path.dirname(inspect.getframeinfo(caller[0]).filename),
+            os.path.dirname(inspect.getframeinfo(caller).filename),
             image)
         if os.path.isfile(caller_image):
             return os.path.abspath(caller_image)
