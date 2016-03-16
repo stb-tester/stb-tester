@@ -8,11 +8,14 @@ these helpers to ensure that they still behave correctly.
 Usage:
 
     stbt auto-selftest generate
+    stbt auto-selftest validate
 
 `stbt auto-selftests generate` generates a doctests for every `FrameObject` in
 your test-pack against any screenshots stored in selftest/screenshots.  This
 results in a set of python files under selftest/auto_selftest which can be
-inspected by (human) eye and validated with `python -m doctest <filename>`.
+inspected by (human) eye and validated either with
+`python -m doctest <filename>` or more commonly with
+`stbt auto-selftests validate`.
 
 **auto-selftest checklist**
 
@@ -23,6 +26,8 @@ inspected by (human) eye and validated with `python -m doctest <filename>`.
 3. View the effect of your changes with `git diff`
 4. Commit the changes to your auto-selftests along with your changes to the
    Frame Objects
+5. Run `stbt auto-selftests validate` with every change on as a part of
+   continuous integration.
 
 Using auto-selftests makes it much easier to create, update and modify Frame
 Objects.  It makes Frame Objects more reliable because every time you find a
@@ -69,24 +74,59 @@ def main(argv):
 
     subparsers.add_parser(
         'generate', help="Regenerate auto-selftests from screenshots")
+    subparsers.add_parser('validate', help='Run (and check) the auto-selftests')
 
     cmdline_args = parser.parse_args(argv[1:])
 
-    if cmdline_args.command == 'generate':
-        root = _find_test_pack_root()
-        if root is None:
-            sys.stderr.write(
-                "This command must be run within a test pack.  Couldn't find a "
-                ".stbt.conf in this or any parent directory.\n")
-            return 1
+    root = _find_test_pack_root()
+    if root is None:
+        sys.stderr.write(
+            "This command must be run within a test pack.  Couldn't find a "
+            ".stbt.conf in this or any parent directory.\n")
+        return 1
 
-        os.chdir(root)
+    os.chdir(root)
+
+    if cmdline_args.command == 'generate':
         generate()
+    elif cmdline_args.command == 'validate':
+        return validate()
     else:
         assert False
 
 
 def generate():
+    tmpdir = generate_into_tmpdir()
+    try:
+        target = "%s/selftest/auto_selftest" % os.curdir
+        if os.path.exists(target):
+            shutil.rmtree(target)
+        os.rename(tmpdir, target)
+    except:
+        shutil.rmtree(tmpdir)
+        raise
+
+
+def validate():
+    import filecmp
+    tmpdir = generate_into_tmpdir()
+    try:
+        orig_files = _recursive_glob(
+            '*.py', "%s/selftest/auto_selftest" % os.curdir)
+        new_files = _recursive_glob('*.py', tmpdir)
+        if orig_files != new_files:
+            return 1
+        _, mismatch, errors = filecmp.cmpfiles(
+            tmpdir, "%s/selftest/auto_selftest" % os.curdir, orig_files)
+        if mismatch or errors:
+            return 1
+        else:
+            return 0
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def generate_into_tmpdir():
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
