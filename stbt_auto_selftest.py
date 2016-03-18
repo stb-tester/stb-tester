@@ -1,53 +1,50 @@
 #!/usr/bin/python
 
 """
-Captures the behaviour of Frame Objects and other helper functions that operate
-on screenshots by generating doctests.  These can later be used when changing
-these helpers to ensure that they still behave correctly.
+``stbt auto-selftest`` captures the behaviour of Frame Objects (and other
+helper functions that operate on a video-frame) by generating doctests. When
+you change these helper functions, the generated doctests help to ensure that
+they still behave correctly.
 
 Usage:
 
     stbt auto-selftest generate
     stbt auto-selftest validate
 
-`stbt auto-selftests generate` generates a doctests for every `FrameObject` in
-your test-pack against any screenshots stored in selftest/screenshots.  This
-results in a set of python files under selftest/auto_selftest which can be
-inspected by (human) eye and validated either with
-`python -m doctest <filename>` or more commonly with
-`stbt auto-selftests validate`.
+``stbt auto-selftests generate`` generates a doctest for every `FrameObject` in
+your test-pack against any screenshots stored in ``selftest/screenshots``. This
+results in a set of python files under ``selftest/auto_selftest`` which can be
+inspected by (human) eye and validated either with ``python -m doctest
+<filename>`` or more commonly with ``stbt auto-selftests validate``.
 
 **auto-selftest checklist**
 
 1. Take screenshots of the device-under-test and put them in the
-   selftest/auto_selftest directory of your test-pack
-2. Run `stbt auto-selftest generate` after every change to your Frame Objects,
-   or after adding a new screenshot
-3. View the effect of your changes with `git diff`
+   ``selftest/auto_selftest`` directory of your test-pack.
+2. Run ``stbt auto-selftest generate`` after every change to your Frame
+   Objects, or after adding a new screenshot.
+3. View the effect of your changes with ``git diff``.
 4. Commit the changes to your auto-selftests along with your changes to the
-   Frame Objects
-5. Run `stbt auto-selftests validate` with every change on as a part of
-   continuous integration.
+   Frame Objects.
+5. Run ``stbt auto-selftests validate`` on every change from your Continuous
+   Integration system.
 
 Using auto-selftests makes it much easier to create, update and modify Frame
-Objects.  It makes Frame Objects more reliable because every time you find a
-screen where they don't behave properly you just add it to your selftest
-screenshot corpus and fix it checking the auto-selftests to see that it's fixed
-and no regressions have been caused.
+Objects. If you find a screen where your Frame Object doesn't behave properly,
+add that screenshot to your selftest corpus, and fix the Frame Object; the
+auto-selftests will check that you haven't introduced a regression in the Frame
+Object's behaviour against the other screenshots.
 
 For more information and for more advanced usage see the example test file
-`example.py`_, the accompianing `selftest screenshots`_ and the selftest
-generated from it `example_selftest.py`_.
-
-.. _example.py: {url}/tests/selftest-example/tests/example.py
-.. _selftest screenshots: {url}/tests/selftest-example/selftest/screenshots
-.. _example_selftest.py: {url}/selftest/auto_selftest/tests/example_selftest.py
+(``tests/example.py``), the accompanying screenshots
+(``selftest/screenshots``), and the generated doctest
+(``selftest/auto_selftest/tests/example_selftest.py``) under
+<https://github.com/stb-tester/stb-tester/tree/master/tests/auto-selftest-example-test-pack/>.
 
 For more information on the background behind auto-selftests see
 `Improve black-box testing agility: automatic self-regression tests
-<https://stb-tester.com/blog/2015/09/24/automatic-self-regression-tests>`_
-""".format(url=("https://github.com/stb-tester/stb-tester/blob/master/"
-                "tests/selftest-example"))
+<https://stb-tester.com/blog/2015/09/24/automatic-self-regression-tests>`_.
+"""
 
 import argparse
 import cStringIO
@@ -69,7 +66,10 @@ SCREENSHOTS_ROOT = "selftest/screenshots"
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(epilog=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="stbt auto-selftest",
+        epilog=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser(
