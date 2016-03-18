@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import errno
 import os
 import re
