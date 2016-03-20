@@ -15,18 +15,26 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    run record batch config control lint power \
-                    screenshot templatematch tv)" \
+                    batch \
+                    config \
+                    control \
+                    lint \
+                    power \
+                    record \
+                    run \
+                    screenshot \
+                    templatematch \
+                    tv)" \
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
-            run)      _stbt_run;;
-            record)   _stbt_record;;
             batch)    _stbt_batch;;
             config)   _stbt_config;;
             control)  _stbt_control;;
             lint)     _stbt_lint;;
             power)    _stbt_power;;
+            record)   _stbt_record;;
+            run)      _stbt_run;;
             templatematch) _stbt_templatematch;;
             *)        COMPREPLY=();;
         esac
