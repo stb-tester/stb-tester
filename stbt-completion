@@ -15,6 +15,7 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
+                    auto-selftest \
                     batch \
                     config \
                     control \
@@ -28,6 +29,7 @@ _stbt() {
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
+            auto-selftest) _stbt_auto_selftest;;
             batch)    _stbt_batch;;
             config)   _stbt_config;;
             control)  _stbt_control;;
@@ -74,6 +76,22 @@ _stbt_record() {
                     --help --verbose --restart-source \
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder --output-file)" \
+            -- "$cur"));;
+    esac
+}
+
+_stbt_auto_selftest() {
+    case "${COMP_WORDS[COMP_CWORD-1]}" in
+        --help|generate|validate) COMPREPLY=(); return;;
+    esac
+
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        *) COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space \
+                    --help generate validate)" \
             -- "$cur"));;
     esac
 }
