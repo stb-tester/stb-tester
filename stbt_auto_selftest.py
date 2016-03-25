@@ -192,6 +192,8 @@ def inspect_module(module_filename):
         module = import_by_filename(module_filename)
         for x in dir(module):
             item = getattr(module, x)
+            if getattr(item, '__module__', None) != module.__name__:
+                continue
             expressions = list(getattr(item, 'AUTO_SELFTEST_EXPRESSIONS', []))
             if not expressions:
                 continue
