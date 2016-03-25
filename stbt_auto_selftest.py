@@ -50,6 +50,7 @@ import argparse
 import cStringIO
 import errno
 import fnmatch
+import multiprocessing
 import os
 import re
 import shutil
@@ -133,6 +134,8 @@ def is_valid_python_identifier(x):
 def generate_into_tmpdir():
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
+    # We use this process pool for sandboxing rather than concurrency:
+    pool = multiprocessing.Pool(processes=1, maxtasksperchild=1)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
     try:
         test_file_count = 0
@@ -147,11 +150,11 @@ def generate_into_tmpdir():
             barename = re.sub('.py$', '_bare.py', outname)
             mkdir_p(os.path.dirname(outname))
 
-            module = inspect_module(module_filename)
+            module = pool.apply(inspect_module, (module_filename,))
             test_line_count = write_bare_doctest(module, barename)
             if test_line_count:
                 test_file_count += 1
-                update_doctests(barename, outname)
+                pool.apply(update_doctests, (barename, outname))
                 os.unlink(barename)
 
         if test_file_count > 0:
@@ -164,6 +167,8 @@ def generate_into_tmpdir():
 
         return tmpdir
     except:
+        pool.close()
+        pool.join()
         shutil.rmtree(tmpdir)
         raise
 
