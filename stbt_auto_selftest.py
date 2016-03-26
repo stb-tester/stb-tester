@@ -175,6 +175,8 @@ def generate_into_tmpdir():
                     "modified or created in this directory may be overwritten "
                     "or deleted by `stbt auto-selftests`.")) + "\n")
 
+        for x in _recursive_glob('*.pyc', tmpdir):
+            os.unlink(os.path.join(tmpdir, x))
         prune_empty_directories(tmpdir)
         return tmpdir
     except:
