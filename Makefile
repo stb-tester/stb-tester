@@ -159,6 +159,7 @@ check-nosetests: tests/ocr/menu.png
 		      -e tests/test.py \
 	              -e tests/test2.py \
 	              -e tests/test_functions.py \
+	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
@@ -173,6 +174,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
+	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests

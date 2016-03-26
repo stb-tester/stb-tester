@@ -182,22 +182,29 @@ def inspect_module(module_filename):
     This is a seperate function so we can run it in a subprocess to avoid
     contaminating the main processes.
     """
-    out = []
-    module = import_by_filename(module_filename)
-    for x in dir(module):
-        item = getattr(module, x)
-        expressions = list(getattr(item, 'AUTO_SELFTEST_EXPRESSIONS', []))
-        if not expressions:
-            continue
+    try:
+        out = []
+        module = import_by_filename(module_filename)
+        for x in dir(module):
+            item = getattr(module, x)
+            expressions = list(getattr(item, 'AUTO_SELFTEST_EXPRESSIONS', []))
+            if not expressions:
+                continue
 
-        out.append(Item(
-            name=item.__name__,
-            expressions=expressions,
-            screenshots=list(
-                getattr(item, 'AUTO_SELFTEST_SCREENSHOTS', [])),
-            try_screenshots=list(
-                getattr(item, 'AUTO_SELFTEST_TRY_SCREENSHOTS', ['*.png']))))
-    return Module(module_filename, out)
+            out.append(Item(
+                name=item.__name__,
+                expressions=expressions,
+                screenshots=list(
+                    getattr(item, 'AUTO_SELFTEST_SCREENSHOTS', [])),
+                try_screenshots=list(
+                    getattr(item, 'AUTO_SELFTEST_TRY_SCREENSHOTS', ['*.png']))))
+        return Module(module_filename, out)
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except:  # pylint: disable=bare-except
+        sys.stderr.write("Received %s Exception while inspecting %s, Skipping\n"
+                         % (sys.exc_info()[1], module_filename))
+        return Module(module_filename, [])
 
 
 def write_bare_doctest(module, output_filename):
