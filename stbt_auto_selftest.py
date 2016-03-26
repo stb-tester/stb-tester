@@ -126,6 +126,10 @@ def validate():
         shutil.rmtree(tmpdir)
 
 
+def is_valid_python_identifier(x):
+    return bool(re.match('^[a-zA-Z_][a-zA-Z0-9_]*$', x))
+
+
 def generate_into_tmpdir():
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
@@ -134,6 +138,9 @@ def generate_into_tmpdir():
         test_file_count = 0
         for module_filename in _recursive_glob('*.py'):
             if module_filename.startswith('selftest'):
+                continue
+            if not is_valid_python_identifier(
+                    os.path.basename(module_filename)[:-3]):
                 continue
             outname = os.path.join(
                 tmpdir, re.sub('.py$', '_selftest.py', module_filename))
