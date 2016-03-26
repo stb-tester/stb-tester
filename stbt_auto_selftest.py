@@ -131,6 +131,16 @@ def is_valid_python_identifier(x):
     return bool(re.match('^[a-zA-Z_][a-zA-Z0-9_]*$', x))
 
 
+def prune_empty_directories(dir_):
+    for root, _dirs, files in os.walk(dir_, topdown=False):
+        if len(files) == 0 and root != dir_:
+            try:
+                os.rmdir(root)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+
 def generate_into_tmpdir():
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
@@ -165,6 +175,7 @@ def generate_into_tmpdir():
                     "modified or created in this directory may be overwritten "
                     "or deleted by `stbt auto-selftests`.")) + "\n")
 
+        prune_empty_directories(tmpdir)
         return tmpdir
     except:
         pool.close()
