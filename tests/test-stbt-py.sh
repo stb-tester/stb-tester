@@ -526,8 +526,8 @@ test_draw_text() {
 test_that_press_waits_between_subsequent_presses() {
     cat > test.py <<-EOF &&
 	import stbt, datetime
-	stbt.press('OK')
 	time1 = datetime.datetime.now()
+	stbt.press('OK')
 	stbt.press('OK', interpress_delay_secs=0.5)
 	time2 = datetime.datetime.now()
 	assert time2 - time1 >= datetime.timedelta(seconds=0.5), (
