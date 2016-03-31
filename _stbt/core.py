@@ -888,8 +888,10 @@ class DeviceUnderTest(object):
             box = Region.from_extents(
                 region.x + box.x // 3, region.y + box.y // 3,
                 region.x + box.right // 3, region.y + box.bottom // 3)
+            debug("Match found: \'%s\' %s" % (str(text), str(box)))
             return TextMatchResult(ts, True, box, frame, text)
         else:
+            debug("No match found: \'%s\'" % str(text))
             return TextMatchResult(ts, False, None, frame, text)
 
     def frames(self, timeout_secs=None):
