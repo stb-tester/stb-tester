@@ -21,6 +21,7 @@
 #/
 #/ Experimental commands. These may change in the future in a backwards-
 #/ incompatible way. They require passing the '--with-experimental' flag:
+#/     auto-selftest  Test your test-cases against saved screenshots
 #/     camera         Configure stbt to capture video from a TV using a camera
 #/
 #/ For help on a specific command do 'stbt <command> --help'.
@@ -39,28 +40,37 @@ else
     experimental=0
 fi
 
-case "$1" in
+cmd=$1
+shift
+
+check_experimental() {
+    if [ "$experimental" != 1 ]; then
+        echo "stbt $cmd is an experimental feature which may change in" 1>&2
+        echo "the future in a backwards-incompatible way. If you still" 1>&2
+        echo "want to proceed use 'stbt --with-experimental $cmd'." 1>&2
+        exit 1
+    fi
+}
+
+case "$cmd" in
     -h|--help)
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
+    auto-selftest)
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
-        exec @LIBEXECDIR@/stbt/stbt-"$@";;
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     # Experimental sub-commands:
     camera)
-        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$1" ]; then
+        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
             echo "stb-tester camera support is not installed." 1>&2
             exit 1
         fi
-        if [ "$experimental" != 1 ]; then
-            echo "stbt $1 is an experimental feature which may change in" 1>&2
-            echo "the future in a backwards-incompatible way. If you still" 1>&2
-            echo "want to proceed use 'stbt --with-experimental'." 1>&2
-            exit 1
-        fi
-        exec @LIBEXECDIR@/stbt/stbt-"$@";;
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     virtual-stb)
-        shift
         export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
         if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
             echo "stbt virtual-stb is not installed." >&2

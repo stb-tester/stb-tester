@@ -80,6 +80,7 @@ INSTALL_CORE_FILES = \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     stbt/__init__.py \
+    stbt_auto_selftest.py \
     stbt-batch \
     stbt-batch.d/instaweb \
     stbt-batch.d/report \
@@ -154,9 +155,11 @@ check-nosetests: tests/ocr/menu.png
 	nosetests --with-doctest -v --match "^test_" \
 	    --doctest-options=+ELLIPSIS \
 	    $(shell git ls-files '*.py' |\
-	      grep -v -e tests/test.py \
+	      grep -v -e tests/auto_selftest_bare.py \
+		      -e tests/test.py \
 	              -e tests/test2.py \
 	              -e tests/test_functions.py \
+	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
@@ -171,6 +174,7 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
+	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
 check-bashcompletion:
 	@echo Running stbt-completion unit tests

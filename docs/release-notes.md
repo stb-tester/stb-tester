@@ -16,12 +16,20 @@ https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 25
 
+New features `stbt.FrameObject` and ``stbt auto-selftest`` that work in tandem
+to make writing and maintaining tests much easier.
+
 UNRELEASED
 
 ##### New features
 
 * Python API: New base-class `stbt.FrameObject` has been added to make it
   easier to structure your test-pack according to the Frame Object pattern.
+
+* New tool: `stbt auto-selftest` captures the behaviour of Frame Objects and
+  other helper functions that operate on screenshots by generating doctests.
+  These can later be used when changing these Frame Objects to ensure that they
+  still behave correctly when making fixes or adding additional properties.
 
 * The `stbt camera` calibration videos have been modified to use QR codes
   rather than text and OCR.  This makes calibration faster, but will require
