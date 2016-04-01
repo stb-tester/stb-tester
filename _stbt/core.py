@@ -875,7 +875,7 @@ class DeviceUnderTest(object):
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            return TextMatchResult(ts, False, None, frame, text)
+            result = TextMatchResult(ts, False, None, frame, text)
         hocr = lxml.etree.fromstring(xml)
         p = _hocr_find_phrase(hocr, text.split())
         if p:
@@ -887,12 +887,17 @@ class DeviceUnderTest(object):
             # must undo this transformation here.
             box = Region.from_extents(
                 region.x + box.x // 3, region.y + box.y // 3,
-                region.x + box.right // 3, region.y + box.bottom // 3)
-            debug("Match found: \'%s\' %s" % (str(text), str(box)))
-            return TextMatchResult(ts, True, box, frame, text)
+                region.x + box.right // 3, region.y + box.bottom // 3))
+            result = TextMatchResult(ts, True, box, frame, text)
         else:
-            debug("No match found: \'%s\'" % str(text))
-            return TextMatchResult(ts, False, None, frame, text)
+            result =  TextMatchResult(ts, False, None, frame, text)
+            
+        if result.match:
+            debug("Match found: %s" % str(result))
+        else:
+            debug("No match found. Closest match: %s" % str(result))
+
+        return result
 
     def frames(self, timeout_secs=None):
         return self._display.frames(timeout_secs)
