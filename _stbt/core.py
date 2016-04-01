@@ -890,7 +890,7 @@ class DeviceUnderTest(object):
                 region.x + box.right // 3, region.y + box.bottom // 3))
             result = TextMatchResult(ts, True, box, frame, text)
         else:
-            result =  TextMatchResult(ts, False, None, frame, text)
+            result = TextMatchResult(ts, False, None, frame, text)
             
         if result.match:
             debug("Match found: %s" % str(result))
