@@ -14,6 +14,7 @@
 #/     lint           Static analysis of testcases
 #/     power          Control networked power switch
 #/     record         Record a testcase
+#/     rig            Interact with stb-tester ONE and stb-tester EIGHT appliances
 #/     screenshot     Capture a single screenshot
 #/     templatematch  Compare two images
 #/     tv             View live video on screen
@@ -70,6 +71,8 @@ case "$cmd" in
         fi
         check_experimental
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
+    rig)
+        exec @LIBEXECDIR@/stbt/stbt_"$cmd".py "$@";;
     virtual-stb)
         export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
         if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
