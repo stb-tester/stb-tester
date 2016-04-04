@@ -875,6 +875,7 @@ class DeviceUnderTest(object):
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
+            debug("Nothing to match.")
             return TextMatchResult(ts, False, None, frame, text)
         hocr = lxml.etree.fromstring(xml)
         p = _hocr_find_phrase(hocr, text.split())
@@ -888,9 +889,16 @@ class DeviceUnderTest(object):
             box = Region.from_extents(
                 region.x + box.x // 3, region.y + box.y // 3,
                 region.x + box.right // 3, region.y + box.bottom // 3)
-            return TextMatchResult(ts, True, box, frame, text)
+            result = TextMatchResult(ts, True, box, frame, text)
         else:
-            return TextMatchResult(ts, False, None, frame, text)
+            result = TextMatchResult(ts, False, None, frame, text)
+
+        if result.match:
+            debug("Match found: %s" % str(result))
+        else:
+            debug("No match found. Closest match: %s" % str(result))
+
+        return result
 
     def frames(self, timeout_secs=None):
         return self._display.frames(timeout_secs)
