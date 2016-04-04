@@ -875,7 +875,8 @@ class DeviceUnderTest(object):
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            result = TextMatchResult(ts, False, None, frame, text)
+            debug("Nothing to match.")
+            return TextMatchResult(ts, False, None, frame, text)
         hocr = lxml.etree.fromstring(xml)
         p = _hocr_find_phrase(hocr, text.split())
         if p:
