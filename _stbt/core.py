@@ -892,7 +892,7 @@ class DeviceUnderTest(object):
             result = TextMatchResult(ts, True, box, frame, text)
         else:
             result = TextMatchResult(ts, False, None, frame, text)
-            
+
         if result.match:
             debug("Match found: %s" % str(result))
         else:
