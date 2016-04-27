@@ -69,6 +69,6 @@ test_that_no_selftests_expressions_passes_stbt_auto_selftest_validate()
 {
     cd_example_testpack &&
     rm -r tests/example.py tests/unicode_example.py selftest/auto_selftest \
-          tests/subdir/subdir_example.py &&
+          tests/subdir/subsubdir/subdir_example.py &&
     stbt --with-experimental auto-selftest validate
 }
