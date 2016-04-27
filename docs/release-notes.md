@@ -21,6 +21,8 @@ to make writing and maintaining tests much easier.
 
 UNRELEASED
 
+##### Breaking changes since 24
+
 ##### New features
 
 * Python API: New base-class `stbt.FrameObject` has been added to make it
@@ -30,16 +32,6 @@ UNRELEASED
   other helper functions that operate on screenshots by generating doctests.
   These can later be used when changing these Frame Objects to ensure that they
   still behave correctly when making fixes or adding additional properties.
-
-* The `stbt camera` calibration videos have been modified to use QR codes
-  rather than text and OCR.  This makes calibration faster, but will require
-  the videos to be re-generated on first use.
-
-* `stbt camera` learnt how to control Android TVs over adb for calibration.
-
-##### Breaking changes since 24
-
-##### New features
 
 * New command `stbt virtual-stb`.  It configures stb-tester to control and get
   its video from a program running on the local PC. This can be used to test
@@ -64,6 +56,12 @@ UNRELEASED
 * The `x11` remote control now converts stb-tester's [standard key names] (like
   "KEY_UP") to the key names that `xdotool` expects.  You can also now specify a
   custom mapping of key names.  This was done to support `stbt virtual-stb`.
+
+* The `stbt camera` calibration videos have been modified to use QR codes
+  rather than text and OCR.  This makes calibration faster, but will require
+  the videos to be re-generated on first use.
+
+* `stbt camera` learnt how to control Android TVs over adb for calibration.
 
 ##### Bugfixes and packaging fixes
 
