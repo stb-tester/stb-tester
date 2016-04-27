@@ -18,7 +18,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(
-    os.path.dirname(__file__), '../../../../tests/subdir'))
+    os.path.dirname(__file__), '../../../../../tests/subdir/subsubdir'))
 
 from subdir_example import *  # isort:skip pylint: disable=wildcard-import, import-error
 
@@ -30,7 +30,7 @@ def f(name):
     if img is None:
         import cv2
         filename = os.path.join(os.path.dirname(__file__),
-                                '../../../screenshots', name)
+                                '../../../../screenshots', name)
         img = cv2.imread(filename)
         assert img is not None, "Failed to load %s" % filename
         _FRAME_CACHE[name] = img

@@ -137,7 +137,7 @@ def prune_empty_directories(dir_):
             try:
                 os.rmdir(root)
             except OSError as e:
-                if e.errno != errno.EEXIST:
+                if e.errno not in [errno.EEXIST, errno.ENOTEMPTY]:
                     raise
 
 
