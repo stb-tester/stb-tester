@@ -193,7 +193,7 @@ def main(argv):
     cp = ConfigParser.ConfigParser()
     cp.read(os.path.join(root, '.stbt.conf'))
     stbt_version = cp.get('test_pack', 'stbt_version')
-    if not stbt_version in STBT_VERSION_WHITELIST:
+    if stbt_version not in STBT_VERSION_WHITELIST:
         sys.stderr.write(
             "This version of stbt-docker does not support stbt_version %r.  "
             "Update to a newer version with:\n"
