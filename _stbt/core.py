@@ -875,28 +875,28 @@ class DeviceUnderTest(object):
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            debug("Nothing to match.")
-            return TextMatchResult(ts, False, None, frame, text)
-        hocr = lxml.etree.fromstring(xml)
-        p = _hocr_find_phrase(hocr, text.split())
-        if p:
-            # Find bounding box
-            box = None
-            for _, elem in p:
-                box = _bounding_box(box, _hocr_elem_region(elem))
-            # _tesseract crops to region and scales up by a factor of 3 so we
-            # must undo this transformation here.
-            box = Region.from_extents(
-                region.x + box.x // 3, region.y + box.y // 3,
-                region.x + box.right // 3, region.y + box.bottom // 3)
-            result = TextMatchResult(ts, True, box, frame, text)
-        else:
             result = TextMatchResult(ts, False, None, frame, text)
+        else:
+            hocr = lxml.etree.fromstring(xml)
+            p = _hocr_find_phrase(hocr, text.split())
+            if p:
+                # Find bounding box
+                box = None
+                for _, elem in p:
+                    box = _bounding_box(box, _hocr_elem_region(elem))
+                # _tesseract crops to region and scales up by a factor of 3 so
+                # we must undo this transformation here.
+                box = Region.from_extents(
+                    region.x + box.x // 3, region.y + box.y // 3,
+                    region.x + box.right // 3, region.y + box.bottom // 3)
+                result = TextMatchResult(ts, True, box, frame, text)
+            else:
+                result = TextMatchResult(ts, False, None, frame, text)
 
         if result.match:
-            debug("Match found: %s" % str(result))
+            debug("match_text: Match found: %s" % str(result))
         else:
-            debug("No match found. Closest match: %s" % str(result))
+            debug("match_text: No match found: %s" % str(result))
 
         return result
 
