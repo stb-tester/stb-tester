@@ -197,34 +197,39 @@ def main(argv):
 
     root = find_test_pack_root()
     if root is None:
-        sys.stderr.write(
-            "This command must be run within a test pack.  Couldn't find a "
-            ".stbt.conf in this or any parent directory.\n"
-            "\n"
-            "To create a new test pack run:\n"
-            "\n"
-            "    git clone -o pristine "
-            "https://github.com/stb-tester/stb-tester-test-pack\n")
+        sys.stderr.write(dedent("""\
+            error: stbt-docker must be run within a test pack.
+            Couldn't find ".stbt.conf" in this or any parent directory.
+
+            To create a new test pack run the following command:
+
+                git clone -o pristine https://github.com/stb-tester/stb-tester-test-pack
+
+            """))
         return 1
 
     cp = ConfigParser.ConfigParser()
     cp.read(os.path.join(root, '.stbt.conf'))
     stbt_version = cp.get('test_pack', 'stbt_version')
     if stbt_version not in STBT_VERSION_WHITELIST:
-        sys.stderr.write(
-            "This version of stbt-docker does not support stbt_version %r.  "
-            "Update to a newer version with:\n"
-            "\n"
-            "    curl -f -o %s https://stb-tester.com/stbt-docker\n")
+        sys.stderr.write(dedent("""\
+            error: This version of stbt-docker does not support stbt_version {v}.
+
+            To update stbt-docker run the following command:
+
+                curl -f -o {argv0} https://stb-tester.com/stbt-docker
+
+            """).format(v=stbt_version, argv0=argv[0]))
         return 1
 
     try:
         docker_image = build_docker_image(root, stbt_version)
     except DockerNotInstalledError:
-        sys.stderr.write(
-            "%s failed:\n%s requires docker.  Install docker, or if it is "
-            "already installed set $DOCKER to the location of the docker "
-            "executable.\n" % (" ".join(argv), os.path.basename(argv[0])))
+        sys.stderr.write(dedent("""\
+            error: stbt-docker requires docker. Install docker, or if it is
+            already installed set $DOCKER to the location of the docker
+            executable.
+            """))
         return 1
 
     if args.command is None:
