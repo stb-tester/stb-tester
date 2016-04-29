@@ -39,6 +39,9 @@ _libgst.gst_buffer_map.restype = ctypes.c_int
 _libgst.gst_buffer_unmap.argtypes = [ctypes.c_void_p, _GstMapInfo_p]
 _libgst.gst_buffer_unmap.restype = None
 
+_libgst.gst_buffer_get_size.argtypes = [ctypes.c_void_p]
+_libgst.gst_buffer_get_size.restype = ctypes.c_size_t
+
 _libgst.gst_sample_get_buffer.argtypes = [ctypes.c_void_p]
 _libgst.gst_sample_get_buffer.restype = ctypes.c_void_p
 
@@ -66,7 +69,15 @@ def _map_gst_buffer(pbuffer, flags):
         _libgst.gst_buffer_unmap(pbuffer, mapping)
 
 
+@contextmanager
 def map_gst_sample(sample, flags):
+    with _sample_borrow_buffer(sample) as pbuffer:
+        with _map_gst_buffer(pbuffer, flags) as x:
+            yield x
+
+
+@contextmanager
+def _sample_borrow_buffer(sample):
     """
     This function exists because of a change in behaviour of pygobject 3.13 that
     broke our ability to get a writable buffer from a GstSample.
@@ -74,17 +85,21 @@ def map_gst_sample(sample, flags):
     See https://bugzilla.gnome.org/show_bug.cgi?id=736896 for more information.
     """
     if not isinstance(sample, Gst.Sample):
-        raise TypeError("map_gst_sample must take a Gst.Sample.  Received a %s"
-                        % str(type(sample)))
+        raise TypeError("sample_borrow_buffer must take a Gst.Sample.  "
+                        "Received a %s instead" % str(type(sample)))
 
     # hashing a GObject actually gives the address (pointer) of the C struct
     # that backs it!:
     pbuffer = _libgst.gst_sample_get_buffer(hash(sample))
     if pbuffer is None:
         raise ValueError(
-            "map_gst_sample: Provided GstSample doesn't contain a buffer")
+            "sample_borrow_buffer: Provided GstSample doesn't contain a buffer")
+    yield pbuffer
 
-    return _map_gst_buffer(pbuffer, flags)
+
+def sample_get_size(sample):
+    with _sample_borrow_buffer(sample) as pbuffer:
+        return _libgst.gst_buffer_get_size(pbuffer)
 
 
 def test_map_sample_reading_data():

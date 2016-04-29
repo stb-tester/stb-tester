@@ -36,7 +36,7 @@ from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate
 from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
-                             numpy_from_sample)
+                             numpy_from_sample, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -495,7 +495,8 @@ def _crop(frame, region):
 
 
 def _image_region(image):
-    return Region(0, 0, image.shape[1], image.shape[0])
+    s = sample_shape(image)
+    return Region(0, 0, s[1], s[0])
 
 
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
