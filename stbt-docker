@@ -39,12 +39,15 @@ Usage:
     $ ./stbt-docker python -m doctest tests/roku.py
     ...
 
-    $ ./stbt-docker
+    $ ./stbt-docker python
     Python 2.7.6 (default, Jun 22 2015, 17:58:13)
     [GCC 4.8.2] on linux2
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import stbt
     >>> stbt.match(...)
+
+    $ ./stbt-docker bash
+    stb-tester@97f85a1a4eea:~/test-pack$ ...
 
 Environment variables:
 
@@ -191,8 +194,8 @@ def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', nargs='?')
-    parser.add_argument('argument', nargs=argparse.REMAINDER)
+    parser.add_argument('command')
+    parser.add_argument('arguments', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
 
     root = find_test_pack_root()
@@ -232,10 +235,7 @@ def main(argv):
             """))
         return 1
 
-    if args.command is None:
-        cmd = ['python']
-    else:
-        cmd = [args.command] + args.argument
+    cmd = [args.command] + args.arguments
 
     try:
         os.makedirs(os.path.join(root, '.stbt/cache'))

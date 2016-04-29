@@ -69,14 +69,6 @@ test_that_docker_opts_passes_arguments_through_to_docker_run() {
     || fail "DOCKER_OPTS has no effect"
 }
 
-test_that_stbt_docker_with_no_arguments_gives_python_interpreter() {
-    load_test_pack empty-test-pack
-    stbt docker >output <<-EOF
-		print "hello",
-		EOF
-    [ "$(cat output)" = "hello" ] || fail "Not Python interpreter"
-}
-
 test_that_with_different_uid_we_still_have_permissions_to_files() {
     [ -n "$TRAVIS" ] || skip "Test will only run on Travis because it involves changing system state"
 
