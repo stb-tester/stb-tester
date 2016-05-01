@@ -212,7 +212,7 @@ test_that_stbt_run_tracing_is_written_to_socket() {
     SOCAT_PID=$!
     sleep 1
 
-    run_state_test || fail "Test failed"
+    run_state_test --save-trace -- || fail "Test failed"
     kill "$SOCAT_PID"
     grep -q "state_change" "trace.jsonl" || fail "state_change not written"
     diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
@@ -223,7 +223,7 @@ assert_correct_unicode_error() {
 		FAIL: test.py: AssertionError: ü
 		Traceback (most recent call last):
 		  File ".../stbt-run", line ..., in <module>
-		    execfile(_filename)
+		    execfile(_absfilename)
 		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
