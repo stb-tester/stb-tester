@@ -1736,13 +1736,9 @@ def _match(image, template, match_parameters, template_name):
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    if logging.get_debug_level() > 1:
-        source_with_roi = image.copy()
-        _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
-        imglog.add("source_with_roi", source_with_roi)
-        imglog.write(
-            template_name, matched, position,
-            first_pass_matched, first_pass_certainty, match_parameters)
+    imglog.write(
+        template_name, matched, region,
+        first_pass_matched, first_pass_certainty, match_parameters)
 
     return matched, region, first_pass_certainty
 
@@ -1970,11 +1966,16 @@ class MatchImageLogger(logging.ImageLogger):
             self._levels.add(pyramid_level)
         super(MatchImageLogger, self).add(name, image)
 
-    def write(self, template_name, matched, position,
+    def write(self, template_name, matched, region,
               first_pass_matched, first_pass_certainty, match_parameters):
+
         d = self.write_images()
         if not d:
             return None
+
+        source_with_roi = self.images["source"].copy()
+        _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
+        cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
         try:
             import jinja2
@@ -2025,10 +2026,10 @@ class MatchImageLogger(logging.ImageLogger):
                         (white pixels indicate positions above the threshold).
 
                 {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                    <li>Matched at {{position}} {{link("source_with_roi")}}
+                    <li>Matched at {{region}} {{link("source_with_roi")}}
                         with certainty {{"%.4f"|format(first_pass_certainty)}}.
                 {% else %}
-                    <li>Didn't match (best match at {{position}}
+                    <li>Didn't match (best match at {{region}}
                         {{link("source_with_roi")}}
                         with certainty {{"%.4f"|format(first_pass_certainty)}}).
                 {% endif %}
@@ -2084,7 +2085,7 @@ class MatchImageLogger(logging.ImageLogger):
                 match_parameters=match_parameters,
                 matched=matched,
                 min=min,
-                position=position,
+                region=region,
                 template_name=template_name,
             ))
 
