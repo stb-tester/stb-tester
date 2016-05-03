@@ -96,7 +96,7 @@ class ImageLogger(object):
         with numpy_from_sample(image, readonly=True) as img:
             self.images[name] = img.copy()
 
-    def write_images(self):
+    def write(self):
         if get_debug_level() <= 1:
             return
         d = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)

@@ -743,7 +743,7 @@ class DeviceUnderTest(object):
             result = MotionResult(sample.get_buffer().pts, motion)
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
-            imglog.write_images()
+            imglog.write()
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
@@ -930,7 +930,7 @@ class DeviceUnderTest(object):
                            numpy.bitwise_and(greyframe, mask))
             else:
                 imglog.add('non-black-regions-after-masking', greyframe)
-            imglog.write_images()
+            imglog.write()
 
         return maxVal == 0
 
@@ -1725,7 +1725,7 @@ def _match(image, template, match_parameters, template_name):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    imglog = MatchImageLogger("detect_match")
+    imglog = MatchImageLogger()
 
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
@@ -1955,25 +1955,25 @@ def _confirm_match(image, position, template, match_parameters, imglog):
     return cv2.countNonZero(eroded) == 0
 
 
-class MatchImageLogger(logging.ImageLogger):
-    def __init__(self, name):
-        super(MatchImageLogger, self).__init__(name)
+class MatchImageLogger(object):
+    def __init__(self):
+        self._imglog = logging.ImageLogger("detect_match")
         self._levels = set()
 
-    def add(self, name, image, pyramid_level=None):  # pylint:disable=arguments-differ
+    def add(self, name, image, pyramid_level=None):
         if pyramid_level is not None:
             name = "level%d-%s" % (pyramid_level, name)
             self._levels.add(pyramid_level)
-        super(MatchImageLogger, self).add(name, image)
+        self._imglog.add(name, image)
 
     def write(self, template_name, matched, region,
               first_pass_matched, first_pass_certainty, match_parameters):
 
-        d = self.write_images()
+        d = self._imglog.write()
         if not d:
             return None
 
-        source_with_roi = self.images["source"].copy()
+        source_with_roi = self._imglog.images["source"].copy()
         _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
         cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
