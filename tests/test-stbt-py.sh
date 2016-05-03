@@ -241,7 +241,7 @@ test_that_is_screen_black_writes_debugging_information() {
     [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
         || fail "source debug image not written"
     [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
-        || fail "source debug image not written"
+        || fail "masked debug image not written"
 }
 
 test_that_is_screen_black_with_mask_writes_debugging_information() {
@@ -259,9 +259,9 @@ test_that_is_screen_black_with_mask_writes_debugging_information() {
     [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
         || fail "source debug image not written"
     [ -e "stbt-debug/is_screen_black/00001/mask.png" ] \
-        || fail "source debug image not written"
+        || fail "mask debug image not written"
     [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
-        || fail "source debug image not written"
+        || fail "masked debug image not written"
 }
 
 test_that_wait_until_returns_on_success() {
