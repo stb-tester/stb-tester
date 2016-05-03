@@ -988,7 +988,9 @@ class DeviceUnderTest(object):
                 os.path.basename(template.friendly_name))
             yield result
 
-    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
+    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None,
+                      region=Region.ALL):
+
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
@@ -1002,9 +1004,12 @@ class DeviceUnderTest(object):
             debug("Using mask %s" % mask.friendly_name)
 
         frames = self.frames(timeout_secs)
-
         frame, _ = next(frames)
-        previous_frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        region = Region.intersect(_image_region(frame), region)
+
+        previous_frame_gray = cv2.cvtColor(crop(frame, region),
+                                           cv2.COLOR_BGR2GRAY)
         if (mask.image is not None and
                 mask.image.shape[:2] != previous_frame_gray.shape[:2]):
             raise ValueError(
@@ -1014,7 +1019,7 @@ class DeviceUnderTest(object):
                     previous_frame_gray.shape))
 
         for frame, _ in frames:
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
 
             imglog = logging.ImageLogger("detect_motion")
             imglog.imwrite("source", frame_gray)
@@ -1041,6 +1046,8 @@ class DeviceUnderTest(object):
             if out_region:
                 # Undo cv2.erode above:
                 out_region = out_region.extend(x=-1, y=-1)
+                # Undo crop:
+                out_region = out_region.translate(region.x, region.y)
 
             motion = bool(out_region)
 
@@ -1110,7 +1117,7 @@ class DeviceUnderTest(object):
 
     def wait_for_motion(
             self, timeout_secs=10, consecutive_frames=None,
-            noise_threshold=None, mask=None):
+            noise_threshold=None, mask=None, region=Region.ALL):
 
         if consecutive_frames is None:
             consecutive_frames = get_config('motion', 'consecutive_frames')
@@ -1138,7 +1145,8 @@ class DeviceUnderTest(object):
 
         matches = deque(maxlen=considered_frames)
         motion_count = 0
-        for res in self.detect_motion(timeout_secs, noise_threshold, mask):
+        for res in self.detect_motion(timeout_secs, noise_threshold, mask,
+                                      region):
             motion_count += bool(res)
             if len(matches) == matches.maxlen:
                 motion_count -= bool(matches.popleft())
