@@ -1751,8 +1751,8 @@ def _find_match(image, template, match_parameters, imglog):
     """Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
-    False positives are ok; we apply a second pass (`_confirm_match`) to weed
-    out false positives.
+    False positives are ok; we apply a second pass later (`_confirm_match`) to
+    weed out false positives.
 
     http://docs.opencv.org/modules/imgproc/doc/object_detection.html
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
