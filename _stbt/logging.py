@@ -1,6 +1,8 @@
 # coding: utf-8
 
 import argparse
+import itertools
+import json
 import os
 import sys
 from collections import OrderedDict
@@ -75,44 +77,49 @@ def argparser_add_verbose_argument(argparser):
              "applied")
 
 
-class ImageLogger(object):
-    """Log intermediate images used in image processing (such as `match`).
+class LogCtx(object):
+    _ctx_number = itertools.count(1)
 
-    Create a new ImageLogger instance for each frame of video.
-    """
-    _frame_number = 1
-
-    def __init__(self, name):
+    def __init__(self, name, data=None):
+        self.data = {name: {}}
+        self.frame_number = LogCtx._ctx_number.next()
         self.name = name
-        self.images = OrderedDict()
-        self.frame_number = ImageLogger._frame_number
-        ImageLogger._frame_number += 1
+        self.outdir = None
 
-    def add(self, name, image):
         if get_debug_level() <= 1:
             return
-        if name in self.images:
-            raise ValueError("Image for name '%s' already logged" % name)
-        with numpy_from_sample(image, readonly=True) as img:
-            self.images[name] = img.copy()
 
-    def write(self):
-        if get_debug_level() <= 1:
-            return
-        d = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)
         try:
-            mkdir_p(d)
+            outdir = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)
+            mkdir_p(outdir)
+            self.outdir = outdir
         except OSError:
             warn("Failed to create directory '%s'; won't save debug images."
                  % d)
-            return None
-        for name, image in self.images.iteritems():
-            if image.dtype == numpy.float32:
-                # Scale `cv2.matchTemplate` heatmap output in range
-                # [0.0, 1.0] to visible grayscale range [0, 255].
-                image = cv2.convertScaleAbs(image, alpha=255)
-            cv2.imwrite(os.path.join(d, name + ".png"), image)
-        return d
+
+        if data is not None:
+            self.log(data)
+
+    def log(self, data):
+        if self.outdir is None:
+            return
+        for k, v in data.iteritems():
+            if k in self.data[self.name]:
+                raise ValueError("'%s' already logged" % k)
+            try:
+                with numpy_from_sample(v, readonly=True) as img:
+                    outname = os.path.join(self.outdir, k + ".png")
+                    cv2.imwrite(outname, img)
+                    self.data[self.name][k] = {
+                        "filename": k + '.png',
+                        "size": [img.shape[1], img.shape[0]]}
+            except TypeError:
+                self.data[self.name][k] = v
+
+    def write(self):
+        if self.outdir is not None:
+            with open(os.path.join(self.outdir, "log.json"), 'w') as f:
+                json.dump(self.data, f)
 
 
 def test_that_debug_can_write_unicode_strings():

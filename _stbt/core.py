@@ -701,17 +701,16 @@ class DeviceUnderTest(object):
                 previous_frame_gray = frame_gray
                 continue
 
-            imglog = logging.ImageLogger("detect_motion")
-            imglog.add("source", frame_gray)
+            imglog = logging.LogCtx("detect_motion", {"source": frame_gray})
 
             absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
             previous_frame_gray = frame_gray
-            imglog.add("absdiff", absdiff)
+            imglog.log({"absdiff": absdiff})
 
             if mask_image is not None:
                 absdiff = cv2.bitwise_and(absdiff, mask_image)
-                imglog.add("mask", mask_image)
-                imglog.add("absdiff_masked", absdiff)
+                imglog.log({"mask": mask_image,
+                            "absdiff_masked": absdiff})
 
             _, thresholded = cv2.threshold(
                 absdiff, int((1 - noise_threshold) * 255), 255,
@@ -719,8 +718,8 @@ class DeviceUnderTest(object):
             eroded = cv2.erode(
                 thresholded,
                 cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            imglog.add("absdiff_threshold", thresholded)
-            imglog.add("absdiff_threshold_erode", eroded)
+            imglog.log({"absdiff_threshold": thresholded,
+                        "absdiff_threshold_erode": eroded})
 
             motion = (cv2.countNonZero(eroded) > 0)
 
@@ -922,14 +921,13 @@ class DeviceUnderTest(object):
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
 
         if logging.get_debug_level() > 1:
-            imglog = logging.ImageLogger("is_screen_black")
-            imglog.add("source", frame)
+            imglog = logging.LogCtx("is_screen_black", {"source": frame})
             if mask is not None:
-                imglog.add('mask', mask)
-                imglog.add('non-black-regions-after-masking',
-                           numpy.bitwise_and(greyframe, mask))
+                imglog.log({'mask': mask,
+                            'non-black-regions-after-masking':
+                            numpy.bitwise_and(greyframe, mask)})
             else:
-                imglog.add('non-black-regions-after-masking', greyframe)
+                imglog.log({'non-black-regions-after-masking': greyframe})
             imglog.write()
 
         return maxVal == 0
@@ -1725,7 +1723,7 @@ def _match(image, template, match_parameters, template_name):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    imglog = MatchImageLogger()
+    imglog = logging.LogCtx("match")
 
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
@@ -1736,9 +1734,14 @@ def _match(image, template, match_parameters, template_name):
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    imglog.write(
-        template_name, matched, region,
-        first_pass_matched, first_pass_certainty, match_parameters)
+    imglog.log({"template_name": template_name,
+                "matched": matched,
+                "region": region,
+                "first_pass_matched": first_pass_matched,
+                "first_pass_certainty": first_pass_certainty,
+                "match_parameters": match_parameters})
+
+    write_match_debug_html(imglog)
 
     return matched, region, first_pass_certainty
 
@@ -1754,8 +1757,8 @@ def _find_match(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.add("source", image)
-    imglog.add("template", template)
+    imglog.log({"source": image,
+                "template": template})
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     levels = get_config("match", "pyramid_levels", type_=int)
@@ -1800,7 +1803,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
         roi_mask = cv2.pyrUp(roi_mask)
-        imglog.add("roi_mask", roi_mask, level)
+        imglog.log({"level%d-roi_mask" % level: roi_mask})
         contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         rois = [
@@ -1822,7 +1825,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
                  min(s.h - 1, r.y + r.h + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
-        imglog.add("source_with_rois", source_with_rois, level)
+        imglog.log({"level%d-source_with_rois" % level: source_with_rois})
 
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
@@ -1833,9 +1836,9 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
             method,
             matches_heatmap[roi.to_slice()])
 
-    imglog.add("source", image, level)
-    imglog.add("template", template, level)
-    imglog.add("source_matchtemplate", matches_heatmap, level)
+    imglog.log({"level%d-source" % level: image,
+                "level%d-template" % level: template,
+                "level%d-source_matchtemplate" % level: matches_heatmap})
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
@@ -1855,7 +1858,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
         (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
          else cv2.THRESH_BINARY))
     new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    imglog.add("source_matchtemplate_threshold", new_roi_mask, level)
+    imglog.log({"level%d-source_matchtemplate_threshold" % level: new_roi_mask})
 
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
@@ -1930,15 +1933,15 @@ def _confirm_match(image, position, template, match_parameters, imglog):
         position.x:(position.x + template.shape[1])]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imglog.add("confirm-source_roi", roi)
-    imglog.add("confirm-source_roi_gray", image_gray)
-    imglog.add("confirm-template_gray", template_gray)
+    imglog.log({"confirm-source_roi": roi,
+                "confirm-source_roi_gray": image_gray,
+                "confirm-template_gray": template_gray})
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imglog.add("confirm-source_roi_gray_normalized", image_gray)
-        imglog.add("confirm-template_gray_normalized", template_gray)
+        imglog.log({"confirm-source_roi_gray_normalized": image_gray,
+                    "confirm-template_gray_normalized": template_gray})
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -1948,152 +1951,149 @@ def _confirm_match(image, position, template, match_parameters, imglog):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    imglog.add("confirm-absdiff", absdiff)
-    imglog.add("confirm-absdiff_threshold", thresholded)
-    imglog.add("confirm-absdiff_threshold_erode", eroded)
+    imglog.log({"confirm-absdiff": absdiff,
+                "confirm-absdiff_threshold": thresholded,
+                "confirm-absdiff_threshold_erode": eroded})
 
     return cv2.countNonZero(eroded) == 0
 
 
-class MatchImageLogger(object):
-    def __init__(self):
-        self._imglog = logging.ImageLogger("detect_match")
-        self._levels = set()
+def write_match_debug_html(log_ctx):
+    if log_ctx.outdir is None:
+        return
 
-    def add(self, name, image, pyramid_level=None):
-        if pyramid_level is not None:
-            name = "level%d-%s" % (pyramid_level, name)
-            self._levels.add(pyramid_level)
-        self._imglog.add(name, image)
+    try:
+        import jinja2
+    except ImportError:
+        warn(
+            "Not generating html view of the image-processing debug images,"
+            " because python 'jinja2' module is not installed.")
+        return None
 
-    def write(self, template_name, matched, region,
-              first_pass_matched, first_pass_certainty, match_parameters):
+    template = jinja2.Template("""
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <style>
+            .thumb {
+                vertical-align: middle; max-width: 300px; max-height: 36px;
+                padding: 1px; border: 1px solid #ccc; }
+            p, li { line-height: 40px; }
+            .annotated_image { position: relative; display: inline-block; }
+            .region { position: absolute; border: 3px solid #f00 }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+        <h4>
+            <i>{{template_name}}</i>
+            {{"matched" if matched else "didn't match"}}
+        </h4>
 
-        d = self._imglog.write()
-        if not d:
-            return None
+        {{annotated_image(source, [region])}}
 
-        source_with_roi = self._imglog.images["source"].copy()
-        _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
-        cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
+        <p>Searching for <b>template</b> {{link("template")}}
+            within <b>source</b> {{link("source")}} image.
 
-        try:
-            import jinja2
-        except ImportError:
-            warn(
-                "Not generating html view of the image-processing debug images,"
-                " because python 'jinja2' module is not installed.")
-            return None
+        {% for level in levels %}
 
-        template = jinja2.Template("""
-            <!DOCTYPE html>
-            <html lang='en'>
-            <head>
-            <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
-            <style>
-                img {
-                    vertical-align: middle; max-width: 300px; max-height: 36px;
-                    padding: 1px; border: 1px solid #ccc; }
-                p, li { line-height: 40px; }
-            </style>
-            </head>
-            <body>
-            <div class="container">
-            <h4>
-                <i>{{template_name}}</i>
-                {{"matched" if matched else "didn't match"}}
-            </h4>
+            <p>At level <b>{{level}}</b>:
+            <ul>
+                <li>Searching for <b>template</b> {{link("template", level)}}
+                    within <b>source regions of interest</b>
+                    {{link("source_with_rois", level)}}.
+                <li>OpenCV <b>matchTemplate result</b>
+                    {{link("source_matchtemplate", level)}}
+                    with method {{match_parameters.match_method}}
+                    ({{"darkest" if match_parameters.match_method ==
+                            "sqdiff-normed" else "lightest"}}
+                    pixel indicates position of best match).
+                <li>matchTemplate result <b>above match_threshold</b>
+                    {{link("source_matchtemplate_threshold", level)}}
+                    of {{"%g"|format(match_parameters.match_threshold)}}
+                    (white pixels indicate positions above the threshold).
 
-            <p>Searching for <b>template</b> {{link("template")}}
-                within <b>source</b> {{link("source")}} image.
-
-            {% for level in levels %}
-
-                <p>At level <b>{{level}}</b>:
-                <ul>
-                    <li>Searching for <b>template</b> {{link("template", level)}}
-                        within <b>source regions of interest</b>
-                        {{link("source_with_rois", level)}}.
-                    <li>OpenCV <b>matchTemplate result</b>
-                        {{link("source_matchtemplate", level)}}
-                        with method {{match_parameters.match_method}}
-                        ({{"darkest" if match_parameters.match_method ==
-                                "sqdiff-normed" else "lightest"}}
-                        pixel indicates position of best match).
-                    <li>matchTemplate result <b>above match_threshold</b>
-                        {{link("source_matchtemplate_threshold", level)}}
-                        of {{"%g"|format(match_parameters.match_threshold)}}
-                        (white pixels indicate positions above the threshold).
-
-                {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                    <li>Matched at {{region}} {{link("source_with_roi")}}
-                        with certainty {{"%.4f"|format(first_pass_certainty)}}.
-                {% else %}
-                    <li>Didn't match (best match at {{region}}
-                        {{link("source_with_roi")}}
-                        with certainty {{"%.4f"|format(first_pass_certainty)}}).
-                {% endif %}
-
-                </ul>
-
-            {% endfor %}
-
-            {% if first_pass_certainty >= match_parameters.match_threshold %}
-                <p><b>Second pass (confirmation):</b>
-                <ul>
-                    <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
-                        against <b>source image's region of interest</b>
-                        {{link("confirm-source_roi_gray")}}.
-
-                {% if match_parameters.confirm_method == "normed-absdiff" %}
-                    <li>Normalised <b>template</b>
-                        {{link("confirm-template_gray_normalized")}}
-                        and <b>source</b>
-                        {{link("confirm-source_roi_gray_normalized")}}.
-                {% endif %}
-
-                    <li><b>Absolute differences</b> {{link("confirm-absdiff")}}.
-                    <li>Differences <b>above confirm_threshold</b>
-                        {{link("confirm-absdiff_threshold")}}
-                        of {{"%.2f"|format(match_parameters.confirm_threshold)}}.
-                    <li>After <b>eroding</b>
-                        {{link("confirm-absdiff_threshold_erode")}}
-                        {{match_parameters.erode_passes}}
-                        {{"time" if match_parameters.erode_passes == 1
-                            else "times"}}.
-                        {{"No" if matched else "Some"}}
-                        differences (white pixels) remain, so the template
-                        {{"does" if matched else "doesn't"}} match.
-                </ul>
+            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
+                <li>Matched at {{region}}
+                {{annotated_image(source, [region])}}
+                    with certainty {{"%.4f"|format(first_pass_certainty)}}.
+            {% else %}
+                <li>Didn't match (best match at {{region}}
+                    {{annotated_image(source, [region])}}
+                    with certainty {{"%.4f"|format(first_pass_certainty)}}).
             {% endif %}
 
-            <p>For further help please read
-                <a href="http://stb-tester.com/match-parameters.html">stb-tester
-                image matching parameters</a>.
+            </ul>
 
-            </div>
-            </body>
-            </html>
-        """)
+        {% endfor %}
 
-        with open(os.path.join(d, "index.html"), "w") as f:
-            f.write(template.render(
-                first_pass_certainty=first_pass_certainty,
-                first_pass_matched=first_pass_matched,
-                levels=list(reversed(sorted(self._levels))),
-                link=self._link,
-                match_parameters=match_parameters,
-                matched=matched,
-                min=min,
-                region=region,
-                template_name=template_name,
-            ))
+        {% if first_pass_certainty >= match_parameters.match_threshold %}
+            <p><b>Second pass (confirmation):</b>
+            <ul>
+                <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
+                    against <b>source image's region of interest</b>
+                    {{link("confirm-source_roi_gray")}}.
 
-    def _link(self, img, level=None):
-        return (
-            "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
-            .format("" if level is None else "level%d-" % level,
-                    img))
+            {% if match_parameters.confirm_method == "normed-absdiff" %}
+                <li>Normalised <b>template</b>
+                    {{link("confirm-template_gray_normalized")}}
+                    and <b>source</b>
+                    {{link("confirm-source_roi_gray_normalized")}}.
+            {% endif %}
+
+                <li><b>Absolute differences</b> {{link("confirm-absdiff")}}.
+                <li>Differences <b>above confirm_threshold</b>
+                    {{link("confirm-absdiff_threshold")}}
+                    of {{"%.2f"|format(match_parameters.confirm_threshold)}}.
+                <li>After <b>eroding</b>
+                    {{link("confirm-absdiff_threshold_erode")}}
+                    {{match_parameters.erode_passes}}
+                    {{"time" if match_parameters.erode_passes == 1
+                        else "times"}}.
+                    {{"No" if matched else "Some"}}
+                    differences (white pixels) remain, so the template
+                    {{"does" if matched else "doesn't"}} match.
+            </ul>
+        {% endif %}
+
+        <p>For further help please read
+            <a href="http://stb-tester.com/match-parameters.html">stb-tester
+            image matching parameters</a>.
+
+        </div>
+        </body>
+        </html>
+    """)
+    levels = list(reversed(sorted(set(
+        [int(re.search(r"level(\d+)-.*", x).group(1))
+         for x in log_ctx.data["match"].keys() if x.startswith("level")]))))
+
+    def link(img, level=None):
+        return "<a href='{0}{1}.png'><img class='thumb' src='{0}{1}.png'></a>".format(
+            "" if level is None else "level%d-" % level, img)
+
+    def annotated_image(image, annotations):
+        out = ('<div class="annotated_image">\n'
+               '  <img src="%s" class="annotated" />\n' % image['filename'])
+        for annotation in annotations:
+            if isinstance(annotation, Region):
+                out += ('<div class="region" style="left: {left}%; top: {top}%;'
+                        'width: {width}%; height: {height}%"></div>').format(
+                    left=annotation.x * 100 // image["size"][0],
+                    top=annotation.y * 100 // image["size"][1],
+                    width=annotation.width * 100 / image["size"][0],
+                    height=annotation.height * 100 / image["size"][1])
+            else:
+                raise AssertionError(
+                    "Don't know how to annotate with %s" % type(annotation))
+        out += '</div>'
+        return out
+
+    with open(os.path.join(log_ctx.outdir, "index.html"), "w") as f:
+        f.write(template.render(
+            levels=levels, link=link, annotated_image=annotated_image, min=min,
+            **log_ctx.data['match']))
 
 
 def _iter_frames(depth=1):
