@@ -71,6 +71,7 @@ INSTALL_CORE_FILES = \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
     _stbt/irnetbox.py \
+    _stbt/libxxhash.so \
     _stbt/logging.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
@@ -80,6 +81,7 @@ INSTALL_CORE_FILES = \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
+    _stbt/xxhash.py \
     stbt/__init__.py \
     stbt_auto_selftest.py \
     stbt-batch \
@@ -152,7 +154,7 @@ PYTHON_FILES = $(shell (git ls-files '*.py' && \
            | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests: tests/ocr/menu.png
+check-nosetests: tests/ocr/menu.png $(INSTALL_CORE_FILES)
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
@@ -190,7 +192,14 @@ check-bashcompletion:
 	        ($$t); \
 	    done'
 
-SUBMODULE_FILES =
+XXHASH_SOURCES = \
+    vendor/xxHash/xxhash.c \
+    vendor/xxHash/xxhash.h
+
+_stbt/libxxhash.so : $(XXHASH_SOURCES)
+	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
+
+SUBMODULE_FILES = $(XXHASH_SOURCES)
 
 $(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
 

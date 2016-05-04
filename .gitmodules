@@ -1,0 +1,3 @@
+[submodule "vendor/xxHash"]
+	path = vendor/xxHash
+	url = https://github.com/stb-tester/xxHash.git
