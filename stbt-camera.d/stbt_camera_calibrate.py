@@ -164,21 +164,21 @@ class NoChessboardError(Exception):
 
 
 def _find_chessboard(appsink, timeout=10):
+    from _stbt.gst_utils import numpy_from_sample
+
     sys.stderr.write("Searching for chessboard\n")
     success = False
     endtime = time.time() + timeout
     while not success and time.time() < endtime:
         sample = appsink.emit("pull-sample")
-        with _stbt.core._numpy_from_sample(sample, readonly=True) \
-                as input_image:
+        with numpy_from_sample(sample, readonly=True) as input_image:
             success, corners = cv2.findChessboardCorners(
                 input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
 
     if success:
         # Refine the corner measurements (not sure why this isn't built into
         # findChessboardCorners?
-        with _stbt.core._numpy_from_sample(sample, readonly=True) \
-                as input_image:
+        with numpy_from_sample(sample, readonly=True) as input_image:
             grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
 
         cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),

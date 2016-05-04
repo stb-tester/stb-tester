@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import argparse
 import datetime
 import functools
-import glob
 import inspect
 import os
 import Queue
@@ -35,14 +34,14 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_hacks import gst_iterate, map_gst_sample
+from _stbt.gst_hacks import gst_iterate
+from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
+                             numpy_from_sample)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
 
-if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
-    GObject.threads_init()
 Gst.init(None)
 
 warnings.filterwarnings(
@@ -639,7 +638,7 @@ class DeviceUnderTest(object):
         if grabbed_from_live:
             frame = self._display.get_sample()
 
-        with _numpy_from_sample(frame, readonly=True) as npframe:
+        with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
 
             matched, match_region, first_pass_certainty = _match(
@@ -648,7 +647,7 @@ class DeviceUnderTest(object):
 
             match_region = match_region.translate(region.x, region.y)
             result = MatchResult(
-                _get_frame_timestamp(frame), matched, match_region,
+                get_frame_timestamp(frame), matched, match_region,
                 first_pass_certainty, numpy.copy(npframe),
                 (template.name or template.image))
 
@@ -687,13 +686,10 @@ class DeviceUnderTest(object):
             mask_image = _load_mask(mask)
 
         previous_frame_gray = None
-        log = functools.partial(
-            _log_image, directory="stbt-debug/detect_motion")
 
         for sample in self._display.gst_samples(timeout_secs):
-            with _numpy_from_sample(sample, readonly=True) as frame:
+            with numpy_from_sample(sample, readonly=True) as frame:
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            log(frame_gray, "source")
 
             if previous_frame_gray is None:
                 if (mask_image is not None and
@@ -705,14 +701,17 @@ class DeviceUnderTest(object):
                 previous_frame_gray = frame_gray
                 continue
 
+            imglog = logging.ImageLogger("detect_motion")
+            imglog.add("source", frame_gray)
+
             absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
             previous_frame_gray = frame_gray
-            log(absdiff, "absdiff")
+            imglog.add("absdiff", absdiff)
 
             if mask_image is not None:
                 absdiff = cv2.bitwise_and(absdiff, mask_image)
-                log(mask_image, "mask")
-                log(absdiff, "absdiff_masked")
+                imglog.add("mask", mask_image)
+                imglog.add("absdiff_masked", absdiff)
 
             _, thresholded = cv2.threshold(
                 absdiff, int((1 - noise_threshold) * 255), 255,
@@ -720,14 +719,14 @@ class DeviceUnderTest(object):
             eroded = cv2.erode(
                 thresholded,
                 cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            log(thresholded, "absdiff_threshold")
-            log(eroded, "absdiff_threshold_erode")
+            imglog.add("absdiff_threshold", thresholded)
+            imglog.add("absdiff_threshold_erode", eroded)
 
             motion = (cv2.countNonZero(eroded) > 0)
 
             # Visualisation: Highlight in red the areas where we detected motion
             if motion:
-                with _numpy_from_sample(sample) as frame:
+                with numpy_from_sample(sample) as frame:
                     cv2.add(
                         frame,
                         numpy.multiply(
@@ -744,6 +743,7 @@ class DeviceUnderTest(object):
             result = MotionResult(sample.get_buffer().pts, motion)
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
+            imglog.write_images()
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
@@ -870,7 +870,7 @@ class DeviceUnderTest(object):
         if _tesseract_version() >= LooseVersion('3.04'):
             _config['tessedit_create_txt'] = 0
 
-        ts = _get_frame_timestamp(frame)
+        ts = get_frame_timestamp(frame)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
@@ -904,7 +904,7 @@ class DeviceUnderTest(object):
         return self._display.frames(timeout_secs)
 
     def get_frame(self):
-        with _numpy_from_sample(
+        with numpy_from_sample(
                 self._display.get_sample(), readonly=True) as frame:
             return frame.copy()
 
@@ -915,21 +915,23 @@ class DeviceUnderTest(object):
             mask = _load_mask(mask)
         if frame is None:
             frame = self._display.get_sample()
-        with _numpy_from_sample(frame, readonly=True) as f:
+        with numpy_from_sample(frame, readonly=True) as f:
             greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
+
         if logging.get_debug_level() > 1:
-            _log_image(frame, 'source', 'stbt-debug/is_screen_black')
+            imglog = logging.ImageLogger("is_screen_black")
+            imglog.add("source", frame)
             if mask is not None:
-                _log_image(mask, 'mask', 'stbt-debug/is_screen_black')
-                _log_image(numpy.bitwise_and(greyframe, mask),
-                           'non-black-regions-after-masking',
-                           'stbt-debug/is_screen_black')
+                imglog.add('mask', mask)
+                imglog.add('non-black-regions-after-masking',
+                           numpy.bitwise_and(greyframe, mask))
             else:
-                _log_image(greyframe, 'non-black-regions-after-masking',
-                           'stbt-debug/is_screen_black')
+                imglog.add('non-black-regions-after-masking', greyframe)
+            imglog.write_images()
+
         return maxVal == 0
 
 # Utility functions
@@ -942,7 +944,7 @@ def save_frame(image, filename):
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
     """
-    with _numpy_from_sample(image, readonly=True) as imagebuf:
+    with numpy_from_sample(image, readonly=True) as imagebuf:
         cv2.imwrite(filename, imagebuf)
 
 
@@ -1316,107 +1318,6 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
-def _gst_sample_make_writable(sample):
-    if sample.get_buffer().mini_object.is_writable():
-        return sample
-    else:
-        return Gst.Sample.new(
-            sample.get_buffer().copy_region(
-                Gst.BufferCopyFlags.FLAGS | Gst.BufferCopyFlags.TIMESTAMPS |
-                Gst.BufferCopyFlags.META | Gst.BufferCopyFlags.MEMORY, 0,
-                sample.get_buffer().get_size()),
-            sample.get_caps(),
-            sample.get_segment(),
-            sample.get_info())
-
-
-@contextmanager
-def _numpy_from_sample(sample, readonly=False):
-    """
-    Allow the contents of a GstSample to be read (and optionally changed) as a
-    numpy array.  The provided numpy array is a view onto the contents of the
-    GstBuffer in the sample provided.  The data is only valid within the `with:`
-    block where this contextmanager is used so the provided array should not
-    be referenced outside the `with:` block.  If you want to use it elsewhere
-    either copy the data with `numpy.ndarray.copy()` or reference the GstSample
-    directly.
-
-    A `numpy.ndarray` may be passed as sample, in which case this
-    contextmanager is a no-op.  This makes it easier to create functions which
-    will accept either numpy arrays or GstSamples providing a migration path
-    for reducing copying in stb-tester.
-
-    :param sample:   Either a GstSample or a `numpy.ndarray` containing the data
-                     you wish to manipulate as a `numpy.ndarray`
-    :param readonly: bool. Determines whether you want to just read or change
-                     the data contained within sample.  If True the GstSample
-                     passed must be writeable or ValueError will be raised.
-                     Use `stbt.gst_sample_make_writable` to get a writable
-                     `GstSample`.
-
-    >>> s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
-    ...                    Gst.Caps.from_string("video/x-raw"), None, None)
-    >>> with _numpy_from_sample(s) as a:
-    ...     print a
-    [104 101 108 108 111]
-    """
-    if isinstance(sample, numpy.ndarray):
-        yield sample
-        return
-    if not isinstance(sample, Gst.Sample):
-        raise TypeError("numpy_from_gstsample must take a Gst.Sample or a "
-                        "numpy.ndarray.  Received a %s" % str(type(sample)))
-
-    caps = sample.get_caps()
-    flags = Gst.MapFlags.READ
-    if not readonly:
-        flags |= Gst.MapFlags.WRITE
-
-    with map_gst_sample(sample, flags) as buf:
-        array = numpy.frombuffer((buf), dtype=numpy.uint8)
-        array.flags.writeable = not readonly
-        if caps.get_structure(0).get_value('format') in ['BGR', 'RGB']:
-            array.shape = (caps.get_structure(0).get_value('height'),
-                           caps.get_structure(0).get_value('width'),
-                           3)
-        yield array
-
-
-def test_that_mapping_a_sample_readonly_gives_a_readonly_array():
-    Gst.init([])
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
-                       Gst.Caps.from_string("video/x-raw"), None, None)
-    with _numpy_from_sample(s, readonly=True) as ro:
-        try:
-            ro[0] = 3
-            assert False, 'Writing elements should have thrown'
-        except (ValueError, RuntimeError):
-            # Different versions of numpy raise different exceptions
-            pass
-
-
-def test_passing_a_numpy_ndarray_as_sample_is_a_noop():
-    a = numpy.ndarray((5, 2))
-    with _numpy_from_sample(a) as m:
-        assert a is m
-
-
-def test_that_dimensions_of_array_are_according_to_caps():
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped(
-        "row 1 4 px  row 2 4 px  row 3 4 px  "),
-        Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
-        None, None)
-    with _numpy_from_sample(s, readonly=True) as a:
-        assert a.shape == (3, 4, 3)
-
-
-def _get_frame_timestamp(frame):
-    if isinstance(frame, Gst.Sample):
-        return frame.get_buffer().pts
-    else:
-        return None
-
-
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline,
                  mainloop, save_video="",
@@ -1553,7 +1454,7 @@ class Display(object):
 
     def frames(self, timeout_secs=None):
         for sample in self.gst_samples(timeout_secs=timeout_secs):
-            with _numpy_from_sample(sample, readonly=True) as frame:
+            with numpy_from_sample(sample, readonly=True) as frame:
                 copy = frame.copy()
             yield (copy, sample.get_buffer().pts)
 
@@ -1577,7 +1478,7 @@ class Display(object):
                             timeout_secs * Gst.SECOND))
                         return
 
-                sample = _gst_sample_make_writable(sample)
+                sample = gst_sample_make_writable(sample)
                 try:
                     yield sample
                 finally:
@@ -1647,8 +1548,8 @@ class Display(object):
                 if now >= match_result.timestamp:
                     self.match_annotations.remove(match_result)
 
-        sample = _gst_sample_make_writable(sample)
-        with _numpy_from_sample(sample) as img:
+        sample = gst_sample_make_writable(sample)
+        with numpy_from_sample(sample) as img:
             _draw_text(
                 img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
                 (10, 30), (255, 255, 255))
@@ -1824,28 +1725,25 @@ def _match(image, template, match_parameters, template_name):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
+    imglog = logging.ImageLogger("detect_match")
+
     first_pass_matched, position, first_pass_certainty = _find_match(
-        image, template, match_parameters)
+        image, template, match_parameters, imglog)
     matched = (
         first_pass_matched and
-        _confirm_match(image, position, template, match_parameters))
+        _confirm_match(image, position, template, match_parameters, imglog))
 
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    if logging.get_debug_level() > 1:
-        source_with_roi = image.copy()
-        _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
-        _log_image(
-            source_with_roi, "source_with_roi", "stbt-debug/detect_match")
-        _log_image_descriptions(
-            template_name, matched, position,
-            first_pass_matched, first_pass_certainty, match_parameters)
+    _log_match_image_debug(
+        imglog, template_name, matched, region,
+        first_pass_matched, first_pass_certainty, match_parameters)
 
     return matched, region, first_pass_certainty
 
 
-def _find_match(image, template, match_parameters):
+def _find_match(image, template, match_parameters, imglog):
     """Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -1856,9 +1754,8 @@ def _find_match(image, template, match_parameters):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
-    log(image, "source")
-    log(template, "template")
+    imglog.add("source", image)
+    imglog.add("template", template)
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     levels = get_config("match", "pyramid_levels", type_=int)
@@ -1872,16 +1769,14 @@ def _find_match(image, template, match_parameters):
 
         matched, best_match_position, certainty, roi_mask = _match_template(
             image_pyramid[level], template_pyramid[level], match_parameters,
-            roi_mask, level)
+            roi_mask, level, imglog)
 
         if level == 0 or not matched:
             return matched, _upsample(best_match_position, level), certainty
 
 
-def _match_template(image, template, match_parameters, roi_mask, level):
+def _match_template(image, template, match_parameters, roi_mask, level, imglog):
 
-    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
-    log_prefix = "level%d-" % level
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
 
@@ -1905,7 +1800,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
         roi_mask = cv2.pyrUp(roi_mask)
-        log(roi_mask, log_prefix + "roi_mask")
+        imglog.add("roi_mask", roi_mask, level)
         contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         rois = [
@@ -1927,7 +1822,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
                  min(s.h - 1, r.y + r.h + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
-        log(source_with_rois, log_prefix + "source_with_rois")
+        imglog.add("source_with_rois", source_with_rois, level)
 
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
@@ -1938,9 +1833,9 @@ def _match_template(image, template, match_parameters, roi_mask, level):
             method,
             matches_heatmap[roi.to_slice()])
 
-    log(image, log_prefix + "source")
-    log(template, log_prefix + "template")
-    log(matches_heatmap, log_prefix + "source_matchtemplate")
+    imglog.add("source", image, level)
+    imglog.add("template", template, level)
+    imglog.add("source_matchtemplate", matches_heatmap, level)
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
@@ -1960,7 +1855,7 @@ def _match_template(image, template, match_parameters, roi_mask, level):
         (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
          else cv2.THRESH_BINARY))
     new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    log(new_roi_mask, log_prefix + "source_matchtemplate_threshold")
+    imglog.add("source_matchtemplate_threshold", new_roi_mask, level)
 
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
@@ -2019,7 +1914,7 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, position, template, match_parameters):
+def _confirm_match(image, position, template, match_parameters, imglog):
     """Confirm that `template` matches `image` at `position`.
 
     This only checks `template` at a single position within `image`, so we can
@@ -2029,23 +1924,21 @@ def _confirm_match(image, position, template, match_parameters):
     if match_parameters.confirm_method == "none":
         return True
 
-    log = functools.partial(_log_image, directory="stbt-debug/detect_match")
-
     # Set Region Of Interest to the "best match" location
     roi = image[
         position.y:(position.y + template.shape[0]),
         position.x:(position.x + template.shape[1])]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    log(roi, "confirm-source_roi")
-    log(image_gray, "confirm-source_roi_gray")
-    log(template_gray, "confirm-template_gray")
+    imglog.add("confirm-source_roi", roi)
+    imglog.add("confirm-source_roi_gray", image_gray)
+    imglog.add("confirm-template_gray", template_gray)
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        log(image_gray, "confirm-source_roi_gray_normalized")
-        log(template_gray, "confirm-template_gray_normalized")
+        imglog.add("confirm-source_roi_gray_normalized", image_gray)
+        imglog.add("confirm-template_gray_normalized", template_gray)
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -2055,48 +1948,32 @@ def _confirm_match(image, position, template, match_parameters):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    log(absdiff, "confirm-absdiff")
-    log(thresholded, "confirm-absdiff_threshold")
-    log(eroded, "confirm-absdiff_threshold_erode")
+    imglog.add("confirm-absdiff", absdiff)
+    imglog.add("confirm-absdiff_threshold", thresholded)
+    imglog.add("confirm-absdiff_threshold_erode", eroded)
 
     return cv2.countNonZero(eroded) == 0
 
 
-_frame_number = 0
-
-
-def _log_image(image, name, directory):
-    if logging.get_debug_level() <= 1:
-        return
-    global _frame_number
-    if name == "source":
-        _frame_number += 1
-    d = os.path.join(directory, "%05d" % _frame_number)
-    try:
-        utils.mkdir_p(d)
-    except OSError:
-        warn("Failed to create directory '%s'; won't save debug images." % d)
-        return
-    with _numpy_from_sample(image, readonly=True) as img:
-        if img.dtype == numpy.float32:
-            img = cv2.convertScaleAbs(img, alpha=255)
-        cv2.imwrite(os.path.join(d, name) + ".png", img)
-
-
-def _log_image_descriptions(
-        template_name, matched, position,
+def _log_match_image_debug(
+        imglog, template_name, matched, region,
         first_pass_matched, first_pass_certainty, match_parameters):
-    """Create html file that describes the debug images."""
+
+    d = imglog.write_images()
+    if not d:
+        return
+
+    source_with_roi = imglog.images["source"].copy()
+    _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
+    cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
     try:
         import jinja2
     except ImportError:
         warn(
-            "Not generating html guide to the image-processing debug images, "
-            "because python 'jinja2' module is not installed.")
+            "Not generating html view of the image-processing debug images,"
+            " because python 'jinja2' module is not installed.")
         return
-
-    d = os.path.join("stbt-debug/detect_match", "%05d" % _frame_number)
 
     template = jinja2.Template("""
         <!DOCTYPE html>
@@ -2139,10 +2016,10 @@ def _log_image_descriptions(
                     (white pixels indicate positions above the threshold).
 
             {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                <li>Matched at {{position}} {{link("source_with_roi")}}
+                <li>Matched at {{region}} {{link("source_with_roi")}}
                     with certainty {{"%.4f"|format(first_pass_certainty)}}.
             {% else %}
-                <li>Didn't match (best match at {{position}}
+                <li>Didn't match (best match at {{region}}
                     {{link("source_with_roi")}}
                     with certainty {{"%.4f"|format(first_pass_certainty)}}).
             {% endif %}
@@ -2193,16 +2070,14 @@ def _log_image_descriptions(
         f.write(template.render(
             first_pass_certainty=first_pass_certainty,
             first_pass_matched=first_pass_matched,
-            levels=list(reversed(sorted(set(
-                [int(re.search(r"level(\d+)-.*", x).group(1))
-                 for x in glob.glob(os.path.join(d, "level*"))])))),
+            levels=list(reversed(sorted(imglog.pyramid_levels))),
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
             match_parameters=match_parameters,
             matched=matched,
             min=min,
-            position=position,
+            region=region,
             template_name=template_name,
         ))
 
@@ -2347,7 +2222,7 @@ def _tesseract(frame, region, mode, lang, _config,
     if _config is None:
         _config = {}
 
-    with _numpy_from_sample(frame, readonly=True) as f:
+    with numpy_from_sample(frame, readonly=True) as f:
         frame_region = Region(0, 0, f.shape[1], f.shape[0])
         intersection = Region.intersect(frame_region, region)
         if intersection is None:
@@ -2513,7 +2388,7 @@ def _fake_frames_at_half_motion():
             for i in range(10):
                 buf = Gst.Buffer.new_wrapped(data[(i // 2) % 2].flatten())
                 buf.pts = i * 1000000000
-                yield _gst_sample_make_writable(
+                yield gst_sample_make_writable(
                     Gst.Sample.new(buf, Gst.Caps.from_string(
                         'video/x-raw,format=BGR,width=2,height=2'), None, None))
 

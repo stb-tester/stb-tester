@@ -69,6 +69,7 @@ INSTALL_CORE_FILES = \
     _stbt/control.py \
     _stbt/core.py \
     _stbt/gst_hacks.py \
+    _stbt/gst_utils.py \
     _stbt/irnetbox.py \
     _stbt/logging.py \
     _stbt/power.py \
@@ -331,7 +332,6 @@ $(info Smart TV support disabled)
 endif
 
 stbt_camera_files=\
-	_stbt/gst_utils.py \
 	_stbt/tv_driver.py \
 	stbt-camera \
 	stbt-camera.d/chessboard-720p-40px-border-white.png \

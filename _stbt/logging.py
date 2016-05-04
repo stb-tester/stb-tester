@@ -3,9 +3,15 @@
 import argparse
 import os
 import sys
+from collections import OrderedDict
 from contextlib import contextmanager
 
+import cv2
+import numpy
+
 from .config import get_config
+from .gst_utils import numpy_from_sample
+from .utils import mkdir_p
 
 _debug_level = None
 
@@ -67,6 +73,50 @@ def argparser_add_verbose_argument(argparser):
         help="Writes structed logging data to given filename.  The format of "
              "the data is newline delimited JSON objects with xz compression "
              "applied")
+
+
+class ImageLogger(object):
+    """Log intermediate images used in image processing (such as `match`).
+
+    Create a new ImageLogger instance for each frame of video.
+    """
+    _frame_number = 1
+
+    def __init__(self, name):
+        self.name = name
+        self.images = OrderedDict()
+        self.frame_number = ImageLogger._frame_number
+        self.pyramid_levels = set()
+        ImageLogger._frame_number += 1
+
+    def add(self, name, image, pyramid_level=None):
+        if get_debug_level() <= 1:
+            return
+        if pyramid_level is not None:
+            name = "level%d-%s" % (pyramid_level, name)
+            self.pyramid_levels.add(pyramid_level)
+        if name in self.images:
+            raise ValueError("Image for name '%s' already logged" % name)
+        with numpy_from_sample(image, readonly=True) as img:
+            self.images[name] = img.copy()
+
+    def write_images(self):
+        if get_debug_level() <= 1:
+            return
+        d = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)
+        try:
+            mkdir_p(d)
+        except OSError:
+            warn("Failed to create directory '%s'; won't save debug images."
+                 % d)
+            return None
+        for name, image in self.images.iteritems():
+            if image.dtype == numpy.float32:
+                # Scale `cv2.matchTemplate` heatmap output in range
+                # [0.0, 1.0] to visible grayscale range [0, 255].
+                image = cv2.convertScaleAbs(image, alpha=255)
+            cv2.imwrite(os.path.join(d, name + ".png"), image)
+        return d
 
 
 def test_that_debug_can_write_unicode_strings():
