@@ -23,6 +23,12 @@ def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
         stbt.match(black(30, 30), frame=black()))
 
 
+def test_matchresult_region_when_first_pyramid_level_fails_to_match():
+    f = _imread("videotestsrc-full-frame.png")
+    assert stbt.Region(184, 0, width=92, height=160) == stbt.match(
+        "videotestsrc-redblue-flipped.png", frame=f).region
+
+
 @raises(ValueError)
 def test_that_match_rejects_greyscale_template():
     grey = cv2.cvtColor(_load_template("black.png").image, cv2.cv.CV_BGR2GRAY)
