@@ -1575,7 +1575,7 @@ class Display(object):
                 label_loc = (match_result.region.x, match_result.region.y - 10)
                 _draw_text(
                     img, label, label_loc, (255, 255, 255), font_scale=0.5)
-                _draw_match(img, match_result.region, match_result.match)
+                _draw_match(img, match_result.region, match_result.match, img)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -1695,11 +1695,14 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
         fontScale=font_scale, color=color, lineType=cv2.CV_AA)
 
 
-def _draw_match(numpy_image, region, match_, thickness=3):
+def _draw_match(numpy_image, region, match_, output_image=None, thickness=3):
+    if output_image is None:
+        output_image = numpy_image.copy()
     cv2.rectangle(
-        numpy_image, (region.x, region.y), (region.right, region.bottom),
+        output_image, (region.x, region.y), (region.right, region.bottom),
         (32, 0 if match_ else 255, 255),  # bgr
         thickness=thickness)
+    return output_image
 
 
 class GObjectTimeout(object):
@@ -1972,9 +1975,9 @@ def _log_match_image_debug(imglog, match_parameters, result):
     if not d:
         return
 
-    source_with_roi = imglog.images["source"].copy()
-    _draw_match(source_with_roi, result.region,
-                imglog.notes["first_pass_matched"], thickness=1)
+    source_with_roi = _draw_match(
+        imglog.images["source"], result.region,
+        imglog.notes["first_pass_matched"], thickness=1)
     cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
     try:
