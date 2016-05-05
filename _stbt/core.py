@@ -630,7 +630,31 @@ class DeviceUnderTest(object):
 
     def match(self, image, frame=None, match_parameters=None,
               region=Region.ALL):
+        result = next(self._match_all(image, frame, match_parameters, region))
+        if result.match:
+            debug("Match found: %s" % str(result))
+        else:
+            debug("No match found. Closest match: %s" % str(result))
+        return result
 
+    def match_all(self, image, frame=None, match_parameters=None,
+                  region=Region.ALL):
+        any_matches = False
+        for result in self._match_all(image, frame, match_parameters, region):
+            if result.match:
+                debug("Match found: %s" % str(result))
+                any_matches = True
+                yield result
+            else:
+                if not any_matches:
+                    debug("No match found. Closest match: %s" % str(result))
+                break
+
+    def _match_all(self, image, frame, match_parameters, region):
+        """
+        Generator that yields a sequence of zero or more truthy MatchResults,
+        followed by a falsey MatchResult.
+        """
         if match_parameters is None:
             match_parameters = MatchParameters()
 
@@ -647,29 +671,27 @@ class DeviceUnderTest(object):
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
 
-            matched, match_region, first_pass_certainty = _match(
-                _crop(npframe, region), template.image, match_parameters,
-                imglog)
+            # pylint:disable=undefined-loop-variable
+            try:
+                for (matched, match_region, first_pass_matched,
+                     first_pass_certainty) in _find_matches(
+                        _crop(npframe, region), template.image,
+                        match_parameters, imglog):
 
-            match_region = Region.from_extents(*match_region).translate(
-                region.x, region.y)
-            result = MatchResult(
-                get_frame_timestamp(frame), matched, match_region,
-                first_pass_certainty, numpy.copy(npframe),
-                (template.name or template.image))
+                    match_region = Region.from_extents(*match_region) \
+                                         .translate(region.x, region.y)
+                    result = MatchResult(
+                        get_frame_timestamp(frame), matched, match_region,
+                        first_pass_certainty, numpy.copy(npframe),
+                        (template.name or template.image))
+                    imglog.set(first_pass_matched=first_pass_matched,
+                               result=result)
+                    if grabbed_from_live:
+                        self._display.draw(result, None)
+                    yield result
 
-        imglog.set(result=result)
-        _log_match_image_debug(imglog)
-
-        if grabbed_from_live:
-            self._display.draw(result, None)
-
-        if result.match:
-            debug("Match found: %s" % str(result))
-        else:
-            debug("No match found. Closest match: %s" % str(result))
-
-        return result
+            finally:
+                _log_match_image_debug(imglog)
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):
@@ -1726,8 +1748,18 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
-@imgproc_cache.memoize({"version": "25"})
-def _match(image, template, match_parameters, imglog):
+def _find_matches(image, template, match_parameters, imglog):
+    """Our image-matching algorithm.
+
+    Runs 2 passes: `_find_candidate_matches` to locate potential matches, then
+    `_confirm_match` to discard false positives from the first pass.
+
+    Returns an iterator yielding zero or more `(True, position, certainty)`
+    tuples for each location where `template` is found within `image`, followed
+    by a single `(False, position, certainty)` tuple when there are no further
+    matching locations.
+    """
+
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
     if any(template.shape[x] < 1 for x in (0, 1)):
@@ -1737,19 +1769,20 @@ def _match(image, template, match_parameters, imglog):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    first_pass_matched, region, first_pass_certainty = _find_match(
-        image, template, match_parameters, imglog)
-    matched = (
-        first_pass_matched and
-        _confirm_match(image, region, template, match_parameters, imglog))
+    # pylint:disable=undefined-loop-variable
+    for first_pass_matched, region, first_pass_certainty in \
+            _find_candidate_matches(image, template, match_parameters, imglog):
+        confirmed = (
+            first_pass_matched and
+            _confirm_match(image, region, template, match_parameters, imglog))
+        yield (confirmed, list(region), first_pass_matched,
+               first_pass_certainty)
+        if not confirmed:
+            break
 
-    imglog.set(first_pass_matched=first_pass_matched)
 
-    return matched, list(region), first_pass_certainty
-
-
-def _find_match(image, template, match_parameters, imglog):
-    """Search for `template` in the entire `image`.
+def _find_candidate_matches(image, template, match_parameters, imglog):
+    """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
     False positives are ok; we apply a second pass later (`_confirm_match`) to
@@ -1762,6 +1795,12 @@ def _find_match(image, template, match_parameters, imglog):
     imglog.imwrite("source", image)
     imglog.imwrite("template", template)
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
+
+    method = {
+        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
+        'ccorr-normed': cv2.TM_CCORR_NORMED,
+        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
+    }[match_parameters.match_method]
 
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
@@ -1780,34 +1819,64 @@ def _find_match(image, template, match_parameters, imglog):
         imwrite = lambda name, img: imglog.imwrite(
             "level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
 
-        matched, best_match_position, certainty, roi_mask = _match_template(
-            image_pyramid[level], template_pyramid[level], match_parameters,
+        heatmap = _match_template(
+            image_pyramid[level], template_pyramid[level], method,
             roi_mask, level, imwrite)
+
+        # Relax the threshold slightly for scaled-down pyramid levels to
+        # compensate for scaling artifacts.
+        threshold = max(
+            0,
+            match_parameters.match_threshold - (0.2 if level > 0 else 0))
+
+        matched, best_match_position, certainty = _find_best_match_position(
+            heatmap, method, threshold, level)
         imglog.append(pyramid_levels=level)
 
         if not matched:
             break
 
-    region = Region(*_upsample(best_match_position, level),  # pylint:disable=undefined-loop-variable
+        _, roi_mask = cv2.threshold(
+            heatmap,
+            ((1 - threshold) if method == cv2.TM_SQDIFF_NORMED else threshold),
+            255,
+            (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
+             else cv2.THRESH_BINARY))
+        roi_mask = roi_mask.astype(numpy.uint8)
+        imwrite("source_matchtemplate_threshold", roi_mask)
+
+    # pylint:disable=undefined-loop-variable
+    region = Region(*_upsample(best_match_position, level),
                     width=template.shape[1], height=template.shape[0])
 
-    return matched, region, certainty
+    while True:
+        yield (matched, region, certainty)
+        if not matched:
+            return
+        assert level == 0
+
+        # Exclude any positions that would overlap the previous match, then
+        # keep iterating until we don't find any more matches.
+        exclude = region.extend(x=-(region.width - 1), y=-(region.height - 1))
+        mask_value = (255 if match_parameters.match_method == 'sqdiff-normed'
+                      else 0)
+        cv2.rectangle(
+            heatmap,
+            # -1 because cv2.rectangle considers the bottom-right point to be
+            # *inside* the rectangle.
+            (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
+            mask_value, cv2.cv.CV_FILLED)
+
+        matched, best_match_position, certainty = _find_best_match_position(
+            heatmap, method, threshold, level)
+        region = Region(*best_match_position,
+                        width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, match_parameters, roi_mask, level,
-                    imwrite):
+def _match_template(image, template, method, roi_mask, level, imwrite):
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
-
-    method = {
-        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
-        'ccorr-normed': cv2.TM_CCORR_NORMED,
-        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
-    }[match_parameters.match_method]
-    threshold = max(
-        0,
-        match_parameters.match_threshold - (0.2 if level > 0 else 0))
 
     matches_heatmap = (
         (numpy.ones if method == cv2.TM_SQDIFF_NORMED else numpy.zeros)(
@@ -1855,6 +1924,10 @@ def _match_template(image, template, match_parameters, roi_mask, level,
     imwrite("template", template)
     imwrite("source_matchtemplate", matches_heatmap)
 
+    return matches_heatmap
+
+
+def _find_best_match_position(matches_heatmap, method, threshold, level):
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
     if method == cv2.TM_SQDIFF_NORMED:
@@ -1866,20 +1939,11 @@ def _match_template(image, template, match_parameters, roi_mask, level,
     else:
         raise ValueError("Invalid matchTemplate method '%s'" % method)
 
-    _, new_roi_mask = cv2.threshold(
-        matches_heatmap,
-        ((1 - threshold) if method == cv2.TM_SQDIFF_NORMED else threshold),
-        255,
-        (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
-         else cv2.THRESH_BINARY))
-    new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    imwrite("source_matchtemplate_threshold", new_roi_mask)
-
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
         level, "Matched" if matched else "Didn't match",
         best_match_position, certainty))
-    return (matched, best_match_position, certainty, new_roi_mask)
+    return (matched, best_match_position, certainty)
 
 
 def _build_pyramid(image, levels):
@@ -1933,10 +1997,11 @@ class _Size(namedtuple("_Size", "h w")):
 
 
 def _confirm_match(image, region, template, match_parameters, imglog):
-    """Confirm that `template` matches `image` at `region`.
+    """Second pass: Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
-    afford to do more computationally-intensive checks than `_find_match`.
+    afford to do more computationally-intensive checks than
+    `_find_candidate_matches`.
     """
 
     if match_parameters.confirm_method == "none":
