@@ -1737,15 +1737,13 @@ def _match(image, template, match_parameters, imglog):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    first_pass_matched, position, first_pass_certainty = _find_match(
+    first_pass_matched, region, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
     matched = (
         first_pass_matched and
-        _confirm_match(image, position, template, match_parameters, imglog))
+        _confirm_match(image, region, template, match_parameters, imglog))
 
     imglog.note("first_pass_matched", first_pass_matched)
-    region = Region(position.x, position.y,
-                    template.shape[1], template.shape[0])
 
     return matched, list(region), first_pass_certainty
 
@@ -1786,8 +1784,10 @@ def _find_match(image, template, match_parameters, imglog):
         if not matched:
             break
 
-    # pylint: disable=W0631
-    return matched, _upsample(best_match_position, level), certainty
+    region = Region(*_upsample(best_match_position, level),  # pylint:disable=undefined-loop-variable
+                    width=template.shape[1], height=template.shape[0])
+
+    return matched, region, certainty
 
 
 def _match_template(image, template, match_parameters, roi_mask, level, imglog):
@@ -1927,8 +1927,8 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, position, template, match_parameters, imglog):
-    """Confirm that `template` matches `image` at `position`.
+def _confirm_match(image, region, template, match_parameters, imglog):
+    """Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
     afford to do more computationally-intensive checks than `_find_match`.
@@ -1938,9 +1938,7 @@ def _confirm_match(image, position, template, match_parameters, imglog):
         return True
 
     # Set Region Of Interest to the "best match" location
-    roi = image[
-        position.y:(position.y + template.shape[0]),
-        position.x:(position.x + template.shape[1])]
+    roi = image[region.y:region.bottom, region.x:region.right]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     imglog.add("confirm-source_roi", roi)
