@@ -639,18 +639,23 @@ class DeviceUnderTest(object):
         if grabbed_from_live:
             frame = self._display.get_sample()
 
+        imglog = logging.ImageLogger("detect_match")
+        imglog.note("template_name", template.friendly_name)
+
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
 
             matched, match_region, first_pass_certainty = _match(
                 _crop(npframe, region), template.image, match_parameters,
-                template.friendly_name)
+                imglog)
 
             match_region = match_region.translate(region.x, region.y)
             result = MatchResult(
                 get_frame_timestamp(frame), matched, match_region,
                 first_pass_certainty, numpy.copy(npframe),
                 (template.name or template.image))
+
+        _log_match_image_debug(imglog, match_parameters, result)
 
         if grabbed_from_live:
             self._display.draw(result, None)
@@ -1716,7 +1721,7 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
-def _match(image, template, match_parameters, template_name):
+def _match(image, template, match_parameters, imglog):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
     if any(template.shape[x] < 1 for x in (0, 1)):
@@ -1726,20 +1731,15 @@ def _match(image, template, match_parameters, template_name):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    imglog = logging.ImageLogger("detect_match")
-
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
     matched = (
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters, imglog))
 
+    imglog.note("first_pass_matched", first_pass_matched)
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
-
-    _log_match_image_debug(
-        imglog, template_name, matched, region,
-        first_pass_matched, first_pass_certainty, match_parameters)
 
     return matched, region, first_pass_certainty
 
@@ -1956,16 +1956,15 @@ def _confirm_match(image, position, template, match_parameters, imglog):
     return cv2.countNonZero(eroded) == 0
 
 
-def _log_match_image_debug(
-        imglog, template_name, matched, region,
-        first_pass_matched, first_pass_certainty, match_parameters):
+def _log_match_image_debug(imglog, match_parameters, result):
 
     d = imglog.write_images()
     if not d:
         return
 
     source_with_roi = imglog.images["source"].copy()
-    _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
+    _draw_match(source_with_roi, result.region,
+                imglog.notes["first_pass_matched"], thickness=1)
     cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
     try:
@@ -1991,8 +1990,8 @@ def _log_match_image_debug(
         <body>
         <div class="container">
         <h4>
-            <i>{{template_name}}</i>
-            {{"matched" if matched else "didn't match"}}
+            <i>{{notes["template_name"]}}</i>
+            {{"matched" if result.match else "didn't match"}}
         </h4>
 
         <p>Searching for <b>template</b> {{link("template")}}
@@ -2016,20 +2015,20 @@ def _log_match_image_debug(
                     of {{"%g"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
-            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                <li>Matched at {{region}} {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(first_pass_certainty)}}.
+            {% if (level == 0 and notes["first_pass_matched"]) or level != min(levels) %}
+                <li>Matched at {{result.region}} {{link("source_with_roi")}}
+                    with certainty {{"%.4f"|format(result.first_pass_result)}}.
             {% else %}
-                <li>Didn't match (best match at {{region}}
+                <li>Didn't match (best match at {{result.region}}
                     {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(first_pass_certainty)}}).
+                    with certainty {{"%.4f"|format(result.first_pass_result)}}).
             {% endif %}
 
             </ul>
 
         {% endfor %}
 
-        {% if first_pass_certainty >= match_parameters.match_threshold %}
+        {% if result.first_pass_result >= match_parameters.match_threshold %}
             <p><b>Second pass (confirmation):</b>
             <ul>
                 <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
@@ -2052,9 +2051,9 @@ def _log_match_image_debug(
                     {{match_parameters.erode_passes}}
                     {{"time" if match_parameters.erode_passes == 1
                         else "times"}}.
-                    {{"No" if matched else "Some"}}
+                    {{"No" if result.match else "Some"}}
                     differences (white pixels) remain, so the template
-                    {{"does" if matched else "doesn't"}} match.
+                    {{"does" if result.match else "doesn't"}} match.
             </ul>
         {% endif %}
 
@@ -2069,17 +2068,14 @@ def _log_match_image_debug(
 
     with open(os.path.join(d, "index.html"), "w") as f:
         f.write(template.render(
-            first_pass_certainty=first_pass_certainty,
-            first_pass_matched=first_pass_matched,
             levels=list(reversed(sorted(imglog.pyramid_levels))),
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
             match_parameters=match_parameters,
-            matched=matched,
             min=min,
-            region=region,
-            template_name=template_name,
+            result=result,
+            notes=imglog.notes
         ))
 
 

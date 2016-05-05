@@ -87,6 +87,7 @@ class ImageLogger(object):
         self.images = OrderedDict()
         self.frame_number = ImageLogger._frame_number
         self.pyramid_levels = set()
+        self.notes = {}
         ImageLogger._frame_number += 1
 
     def add(self, name, image, pyramid_level=None):
@@ -99,6 +100,11 @@ class ImageLogger(object):
             raise ValueError("Image for name '%s' already logged" % name)
         with numpy_from_sample(image, readonly=True) as img:
             self.images[name] = img.copy()
+
+    def note(self, name, value):
+        if get_debug_level() <= 1:
+            return
+        self.notes[name] = value
 
     def write_images(self):
         if get_debug_level() <= 1:
