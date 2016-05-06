@@ -63,6 +63,7 @@ import traceback
 from collections import namedtuple
 from textwrap import dedent, wrap
 
+from _stbt.imgproc_cache import cache
 from _stbt.utils import mkdir_p
 
 SCREENSHOTS_ROOT = "selftest/screenshots"
@@ -378,7 +379,7 @@ def update_doctests(infilename, outfile):
 
     perf_log = []
 
-    with open(infilename, 'r') as infile:
+    with open(infilename, 'r') as infile, cache():
         for line in infile:
             # pylint: disable=cell-var-from-loop
             m = re.match(r'\s*>>> (.*)\n', line)

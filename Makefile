@@ -70,6 +70,7 @@ INSTALL_CORE_FILES = \
     _stbt/core.py \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
+    _stbt/imgproc_cache.py \
     _stbt/irnetbox.py \
     _stbt/libxxhash.so \
     _stbt/lmdb/__init__.py \

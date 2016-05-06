@@ -83,6 +83,7 @@ class ImageLogger(object):
     _frame_number = 1
 
     def __init__(self, name):
+        self.enabled = get_debug_level() > 1
         self.name = name
         self.images = OrderedDict()
         self.frame_number = ImageLogger._frame_number
@@ -91,7 +92,7 @@ class ImageLogger(object):
         ImageLogger._frame_number += 1
 
     def add(self, name, image, pyramid_level=None):
-        if get_debug_level() <= 1:
+        if not self.enabled:
             return
         if pyramid_level is not None:
             name = "level%d-%s" % (pyramid_level, name)
@@ -102,12 +103,12 @@ class ImageLogger(object):
             self.images[name] = img.copy()
 
     def note(self, name, value):
-        if get_debug_level() <= 1:
+        if not self.enabled:
             return
         self.notes[name] = value
 
     def write_images(self):
-        if get_debug_level() <= 1:
+        if not self.enabled:
             return
         d = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)
         try:

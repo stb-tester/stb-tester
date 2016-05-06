@@ -72,3 +72,33 @@ test_that_no_selftests_expressions_passes_stbt_auto_selftest_validate()
           tests/subdir/subsubdir/subdir_example.py &&
     stbt --with-experimental auto-selftest validate
 }
+
+test_auto_selftest_caching()
+{
+    cd_example_testpack &&
+
+    export XDG_CACHE_HOME=$PWD/cache
+
+    # Regenerating the GStreamer plugin cache would have messed up our timing so
+    # force it here:
+    gst-inspect-1.0 &>/dev/null
+
+    STBT_DISABLE_CACHING=1 /usr/bin/time --format=%e -o without_cache.time \
+        stbt --with-experimental auto-selftest validate
+
+    ! [ -e cache/stbt/cache.lmdb ] \
+        || fail "Cache file created despite STBT_DISABLE_CACHING"
+
+    /usr/bin/time --format=%e -o cold_cache.time \
+        stbt --with-experimental auto-selftest validate \
+        || fail "auto-selftest failed"
+
+    [ -e cache/stbt/cache.lmdb ] || fail "Cache file not created"
+
+    /usr/bin/time --format=%e -o hot_cache.time \
+        stbt --with-experimental auto-selftest validate \
+        || fail "auto-selftest failed"
+
+    python -c "assert ($(<hot_cache.time) * 2) < $(<without_cache.time)" \
+        || fail "caching isn't fast"
+}

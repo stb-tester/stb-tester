@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import argparse
 import datetime
+import errno
 import functools
 import inspect
 import os
@@ -32,7 +33,7 @@ import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
-from _stbt import logging, utils
+from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate
 from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
@@ -1722,6 +1723,7 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
+@imgproc_cache.memoize({"version": "25"})
 def _match(image, template, match_parameters, imglog):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
@@ -2206,8 +2208,14 @@ def _tesseract_version(output=None):
     global _memoise_tesseract_version
     if output is None:
         if _memoise_tesseract_version is None:
-            _memoise_tesseract_version = subprocess.check_output(
-                ['tesseract', '--version'], stderr=subprocess.STDOUT)
+            try:
+                _memoise_tesseract_version = subprocess.check_output(
+                    ['tesseract', '--version'], stderr=subprocess.STDOUT)
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    return None
+                else:
+                    raise
         output = _memoise_tesseract_version
 
     line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
@@ -2235,6 +2243,8 @@ def _tesseract(frame, region, mode, lang, _config,
                 region)
 
 
+@imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
+                        "version": "25"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words):
     # We scale image up 3x before feeding it to tesseract as this
