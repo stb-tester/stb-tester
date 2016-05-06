@@ -649,7 +649,8 @@ class DeviceUnderTest(object):
                 _crop(npframe, region), template.image, match_parameters,
                 imglog)
 
-            match_region = match_region.translate(region.x, region.y)
+            match_region = Region.from_extents(*match_region).translate(
+                region.x, region.y)
             result = MatchResult(
                 get_frame_timestamp(frame), matched, match_region,
                 first_pass_certainty, numpy.copy(npframe),
@@ -1741,7 +1742,7 @@ def _match(image, template, match_parameters, imglog):
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    return matched, region, first_pass_certainty
+    return matched, list(region), first_pass_certainty
 
 
 def _find_match(image, template, match_parameters, imglog):
