@@ -54,6 +54,7 @@ import multiprocessing
 import os
 import re
 import shutil
+import signal
 import StringIO
 import sys
 import tempfile
@@ -141,11 +142,16 @@ def prune_empty_directories(dir_):
                     raise
 
 
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 def generate_into_tmpdir():
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
     # We use this process pool for sandboxing rather than concurrency:
-    pool = multiprocessing.Pool(processes=1, maxtasksperchild=1)
+    pool = multiprocessing.Pool(
+        processes=1, maxtasksperchild=1, initializer=init_worker)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
     try:
         test_file_count = 0
@@ -164,7 +170,8 @@ def generate_into_tmpdir():
             test_line_count = write_bare_doctest(module, barename)
             if test_line_count:
                 test_file_count += 1
-                pool.apply(update_doctests, (barename, outname))
+                pool.apply_async(
+                    update_doctests, (barename, outname)).get(timeout=60 * 60)
                 os.unlink(barename)
 
         if test_file_count > 0:
@@ -180,7 +187,7 @@ def generate_into_tmpdir():
         prune_empty_directories(tmpdir)
         return tmpdir
     except:
-        pool.close()
+        pool.terminate()
         pool.join()
         shutil.rmtree(tmpdir)
         raise
