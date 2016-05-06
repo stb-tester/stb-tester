@@ -147,6 +147,21 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+def iterate_with_progress(sequence, width=20, stream=sys.stderr):
+    ANSI_ERASE_LINE = '\033[K'
+    stream.write('\n')
+    total = len(sequence)
+    for n, v in enumerate(sequence):
+        if n == total:
+            break
+        progress = (n * width) // total
+        stream.write(
+            ANSI_ERASE_LINE + '[%s] %8d / %d - Processing %s\r' % (
+                '#' * progress + ' ' * (width - progress), n, total, str(v)))
+        yield v
+    stream.write('\n')
+
+
 def generate_into_tmpdir():
     start_time = time.time()
 
@@ -157,14 +172,18 @@ def generate_into_tmpdir():
         processes=1, maxtasksperchild=1, initializer=init_worker)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
     try:
-        perf_log = []
-        test_file_count = 0
+        filenames = []
         for module_filename in _recursive_glob('*.py'):
             if module_filename.startswith('selftest'):
                 continue
             if not is_valid_python_identifier(
                     os.path.basename(module_filename)[:-3]):
                 continue
+            filenames.append(module_filename)
+
+        perf_log = []
+        test_file_count = 0
+        for module_filename in iterate_with_progress(filenames):
             outname = os.path.join(
                 tmpdir, re.sub('.py$', '_selftest.py', module_filename))
             barename = re.sub('.py$', '_bare.py', outname)
