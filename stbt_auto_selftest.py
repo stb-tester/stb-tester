@@ -58,6 +58,7 @@ import signal
 import StringIO
 import sys
 import tempfile
+import time
 import traceback
 from collections import namedtuple
 from textwrap import dedent, wrap
@@ -147,6 +148,8 @@ def init_worker():
 
 
 def generate_into_tmpdir():
+    start_time = time.time()
+
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
     # We use this process pool for sandboxing rather than concurrency:
@@ -154,6 +157,7 @@ def generate_into_tmpdir():
         processes=1, maxtasksperchild=1, initializer=init_worker)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
     try:
+        perf_log = []
         test_file_count = 0
         for module_filename in _recursive_glob('*.py'):
             if module_filename.startswith('selftest'):
@@ -170,8 +174,8 @@ def generate_into_tmpdir():
             test_line_count = write_bare_doctest(module, barename)
             if test_line_count:
                 test_file_count += 1
-                pool.apply_async(
-                    update_doctests, (barename, outname)).get(timeout=60 * 60)
+                perf_log.extend(pool.apply_async(
+                    update_doctests, (barename, outname)).get(timeout=60 * 60))
                 os.unlink(barename)
 
         if test_file_count > 0:
@@ -185,6 +189,9 @@ def generate_into_tmpdir():
         for x in _recursive_glob('*.pyc', tmpdir):
             os.unlink(os.path.join(tmpdir, x))
         prune_empty_directories(tmpdir)
+
+        print_perf_summary(perf_log, time.time() - start_time)
+
         return tmpdir
     except:
         pool.terminate()
@@ -326,6 +333,22 @@ def write_test_for_class(item, out):
     return len(always_screenshots) + len(try_screenshots)
 
 
+def print_perf_summary(perf_log, total_time):
+    perf_log.sort(key=lambda x: -x[1])
+    eval_time = sum(x[1] for x in perf_log)
+    print "Total time: %fs" % total_time
+    print "Total time evaluating: %fs" % eval_time
+    print "Overhead: %fs (%f%%)" % (
+        total_time - eval_time, 100 * (total_time - eval_time) / total_time)
+    print "Number of expressions evaluated: %i" % len(perf_log)
+    if len(perf_log) == 0:
+        return
+    print "Median time: %fs" % perf_log[len(perf_log) // 2][1]
+    print "Slowest 10 evaluations:"
+    for cmd, duration in perf_log[:10]:
+        print "%.03fs\t%s" % (duration, cmd)
+
+
 def update_doctests(infilename, outfile):
     """
     Updates a file with doctests in it but no results to have "correct" results.
@@ -334,13 +357,13 @@ def update_doctests(infilename, outfile):
     if isinstance(outfile, str):
         outfile = open(outfile, 'w')
 
-    test_line_count = 0
+    perf_log = []
+
     with open(infilename, 'r') as infile:
         for line in infile:
             # pylint: disable=cell-var-from-loop
             m = re.match(r'\s*>>> (.*)\n', line)
             if m:
-                test_line_count += 1
                 cmd = m.group(1)
             else:
                 outfile.write(("%s" % line).encode('utf-8'))
@@ -388,6 +411,7 @@ def update_doctests(infilename, outfile):
                     print repr(value)
 
             try:
+                start_time = time.time()
                 sys.stdout = io
                 old_displayhook, sys.displayhook = sys.displayhook, displayhook
                 exec compile(cmd, "<string>", "single") in module.__dict__  # pylint: disable=exec-used
@@ -398,6 +422,8 @@ def update_doctests(infilename, outfile):
                 result[0] = "exception"
                 traceback.print_exc(0, io)
             finally:
+                perf_log.append((cmd, time.time() - start_time))
+
                 interesting = (did_print[0] or
                                result[0] in ["exception", "truthy"])
                 sys.displayhook = old_displayhook
@@ -413,7 +439,7 @@ def update_doctests(infilename, outfile):
                         else:
                             outfile.write('    ' + output_line)
 
-    return test_line_count
+    return perf_log
 
 
 def test_update_doctests():
@@ -422,8 +448,8 @@ def test_update_doctests():
     import subprocess
     from tempfile import NamedTemporaryFile
     with NamedTemporaryFile() as outfile:
-        test_line_count = update_doctests(
-            _find_file('tests/auto_selftest_bare.py'), outfile.name)
+        test_line_count = len(update_doctests(
+            _find_file('tests/auto_selftest_bare.py'), outfile.name))
         assert test_line_count == 19
         actual = outfile.read()
         with open(_find_file('tests/auto_selftest_expected.py')) as f:
