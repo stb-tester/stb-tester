@@ -9,6 +9,7 @@ Source: %{name}-@VERSION@.tar.gz
 %define debug_package %{nil}
 
 BuildRequires: python-docutils
+BuildRequires: python-devel
 BuildRequires: which
 
 Requires: curl

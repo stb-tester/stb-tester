@@ -8,6 +8,7 @@
 .stbt-ldflags
 .stbt-prefix
 _stbt/libxxhash.so
+_stbt/lmdb/
 debian-packages
 defaults.conf
 docs/stbt.1

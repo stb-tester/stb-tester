@@ -72,6 +72,9 @@ INSTALL_CORE_FILES = \
     _stbt/gst_utils.py \
     _stbt/irnetbox.py \
     _stbt/libxxhash.so \
+    _stbt/lmdb/__init__.py \
+    _stbt/lmdb/cpython.so \
+    _stbt/lmdb/LICENSE \
     _stbt/logging.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
@@ -199,7 +202,29 @@ XXHASH_SOURCES = \
 _stbt/libxxhash.so : $(XXHASH_SOURCES)
 	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
 
-SUBMODULE_FILES = $(XXHASH_SOURCES)
+LMDB_SOURCES = \
+    vendor/py-lmdb/lib/lmdb.h \
+    vendor/py-lmdb/lib/mdb.c \
+    vendor/py-lmdb/lib/midl.c \
+    vendor/py-lmdb/lib/midl.h \
+    vendor/py-lmdb/lib/py-lmdb/preload.h \
+    vendor/py-lmdb/lmdb/cpython.c
+
+_stbt/lmdb/__init__.py : vendor/py-lmdb/lmdb/__init__.py
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/LICENSE : vendor/py-lmdb/LICENSE
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/cpython.so : $(LMDB_SOURCES)
+	mkdir -p $(dir $@) && \
+	$(CC) -o _stbt/lmdb/cpython.so -O2 --shared -fPIC \
+	    $(shell pkg-config --cflags --libs python) \
+	    -Ivendor/py-lmdb/lib/ \
+	    -Ivendor/py-lmdb/lib/py-lmdb/ \
+	    $(filter %.c,$(LMDB_SOURCES))
+
+SUBMODULE_FILES = $(LMDB_SOURCES) vendor/py-lmdb/LICENSE $(XXHASH_SOURCES)
 
 $(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
 
