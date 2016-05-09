@@ -25,4 +25,5 @@ stbt.sh
 TAGS
 tests/ocr/menu.png
 tests/test-install
+vendor/.submodules-checked-out
 VERSION
