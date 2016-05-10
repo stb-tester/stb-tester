@@ -12,10 +12,10 @@
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of testcases
+#/     match          Compare two images
 #/     power          Control networked power switch
 #/     record         Record a testcase
 #/     screenshot     Capture a single screenshot
-#/     templatematch  Compare two images
 #/     tv             View live video on screen
 #/     virtual-stb    Configure stbt to use an STB emulator
 #/
@@ -57,19 +57,10 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    auto-selftest)
-        check_experimental
-        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
-    run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
+    run|record|batch|config|control|lint|power|screenshot|match|tv)
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
-    # Experimental sub-commands:
-    camera)
-        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
-            echo "stb-tester camera support is not installed." 1>&2
-            exit 1
-        fi
-        check_experimental
-        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
+    templatematch)  # for backwards compatibility
+        exec @LIBEXECDIR@/stbt/stbt-match "$@";;
     virtual-stb)
         export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
         if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
@@ -77,6 +68,17 @@ case "$cmd" in
             exit 1
         fi
         exec @LIBEXECDIR@/stbt/stbt_virtual_stb.py "$@";;
+    # Experimental sub-commands:
+    auto-selftest)
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
+    camera)
+        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
+            echo "stb-tester camera support is not installed." 1>&2
+            exit 1
+        fi
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     *)
         usage >&2; exit 1;;
 esac

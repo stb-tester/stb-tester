@@ -45,6 +45,10 @@ UNRELEASED
       real hardware.  This approach can be particularly useful to reduce the
       cost of test maintainance.
 
+* The `stbt templatematch` command-line tool has been renamed to `stbt match`
+  (for consistency with the Python API terminology). The old name remains as an
+  alias, for backwards compatibility.
+
 * New `roku` remote control that uses the [Roku HTTP control protocol].
   Stb-tester's [standard key names] (like "KEY_HOME") will be converted to the
   corresponding Roku key name, or you can use the [Roku key names] directly.

@@ -18,13 +18,13 @@ import stbt
 
 
 def error(s):
-    sys.stderr.write("stbt templatematch: error: %s\n" % s)
+    sys.stderr.write("stbt match: error: %s\n" % s)
     sys.exit(1)
 
 
 parser = argparse.ArgumentParser()
-parser.prog = "stbt templatematch"
-parser.description = """Run stbt's templatematch algorithm against a single
+parser.prog = "stbt match"
+parser.description = """Run stbt's image-matching algorithm against a single
     frame (which you can capture using `stbt screenshot`)."""
 parser.add_argument(
     "-v", "--verbose", action="store_true",

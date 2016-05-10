@@ -516,6 +516,6 @@ test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
         test.py &&
 
     # sqdiff-normed & ccorr-normed give incorrect result on all-black images
-    stbt templatematch screenshot.png "$testdir"/black-full-frame.png \
+    stbt match screenshot.png "$testdir"/black-full-frame.png \
         match_method=ccoeff-normed
 }

@@ -95,11 +95,11 @@ INSTALL_CORE_FILES = \
     stbt-config \
     stbt-control \
     stbt-lint \
+    stbt-match \
     stbt-power \
     stbt-record \
     stbt-run \
     stbt-screenshot \
-    stbt-templatematch \
     stbt-tv
 
 INSTALL_VSTB_FILES = \
