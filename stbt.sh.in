@@ -9,6 +9,7 @@
 #/ Available commands are:
 #/     run            Run a testcase
 #/     batch          Run testcases repeatedly, create html report
+#/     auto-selftest  Test your test-cases against saved screenshots
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of testcases
@@ -21,7 +22,6 @@
 #/
 #/ Experimental commands. These may change in the future in a backwards-
 #/ incompatible way. They require passing the '--with-experimental' flag:
-#/     auto-selftest  Test your test-cases against saved screenshots
 #/     camera         Configure stbt to capture video from a TV using a camera
 #/
 #/ For help on a specific command do 'stbt <command> --help'.
@@ -57,6 +57,8 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
+    auto-selftest)
+        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|match|tv)
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility
@@ -69,9 +71,6 @@ case "$cmd" in
         fi
         exec @LIBEXECDIR@/stbt/stbt_virtual_stb.py "$@";;
     # Experimental sub-commands:
-    auto-selftest)
-        check_experimental
-        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
     camera)
         if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
             echo "stb-tester camera support is not installed." 1>&2
