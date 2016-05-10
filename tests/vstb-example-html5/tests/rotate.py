@@ -3,7 +3,7 @@ from stbt import press, wait_for_match
 
 
 def wait_for_vstb_startup():
-    wait_for_match('stb-tester-350px.png')
+    wait_for_match('stb-tester-350px.png', timeout_secs=20)
 
 
 def test_that_image_is_rotated_by_arrows():
