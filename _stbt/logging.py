@@ -82,7 +82,7 @@ class ImageLogger(object):
     """
     _frame_number = 1
 
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         self.enabled = get_debug_level() > 1
         if not self.enabled:
             return
@@ -104,12 +104,15 @@ class ImageLogger(object):
 
         self.images = OrderedDict()
         self.pyramid_levels = set()
-        self.notes = {}
+        self.data = {}
+        for k, v in kwargs.iteritems():
+            self.data[k] = v
 
-    def note(self, name, value):
+    def set(self, **kwargs):
         if not self.enabled:
             return
-        self.notes[name] = value
+        for k, v in kwargs.iteritems():
+            self.data[k] = v
 
     def imwrite(self, name, image, pyramid_level=None):
         if not self.enabled:

@@ -640,8 +640,9 @@ class DeviceUnderTest(object):
         if grabbed_from_live:
             frame = self._display.get_sample()
 
-        imglog = logging.ImageLogger("detect_match")
-        imglog.note("template_name", template.friendly_name)
+        imglog = logging.ImageLogger(
+            "detect_match", match_parameters=match_parameters,
+            template_name=template.friendly_name)
 
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
@@ -657,7 +658,8 @@ class DeviceUnderTest(object):
                 first_pass_certainty, numpy.copy(npframe),
                 (template.name or template.image))
 
-        _log_match_image_debug(imglog, match_parameters, result)
+        imglog.set(result=result)
+        _log_match_image_debug(imglog)
 
         if grabbed_from_live:
             self._display.draw(result, None)
@@ -1741,7 +1743,7 @@ def _match(image, template, match_parameters, imglog):
         first_pass_matched and
         _confirm_match(image, region, template, match_parameters, imglog))
 
-    imglog.note("first_pass_matched", first_pass_matched)
+    imglog.set(first_pass_matched=first_pass_matched)
 
     return matched, list(region), first_pass_certainty
 
@@ -1964,14 +1966,14 @@ def _confirm_match(image, region, template, match_parameters, imglog):
     return cv2.countNonZero(eroded) == 0
 
 
-def _log_match_image_debug(imglog, match_parameters, result):
+def _log_match_image_debug(imglog):
 
     if not imglog.enabled:
         return
 
     imglog.imwrite("source_with_roi", _draw_match(
-        imglog.images["source"], result.region,
-        imglog.notes["first_pass_matched"], thickness=1))
+        imglog.images["source"], imglog.data["result"].region,
+        imglog.data["first_pass_matched"], thickness=1))
 
     try:
         import jinja2
@@ -1996,7 +1998,7 @@ def _log_match_image_debug(imglog, match_parameters, result):
         <body>
         <div class="container">
         <h4>
-            <i>{{notes["template_name"]}}</i>
+            <i>{{template_name}}</i>
             {{"matched" if result.match else "didn't match"}}
         </h4>
 
@@ -2021,7 +2023,7 @@ def _log_match_image_debug(imglog, match_parameters, result):
                     of {{"%g"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
-            {% if (level == 0 and notes["first_pass_matched"]) or level != min(levels) %}
+            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
                 <li>Matched at {{result.region}} {{link("source_with_roi")}}
                     with certainty {{"%.4f"|format(result.first_pass_result)}}.
             {% else %}
@@ -2074,14 +2076,15 @@ def _log_match_image_debug(imglog, match_parameters, result):
 
     with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
+            first_pass_matched=imglog.data["first_pass_matched"],
             levels=list(reversed(sorted(imglog.pyramid_levels))),
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
-            match_parameters=match_parameters,
+            match_parameters=imglog.data["match_parameters"],
             min=min,
-            result=result,
-            notes=imglog.notes
+            result=imglog.data["result"],
+            template_name=imglog.data["template_name"],
         ))
 
 
