@@ -710,16 +710,16 @@ class DeviceUnderTest(object):
                 continue
 
             imglog = logging.ImageLogger("detect_motion")
-            imglog.add("source", frame_gray)
+            imglog.imwrite("source", frame_gray)
 
             absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
             previous_frame_gray = frame_gray
-            imglog.add("absdiff", absdiff)
+            imglog.imwrite("absdiff", absdiff)
 
             if mask_image is not None:
                 absdiff = cv2.bitwise_and(absdiff, mask_image)
-                imglog.add("mask", mask_image)
-                imglog.add("absdiff_masked", absdiff)
+                imglog.imwrite("mask", mask_image)
+                imglog.imwrite("absdiff_masked", absdiff)
 
             _, thresholded = cv2.threshold(
                 absdiff, int((1 - noise_threshold) * 255), 255,
@@ -727,8 +727,8 @@ class DeviceUnderTest(object):
             eroded = cv2.erode(
                 thresholded,
                 cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            imglog.add("absdiff_threshold", thresholded)
-            imglog.add("absdiff_threshold_erode", eroded)
+            imglog.imwrite("absdiff_threshold", thresholded)
+            imglog.imwrite("absdiff_threshold_erode", eroded)
 
             motion = (cv2.countNonZero(eroded) > 0)
 
@@ -751,7 +751,6 @@ class DeviceUnderTest(object):
             result = MotionResult(sample.get_buffer().pts, motion)
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
-            imglog.write_images()
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
@@ -931,14 +930,13 @@ class DeviceUnderTest(object):
 
         if logging.get_debug_level() > 1:
             imglog = logging.ImageLogger("is_screen_black")
-            imglog.add("source", frame)
+            imglog.imwrite("source", frame)
             if mask is not None:
-                imglog.add('mask', mask)
-                imglog.add('non-black-regions-after-masking',
-                           numpy.bitwise_and(greyframe, mask))
+                imglog.imwrite('mask', mask)
+                imglog.imwrite('non-black-regions-after-masking',
+                               numpy.bitwise_and(greyframe, mask))
             else:
-                imglog.add('non-black-regions-after-masking', greyframe)
-            imglog.write_images()
+                imglog.imwrite('non-black-regions-after-masking', greyframe)
 
         return maxVal == 0
 
@@ -1759,8 +1757,8 @@ def _find_match(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.add("source", image)
-    imglog.add("template", template)
+    imglog.imwrite("source", image)
+    imglog.imwrite("template", template)
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     levels = get_config("match", "pyramid_levels", type_=int)
@@ -1835,7 +1833,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
                  min(s.h - 1, r.y + r.h + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
-        imglog.add("source_with_rois", source_with_rois, level)
+        imglog.imwrite("source_with_rois", source_with_rois, level)
 
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
@@ -1846,9 +1844,9 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
             method,
             matches_heatmap[roi.to_slice()])
 
-    imglog.add("source", image, level)
-    imglog.add("template", template, level)
-    imglog.add("source_matchtemplate", matches_heatmap, level)
+    imglog.imwrite("source", image, level)
+    imglog.imwrite("template", template, level)
+    imglog.imwrite("source_matchtemplate", matches_heatmap, level)
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
@@ -1868,7 +1866,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
         (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
          else cv2.THRESH_BINARY))
     new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    imglog.add("source_matchtemplate_threshold", new_roi_mask, level)
+    imglog.imwrite("source_matchtemplate_threshold", new_roi_mask, level)
 
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
@@ -1941,15 +1939,15 @@ def _confirm_match(image, region, template, match_parameters, imglog):
     roi = image[region.y:region.bottom, region.x:region.right]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imglog.add("confirm-source_roi", roi)
-    imglog.add("confirm-source_roi_gray", image_gray)
-    imglog.add("confirm-template_gray", template_gray)
+    imglog.imwrite("confirm-source_roi", roi)
+    imglog.imwrite("confirm-source_roi_gray", image_gray)
+    imglog.imwrite("confirm-template_gray", template_gray)
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imglog.add("confirm-source_roi_gray_normalized", image_gray)
-        imglog.add("confirm-template_gray_normalized", template_gray)
+        imglog.imwrite("confirm-source_roi_gray_normalized", image_gray)
+        imglog.imwrite("confirm-template_gray_normalized", template_gray)
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -1959,23 +1957,21 @@ def _confirm_match(image, region, template, match_parameters, imglog):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    imglog.add("confirm-absdiff", absdiff)
-    imglog.add("confirm-absdiff_threshold", thresholded)
-    imglog.add("confirm-absdiff_threshold_erode", eroded)
+    imglog.imwrite("confirm-absdiff", absdiff)
+    imglog.imwrite("confirm-absdiff_threshold", thresholded)
+    imglog.imwrite("confirm-absdiff_threshold_erode", eroded)
 
     return cv2.countNonZero(eroded) == 0
 
 
 def _log_match_image_debug(imglog, match_parameters, result):
 
-    d = imglog.write_images()
-    if not d:
+    if not imglog.enabled:
         return
 
-    source_with_roi = _draw_match(
+    imglog.imwrite("source_with_roi", _draw_match(
         imglog.images["source"], result.region,
-        imglog.notes["first_pass_matched"], thickness=1)
-    cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
+        imglog.notes["first_pass_matched"], thickness=1))
 
     try:
         import jinja2
@@ -2076,7 +2072,7 @@ def _log_match_image_debug(imglog, match_parameters, result):
         </html>
     """)
 
-    with open(os.path.join(d, "index.html"), "w") as f:
+    with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
             levels=list(reversed(sorted(imglog.pyramid_levels))),
             link=lambda s, level=None: (

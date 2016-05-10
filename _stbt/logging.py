@@ -84,14 +84,34 @@ class ImageLogger(object):
 
     def __init__(self, name):
         self.enabled = get_debug_level() > 1
+        if not self.enabled:
+            return
+
         self.name = name
-        self.images = OrderedDict()
         self.frame_number = ImageLogger._frame_number
-        self.pyramid_levels = set()
-        self.notes = {}
         ImageLogger._frame_number += 1
 
-    def add(self, name, image, pyramid_level=None):
+        try:
+            outdir = os.path.join("stbt-debug", self.name,
+                                  "%05d" % self.frame_number)
+            mkdir_p(outdir)
+            self.outdir = outdir
+        except OSError:
+            warn("Failed to create directory '%s'; won't save debug images."
+                 % outdir)
+            self.enabled = False
+            return
+
+        self.images = OrderedDict()
+        self.pyramid_levels = set()
+        self.notes = {}
+
+    def note(self, name, value):
+        if not self.enabled:
+            return
+        self.notes[name] = value
+
+    def imwrite(self, name, image, pyramid_level=None):
         if not self.enabled:
             return
         if pyramid_level is not None:
@@ -100,30 +120,14 @@ class ImageLogger(object):
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
         with numpy_from_sample(image, readonly=True) as img:
-            self.images[name] = img.copy()
-
-    def note(self, name, value):
-        if not self.enabled:
-            return
-        self.notes[name] = value
-
-    def write_images(self):
-        if not self.enabled:
-            return
-        d = os.path.join("stbt-debug", self.name, "%05d" % self.frame_number)
-        try:
-            mkdir_p(d)
-        except OSError:
-            warn("Failed to create directory '%s'; won't save debug images."
-                 % d)
-            return None
-        for name, image in self.images.iteritems():
-            if image.dtype == numpy.float32:
+            if img.dtype == numpy.float32:
                 # Scale `cv2.matchTemplate` heatmap output in range
                 # [0.0, 1.0] to visible grayscale range [0, 255].
-                image = cv2.convertScaleAbs(image, alpha=255)
-            cv2.imwrite(os.path.join(d, name + ".png"), image)
-        return d
+                img = cv2.convertScaleAbs(image, alpha=255)
+            else:
+                img = img.copy()
+            self.images[name] = img
+            cv2.imwrite(os.path.join(self.outdir, name + ".png"), img)
 
 
 def test_that_debug_can_write_unicode_strings():
