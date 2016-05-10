@@ -1777,9 +1777,13 @@ def _find_match(image, template, match_parameters, imglog):
             else:
                 roi_mask = cv2.pyrUp(roi_mask)
 
+        imwrite = lambda name, img: imglog.imwrite(
+            "level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
+
         matched, best_match_position, certainty, roi_mask = _match_template(
             image_pyramid[level], template_pyramid[level], match_parameters,
-            roi_mask, level, imglog)
+            roi_mask, level, imwrite)
+        imglog.append(pyramid_levels=level)
 
         if not matched:
             break
@@ -1790,7 +1794,8 @@ def _find_match(image, template, match_parameters, imglog):
     return matched, region, certainty
 
 
-def _match_template(image, template, match_parameters, roi_mask, level, imglog):
+def _match_template(image, template, match_parameters, roi_mask, level,
+                    imwrite):
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
@@ -1835,7 +1840,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
                  min(s.h - 1, r.y + r.h + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
-        imglog.imwrite("source_with_rois", source_with_rois, level)
+        imwrite("source_with_rois", source_with_rois)
 
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
@@ -1846,9 +1851,9 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
             method,
             matches_heatmap[roi.to_slice()])
 
-    imglog.imwrite("source", image, level)
-    imglog.imwrite("template", template, level)
-    imglog.imwrite("source_matchtemplate", matches_heatmap, level)
+    imwrite("source", image)
+    imwrite("template", template)
+    imwrite("source_matchtemplate", matches_heatmap)
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
@@ -1868,7 +1873,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
         (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
          else cv2.THRESH_BINARY))
     new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    imglog.imwrite("source_matchtemplate_threshold", new_roi_mask, level)
+    imwrite("source_matchtemplate_threshold", new_roi_mask)
 
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
@@ -2077,7 +2082,7 @@ def _log_match_image_debug(imglog):
     with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
             first_pass_matched=imglog.data["first_pass_matched"],
-            levels=list(reversed(sorted(imglog.pyramid_levels))),
+            levels=imglog.data["pyramid_levels"],
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),

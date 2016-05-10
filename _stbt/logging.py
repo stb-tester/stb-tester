@@ -114,12 +114,17 @@ class ImageLogger(object):
         for k, v in kwargs.iteritems():
             self.data[k] = v
 
-    def imwrite(self, name, image, pyramid_level=None):
+    def append(self, **kwargs):
         if not self.enabled:
             return
-        if pyramid_level is not None:
-            name = "level%d-%s" % (pyramid_level, name)
-            self.pyramid_levels.add(pyramid_level)
+        for k, v in kwargs.iteritems():
+            if k not in self.data:
+                self.data[k] = []
+            self.data[k].append(v)
+
+    def imwrite(self, name, image):
+        if not self.enabled:
+            return
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
         with numpy_from_sample(image, readonly=True) as img:
