@@ -854,7 +854,7 @@ class DeviceUnderTest(object):
             frame, region, mode, lang, tesseract_config,
             user_patterns=tesseract_user_patterns,
             user_words=tesseract_user_words)
-        text = text.decode('utf-8').strip().translate(_ocr_transtab)
+        text = text.strip().translate(_ocr_transtab)
         debug(u"OCR in region %s read '%s'." % (region, text))
         return text
 
@@ -878,7 +878,7 @@ class DeviceUnderTest(object):
         if xml == '':
             result = TextMatchResult(ts, False, None, frame, text)
         else:
-            hocr = lxml.etree.fromstring(xml)
+            hocr = lxml.etree.fromstring(xml.encode('utf-8'))
             p = _hocr_find_phrase(hocr, text.split())
             if p:
                 # Find bounding box
@@ -2223,23 +2223,29 @@ def _tesseract(frame, region, mode, lang, _config,
     if _config is None:
         _config = {}
 
-    with numpy_from_sample(frame, readonly=True) as f:
-        frame_region = Region(0, 0, f.shape[1], f.shape[0])
-        intersection = Region.intersect(frame_region, region)
-        if intersection is None:
-            warn("Requested OCR in region %s which doesn't overlap with "
-                 "the frame %s" % (str(region), frame_region))
-            return ('', None)
-        else:
-            region = intersection
+    frame_region = _image_region(frame)
+    intersection = Region.intersect(frame_region, region)
+    if intersection is None:
+        warn("Requested OCR in region %s which doesn't overlap with "
+             "the frame %s" % (str(region), frame_region))
+        return (u'', None)
+    else:
+        region = intersection
 
-        # We scale image up 3x before feeding it to tesseract as this
-        # significantly reduces the error rate by more than 6x in tests.  This
-        # uses bilinear interpolation which produces the best results.  See
-        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-        outsize = (region.width * 3, region.height * 3)
-        subframe = cv2.resize(_crop(f, region), outsize,
-                              interpolation=cv2.INTER_LINEAR)
+    with numpy_from_sample(frame, readonly=True) as f:
+        return (_tesseract_subprocess(_crop(f, region), mode, lang,
+                                      _config, user_patterns, user_words),
+                region)
+
+
+def _tesseract_subprocess(
+        frame, mode, lang, _config, user_patterns, user_words):
+    # We scale image up 3x before feeding it to tesseract as this
+    # significantly reduces the error rate by more than 6x in tests.  This
+    # uses bilinear interpolation which produces the best results.  See
+    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+    outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
+    subframe = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -2299,7 +2305,7 @@ def _tesseract(frame, region, mode, lang, _config,
         cv2.imwrite(tmp + '/input.png', subframe)
         subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return (outfile.read(), region)
+            return outfile.read().decode('utf-8')
 
 
 def _hocr_iterate(hocr):
