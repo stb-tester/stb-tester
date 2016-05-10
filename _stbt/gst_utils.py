@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import gi
 import numpy
 
-from .gst_hacks import map_gst_sample
+from .gst_hacks import map_gst_sample, sample_get_size
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst  # isort:skip pylint: disable=E0611
@@ -111,6 +111,20 @@ def get_frame_timestamp(frame):
         return frame.get_buffer().pts
     else:
         return None
+
+
+def sample_shape(sample):
+    if isinstance(sample, numpy.ndarray):
+        return sample.shape
+    elif isinstance(sample, Gst.Sample):
+        caps = sample.get_caps().get_structure(0)
+        if caps.get_value('format') in ['BGR', 'RGB']:
+            return (caps.get_value('height'), caps.get_value('width'), 3)
+        else:
+            return (sample_get_size(sample),)
+    else:
+        raise TypeError("sample_shape must take a Gst.Sample or a "
+                        "numpy.ndarray.  Received a %s" % str(type(sample)))
 
 
 def frames_to_video(outfilename, frames, caps="image/svg",

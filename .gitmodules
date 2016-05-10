@@ -1,0 +1,6 @@
+[submodule "vendor/xxHash"]
+	path = vendor/xxHash
+	url = https://github.com/stb-tester/xxHash.git
+[submodule "vendor/py-lmdb"]
+	path = vendor/py-lmdb
+	url = https://github.com/stb-tester/py-lmdb.git

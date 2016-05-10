@@ -70,7 +70,12 @@ INSTALL_CORE_FILES = \
     _stbt/core.py \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
+    _stbt/imgproc_cache.py \
     _stbt/irnetbox.py \
+    _stbt/libxxhash.so \
+    _stbt/lmdb/__init__.py \
+    _stbt/lmdb/cpython.so \
+    _stbt/lmdb/LICENSE \
     _stbt/logging.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
@@ -80,6 +85,7 @@ INSTALL_CORE_FILES = \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
+    _stbt/xxhash.py \
     stbt/__init__.py \
     stbt_auto_selftest.py \
     stbt-batch \
@@ -101,6 +107,8 @@ INSTALL_CORE_FILES = \
     stbt-run \
     stbt-screenshot \
     stbt-tv
+
+all: $(INSTALL_CORE_FILES)
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -146,10 +154,11 @@ clean:
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
            git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+           | grep -v '^vendor/' \
            | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests: tests/ocr/menu.png
+check-nosetests: tests/ocr/menu.png $(INSTALL_CORE_FILES)
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
@@ -162,7 +171,8 @@ check-nosetests: tests/ocr/menu.png
 	              -e tests/test_functions.py \
 	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	              -e tests/vstb-example-html5/ \
-	              -e tests/webminspector/) \
+	              -e tests/webminspector/ \
+	              -e vendor/) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
@@ -185,6 +195,45 @@ check-bashcompletion:
 	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
 	        ($$t); \
 	    done'
+
+XXHASH_SOURCES = \
+    vendor/xxHash/xxhash.c \
+    vendor/xxHash/xxhash.h
+
+_stbt/libxxhash.so : $(XXHASH_SOURCES)
+	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
+
+LMDB_SOURCES = \
+    vendor/py-lmdb/lib/lmdb.h \
+    vendor/py-lmdb/lib/mdb.c \
+    vendor/py-lmdb/lib/midl.c \
+    vendor/py-lmdb/lib/midl.h \
+    vendor/py-lmdb/lib/py-lmdb/preload.h \
+    vendor/py-lmdb/lmdb/cpython.c
+
+_stbt/lmdb/__init__.py : vendor/py-lmdb/lmdb/__init__.py
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/LICENSE : vendor/py-lmdb/LICENSE
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/cpython.so : $(LMDB_SOURCES)
+	mkdir -p $(dir $@) && \
+	$(CC) -o _stbt/lmdb/cpython.so -O2 --shared -fPIC \
+	    $(shell pkg-config --cflags --libs python) \
+	    -Ivendor/py-lmdb/lib/ \
+	    -Ivendor/py-lmdb/lib/py-lmdb/ \
+	    $(filter %.c,$(LMDB_SOURCES))
+
+SUBMODULE_FILES = $(LMDB_SOURCES) vendor/py-lmdb/LICENSE $(XXHASH_SOURCES)
+
+$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
+
+vendor/.submodules-checked-out : .gitmodules
+	git submodule init && \
+	git submodule sync && \
+	git submodule update && \
+	touch $@
 
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
@@ -212,8 +261,9 @@ tests/ocr/menu.png: %.png: %.svg
 # list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = $(shell git ls-files)
+DIST = $(shell git ls-files | grep -v '^vendor/')
 DIST += VERSION
+DIST += vendor/.submodules-checked-out
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
 	@$(TAR) --version 2>/dev/null | grep -q GNU || { \
@@ -222,8 +272,10 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    exit 1; }
 	# Separate tar and gzip so we can pass "-n" for more deterministic
 	# tarball generation
+	SUBMODULE_DIST=$$( \
+	    git submodule foreach -q 'git ls-files | sed s,^,$$path/,') && \
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
-	         -f stb-tester-$(VERSION).tar $^ && \
+	         -f stb-tester-$(VERSION).tar $^ $$SUBMODULE_DIST && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 

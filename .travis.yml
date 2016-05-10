@@ -28,6 +28,7 @@ install:
         lighttpd
         moreutils
         pep8
+        python-dev
         python-docutils
         python-flask
         python-gi

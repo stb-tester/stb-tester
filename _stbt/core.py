@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import argparse
 import datetime
+import errno
 import functools
 import inspect
 import os
@@ -32,11 +33,11 @@ import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
-from _stbt import logging, utils
+from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_hacks import gst_iterate
 from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
-                             numpy_from_sample)
+                             numpy_from_sample, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -495,7 +496,8 @@ def _crop(frame, region):
 
 
 def _image_region(image):
-    return Region(0, 0, image.shape[1], image.shape[0])
+    s = sample_shape(image)
+    return Region(0, 0, s[1], s[0])
 
 
 class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
@@ -638,18 +640,24 @@ class DeviceUnderTest(object):
         if grabbed_from_live:
             frame = self._display.get_sample()
 
+        imglog = logging.ImageLogger("detect_match")
+        imglog.note("template_name", template.friendly_name)
+
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
 
             matched, match_region, first_pass_certainty = _match(
                 _crop(npframe, region), template.image, match_parameters,
-                template.friendly_name)
+                imglog)
 
-            match_region = match_region.translate(region.x, region.y)
+            match_region = Region.from_extents(*match_region).translate(
+                region.x, region.y)
             result = MatchResult(
                 get_frame_timestamp(frame), matched, match_region,
                 first_pass_certainty, numpy.copy(npframe),
                 (template.name or template.image))
+
+        _log_match_image_debug(imglog, match_parameters, result)
 
         if grabbed_from_live:
             self._display.draw(result, None)
@@ -853,7 +861,7 @@ class DeviceUnderTest(object):
             frame, region, mode, lang, tesseract_config,
             user_patterns=tesseract_user_patterns,
             user_words=tesseract_user_words)
-        text = text.decode('utf-8').strip().translate(_ocr_transtab)
+        text = text.strip().translate(_ocr_transtab)
         debug(u"OCR in region %s read '%s'." % (region, text))
         return text
 
@@ -877,7 +885,7 @@ class DeviceUnderTest(object):
         if xml == '':
             result = TextMatchResult(ts, False, None, frame, text)
         else:
-            hocr = lxml.etree.fromstring(xml)
+            hocr = lxml.etree.fromstring(xml.encode('utf-8'))
             p = _hocr_find_phrase(hocr, text.split())
             if p:
                 # Find bounding box
@@ -1715,7 +1723,8 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
-def _match(image, template, match_parameters, template_name):
+@imgproc_cache.memoize({"version": "25"})
+def _match(image, template, match_parameters, imglog):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
     if any(template.shape[x] < 1 for x in (0, 1)):
@@ -1725,22 +1734,17 @@ def _match(image, template, match_parameters, template_name):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    imglog = logging.ImageLogger("detect_match")
-
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
     matched = (
         first_pass_matched and
         _confirm_match(image, position, template, match_parameters, imglog))
 
+    imglog.note("first_pass_matched", first_pass_matched)
     region = Region(position.x, position.y,
                     template.shape[1], template.shape[0])
 
-    _log_match_image_debug(
-        imglog, template_name, matched, region,
-        first_pass_matched, first_pass_certainty, match_parameters)
-
-    return matched, region, first_pass_certainty
+    return matched, list(region), first_pass_certainty
 
 
 def _find_match(image, template, match_parameters, imglog):
@@ -1955,16 +1959,15 @@ def _confirm_match(image, position, template, match_parameters, imglog):
     return cv2.countNonZero(eroded) == 0
 
 
-def _log_match_image_debug(
-        imglog, template_name, matched, region,
-        first_pass_matched, first_pass_certainty, match_parameters):
+def _log_match_image_debug(imglog, match_parameters, result):
 
     d = imglog.write_images()
     if not d:
         return
 
     source_with_roi = imglog.images["source"].copy()
-    _draw_match(source_with_roi, region, first_pass_matched, thickness=1)
+    _draw_match(source_with_roi, result.region,
+                imglog.notes["first_pass_matched"], thickness=1)
     cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
 
     try:
@@ -1990,8 +1993,8 @@ def _log_match_image_debug(
         <body>
         <div class="container">
         <h4>
-            <i>{{template_name}}</i>
-            {{"matched" if matched else "didn't match"}}
+            <i>{{notes["template_name"]}}</i>
+            {{"matched" if result.match else "didn't match"}}
         </h4>
 
         <p>Searching for <b>template</b> {{link("template")}}
@@ -2015,20 +2018,20 @@ def _log_match_image_debug(
                     of {{"%g"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
-            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                <li>Matched at {{region}} {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(first_pass_certainty)}}.
+            {% if (level == 0 and notes["first_pass_matched"]) or level != min(levels) %}
+                <li>Matched at {{result.region}} {{link("source_with_roi")}}
+                    with certainty {{"%.4f"|format(result.first_pass_result)}}.
             {% else %}
-                <li>Didn't match (best match at {{region}}
+                <li>Didn't match (best match at {{result.region}}
                     {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(first_pass_certainty)}}).
+                    with certainty {{"%.4f"|format(result.first_pass_result)}}).
             {% endif %}
 
             </ul>
 
         {% endfor %}
 
-        {% if first_pass_certainty >= match_parameters.match_threshold %}
+        {% if result.first_pass_result >= match_parameters.match_threshold %}
             <p><b>Second pass (confirmation):</b>
             <ul>
                 <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
@@ -2051,9 +2054,9 @@ def _log_match_image_debug(
                     {{match_parameters.erode_passes}}
                     {{"time" if match_parameters.erode_passes == 1
                         else "times"}}.
-                    {{"No" if matched else "Some"}}
+                    {{"No" if result.match else "Some"}}
                     differences (white pixels) remain, so the template
-                    {{"does" if matched else "doesn't"}} match.
+                    {{"does" if result.match else "doesn't"}} match.
             </ul>
         {% endif %}
 
@@ -2068,17 +2071,14 @@ def _log_match_image_debug(
 
     with open(os.path.join(d, "index.html"), "w") as f:
         f.write(template.render(
-            first_pass_certainty=first_pass_certainty,
-            first_pass_matched=first_pass_matched,
             levels=list(reversed(sorted(imglog.pyramid_levels))),
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
             match_parameters=match_parameters,
-            matched=matched,
             min=min,
-            region=region,
-            template_name=template_name,
+            result=result,
+            notes=imglog.notes
         ))
 
 
@@ -2208,8 +2208,14 @@ def _tesseract_version(output=None):
     global _memoise_tesseract_version
     if output is None:
         if _memoise_tesseract_version is None:
-            _memoise_tesseract_version = subprocess.check_output(
-                ['tesseract', '--version'], stderr=subprocess.STDOUT)
+            try:
+                _memoise_tesseract_version = subprocess.check_output(
+                    ['tesseract', '--version'], stderr=subprocess.STDOUT)
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    return None
+                else:
+                    raise
         output = _memoise_tesseract_version
 
     line = [x for x in output.split('\n') if x.startswith('tesseract')][0]
@@ -2222,23 +2228,31 @@ def _tesseract(frame, region, mode, lang, _config,
     if _config is None:
         _config = {}
 
-    with numpy_from_sample(frame, readonly=True) as f:
-        frame_region = Region(0, 0, f.shape[1], f.shape[0])
-        intersection = Region.intersect(frame_region, region)
-        if intersection is None:
-            warn("Requested OCR in region %s which doesn't overlap with "
-                 "the frame %s" % (str(region), frame_region))
-            return ('', None)
-        else:
-            region = intersection
+    frame_region = _image_region(frame)
+    intersection = Region.intersect(frame_region, region)
+    if intersection is None:
+        warn("Requested OCR in region %s which doesn't overlap with "
+             "the frame %s" % (str(region), frame_region))
+        return (u'', None)
+    else:
+        region = intersection
 
-        # We scale image up 3x before feeding it to tesseract as this
-        # significantly reduces the error rate by more than 6x in tests.  This
-        # uses bilinear interpolation which produces the best results.  See
-        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-        outsize = (region.width * 3, region.height * 3)
-        subframe = cv2.resize(_crop(f, region), outsize,
-                              interpolation=cv2.INTER_LINEAR)
+    with numpy_from_sample(frame, readonly=True) as f:
+        return (_tesseract_subprocess(_crop(f, region), mode, lang,
+                                      _config, user_patterns, user_words),
+                region)
+
+
+@imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
+                        "version": "25"})
+def _tesseract_subprocess(
+        frame, mode, lang, _config, user_patterns, user_words):
+    # We scale image up 3x before feeding it to tesseract as this
+    # significantly reduces the error rate by more than 6x in tests.  This
+    # uses bilinear interpolation which produces the best results.  See
+    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+    outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
+    subframe = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -2298,7 +2312,7 @@ def _tesseract(frame, region, mode, lang, _config,
         cv2.imwrite(tmp + '/input.png', subframe)
         subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return (outfile.read(), region)
+            return outfile.read().decode('utf-8')
 
 
 def _hocr_iterate(hocr):
