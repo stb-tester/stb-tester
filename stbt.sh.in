@@ -57,18 +57,7 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    auto-selftest)
-        check_experimental
-        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
-        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
-    # Experimental sub-commands:
-    camera)
-        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
-            echo "stb-tester camera support is not installed." 1>&2
-            exit 1
-        fi
-        check_experimental
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     virtual-stb)
         export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
@@ -77,6 +66,17 @@ case "$cmd" in
             exit 1
         fi
         exec @LIBEXECDIR@/stbt/stbt_virtual_stb.py "$@";;
+    # Experimental sub-commands:
+    auto-selftest)
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
+    camera)
+        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
+            echo "stb-tester camera support is not installed." 1>&2
+            exit 1
+        fi
+        check_experimental
+        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     *)
         usage >&2; exit 1;;
 esac
