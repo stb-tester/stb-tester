@@ -1,4 +1,6 @@
 import os
+import sys
+from contextlib import contextmanager
 
 import cv2
 import numpy
@@ -115,6 +117,59 @@ def test_that_match_all_obeys_region():
     print matches
     assert matches == [stbt.Region(x, y, width=135, height=44) for x, y in [
         (177, 75), (177, 119)]]
+
+
+# These ImageLogger tests don't verify the html & png debug output, just that
+# it doesn't raise any exceptions.
+
+def test_image_debug_when_first_pass_gives_no_matches():
+    with scoped_debug_level(2):
+        matches = list(stbt.match_all(
+            "videotestsrc-redblue-flipped.png",
+            frame=_imread("videotestsrc-full-frame.png")))
+        print matches
+        assert len(matches) == 0
+
+
+def test_image_debug_when_first_pass_stops_with_a_nonmatch():
+    with scoped_debug_level(2):
+        matches = list(stbt.match_all(
+            "button.png", frame=_imread("buttons.png"),
+            match_parameters=mp(match_threshold=0.99)))
+        print matches
+        assert len(matches) == 6
+
+
+def test_image_debug_when_second_pass_stops_with_a_nonmatch():
+    with scoped_debug_level(2):
+        matches = list(stbt.match_all(
+            "button.png", frame=_imread("buttons.png")))
+        print matches
+        assert len(matches) == 6
+
+
+def test_image_debug_with_normed_absdiff():
+    with scoped_debug_level(2):
+        matches = list(stbt.match_all(
+            "button.png", frame=_imread("buttons.png"),
+            match_parameters=mp(confirm_method="normed-absdiff",
+                                confirm_threshold=0.3)))
+        print matches
+        assert len(matches) == 6
+
+
+@contextmanager
+def scoped_debug_level(n):
+    """Don't send debug output to stderr as it messes up "make check" output."""
+    import _stbt.logging
+
+    original_stderr = sys.stderr
+    sys.stderr = sys.stdout
+    try:
+        with _stbt.logging.scoped_debug_level(n):
+            yield
+    finally:
+        sys.stderr = original_stderr
 
 
 def _imread(filename):

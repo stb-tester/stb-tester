@@ -15,6 +15,7 @@ import datetime
 import errno
 import functools
 import inspect
+import itertools
 import os
 import Queue
 import re
@@ -423,7 +424,7 @@ class MatchResult(object):
     # pylint: disable=W0621
     def __init__(
             self, timestamp, match, region, first_pass_result, frame=None,
-            image=None):
+            image=None, _first_pass_matched=None):
         self.timestamp = timestamp
         self.match = match
         self.region = region
@@ -443,6 +444,7 @@ class MatchResult(object):
                 DeprecationWarning, stacklevel=2)
             image = ""
         self.image = image
+        self._first_pass_matched = _first_pass_matched
 
     def __str__(self):
         return (
@@ -665,7 +667,7 @@ class DeviceUnderTest(object):
             frame = self._display.get_sample()
 
         imglog = logging.ImageLogger(
-            "detect_match", match_parameters=match_parameters,
+            "match", match_parameters=match_parameters,
             template_name=template.friendly_name)
 
         with numpy_from_sample(frame, readonly=True) as npframe:
@@ -683,9 +685,8 @@ class DeviceUnderTest(object):
                     result = MatchResult(
                         get_frame_timestamp(frame), matched, match_region,
                         first_pass_certainty, numpy.copy(npframe),
-                        (template.name or template.image))
-                    imglog.set(first_pass_matched=first_pass_matched,
-                               result=result)
+                        (template.name or template.image), first_pass_matched)
+                    imglog.append(matches=result)
                     if grabbed_from_live:
                         self._display.draw(result, None)
                     yield result
@@ -1770,11 +1771,15 @@ def _find_matches(image, template, match_parameters, imglog):
         raise ValueError("Template image must be 8-bits per channel")
 
     # pylint:disable=undefined-loop-variable
-    for first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, match_parameters, imglog):
+    for i, first_pass_matched, region, first_pass_certainty in \
+            _find_candidate_matches(image, template, match_parameters,
+                                    imglog):
         confirmed = (
             first_pass_matched and
-            _confirm_match(image, region, template, match_parameters, imglog))
+            _confirm_match(image, region, template, match_parameters,
+                           imwrite=lambda name, img: imglog.imwrite(
+                               "match%d-%s" % (i, name), img)))  # pylint:disable=cell-var-from-loop
+
         yield (confirmed, list(region), first_pass_matched,
                first_pass_certainty)
         if not confirmed:
@@ -1831,7 +1836,8 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, method, threshold, level)
-        imglog.append(pyramid_levels=level)
+        imglog.append(pyramid_levels=(
+            matched, best_match_position, certainty, level))
 
         if not matched:
             break
@@ -1849,8 +1855,10 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     region = Region(*_upsample(best_match_position, level),
                     width=template.shape[1], height=template.shape[0])
 
-    while True:
-        yield (matched, region, certainty)
+    for i in itertools.count():
+
+        imglog.imwrite("match%d-heatmap" % i, heatmap)
+        yield (i, matched, region, certainty)
         if not matched:
             return
         assert level == 0
@@ -1996,7 +2004,7 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, region, template, match_parameters, imglog):
+def _confirm_match(image, region, template, match_parameters, imwrite):
     """Second pass: Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
@@ -2011,15 +2019,15 @@ def _confirm_match(image, region, template, match_parameters, imglog):
     roi = image[region.y:region.bottom, region.x:region.right]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imglog.imwrite("confirm-source_roi", roi)
-    imglog.imwrite("confirm-source_roi_gray", image_gray)
-    imglog.imwrite("confirm-template_gray", template_gray)
+    imwrite("confirm-source_roi", roi)
+    imwrite("confirm-source_roi_gray", image_gray)
+    imwrite("confirm-template_gray", template_gray)
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imglog.imwrite("confirm-source_roi_gray_normalized", image_gray)
-        imglog.imwrite("confirm-template_gray_normalized", template_gray)
+        imwrite("confirm-source_roi_gray_normalized", image_gray)
+        imwrite("confirm-template_gray_normalized", template_gray)
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -2029,9 +2037,9 @@ def _confirm_match(image, region, template, match_parameters, imglog):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    imglog.imwrite("confirm-absdiff", absdiff)
-    imglog.imwrite("confirm-absdiff_threshold", thresholded)
-    imglog.imwrite("confirm-absdiff_threshold_erode", eroded)
+    imwrite("confirm-absdiff", absdiff)
+    imwrite("confirm-absdiff_threshold", thresholded)
+    imwrite("confirm-absdiff_threshold_erode", eroded)
 
     return cv2.countNonZero(eroded) == 0
 
@@ -2041,9 +2049,18 @@ def _log_match_image_debug(imglog):
     if not imglog.enabled:
         return
 
-    imglog.imwrite("source_with_roi", _draw_match(
-        imglog.images["source"], imglog.data["result"].region,
-        imglog.data["first_pass_matched"], thickness=1))
+    for matched, position, _, level in imglog.data["pyramid_levels"]:
+        template = imglog.images["level%d-template" % level]
+        imglog.imwrite("level%d-source_with_match" % level, _draw_match(
+            imglog.images["level%d-source" % level],
+            Region(x=position.x, y=position.y,
+                   width=template.shape[1], height=template.shape[0]),
+            matched, thickness=1))
+
+    for i, result in enumerate(imglog.data["matches"]):
+        imglog.imwrite("match%d-source_with_match" % i, _draw_match(
+            imglog.images["source"], result.region, result._first_pass_matched,  # pylint:disable=protected-access
+            thickness=1))
 
     try:
         import jinja2
@@ -2059,80 +2076,130 @@ def _log_match_image_debug(imglog):
         <head>
         <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
         <style>
+            h5 { margin-top: 40px; }
+            .table th { font-weight: normal; background-color: #eee; }
             img {
-                vertical-align: middle; max-width: 300px; max-height: 36px;
+                vertical-align: middle; max-width: 150px; max-height: 36px;
                 padding: 1px; border: 1px solid #ccc; }
-            p, li { line-height: 40px; }
+            p { line-height: 40px; }
+            .table td { vertical-align: middle; }
         </style>
         </head>
         <body>
         <div class="container">
         <h4>
             <i>{{template_name}}</i>
-            {{"matched" if result.match else "didn't match"}}
+            {{"matched" if matched else "didn't match"}}
         </h4>
 
+        <h5>First pass (find candidate matches):</h5>
+
         <p>Searching for <b>template</b> {{link("template")}}
-            within <b>source</b> {{link("source")}} image.
+            within <b>source</b> image {{link("source")}}
 
-        {% for level in levels %}
+        <table class="table">
+        <tr>
+          <th>Pyramid level</th>
+          <th>Match #</th>
+          <th>Searching for <b>template</b></th>
+          <th>within <b>source regions of interest</b></th>
+          <th>
+            OpenCV <b>matchTemplate heatmap</b>
+            with method {{match_parameters.match_method}}
+            ({{"darkest" if match_parameters.match_method ==
+                    "sqdiff-normed" else "lightest"}}
+            pixel indicates position of best match).
+          </th>
+          <th>
+            matchTemplate heatmap <b>above match_threshold</b>
+            of {{"%g"|format(match_parameters.match_threshold)}}
+            (white pixels indicate positions above the threshold).
+          </th>
+          <th><b>Matched?<b></th>
+          <th>Best match <b>position</b></th>
+          <th>&nbsp;</th>
+          <th><b>certainty</b></th>
+        </tr>
 
-            <p>At level <b>{{level}}</b>:
-            <ul>
-                <li>Searching for <b>template</b> {{link("template", level)}}
-                    within <b>source regions of interest</b>
-                    {{link("source_with_rois", level)}}.
-                <li>OpenCV <b>matchTemplate result</b>
-                    {{link("source_matchtemplate", level)}}
-                    with method {{match_parameters.match_method}}
-                    ({{"darkest" if match_parameters.match_method ==
-                            "sqdiff-normed" else "lightest"}}
-                    pixel indicates position of best match).
-                <li>matchTemplate result <b>above match_threshold</b>
-                    {{link("source_matchtemplate_threshold", level)}}
-                    of {{"%g"|format(match_parameters.match_threshold)}}
-                    (white pixels indicate positions above the threshold).
-
-            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
-                <li>Matched at {{result.region}} {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(result.first_pass_result)}}.
-            {% else %}
-                <li>Didn't match (best match at {{result.region}}
-                    {{link("source_with_roi")}}
-                    with certainty {{"%.4f"|format(result.first_pass_result)}}).
-            {% endif %}
-
-            </ul>
-
+        {% for matched, position, certainty, level in pyramid_levels %}
+        <tr>
+          <td><b>{{level}}</b></td>
+          <td><b>{{"0" if level == 0 else ""}}</b></td>
+          <td>{{link("template", level)}}</td>
+          <td>{{link("source_with_rois", level)}}</td>
+          <td>{{link("source_matchtemplate", level)}}</td>
+          <td>
+            {{link("source_matchtemplate_threshold", level) if matched else ""}}
+          </td>
+          <td>{{"Matched" if matched else "Didn't match"}}</td>
+          <td>{{position if level > 0 else matches[0].region}}</td>
+          <td>{{link("source_with_match", level)}}</td>
+          <td>{{"%.4f"|format(certainty)}}</td>
+        </tr>
         {% endfor %}
 
-        {% if result.first_pass_result >= match_parameters.match_threshold %}
-            <p><b>Second pass (confirmation):</b>
-            <ul>
-                <li>Comparing <b>template</b> {{link("confirm-template_gray")}}
-                    against <b>source image's region of interest</b>
-                    {{link("confirm-source_roi_gray")}}.
+        {% for m in matches[1:] %}
+        {# note that loop.index is 1-based #}
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>{{loop.index}}</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>{{link("heatmap", match=loop.index)}}</td>
+          <td></td>
+          <td>{{"Matched" if m._first_pass_matched else "Didn't match"}}</td>
+          <td>{{m.region}}</td>
+          <td>{{link("source_with_match", match=loop.index)}}</td>
+          <td>{{"%.4f"|format(m.first_pass_result)}}</td>
+        </tr>
+        {% endfor %}
 
-            {% if match_parameters.confirm_method == "normed-absdiff" %}
-                <li>Normalised <b>template</b>
-                    {{link("confirm-template_gray_normalized")}}
-                    and <b>source</b>
-                    {{link("confirm-source_roi_gray_normalized")}}.
-            {% endif %}
+        </table>
 
-                <li><b>Absolute differences</b> {{link("confirm-absdiff")}}.
-                <li>Differences <b>above confirm_threshold</b>
-                    {{link("confirm-absdiff_threshold")}}
-                    of {{"%.2f"|format(match_parameters.confirm_threshold)}}.
-                <li>After <b>eroding</b>
-                    {{link("confirm-absdiff_threshold_erode")}}
-                    {{match_parameters.erode_passes}}
-                    {{"time" if match_parameters.erode_passes == 1
-                        else "times"}}.
-                    {{"No" if result.match else "Some"}}
-                    differences (white pixels) remain, so the template
-                    {{"does" if result.match else "doesn't"}} match.
-            </ul>
+        {% if show_second_pass %}
+        <h5>Second pass (confirmation):</h5>
+
+        <table class="table">
+        <tr>
+          <th>Match #</th>
+          <th>Comparing <b>template</b></th>
+          <th>against <b>source image's region of interest</b></th>
+          {% if match_parameters.confirm_method == "normed-absdiff" %}
+            <th><b>Normalised template</b></th>
+            <th><b>Normalised source</b></th>
+          {% endif %}
+          <th><b>Absolute differences</b></th>
+          <th>
+            Differences <b>above confirm_threshold</b>
+            of {{"%.2f"|format(match_parameters.confirm_threshold)}}
+          </th>
+          <th>
+            After <b>eroding</b>
+            {{match_parameters.erode_passes}}
+            {{"time" if match_parameters.erode_passes == 1
+              else "times"}};
+            the template matches if any differences (white pixels) remain
+          </th>
+        </tr>
+
+        {% for m in matches %}
+        {% if m._first_pass_matched %}
+        <tr>
+          <td><b>{{loop.index0}}</b></td>
+          <td>{{link("confirm-template_gray", match=0)}}</td>
+          <td>{{link("confirm-source_roi_gray", match=loop.index0)}}</td>
+          {% if match_parameters.confirm_method == "normed-absdiff" %}
+            <td>{{link("confirm-template_gray_normalized", match=loop.index0)}}</td>
+            <td>{{link("confirm-source_roi_gray_normalized", match=loop.index0)}}</td>
+          {% endif %}
+          <td>{{link("confirm-absdiff", match=loop.index0)}}</td>
+          <td>{{link("confirm-absdiff_threshold", match=loop.index0)}}</td>
+          <td>{{link("confirm-absdiff_threshold_erode", match=loop.index0)}}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+
+        </table>
         {% endif %}
 
         <p>For further help please read
@@ -2144,16 +2211,21 @@ def _log_match_image_debug(imglog):
         </html>
     """)
 
+    def link(name, level=None, match=None):
+        return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'></a>"
+                .format("" if level is None else "level%d-" % level,
+                        "" if match is None else "match%d-" % match,
+                        name))
+
     with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
-            first_pass_matched=imglog.data["first_pass_matched"],
-            levels=imglog.data["pyramid_levels"],
-            link=lambda s, level=None: (
-                "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
-                .format("" if level is None else "level%d-" % level, s)),
+            link=link,
             match_parameters=imglog.data["match_parameters"],
+            matches=imglog.data["matches"],
             min=min,
-            result=imglog.data["result"],
+            pyramid_levels=imglog.data["pyramid_levels"],
+            show_second_pass=any(
+                x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
             template_name=imglog.data["template_name"],
         ))
 
