@@ -94,6 +94,16 @@ def which_docker_container_am_i_running_in():
                 return m.group(1)
 
 
+def native_to_unix_path(path):
+    if os.name == "nt":
+        drive, path = os.path.splitdrive(path)
+        if drive:
+            path = "/" + drive[0].lower() + path
+        return path.replace("\\", "/")
+    else:
+        return path
+
+
 def container_to_host_path(path):
     path = os.path.abspath(path)
     if not sys.platform.startswith('linux'):
@@ -112,7 +122,7 @@ def container_to_host_path(path):
         # * We're trying to mount a volume that is not mounted through to the
         #   VM.  I think this means that it must be under '/Users' on Mac OS or
         #   c:\Users on Windows.
-        return path
+        return native_to_unix_path(path)
 
     container = which_docker_container_am_i_running_in()
     if not container:
@@ -224,6 +234,35 @@ def build_docker_image(test_pack, stbt_version):
     return docker_image
 
 
+def read_stbt_conf(root):
+    """
+    git for Windows converts symlinks into normal files, but we still need to
+    traverse them for the purposes of loading .stbt.conf.
+    """
+    root = os.path.abspath(root)
+    cp = ConfigParser.ConfigParser()
+    filename = os.path.join(root, '.stbt.conf')
+    for _ in range(10):
+        try:
+            cp.read(filename)
+            return os.path.relpath(filename, root), cp
+        except ConfigParser.MissingSectionHeaderError:
+            if os.name == "posix":
+                # POSIX systems can support symlinks so something else must have
+                # gone wrong.
+                raise
+            with open(filename) as f:
+                link = f.read()
+            filename = os.path.normpath(os.path.join(
+                os.path.dirname(filename), link))
+            if not filename.startswith(root):
+                raise Exception("Traversing .stbt.conf symlinks failed: "
+                                "symlink points outside of test-pack")
+
+    raise Exception(
+        "Traversing .stbt.conf symlinks failed: Symlink depth too great")
+
+
 def self_uid_gid():
     """
     This returns the UID and GID of the user who invoked this program from the
@@ -273,9 +312,8 @@ def main(argv):
             """))
         return 1
 
-    cp = ConfigParser.ConfigParser()
-    cp.read(os.path.join(root, '.stbt.conf'))
-    stbt_version = cp.get('test_pack', 'stbt_version')
+    config_filename, config = read_stbt_conf(root)
+    stbt_version = config.get('test_pack', 'stbt_version')
     if stbt_version not in STBT_VERSION_WHITELIST:
         sys.stderr.write(dedent("""\
             error: This version of stbt-docker does not support stbt_version {v}.
@@ -316,8 +354,8 @@ def main(argv):
 
     # We use /bin/dash here because many programs (including make) get confused
     # if they are running as pid 1.
-    os.execvp(
-        DOCKER[0], DOCKER +
+    cmdline = (
+        DOCKER +
         ['run', '-i', '--rm', '-u', '0:0',
          '-v', '%s:/var/lib/stbt/.cache' % cache_volume,
          '-v', '%s:/var/lib/stbt/test-pack' % container_to_host_path(root)]
@@ -331,8 +369,14 @@ def main(argv):
          sudo -u stb-tester -E -- \\
              env STBT_CONFIG_FILE={config_filename} \\
              "$0" "$@" """).format(
-            uid=os.getuid(), gid=os.getgid(), cwd=pipes.quote(innerdir))]
+            uid=inner_uid, gid=inner_gid, cwd=pipes.quote(innerdir),
+            config_filename=pipes.quote(config_filename))]
         + cmd)
+
+    if os.name == "posix":
+        os.execvp(cmdline[0], cmdline)
+    else:
+        return subprocess.call(cmdline)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
