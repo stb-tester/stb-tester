@@ -98,10 +98,25 @@ def container_to_host_path(path):
     path = os.path.abspath(path)
     container = which_docker_container_am_i_running_in()
     if not container:
-        # Running on host (but not necessicarily the same host as the docker
-        # daemon)
+        # We're running on Linux, but not inside a docker container.  We assume
+        # that paths that we see are the same as paths that the docker daemon
+        # sees.  This will break if:
+        #
+        # * The docker daemon is not running on the same machine as us and the
+        #   remote machine doesn't have our files mounted in exactly the same
+        #   locations.
+        # * The docker container to be created is running in a sufficiently
+        #   different mount namespace to us.
         return path
     else:
+        # We're running in a docker container.  We assume that we're being
+        # supervised by the same docker daemon as the deamon we'll talk to.
+        # This will break if:
+        #
+        # * We're not being supervised by the same docker daemon as we'll be
+        #   asking to do the running.  This could be because there are multiple
+        #   docker daemons running on this machine or we're talking to a remote
+        #   docker daemon on a cluster somewhere.
         this_container = json.loads(subprocess.check_output(
             DOCKER + ['inspect', container]))[0]
         best_match = None
@@ -191,6 +206,23 @@ def build_docker_image(test_pack, stbt_version):
     return docker_image
 
 
+def self_uid_gid():
+    """
+    This returns the UID and GID of the user who invoked this program from the
+    perspective of inside the docker container.
+    """
+    if sys.platform.startswith("linux"):
+        # We assume that the docker daemon has the same understanding of UIDs
+        # and GIDs as us.  This breaks if:
+        #
+        # * The docker daemon is not running on the same machine as us
+        # * The docker container to be created is running in a different user
+        #   namespace to us.
+        # * We are or the docker container will be under some sort of filesystem
+        #   UID/GID mapping
+        return (os.getuid(), os.getgid())
+    else:
+        raise Exception("Don't have support for Windows or MacOS X")
 def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__,
@@ -250,6 +282,8 @@ def main(argv):
     # actions can't mess up another's:
     cache_volume = ("stbt-cache-" +
                     re.sub('[^a-zA-Z0-9_.-]', '_', getpass.getuser()))
+
+    inner_uid, inner_gid = self_uid_gid()
 
     # We use /bin/dash here because many programs (including make) get confused
     # if they are running as pid 1.
