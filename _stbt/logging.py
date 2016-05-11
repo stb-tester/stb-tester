@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import argparse
+import itertools
 import os
 import sys
 from collections import OrderedDict
@@ -80,7 +81,7 @@ class ImageLogger(object):
 
     Create a new ImageLogger instance for each frame of video.
     """
-    _frame_number = 1
+    _frame_number = itertools.count(1)
 
     def __init__(self, name, **kwargs):
         self.enabled = get_debug_level() > 1
@@ -88,8 +89,7 @@ class ImageLogger(object):
             return
 
         self.name = name
-        self.frame_number = ImageLogger._frame_number
-        ImageLogger._frame_number += 1
+        self.frame_number = ImageLogger._frame_number.next()
 
         try:
             outdir = os.path.join("stbt-debug", self.name,
