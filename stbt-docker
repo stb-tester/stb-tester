@@ -96,6 +96,24 @@ def which_docker_container_am_i_running_in():
 
 def container_to_host_path(path):
     path = os.path.abspath(path)
+    if not sys.platform.startswith('linux'):
+        # We assume that the files we can see are mounted on the (linux) system
+        # that is running the target docker daemon, and mounted into the same
+        # location.  This is how docker-toolbox sets itself up with docker
+        # daemon running on boot2docker linux in a VirtualBox VM on the MacOS/
+        # Windows host.  docker-toolbox will mount filesystems from the VM host
+        # via vboxfs.  This will break if:
+        #
+        # * This is not docker-toolbox after-all, or at least is not set up
+        #   in a compatible way with it.  Perhaps we're talking to a remote
+        #   docker on some cluster somewhere.
+        # * Docker changes the way they do the mounts in some later version of
+        #   docker-toolbox
+        # * We're trying to mount a volume that is not mounted through to the
+        #   VM.  I think this means that it must be under '/Users' on Mac OS or
+        #   c:\Users on Windows.
+        return path
+
     container = which_docker_container_am_i_running_in()
     if not container:
         # We're running on Linux, but not inside a docker container.  We assume
@@ -222,7 +240,18 @@ def self_uid_gid():
         #   UID/GID mapping
         return (os.getuid(), os.getgid())
     else:
-        raise Exception("Don't have support for Windows or MacOS X")
+        # We assume docker was installed with docker-toolbox.  This means there
+        # is a VirtualBox VM running boot2docker linux with the docker daemon on
+        # top.  This mounts filesystems from the VM host via vboxfs with
+        # UID=1000 and GID=50.  This breaks if:
+        #
+        # * This is not docker-toolbox after-all.  Perhaps we're talking to a
+        #   remote docker on some cluster somewhere.
+        # * Docker change the way they do the mounts in some later version of
+        #   docker-toolbox
+        return 1000, 50
+
+
 def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__,
