@@ -83,7 +83,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
         stbt.ocr(frame=cv2.absdiff(_crop(frame, m.region), button))
         for m in stbt.match_all(
             button, frame=frame, match_parameters=mp(confirm_method='none'))]
-    text = sorted([t for t in text if t != ''])
+    text = sorted([t for t in text if t not in ['', '\\s']])
     print text
     assert text == [u'Button 1', u'Button 2', u'Buttons']
 
