@@ -67,6 +67,7 @@ See also:
 import argparse
 import ConfigParser
 import errno
+import getpass
 import hashlib
 import json
 import os
@@ -237,23 +238,25 @@ def main(argv):
 
     cmd = [args.command] + args.arguments
 
-    try:
-        os.makedirs(os.path.join(root, '.stbt/cache'))
-    except OSError:
-        # Directory already exists
-        pass
-
     tty_arg = ['-t'] if sys.stdin.isatty() else []
 
     innerdir = '/var/lib/stbt/test-pack/' + os.path.relpath(os.curdir, root)
+
+    # cache_volume refers to a docker named volume that will be created
+    # on-demand if it doesn't exist.  We want the stbt cache to be stored on a
+    # native docker volume because we need it to be fast and we want it to
+    # support linux filesystem semantics so don't want to go through some sort
+    # of translation layer.  We give each user their own volume so one person's
+    # actions can't mess up another's:
+    cache_volume = ("stbt-cache-" +
+                    re.sub('[^a-zA-Z0-9_.-]', '_', getpass.getuser()))
 
     # We use /bin/dash here because many programs (including make) get confused
     # if they are running as pid 1.
     os.execvp(
         DOCKER[0], DOCKER +
         ['run', '-i', '--rm', '-u', '0:0',
-         '-v', '%s:/var/lib/stbt/.cache' % container_to_host_path(
-             os.path.join(root, '.stbt/cache')),
+         '-v', '%s:/var/lib/stbt/.cache' % cache_volume,
          '-v', '%s:/var/lib/stbt/test-pack' % container_to_host_path(root),
          '-e', 'STBT_CONFIG_FILE=/var/lib/stbt/test-pack/.stbt.conf'] + tty_arg
         + shlex.split(os.environ.get('DOCKER_OPTS', '')) +
