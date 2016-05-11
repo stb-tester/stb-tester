@@ -1814,7 +1814,6 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        imglog.add("roi_mask", roi_mask, level)
         contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         rois = [
