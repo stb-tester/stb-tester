@@ -692,7 +692,10 @@ class DeviceUnderTest(object):
                     yield result
 
             finally:
-                _log_match_image_debug(imglog)
+                try:
+                    _log_match_image_debug(imglog)
+                except Exception:  # pylint:disable=broad-except
+                    pass
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):

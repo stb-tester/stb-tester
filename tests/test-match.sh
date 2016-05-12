@@ -183,13 +183,27 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
 test_match_nonexistent_template() {
     cat > test.py <<-EOF
 	import stbt
-	try:
-	    stbt.match("idontexist.png")
-	    assert False, "Trying to match an non-existant template should throw"
-	except:
-	    pass
+	stbt.match("idontexist.png")
 	EOF
-    stbt run -v test.py
+    ! stbt run -vv test.py \
+        || fail "Trying to match an non-existant template should throw"
+    cat log | grep -q "FAIL: test.py: UITestError: No such template file: idontexist.png" \
+        || fail "Didn't see 'UITestError: No such template file'"
+}
+
+test_match_invalid_template() {
+    # Like test_match.py:test_that_match_rejects_greyscale_template, but checks
+    # that "stbt run -vv" doesn't report a later exception from the _match_all
+    # teardown. (This is a regression test.)
+    cat > test.py <<-EOF
+	import numpy, stbt
+	grey = numpy.zeros((20, 20), dtype=numpy.uint8)
+	stbt.match(grey)
+	EOF
+    ! stbt run -vv test.py \
+        || fail "Invalid template should cause test to fail"
+    cat log | grep -q "FAIL: test.py: ValueError: Template image must be 3 channel BGR" \
+        || fail "Didn't see 'ValueError: Template image must be 3 channel BGR'"
 }
 
 test_press_until_match_presses_once() {

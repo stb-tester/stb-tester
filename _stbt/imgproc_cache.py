@@ -21,7 +21,7 @@ import numpy
 
 from _stbt.gst_utils import Gst, numpy_from_sample
 from _stbt.logging import ImageLogger
-from _stbt.utils import mkdir_p, named_temporary_directory
+from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
 
 # Our embedded version of lmdb does `import lmdb` itself.  Work around this with
 # sys.path:
@@ -227,22 +227,11 @@ def _cache_hash(value):
     return h.digest()
 
 
-@contextmanager
-def _scoped_curdir():
-    with named_temporary_directory() as tmpdir:
-        olddir = os.path.abspath(os.curdir)
-        os.chdir(tmpdir)
-        try:
-            yield olddir
-        finally:
-            os.chdir(olddir)
-
-
 def test_that_cache_is_disabled_when_debug_match():
     # debug logging is a side effect that the cache cannot reproduce
     import stbt
     import _stbt.logging
-    with _scoped_curdir() as srcdir, cache('cache.lmdb'):
+    with scoped_curdir() as srcdir, cache('cache.lmdb'):
         stbt.match(srcdir + '/tests/red-black.png',
                    frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         assert not os.path.exists('stbt-debug')
