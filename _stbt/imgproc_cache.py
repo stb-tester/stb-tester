@@ -20,7 +20,7 @@ import numpy
 
 from _stbt.gst_utils import Gst, numpy_from_sample
 from _stbt.logging import ImageLogger
-from _stbt.utils import mkdir_p
+from _stbt.utils import mkdir_p, named_temporary_directory
 
 # Our embedded version of lmdb does `import lmdb` itself.  Work around this with
 # sys.path:
@@ -175,7 +175,6 @@ def _cache_hash(value):
 
 @contextmanager
 def _scoped_curdir():
-    from _stbt.utils import named_temporary_directory
     with named_temporary_directory() as tmpdir:
         olddir = os.path.abspath(os.curdir)
         os.chdir(tmpdir)
@@ -216,7 +215,7 @@ def _check_cache_behaviour(func):
     uncached_result = func()
     uncached_time = timer.timeit(number=5) / 5.
 
-    with cache():
+    with named_temporary_directory() as tmpdir, cache(tmpdir):
         # Prime the cache
         func()
         cached_time = timer.timeit(number=5) / 5.
