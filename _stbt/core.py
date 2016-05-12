@@ -673,6 +673,12 @@ class DeviceUnderTest(object):
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
 
+            # Remove this copy once we make numpy_from_sample *not* unmap the
+            # sample when the contextmanager exits, but when no further
+            # references are held to the numpy image.
+            npframe = numpy.copy(npframe)
+            npframe.flags.writeable = False
+
             # pylint:disable=undefined-loop-variable
             try:
                 for (matched, match_region, first_pass_matched,
@@ -684,7 +690,7 @@ class DeviceUnderTest(object):
                                          .translate(region.x, region.y)
                     result = MatchResult(
                         get_frame_timestamp(frame), matched, match_region,
-                        first_pass_certainty, numpy.copy(npframe),
+                        first_pass_certainty, npframe,
                         (template.name or template.image), first_pass_matched)
                     imglog.append(matches=result)
                     if grabbed_from_live:
