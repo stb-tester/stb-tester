@@ -1749,6 +1749,7 @@ class GObjectTimeout(object):
 _BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
 
 
+@imgproc_cache.memoize_iterator({"version": "25"})
 def _find_matches(image, template, match_parameters, imglog):
     """Our image-matching algorithm.
 

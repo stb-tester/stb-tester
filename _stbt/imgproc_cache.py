@@ -11,6 +11,7 @@ functions in their test-packs.
 
 import functools
 import inspect
+import itertools
 import json
 import os
 import sys
@@ -105,29 +106,82 @@ def memoize(additional_fields=None):
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(function, *args, **kwargs)
                 key = _cache_hash((func_key, full_kwargs))
-                with _cache.begin() as txn:
-                    out = txn.get(key)
-                if out is not None:
-                    return json.loads(out)
-                output = function(**full_kwargs)
-                with _cache.begin(write=True) as txn:
-                    try:
-                        txn.put(key, json.dumps(output).encode("utf-8"))
-                    except lmdb.MapFullError:  # pylint: disable=no-member
-                        global _cache_full_warning
-                        if not _cache_full_warning:
-                            sys.stderr.write(
-                                "Image processing cache is full.  This will "
-                                "cause degraded performance.  Consider "
-                                "deleting the cache file (%s) to purge old "
-                                "results\n" % _cache.path())
-                            _cache_full_warning = True
-                return output
             except NotCachable:
                 return function(*args, **kwargs)
 
+            with _cache.begin() as txn:
+                out = txn.get(key)
+            if out is not None:
+                return json.loads(out)
+            output = function(**full_kwargs)
+            _cache_put(key, output)
+            return output
+
         return inner
     return decorator
+
+
+def memoize_iterator(additional_fields=None):
+    """
+    A decorator like `imgproc_cache.memoize`, but for functions that return an
+    iterator.
+    """
+
+    def decorator(function):
+        func_key = json.dumps([function.__name__, additional_fields],
+                              sort_keys=True)
+
+        @functools.wraps(function)
+        def inner(*args, **kwargs):
+            try:
+                if _cache is None:
+                    raise NotCachable()
+                full_kwargs = inspect.getcallargs(function, *args, **kwargs)
+                key = _cache_hash((func_key, full_kwargs))
+            except NotCachable:
+                for x in function(*args, **kwargs):
+                    yield x
+                return
+
+            for i in itertools.count():
+                with _cache.begin() as txn:
+                    out = txn.get(key + str(i))
+                if out is None:
+                    break
+                out_, stop_ = json.loads(out)
+                if stop_:
+                    raise StopIteration()
+                yield out_
+
+            skip = i  # pylint:disable=undefined-loop-variable
+            it = function(**full_kwargs)
+            for i in itertools.count():
+                try:
+                    output = next(it)
+                    if i >= skip:
+                        _cache_put(key + str(i), [output, None])
+                        yield output
+                except StopIteration:
+                    _cache_put(key + str(i), [None, "StopIteration"])
+                    raise
+
+        return inner
+    return decorator
+
+
+def _cache_put(key, value):
+    with _cache.begin(write=True) as txn:
+        try:
+            txn.put(key, json.dumps(value).encode("utf-8"))
+        except lmdb.MapFullError:  # pylint: disable=no-member
+            global _cache_full_warning
+            if not _cache_full_warning:
+                sys.stderr.write(
+                    "Image processing cache is full.  This will "
+                    "cause degraded performance.  Consider "
+                    "deleting the cache file (%s) to purge old "
+                    "results\n" % _cache.path())
+                _cache_full_warning = True
 
 
 class NotCachable(Exception):
@@ -227,6 +281,60 @@ def _check_cache_behaviour(func):
     return cached_time, uncached_time, cached_result, uncached_result
 
 
+def test_memoize_iterator():
+    counter = [0]
+
+    @memoize_iterator()
+    def cached_function(_arg):
+        for x in range(10):
+            counter[0] += 1
+            yield x
+
+    with named_temporary_directory() as tmpdir, cache(tmpdir):
+        uncached = list(itertools.islice(cached_function(1), 5))
+        assert uncached == range(5)
+        assert counter[0] == 5
+
+        cached = list(itertools.islice(cached_function(1), 5))
+        assert cached == range(5)
+        assert counter[0] == 5
+
+        partially_cached = list(itertools.islice(cached_function(1), 10))
+        assert partially_cached == range(10)
+        assert counter[0] == 15
+
+        partially_cached = list(cached_function(1))
+        assert partially_cached == range(10)
+        assert counter[0] == 25
+
+        cached = list(cached_function(1))
+        assert cached == range(10)
+        assert counter[0] == 25
+
+        uncached = list(cached_function(2))
+        assert uncached == range(10)
+        assert counter[0] == 35
+
+
+def test_memoize_iterator_on_empty_iterator():
+    counter = [0]
+
+    @memoize_iterator()
+    def cached_function():
+        counter[0] += 1
+        if False:
+            yield
+
+    with named_temporary_directory() as tmpdir, cache(tmpdir):
+        uncached = list(cached_function())
+        assert uncached == []
+        assert counter[0] == 1
+
+        cached = list(cached_function())
+        assert cached == []
+        assert counter[0] == 1
+
+
 def test_that_cache_speeds_up_match():
     import stbt
     black = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
@@ -240,6 +348,26 @@ def test_that_cache_speeds_up_match():
     assert uncached_time > (cached_time * 4)
     _fields_eq(cached_result, uncached_result,
                ['match', 'region', 'first_pass_result', 'frame', 'image'])
+
+
+def test_that_cache_speeds_up_match_all():
+    import stbt
+    import cv2
+
+    frame = cv2.imread('tests/buttons.png')
+
+    def match_all():
+        return list(stbt.match_all('tests/button.png', frame=frame))
+
+    cached_time, uncached_time, cached_result, uncached_result = (
+        _check_cache_behaviour(match_all))
+
+    assert uncached_time > (cached_time * 4)
+    assert len(uncached_result) == 6
+    for cached, uncached in itertools.izip_longest(cached_result,
+                                                   uncached_result):
+        _fields_eq(cached, uncached,
+                   ['match', 'region', 'first_pass_result', 'frame', 'image'])
 
 
 def test_that_cache_speeds_up_ocr():
