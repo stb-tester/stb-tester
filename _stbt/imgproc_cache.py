@@ -246,8 +246,10 @@ def test_that_cache_speeds_up_ocr():
     import stbt
     import cv2
 
+    frame = cv2.imread('tests/red-black.png')
+
     def ocr():
-        return stbt.ocr(frame=cv2.imread('tests/red-black.png'))
+        return stbt.ocr(frame=frame)
 
     cached_time, uncached_time, cached_result, uncached_result = (
         _check_cache_behaviour(ocr))
@@ -262,8 +264,10 @@ def test_that_cache_speeds_up_match_text():
     import stbt
     import cv2
 
+    frame = cv2.imread('tests/red-black.png')
+
     def match_text():
-        return stbt.match_text("RED", frame=cv2.imread('tests/red-black.png'))
+        return stbt.match_text("RED", frame=frame)
 
     cached_time, uncached_time, cached_result, uncached_result = (
         _check_cache_behaviour(match_text))
