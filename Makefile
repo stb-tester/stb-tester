@@ -183,7 +183,7 @@ check-integrationtests: install-for-test
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
-check-pylint:
+check-pylint: $(INSTALL_CORE_FILES)
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh

@@ -640,8 +640,9 @@ class DeviceUnderTest(object):
         if grabbed_from_live:
             frame = self._display.get_sample()
 
-        imglog = logging.ImageLogger("detect_match")
-        imglog.note("template_name", template.friendly_name)
+        imglog = logging.ImageLogger(
+            "detect_match", match_parameters=match_parameters,
+            template_name=template.friendly_name)
 
         with numpy_from_sample(frame, readonly=True) as npframe:
             region = Region.intersect(_image_region(npframe), region)
@@ -657,7 +658,8 @@ class DeviceUnderTest(object):
                 first_pass_certainty, numpy.copy(npframe),
                 (template.name or template.image))
 
-        _log_match_image_debug(imglog, match_parameters, result)
+        imglog.set(result=result)
+        _log_match_image_debug(imglog)
 
         if grabbed_from_live:
             self._display.draw(result, None)
@@ -710,16 +712,16 @@ class DeviceUnderTest(object):
                 continue
 
             imglog = logging.ImageLogger("detect_motion")
-            imglog.add("source", frame_gray)
+            imglog.imwrite("source", frame_gray)
 
             absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
             previous_frame_gray = frame_gray
-            imglog.add("absdiff", absdiff)
+            imglog.imwrite("absdiff", absdiff)
 
             if mask_image is not None:
                 absdiff = cv2.bitwise_and(absdiff, mask_image)
-                imglog.add("mask", mask_image)
-                imglog.add("absdiff_masked", absdiff)
+                imglog.imwrite("mask", mask_image)
+                imglog.imwrite("absdiff_masked", absdiff)
 
             _, thresholded = cv2.threshold(
                 absdiff, int((1 - noise_threshold) * 255), 255,
@@ -727,8 +729,8 @@ class DeviceUnderTest(object):
             eroded = cv2.erode(
                 thresholded,
                 cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            imglog.add("absdiff_threshold", thresholded)
-            imglog.add("absdiff_threshold_erode", eroded)
+            imglog.imwrite("absdiff_threshold", thresholded)
+            imglog.imwrite("absdiff_threshold_erode", eroded)
 
             motion = (cv2.countNonZero(eroded) > 0)
 
@@ -751,7 +753,6 @@ class DeviceUnderTest(object):
             result = MotionResult(sample.get_buffer().pts, motion)
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
-            imglog.write_images()
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
@@ -931,14 +932,13 @@ class DeviceUnderTest(object):
 
         if logging.get_debug_level() > 1:
             imglog = logging.ImageLogger("is_screen_black")
-            imglog.add("source", frame)
+            imglog.imwrite("source", frame)
             if mask is not None:
-                imglog.add('mask', mask)
-                imglog.add('non-black-regions-after-masking',
-                           numpy.bitwise_and(greyframe, mask))
+                imglog.imwrite('mask', mask)
+                imglog.imwrite('non-black-regions-after-masking',
+                               numpy.bitwise_and(greyframe, mask))
             else:
-                imglog.add('non-black-regions-after-masking', greyframe)
-            imglog.write_images()
+                imglog.imwrite('non-black-regions-after-masking', greyframe)
 
         return maxVal == 0
 
@@ -1575,7 +1575,7 @@ class Display(object):
                 label_loc = (match_result.region.x, match_result.region.y - 10)
                 _draw_text(
                     img, label, label_loc, (255, 255, 255), font_scale=0.5)
-                _draw_match(img, match_result.region, match_result.match)
+                _draw_match(img, match_result.region, match_result.match, img)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -1695,11 +1695,14 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
         fontScale=font_scale, color=color, lineType=cv2.CV_AA)
 
 
-def _draw_match(numpy_image, region, match_, thickness=3):
+def _draw_match(numpy_image, region, match_, output_image=None, thickness=3):
+    if output_image is None:
+        output_image = numpy_image.copy()
     cv2.rectangle(
-        numpy_image, (region.x, region.y), (region.right, region.bottom),
+        output_image, (region.x, region.y), (region.right, region.bottom),
         (32, 0 if match_ else 255, 255),  # bgr
         thickness=thickness)
+    return output_image
 
 
 class GObjectTimeout(object):
@@ -1734,15 +1737,13 @@ def _match(image, template, match_parameters, imglog):
     if template.dtype != numpy.uint8:
         raise ValueError("Template image must be 8-bits per channel")
 
-    first_pass_matched, position, first_pass_certainty = _find_match(
+    first_pass_matched, region, first_pass_certainty = _find_match(
         image, template, match_parameters, imglog)
     matched = (
         first_pass_matched and
-        _confirm_match(image, position, template, match_parameters, imglog))
+        _confirm_match(image, region, template, match_parameters, imglog))
 
-    imglog.note("first_pass_matched", first_pass_matched)
-    region = Region(position.x, position.y,
-                    template.shape[1], template.shape[0])
+    imglog.set(first_pass_matched=first_pass_matched)
 
     return matched, list(region), first_pass_certainty
 
@@ -1751,15 +1752,15 @@ def _find_match(image, template, match_parameters, imglog):
     """Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
-    False positives are ok; we apply a second pass (`_confirm_match`) to weed
-    out false positives.
+    False positives are ok; we apply a second pass later (`_confirm_match`) to
+    weed out false positives.
 
     http://docs.opencv.org/modules/imgproc/doc/object_detection.html
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.add("source", image)
-    imglog.add("template", template)
+    imglog.imwrite("source", image)
+    imglog.imwrite("template", template)
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     levels = get_config("match", "pyramid_levels", type_=int)
@@ -1770,16 +1771,31 @@ def _find_match(image, template, match_parameters, imglog):
     roi_mask = None  # Initial region of interest: The whole image.
 
     for level in reversed(range(len(template_pyramid))):
+        if roi_mask is not None:
+            if any(x < 3 for x in roi_mask.shape):
+                roi_mask = None
+            else:
+                roi_mask = cv2.pyrUp(roi_mask)
+
+        imwrite = lambda name, img: imglog.imwrite(
+            "level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
 
         matched, best_match_position, certainty, roi_mask = _match_template(
             image_pyramid[level], template_pyramid[level], match_parameters,
-            roi_mask, level, imglog)
+            roi_mask, level, imwrite)
+        imglog.append(pyramid_levels=level)
 
-        if level == 0 or not matched:
-            return matched, _upsample(best_match_position, level), certainty
+        if not matched:
+            break
+
+    region = Region(*_upsample(best_match_position, level),  # pylint:disable=undefined-loop-variable
+                    width=template.shape[1], height=template.shape[0])
+
+    return matched, region, certainty
 
 
-def _match_template(image, template, match_parameters, roi_mask, level, imglog):
+def _match_template(image, template, match_parameters, roi_mask, level,
+                    imwrite):
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
@@ -1799,12 +1815,10 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
              image.shape[1] - template.shape[1] + 1),
             dtype=numpy.float32))
 
-    if roi_mask is None or any(x < 3 for x in roi_mask.shape):
+    if roi_mask is None:
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        roi_mask = cv2.pyrUp(roi_mask)
-        imglog.add("roi_mask", roi_mask, level)
         contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         rois = [
@@ -1826,7 +1840,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
                  min(s.h - 1, r.y + r.h + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
-        imglog.add("source_with_rois", source_with_rois, level)
+        imwrite("source_with_rois", source_with_rois)
 
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
@@ -1837,9 +1851,9 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
             method,
             matches_heatmap[roi.to_slice()])
 
-    imglog.add("source", image, level)
-    imglog.add("template", template, level)
-    imglog.add("source_matchtemplate", matches_heatmap, level)
+    imwrite("source", image)
+    imwrite("template", template)
+    imwrite("source_matchtemplate", matches_heatmap)
 
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
@@ -1859,7 +1873,7 @@ def _match_template(image, template, match_parameters, roi_mask, level, imglog):
         (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
          else cv2.THRESH_BINARY))
     new_roi_mask = new_roi_mask.astype(numpy.uint8)
-    imglog.add("source_matchtemplate_threshold", new_roi_mask, level)
+    imwrite("source_matchtemplate_threshold", new_roi_mask)
 
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
@@ -1918,8 +1932,8 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, position, template, match_parameters, imglog):
-    """Confirm that `template` matches `image` at `position`.
+def _confirm_match(image, region, template, match_parameters, imglog):
+    """Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
     afford to do more computationally-intensive checks than `_find_match`.
@@ -1929,20 +1943,18 @@ def _confirm_match(image, position, template, match_parameters, imglog):
         return True
 
     # Set Region Of Interest to the "best match" location
-    roi = image[
-        position.y:(position.y + template.shape[0]),
-        position.x:(position.x + template.shape[1])]
+    roi = image[region.y:region.bottom, region.x:region.right]
     image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imglog.add("confirm-source_roi", roi)
-    imglog.add("confirm-source_roi_gray", image_gray)
-    imglog.add("confirm-template_gray", template_gray)
+    imglog.imwrite("confirm-source_roi", roi)
+    imglog.imwrite("confirm-source_roi_gray", image_gray)
+    imglog.imwrite("confirm-template_gray", template_gray)
 
     if match_parameters.confirm_method == "normed-absdiff":
         cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imglog.add("confirm-source_roi_gray_normalized", image_gray)
-        imglog.add("confirm-template_gray_normalized", template_gray)
+        imglog.imwrite("confirm-source_roi_gray_normalized", image_gray)
+        imglog.imwrite("confirm-template_gray_normalized", template_gray)
 
     absdiff = cv2.absdiff(image_gray, template_gray)
     _, thresholded = cv2.threshold(
@@ -1952,23 +1964,21 @@ def _confirm_match(image, position, template, match_parameters, imglog):
         thresholded,
         cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)),
         iterations=match_parameters.erode_passes)
-    imglog.add("confirm-absdiff", absdiff)
-    imglog.add("confirm-absdiff_threshold", thresholded)
-    imglog.add("confirm-absdiff_threshold_erode", eroded)
+    imglog.imwrite("confirm-absdiff", absdiff)
+    imglog.imwrite("confirm-absdiff_threshold", thresholded)
+    imglog.imwrite("confirm-absdiff_threshold_erode", eroded)
 
     return cv2.countNonZero(eroded) == 0
 
 
-def _log_match_image_debug(imglog, match_parameters, result):
+def _log_match_image_debug(imglog):
 
-    d = imglog.write_images()
-    if not d:
+    if not imglog.enabled:
         return
 
-    source_with_roi = imglog.images["source"].copy()
-    _draw_match(source_with_roi, result.region,
-                imglog.notes["first_pass_matched"], thickness=1)
-    cv2.imwrite(os.path.join(d, "source_with_roi.png"), source_with_roi)
+    imglog.imwrite("source_with_roi", _draw_match(
+        imglog.images["source"], imglog.data["result"].region,
+        imglog.data["first_pass_matched"], thickness=1))
 
     try:
         import jinja2
@@ -1993,7 +2003,7 @@ def _log_match_image_debug(imglog, match_parameters, result):
         <body>
         <div class="container">
         <h4>
-            <i>{{notes["template_name"]}}</i>
+            <i>{{template_name}}</i>
             {{"matched" if result.match else "didn't match"}}
         </h4>
 
@@ -2018,7 +2028,7 @@ def _log_match_image_debug(imglog, match_parameters, result):
                     of {{"%g"|format(match_parameters.match_threshold)}}
                     (white pixels indicate positions above the threshold).
 
-            {% if (level == 0 and notes["first_pass_matched"]) or level != min(levels) %}
+            {% if (level == 0 and first_pass_matched) or level != min(levels) %}
                 <li>Matched at {{result.region}} {{link("source_with_roi")}}
                     with certainty {{"%.4f"|format(result.first_pass_result)}}.
             {% else %}
@@ -2069,16 +2079,17 @@ def _log_match_image_debug(imglog, match_parameters, result):
         </html>
     """)
 
-    with open(os.path.join(d, "index.html"), "w") as f:
+    with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
-            levels=list(reversed(sorted(imglog.pyramid_levels))),
+            first_pass_matched=imglog.data["first_pass_matched"],
+            levels=imglog.data["pyramid_levels"],
             link=lambda s, level=None: (
                 "<a href='{0}{1}.png'><img src='{0}{1}.png'></a>"
                 .format("" if level is None else "level%d-" % level, s)),
-            match_parameters=match_parameters,
+            match_parameters=imglog.data["match_parameters"],
             min=min,
-            result=result,
-            notes=imglog.notes
+            result=imglog.data["result"],
+            template_name=imglog.data["template_name"],
         ))
 
 
