@@ -715,6 +715,9 @@ class FrameObject(_stbt.core.FrameObject):
     def __init__(self, frame=None):
         if frame is None:
             frame = _dut.get_frame()
+            # This anticipates a time where stbt.get_frame returns a read-only
+            # buffer:
+            frame.flags.writeable = False
         super(FrameObject, self).__init__(frame)
 
 
