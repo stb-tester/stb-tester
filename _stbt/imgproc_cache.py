@@ -214,12 +214,12 @@ def _check_cache_behaviour(func):
 
     timer = Timer(func)
     uncached_result = func()
-    uncached_time = timer.timeit(number=5)
+    uncached_time = timer.timeit(number=5) / 5.
 
     with cache():
         # Prime the cache
         func()
-        cached_time = timer.timeit(number=5)
+        cached_time = timer.timeit(number=5) / 5.
         cached_result = func()
 
     print "%s with cache: %s" % (func.__name__, cached_time)
