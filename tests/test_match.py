@@ -122,6 +122,19 @@ def test_that_match_all_obeys_region():
         (177, 75), (177, 119)]]
 
 
+def test_match_all_with_an_image_that_matches_everywhere():
+    matches = sorted(m.region for m in stbt.match_all(
+        "repeating-pattern.png",
+        frame=_imread("repeating-pattern-full-frame.png")))
+
+    expected_matches = sorted([stbt.Region(x, y, width=16, height=16)
+                               for x in range(0, 320, 16)
+                               for y in range(0, 240, 16)])
+
+    print matches
+    assert matches == expected_matches
+
+
 # These ImageLogger tests are very basic regression tests. Possible
 # improvements include opening the debug html in a browser under "stbt
 # virtual-stb" and compare a screenshot; or using "stbt auto-selftest" to
