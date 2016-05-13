@@ -23,10 +23,19 @@ UNRELEASED
 
 ##### Breaking changes since 24
 
+* The `frame` parameter of the `MatchResult` returned from `stbt.match`,
+  `stbt.detect_match` and `stbt.wait_for_match` is now read-only. Use
+  `numpy.copy(match_result.frame)` if you need a writable copy.
+
 ##### New features
 
 * Python API: New base-class `stbt.FrameObject` has been added to make it
   easier to structure your test-pack according to the Frame Object pattern.
+
+* Python API: New function `stbt.match_all` that searches for *all instances*
+  of a reference image within a single video frame. It returns an iterator of
+  zero or more `MatchResult` objects (one for each position in the frame where
+  the reference image matches).
 
 * New tool: `stbt auto-selftest` captures the behaviour of Frame Objects and
   other helper functions that operate on screenshots by generating doctests.

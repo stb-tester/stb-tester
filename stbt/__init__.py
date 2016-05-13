@@ -46,6 +46,7 @@ __all__ = [
     "get_frame",
     "is_screen_black",
     "match",
+    "match_all",
     "match_text",
     "MatchParameters",
     "MatchResult",
@@ -138,6 +139,31 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       false otherwise.
     """
     return _dut.match(image, frame, match_parameters, region)
+
+
+def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
+    """
+    Search for all instances of an image in a single video frame.
+
+    Arguments are the same as `match`.
+
+    :returns:
+      An iterator of zero or more `MatchResult` objects (one for each position
+      in the frame where ``image`` matches).
+
+    Examples:
+
+    .. code-block:: python
+
+        all_buttons = list(stbt.match_all("button.png"))
+
+        for match_result in stbt.match_all("button.png"):
+            # do something with match_result here
+            ...
+
+    ``match_all`` was added in stb-tester v25.
+    """
+    return _dut.match_all(image, frame, match_parameters, region)
 
 
 def detect_match(image, timeout_secs=10, match_parameters=None,

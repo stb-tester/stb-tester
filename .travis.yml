@@ -81,4 +81,5 @@ install:
  - make enable_stbt_camera=yes
 
 script:
+ - tesseract --version
  - make enable_stbt_camera=no check

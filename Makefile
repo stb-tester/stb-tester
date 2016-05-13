@@ -158,7 +158,7 @@ PYTHON_FILES = $(shell (git ls-files '*.py' && \
            | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests: tests/ocr/menu.png $(INSTALL_CORE_FILES)
+check-nosetests: $(INSTALL_CORE_FILES) tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
@@ -254,7 +254,7 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
-tests/ocr/menu.png: %.png: %.svg
+tests/buttons.png tests/ocr/menu.png: %.png: %.svg
 	rsvg-convert $< >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the

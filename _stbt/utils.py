@@ -27,3 +27,14 @@ def named_temporary_directory(
         yield dirname
     finally:
         rmtree(dirname)
+
+
+@contextmanager
+def scoped_curdir():
+    with named_temporary_directory() as tmpdir:
+        olddir = os.path.abspath(os.curdir)
+        os.chdir(tmpdir)
+        try:
+            yield olddir
+        finally:
+            os.chdir(olddir)
