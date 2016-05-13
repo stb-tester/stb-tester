@@ -25,7 +25,7 @@ UNRELEASED
 
 * The `frame` parameter of the `MatchResult` returned from `stbt.match`,
   `stbt.detect_match` and `stbt.wait_for_match` is now read-only. Use
-  `numpy.copy(match_result.frame)` if you need a writable copy.
+  `frame.copy()` if you need a writable copy.
 
 ##### New features
 
