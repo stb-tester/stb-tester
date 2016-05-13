@@ -157,6 +157,8 @@ def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
 
         all_buttons = list(stbt.match_all("button.png"))
 
+    .. code-block:: python
+
         for match_result in stbt.match_all("button.png"):
             # do something with match_result here
             ...
