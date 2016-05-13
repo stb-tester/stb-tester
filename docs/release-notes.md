@@ -32,6 +32,11 @@ UNRELEASED
 * Python API: New base-class `stbt.FrameObject` has been added to make it
   easier to structure your test-pack according to the Frame Object pattern.
 
+* Python API: New function `stbt.match_all` that searches for *all instances*
+  of a reference image within a single video frame. It returns an iterator of
+  zero or more `MatchResult` objects (one for each position in the frame where
+  the reference image matches).
+
 * New tool: `stbt auto-selftest` captures the behaviour of Frame Objects and
   other helper functions that operate on screenshots by generating doctests.
   These can later be used when changing these Frame Objects to ensure that they
