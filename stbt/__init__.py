@@ -424,8 +424,12 @@ def frames(timeout_secs=None):
       iterating (for example with ``break``) at any time.
 
     :returns:
-      An ``(image, timestamp)`` tuple for each video frame, where ``image`` is
-      a `numpy.ndarray` object (that is, an OpenCV image).
+      An ``(image, timestamp)`` tuple for each video frame:
+
+      * ``image`` is a `numpy.ndarray` object (that is, an OpenCV image).
+      * ``timestamp`` is a time in nanoseconds. The absolute value isn't
+        related to the system time; what's useful is the relative difference
+        between frames.
     """
     return _dut.frames(timeout_secs)
 
