@@ -33,6 +33,7 @@ def f(name):
                                 '../../screenshots', name)
         img = cv2.imread(filename)
         assert img is not None, "Failed to load %s" % filename
+        img.flags.writeable = False
         _FRAME_CACHE[name] = img
     return img
 

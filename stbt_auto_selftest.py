@@ -304,6 +304,7 @@ def write_bare_doctest(module, output_filename):
                                         {screenshots_rel}, name)
                 img = cv2.imread(filename)
                 assert img is not None, "Failed to load %s" % filename
+                img.flags.writeable = False
                 _FRAME_CACHE[name] = img
             return img
         '''.format(name=os.path.basename(module.filename[:-3]),
