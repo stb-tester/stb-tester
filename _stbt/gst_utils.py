@@ -93,23 +93,34 @@ class CapturedFrame(numpy.ndarray):
     They are a subclass of `numpy.ndarray` - the type that OpenCV uses to
     represent images.  Data is stored in 8-bit, 3 channel BGR format.
 
+    In addition to the members inherited from `numpy.ndarray` `CapturedFrame`
+    defines:
+
+    * `time` (float) - the wall-clock time that this video-frame was captured
+      as number of seconds since the unix epoch (1970-01-01T00:00:00Z).  This
+      is the same format as returned from the Python standard library function
+      `time.time()`.
+
     Added in stb-tester v26.
     """
-    def __new__(cls, array, dtype=None, order=None, _gst_pts=None):
+    def __new__(cls, array, dtype=None, order=None, _gst_pts=None, time=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         obj._gst_pts = _gst_pts  # pylint: disable=protected-access
+        obj.time = time
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return
         self._gst_pts = getattr(obj, '_gst_pts', None)  # pylint: disable=protected-access,attribute-defined-outside-init
+        self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
 
 
 def array_from_sample(sample, readwrite=False):
     return CapturedFrame(
         _MappedSample(sample, readwrite),
-        _gst_pts=sample.get_buffer().pts)
+        _gst_pts=sample.get_buffer().pts,
+        time=getattr(sample, 'time', None))
 
 
 def test_that_array_from_sample_readonly_gives_a_readonly_array():

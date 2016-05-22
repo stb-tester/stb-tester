@@ -429,9 +429,14 @@ def frames(timeout_secs=None):
       An ``(image, timestamp)`` tuple for each video frame:
 
       * ``image`` is a `CapturedFrame` object (that is, an OpenCV image).
-      * ``timestamp`` is a time in nanoseconds. The absolute value isn't
-        related to the system time; what's useful is the relative difference
-        between frames.
+      * ``timestamp`` (deprecated since v26) is a time in nanoseconds. The
+        absolute value isn't related to the system time; what's useful is the
+        relative difference between frames.
+
+        This is here for backwards compatibility reasons.  In new tests
+        `image.time` instead.  `time` is better as it is in seconds (rather
+        than nanoseconds) and measures system time so can be compared to
+        `time.time()`.
     """
     return _dut.frames(timeout_secs)
 

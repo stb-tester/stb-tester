@@ -1523,6 +1523,10 @@ class Display(object):
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-sample", self.on_new_sample)
 
+        # A realtime clock gives timestamps compatible with time.time()
+        self.source_pipeline.use_clock(
+            Gst.SystemClock(clock_type=Gst.ClockType.REALTIME))
+
         if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
             # Hauppauge HDPVR capture device.
@@ -1594,6 +1598,11 @@ class Display(object):
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
+
+        running_time = sample.get_segment().to_running_time(
+            Gst.Format.TIME, sample.get_buffer().pts)
+        sample.time = appsink.base_time + running_time
+
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
