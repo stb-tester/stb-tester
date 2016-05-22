@@ -36,9 +36,9 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_hacks import gst_iterate
-from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
-                             numpy_from_sample, sample_shape)
+from _stbt.gst_utils import (get_frame_timestamp, gst_iterate,
+                             gst_sample_make_writable, numpy_from_sample,
+                             sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
