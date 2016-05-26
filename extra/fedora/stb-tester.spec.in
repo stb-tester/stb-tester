@@ -81,6 +81,7 @@ rather than on specific hardware.
 Summary: stb-tester GPL package
 
 Requires: stb-tester
+Requires: python-libcec
 
 %description gpl
 Support for additional stb-tester features that depend on GPLed libraries,

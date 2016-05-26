@@ -115,6 +115,7 @@ Description: Support for "virtual" set-top boxes where the stb software runs on
 
 Package: stb-tester-gpl
 Architecture: any
-Depends: stb-tester (>> ${source:Upstream-Version})
+Depends: stb-tester (>> ${source:Upstream-Version}),
+         python-libcec
 Description: Support for additional stb-tester features that depend on GPLed
  libraries, rather than the LGPL that the rest of stb-tester uses.

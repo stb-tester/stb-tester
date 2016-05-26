@@ -32,6 +32,10 @@ UNRELEASED
   remote control using the lirc socket protocol. This for example allows you to
   control a roku via its HTTP REST API using `irsend`.
 
+* New remote-control type "hdmi-cec".  With the help of a USB-CEC adapter this
+  allows stb-tester to send keypresses of HDMI.  This is useful to drive devices
+  that don't have IR input such as some Sony Playstation models.
+
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white

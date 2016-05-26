@@ -18,8 +18,12 @@ __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
 try:
     from .control_gpl import controls as gpl_controls
-except:
+except ImportError:
     gpl_controls = None
+
+
+class UnknownKeyError(Exception):
+    pass
 
 
 def uri_to_remote(uri, display=None):
@@ -44,6 +48,7 @@ def uri_to_remote(uri, display=None):
     ]
     if gpl_controls is not None:
         remotes += gpl_controls
+
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
