@@ -22,6 +22,10 @@ except ImportError:
     gpl_controls = None
 
 
+class UnknownKeyError(Exception):
+    pass
+
+
 def uri_to_remote(uri, display=None):
     remotes = [
         (r'''irnetbox:
@@ -44,6 +48,7 @@ def uri_to_remote(uri, display=None):
     ]
     if gpl_controls is not None:
         remotes += gpl_controls
+
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:

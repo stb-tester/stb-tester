@@ -81,6 +81,36 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
+  hdmi-cec:[<device>]:[<source>]:[<destination>]
+    In conjuction with a USB-CEC adaptor this controls a set-top box by sending
+    key-presses over HDMI.  This is useful for devices that lack an IR input
+    such as the Playstation 4.
+
+    * The USB-CEC adaptor to use.  Leave empty to auto-detect.
+
+    * source/destination - A hexidecimal number between 0 and f indicating the
+      HDMI source/destination.  Source defaults to 1 (Recording 1), destination
+      defaults to 4 (Playback 1).
+
+      The different values mean:
+
+        * 0 - TV
+        * 1 - Recording 1
+        * 2 - Recording 2
+        * 3 - Tuner 1
+        * 4 - Playback 1
+        * 5 - Audio system
+        * 6 - Tuner 2
+        * 7 - Tuner 3
+        * 8 - Playback 2
+        * 9 - Playback 3
+        * a - Tuner 4
+        * b - Playback 3
+        * c - Reserved
+        * d - Reserved
+        * e - Reserved
+        * f - Unregistered (source)/Broadcast (destination)
+
   roku:<hostname>
     Controls Roku players using the Roku's HTTP control protocol. Stb-tester's
     standard key names (like "KEY_HOME") will be converted to the corresponding

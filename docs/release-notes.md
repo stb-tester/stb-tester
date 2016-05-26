@@ -32,6 +32,19 @@ UNRELEASED
   remote control using the lirc socket protocol. This for example allows you to
   control a roku via its HTTP REST API using `irsend`.
 
+* New remote-control type "hdmi-cec". With the help of a USB-CEC adapter such
+  as <https://www.pulse-eight.com/p/104/usb-hdmi-cec-adapter> this allows
+  stb-tester to send keypresses over HDMI, to control devices that don't have
+  infrared input such as Sony PlayStation.
+
+  This remote control isn't included in the `stb-tester` Ubuntu packages we
+  publish, because it uses libcec which has a GPLv2+ license (stb-tester is
+  LGPL licensed). To get the CEC remote control, install the `stb-tester-gpl`
+  package (currently only available for Ubuntu 16.04).
+
+  Thanks to Daniel Andersson (@danielandersson) for the initial prototype and
+  research.
+
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white
