@@ -34,6 +34,7 @@ install:
         python-gi
         python-jinja2
         python-kitchen
+        python-libcec
         python-lxml
         python-lzma
         python-matplotlib
