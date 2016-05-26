@@ -16,6 +16,11 @@ from .logging import debug, scoped_debug_level
 
 __all__ = ['uri_to_remote', 'uri_to_remote_recorder']
 
+try:
+    from .control_gpl import controls as gpl_controls
+except:
+    gpl_controls = None
+
 
 def uri_to_remote(uri, display=None):
     remotes = [
@@ -36,6 +41,8 @@ def uri_to_remote(uri, display=None):
         (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
     ]
+    if gpl_controls is not None:
+        remotes += gpl_controls
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
