@@ -1,0 +1,382 @@
+#!/usr/bin/env python
+
+#
+# This file is part of stb-tester but it is intended to be distributed
+# independently, checked into test-packs. See
+# https://github.com/stb-tester/stb-tester/ for the canonical source.
+#
+# This program is built with portability in mind so it should run on Mac OS and
+# Windows. The only dependencies are Python and docker. It is also
+# self-contained and relocatable so it can be deployed as a single file with no
+# dependency on anything else in stbt.
+#
+# Copyright 2015-16 stb-tester.com Ltd.
+#
+# License: LGPL v2.1 or (at your option) any later version (see
+# https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
+#
+
+# pylint:disable=line-too-long
+r"""
+"stbt-docker" runs the specified command in a docker container that is set up
+like an stb-tester ONE but without video-capture or infrared hardware.
+
+The docker container will have stbt and all its dependencies installed,
+as well as your test-pack's own dependencies as specified in
+"config/setup/setup". This makes it easier to run stbt commands on a CI server
+or on a developer's PC for local test-script development, when video-capture
+is not needed: For example to run pylint, stbt auto-selftest, etc.
+
+Run this command from an stb-tester test-pack. The test-pack will be mounted
+into the docker container as "/var/lib/stbt/test-pack".
+
+Usage:
+
+    $ ./stbt-docker stbt lint --errors-only tests/roku.py
+    ********** module roku
+    E:284,12: "wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
+
+    $ ./stbt-docker python -m doctest tests/roku.py
+    ...
+
+    $ ./stbt-docker python
+    Python 2.7.6 (default, Jun 22 2015, 17:58:13)
+    [GCC 4.8.2] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import stbt
+    >>> stbt.match(...)
+
+    $ ./stbt-docker bash
+    stb-tester@97f85a1a4eea:~/test-pack$ ...
+
+Environment variables:
+
+* DOCKER - The location of the docker binary. Defaults to "docker".
+* DOCKER_OPTS - Additional arguments to "docker run". Shell escaping will be
+  unescaped once, so that you can specify arguments with spaces. For example:
+  DOCKER_OPTS="--memory=2g --volume=/path\ with\ spaces\ on\ host:/path\ in\ container"
+
+See also:
+
+* https://stb-tester.com/manual/advanced-configuration#customising-the-test-run-environment
+* https://github.com/stb-tester/stb-tester-test-pack
+
+"""
+# pylint:enable=line-too-long
+
+import argparse
+import ConfigParser
+import errno
+import getpass
+import hashlib
+import json
+import os
+import pipes
+import re
+import shlex
+import subprocess
+import sys
+import tarfile
+import tempfile
+from cStringIO import StringIO
+from textwrap import dedent
+
+DOCKER = shlex.split(os.environ.get("DOCKER", "docker"))
+STBT_VERSION_WHITELIST = {"0.21", "22", "23", "24"}
+
+
+def which_docker_container_am_i_running_in():
+    with open('/proc/self/cgroup') as f:
+        for line in f:
+            m = (re.search(r'docker/([0-9a-f]{64})$', line)
+                 or re.search(r'docker-([0-9a-f]{64})\.scope$', line))
+            if m:
+                return m.group(1)
+
+
+def native_to_unix_path(path):
+    if os.name == "nt":
+        drive, path = os.path.splitdrive(path)
+        if drive:
+            path = "/" + drive[0].lower() + path
+        return path.replace("\\", "/")
+    else:
+        return path
+
+
+def container_to_host_path(path):
+    path = os.path.abspath(path)
+    if not sys.platform.startswith('linux'):
+        # We assume that the files we can see are mounted on the (linux) system
+        # that is running the target docker daemon, and mounted into the same
+        # location.  This is how docker-toolbox sets itself up with docker
+        # daemon running on boot2docker linux in a VirtualBox VM on the MacOS/
+        # Windows host.  docker-toolbox will mount filesystems from the VM host
+        # via vboxfs.  This will break if:
+        #
+        # * This is not docker-toolbox after-all, or at least is not set up
+        #   in a compatible way with it.  Perhaps we're talking to a remote
+        #   docker on some cluster somewhere.
+        # * Docker changes the way they do the mounts in some later version of
+        #   docker-toolbox
+        # * We're trying to mount a volume that is not mounted through to the
+        #   VM.  I think this means that it must be under '/Users' on Mac OS or
+        #   c:\Users on Windows.
+        return native_to_unix_path(path)
+
+    container = which_docker_container_am_i_running_in()
+    if not container:
+        # We're running on Linux, but not inside a docker container.  We assume
+        # that paths that we see are the same as paths that the docker daemon
+        # sees.  This will break if:
+        #
+        # * The docker daemon is not running on the same machine as us and the
+        #   remote machine doesn't have our files mounted in exactly the same
+        #   locations.
+        # * The docker container to be created is running in a sufficiently
+        #   different mount namespace to us.
+        return path
+    else:
+        # We're running in a docker container.  We assume that we're being
+        # supervised by the same docker daemon as the deamon we'll talk to.
+        # This will break if:
+        #
+        # * We're not being supervised by the same docker daemon as we'll be
+        #   asking to do the running.  This could be because there are multiple
+        #   docker daemons running on this machine or we're talking to a remote
+        #   docker daemon on a cluster somewhere.
+        this_container = json.loads(subprocess.check_output(
+            DOCKER + ['inspect', container]))[0]
+        best_match = None
+        for cpath, hpath in this_container['Volumes'].items():
+            rel = os.path.relpath(path, cpath)
+            if '..' not in rel:
+                if best_match is None or len(rel) < len(best_match[1]):
+                    best_match = (hpath, rel)
+        if best_match:
+            return os.path.join(*best_match)
+        else:
+            raise RuntimeError(
+                "Requested container path %s is not in a volume" % path)
+
+
+def find_test_pack_root():
+    root = os.getcwd()
+    while root != '/':
+        if os.path.exists(os.path.join(root, '.stbt.conf')):
+            return root
+        root = os.path.split(root)[0]
+
+
+def dict_to_tarball(d):
+    with tempfile.NamedTemporaryFile() as tarball:
+        with tarfile.open(fileobj=tarball, mode='w') as t:
+            for filename, contents in d.items():
+                ti = tarfile.TarInfo(name=filename)
+                ti.size = len(contents)
+                ti.uid = os.getuid()
+                ti.gid = os.getgid()
+                t.addfile(ti, StringIO(contents))
+        return open(tarball.name, 'r')
+
+DOCKERFILE = """
+FROM {base_image}
+
+RUN mkdir -p /var/lib/stbt/test-pack/config/setup
+ADD setup /var/lib/stbt/test-pack/config/setup/setup
+RUN sudo chown stb-tester:stb-tester /var/lib/stbt/test-pack/config/setup/setup
+RUN chmod a+x /var/lib/stbt/test-pack/config/setup/setup
+RUN /var/lib/stbt/test-pack/config/setup/setup
+"""
+
+
+class DockerNotInstalledError(RuntimeError):
+    pass
+
+
+def build_docker_image(test_pack, stbt_version):
+    base_image = "stbtester/stbt-one-test-pack-base-%s:v24.4" % stbt_version
+    try:
+        with open(os.path.join(test_pack, 'config/setup/setup')) as f:
+            setup = f.read()
+    except IOError as e:
+        if e.errno in [errno.EEXIST, errno.ENOENT]:
+            # No customisation of docker container required
+            return base_image
+        else:
+            raise
+
+    dockerfile = DOCKERFILE.format(base_image=base_image)
+    md5 = hashlib.md5()
+    md5.update(stbt_version)
+    md5.update(setup)
+    docker_image = "stb-tester-test-pack-%s" % md5.hexdigest()
+
+    try:
+        subprocess.check_output(DOCKER + ['inspect', docker_image],
+                                stderr=subprocess.STDOUT)
+        # Customised docker container is already cached
+        return docker_image
+    except subprocess.CalledProcessError:
+        pass
+    except OSError:
+        raise DockerNotInstalledError()
+
+    docker_build_context = {
+        'Dockerfile': dockerfile,
+        'setup': setup,
+    }
+    with dict_to_tarball(docker_build_context) as f:
+        subprocess.check_call(
+            DOCKER + ['build', '-t', docker_image, '-'],
+            stdout=sys.stderr, stdin=f)
+
+    return docker_image
+
+
+def read_stbt_conf(root):
+    """
+    git for Windows converts symlinks into normal files, but we still need to
+    traverse them for the purposes of loading .stbt.conf.
+    """
+    root = os.path.abspath(root)
+    cp = ConfigParser.ConfigParser()
+    filename = os.path.join(root, '.stbt.conf')
+    for _ in range(10):
+        try:
+            cp.read(filename)
+            return os.path.relpath(filename, root), cp
+        except ConfigParser.MissingSectionHeaderError:
+            if os.name == "posix":
+                # POSIX systems can support symlinks so something else must have
+                # gone wrong.
+                raise
+            with open(filename) as f:
+                link = f.read()
+            filename = os.path.normpath(os.path.join(
+                os.path.dirname(filename), link))
+            if not filename.startswith(root):
+                raise Exception("Traversing .stbt.conf symlinks failed: "
+                                "symlink points outside of test-pack")
+
+    raise Exception(
+        "Traversing .stbt.conf symlinks failed: Symlink depth too great")
+
+
+def self_uid_gid():
+    """
+    This returns the UID and GID of the user who invoked this program from the
+    perspective of inside the docker container.
+    """
+    if sys.platform.startswith("linux"):
+        # We assume that the docker daemon has the same understanding of UIDs
+        # and GIDs as us.  This breaks if:
+        #
+        # * The docker daemon is not running on the same machine as us
+        # * The docker container to be created is running in a different user
+        #   namespace to us.
+        # * We are or the docker container will be under some sort of filesystem
+        #   UID/GID mapping
+        return (os.getuid(), os.getgid())
+    else:
+        # We assume docker was installed with docker-toolbox.  This means there
+        # is a VirtualBox VM running boot2docker linux with the docker daemon on
+        # top.  This mounts filesystems from the VM host via vboxfs with
+        # UID=1000 and GID=50.  This breaks if:
+        #
+        # * This is not docker-toolbox after-all.  Perhaps we're talking to a
+        #   remote docker on some cluster somewhere.
+        # * Docker change the way they do the mounts in some later version of
+        #   docker-toolbox
+        return 1000, 50
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        epilog=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('command')
+    parser.add_argument('arguments', nargs=argparse.REMAINDER)
+    args = parser.parse_args(argv[1:])
+
+    root = find_test_pack_root()
+    if root is None:
+        sys.stderr.write(dedent("""\
+            error: stbt-docker must be run within a test pack.
+            Couldn't find ".stbt.conf" in this or any parent directory.
+
+            To create a new test pack run the following command:
+
+                git clone -o pristine https://github.com/stb-tester/stb-tester-test-pack
+
+            """))
+        return 1
+
+    config_filename, config = read_stbt_conf(root)
+    stbt_version = config.get('test_pack', 'stbt_version')
+    if stbt_version not in STBT_VERSION_WHITELIST:
+        sys.stderr.write(dedent("""\
+            error: This version of stbt-docker does not support stbt_version {v}.
+
+            To update stbt-docker run the following command:
+
+                curl -f -o {argv0} https://stb-tester.com/stbt-docker
+
+            """).format(v=stbt_version, argv0=argv[0]))
+        return 1
+
+    try:
+        docker_image = build_docker_image(root, stbt_version)
+    except DockerNotInstalledError:
+        sys.stderr.write(dedent("""\
+            error: stbt-docker requires docker. Install docker, or if it is
+            already installed set $DOCKER to the location of the docker
+            executable.
+            """))
+        return 1
+
+    cmd = [args.command] + args.arguments
+
+    tty_arg = ['-t'] if sys.stdin.isatty() else []
+
+    innerdir = '/var/lib/stbt/test-pack/' + os.path.relpath(os.curdir, root)
+
+    # cache_volume refers to a docker named volume that will be created
+    # on-demand if it doesn't exist.  We want the stbt cache to be stored on a
+    # native docker volume because we need it to be fast and we want it to
+    # support linux filesystem semantics so don't want to go through some sort
+    # of translation layer.  We give each user their own volume so one person's
+    # actions can't mess up another's:
+    cache_volume = ("stbt-cache-" +
+                    re.sub('[^a-zA-Z0-9_.-]', '_', getpass.getuser()))
+
+    inner_uid, inner_gid = self_uid_gid()
+
+    # We use /bin/dash here because many programs (including make) get confused
+    # if they are running as pid 1.
+    cmdline = (
+        DOCKER +
+        ['run', '-i', '--rm', '-u', '0:0',
+         '-v', '%s:/var/lib/stbt/.cache' % cache_volume,
+         '-v', '%s:/var/lib/stbt/test-pack' % container_to_host_path(root)]
+        + tty_arg + shlex.split(os.environ.get('DOCKER_OPTS', '')) +
+        [docker_image, '/bin/dash', '-c', dedent("""\
+         find /var/lib/stbt -xdev -path /var/lib/stbt/test-pack -prune \\
+              -o -print0 | xargs -0 chown -f {uid}:{gid} &&
+         sed -i s/stb-tester:x:1000:1000/stb-tester:x:{uid}:{gid}/ /etc/passwd &&
+         sed -i s/stb-tester:x:1000/stb-tester:x:{gid}/ /etc/group &&
+         cd {cwd} &&
+         sudo -u stb-tester -E -- \\
+             env STBT_CONFIG_FILE={config_filename} \\
+             "$0" "$@" """).format(
+            uid=inner_uid, gid=inner_gid, cwd=pipes.quote(innerdir),
+            config_filename=pipes.quote(config_filename))]
+        + cmd)
+
+    if os.name == "posix":
+        os.execvp(cmdline[0], cmdline)
+    else:
+        return subprocess.call(cmdline)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

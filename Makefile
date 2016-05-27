@@ -100,6 +100,7 @@ INSTALL_CORE_FILES = \
     stbt-batch.d/templates/testrun.html \
     stbt-config \
     stbt-control \
+    stbt-docker \
     stbt-lint \
     stbt-match \
     stbt-power \

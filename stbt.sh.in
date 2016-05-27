@@ -11,6 +11,7 @@
 #/     batch          Run testcases repeatedly, create html report
 #/     config         Print configuration value
 #/     control        Send remote control signals
+#/     docker         Run stbt command in a docker container
 #/     lint           Static analysis of testcases
 #/     match          Compare two images
 #/     power          Control networked power switch
@@ -57,7 +58,7 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    run|record|batch|config|control|lint|power|screenshot|match|tv)
+    run|record|batch|config|control|docker|lint|power|screenshot|match|tv)
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility
         exec @LIBEXECDIR@/stbt/stbt-match "$@";;

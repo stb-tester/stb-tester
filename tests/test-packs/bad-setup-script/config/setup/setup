@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+echo 1 | sudo tee /etc/setup-revision
+pwd | sudo tee /etc/setup-pwd
+whoami | sudo tee /etc/setup-whoami
+echo "$0" "$@" | sudo tee /etc/setup-args
+
+# setup scripts are intended to be deterministic.  $RANDOM would be a really
+# bad idea in a real setup script but I use it here to check caching.
+echo "$RANDOM" | sudo tee /etc/setup-id
+
+# Used by test_that_if_setup_fails_no_tests_are_run
+echo "This is going to fail"
+false
