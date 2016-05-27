@@ -4,6 +4,8 @@ rotate_py=$testdir/vstb-example-html5/tests/rotate.py &&
 
 with_html5_vstb()
 {
+    which chromium-browser &>/dev/null || skip "chromium-browser not installed"
+
     stbt virtual-stb run --background \
         "$@" $testdir/vstb-example-html5/run.sh &&
     trap "stbt virtual-stb stop -f" EXIT
