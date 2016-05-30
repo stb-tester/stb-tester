@@ -110,7 +110,7 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     """
     Search for an image in a single video frame.
 
-    :type image: string or numpy.ndarray
+    :type image: string or `numpy.ndarray`
     :param image:
       The image to search for. It can be the filename of a png file on disk, or
       a numpy array containing the pixel data in 8-bit BGR format.
@@ -120,7 +120,7 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       searching for images captured from the system-under-test earlier in the
       test script.
 
-    :param numpy.ndarray frame:
+    :param `numpy.ndarray` frame:
       If this is specified it is used as the video frame to search in;
       otherwise a new frame is grabbed from the system-under-test. This is an
       image in OpenCV format (for example as returned by `frames` and
@@ -424,21 +424,25 @@ def frames(timeout_secs=None):
       iterating (for example with ``break``) at any time.
 
     :returns:
-      An ``(image, timestamp)`` tuple for each video frame, where ``image`` is
-      a `numpy.ndarray` object (that is, an OpenCV image).
+      An ``(image, timestamp)`` tuple for each video frame:
+
+      * ``image`` is a `numpy.ndarray` object (that is, an OpenCV image).
+      * ``timestamp`` is a time in nanoseconds. The absolute value isn't
+        related to the system time; what's useful is the relative difference
+        between frames.
     """
     return _dut.frames(timeout_secs)
 
 
 def get_frame():
-    """:returns: The latest video frame in OpenCV format (`numpy.ndarray`)."""
+    """:returns: The latest video frame in OpenCV format (a `numpy.ndarray`)."""
     return _dut.get_frame()
 
 
 def is_screen_black(frame=None, mask=None, threshold=None):
     """Check for the presence of a black screen in a video frame.
 
-    :param numpy.ndarray frame:
+    :param `numpy.ndarray` frame:
       If this is specified it is used as the video frame to check; otherwise a
       new frame is grabbed from the system-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).
