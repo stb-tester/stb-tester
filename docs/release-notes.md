@@ -42,10 +42,11 @@ UNRELEASED
   These can later be used when changing these Frame Objects to ensure that they
   still behave correctly when making fixes or adding additional properties.
 
-* New command `stbt virtual-stb`.  It configures stb-tester to control and get
-  its video from a program running on the local PC. This can be used to test
-  set-top box software running in emulators, or HTML5 UIs running in a browser.
-  This can be used:
+* New command `stbt virtual-stb`. It configures stb-tester to control and get
+  its video from a program running on the local PC. It supports any program
+  that can run under X11 (the "X Window System" used on Linux desktops). This
+  can be used to test set-top box software running in emulators, or HTML5 UIs
+  running in a browser. This can be used:
   
     * To test STB UIs during early development when the real hardware is not yet
       available

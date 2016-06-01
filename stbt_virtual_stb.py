@@ -13,14 +13,15 @@ Run some tests against youtube HTML5 TV edition:
     # With this your existing stbt configuration won't be overridden:
     export STBT_CONFIG_FILE=/tmp/stbt.conf
 
-    # This will launch chromium-browser and set stbt to read video from and send
-    # keypresses to chromium by modifying $STBT_CONFIG_FILE:
+    # This launches chromium and configures stbt (by modifying
+    # $STBT_CONFIG_FILE) to read video from chromium and to send keypresses to
+    # chromium:
     stbt virtual-stb run --background chromium --app=http://youtube.com/tv
 
-    # Run a test against the YouTube UI set up before:
+    # Run a test against the YouTube UI we started in the previous command:
     stbt run tests/youtube.py::test_playing_popular_content
 
-    # Tear down the chromium and the virtual stb and remove the configuration:
+    # Tear down the chromium virtual-stb and remove the configuration:
     stbt virtual-stb stop
 """
 
@@ -75,8 +76,8 @@ def virtual_stb(command, x_keymap=None, verbose=False):
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description="Configure stb-tester to use a local program as "
-                    "input/output", epilog=__doc__,
+        description="Configure stb-tester to use a local X11 program as "
+                    "input/output.", epilog=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest='subcommand')
     run_parser = subparsers.add_parser('run')
