@@ -143,13 +143,14 @@ def main_loop(control_uri, keymap_file):
     timer = None
 
     with terminal() as term:
+        _, term_width = term.getmaxyx()
         printed_keymap = dedent("""\
             Keymap: {keymap_file}
             Control: {control_uri}
 
             {mapping}
 
-            """).format(keymap_file=keymap_file,
+            """).format(keymap_file=keymap_file[:term_width - len("Keymap:  ")],
                         control_uri=control_uri,
                         mapping=keymap_string(keymap))
         if keymap_fits_terminal(term, printed_keymap):
