@@ -184,9 +184,8 @@ def clear_last_command(term):
 
 def keymap_fits_terminal(term, printed_keymap):
     term_y, term_x = term.getmaxyx()
-    keymap_y = printed_keymap.count("\n")
-    keymap_x = len(printed_keymap.split("\n")[0])
-    return term_y > keymap_y and term_x > keymap_x
+    lines = printed_keymap.split("\n")
+    return term_y > len(lines) and term_x > max(len(line) for line in lines)
 
 
 @contextlib.contextmanager
