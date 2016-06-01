@@ -12,6 +12,7 @@ import os
 import sys
 import threading
 import time
+from textwrap import dedent
 
 import _stbt.control
 import stbt
@@ -142,8 +143,15 @@ def main_loop(control_uri, keymap_file):
     timer = None
 
     with terminal() as term:
-        printed_keymap = ("Keymap: %s\nControl: %s\n\n%s\n\n" %
-                          (keymap_file, control_uri, keymap_string(keymap)))
+        printed_keymap = dedent("""\
+            Keymap: {keymap_file}
+            Control: {control_uri}
+
+            {mapping}
+
+            """).format(keymap_file=keymap_file,
+                        control_uri=control_uri,
+                        mapping=keymap_string(keymap))
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
         else:
