@@ -208,8 +208,8 @@ def keymap_string(keymap):
     middle = int(math.ceil(float(len(keylist)) / 2))
     rows = [
         "%s %s" % (
-            keylist[i], keylist[middle + i]
-            if middle + i < len(keylist) else "")
+            keylist[i],
+            keylist[middle + i] if middle + i < len(keylist) else "")
         for i in range(middle)]
     return "\n".join(rows)
 
