@@ -196,45 +196,6 @@ check-bashcompletion:
 	        ($$t); \
 	    done'
 
-XXHASH_SOURCES = \
-    vendor/xxHash/xxhash.c \
-    vendor/xxHash/xxhash.h
-
-_stbt/libxxhash.so : $(XXHASH_SOURCES)
-	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
-
-LMDB_SOURCES = \
-    vendor/py-lmdb/lib/lmdb.h \
-    vendor/py-lmdb/lib/mdb.c \
-    vendor/py-lmdb/lib/midl.c \
-    vendor/py-lmdb/lib/midl.h \
-    vendor/py-lmdb/lib/py-lmdb/preload.h \
-    vendor/py-lmdb/lmdb/cpython.c
-
-_stbt/lmdb/__init__.py : vendor/py-lmdb/lmdb/__init__.py
-	mkdir -p $(dir $@) && cp $< $@
-
-_stbt/lmdb/LICENSE : vendor/py-lmdb/LICENSE
-	mkdir -p $(dir $@) && cp $< $@
-
-_stbt/lmdb/cpython.so : $(LMDB_SOURCES)
-	mkdir -p $(dir $@) && \
-	$(CC) -o _stbt/lmdb/cpython.so -O2 --shared -fPIC \
-	    $(shell pkg-config --cflags --libs python) \
-	    -Ivendor/py-lmdb/lib/ \
-	    -Ivendor/py-lmdb/lib/py-lmdb/ \
-	    $(filter %.c,$(LMDB_SOURCES))
-
-SUBMODULE_FILES = $(LMDB_SOURCES) vendor/py-lmdb/LICENSE $(XXHASH_SOURCES)
-
-$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
-
-vendor/.submodules-checked-out : .gitmodules
-	git submodule init && \
-	git submodule sync && \
-	git submodule update && \
-	touch $@
-
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
 check-cameratests: install-for-test
@@ -291,6 +252,47 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 TAGS:
 	etags stbt/**.py _stbt/**.py
+
+### Third-party dependencies #################################################
+
+XXHASH_SOURCES = \
+    vendor/xxHash/xxhash.c \
+    vendor/xxHash/xxhash.h
+
+_stbt/libxxhash.so : $(XXHASH_SOURCES)
+	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
+
+LMDB_SOURCES = \
+    vendor/py-lmdb/lib/lmdb.h \
+    vendor/py-lmdb/lib/mdb.c \
+    vendor/py-lmdb/lib/midl.c \
+    vendor/py-lmdb/lib/midl.h \
+    vendor/py-lmdb/lib/py-lmdb/preload.h \
+    vendor/py-lmdb/lmdb/cpython.c
+
+_stbt/lmdb/__init__.py : vendor/py-lmdb/lmdb/__init__.py
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/LICENSE : vendor/py-lmdb/LICENSE
+	mkdir -p $(dir $@) && cp $< $@
+
+_stbt/lmdb/cpython.so : $(LMDB_SOURCES)
+	mkdir -p $(dir $@) && \
+	$(CC) -o _stbt/lmdb/cpython.so -O2 --shared -fPIC \
+	    $(shell pkg-config --cflags --libs python) \
+	    -Ivendor/py-lmdb/lib/ \
+	    -Ivendor/py-lmdb/lib/py-lmdb/ \
+	    $(filter %.c,$(LMDB_SOURCES))
+
+SUBMODULE_FILES = $(LMDB_SOURCES) vendor/py-lmdb/LICENSE $(XXHASH_SOURCES)
+
+$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
+
+vendor/.submodules-checked-out : .gitmodules
+	git submodule init && \
+	git submodule sync && \
+	git submodule update && \
+	touch $@
 
 ### Documentation ############################################################
 
