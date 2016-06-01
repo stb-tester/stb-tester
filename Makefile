@@ -313,7 +313,7 @@ install-docs: docs/stbt.1
 
 ### Debian Packaging #########################################################
 
-ubuntu_releases ?= trusty vivid wily
+ubuntu_releases ?= trusty wily xenial
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
@@ -351,7 +351,7 @@ stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
 	dpkg-source -x $< $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck \
-	 dpkg-buildpackage -rfakeroot -b $(DPKG_OPTS)) && \
+	 debuild -rfakeroot -b $(DPKG_OPTS)) && \
 	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 

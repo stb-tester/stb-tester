@@ -64,7 +64,7 @@ sed -e "s/@VERSION@/$version/g" \
 
 # .dsc & .debian.tar.gz (both created by debuild).
 (cd $builddir/stb-tester-$version &&
- LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S $DPKG_OPTS)
+ LINTIAN_PROFILE=ubuntu debuild -eLINTIAN_PROFILE -S -Zgzip $DPKG_OPTS)
 
 # All done! Copy to stb-tester/debian-packages.
 mkdir -p $srcdir/debian-packages
