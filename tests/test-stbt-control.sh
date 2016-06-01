@@ -41,7 +41,7 @@ validate_stbt_record_control_recorder() {
     diff -u expected test.py
 }
 
-test_stbt_control_as_stbt_record_control_recorder__explict_keymap() {
+test_stbt_control_as_stbt_record_control_recorder__explicit_keymap() {
     validate_stbt_record_control_recorder \
         stbt-control:$testdir/stbt-control.keymap
 }
