@@ -24,7 +24,7 @@ _stbt() {
                     record \
                     run \
                     screenshot \
-                    templatematch \
+                    match \
                     tv)" \
             -- "$cur"))
     else
@@ -37,7 +37,7 @@ _stbt() {
             power)    _stbt_power;;
             record)   _stbt_record;;
             run)      _stbt_run;;
-            templatematch) _stbt_templatematch;;
+            match)    _stbt_match;;
             *)        COMPREPLY=();;
         esac
     fi
@@ -159,7 +159,7 @@ _stbt_power() {
     esac
 }
 
-_stbt_templatematch() {
+_stbt_match() {
     _stbt_get_prev
     local cur="$_stbt_cur"
     local prev="$_stbt_prev"
@@ -499,11 +499,11 @@ _stbt_test_get_prev() {
     _stbt_assert_get_prev --control=file: ///dev/stdin
 
     # User types "match_method="
-    COMP_WORDS=(stbt templatematch frame.png template.png match_method = "");
+    COMP_WORDS=(stbt match frame.png template.png match_method = "");
     COMP_CWORD=6; _stbt_get_prev
     _stbt_assert_get_prev match_method= ""
 
-    COMP_WORDS=(stbt templatematch frame.png template.png match_method = sqdiff);
+    COMP_WORDS=(stbt match frame.png template.png match_method = sqdiff);
     COMP_CWORD=6; _stbt_get_prev
     _stbt_assert_get_prev match_method= sqdiff
 }
