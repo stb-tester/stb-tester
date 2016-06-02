@@ -296,8 +296,8 @@ def analyse_colours_video(number=None):
         # the bottom.
         codes = qrscanner.read_qr_codes(frame)
 
-        if (len(codes) == 4 and re.match('#[0-9a-f]{6}', codes[0])
-                and all(c == codes[0] for c in codes)):
+        if (len(codes) == 4 and re.match('#[0-9a-f]{6}', codes[0]) and
+                all(c == codes[0] for c in codes)):
             colour_hex = codes[0]
             desired = numpy.array((
                 int(colour_hex[1:3], 16),
@@ -616,8 +616,8 @@ def setup(source_pipeline):
     """If we haven't got a configured camera offer a list of cameras you might
     want to use.  In the future it could be useful to allow the user to select
     one from the list interactively."""
-    if (source_pipeline == ''
-            or stbt.get_config('global', 'v4l2_device', '') == ''):
+    if (source_pipeline == '' or
+            stbt.get_config('global', 'v4l2_device', '') == ''):
         sys.stderr.write(
             'No camera configured in stbt.conf please add parameters '
             '"v4l2_device" and "source_pipeline" to section [global] of '

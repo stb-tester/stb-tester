@@ -95,20 +95,20 @@ class Run(object):
                     "git-commit",
                     "test-args",
                     "test-name",
-                ]
-                and not x.endswith(".jpeg")
-                and not x.endswith(".jpg")
-                and not x.endswith(".png")
-                and not x.endswith(".manual")
-                and not basename(x).startswith("index.html")
+                ] and
+                not x.endswith(".jpeg") and
+                not x.endswith(".jpg") and
+                not x.endswith(".png") and
+                not x.endswith(".manual") and
+                not basename(x).startswith("index.html")
             ])
             self.images = sorted(
                 set([
                     basename(x) for x in
                     glob.glob(rundir + "/*.jpeg") +
                     glob.glob(rundir + "/*.jpg") +
-                    glob.glob(rundir + "/*.png")])
-                - set(["thumbnail.jpg"]))
+                    glob.glob(rundir + "/*.png")]) -
+                set(["thumbnail.jpg"]))
 
         self.extra_columns = collections.OrderedDict()
         for line in self.read("extra-columns").splitlines():

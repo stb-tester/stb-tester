@@ -1461,8 +1461,8 @@ class Display(object):
             source_queue.connect("running", self.on_running)
 
     def set_source_pipeline_playing(self):
-        if (self.source_pipeline.set_state(Gst.State.PAUSED)
-                == Gst.StateChangeReturn.NO_PREROLL):
+        if (self.source_pipeline.set_state(Gst.State.PAUSED) ==
+                Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
                 .set_property('leaky', 'downstream')
@@ -1831,8 +1831,8 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             else:
                 roi_mask = cv2.pyrUp(roi_mask)
 
-        imwrite = lambda name, img: imglog.imwrite(
-            "level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
+        def imwrite(name, img):
+            imglog.imwrite("level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
 
         heatmap = _match_template(
             image_pyramid[level], template_pyramid[level], method,

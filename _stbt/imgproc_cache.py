@@ -244,7 +244,7 @@ def test_that_cache_is_disabled_when_debug_match():
 
 def _fields_eq(a, b, fields):
     for x in fields:
-        assert type(getattr(a, x)) == type(getattr(b, x))
+        assert type(getattr(a, x)) == type(getattr(b, x))  # noqa (pep8 E721)
         if isinstance(getattr(a, x), numpy.ndarray):
             assert (getattr(a, x) == getattr(b, x)).all()
         else:
