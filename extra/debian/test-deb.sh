@@ -17,9 +17,9 @@ docker run -t \
     /bin/bash -c "
         set -x &&
         apt-get update &&
-        { dpkg -i ${*/#/tmp/}; true; } &&
+        { dpkg -i ${*/#//tmp/}; true; } &&
         apt-get --fix-broken -y install &&
-        apt-get -y install man &&
+        apt-get -y install man time &&
         stbt --version &&
         stbt --help &&
         man stbt | cat &&

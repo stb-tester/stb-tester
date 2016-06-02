@@ -16,7 +16,7 @@ docker run -t \
     fedora:23 \
     /bin/bash -c "
         set -x &&
-        dnf install -y man ${*/#/tmp/} &&
+        dnf install -y man time ${*/#//tmp/} &&
         stbt --version &&
         stbt --help &&
         man stbt | cat &&
