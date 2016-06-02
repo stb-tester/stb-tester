@@ -12,6 +12,7 @@ import os
 import sys
 import threading
 import time
+from textwrap import dedent
 
 import _stbt.control
 import stbt
@@ -142,8 +143,16 @@ def main_loop(control_uri, keymap_file):
     timer = None
 
     with terminal() as term:
-        printed_keymap = ("Keymap: %s\nControl: %s\n\n%s\n\n" %
-                          (keymap_file, control_uri, keymap_string(keymap)))
+        _, term_width = term.getmaxyx()
+        printed_keymap = dedent("""\
+            Keymap: {keymap_file}
+            Control: {control_uri}
+
+            {mapping}
+
+            """).format(keymap_file=keymap_file[:term_width - len("Keymap:  ")],
+                        control_uri=control_uri,
+                        mapping=keymap_string(keymap))
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
         else:
@@ -175,9 +184,8 @@ def clear_last_command(term):
 
 def keymap_fits_terminal(term, printed_keymap):
     term_y, term_x = term.getmaxyx()
-    keymap_y = printed_keymap.count("\n")
-    keymap_x = len(printed_keymap.split("\n")[0])
-    return term_y > keymap_y and term_x > keymap_x
+    lines = printed_keymap.split("\n")
+    return term_y > len(lines) and term_x > max(len(line) for line in lines)
 
 
 @contextlib.contextmanager
@@ -208,8 +216,8 @@ def keymap_string(keymap):
     middle = int(math.ceil(float(len(keylist)) / 2))
     rows = [
         "%s %s" % (
-            keylist[i], keylist[middle + i]
-            if middle + i < len(keylist) else "")
+            keylist[i],
+            keylist[middle + i] if middle + i < len(keylist) else "")
         for i in range(middle)]
     return "\n".join(rows)
 
