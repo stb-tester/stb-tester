@@ -26,7 +26,9 @@ for f in "$@"; do
             -e "assertion .G_TYPE_IS_BOXED (boxed_type). failed" \
             -e "assertion .G_IS_PARAM_SPEC (pspec). failed" \
             -e "return isinstance(object, (type, types.ClassType))" \
-            -e "gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type"
+            -e "gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type" \
+            -e "astroid.* Use gi.require_version" \
+            -e "^  __import__(m)$"
 
     pep8 $(pep8options $f) $f || r=1 ret=1
 
