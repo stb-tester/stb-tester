@@ -23,12 +23,12 @@ identity.AUTO_SELFTEST_EXPRESSIONS = [
 
 
 def print_something_unicode(n):
-    print [
+    print([
         "Spinal Tap",
         u"Spinal Tap",
         "Spın̈al Tap",
         u"Spın̈al Tap",
-    ][n]
+    ][n])
 print_something_unicode.AUTO_SELFTEST_TRY_SCREENSHOTS = []
 print_something_unicode.AUTO_SELFTEST_SCREENSHOTS = [
     "frame-object-with-dialog.png"]

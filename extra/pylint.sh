@@ -9,8 +9,9 @@
 [ $# -gt 0 ] || { grep '^#/' "$0" | cut -c4- >&2; exit 1; }
 
 pep8options() {
+    # E402: module level import not at top of file (because isort does it)
     # E501: line too long > 80 chars (because pylint does it)
-    echo --ignore=E501
+    echo --ignore=E402,E501
 }
 
 ret=0
