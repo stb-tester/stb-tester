@@ -96,8 +96,7 @@ test_that_stbt_camera_calibrate_corrects_for_geometric_distortion() {
     start_fake_video_src_launch_1080 \
         uridecodebin "uri=file://$testdir/capture-letters-bw.png" \
         ! videoconvert ! imagefreeze &&
-    stbt --with-experimental camera validate --positions-only letters-bw &&
-    stop_fake_video_src
+    stbt --with-experimental camera validate --positions-only letters-bw
 }
 
 ###
@@ -123,6 +122,7 @@ start_fake_video_src() {
     while cat uri_playlist; do true; done | \
         PYTHONPATH=$testdir/..:$PYTHONPATH "$testdir/fake-video-src.py" "$PWD/gst-shm-socket" &
     FAKE_VIDEO_SRC_PID=$!
+    trap stop_fake_video_src EXIT
     while [ ! -e gst-shm-socket ]; do
         sleep 0.1
     done
@@ -153,6 +153,7 @@ start_fake_video_src_launch()
           socket-path=$PWD/gst-shm-socket blocksize=$frame_bytes sync=true \
           buffer-time=100000000 &
     FAKE_VIDEO_SRC_PID=$!
+    trap stop_fake_video_src EXIT
     while [ ! -e gst-shm-socket ]; do
         sleep 0.1
     done
@@ -203,8 +204,7 @@ run_validation() {
         ! videoconvert ! $extra ! videoconvert \
         ! video/x-raw,width=1280,height=720 ! imagefreeze &&
     set_config global.control none &&
-    stbt --with-experimental camera validate --tv-driver=assume "$color" &&
-    stop_fake_video_src
+    stbt --with-experimental camera validate --tv-driver=assume "$color"
 }
 
 test_that_validation_passes_on_pristine_input() {
@@ -291,8 +291,6 @@ test_that_validation_video_served_over_http_is_correct() {
         echo "TEARDOWN" >stbt_validate_input.teardown
         rm stbt_validate_input.teardown
     )
-
-    stop_fake_video_src
 }
 
 # Test illumination compensation
@@ -307,6 +305,5 @@ test_illumination_compensation() {
     start_fake_video_src "$testdir/vignette-overlay.svg" &&
     stbt --with-experimental camera calibrate --noninteractive &&
     start_fake_video_src "$testdir/vignette-overlay.svg" &&
-    stbt --with-experimental camera validate &&
-    stop_fake_video_src
+    stbt --with-experimental camera validate
 }
