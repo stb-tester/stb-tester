@@ -4,22 +4,25 @@ stb-tester release notes
 [stb-tester](http://stb-tester.com) python APIs for use in test scripts are
 stable: If better APIs are introduced, the existing API will be marked as
 deprecated but not removed for one year. Similarly, the command-line interfaces
-of *stbt run*, *stbt record*, *stbt batch*, *stbt config*, *stbt control*,
-*stbt power*, *stbt screenshot*, *stbt templatematch*, and *stbt tv* are
-stable. Other command-line utilities are considered experimental, but we always
-endeavour to keep backwards compatibility. The release notes always provide an
-exhaustive list of any changes, along with upgrade instructions where
-necessary.
+of *stbt run*, *stbt auto-selftest*, *stbt batch*, *stbt config*, *stbt
+control*, *stbt power*, *stbt record*, *stbt screenshot*, *stbt templatematch*,
+*stbt tv*, and *stbt virtual-stb* are stable. Other command-line utilities are
+considered experimental, but we always endeavour to keep backwards
+compatibility. The release notes always provide an exhaustive list of any
+changes, along with upgrade instructions where necessary.
 
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
 #### 25
 
-New features `stbt.FrameObject` and ``stbt auto-selftest`` that work in tandem
-to make writing and maintaining tests much easier.
+New features `stbt.FrameObject` and `stbt auto-selftest` that work in tandem to
+make writing and maintaining tests much easier; new tool `stbt virtual-stb` for
+testing any application that can run under X (instead of testing a physical
+set-top box); new tool `stbt-docker` to run commands in a docker container that
+has stbt installed.
 
-UNRELEASED
+3 June 2016.
 
 ##### Breaking changes since 24
 
@@ -29,31 +32,64 @@ UNRELEASED
 
 ##### New features
 
-* Python API: New base-class `stbt.FrameObject` has been added to make it
-  easier to structure your test-pack according to the Frame Object pattern.
+* Python API: New base class `stbt.FrameObject` makes it easier to structure
+  your test-pack according to the Frame Object pattern. For details see the
+  [stbt.FrameObject reference documentation][stbt.FrameObject].
 
-* Python API: New function `stbt.match_all` that searches for *all instances*
+* Python API: New function [stbt.match_all] that searches for *all instances*
   of a reference image within a single video frame. It returns an iterator of
   zero or more `MatchResult` objects (one for each position in the frame where
   the reference image matches).
 
 * New tool: `stbt auto-selftest` captures the behaviour of Frame Objects and
-  other helper functions that operate on screenshots by generating doctests.
-  These can later be used when changing these Frame Objects to ensure that they
-  still behave correctly when making fixes or adding additional properties.
+  other helper functions that operate on screenshots, by generating doctests.
 
-* New command `stbt virtual-stb`. It configures stb-tester to control and get
-  its video from a program running on the local PC. It supports any program
-  that can run under X11 (the "X Window System" used on Linux desktops). This
-  can be used to test set-top box software running in emulators, or HTML5 UIs
-  running in a browser. This can be used:
-  
-    * To test STB UIs during early development when the real hardware is not yet
-      available
+  This allows you to develop your test scripts more quickly: To implement &
+  test your Frame Objects you only need some screenshots, so you don't need to
+  run tests against a real set-top box to test your Frame Objects. These
+  selftests will also catch unintended changes in the behaviour of your code
+  when you are refactoring or changing your Frame Objects.
+
+  For instructions see `stbt auto-selftest --help`.
+
+* New tool: `stbt virtual-stb` configures stb-tester to control and get its
+  video from a program running on the local PC. It supports any program that
+  can run under X11 (the "X Window System" used on Linux desktops). This can be
+  used to test set-top box software running in emulators, or HTML5 UIs running
+  in a browser. For example:
+
+    * To test set-top box UIs during early development when the real hardware
+      is not yet available.
     * As a first stage test in a continuous integration pipeline to build
-      confidence in both your implementation and your tests before testing with
-      real hardware.  This approach can be particularly useful to reduce the
-      cost of test maintainance.
+      confidence in your implementation and in your tests before testing with
+      real hardware. This approach can be particularly useful to reduce the
+      cost of test maintenance.
+
+  For instructions see `stbt virtual-stb --help`.
+
+  To install on Ubuntu or Fedora, install the `stb-tester-virtual-stb` package
+  (it's a separate package to avoid installing the dependencies for users who
+  don't need virtual-stb). Note [known issues with virtual-stb on Fedora].
+
+* New tool: `stbt-docker` runs the specified command in a docker container that
+  is set up like an [stb-tester ONE] but without video-capture or infrared
+  hardware.
+
+  The docker container will have stbt and all its dependencies installed, as
+  well as your test-pack's own dependencies as specified in
+  [config/setup/setup]. This makes it easier to run stbt commands on a CI
+  server or on a developer's PC for local test-script development, when
+  video-capture is not needed: For example to run pylint, stbt auto-selftest,
+  etc.
+
+  stbt-docker is built with portability in mind so it should run on Mac OS and
+  Windows. The only dependencies are Python and Docker. stbt-docker is
+  self-contained and relocatable so it can be deployed as a single file with no
+  dependency on anything else in stbt.
+
+  stbt-docker development is done in its own git repository:
+  <https://github.com/stb-tester/stbt-docker>. See the README file there for
+  usage & installation instructions.
 
 * The `stbt templatematch` command-line tool has been renamed to `stbt match`
   (for consistency with the Python API terminology). The old name remains as an
@@ -62,24 +98,46 @@ UNRELEASED
 * New `roku` remote control that uses the [Roku HTTP control protocol].
   Stb-tester's [standard key names] (like "KEY_HOME") will be converted to the
   corresponding Roku key name, or you can use the [Roku key names] directly.
-
-[Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
-[standard key names]: https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names
-[Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
+  For configuration instructions see the documentation for `--control` in the
+  [stbt(1) man page].
 
 * The `x11` remote control now converts stb-tester's [standard key names] (like
-  "KEY_UP") to the key names that `xdotool` expects.  You can also now specify a
-  custom mapping of key names.  This was done to support `stbt virtual-stb`.
+  "KEY_UP") to the key names that `xdotool` expects. This allows you to run the
+  same test scripts (without needing to change the key names) against a real
+  set-top box and against an emulator running under `stbt virtual-stb`. You can
+  also now specify a custom mapping of key names (see the [stbt(1) man page]).
 
 * The `stbt camera` calibration videos have been modified to use QR codes
   rather than text and OCR.  This makes calibration faster, but will require
   the videos to be re-generated on first use.
 
-* `stbt camera` learnt how to control Android TVs over adb for calibration.
+* `stbt camera` learned how to control Android TVs over adb for calibration.
 
-##### Bugfixes and packaging fixes
+##### Minor fixes and packaging fixes
 
-##### Developer-visible changes
+* When `match` and `wait_for_match` can't find the specified reference image,
+  the error message now says the actual path & filename you specified (that is,
+  a path relative to the test script), not an absolute path under the current
+  working directory.
+
+* `match_text` now logs a line (when debug output is enabled) saying whether it
+  found a match or not, much like `match` and `wait_for_match` already do.
+  Thanks to Rinaldo Merlo for the patch.
+
+* The "stb-tester" packages for Ubuntu & Fedora no longer install the
+  dependencies for the x11 remote control; they are installed by the
+  "stb-tester-virtual-stb" package instead.
+
+[stbt.FrameObject]: https://stb-tester.com/manual/python-api#stbt.FrameObject
+[stbt.match_all]: https://stb-tester.com/manual/python-api#stbt.match_all
+[known issues with virtual-stb on Fedora]: https://github.com/stb-tester/stb-tester/issues?q=is%3Aissue+virtual-stb
+[stb-tester ONE]: https://stb-tester.com/stb-tester-one
+[config/setup/setup]: https://stb-tester.com/manual/advanced-configuration#customising-the-test-run-environment
+[Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
+[standard key names]: https://stb-tester.com/manual/getting-started#remote-control-key-names
+[Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
+[stbt(1) man page]: http://stb-tester.com/stbt.html
+
 
 #### 24
 
@@ -428,7 +486,7 @@ Composable API, match_text, stbt camera, triaging improvements
 * Added new "x11" remote-control type for sending keypresses to an X display.
   It can be used with GStreamer's ximagesrc for testing desktop applications
   and websites. For details see the documentation for `--control` in the
-  [stbt(1) man page](http://stb-tester.com/stbt.html).
+  [stbt(1) man page].
 
 * The videos recorded by `stbt batch run` are now shown inline in the HTML
   report using the HTML5 video tag. This looks great and makes triage easier.
