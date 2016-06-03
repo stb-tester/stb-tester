@@ -92,7 +92,7 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir
 /usr/bin/irnetbox-proxy
 %{_libexecdir}/stbt
 %exclude %{_libexecdir}/stbt/stbt-camera*
-%exclude %{_libexecdir}/stbt/stbt-virtual-stb.py
+%exclude %{_libexecdir}/stbt/stbt_virtual_stb.py*
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
