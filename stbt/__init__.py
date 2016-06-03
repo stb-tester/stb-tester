@@ -743,6 +743,8 @@ class FrameObject(_stbt.core.FrameObject):
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
 
+    ``FrameObject`` was added in stb-tester v25.
+
     '''
     def __init__(self, frame=None):
         if frame is None:
