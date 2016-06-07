@@ -42,7 +42,10 @@ def uri_to_remote(uri, display=None):
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
     ]
     if gpl_controls is not None:
+        print "GPL Controls ACTIVATED"
         remotes += gpl_controls
+
+    print(remotes)
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
