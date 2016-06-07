@@ -29,7 +29,7 @@ class FalseyFrameObject(stbt.FrameObject):
 
 # If we want an item in a module to be tested we just need to add a
 # AUTO_SELFTEST_EXPRESSIONS member to it.  In fact this is exactly why
-# stbt auto-selftests knows to test FrameObjects: the FrameObject base class
+# stbt auto-selftest knows to test FrameObjects: the FrameObject base class
 # defines this member for you.
 #
 # Here's an example of testing a function instead of a class:
@@ -44,7 +44,7 @@ not_a_frame_object.AUTO_SELFTEST_EXPRESSIONS = [
 
 
 # And to further illustrate the point here's an example of disabling
-# auto-selftests for a FrameObject:
+# auto-selftest for a FrameObject:
 class TruthyFrameObject1(stbt.FrameObject):
     AUTO_SELFTEST_EXPRESSIONS = []
 
