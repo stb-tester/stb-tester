@@ -256,8 +256,9 @@ def inspect_module(module_filename):
     except (KeyboardInterrupt, SystemExit):
         raise
     except:  # pylint: disable=bare-except
-        sys.stderr.write("Received %s Exception while inspecting %s, Skipping\n"
-                         % (sys.exc_info()[1], module_filename))
+        sys.stderr.write(
+            "Received \"%s\" exception while inspecting %s; skipping.\n"
+            % (sys.exc_info()[1], module_filename))
         return Module(module_filename, [])
 
 
