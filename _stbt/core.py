@@ -159,6 +159,13 @@ class MatchParameters(object):
         self.confirm_threshold = confirm_threshold
         self.erode_passes = erode_passes
 
+    def __repr__(self):
+        return (
+            "MatchParameters(match_method=%r, match_threshold=%r, "
+            "confirm_method=%r, confirm_threshold=%r, erode_passes=%r)"
+            % (self.match_method, self.match_threshold,
+               self.confirm_method, self.confirm_threshold, self.erode_passes))
+
 
 class Position(namedtuple('Position', 'x y')):
     """A point within the video frame.
@@ -205,10 +212,10 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> a.width, a.extend(x=3).width, a.extend(right=-3).width
     (8, 5, 5)
-    >>> print c.replace(bottom=10)
-    Region(x=10, y=4, width=3, height=6)
-    >>> print Region.intersect(a, b)
-    Region(x=4, y=4, width=4, height=4)
+    >>> c.replace(bottom=10)
+    Region(x=10, y=4, right=13, bottom=10)
+    >>> Region.intersect(a, b)
+    Region(x=4, y=4, right=8, bottom=8)
     >>> Region.intersect(a, b) == Region.intersect(b, a)
     True
     >>> Region.intersect(c, b) == c
@@ -220,8 +227,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
     >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
     >>> quadrant.translate(2, 2)
     Region(x=-inf, y=-inf, right=2, bottom=2)
-    >>> print c.translate(x=-9, y=-3)
-    Region(x=1, y=1, width=3, height=2)
+    >>> c.translate(x=-9, y=-3)
+    Region(x=1, y=1, right=4, bottom=3)
     >>> Region.intersect(Region.ALL, c) == c
     True
     >>> Region.ALL
@@ -267,18 +274,12 @@ class Region(namedtuple('Region', 'x y right bottom')):
             raise ValueError("'bottom' must be greater than 'y'")
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
-    def __str__(self):
-        if self == Region.ALL:
-            return 'Region.ALL'
-        else:
-            return 'Region(x=%s, y=%s, width=%s, height=%s)' \
-                % (self.x, self.y, self.width, self.height)
-
     def __repr__(self):
         if self == Region.ALL:
             return 'Region.ALL'
         else:
-            return super(Region, self).__repr__()
+            return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
+                % (self.x, self.y, self.right, self.bottom)
 
     @property
     def width(self):
@@ -298,9 +299,8 @@ class Region(namedtuple('Region', 'x y right bottom')):
         Deprecated since we added ``right`` and ``bottom`` to Region
         constructor.
 
-        >>> b = Region.from_extents(4, 4, 13, 10)
-        >>> print b
-        Region(x=4, y=4, width=9, height=6)
+        >>> Region.from_extents(4, 4, 13, 10)
+        Region(x=4, y=4, right=13, bottom=10)
         """
         return Region(x, y, right=right, bottom=bottom)
 
@@ -389,13 +389,15 @@ def _bounding_box(a, b):
     contains both regions a and b.
 
     >>> print _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
-    Region(x=20, y=20, width=40, height=30)
+    Region(x=20, y=20, right=60, bottom=50)
     >>> print _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
-    Region(x=20, y=30, width=10, height=20)
+    Region(x=20, y=30, right=30, bottom=50)
     >>> print _bounding_box(None, Region(20, 30, 10, 20))
-    Region(x=20, y=30, width=10, height=20)
+    Region(x=20, y=30, right=30, bottom=50)
     >>> print _bounding_box(Region(20, 30, 10, 20), None)
-    Region(x=20, y=30, width=10, height=20)
+    Region(x=20, y=30, right=30, bottom=50)
+    >>> print _bounding_box(Region(20, 30, 10, 20), Region.ALL)
+    Region.ALL
     >>> print _bounding_box(None, None)
     None
     """
@@ -446,10 +448,10 @@ class MatchResult(object):
         self.image = image
         self._first_pass_matched = _first_pass_matched
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            "MatchResult(timestamp=%s, match=%s, region=%s, "
-            "first_pass_result=%s, frame=%s, image=%s)" % (
+            "MatchResult(timestamp=%r, match=%r, region=%r, "
+            "first_pass_result=%r, frame=<%s>, image=%s)" % (
                 self.timestamp,
                 self.match,
                 self.region,
@@ -554,16 +556,16 @@ class TextMatchResult(namedtuple(
     def __nonzero__(self):
         return self.match
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            "TextMatchResult(timestamp=%s, match=%s, region=%s, frame=%s, "
-            "text=%s)" % (
+            "TextMatchResult(timestamp=%r, match=%r, region=%r, frame=<%s>, "
+            "text=%r)" % (
                 self.timestamp,
                 self.match,
                 self.region,
                 "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
                               self.frame.shape[2]),
-                repr(self.text)))
+                self.text))
 
 
 def new_device_under_test_from_config(
