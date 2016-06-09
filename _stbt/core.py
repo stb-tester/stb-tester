@@ -537,9 +537,7 @@ class OcrMode(IntEnum):
         return str(self)
 
 
-class TextMatchResult(namedtuple(
-        "TextMatchResult", "timestamp match region frame text")):
-
+class TextMatchResult(object):
     """The result from `match_text`.
 
     * ``timestamp``: Video stream timestamp.
@@ -552,6 +550,13 @@ class TextMatchResult(namedtuple(
     * ``text``: The text (unicode string) that was searched for, as given to
       `match_text`.
     """
+    def __init__(self, timestamp, match, region, frame, text):
+        self.timestamp = timestamp
+        self.match = match
+        self.region = region
+        self.frame = frame
+        self.text = text
+
     # pylint: disable=E1101
     def __nonzero__(self):
         return self.match
