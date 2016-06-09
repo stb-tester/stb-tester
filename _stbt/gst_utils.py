@@ -26,7 +26,7 @@ def gst_sample_make_writable(sample):
             sample.get_info())
 
 
-def get_frame_timestamp(frame):
+def get_frame_stream_timestamp_ns(frame):
     if isinstance(frame, Gst.Sample):
         return frame.get_buffer().pts
     else:

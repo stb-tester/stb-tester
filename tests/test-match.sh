@@ -239,22 +239,24 @@ test_press_until_match_max_presses() {
 
 test_press_until_match_reads_interval_secs_from_config_file() {
     cat > test-3s.py <<-EOF &&
+	import time
 	import stbt
-	_, start = stbt.frames().next()
+	start = stbt.get_frame().time
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
-	assert (match.timestamp - start) >= 3e9, (
-	    "Took %dns; expected >=3s" % (match.timestamp - start))
+	assert (match.time - start) >= 3, (
+	    "Took %fs; expected >=3s" % (match.time - start))
 	EOF
     stbt run -v test-3s.py &&
 
     cat > test-1s.py <<-EOF &&
+	import time
 	import stbt
-	_, start = stbt.frames().next()
+	start = stbt.get_frame().time
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
-	assert (match.timestamp - start) < 3e9, (
-	    "Took %dns; expected <3s" % (match.timestamp - start))
+	assert (match.time - start) < 3, (
+	    "Took %fs; expected <3s" % (match.time - start))
 	EOF
     set_config press_until_match.interval_secs "1" &&
     stbt run -v test-1s.py
@@ -409,18 +411,23 @@ test_match_searches_in_provided_region() {
 
 test_detect_match_reports_valid_timestamp() {
     cat > test.py <<-EOF
-	last_timestamp=None
+	import time
+	
+	last_timestamp = None
+	start_time = stbt.get_frame().time
 	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
+	    assert match_result.time >= start_time
 	    if last_timestamp != None:
-	        if match_result.timestamp - last_timestamp >= 0:
+	        if match_result.time - last_timestamp >= 0:
+	            assert match_result.time <= time.time()
 	            import sys
 	            sys.exit(0)
 	        else:
-	            raise Exception("Invalid timestamps reported: %d - %d." % (
-	                            last_timestamp, match_result.timestamp))
-	    if match_result.timestamp == None:
+	            raise Exception("Invalid timestamps reported: %f - %f." % (
+	                            last_timestamp, match_result.time))
+	    if match_result.time == None:
 	        raise Exception("Empty timestamp reported.")
-	    last_timestamp = match_result.timestamp
+	    last_timestamp = match_result.time
 	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt run -v test.py

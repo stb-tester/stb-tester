@@ -21,7 +21,6 @@ import Queue
 import re
 import subprocess
 import threading
-import time
 import traceback
 import warnings
 from collections import deque, namedtuple
@@ -37,7 +36,7 @@ from kitchen.text.converters import to_bytes
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, CapturedFrame,
-                             get_frame_timestamp, gst_iterate,
+                             get_frame_stream_timestamp_ns, gst_iterate,
                              gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
@@ -412,7 +411,9 @@ def _bounding_box(a, b):
 class MatchResult(object):
     """The result from `match`.
 
-    * ``timestamp``: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).  Introduced in v26.
     * ``match``: Boolean result, the same as evaluating `MatchResult` as a bool.
       That is, ``if match_result:`` will behave the same as
       ``if match_result.match:``.
@@ -422,11 +423,15 @@ class MatchResult(object):
       (see `MatchParameters` for details).
     * ``frame``: The video frame that was searched, in OpenCV format.
     * ``image``: The template image that was searched for, as given to `match`.
+    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
+      value isn’t related to the system time; what’s useful is the relative
+      difference between frames.  This is here for compatibility reasons only.
+      Use ``time`` instead.
     """
     # pylint: disable=W0621
     def __init__(
-            self, timestamp, match, region, first_pass_result, frame=None,
-            image=None, _first_pass_matched=None):
+            self, time, match, region, first_pass_result, frame=None,
+            image=None, timestamp=None, _first_pass_matched=None):
         self.timestamp = timestamp
         self.match = match
         self.region = region
@@ -446,13 +451,14 @@ class MatchResult(object):
                 DeprecationWarning, stacklevel=2)
             image = ""
         self.image = image
+        self.time = time
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
         return (
-            "MatchResult(timestamp=%r, match=%r, region=%r, "
-            "first_pass_result=%r, frame=<%s>, image=%s)" % (
-                self.timestamp,
+            "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
+            "frame=<%s>, image=%s, timestamp=%s)" % (
+                self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
@@ -460,7 +466,8 @@ class MatchResult(object):
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
-                else repr(self.image)))
+                else repr(self.image),
+                self.timestamp))
 
     @property
     def position(self):
@@ -507,24 +514,40 @@ def _image_region(image):
 class MotionResult(object):
     """The result from `detect_motion`.
 
-    * `timestamp`: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).  Introduced in v26.
     * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.motion:``.
     * ``region``: The region of the video frame that contained the motion.
       `None` if no motion detected.
+    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
+      value isn’t related to the system time; what’s useful is the relative
+      difference between frames.  This is here for compatibility reasons only.
+      Use ``time`` instead.
     """
-    def __init__(self, timestamp, motion, region=None):
-        self.timestamp = timestamp
+    def __init__(self, time, motion, region, timestamp):
+        self.time = time
         self.motion = motion
         self.region = region
+        self.timestamp = timestamp
 
     def __nonzero__(self):
         return self.motion
 
     def __repr__(self):
-        return "MotionResult(timestamp=%r, motion=%r, region=%r)" % (
-            self.timestamp, self.motion, self.region)
+        return (
+            "MotionResult(time=%r, motion=%r, region=%r, timestamp=%s)" % (
+                self.time, self.motion, self.region, self.timestamp))
+
+
+def test_motionresult_repr():
+    txt = ("MotionResult("
+           "time=1466002032.335607, motion=True, "
+           "region=Region(x=321, y=32, right=334, bottom=42), "
+           "timestamp=3356072413)")
+    assert repr(eval(txt)) == txt  # pylint: disable=eval-used
 
 
 class OcrMode(IntEnum):
@@ -554,7 +577,9 @@ class OcrMode(IntEnum):
 class TextMatchResult(object):
     """The result from `match_text`.
 
-    * ``timestamp``: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).  Introduced in v26.
     * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.match:``.
@@ -563,13 +588,19 @@ class TextMatchResult(object):
     * ``frame``: The video frame that was searched, in OpenCV format.
     * ``text``: The text (unicode string) that was searched for, as given to
       `match_text`.
+    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
+      value isn’t related to the system time; what’s useful is the relative
+      difference between frames.  This is here for compatibility reasons only.
+      Use ``time`` instead.
     """
-    def __init__(self, timestamp, match, region, frame, text):
-        self.timestamp = timestamp
+    def __init__(self, time, match, region, frame, text,
+                 timestamp):
+        self.time = time
         self.match = match
         self.region = region
         self.frame = frame
         self.text = text
+        self.timestamp = timestamp
 
     # pylint: disable=E1101
     def __nonzero__(self):
@@ -577,14 +608,15 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(timestamp=%r, match=%r, region=%r, frame=<%s>, "
-            "text=%r)" % (
-                self.timestamp,
+            "TextMatchResult(time=%r, match=%r, region=%r, frame=<%s>, "
+            "text=%r, timestamp=%s)" % (
+                self.time,
                 self.match,
                 self.region,
                 "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
                               self.frame.shape[2]),
-                self.text))
+                self.text,
+                self.timestamp))
 
 
 def new_device_under_test_from_config(
@@ -669,6 +701,7 @@ class DeviceUnderTest(object):
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
+        import time
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
@@ -749,9 +782,11 @@ class DeviceUnderTest(object):
                 match_region = Region.from_extents(*match_region) \
                                      .translate(region.x, region.y)
                 result = MatchResult(
-                    get_frame_timestamp(frame), matched, match_region,
+                    getattr(frame, "time", None), matched, match_region,
                     first_pass_certainty, frame,
-                    (template.name or template.image), first_pass_matched)
+                    (template.name or template.image),
+                    get_frame_stream_timestamp_ns(frame),
+                    first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
                     self._display.draw(
@@ -833,8 +868,9 @@ class DeviceUnderTest(object):
 
             motion = bool(out_region)
 
-            result = MotionResult(
-                get_frame_timestamp(frame), motion, out_region)
+            result = MotionResult(getattr(frame, "time", None), motion,
+                                  out_region,
+                                  get_frame_stream_timestamp_ns(frame))
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -964,12 +1000,13 @@ class DeviceUnderTest(object):
         if _tesseract_version() >= LooseVersion('3.04'):
             _config['tessedit_create_txt'] = 0
 
-        ts = get_frame_timestamp(frame)
+        rts = getattr(frame, "time", None)
+        sts = get_frame_stream_timestamp_ns(frame)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            result = TextMatchResult(ts, False, None, frame, text)
+            result = TextMatchResult(rts, False, None, frame, text, sts)
         else:
             hocr = lxml.etree.fromstring(xml.encode('utf-8'))
             p = _hocr_find_phrase(hocr, text.split())
@@ -983,9 +1020,9 @@ class DeviceUnderTest(object):
                 box = Region.from_extents(
                     region.x + box.x // 3, region.y + box.y // 3,
                     region.x + box.right // 3, region.y + box.bottom // 3)
-                result = TextMatchResult(ts, True, box, frame, text)
+                result = TextMatchResult(rts, True, box, frame, text, sts)
             else:
-                result = TextMatchResult(ts, False, None, frame, text)
+                result = TextMatchResult(rts, False, None, frame, text, sts)
 
         if result.match:
             debug("match_text: Match found: %s" % str(result))
@@ -996,7 +1033,7 @@ class DeviceUnderTest(object):
 
     def frames(self, timeout_secs=None):
         for f in self._display.frames(timeout_secs):
-            yield f.copy(), get_frame_timestamp(f)
+            yield f.copy(), get_frame_stream_timestamp_ns(f)
 
     def get_frame(self):
         return self._display.pull_frame().copy()
@@ -1092,6 +1129,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
 
     ``wait_until`` was added in stb-tester v22.
     """
+    import time
     expiry_time = time.time() + timeout_secs
     while True:
         e = callable_()
@@ -1572,6 +1610,7 @@ class Display(object):
         return array_from_sample(self._get_sample(timeout_secs))
 
     def frames(self, timeout_secs=None):
+        import time
         self.start_timestamp = None
 
         with self.lock:
@@ -1601,7 +1640,8 @@ class Display(object):
 
         running_time = sample.get_segment().to_running_time(
             Gst.Format.TIME, sample.get_buffer().pts)
-        sample.time = appsink.base_time + running_time
+        sample.time = (
+            float(appsink.base_time + running_time) / 1e9)
 
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
