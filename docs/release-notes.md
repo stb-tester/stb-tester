@@ -27,6 +27,11 @@ UNRELEASED
 
 ##### Minor fixes and packaging fixes
 
+* `MotionResult` now defines `__nonzero__()`. This means you can write
+  `if result:` rather than having to write `if result.motion`.  This is a minor
+  ergonomic improvement for consistency with `MatchResult` and
+  `TextMatchResult`.
+
 * The debug log output of `match`, `wait_for_match` and `match_text` shows the
   matching region as (x, y, right, bottom) instead of (x, y, width, height).
 

@@ -508,9 +508,12 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
     """The result from `detect_motion`.
 
     * `timestamp`: Video stream timestamp.
-    * `motion`: Boolean result.
+    * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
+      bool. That is, ``if result:`` will behave the same as
+      ``if result.motion:``.
     """
-    pass
+    def __nonzero__(self):
+        return self.motion
 
 
 class OcrMode(IntEnum):
