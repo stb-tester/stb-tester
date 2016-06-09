@@ -20,8 +20,9 @@ UNRELEASED
 
 ##### Breaking changes since 25
 
-* `TextMatchResult` (as returned from `match_text`) no longer derives from
-  `tuple`. We don't expect that this will break any real-life test scripts.
+* `TextMatchResult` (returned from `match_text`) and `MotionResult` (returned
+  from `wait_for_motion` no longer derive from `tuple`. We don't expect that
+  this will break any real-life test scripts.
 
 ##### New features
 

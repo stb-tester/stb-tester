@@ -504,7 +504,7 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
+class MotionResult(object):
     """The result from `detect_motion`.
 
     * `timestamp`: Video stream timestamp.
@@ -512,8 +512,16 @@ class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
       bool. That is, ``if result:`` will behave the same as
       ``if result.motion:``.
     """
+    def __init__(self, timestamp, motion):
+        self.timestamp = timestamp
+        self.motion = motion
+
     def __nonzero__(self):
         return self.motion
+
+    def __repr__(self):
+        return "MotionResult(timestamp=%r, motion=%r)" % (
+            self.timestamp, self.motion)
 
 
 class OcrMode(IntEnum):
