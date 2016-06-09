@@ -14,6 +14,18 @@ changes, along with upgrade instructions where necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
+#### 26
+
+UNRELEASED
+
+##### Breaking changes since 25
+
+##### New features
+
+##### Minor fixes and packaging fixes
+
+##### Developer-visible changes
+
 #### 25
 
 New features `stbt.FrameObject` and `stbt auto-selftest` that work in tandem to
