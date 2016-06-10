@@ -33,6 +33,10 @@ def main(argv):
         formatter_class=argparse.RawDescriptionHelpFormatter)
     _, pylint_args = parser.parse_known_args(argv[1:])
 
+    if not pylint_args:
+        parser.print_usage(sys.stderr)
+        return 1
+
     try:
         with open("/dev/null", "w") as devnull:
             subprocess.check_call(["pylint", "--help"],
