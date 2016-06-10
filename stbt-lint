@@ -18,8 +18,10 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
+import threading
 
 
 def main(argv):
@@ -46,9 +48,40 @@ def main(argv):
         os.path.dirname(__file__),
         env.get("PYTHONPATH", "")])
 
-    return subprocess.call(
+    pylint = subprocess.Popen(
         ["pylint", "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
-        env=env)
+        env=env, stderr=subprocess.PIPE)
+
+    t = threading.Thread(target=filter_warnings,
+                         args=(pylint.stderr, sys.stderr))
+    t.start()
+
+    pylint.wait()
+    t.join()
+    return pylint.returncode
+
+
+def filter_warnings(input_, output):
+    while True:
+        line = input_.readline()
+        if not line:
+            break
+        if any(re.search(pattern, line) for pattern in WARNINGS):
+            continue
+        output.write(line)
+
+
+WARNINGS = [
+    # pylint:disable=line-too-long
+    r"libdc1394 error: Failed to initialize libdc1394",
+    r"pygobject_register_sinkfunc is deprecated",
+    r"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
+    r"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
+    r"return isinstance\(object, \(type, types.ClassType\)\)",
+    r"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
+    r"astroid.* Use gi.require_version",
+    r"^  __import__\(m\)$",
+]
 
 
 if __name__ == "__main__":
