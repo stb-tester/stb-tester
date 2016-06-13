@@ -1,3 +1,4 @@
+import ctypes
 import sys
 from contextlib import contextmanager
 
@@ -125,6 +126,81 @@ def sample_shape(sample):
     else:
         raise TypeError("sample_shape must take a Gst.Sample or a "
                         "numpy.ndarray.  Received a %s" % str(type(sample)))
+
+
+class _MappedSample(object):
+    """
+    Implements the numpy array interface for a GstSample, taking care to unmap
+    in its destructor.  This allows us to create numpy arrays backed by the
+    memory from a GstBuffer.
+    """
+    __slots__ = '_ctx', '__array_interface__'
+
+    def __init__(self, sample, readwrite=False):
+        if not isinstance(sample, Gst.Sample):
+            raise TypeError("MappedSample must take a Gst.Sample.  Received a "
+                            "%s" % str(type(sample)))
+
+        flags = Gst.MapFlags.READ
+        if readwrite:
+            flags |= Gst.MapFlags.WRITE
+
+        shape = sample_shape(sample)
+        size = reduce(lambda a, b: a * b, shape, 1)
+
+        ctx = map_gst_sample(sample, flags)
+        data = ctx.__enter__()
+        self._ctx = ctx
+        if len(data) != size:
+            raise ValueError("Provided sample is too small for image of shape "
+                             "%s.  %iB < %iB." % (shape, len(data), size))
+
+        self.__array_interface__ = {
+            "shape": shape,
+            "typestr": "|u1",
+            "data": (ctypes.addressof(data), not readwrite),
+            "version": 3,
+        }
+
+    def __del__(self):
+        self.__array_interface__ = None
+        if self._ctx:
+            self._ctx.__exit__(None, None, None)
+
+
+def array_from_sample(sample, readwrite=False):
+    return numpy.array(_MappedSample(sample, readwrite), copy=False)
+
+
+def test_that_array_from_sample_readonly_gives_a_readonly_array():
+    Gst.init([])
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+                       Gst.Caps.from_string("video/x-raw"), None, None)
+    array = array_from_sample(s)
+    try:
+        array[0] = 3
+        assert False, 'Writing elements should have thrown'
+    except (ValueError, RuntimeError):
+        # Different versions of numpy raise different exceptions
+        pass
+
+
+def test_that_array_from_sample_readwrite_gives_a_writable_array():
+    Gst.init([])
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+                       Gst.Caps.from_string("video/x-raw"), None, None)
+    array = array_from_sample(s, readwrite=True)
+    array[0] = ord("j")
+    assert s.get_buffer().extract_dup(0, 5) == "jello"
+
+
+def test_that_array_from_sample_dimensions_of_array_are_according_to_caps():
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(
+        "row 1 4 px  row 2 4 px  row 3 4 px  "),
+        Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
+        None, None)
+    a = array_from_sample(s)
+    assert a.shape == (3, 4, 3)
 
 
 def gst_iterate(gst_iterator):
