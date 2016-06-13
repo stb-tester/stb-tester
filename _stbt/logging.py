@@ -122,7 +122,7 @@ class ImageLogger(object):
                 self.data[k] = []
             self.data[k].append(v)
 
-    def imwrite(self, name, image):
+    def imwrite(self, name, image, region=None, colour=None):
         if not self.enabled:
             return
         if name in self.images:
@@ -135,6 +135,11 @@ class ImageLogger(object):
             else:
                 img = img.copy()
             self.images[name] = img
+            if region:
+                cv2.rectangle(
+                    img, (region.x, region.y), (region.right, region.bottom),
+                    colour, thickness=1)
+
             cv2.imwrite(os.path.join(self.outdir, name + ".png"), img)
 
 

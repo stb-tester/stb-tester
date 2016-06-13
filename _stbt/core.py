@@ -756,7 +756,8 @@ class DeviceUnderTest(object):
                         (template.name or template.image), first_pass_matched)
                     imglog.append(matches=result)
                     if grabbed_from_live:
-                        self._display.draw(result, None)
+                        self._display.draw(
+                            result, label=os.path.basename(template.friendly_name))
                     yield result
 
             finally:
@@ -775,7 +776,7 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._display.draw(result, None)
+            self._display.draw(result, label=os.path.basename(template.friendly_name))
             yield result
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
@@ -1425,6 +1426,28 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
+class _Annotation(namedtuple("_Annotation", "pts region label colour")):
+    MATCHED = (32, 0, 255)  # Red
+    NO_MATCH = (32, 255, 255)  # Yellow
+
+    @staticmethod
+    def from_result(result, label=""):
+        colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
+        return _Annotation(result.timestamp, result.region, label, colour)
+
+    def draw(self, img):
+        if not self.region:
+            return
+        cv2.rectangle(
+            img, (self.region.x, self.region.y),
+            (self.region.right, self.region.bottom), self.colour,
+            thickness=3)
+
+        # Slightly above the match annotation
+        label_loc = (self.region.x, self.region.y - 10)
+        _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
+
+
 class Display(object):
     def __init__(self, user_source_pipeline, user_sink_pipeline,
                  mainloop, save_video="",
@@ -1442,7 +1465,7 @@ class Display(object):
 
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
-        self.match_annotations = []
+        self.annotations = []
 
         self.restart_source_enabled = restart_source
 
@@ -1623,7 +1646,7 @@ class Display(object):
 
         self.last_sample.put_nowait(sample_or_exception)
 
-    def draw(self, obj, duration_secs):
+    def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
             if isinstance(obj, str) or isinstance(obj, unicode):
                 obj = (
@@ -1632,8 +1655,9 @@ class Display(object):
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs * Gst.SECOND})
             elif isinstance(obj, MatchResult):
-                if obj.timestamp is not None:
-                    self.match_annotations.append(obj)
+                annotation = _Annotation.from_result(obj, label=label)
+                if annotation.pts:
+                    self.annotations.append(annotation)
             else:
                 raise TypeError(
                     "Can't draw object of type '%s'" % type(obj).__name__)
@@ -1642,21 +1666,22 @@ class Display(object):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.get_buffer().pts
         texts = []
-        matches = []
+        annotations = []
         with self.annotations_lock:
             for x in self.text_annotations:
                 x.setdefault('start_time', now)
                 if now < x['start_time'] + x['duration']:
                     texts.append(x)
             self.text_annotations = texts[:]
-            for match_result in list(self.match_annotations):
-                if match_result.timestamp == now:
-                    matches.append(match_result)
-                if now >= match_result.timestamp:
-                    self.match_annotations.remove(match_result)
+            for annotation in list(self.annotations):
+                if annotation.pts == now:
+                    annotations.append(annotation)
+                if now >= annotation.pts:
+                    self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
         with numpy_from_sample(sample) as img:
+            # Text:
             _draw_text(
                 img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
                 (10, 30), (255, 255, 255))
@@ -1665,16 +1690,10 @@ class Display(object):
                 age = float(now - x['start_time']) / (3 * Gst.SECOND)
                 color = (int(255 * max([1 - age, 0.5])),) * 3
                 _draw_text(img, x['text'], origin, color)
-            for match_result in matches:
-                if isinstance(match_result.image, numpy.ndarray):
-                    label = '<Custom Image>'
-                else:
-                    label = os.path.basename(match_result.image)
-                # Slightly above the match annotation
-                label_loc = (match_result.region.x, match_result.region.y - 10)
-                _draw_text(
-                    img, label, label_loc, (255, 255, 255), font_scale=0.5)
-                _draw_match(img, match_result.region, match_result.match, img)
+
+            # Regions:
+            for annotation in annotations:
+                annotation.draw(img)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -1782,6 +1801,9 @@ class Display(object):
 
 
 def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
+    if not text:
+        return
+
     (width, height), _ = cv2.getTextSize(
         text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale,
         thickness=1)
@@ -1792,16 +1814,6 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX,
         fontScale=font_scale, color=color, lineType=cv2.CV_AA)
-
-
-def _draw_match(numpy_image, region, match_, output_image=None, thickness=3):
-    if output_image is None:
-        output_image = numpy_image.copy()
-    cv2.rectangle(
-        output_image, (region.x, region.y), (region.right, region.bottom),
-        (32, 0 if match_ else 255, 255),  # bgr
-        thickness=thickness)
-    return output_image
 
 
 class GObjectTimeout(object):
@@ -2128,16 +2140,18 @@ def _log_match_image_debug(imglog):
 
     for matched, position, _, level in imglog.data["pyramid_levels"]:
         template = imglog.images["level%d-template" % level]
-        imglog.imwrite("level%d-source_with_match" % level, _draw_match(
-            imglog.images["level%d-source" % level],
-            Region(x=position.x, y=position.y,
-                   width=template.shape[1], height=template.shape[0]),
-            matched, thickness=1))
+        imglog.imwrite("level%d-source_with_match" % level,
+                       imglog.images["level%d-source" % level],
+                       Region(x=position.x, y=position.y,
+                              width=template.shape[1],
+                              height=template.shape[0]),
+                       _Annotation.MATCHED if matched else _Annotation.NO_MATCH)
 
     for i, result in enumerate(imglog.data["matches"]):
-        imglog.imwrite("match%d-source_with_match" % i, _draw_match(
-            imglog.images["source"], result.region, result._first_pass_matched,  # pylint:disable=protected-access
-            thickness=1))
+        imglog.imwrite(
+            "match%d-source_with_match" % i, imglog.images["source"],
+            result.region, _Annotation.MATCHED if result._first_pass_matched  # pylint:disable=protected-access
+            else _Annotation.NO_MATCH)
 
     try:
         import jinja2
