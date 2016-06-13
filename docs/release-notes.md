@@ -24,6 +24,9 @@ UNRELEASED
 
 ##### Minor fixes and packaging fixes
 
+* The debug log output of `match`, `wait_for_match` and `match_text` shows the
+  matching region as (x, y, right, bottom) instead of (x, y, width, height).
+
 ##### Developer-visible changes
 
 #### 25
