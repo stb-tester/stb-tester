@@ -77,6 +77,9 @@ test_detect_motion_reports_motion() {
 	for motion_result in detect_motion():
 	    assert bool(motion_result) == motion_result.motion
 	    if motion_result:
+	        # videotestsrc has motion in bottom right corner:
+	        assert motion_result.region == stbt.Region(
+	            240, 180, right=320, bottom=240)
 	        import sys
 	        sys.exit(0)
 	    else:

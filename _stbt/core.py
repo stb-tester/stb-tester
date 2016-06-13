@@ -511,17 +511,20 @@ class MotionResult(object):
     * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.motion:``.
+    * ``region``: The region of the video frame that contained the motion.
+      `None` if no motion detected.
     """
-    def __init__(self, timestamp, motion):
+    def __init__(self, timestamp, motion, region=None):
         self.timestamp = timestamp
         self.motion = motion
+        self.region = region
 
     def __nonzero__(self):
         return self.motion
 
     def __repr__(self):
-        return "MotionResult(timestamp=%r, motion=%r)" % (
-            self.timestamp, self.motion)
+        return "MotionResult(timestamp=%r, motion=%r, region=%r)" % (
+            self.timestamp, self.motion, self.region)
 
 
 class OcrMode(IntEnum):
@@ -605,6 +608,47 @@ def new_device_under_test_from_config(
         restart_source, transformation_pipeline)
     return DeviceUnderTest(
         display=display, control=uri_to_remote(control_uri, display))
+
+
+def _pixel_bounding_box(img):
+    """
+    Find the smallest region that contains all the non-zero pixels in an image.
+
+    >>> _pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
+    >>> _pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
+    >>> _pixel_bounding_box(numpy.array([
+    ...     [0, 0, 0, 0],
+    ...     [0, 1, 1, 1],
+    ...     [0, 1, 1, 1],
+    ...     [0, 0, 0, 0],
+    ... ], dtype=numpy.uint8))
+    Region(x=1, y=1, right=4, bottom=3)
+    >>> _pixel_bounding_box(numpy.array([
+    ...     [0, 0, 0, 0, 0, 0],
+    ...     [0, 0, 0, 1, 0, 0],
+    ...     [0, 1, 0, 0, 0, 0],
+    ...     [0, 0, 0, 0, 1, 0],
+    ...     [0, 0, 1, 0, 0, 0],
+    ...     [0, 0, 0, 0, 0, 0]
+    ... ], dtype=numpy.uint8))
+    Region(x=1, y=1, right=5, bottom=5)
+    """
+    if len(img.shape) != 2:
+        raise ValueError("Single-channel image required.  Provided image has "
+                         "shape %r" % (img.shape,))
+
+    out = [None, None, None, None]
+
+    for axis in (0, 1):
+        flat = numpy.any(img, axis=axis)
+        indices = numpy.where(flat)[0]
+        if len(indices) == 0:
+            return None
+        out[axis] = indices[0]
+        out[axis + 2] = indices[-1] + 1
+
+    return Region.from_extents(*out)
 
 
 class DeviceUnderTest(object):
@@ -782,7 +826,12 @@ class DeviceUnderTest(object):
             imglog.imwrite("absdiff_threshold", thresholded)
             imglog.imwrite("absdiff_threshold_erode", eroded)
 
-            motion = (cv2.countNonZero(eroded) > 0)
+            out_region = _pixel_bounding_box(eroded)
+            if out_region:
+                # Undo cv2.erode above:
+                out_region = out_region.extend(x=-1, y=-1)
+
+            motion = bool(out_region)
 
             # Visualisation: Highlight in red the areas where we detected motion
             if motion:
@@ -800,7 +849,7 @@ class DeviceUnderTest(object):
                             iterations=1),
                         dst=frame)
 
-            result = MotionResult(sample.get_buffer().pts, motion)
+            result = MotionResult(sample.get_buffer().pts, motion, out_region)
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
             yield result
