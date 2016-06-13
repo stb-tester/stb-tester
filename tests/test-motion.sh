@@ -209,3 +209,25 @@ test_detect_motion_example_press_and_wait_for_no_motion() {
 	EOF
     stbt run -v test.py
 }
+
+test_detect_motion_visualisation() {
+    cat > detect_motion.py <<-EOF &&
+	for result in detect_motion():
+	    pass
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true" \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        detect_motion.py &
+    source_pid=$!
+    trap "kill $source_pid; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	wait_for_match("$testdir/motion-visualisation.png")
+	EOF
+    stbt run -v --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py
+}

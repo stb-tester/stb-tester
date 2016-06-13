@@ -456,7 +456,7 @@ test_template_annotation_labels() {
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v \
-        --source-pipeline 'videotestsrc is-live=true' \
+        --source-pipeline 'videotestsrc is-live=true ! video/x-raw,width=640' \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
         test.py &
     test_script=$!

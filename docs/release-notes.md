@@ -37,6 +37,10 @@ UNRELEASED
   ergonomic improvement for consistency with `MatchResult` and
   `TextMatchResult`.
 
+* The way motion detection is visualised on the output video has changed.
+  Instead of colouring the in-motion areas red we draw a red rectangle around
+  the area with motion.  This is consistent to the `match` visualisation.
+
 * The debug log output of `match`, `wait_for_match` and `match_text` shows the
   matching region as (x, y, right, bottom) instead of (x, y, width, height).
 

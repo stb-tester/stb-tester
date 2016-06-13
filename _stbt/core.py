@@ -757,7 +757,8 @@ class DeviceUnderTest(object):
                     imglog.append(matches=result)
                     if grabbed_from_live:
                         self._display.draw(
-                            result, label=os.path.basename(template.friendly_name))
+                            result, label="match(%r)" %
+                            os.path.basename(template.friendly_name))
                     yield result
 
             finally:
@@ -776,7 +777,8 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._display.draw(result, label=os.path.basename(template.friendly_name))
+            self._display.draw(result, label="match(%r)" %
+                               os.path.basename(template.friendly_name))
             yield result
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
@@ -834,23 +836,8 @@ class DeviceUnderTest(object):
 
             motion = bool(out_region)
 
-            # Visualisation: Highlight in red the areas where we detected motion
-            if motion:
-                with numpy_from_sample(sample) as frame:
-                    cv2.add(
-                        frame,
-                        numpy.multiply(
-                            numpy.ones(frame.shape, dtype=numpy.uint8),
-                            numpy.array((0, 0, 255), dtype=numpy.uint8),  # bgr
-                            dtype=numpy.uint8),
-                        mask=cv2.dilate(
-                            thresholded,
-                            cv2.getStructuringElement(
-                                cv2.MORPH_ELLIPSE, (3, 3)),
-                            iterations=1),
-                        dst=frame)
-
             result = MotionResult(sample.get_buffer().pts, motion, out_region)
+            self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
             yield result
@@ -1654,7 +1641,7 @@ class Display(object):
                     ' ' + obj)
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs * Gst.SECOND})
-            elif isinstance(obj, MatchResult):
+            elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.pts:
                     self.annotations.append(annotation)
@@ -2644,6 +2631,9 @@ def _fake_frames_at_half_motion():
                 yield gst_sample_make_writable(
                     Gst.Sample.new(buf, Gst.Caps.from_string(
                         'video/x-raw,format=BGR,width=2,height=2'), None, None))
+
+        def draw(self, *_args, **_kwargs):
+            pass
 
     dut = DeviceUnderTest(display=FakeDisplay())
     dut.get_frame = lambda: None
