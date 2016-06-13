@@ -1595,7 +1595,6 @@ class Display(object):
                             timeout_secs * Gst.SECOND))
                         return
 
-                sample = gst_sample_make_writable(sample)
                 try:
                     yield sample
                 finally:
