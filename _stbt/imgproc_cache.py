@@ -256,12 +256,12 @@ def _check_cache_behaviour(func):
 
     timer = Timer(func)
     uncached_result = func()
-    uncached_time = timer.timeit(number=5) / 5.
+    uncached_time = min(timer.repeat(10, number=1))
 
     with named_temporary_directory() as tmpdir, cache(tmpdir):
         # Prime the cache
         func()
-        cached_time = timer.timeit(number=5) / 5.
+        cached_time = min(timer.repeat(10, number=1))
         cached_result = func()
 
     print "%s with cache: %s" % (func.__name__, cached_time)
