@@ -26,12 +26,20 @@ UNRELEASED
 
 ##### New features
 
+* Python API: `MotionResult` (returned from `detect_motion()` and
+  `wait_for_motion()`) now has a member `region` which indicates where in the
+  video the motion was detected.
+
 ##### Minor fixes and packaging fixes
 
 * `MotionResult` now defines `__nonzero__()`. This means you can write
   `if result:` rather than having to write `if result.motion`.  This is a minor
   ergonomic improvement for consistency with `MatchResult` and
   `TextMatchResult`.
+
+* The way motion detection is visualised on the output video has changed.
+  Instead of colouring the in-motion areas red we draw a red rectangle around
+  the area with motion.  This is consistent to the `match` visualisation.
 
 * The debug log output of `match`, `wait_for_match` and `match_text` shows the
   matching region as (x, y, right, bottom) instead of (x, y, width, height).
