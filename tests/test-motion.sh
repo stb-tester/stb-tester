@@ -75,7 +75,8 @@ test_detect_motion_reports_motion() {
     cat > test.py <<-EOF
 	# Should report motion
 	for motion_result in detect_motion():
-	    if motion_result.motion:
+	    assert bool(motion_result) == motion_result.motion
+	    if motion_result:
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -109,7 +110,8 @@ test_detect_motion_reports_no_motion() {
 	# Should not report motion
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-no-video.png"):
-	    if not motion_result.motion:
+	    assert bool(motion_result) == motion_result.motion
+	    if not motion_result:
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -156,7 +158,7 @@ test_detect_motion_changing_mask() {
 	wait_for_motion(mask="$testdir/videotestsrc-mask-video.png")
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-no-video.png"):
-	    if not motion_result.motion:
+	    if not motion_result:
 	        import sys
 	        sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")
@@ -168,7 +170,7 @@ test_detect_motion_changing_mask_is_not_racy() {
     cat > test.py <<-EOF
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-video.png"):
-	    if not motion_result.motion:
+	    if not motion_result:
 	        raise Exception("Motion not reported.")
 	    # Leave time for another frame to be processed with this mask
 	    import time
@@ -177,7 +179,7 @@ test_detect_motion_changing_mask_is_not_racy() {
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-no-video.png"):
 	    # Not supposed to detect motion
-	    if not motion_result.motion:
+	    if not motion_result:
 	        import sys
 	        sys.exit(0)
 	    else:
@@ -192,12 +194,12 @@ test_detect_motion_example_press_and_wait_for_no_motion() {
 	key_sent = False
 	for motion_result in detect_motion():
 	    if not key_sent:
-	        if not motion_result.motion:
+	        if not motion_result:
 	            raise Exception("Motion not reported.")
 	        press("checkers-8")
 	        key_sent = True
 	    else:
-	        if not motion_result.motion:
+	        if not motion_result:
 	            import sys
 	            sys.exit(0)
 	raise Exception("Timeout occured without any result reported.")

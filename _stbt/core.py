@@ -504,13 +504,24 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-class MotionResult(namedtuple('MotionResult', 'timestamp motion')):
+class MotionResult(object):
     """The result from `detect_motion`.
 
     * `timestamp`: Video stream timestamp.
-    * `motion`: Boolean result.
+    * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
+      bool. That is, ``if result:`` will behave the same as
+      ``if result.motion:``.
     """
-    pass
+    def __init__(self, timestamp, motion):
+        self.timestamp = timestamp
+        self.motion = motion
+
+    def __nonzero__(self):
+        return self.motion
+
+    def __repr__(self):
+        return "MotionResult(timestamp=%r, motion=%r)" % (
+            self.timestamp, self.motion)
 
 
 class OcrMode(IntEnum):
@@ -537,9 +548,7 @@ class OcrMode(IntEnum):
         return str(self)
 
 
-class TextMatchResult(namedtuple(
-        "TextMatchResult", "timestamp match region frame text")):
-
+class TextMatchResult(object):
     """The result from `match_text`.
 
     * ``timestamp``: Video stream timestamp.
@@ -552,6 +561,13 @@ class TextMatchResult(namedtuple(
     * ``text``: The text (unicode string) that was searched for, as given to
       `match_text`.
     """
+    def __init__(self, timestamp, match, region, frame, text):
+        self.timestamp = timestamp
+        self.match = match
+        self.region = region
+        self.frame = frame
+        self.text = text
+
     # pylint: disable=E1101
     def __nonzero__(self):
         return self.match

@@ -20,9 +20,18 @@ UNRELEASED
 
 ##### Breaking changes since 25
 
+* `TextMatchResult` (returned from `match_text`) and `MotionResult` (returned
+  from `wait_for_motion` no longer derive from `tuple`. We don't expect that
+  this will break any real-life test scripts.
+
 ##### New features
 
 ##### Minor fixes and packaging fixes
+
+* `MotionResult` now defines `__nonzero__()`. This means you can write
+  `if result:` rather than having to write `if result.motion`.  This is a minor
+  ergonomic improvement for consistency with `MatchResult` and
+  `TextMatchResult`.
 
 * The debug log output of `match`, `wait_for_match` and `match_text` shows the
   matching region as (x, y, right, bottom) instead of (x, y, width, height).
