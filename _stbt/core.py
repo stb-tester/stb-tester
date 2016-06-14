@@ -36,9 +36,9 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (get_frame_timestamp, gst_iterate,
-                             gst_sample_make_writable, numpy_from_sample,
-                             sample_shape)
+from _stbt.gst_utils import (array_from_sample, get_frame_timestamp,
+                             gst_iterate, gst_sample_make_writable,
+                             numpy_from_sample, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -726,7 +726,7 @@ class DeviceUnderTest(object):
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
-            frame = self._display.get_sample()
+            frame = self._display.pull_frame()
 
         imglog = logging.ImageLogger(
             "match", match_parameters=match_parameters,
@@ -738,7 +738,7 @@ class DeviceUnderTest(object):
             # Remove this copy once we make numpy_from_sample *not* unmap the
             # sample when the contextmanager exits, but when no further
             # references are held to the numpy image.
-            npframe = numpy.copy(npframe)
+            npframe = npframe.copy()
             npframe.flags.writeable = False
 
             # pylint:disable=undefined-loop-variable
@@ -773,7 +773,7 @@ class DeviceUnderTest(object):
 
         debug("Searching for " + template.friendly_name)
 
-        for sample in self._display.gst_samples(timeout_secs):
+        for sample in self._display.frames(timeout_secs):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
@@ -794,7 +794,7 @@ class DeviceUnderTest(object):
 
         previous_frame_gray = None
 
-        for sample in self._display.gst_samples(timeout_secs):
+        for sample in self._display.frames(timeout_secs):
             with numpy_from_sample(sample, readonly=True) as frame:
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -836,7 +836,8 @@ class DeviceUnderTest(object):
 
             motion = bool(out_region)
 
-            result = MotionResult(sample.get_buffer().pts, motion, out_region)
+            result = MotionResult(
+                get_frame_timestamp(sample), motion, out_region)
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -935,7 +936,7 @@ class DeviceUnderTest(object):
             tesseract_user_patterns=None):
 
         if frame is None:
-            frame = self._display.get_sample()
+            frame = self._display.pull_frame()
 
         if region is None:
             warnings.warn(
@@ -997,12 +998,11 @@ class DeviceUnderTest(object):
         return result
 
     def frames(self, timeout_secs=None):
-        return self._display.frames(timeout_secs)
+        for f in self._display.frames(timeout_secs):
+            yield f.copy(), get_frame_timestamp(f)
 
     def get_frame(self):
-        with numpy_from_sample(
-                self._display.get_sample(), readonly=True) as frame:
-            return frame.copy()
+        return self._display.pull_frame().copy()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -1010,7 +1010,7 @@ class DeviceUnderTest(object):
         if mask:
             mask = _load_mask(mask)
         if frame is None:
-            frame = self._display.get_sample()
+            frame = self._display.pull_frame()
         with numpy_from_sample(frame, readonly=True) as f:
             greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
@@ -1548,7 +1548,7 @@ class Display(object):
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
-    def get_sample(self, timeout_secs=10):
+    def _get_sample(self, timeout_secs=10):
         try:
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
@@ -1565,23 +1565,20 @@ class Display(object):
             raise UITestError(str(gst_sample))
 
         if isinstance(gst_sample, Gst.Sample):
-            self.last_used_sample = gst_sample
+            self.last_used_sample = array_from_sample(gst_sample)
 
         return gst_sample
 
-    def frames(self, timeout_secs=None):
-        for sample in self.gst_samples(timeout_secs=timeout_secs):
-            with numpy_from_sample(sample, readonly=True) as frame:
-                copy = frame.copy()
-            yield (copy, sample.get_buffer().pts)
+    def pull_frame(self, timeout_secs=10):
+        return array_from_sample(self._get_sample(timeout_secs))
 
-    def gst_samples(self, timeout_secs=None):
+    def frames(self, timeout_secs=None):
         self.start_timestamp = None
 
         with self.lock:
             while True:
                 ddebug("user thread: Getting sample at %s" % time.time())
-                sample = self.get_sample(max(10, timeout_secs))
+                sample = self._get_sample(max(10, timeout_secs))
                 ddebug("user thread: Got sample at %s" % time.time())
                 timestamp = sample.get_buffer().pts
 
@@ -1596,7 +1593,7 @@ class Display(object):
                         return
 
                 try:
-                    yield sample
+                    yield array_from_sample(sample)
                 finally:
                     self.push_sample(sample)
 
@@ -2619,17 +2616,14 @@ def test_wait_for_motion_half_motion_int():
 @contextmanager
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
-        def gst_samples(self, _timeout_secs=10):
+        def frames(self, _timeout_secs=10):
+            from _stbt.gst_utils import CapturedFrame
             data = [
                 numpy.zeros((2, 2, 3), dtype=numpy.uint8),
                 numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
             ]
             for i in range(10):
-                buf = Gst.Buffer.new_wrapped(data[(i // 2) % 2].flatten())
-                buf.pts = i * 1000000000
-                yield gst_sample_make_writable(
-                    Gst.Sample.new(buf, Gst.Caps.from_string(
-                        'video/x-raw,format=BGR,width=2,height=2'), None, None))
+                yield CapturedFrame(data[(i // 2) % 2], _gst_pts=int(i * 1e9))
 
         def draw(self, *_args, **_kwargs):
             pass
