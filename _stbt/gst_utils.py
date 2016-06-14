@@ -111,7 +111,7 @@ def get_frame_timestamp(frame):
     if isinstance(frame, Gst.Sample):
         return frame.get_buffer().pts
     else:
-        return None
+        return getattr(frame, "_gst_pts", None)
 
 
 def sample_shape(sample):
@@ -168,8 +168,26 @@ class _MappedSample(object):
             self._ctx.__exit__(None, None, None)
 
 
+class CapturedFrame(numpy.ndarray):
+    """
+    A subclass of ndarray that we use so we can attach additional metadata to it
+    such as timestamps.
+    """
+    def __new__(cls, array, dtype=None, order=None, _gst_pts=None):
+        obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
+        obj._gst_pts = _gst_pts  # pylint: disable=protected-access
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        self._gst_pts = getattr(obj, '_gst_pts', None)  # pylint: disable=protected-access,attribute-defined-outside-init
+
+
 def array_from_sample(sample, readwrite=False):
-    return numpy.array(_MappedSample(sample, readwrite), copy=False)
+    return CapturedFrame(
+        _MappedSample(sample, readwrite),
+        _gst_pts=sample.get_buffer().pts)
 
 
 def test_that_array_from_sample_readonly_gives_a_readonly_array():
