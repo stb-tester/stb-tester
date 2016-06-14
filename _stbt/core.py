@@ -732,40 +732,38 @@ class DeviceUnderTest(object):
             "match", match_parameters=match_parameters,
             template_name=template.friendly_name)
 
-        with numpy_from_sample(frame, readonly=True) as npframe:
-            region = Region.intersect(_image_region(npframe), region)
+        region = Region.intersect(_image_region(frame), region)
 
-            # Remove this copy once we make numpy_from_sample *not* unmap the
-            # sample when the contextmanager exits, but when no further
-            # references are held to the numpy image.
-            npframe = npframe.copy()
-            npframe.flags.writeable = False
+        # Remove this copy once we've confirmed that doing so won't cause
+        # push_sample to doodle on the frame later.
+        frame = frame.copy()
+        frame.flags.writeable = False
 
-            # pylint:disable=undefined-loop-variable
+        # pylint:disable=undefined-loop-variable
+        try:
+            for (matched, match_region, first_pass_matched,
+                 first_pass_certainty) in _find_matches(
+                    _crop(frame, region), template.image,
+                    match_parameters, imglog):
+
+                match_region = Region.from_extents(*match_region) \
+                                     .translate(region.x, region.y)
+                result = MatchResult(
+                    get_frame_timestamp(frame), matched, match_region,
+                    first_pass_certainty, frame,
+                    (template.name or template.image), first_pass_matched)
+                imglog.append(matches=result)
+                if grabbed_from_live:
+                    self._display.draw(
+                        result, label="match(%r)" %
+                        os.path.basename(template.friendly_name))
+                yield result
+
+        finally:
             try:
-                for (matched, match_region, first_pass_matched,
-                     first_pass_certainty) in _find_matches(
-                        _crop(npframe, region), template.image,
-                        match_parameters, imglog):
-
-                    match_region = Region.from_extents(*match_region) \
-                                         .translate(region.x, region.y)
-                    result = MatchResult(
-                        get_frame_timestamp(frame), matched, match_region,
-                        first_pass_certainty, npframe,
-                        (template.name or template.image), first_pass_matched)
-                    imglog.append(matches=result)
-                    if grabbed_from_live:
-                        self._display.draw(
-                            result, label="match(%r)" %
-                            os.path.basename(template.friendly_name))
-                    yield result
-
-            finally:
-                try:
-                    _log_match_image_debug(imglog)
-                except Exception:  # pylint:disable=broad-except
-                    pass
+                _log_match_image_debug(imglog)
+            except Exception:  # pylint:disable=broad-except
+                pass
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):
@@ -794,9 +792,8 @@ class DeviceUnderTest(object):
 
         previous_frame_gray = None
 
-        for sample in self._display.frames(timeout_secs):
-            with numpy_from_sample(sample, readonly=True) as frame:
-                frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        for frame in self._display.frames(timeout_secs):
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if previous_frame_gray is None:
                 if (mask_image is not None and
@@ -837,7 +834,7 @@ class DeviceUnderTest(object):
             motion = bool(out_region)
 
             result = MotionResult(
-                get_frame_timestamp(sample), motion, out_region)
+                get_frame_timestamp(frame), motion, out_region)
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -1011,8 +1008,7 @@ class DeviceUnderTest(object):
             mask = _load_mask(mask)
         if frame is None:
             frame = self._display.pull_frame()
-        with numpy_from_sample(frame, readonly=True) as f:
-            greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
+        greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
@@ -1039,8 +1035,7 @@ def save_frame(image, filename):
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
     """
-    with numpy_from_sample(image, readonly=True) as imagebuf:
-        cv2.imwrite(filename, imagebuf)
+    cv2.imwrite(filename, image)
 
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0):
@@ -2459,10 +2454,9 @@ def _tesseract(frame, region, mode, lang, _config,
     else:
         region = intersection
 
-    with numpy_from_sample(frame, readonly=True) as f:
-        return (_tesseract_subprocess(_crop(f, region), mode, lang,
-                                      _config, user_patterns, user_words),
-                region)
+    return (_tesseract_subprocess(_crop(frame, region), mode, lang,
+                                  _config, user_patterns, user_words),
+            region)
 
 
 @imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),

@@ -11,7 +11,6 @@ import cv2
 import numpy
 
 from .config import get_config
-from .gst_utils import numpy_from_sample
 from .utils import mkdir_p
 
 _debug_level = None
@@ -127,20 +126,19 @@ class ImageLogger(object):
             return
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
-        with numpy_from_sample(image, readonly=True) as img:
-            if img.dtype == numpy.float32:
-                # Scale `cv2.matchTemplate` heatmap output in range
-                # [0.0, 1.0] to visible grayscale range [0, 255].
-                img = cv2.convertScaleAbs(image, alpha=255)
-            else:
-                img = img.copy()
-            self.images[name] = img
-            if region:
-                cv2.rectangle(
-                    img, (region.x, region.y), (region.right, region.bottom),
-                    colour, thickness=1)
+        if image.dtype == numpy.float32:
+            # Scale `cv2.matchTemplate` heatmap output in range
+            # [0.0, 1.0] to visible grayscale range [0, 255].
+            image = cv2.convertScaleAbs(image, alpha=255)
+        else:
+            image = image.copy()
+        self.images[name] = image
+        if region:
+            cv2.rectangle(
+                image, (region.x, region.y), (region.right, region.bottom),
+                colour, thickness=1)
 
-            cv2.imwrite(os.path.join(self.outdir, name + ".png"), img)
+        cv2.imwrite(os.path.join(self.outdir, name + ".png"), image)
 
 
 def test_that_debug_can_write_unicode_strings():
