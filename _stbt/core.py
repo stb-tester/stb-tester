@@ -36,9 +36,9 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (array_from_sample, get_frame_timestamp,
-                             gst_iterate, gst_sample_make_writable,
-                             sample_shape)
+from _stbt.gst_utils import (array_from_sample, CapturedFrame,
+                             get_frame_timestamp, gst_iterate,
+                             gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -2615,7 +2615,6 @@ def test_wait_for_motion_half_motion_int():
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
         def frames(self, _timeout_secs=10):
-            from _stbt.gst_utils import CapturedFrame
             data = [
                 numpy.zeros((2, 2, 3), dtype=numpy.uint8),
                 numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,

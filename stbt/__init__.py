@@ -16,6 +16,7 @@ from _stbt.core import \
     as_precondition, \
     debug, \
     get_config, \
+    CapturedFrame, \
     ConfigurationError, \
     MatchParameters, \
     MatchResult, \
@@ -35,6 +36,7 @@ from _stbt.core import \
 
 __all__ = [
     "as_precondition",
+    "CapturedFrame",
     "ConfigurationError",
     "debug",
     "detect_match",
@@ -426,7 +428,7 @@ def frames(timeout_secs=None):
     :returns:
       An ``(image, timestamp)`` tuple for each video frame:
 
-      * ``image`` is a `numpy.ndarray` object (that is, an OpenCV image).
+      * ``image`` is a `CapturedFrame` object (that is, an OpenCV image).
       * ``timestamp`` is a time in nanoseconds. The absolute value isn't
         related to the system time; what's useful is the relative difference
         between frames.
@@ -435,7 +437,7 @@ def frames(timeout_secs=None):
 
 
 def get_frame():
-    """:returns: The latest video frame in OpenCV format (a `numpy.ndarray`)."""
+    """:returns: The latest video frame in OpenCV format (a `CapturedFrame`)."""
     return _dut.get_frame()
 
 

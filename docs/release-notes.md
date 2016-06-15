@@ -30,6 +30,9 @@ UNRELEASED
   `wait_for_motion()`) now has a member `region` which indicates where in the
   video the motion was detected.
 
+* Python API: `get_frame()` and `frames()` now return a `CapturedFrame` object.
+  This is a subclass of `numpy.ndarray`.
+
 ##### Minor fixes and packaging fixes
 
 * `MotionResult` now defines `__nonzero__()`. This means you can write

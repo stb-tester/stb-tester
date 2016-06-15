@@ -89,8 +89,11 @@ class _MappedSample(object):
 
 class CapturedFrame(numpy.ndarray):
     """
-    A subclass of ndarray that we use so we can attach additional metadata to it
-    such as timestamps.
+    `CapturedFrame`s are returned from `stbt.get_frame()` and `stbt.frames()`.
+    They are a subclass of `numpy.ndarray` - the type that OpenCV uses to
+    represent images.  Data is stored in 8-bit, 3 channel BGR format.
+
+    Added in stb-tester v26.
     """
     def __new__(cls, array, dtype=None, order=None, _gst_pts=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
