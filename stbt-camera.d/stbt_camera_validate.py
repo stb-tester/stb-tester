@@ -88,7 +88,7 @@ def length(vec):
 
 
 def svg_to_array(svg):
-    from _stbt.gst_utils import numpy_from_sample
+    from _stbt.gst_utils import array_from_sample
     pipeline = Gst.parse_launch(
         'appsrc name="src" caps="image/svg" ! rsvgdec ! '
         'videoconvert ! appsink caps="video/x-raw,format=BGR" name="sink"')
@@ -101,8 +101,7 @@ def svg_to_array(svg):
     src.emit("end-of-stream")
     pipeline.set_state(Gst.State.NULL)
     pipeline.get_state(0)
-    with numpy_from_sample(sample, readonly=True) as frame:
-        return frame.copy()
+    return array_from_sample(sample)
 
 
 def generate_letters_svg(fgcolour, bgcolour):

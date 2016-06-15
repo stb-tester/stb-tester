@@ -19,7 +19,6 @@ from contextlib import contextmanager
 
 import numpy
 
-from _stbt.gst_utils import Gst, numpy_from_sample
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
 
@@ -204,12 +203,11 @@ class _ArgsEncoder(json.JSONEncoder):
                 "confirm_method": value.confirm_method,
                 "confirm_threshold": value.confirm_threshold,
                 "erode_passes": value.erode_passes}
-        elif isinstance(value, (Gst.Sample, numpy.ndarray)):
+        elif isinstance(value, numpy.ndarray):
             from _stbt.xxhash import Xxhash64
-            with numpy_from_sample(value, readonly=True) as s:
-                h = Xxhash64()
-                h.update(numpy.ascontiguousarray(s).data)
-                return (s.shape, h.hexdigest())
+            h = Xxhash64()
+            h.update(numpy.ascontiguousarray(value).data)
+            return (value.shape, h.hexdigest())
         else:
             json.JSONEncoder.default(self, value)
 

@@ -46,6 +46,10 @@ UNRELEASED
 
 ##### Developer-visible changes
 
+* We no-longer use `with numpy_from_sample` when dealing with frames internally.
+  The new `array_from_sample` and the `CapturedFrame` `ndarray` subclass fulfill
+  a similar job but without needing a `with` block.
+
 #### 25
 
 New features `stbt.FrameObject` and `stbt auto-selftest` that work in tandem to

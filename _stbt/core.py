@@ -36,9 +36,9 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_hacks import gst_iterate
-from _stbt.gst_utils import (get_frame_timestamp, gst_sample_make_writable,
-                             numpy_from_sample, sample_shape)
+from _stbt.gst_utils import (array_from_sample, get_frame_timestamp,
+                             gst_iterate, gst_sample_make_writable,
+                             sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -726,46 +726,44 @@ class DeviceUnderTest(object):
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
-            frame = self._display.get_sample()
+            frame = self._display.pull_frame()
 
         imglog = logging.ImageLogger(
             "match", match_parameters=match_parameters,
             template_name=template.friendly_name)
 
-        with numpy_from_sample(frame, readonly=True) as npframe:
-            region = Region.intersect(_image_region(npframe), region)
+        region = Region.intersect(_image_region(frame), region)
 
-            # Remove this copy once we make numpy_from_sample *not* unmap the
-            # sample when the contextmanager exits, but when no further
-            # references are held to the numpy image.
-            npframe = numpy.copy(npframe)
-            npframe.flags.writeable = False
+        # Remove this copy once we've confirmed that doing so won't cause
+        # push_sample to doodle on the frame later.
+        frame = frame.copy()
+        frame.flags.writeable = False
 
-            # pylint:disable=undefined-loop-variable
+        # pylint:disable=undefined-loop-variable
+        try:
+            for (matched, match_region, first_pass_matched,
+                 first_pass_certainty) in _find_matches(
+                    _crop(frame, region), template.image,
+                    match_parameters, imglog):
+
+                match_region = Region.from_extents(*match_region) \
+                                     .translate(region.x, region.y)
+                result = MatchResult(
+                    get_frame_timestamp(frame), matched, match_region,
+                    first_pass_certainty, frame,
+                    (template.name or template.image), first_pass_matched)
+                imglog.append(matches=result)
+                if grabbed_from_live:
+                    self._display.draw(
+                        result, label="match(%r)" %
+                        os.path.basename(template.friendly_name))
+                yield result
+
+        finally:
             try:
-                for (matched, match_region, first_pass_matched,
-                     first_pass_certainty) in _find_matches(
-                        _crop(npframe, region), template.image,
-                        match_parameters, imglog):
-
-                    match_region = Region.from_extents(*match_region) \
-                                         .translate(region.x, region.y)
-                    result = MatchResult(
-                        get_frame_timestamp(frame), matched, match_region,
-                        first_pass_certainty, npframe,
-                        (template.name or template.image), first_pass_matched)
-                    imglog.append(matches=result)
-                    if grabbed_from_live:
-                        self._display.draw(
-                            result, label="match(%r)" %
-                            os.path.basename(template.friendly_name))
-                    yield result
-
-            finally:
-                try:
-                    _log_match_image_debug(imglog)
-                except Exception:  # pylint:disable=broad-except
-                    pass
+                _log_match_image_debug(imglog)
+            except Exception:  # pylint:disable=broad-except
+                pass
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):
@@ -773,7 +771,7 @@ class DeviceUnderTest(object):
 
         debug("Searching for " + template.friendly_name)
 
-        for sample in self._display.gst_samples(timeout_secs):
+        for sample in self._display.frames(timeout_secs):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
@@ -794,9 +792,8 @@ class DeviceUnderTest(object):
 
         previous_frame_gray = None
 
-        for sample in self._display.gst_samples(timeout_secs):
-            with numpy_from_sample(sample, readonly=True) as frame:
-                frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        for frame in self._display.frames(timeout_secs):
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if previous_frame_gray is None:
                 if (mask_image is not None and
@@ -836,7 +833,8 @@ class DeviceUnderTest(object):
 
             motion = bool(out_region)
 
-            result = MotionResult(sample.get_buffer().pts, motion, out_region)
+            result = MotionResult(
+                get_frame_timestamp(frame), motion, out_region)
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -935,7 +933,7 @@ class DeviceUnderTest(object):
             tesseract_user_patterns=None):
 
         if frame is None:
-            frame = self._display.get_sample()
+            frame = self._display.pull_frame()
 
         if region is None:
             warnings.warn(
@@ -997,12 +995,11 @@ class DeviceUnderTest(object):
         return result
 
     def frames(self, timeout_secs=None):
-        return self._display.frames(timeout_secs)
+        for f in self._display.frames(timeout_secs):
+            yield f.copy(), get_frame_timestamp(f)
 
     def get_frame(self):
-        with numpy_from_sample(
-                self._display.get_sample(), readonly=True) as frame:
-            return frame.copy()
+        return self._display.pull_frame().copy()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -1010,9 +1007,8 @@ class DeviceUnderTest(object):
         if mask:
             mask = _load_mask(mask)
         if frame is None:
-            frame = self._display.get_sample()
-        with numpy_from_sample(frame, readonly=True) as f:
-            greyframe = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
+            frame = self._display.pull_frame()
+        greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
@@ -1039,8 +1035,7 @@ def save_frame(image, filename):
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
     """
-    with numpy_from_sample(image, readonly=True) as imagebuf:
-        cv2.imwrite(filename, imagebuf)
+    cv2.imwrite(filename, image)
 
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0):
@@ -1548,7 +1543,7 @@ class Display(object):
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
-    def get_sample(self, timeout_secs=10):
+    def _get_sample(self, timeout_secs=10):
         try:
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
@@ -1565,23 +1560,20 @@ class Display(object):
             raise UITestError(str(gst_sample))
 
         if isinstance(gst_sample, Gst.Sample):
-            self.last_used_sample = gst_sample
+            self.last_used_sample = array_from_sample(gst_sample)
 
         return gst_sample
 
-    def frames(self, timeout_secs=None):
-        for sample in self.gst_samples(timeout_secs=timeout_secs):
-            with numpy_from_sample(sample, readonly=True) as frame:
-                copy = frame.copy()
-            yield (copy, sample.get_buffer().pts)
+    def pull_frame(self, timeout_secs=10):
+        return array_from_sample(self._get_sample(timeout_secs))
 
-    def gst_samples(self, timeout_secs=None):
+    def frames(self, timeout_secs=None):
         self.start_timestamp = None
 
         with self.lock:
             while True:
                 ddebug("user thread: Getting sample at %s" % time.time())
-                sample = self.get_sample(max(10, timeout_secs))
+                sample = self._get_sample(max(10, timeout_secs))
                 ddebug("user thread: Got sample at %s" % time.time())
                 timestamp = sample.get_buffer().pts
 
@@ -1596,7 +1588,7 @@ class Display(object):
                         return
 
                 try:
-                    yield sample
+                    yield array_from_sample(sample)
                 finally:
                     self.push_sample(sample)
 
@@ -1666,20 +1658,20 @@ class Display(object):
                     self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
-        with numpy_from_sample(sample) as img:
-            # Text:
-            _draw_text(
-                img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
-                (10, 30), (255, 255, 255))
-            for i, x in enumerate(reversed(texts)):
-                origin = (10, (i + 2) * 30)
-                age = float(now - x['start_time']) / (3 * Gst.SECOND)
-                color = (int(255 * max([1 - age, 0.5])),) * 3
-                _draw_text(img, x['text'], origin, color)
+        img = array_from_sample(sample, readwrite=True)
+        # Text:
+        _draw_text(
+            img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
+            (10, 30), (255, 255, 255))
+        for i, x in enumerate(reversed(texts)):
+            origin = (10, (i + 2) * 30)
+            age = float(now - x['start_time']) / (3 * Gst.SECOND)
+            color = (int(255 * max([1 - age, 0.5])),) * 3
+            _draw_text(img, x['text'], origin, color)
 
-            # Regions:
-            for annotation in annotations:
-                annotation.draw(img)
+        # Regions:
+        for annotation in annotations:
+            annotation.draw(img)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
@@ -2466,10 +2458,9 @@ def _tesseract(frame, region, mode, lang, _config,
     else:
         region = intersection
 
-    with numpy_from_sample(frame, readonly=True) as f:
-        return (_tesseract_subprocess(_crop(f, region), mode, lang,
-                                      _config, user_patterns, user_words),
-                region)
+    return (_tesseract_subprocess(_crop(frame, region), mode, lang,
+                                  _config, user_patterns, user_words),
+            region)
 
 
 @imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
@@ -2623,17 +2614,14 @@ def test_wait_for_motion_half_motion_int():
 @contextmanager
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
-        def gst_samples(self, _timeout_secs=10):
+        def frames(self, _timeout_secs=10):
+            from _stbt.gst_utils import CapturedFrame
             data = [
                 numpy.zeros((2, 2, 3), dtype=numpy.uint8),
                 numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
             ]
             for i in range(10):
-                buf = Gst.Buffer.new_wrapped(data[(i // 2) % 2].flatten())
-                buf.pts = i * 1000000000
-                yield gst_sample_make_writable(
-                    Gst.Sample.new(buf, Gst.Caps.from_string(
-                        'video/x-raw,format=BGR,width=2,height=2'), None, None))
+                yield CapturedFrame(data[(i // 2) % 2], _gst_pts=int(i * 1e9))
 
         def draw(self, *_args, **_kwargs):
             pass

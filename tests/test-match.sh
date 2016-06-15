@@ -240,7 +240,7 @@ test_press_until_match_max_presses() {
 test_press_until_match_reads_interval_secs_from_config_file() {
     cat > test-3s.py <<-EOF &&
 	import stbt
-	start = stbt._dut._display.gst_samples().next().get_buffer().pts
+	_, start = stbt.frames().next()
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
 	assert (match.timestamp - start) >= 3e9, (
@@ -250,7 +250,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 
     cat > test-1s.py <<-EOF &&
 	import stbt
-	start = stbt._dut._display.gst_samples().next().get_buffer().pts
+	_, start = stbt.frames().next()
 	match = press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
 	assert (match.timestamp - start) < 3e9, (

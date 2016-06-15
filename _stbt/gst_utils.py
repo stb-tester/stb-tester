@@ -1,5 +1,5 @@
+import ctypes
 import sys
-from contextlib import contextmanager
 
 import gi
 import numpy
@@ -10,86 +10,6 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst  # isort:skip pylint: disable=E0611
 
 Gst.init([])
-
-
-@contextmanager
-def numpy_from_sample(sample, readonly=False):
-    """
-    Allow the contents of a GstSample to be read (and optionally changed) as a
-    numpy array.  The provided numpy array is a view onto the contents of the
-    GstBuffer in the sample provided.  The data is only valid within the `with:`
-    block where this contextmanager is used so the provided array should not
-    be referenced outside the `with:` block.  If you want to use it elsewhere
-    either copy the data with `numpy.ndarray.copy()` or reference the GstSample
-    directly.
-
-    A `numpy.ndarray` may be passed as sample, in which case this
-    contextmanager is a no-op.  This makes it easier to create functions which
-    will accept either numpy arrays or GstSamples providing a migration path
-    for reducing copying in stb-tester.
-
-    :param sample:   Either a GstSample or a `numpy.ndarray` containing the data
-                     you wish to manipulate as a `numpy.ndarray`
-    :param readonly: bool. Determines whether you want to just read or change
-                     the data contained within sample.  If True the GstSample
-                     passed must be writeable or ValueError will be raised.
-                     Use `gst_sample_make_writable` to get a writable
-                     `GstSample`.
-
-    >>> s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
-    ...                    Gst.Caps.from_string("video/x-raw"), None, None)
-    >>> with numpy_from_sample(s) as a:
-    ...     print a
-    [104 101 108 108 111]
-    """
-    if isinstance(sample, numpy.ndarray):
-        yield sample
-        return
-    if not isinstance(sample, Gst.Sample):
-        raise TypeError("numpy_from_gstsample must take a Gst.Sample or a "
-                        "numpy.ndarray.  Received a %s" % str(type(sample)))
-
-    caps = sample.get_caps()
-    flags = Gst.MapFlags.READ
-    if not readonly:
-        flags |= Gst.MapFlags.WRITE
-
-    with map_gst_sample(sample, flags) as buf:
-        array = numpy.frombuffer((buf), dtype=numpy.uint8)
-        array.flags.writeable = not readonly
-        if caps.get_structure(0).get_value('format') in ['BGR', 'RGB']:
-            array.shape = (caps.get_structure(0).get_value('height'),
-                           caps.get_structure(0).get_value('width'),
-                           3)
-        yield array
-
-
-def test_that_mapping_a_sample_readonly_gives_a_readonly_array():
-    Gst.init([])
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
-                       Gst.Caps.from_string("video/x-raw"), None, None)
-    with numpy_from_sample(s, readonly=True) as ro:
-        try:
-            ro[0] = 3
-            assert False, 'Writing elements should have thrown'
-        except (ValueError, RuntimeError):
-            # Different versions of numpy raise different exceptions
-            pass
-
-
-def test_passing_a_numpy_ndarray_as_sample_is_a_noop():
-    a = numpy.ndarray((5, 2))
-    with numpy_from_sample(a) as m:
-        assert a is m
-
-
-def test_that_dimensions_of_array_are_according_to_caps():
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped(
-        "row 1 4 px  row 2 4 px  row 3 4 px  "),
-        Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
-        None, None)
-    with numpy_from_sample(s, readonly=True) as a:
-        assert a.shape == (3, 4, 3)
 
 
 def gst_sample_make_writable(sample):
@@ -110,7 +30,7 @@ def get_frame_timestamp(frame):
     if isinstance(frame, Gst.Sample):
         return frame.get_buffer().pts
     else:
-        return None
+        return getattr(frame, "_gst_pts", None)
 
 
 def sample_shape(sample):
@@ -125,6 +45,115 @@ def sample_shape(sample):
     else:
         raise TypeError("sample_shape must take a Gst.Sample or a "
                         "numpy.ndarray.  Received a %s" % str(type(sample)))
+
+
+class _MappedSample(object):
+    """
+    Implements the numpy array interface for a GstSample, taking care to unmap
+    in its destructor.  This allows us to create numpy arrays backed by the
+    memory from a GstBuffer.
+    """
+    __slots__ = '_ctx', '__array_interface__'
+
+    def __init__(self, sample, readwrite=False):
+        if not isinstance(sample, Gst.Sample):
+            raise TypeError("MappedSample must take a Gst.Sample.  Received a "
+                            "%s" % str(type(sample)))
+
+        flags = Gst.MapFlags.READ
+        if readwrite:
+            flags |= Gst.MapFlags.WRITE
+
+        shape = sample_shape(sample)
+        size = reduce(lambda a, b: a * b, shape, 1)
+
+        ctx = map_gst_sample(sample, flags)
+        data = ctx.__enter__()
+        self._ctx = ctx
+        if len(data) != size:
+            raise ValueError("Provided sample is too small for image of shape "
+                             "%s.  %iB < %iB." % (shape, len(data), size))
+
+        self.__array_interface__ = {
+            "shape": shape,
+            "typestr": "|u1",
+            "data": (ctypes.addressof(data), not readwrite),
+            "version": 3,
+        }
+
+    def __del__(self):
+        self.__array_interface__ = None
+        if self._ctx:
+            self._ctx.__exit__(None, None, None)
+
+
+class CapturedFrame(numpy.ndarray):
+    """
+    A subclass of ndarray that we use so we can attach additional metadata to it
+    such as timestamps.
+    """
+    def __new__(cls, array, dtype=None, order=None, _gst_pts=None):
+        obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
+        obj._gst_pts = _gst_pts  # pylint: disable=protected-access
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        self._gst_pts = getattr(obj, '_gst_pts', None)  # pylint: disable=protected-access,attribute-defined-outside-init
+
+
+def array_from_sample(sample, readwrite=False):
+    return CapturedFrame(
+        _MappedSample(sample, readwrite),
+        _gst_pts=sample.get_buffer().pts)
+
+
+def test_that_array_from_sample_readonly_gives_a_readonly_array():
+    Gst.init([])
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+                       Gst.Caps.from_string("video/x-raw"), None, None)
+    array = array_from_sample(s)
+    try:
+        array[0] = 3
+        assert False, 'Writing elements should have thrown'
+    except (ValueError, RuntimeError):
+        # Different versions of numpy raise different exceptions
+        pass
+
+
+def test_that_array_from_sample_readwrite_gives_a_writable_array():
+    Gst.init([])
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+                       Gst.Caps.from_string("video/x-raw"), None, None)
+    array = array_from_sample(s, readwrite=True)
+    array[0] = ord("j")
+    assert s.get_buffer().extract_dup(0, 5) == "jello"
+
+
+def test_that_array_from_sample_dimensions_of_array_are_according_to_caps():
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(
+        "row 1 4 px  row 2 4 px  row 3 4 px  "),
+        Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
+        None, None)
+    a = array_from_sample(s)
+    assert a.shape == (3, 4, 3)
+
+
+def gst_iterate(gst_iterator):
+    """Wrap a Gst.Iterator to expose the Python iteration protocol.  The
+    gst-python package exposes similar functionality on Gst.Iterator itself so
+    this code should be retired in the future once gst-python is broadly enough
+    available."""
+    result = Gst.IteratorResult.OK
+    while result == Gst.IteratorResult.OK:
+        result, value = gst_iterator.next()
+        if result == Gst.IteratorResult.OK:
+            yield value
+        elif result == Gst.IteratorResult.ERROR:
+            raise RuntimeError("Iteration Error")
+        elif result == Gst.IteratorResult.RESYNC:
+            raise RuntimeError("Iteration Resync")
 
 
 def frames_to_video(outfilename, frames, caps="image/svg",
