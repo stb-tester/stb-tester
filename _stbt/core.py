@@ -2234,49 +2234,53 @@ def _log_match_image_debug(imglog):
         </table>
 
         {% if show_second_pass %}
-        <h5>Second pass (confirmation):</h5>
+          <h5>Second pass (confirmation):</h5>
 
-        <table class="table">
-        <tr>
-          <th>Match #</th>
-          <th>Comparing <b>template</b></th>
-          <th>against <b>source image's region of interest</b></th>
-          {% if match_parameters.confirm_method == "normed-absdiff" %}
-            <th><b>Normalised template</b></th>
-            <th><b>Normalised source</b></th>
+          <p><b>Confirm method:</b> {{match_parameters.confirm_method}}</p>
+
+          {% if match_parameters.confirm_method != "none" %}
+            <table class="table">
+            <tr>
+              <th>Match #</th>
+              <th>Comparing <b>template</b></th>
+              <th>against <b>source image's region of interest</b></th>
+              {% if match_parameters.confirm_method == "normed-absdiff" %}
+                <th><b>Normalised template</b></th>
+                <th><b>Normalised source</b></th>
+              {% endif %}
+              <th><b>Absolute differences</b></th>
+              <th>
+                Differences <b>above confirm_threshold</b>
+                of {{"%.2f"|format(match_parameters.confirm_threshold)}}
+              </th>
+              <th>
+                After <b>eroding</b>
+                {{match_parameters.erode_passes}}
+                {{"time" if match_parameters.erode_passes == 1
+                  else "times"}};
+                the template matches if any differences (white pixels) remain
+              </th>
+            </tr>
+
+            {% for m in matches %}
+              {% if m._first_pass_matched %}
+                <tr>
+                  <td><b>{{loop.index0}}</b></td>
+                  <td>{{link("confirm-template_gray", match=0)}}</td>
+                  <td>{{link("confirm-source_roi_gray", match=loop.index0)}}</td>
+                  {% if match_parameters.confirm_method == "normed-absdiff" %}
+                    <td>{{link("confirm-template_gray_normalized", match=loop.index0)}}</td>
+                    <td>{{link("confirm-source_roi_gray_normalized", match=loop.index0)}}</td>
+                  {% endif %}
+                  <td>{{link("confirm-absdiff", match=loop.index0)}}</td>
+                  <td>{{link("confirm-absdiff_threshold", match=loop.index0)}}</td>
+                  <td>{{link("confirm-absdiff_threshold_erode", match=loop.index0)}}</td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+
+            </table>
           {% endif %}
-          <th><b>Absolute differences</b></th>
-          <th>
-            Differences <b>above confirm_threshold</b>
-            of {{"%.2f"|format(match_parameters.confirm_threshold)}}
-          </th>
-          <th>
-            After <b>eroding</b>
-            {{match_parameters.erode_passes}}
-            {{"time" if match_parameters.erode_passes == 1
-              else "times"}};
-            the template matches if any differences (white pixels) remain
-          </th>
-        </tr>
-
-        {% for m in matches %}
-        {% if m._first_pass_matched %}
-        <tr>
-          <td><b>{{loop.index0}}</b></td>
-          <td>{{link("confirm-template_gray", match=0)}}</td>
-          <td>{{link("confirm-source_roi_gray", match=loop.index0)}}</td>
-          {% if match_parameters.confirm_method == "normed-absdiff" %}
-            <td>{{link("confirm-template_gray_normalized", match=loop.index0)}}</td>
-            <td>{{link("confirm-source_roi_gray_normalized", match=loop.index0)}}</td>
-          {% endif %}
-          <td>{{link("confirm-absdiff", match=loop.index0)}}</td>
-          <td>{{link("confirm-absdiff_threshold", match=loop.index0)}}</td>
-          <td>{{link("confirm-absdiff_threshold_erode", match=loop.index0)}}</td>
-        </tr>
-        {% endif %}
-        {% endfor %}
-
-        </table>
         {% endif %}
 
         <p>For further help please read
