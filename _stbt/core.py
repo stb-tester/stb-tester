@@ -38,7 +38,7 @@ from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, get_frame_timestamp,
                              gst_iterate, gst_sample_make_writable,
-                             numpy_from_sample, sample_shape)
+                             sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -1658,20 +1658,20 @@ class Display(object):
                     self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
-        with numpy_from_sample(sample) as img:
-            # Text:
-            _draw_text(
-                img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
-                (10, 30), (255, 255, 255))
-            for i, x in enumerate(reversed(texts)):
-                origin = (10, (i + 2) * 30)
-                age = float(now - x['start_time']) / (3 * Gst.SECOND)
-                color = (int(255 * max([1 - age, 0.5])),) * 3
-                _draw_text(img, x['text'], origin, color)
+        img = array_from_sample(sample, readwrite=True)
+        # Text:
+        _draw_text(
+            img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
+            (10, 30), (255, 255, 255))
+        for i, x in enumerate(reversed(texts)):
+            origin = (10, (i + 2) * 30)
+            age = float(now - x['start_time']) / (3 * Gst.SECOND)
+            color = (int(255 * max([1 - age, 0.5])),) * 3
+            _draw_text(img, x['text'], origin, color)
 
-            # Regions:
-            for annotation in annotations:
-                annotation.draw(img)
+        # Regions:
+        for annotation in annotations:
+            annotation.draw(img)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
