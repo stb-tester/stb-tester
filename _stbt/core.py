@@ -779,7 +779,12 @@ class DeviceUnderTest(object):
                                os.path.basename(template.friendly_name))
             yield result
 
-    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
+    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None,
+                      region=Region.ALL):
+
+        if mask is not None and region != Region.ALL:
+            raise ValueError("You can't specify both 'mask' and 'region'")
+
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
@@ -897,7 +902,10 @@ class DeviceUnderTest(object):
 
     def wait_for_motion(
             self, timeout_secs=10, consecutive_frames=None,
-            noise_threshold=None, mask=None):
+            noise_threshold=None, mask=None, region=Region.ALL):
+
+        if mask is not None and region != Region.ALL:
+            raise ValueError("You can't specify both 'mask' and 'region'")
 
         if consecutive_frames is None:
             consecutive_frames = get_config('motion', 'consecutive_frames')
@@ -918,7 +926,8 @@ class DeviceUnderTest(object):
             motion_frames, considered_frames))
 
         matches = deque(maxlen=considered_frames)
-        for res in self.detect_motion(timeout_secs, noise_threshold, mask):
+        for res in self.detect_motion(timeout_secs, noise_threshold, mask,
+                                      region):
             matches.append(res.motion)
             if matches.count(True) >= motion_frames:
                 debug("Motion detected.")
