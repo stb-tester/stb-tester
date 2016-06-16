@@ -1,12 +1,14 @@
 from .logging import debug
 
+class HdmiCecError(Exception):
+    pass
 
 class HdmiCecControl(object):
-    cecconfig = {}
-    lib = {}
 
     # Map our recommended keynames (from linux input-event-codes.h) to the
     # equivalent CEC commands.
+    # The mapping between CEC commands and code can be found at http://www.cec-o-matic.com
+    # or in HDMI-CEC specification 1.3a
     _KEYNAMES = {
         "KEY_OK": "14:44:00",
         "KEY_UP": "14:44:01",
@@ -28,34 +30,34 @@ class HdmiCecControl(object):
         debug("libCEC version " + self.lib.VersionToString(self.cecconfig.serverVersion) +
               " loaded: " + self.lib.GetLibInfo())
 
-        if device == 'auto':
-            device = self.DetectAdapter()
+        if device is None:
+            device = self.detect_adapter()
             if device is None:
-                debug("No adapters found")
+                raise HdmiCecError("No adapter found")
         if self.lib.Open(device):
-            debug("connection opened")
+            debug("Connection to CEC adapter opened")
         else:
-            debug("failed to open a connection to the CEC adapter")
+            raise HdmiCecError("Failed to open a connection to the CEC adapter")
 
     def press(self, key):
-        cec_command = self._KEYNAMES.get(key, key)
+        cec_command = self._KEYNAMES.get(key)
         cmd = self.lib.CommandFromString(cec_command)
-        debug("transmit " + key + " as " + cec_command)
+        debug("Transmit " + key + " as " + cec_command)
         if self.lib.Transmit(cmd):
             self.lib.Transmit(self.lib.CommandFromString('14:45'))
-            debug("command sent")
+            debug("Command sent")
         else:
-            debug("failed to send command")
+            raise HdmiCecError("Failed to send command")
 
     # detect an adapter and return the com port path
-    def DetectAdapter(self):
+    def detect_adapter(self):
         retval = None
         adapters = self.lib.DetectAdapters()
         for adapter in adapters:
-            debug("found a CEC adapter:")
-            debug("port:     " + adapter.strComName)
-            debug("vendor:   " + hex(adapter.iVendorId))
-            debug("product:  " + hex(adapter.iProductId))
+            debug("Found a CEC adapter:")
+            debug("Port:     " + adapter.strComName)
+            debug("Vendor:   " + hex(adapter.iVendorId))
+            debug("Product:  " + hex(adapter.iProductId))
             retval = adapter.strComName
         return retval
 
