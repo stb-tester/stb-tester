@@ -1,7 +1,9 @@
 from .logging import debug
 
+
 class HdmiCecError(Exception):
     pass
+
 
 class HdmiCecControl(object):
 
