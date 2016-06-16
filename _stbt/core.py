@@ -954,11 +954,21 @@ class DeviceUnderTest(object):
             motion_frames, considered_frames))
 
         matches = deque(maxlen=considered_frames)
+        motion_count = 0
         for res in self.detect_motion(timeout_secs, noise_threshold, mask):
-            matches.append(res.motion)
-            if matches.count(True) >= motion_frames:
+            motion_count += bool(res)
+            if len(matches) == matches.maxlen:
+                motion_count -= bool(matches.popleft())
+            matches.append(res)
+            if motion_count >= motion_frames:
                 debug("Motion detected.")
-                return res
+                # We want to return the first True motion result as this is when
+                # the motion actually started.
+                for result in matches:
+                    if result:
+                        return result
+                assert False, ("Logic error in wait_for_motion: This code "
+                               "should never be reached")
 
         screenshot = self.get_frame()
         raise MotionTimeout(screenshot, mask, timeout_secs)
@@ -2634,12 +2644,23 @@ def _hocr_elem_region(elem):
 
 def test_wait_for_motion_half_motion_str_2of4():
     with _fake_frames_at_half_motion() as dut:
-        dut.wait_for_motion(consecutive_frames='2/4')
+        res = dut.wait_for_motion(consecutive_frames='2/4')
+        print res
+        assert res.time == 1466084612.
 
 
 def test_wait_for_motion_half_motion_str_2of3():
     with _fake_frames_at_half_motion() as dut:
-        dut.wait_for_motion(consecutive_frames='2/3')
+        res = dut.wait_for_motion(consecutive_frames='2/3')
+        print res
+        assert res.time == 1466084612.
+
+
+def test_wait_for_motion_half_motion_str_4of10():
+    with _fake_frames_at_half_motion() as dut:
+        # Time is not affected by consecutive_frames parameter
+        res = dut.wait_for_motion(consecutive_frames='4/10')
+        assert res.time == 1466084612.
 
 
 def test_wait_for_motion_half_motion_str_3of4():
@@ -2666,10 +2687,18 @@ def _fake_frames_at_half_motion():
         def frames(self, _timeout_secs=10):
             data = [
                 numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
                 numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
             ]
-            for i in range(10):
-                yield CapturedFrame(data[(i // 2) % 2], _gst_pts=int(i * 1e9))
+            # Start with no motion
+            for i in range(6):
+                yield CapturedFrame(data[0], _gst_pts=int(i * 1e9),
+                                    time=1466084606. + i)
+            # Motion starts on 6th frame at time 1466084612.
+            for i in range(6, 20):
+                yield CapturedFrame(data[i % len(data)], _gst_pts=int(i * 1e9),
+                                    time=1466084606. + i)
 
         def draw(self, *_args, **_kwargs):
             pass

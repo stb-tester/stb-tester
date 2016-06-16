@@ -312,7 +312,8 @@ def wait_for_motion(
 
     :param str mask: See `detect_motion`.
 
-    :returns: `MotionResult` when motion is detected.
+    :returns: `MotionResult` when motion is detected.  `result.time` is the time
+              of the first frame in which motion was detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
     """
