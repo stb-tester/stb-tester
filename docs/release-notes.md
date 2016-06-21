@@ -70,7 +70,8 @@ has stbt installed.
 
 * Python API: New base class `stbt.FrameObject` makes it easier to structure
   your test-pack according to the Frame Object pattern. For details see the
-  [stbt.FrameObject reference documentation][stbt.FrameObject].
+  [stbt.FrameObject reference documentation][stbt.FrameObject] and
+  [this tutorial](https://stb-tester.com/videos/example-test-script-navigating-a-menu).
 
 * Python API: New function [stbt.match_all] that searches for *all instances*
   of a reference image within a single video frame. It returns an iterator of
@@ -86,7 +87,8 @@ has stbt installed.
   selftests will also catch unintended changes in the behaviour of your code
   when you are refactoring or changing your Frame Objects.
 
-  For instructions see `stbt auto-selftest --help`.
+  For instructions see `stbt auto-selftest --help` and
+  [this tutorial](https://stb-tester.com/videos/example-test-script-navigating-a-menu).
 
 * New tool: `stbt virtual-stb` configures stb-tester to control and get its
   video from a program running on the local PC. It supports any program that
