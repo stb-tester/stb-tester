@@ -349,7 +349,7 @@ def ocr(frame=None, region=Region.ALL,
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
         See the `tesseract documentation
-        <https://code.google.com/p/tesseract-ocr/wiki/ControlParams>`_
+        <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`_
         for details.
 
     :type tesseract_user_words: list of unicode strings
