@@ -12,7 +12,7 @@ cat > script.$$ <<-EOF
 	frames = 0
 	stbt.frames().next()  # Don't count pipeline startup time
 	start = datetime.datetime.now()
-	for m in stbt.detect_match("template.png", timeout_secs=10):
+	for m in stbt.detect_match("videotestsrc-redblue.png", timeout_secs=10):
 	    frames += 1
 	    print "%s %s %s" % (m.timestamp, bool(m), m.position)
 	    # if not m:
@@ -24,7 +24,6 @@ cat > script.$$ <<-EOF
 trap "rm -f script.$$" EXIT
 
 ../stbt-run \
-    --source-pipeline \
-      "filesrc location=video.mpeg ! tsdemux ! h264parse" \
+    --source-pipeline "filesrc location=video.mpeg" \
     --control none \
     script.$$
