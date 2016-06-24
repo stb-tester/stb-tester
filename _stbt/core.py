@@ -35,8 +35,7 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (array_from_sample, Frame,
-                             get_frame_stream_timestamp_ns, gst_iterate,
+from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
                              gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
@@ -428,23 +427,21 @@ class MatchResult(object):
       difference between frames.  This is here for compatibility reasons only.
       Use ``time`` instead.
     """
-    # pylint: disable=W0621
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
-            timestamp=None, _first_pass_matched=None):
-        self.timestamp = timestamp
+            _first_pass_matched=None):
+        self.time = time
         self.match = match
         self.region = region
         self.first_pass_result = first_pass_result
         self.frame = frame
         self.image = image
-        self.time = time
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
         return (
             "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
-            "frame=<%s>, image=%s, timestamp=%s)" % (
+            "frame=<%s>, image=%s)" % (
                 self.time,
                 self.match,
                 self.region,
@@ -453,12 +450,18 @@ class MatchResult(object):
                     self.frame.shape[1], self.frame.shape[0],
                     self.frame.shape[2]),
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
-                else repr(self.image),
-                self.timestamp))
+                else repr(self.image)))
 
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
 
     def __nonzero__(self):
         return self.match
@@ -514,26 +517,31 @@ class MotionResult(object):
       difference between frames.  This is here for compatibility reasons only.
       Use ``time`` instead.
     """
-    def __init__(self, time, motion, region, timestamp):
+    def __init__(self, time, motion, region):
         self.time = time
         self.motion = motion
         self.region = region
-        self.timestamp = timestamp
 
     def __nonzero__(self):
         return self.motion
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r, timestamp=%s)" % (
-                self.time, self.motion, self.region, self.timestamp))
+            "MotionResult(time=%r, motion=%r, region=%r)" % (
+                self.time, self.motion, self.region))
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
 
 
 def test_motionresult_repr():
     txt = ("MotionResult("
            "time=1466002032.335607, motion=True, "
-           "region=Region(x=321, y=32, right=334, bottom=42), "
-           "timestamp=3356072413)")
+           "region=Region(x=321, y=32, right=334, bottom=42))")
     assert repr(eval(txt)) == txt  # pylint: disable=eval-used
 
 
@@ -580,14 +588,12 @@ class TextMatchResult(object):
       difference between frames.  This is here for compatibility reasons only.
       Use ``time`` instead.
     """
-    def __init__(self, time, match, region, frame, text,
-                 timestamp):
+    def __init__(self, time, match, region, frame, text):
         self.time = time
         self.match = match
         self.region = region
         self.frame = frame
         self.text = text
-        self.timestamp = timestamp
 
     # pylint: disable=E1101
     def __nonzero__(self):
@@ -596,14 +602,20 @@ class TextMatchResult(object):
     def __repr__(self):
         return (
             "TextMatchResult(time=%r, match=%r, region=%r, frame=<%s>, "
-            "text=%r, timestamp=%s)" % (
+            "text=%r)" % (
                 self.time,
                 self.match,
                 self.region,
                 "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
                               self.frame.shape[2]),
-                self.text,
-                self.timestamp))
+                self.text))
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
 
 
 def new_device_under_test_from_config(
@@ -772,7 +784,6 @@ class DeviceUnderTest(object):
                     getattr(frame, "time", None), matched, match_region,
                     first_pass_certainty, frame,
                     (template.name or template.image),
-                    get_frame_stream_timestamp_ns(frame),
                     first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
@@ -856,8 +867,7 @@ class DeviceUnderTest(object):
             motion = bool(out_region)
 
             result = MotionResult(getattr(frame, "time", None), motion,
-                                  out_region,
-                                  get_frame_stream_timestamp_ns(frame))
+                                  out_region)
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -998,12 +1008,11 @@ class DeviceUnderTest(object):
             _config['tessedit_create_txt'] = 0
 
         rts = getattr(frame, "time", None)
-        sts = get_frame_stream_timestamp_ns(frame)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            result = TextMatchResult(rts, False, None, frame, text, sts)
+            result = TextMatchResult(rts, False, None, frame, text)
         else:
             hocr = lxml.etree.fromstring(xml.encode('utf-8'))
             p = _hocr_find_phrase(hocr, text.split())
@@ -1017,9 +1026,9 @@ class DeviceUnderTest(object):
                 box = Region.from_extents(
                     region.x + box.x // 3, region.y + box.y // 3,
                     region.x + box.right // 3, region.y + box.bottom // 3)
-                result = TextMatchResult(rts, True, box, frame, text, sts)
+                result = TextMatchResult(rts, True, box, frame, text)
             else:
-                result = TextMatchResult(rts, False, None, frame, text, sts)
+                result = TextMatchResult(rts, False, None, frame, text)
 
         if result.match:
             debug("match_text: Match found: %s" % str(result))
@@ -1030,7 +1039,7 @@ class DeviceUnderTest(object):
 
     def frames(self, timeout_secs=None):
         for f in self._display.frames(timeout_secs):
-            yield f.copy(), get_frame_stream_timestamp_ns(f)
+            yield f.copy(), int(f.time * 1e9)
 
     def get_frame(self):
         return self._display.pull_frame().copy()
@@ -1443,14 +1452,14 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
-class _Annotation(namedtuple("_Annotation", "pts region label colour")):
+class _Annotation(namedtuple("_Annotation", "time region label colour")):
     MATCHED = (32, 0, 255)  # Red
     NO_MATCH = (32, 255, 255)  # Yellow
 
     @staticmethod
     def from_result(result, label=""):
         colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
-        return _Annotation(result.timestamp, result.region, label, colour)
+        return _Annotation(result.time, result.region, label, colour)
 
     def draw(self, img):
         if not self.region:
@@ -1615,16 +1624,14 @@ class Display(object):
                 ddebug("user thread: Getting sample at %s" % time.time())
                 sample = self._get_sample(max(10, timeout_secs))
                 ddebug("user thread: Got sample at %s" % time.time())
-                timestamp = sample.get_buffer().pts
+                timestamp = sample.time
 
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if (timestamp - self.start_timestamp >
-                            timeout_secs * Gst.SECOND):
-                        debug("timed out: %d - %d > %d" % (
-                            timestamp, self.start_timestamp,
-                            timeout_secs * Gst.SECOND))
+                    if timestamp - self.start_timestamp > timeout_secs:
+                        debug("timed out: %.3f - %.3f > %.3f" % (
+                            timestamp, self.start_timestamp, timeout_secs))
                         return
 
                 try:
@@ -1658,9 +1665,8 @@ class Display(object):
             ddebug("glib thread: reporting exception to user thread: %s" %
                    sample_or_exception)
         else:
-            ddebug("glib thread: new sample (timestamp=%s). Queue.qsize: %d" %
-                   (sample_or_exception.get_buffer().pts,
-                    self.last_sample.qsize()))
+            ddebug("glib thread: new sample (time=%s). Queue.qsize: %d" %
+                   (sample_or_exception.time, self.last_sample.qsize()))
 
         # Drop old frame
         try:
@@ -1677,10 +1683,10 @@ class Display(object):
                     datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
-                    {"text": obj, "duration": duration_secs * Gst.SECOND})
+                    {"text": obj, "duration": duration_secs})
             elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
                 annotation = _Annotation.from_result(obj, label=label)
-                if annotation.pts:
+                if annotation.time:
                     self.annotations.append(annotation)
             else:
                 raise TypeError(
@@ -1688,7 +1694,7 @@ class Display(object):
 
     def push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
-        now = sample.get_buffer().pts
+        now = sample.time
         texts = []
         annotations = []
         with self.annotations_lock:
@@ -1698,9 +1704,9 @@ class Display(object):
                     texts.append(x)
             self.text_annotations = texts[:]
             for annotation in list(self.annotations):
-                if annotation.pts == now:
+                if annotation.time == now:
                     annotations.append(annotation)
-                if now >= annotation.pts:
+                if now >= annotation.time:
                     self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
@@ -1711,7 +1717,7 @@ class Display(object):
             (10, 30), (255, 255, 255))
         for i, x in enumerate(reversed(texts)):
             origin = (10, (i + 2) * 30)
-            age = float(now - x['start_time']) / (3 * Gst.SECOND)
+            age = float(now - x['start_time']) / 3
             color = (int(255 * max([1 - age, 0.5])),) * 3
             _draw_text(img, x['text'], origin, color)
 
@@ -2680,12 +2686,10 @@ def _fake_frames_at_half_motion():
             ]
             # Start with no motion
             for i in range(6):
-                yield Frame(data[0], _gst_pts=int(i * 1e9),
-                            time=1466084606. + i)
+                yield Frame(data[0], time=1466084606. + i)
             # Motion starts on 6th frame at time 1466084612.
             for i in range(6, 20):
-                yield Frame(data[i % len(data)], _gst_pts=int(i * 1e9),
-                            time=1466084606. + i)
+                yield Frame(data[i % len(data)], time=1466084606. + i)
 
         def draw(self, *_args, **_kwargs):
             pass

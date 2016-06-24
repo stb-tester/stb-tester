@@ -26,13 +26,6 @@ def gst_sample_make_writable(sample):
             sample.get_info())
 
 
-def get_frame_stream_timestamp_ns(frame):
-    if isinstance(frame, Gst.Sample):
-        return frame.get_buffer().pts
-    else:
-        return getattr(frame, "_gst_pts", None)
-
-
 def sample_shape(sample):
     if isinstance(sample, numpy.ndarray):
         return sample.shape
@@ -102,23 +95,20 @@ class Frame(numpy.ndarray):
 
     Added in stb-tester v26.
     """
-    def __new__(cls, array, dtype=None, order=None, _gst_pts=None, time=None):
+    def __new__(cls, array, dtype=None, order=None, time=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
-        obj._gst_pts = _gst_pts  # pylint: disable=protected-access
         obj.time = time
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self._gst_pts = getattr(obj, '_gst_pts', None)  # pylint: disable=protected-access,attribute-defined-outside-init
         self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
 
 
 def array_from_sample(sample, readwrite=False):
     return Frame(
         _MappedSample(sample, readwrite),
-        _gst_pts=sample.get_buffer().pts,
         time=getattr(sample, 'time', None))
 
 
