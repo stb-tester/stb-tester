@@ -1484,7 +1484,7 @@ class Display(object):
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
-        self.last_used_sample = None
+        self.last_used_frame = None
         self.source_pipeline = None
         self.start_timestamp = None
         self.underrun_timeout = None
@@ -1610,7 +1610,7 @@ class Display(object):
             raise UITestError(str(gst_sample))
 
         if isinstance(gst_sample, Gst.Sample):
-            self.last_used_sample = array_from_sample(gst_sample)
+            self.last_used_frame = array_from_sample(gst_sample)
 
         return gst_sample
 
