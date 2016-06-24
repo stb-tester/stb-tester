@@ -87,14 +87,13 @@ class _MappedSample(object):
             self._ctx.__exit__(None, None, None)
 
 
-class CapturedFrame(numpy.ndarray):
+class Frame(numpy.ndarray):
     """
-    `CapturedFrame`s are returned from `stbt.get_frame()` and `stbt.frames()`.
+    `Frame`s are returned from `stbt.get_frame()` and `stbt.frames()`.
     They are a subclass of `numpy.ndarray` - the type that OpenCV uses to
     represent images.  Data is stored in 8-bit, 3 channel BGR format.
 
-    In addition to the members inherited from `numpy.ndarray` `CapturedFrame`
-    defines:
+    In addition to the members inherited from `numpy.ndarray` `Frame` defines:
 
     * `time` (float) - the wall-clock time that this video-frame was captured
       as number of seconds since the unix epoch (1970-01-01T00:00:00Z).  This
@@ -117,7 +116,7 @@ class CapturedFrame(numpy.ndarray):
 
 
 def array_from_sample(sample, readwrite=False):
-    return CapturedFrame(
+    return Frame(
         _MappedSample(sample, readwrite),
         _gst_pts=sample.get_buffer().pts,
         time=getattr(sample, 'time', None))

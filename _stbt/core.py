@@ -35,7 +35,7 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (array_from_sample, CapturedFrame,
+from _stbt.gst_utils import (array_from_sample, Frame,
                              get_frame_stream_timestamp_ns, gst_iterate,
                              gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
@@ -2693,12 +2693,12 @@ def _fake_frames_at_half_motion():
             ]
             # Start with no motion
             for i in range(6):
-                yield CapturedFrame(data[0], _gst_pts=int(i * 1e9),
-                                    time=1466084606. + i)
+                yield Frame(data[0], _gst_pts=int(i * 1e9),
+                            time=1466084606. + i)
             # Motion starts on 6th frame at time 1466084612.
             for i in range(6, 20):
-                yield CapturedFrame(data[i % len(data)], _gst_pts=int(i * 1e9),
-                                    time=1466084606. + i)
+                yield Frame(data[i % len(data)], _gst_pts=int(i * 1e9),
+                            time=1466084606. + i)
 
         def draw(self, *_args, **_kwargs):
             pass
