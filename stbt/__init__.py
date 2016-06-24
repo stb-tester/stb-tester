@@ -312,8 +312,9 @@ def wait_for_motion(
 
     :param str mask: See `detect_motion`.
 
-    :returns: `MotionResult` when motion is detected.  `result.time` is the time
-              of the first frame in which motion was detected.
+    :returns: `MotionResult` when motion is detected. The MotionResult's
+        ``time`` attribute is the time of the first frame in which motion was
+        detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
     """
@@ -427,23 +428,26 @@ def frames(timeout_secs=None):
       iterating (for example with ``break``) at any time.
 
     :returns:
-      An ``(image, timestamp)`` tuple for each video frame:
+      A ``(frame, timestamp)`` tuple for each video frame:
 
-      * ``image`` is a `Frame` (that is, an OpenCV image).
-      * ``timestamp`` (deprecated since v26) is a time in nanoseconds. The
-        absolute value isn't related to the system time; what's useful is the
-        relative difference between frames.
+      * ``frame`` is a `stbt.Frame` (that is, an OpenCV image).
+      * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use
+        ``frame.time`` instead.
 
-        This is here for backwards compatibility reasons.  In new tests
-        `image.time` instead.  `time` is better as it is in seconds (rather
-        than nanoseconds) and measures system time so can be compared to
-        `time.time()`.
+    Changed in stb-tester v26: The first item of the tuple is a `stbt.Frame`
+    instead of a `numpy.ndarray`.
     """
     return _dut.frames(timeout_secs)
 
 
 def get_frame():
-    """:returns: The latest video frame in OpenCV format (a `Frame`)."""
+    """Grabs a video frame captured from the system-under-test.
+
+    :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
+
+    Changed in stb-tester v26: Returns a `stbt.Frame` instead of a
+    `numpy.ndarray`.
+    """
     return _dut.get_frame()
 
 

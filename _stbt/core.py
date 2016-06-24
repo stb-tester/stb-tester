@@ -412,7 +412,7 @@ class MatchResult(object):
 
     * ``time`` (float): The time at which the video-frame was captured in
       seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).  Introduced in v26.
+      system time (`time.time()`).
     * ``match``: Boolean result, the same as evaluating `MatchResult` as a bool.
       That is, ``if match_result:`` will behave the same as
       ``if match_result.match:``.
@@ -420,12 +420,13 @@ class MatchResult(object):
     * ``first_pass_result``: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of stb-tester's two-pass image matching algorithm
       (see `MatchParameters` for details).
-    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
+      searched, as given to `match`.
     * ``image``: The template image that was searched for, as given to `match`.
-    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
-      value isn’t related to the system time; what’s useful is the relative
-      difference between frames.  This is here for compatibility reasons only.
-      Use ``time`` instead.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
@@ -502,20 +503,20 @@ def _image_region(image):
 
 
 class MotionResult(object):
-    """The result from `detect_motion`.
+    """The result from `detect_motion` and `wait_for_motion`.
 
     * ``time`` (float): The time at which the video-frame was captured in
       seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).  Introduced in v26.
+      system time (`time.time()`).
     * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.motion:``.
-    * ``region``: The region of the video frame that contained the motion.
-      `None` if no motion detected.
-    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
-      value isn’t related to the system time; what’s useful is the relative
-      difference between frames.  This is here for compatibility reasons only.
-      Use ``time`` instead.
+    * ``region``: The `Region` of the video frame that contained the motion.
+      ``None`` if no motion detected.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(self, time, motion, region):
         self.time = time
@@ -574,19 +575,20 @@ class TextMatchResult(object):
 
     * ``time`` (float): The time at which the video-frame was captured in
       seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).  Introduced in v26.
+      system time (`time.time()`).
     * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.match:``.
     * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
       no text was found.
-    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
+      searched, as given to `match_text`.
     * ``text``: The text (unicode string) that was searched for, as given to
       `match_text`.
-    * ``timestamp`` (int): Video stream timestamp in nanoseconds.  The absolute
-      value isn’t related to the system time; what’s useful is the relative
-      difference between frames.  This is here for compatibility reasons only.
-      Use ``time`` instead.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(self, time, match, region, frame, text):
         self.time = time

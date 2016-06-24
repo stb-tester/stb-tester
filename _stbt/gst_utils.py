@@ -81,19 +81,21 @@ class _MappedSample(object):
 
 
 class Frame(numpy.ndarray):
-    """
-    `Frame`s are returned from `stbt.get_frame()` and `stbt.frames()`.
-    They are a subclass of `numpy.ndarray` - the type that OpenCV uses to
-    represent images.  Data is stored in 8-bit, 3 channel BGR format.
+    """A frame of video.
 
-    In addition to the members inherited from `numpy.ndarray` `Frame` defines:
+    A ``Frame`` is what you get from `stbt.get_frame` and `stbt.frames`. It is
+    a subclass of `numpy.ndarray`, which is the type that OpenCV uses to
+    represent images. Data is stored in 8-bit, 3 channel BGR format.
 
-    * `time` (float) - the wall-clock time that this video-frame was captured
-      as number of seconds since the unix epoch (1970-01-01T00:00:00Z).  This
-      is the same format as returned from the Python standard library function
-      `time.time()`.
+    In addition to the members inherited from `numpy.ndarray`, `Frame` defines
+    the following attributes:
 
-    Added in stb-tester v26.
+    * ``time`` (float) - the wall-clock time that this video-frame was captured
+      as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This is
+      the same format used by the Python standard library function `time.time`.
+
+    ``Frame`` was added in stb-tester v26.
+
     """
     def __new__(cls, array, dtype=None, order=None, time=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)

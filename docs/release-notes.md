@@ -21,22 +21,34 @@ UNRELEASED
 ##### Breaking changes since 25
 
 * `TextMatchResult` (returned from `match_text`) and `MotionResult` (returned
-  from `wait_for_motion` no longer derive from `tuple`. We don't expect that
+  from `wait_for_motion`) no longer derive from `tuple`. We don't expect that
   this will break any real-life test scripts.
 
 ##### New features
 
-* Python API: `MotionResult` (returned from `detect_motion()` and
-  `wait_for_motion()`) now has a member `region` which indicates where in the
-  video the motion was detected.
+* Python API: `stbt.get_frame` and `stbt.frames` now return a `stbt.Frame`
+  instead of a `numpy.ndarray`. `Frame` is a subclass of `numpy.ndarray` with
+  an additional attribute: `time`. This is the time at which the video-frame
+  was captured, as a floating point number expressed in seconds since the epoch
+  (so you can compare it against Python's `time.time`).
 
-* Python API: `get_frame()` and `frames()` now return a `Frame` object.
-  This is a subclass of `numpy.ndarray`.
+  Note that `stbt.frames()` yields pairs of `frame, timestamp`. The `timestamp`
+  element of that pair is now deprecated (it's a number in nanoseconds not
+  seconds, and it isn't related to the system time). Use the frame's `time`
+  attribute instead.
+
+* Python API: `MatchResult`, `TextMatchResult`, and `MotionResult` have a new
+  `time` attribute. This is the time at which the matching video-frame was
+  captured. The `timestamp` attribute of these classes is now deprecated. See
+  the previous bullet point for details.
+
+* Python API: `MotionResult` has a new `region` attribute which indicates where
+  in the frame the motion was detected.
 
 ##### Minor fixes and packaging fixes
 
-* `MotionResult` now defines `__nonzero__()`. This means you can write
-  `if result:` rather than having to write `if result.motion`.  This is a minor
+* `MotionResult` now defines `__nonzero__`. This means you can write
+  `if result:` rather than having to write `if result.motion`. This is a minor
   ergonomic improvement for consistency with `MatchResult` and
   `TextMatchResult`.
 
@@ -47,11 +59,14 @@ UNRELEASED
 * The debug log output of `match`, `wait_for_match` and `match_text` shows the
   matching region as (x, y, right, bottom) instead of (x, y, width, height).
 
-##### Developer-visible changes
+##### Maintainer-visible changes
 
-* We no-longer use `with numpy_from_sample` when dealing with frames internally.
-  The new `array_from_sample` and the `Frame` `ndarray` subclass fulfill a
-  similar job but without needing a `with` block.
+* Video frames are now reference-counted, so we no longer need our `with
+  numpy_from_sample` context manager when dealing with frames internally. We
+  still return a *copy* from `stbt.get_frame` and `stbt.frames` because we
+  haven't yet tested that users can change these frames without affecting the
+  output video recording, but we intend to remove the copy in a future release.
+
 
 #### 25
 
@@ -302,7 +317,7 @@ New `stbt batch run --shuffle` option to run test cases in a random order.
   fades out over a few seconds. This makes it easier to distinguish the new
   messages from the old messages.
 
-##### Developer-visible changes since 22
+##### Maintainer-visible changes since 22
 
 * Much of the code has moved from `stbt/__init__.py` to `_stbt/core.py`. This
   is part of the work in progress to allow `stbt` to be used as a library from
@@ -460,7 +475,7 @@ and adds no information.
 
 [#264]: https://github.com/stb-tester/stb-tester/issues/264
 
-##### Developer-visible changes since 0.21
+##### Maintainer-visible changes since 0.21
 
 * `stbt power` is now implemented in Python rather than bash, although for the
   time being it still calls back into the bash implementation to control/query
@@ -597,7 +612,7 @@ Composable API, match_text, stbt camera, triaging improvements
 * The Fedora package now installs `libvpx` if it's missing -- we need it for
   the videos recorded by `stbt batch run` and `stbt run --save-video`.
 
-##### Developer-visible changes since 0.20
+##### Maintainer-visible changes since 0.20
 
 * The `stbt.py` python module has been split into a python package
   (`stbt/__init__.py`, `stbt/config.py`, etc). This is for code organisation
@@ -699,7 +714,7 @@ Other changes:
   gstreamer1-plugins-bad-free-extras (for the GStreamer `decklinksrc` element
   for the Blackmagic Intensity Pro).
 
-##### Developer-visible changes since 0.19 beta
+##### Maintainer-visible changes since 0.19 beta
 
 * `make check` now passes with pylint 1.x (and it continues to pass with pylint
   0.x).
