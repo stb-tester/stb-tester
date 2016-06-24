@@ -430,26 +430,13 @@ class MatchResult(object):
     """
     # pylint: disable=W0621
     def __init__(
-            self, time, match, region, first_pass_result, frame=None,
-            image=None, timestamp=None, _first_pass_matched=None):
+            self, time, match, region, first_pass_result, frame, image,
+            timestamp=None, _first_pass_matched=None):
         self.timestamp = timestamp
         self.match = match
         self.region = region
         self.first_pass_result = first_pass_result
-        if frame is None:
-            warnings.warn(
-                "Creating a 'MatchResult' without specifying 'frame' is "
-                "deprecated. In a future release of stb-tester the 'frame' "
-                "parameter will be mandatory.",
-                DeprecationWarning, stacklevel=2)
         self.frame = frame
-        if image is None:
-            warnings.warn(
-                "Creating a 'MatchResult' without specifying 'image' is "
-                "deprecated. In a future release of stb-tester the 'image' "
-                "parameter will be mandatory.",
-                DeprecationWarning, stacklevel=2)
-            image = ""
         self.image = image
         self.time = time
         self._first_pass_matched = _first_pass_matched
