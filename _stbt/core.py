@@ -1481,11 +1481,15 @@ class Display(object):
                  mainloop, save_video="",
                  restart_source=False,
                  transformation_pipeline='identity'):
+
+        import time
+
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
         self.last_used_frame = None
         self.source_pipeline = None
+        self.init_time = time.time()
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
@@ -1648,6 +1652,11 @@ class Display(object):
             Gst.Format.TIME, sample.get_buffer().pts)
         sample.time = (
             float(appsink.base_time + running_time) / 1e9)
+
+        if (sample.time > self.init_time + 31536000 or
+                sample.time < self.init_time - 31536000):  # 1 year
+            warn("Received frame with suspicious timestamp: %f. Check your "
+                 "source-pipeline configuration." % sample.time)
 
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
