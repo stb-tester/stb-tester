@@ -224,7 +224,8 @@ test_detect_motion_visualisation() {
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v \
-        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true" \
+        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true \
+                           ! image/png,framerate=25/1" \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
         detect_motion.py &
     source_pid=$!
