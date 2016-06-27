@@ -134,7 +134,7 @@ except Exception as e:  # pylint: disable=W0703
     if hasattr(e, "screenshot") and e.screenshot is not None:
         screenshot = e.screenshot
     elif stbt._dut._display:  # pylint: disable=W0212
-        screenshot = stbt._dut._display.last_used_sample  # pylint: disable=W0212
+        screenshot = stbt._dut._display.last_used_frame  # pylint: disable=W0212
     else:
         screenshot = None
 

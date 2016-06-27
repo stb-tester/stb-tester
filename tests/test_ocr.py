@@ -153,8 +153,9 @@ def test_match_text_stringify_result():
     result = stbt.match_text(u"Onion Bhaji", frame=frame)
 
     assert re.match(
-        r"TextMatchResult\(timestamp=None, match=True, region=Region\(.*\), "
-        r"frame=<1280x720x3>, text=u'Onion Bhaji'\)", str(result))
+        r"TextMatchResult\(time=None, match=True, region=Region\(.*\), "
+        r"frame=<1280x720x3>, text=u'Onion Bhaji'\)",
+        str(result))
 
 
 def test_that_text_region_is_correct_even_with_regions_larger_than_frame():

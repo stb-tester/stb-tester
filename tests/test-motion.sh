@@ -91,18 +91,24 @@ test_detect_motion_reports_motion() {
 
 test_detect_motion_reports_valid_timestamp() {
     cat > test.py <<-EOF
-	last_timestamp=None
+	import time
+	
+	start_time = time.time()
+	last_timestamp = None
 	for motion_result in detect_motion():
+	    assert motion_result.time >= start_time
 	    if last_timestamp != None:
-	        if motion_result.timestamp - last_timestamp >= 0:
+	        if motion_result.time - last_timestamp >= 0:
 	            import sys
+	            assert motion_result.time <= time.time()
 	            sys.exit(0)
 	        else:
-	            raise Exception("Invalid timestamps reported: %d - %d." % (
-	                            last_timestamp, motion_result.timestamp))
-	    if motion_result.timestamp == None:
+	            raise Exception("Invalid timestamps reported: %f - %f." % (
+	                            last_timestamp,
+	                            motion_result.time))
+	    if motion_result.time == None:
 	        raise Exception("Empty timestamp reported.")
-	    last_timestamp = motion_result.timestamp
+	    last_timestamp = motion_result.time
 	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt run -v test.py
@@ -218,7 +224,8 @@ test_detect_motion_visualisation() {
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v \
-        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true" \
+        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true \
+                           ! image/png,framerate=25/1" \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
         detect_motion.py &
     source_pid=$!

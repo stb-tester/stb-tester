@@ -447,6 +447,25 @@ test_clock_visualisation() {
         verify.py
 }
 
+test_that_get_frame_time_is_wall_time() {
+    cat > test.py <<-EOF &&
+	import stbt, time
+
+	f = stbt.get_frame()
+	t = time.time()
+
+	print "stbt.get_frame().time:", f.time
+	print "time.time():", t
+	print "latency:", t - f.time
+
+	# get_frame() gives us the last frame that arrived.  This may arrived a
+	# little time ago and have been waiting in a buffer.
+	assert t - 0.1 < f.time < t
+	EOF
+
+    stbt run -vv test.py
+}
+
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
 	import stbt

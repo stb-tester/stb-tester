@@ -26,13 +26,6 @@ def gst_sample_make_writable(sample):
             sample.get_info())
 
 
-def get_frame_timestamp(frame):
-    if isinstance(frame, Gst.Sample):
-        return frame.get_buffer().pts
-    else:
-        return getattr(frame, "_gst_pts", None)
-
-
 def sample_shape(sample):
     if isinstance(sample, numpy.ndarray):
         return sample.shape
@@ -87,26 +80,38 @@ class _MappedSample(object):
             self._ctx.__exit__(None, None, None)
 
 
-class CapturedFrame(numpy.ndarray):
+class Frame(numpy.ndarray):
+    """A frame of video.
+
+    A ``Frame`` is what you get from `stbt.get_frame` and `stbt.frames`. It is
+    a subclass of `numpy.ndarray`, which is the type that OpenCV uses to
+    represent images. Data is stored in 8-bit, 3 channel BGR format.
+
+    In addition to the members inherited from `numpy.ndarray`, `Frame` defines
+    the following attributes:
+
+    * ``time`` (float) - the wall-clock time that this video-frame was captured
+      as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This is
+      the same format used by the Python standard library function `time.time`.
+
+    ``Frame`` was added in stb-tester v26.
+
     """
-    A subclass of ndarray that we use so we can attach additional metadata to it
-    such as timestamps.
-    """
-    def __new__(cls, array, dtype=None, order=None, _gst_pts=None):
+    def __new__(cls, array, dtype=None, order=None, time=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
-        obj._gst_pts = _gst_pts  # pylint: disable=protected-access
+        obj.time = time
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self._gst_pts = getattr(obj, '_gst_pts', None)  # pylint: disable=protected-access,attribute-defined-outside-init
+        self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
 
 
 def array_from_sample(sample, readwrite=False):
-    return CapturedFrame(
+    return Frame(
         _MappedSample(sample, readwrite),
-        _gst_pts=sample.get_buffer().pts)
+        time=getattr(sample, 'time', None))
 
 
 def test_that_array_from_sample_readonly_gives_a_readonly_array():

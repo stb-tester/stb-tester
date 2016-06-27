@@ -21,7 +21,6 @@ import Queue
 import re
 import subprocess
 import threading
-import time
 import traceback
 import warnings
 from collections import deque, namedtuple
@@ -36,9 +35,8 @@ from kitchen.text.converters import to_bytes
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (array_from_sample, get_frame_timestamp,
-                             gst_iterate, gst_sample_make_writable,
-                             sample_shape)
+from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
+                             gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
 
 gi.require_version("Gst", "1.0")
@@ -412,7 +410,9 @@ def _bounding_box(a, b):
 class MatchResult(object):
     """The result from `match`.
 
-    * ``timestamp``: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).
     * ``match``: Boolean result, the same as evaluating `MatchResult` as a bool.
       That is, ``if match_result:`` will behave the same as
       ``if match_result.match:``.
@@ -420,39 +420,30 @@ class MatchResult(object):
     * ``first_pass_result``: Value between 0 (poor) and 1.0 (excellent match)
       from the first pass of stb-tester's two-pass image matching algorithm
       (see `MatchParameters` for details).
-    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
+      searched, as given to `match`.
     * ``image``: The template image that was searched for, as given to `match`.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
-    # pylint: disable=W0621
     def __init__(
-            self, timestamp, match, region, first_pass_result, frame=None,
-            image=None, _first_pass_matched=None):
-        self.timestamp = timestamp
+            self, time, match, region, first_pass_result, frame, image,
+            _first_pass_matched=None):
+        self.time = time
         self.match = match
         self.region = region
         self.first_pass_result = first_pass_result
-        if frame is None:
-            warnings.warn(
-                "Creating a 'MatchResult' without specifying 'frame' is "
-                "deprecated. In a future release of stb-tester the 'frame' "
-                "parameter will be mandatory.",
-                DeprecationWarning, stacklevel=2)
         self.frame = frame
-        if image is None:
-            warnings.warn(
-                "Creating a 'MatchResult' without specifying 'image' is "
-                "deprecated. In a future release of stb-tester the 'image' "
-                "parameter will be mandatory.",
-                DeprecationWarning, stacklevel=2)
-            image = ""
         self.image = image
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
         return (
-            "MatchResult(timestamp=%r, match=%r, region=%r, "
-            "first_pass_result=%r, frame=<%s>, image=%s)" % (
-                self.timestamp,
+            "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
+            "frame=<%s>, image=%s)" % (
+                self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
@@ -465,6 +456,13 @@ class MatchResult(object):
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
 
     def __nonzero__(self):
         return self.match
@@ -505,17 +503,23 @@ def _image_region(image):
 
 
 class MotionResult(object):
-    """The result from `detect_motion`.
+    """The result from `detect_motion` and `wait_for_motion`.
 
-    * `timestamp`: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).
     * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.motion:``.
-    * ``region``: The region of the video frame that contained the motion.
-      `None` if no motion detected.
+    * ``region``: The `Region` of the video frame that contained the motion.
+      ``None`` if no motion detected.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
-    def __init__(self, timestamp, motion, region=None):
-        self.timestamp = timestamp
+    def __init__(self, time, motion, region):
+        self.time = time
         self.motion = motion
         self.region = region
 
@@ -523,8 +527,23 @@ class MotionResult(object):
         return self.motion
 
     def __repr__(self):
-        return "MotionResult(timestamp=%r, motion=%r, region=%r)" % (
-            self.timestamp, self.motion, self.region)
+        return (
+            "MotionResult(time=%r, motion=%r, region=%r)" % (
+                self.time, self.motion, self.region))
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
+
+
+def test_motionresult_repr():
+    txt = ("MotionResult("
+           "time=1466002032.335607, motion=True, "
+           "region=Region(x=321, y=32, right=334, bottom=42))")
+    assert repr(eval(txt)) == txt  # pylint: disable=eval-used
 
 
 class OcrMode(IntEnum):
@@ -554,18 +573,25 @@ class OcrMode(IntEnum):
 class TextMatchResult(object):
     """The result from `match_text`.
 
-    * ``timestamp``: Video stream timestamp.
+    * ``time`` (float): The time at which the video-frame was captured in
+      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
+      system time (`time.time()`).
     * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
       bool. That is, ``if result:`` will behave the same as
       ``if result.match:``.
     * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
       no text was found.
-    * ``frame``: The video frame that was searched, in OpenCV format.
+    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
+      searched, as given to `match_text`.
     * ``text``: The text (unicode string) that was searched for, as given to
       `match_text`.
+    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
+      instead.
+
+    The ``time`` attribute was added in stb-tester v26.
     """
-    def __init__(self, timestamp, match, region, frame, text):
-        self.timestamp = timestamp
+    def __init__(self, time, match, region, frame, text):
+        self.time = time
         self.match = match
         self.region = region
         self.frame = frame
@@ -577,14 +603,21 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(timestamp=%r, match=%r, region=%r, frame=<%s>, "
+            "TextMatchResult(time=%r, match=%r, region=%r, frame=<%s>, "
             "text=%r)" % (
-                self.timestamp,
+                self.time,
                 self.match,
                 self.region,
                 "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
                               self.frame.shape[2]),
                 self.text))
+
+    @property
+    def timestamp(self):
+        if self.time is None:
+            return None
+        else:
+            return int(self.time * 1e9)
 
 
 def new_device_under_test_from_config(
@@ -669,6 +702,7 @@ class DeviceUnderTest(object):
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
+        import time
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
@@ -749,9 +783,10 @@ class DeviceUnderTest(object):
                 match_region = Region.from_extents(*match_region) \
                                      .translate(region.x, region.y)
                 result = MatchResult(
-                    get_frame_timestamp(frame), matched, match_region,
+                    getattr(frame, "time", None), matched, match_region,
                     first_pass_certainty, frame,
-                    (template.name or template.image), first_pass_matched)
+                    (template.name or template.image),
+                    first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
                     self._display.draw(
@@ -833,8 +868,8 @@ class DeviceUnderTest(object):
 
             motion = bool(out_region)
 
-            result = MotionResult(
-                get_frame_timestamp(frame), motion, out_region)
+            result = MotionResult(getattr(frame, "time", None), motion,
+                                  out_region)
             self._display.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
@@ -918,11 +953,21 @@ class DeviceUnderTest(object):
             motion_frames, considered_frames))
 
         matches = deque(maxlen=considered_frames)
+        motion_count = 0
         for res in self.detect_motion(timeout_secs, noise_threshold, mask):
-            matches.append(res.motion)
-            if matches.count(True) >= motion_frames:
+            motion_count += bool(res)
+            if len(matches) == matches.maxlen:
+                motion_count -= bool(matches.popleft())
+            matches.append(res)
+            if motion_count >= motion_frames:
                 debug("Motion detected.")
-                return res
+                # We want to return the first True motion result as this is when
+                # the motion actually started.
+                for result in matches:
+                    if result:
+                        return result
+                assert False, ("Logic error in wait_for_motion: This code "
+                               "should never be reached")
 
         screenshot = self.get_frame()
         raise MotionTimeout(screenshot, mask, timeout_secs)
@@ -964,12 +1009,12 @@ class DeviceUnderTest(object):
         if _tesseract_version() >= LooseVersion('3.04'):
             _config['tessedit_create_txt'] = 0
 
-        ts = get_frame_timestamp(frame)
+        rts = getattr(frame, "time", None)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
                                  user_words=text.split())
         if xml == '':
-            result = TextMatchResult(ts, False, None, frame, text)
+            result = TextMatchResult(rts, False, None, frame, text)
         else:
             hocr = lxml.etree.fromstring(xml.encode('utf-8'))
             p = _hocr_find_phrase(hocr, text.split())
@@ -983,9 +1028,9 @@ class DeviceUnderTest(object):
                 box = Region.from_extents(
                     region.x + box.x // 3, region.y + box.y // 3,
                     region.x + box.right // 3, region.y + box.bottom // 3)
-                result = TextMatchResult(ts, True, box, frame, text)
+                result = TextMatchResult(rts, True, box, frame, text)
             else:
-                result = TextMatchResult(ts, False, None, frame, text)
+                result = TextMatchResult(rts, False, None, frame, text)
 
         if result.match:
             debug("match_text: Match found: %s" % str(result))
@@ -996,7 +1041,7 @@ class DeviceUnderTest(object):
 
     def frames(self, timeout_secs=None):
         for f in self._display.frames(timeout_secs):
-            yield f.copy(), get_frame_timestamp(f)
+            yield f.copy(), int(f.time * 1e9)
 
     def get_frame(self):
         return self._display.pull_frame().copy()
@@ -1092,6 +1137,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
 
     ``wait_until`` was added in stb-tester v22.
     """
+    import time
     expiry_time = time.time() + timeout_secs
     while True:
         e = callable_()
@@ -1408,14 +1454,14 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
-class _Annotation(namedtuple("_Annotation", "pts region label colour")):
+class _Annotation(namedtuple("_Annotation", "time region label colour")):
     MATCHED = (32, 0, 255)  # Red
     NO_MATCH = (32, 255, 255)  # Yellow
 
     @staticmethod
     def from_result(result, label=""):
         colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
-        return _Annotation(result.timestamp, result.region, label, colour)
+        return _Annotation(result.time, result.region, label, colour)
 
     def draw(self, img):
         if not self.region:
@@ -1435,11 +1481,15 @@ class Display(object):
                  mainloop, save_video="",
                  restart_source=False,
                  transformation_pipeline='identity'):
+
+        import time
+
         self.novideo = False
         self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
-        self.last_used_sample = None
+        self.last_used_frame = None
         self.source_pipeline = None
+        self.init_time = time.time()
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
@@ -1523,6 +1573,10 @@ class Display(object):
         appsink = self.source_pipeline.get_by_name("appsink")
         appsink.connect("new-sample", self.on_new_sample)
 
+        # A realtime clock gives timestamps compatible with time.time()
+        self.source_pipeline.use_clock(
+            Gst.SystemClock(clock_type=Gst.ClockType.REALTIME))
+
         if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
             # Hauppauge HDPVR capture device.
@@ -1560,7 +1614,7 @@ class Display(object):
             raise UITestError(str(gst_sample))
 
         if isinstance(gst_sample, Gst.Sample):
-            self.last_used_sample = array_from_sample(gst_sample)
+            self.last_used_frame = array_from_sample(gst_sample)
 
         return gst_sample
 
@@ -1568,6 +1622,7 @@ class Display(object):
         return array_from_sample(self._get_sample(timeout_secs))
 
     def frames(self, timeout_secs=None):
+        import time
         self.start_timestamp = None
 
         with self.lock:
@@ -1575,16 +1630,14 @@ class Display(object):
                 ddebug("user thread: Getting sample at %s" % time.time())
                 sample = self._get_sample(max(10, timeout_secs))
                 ddebug("user thread: Got sample at %s" % time.time())
-                timestamp = sample.get_buffer().pts
+                timestamp = sample.time
 
                 if timeout_secs is not None:
                     if not self.start_timestamp:
                         self.start_timestamp = timestamp
-                    if (timestamp - self.start_timestamp >
-                            timeout_secs * Gst.SECOND):
-                        debug("timed out: %d - %d > %d" % (
-                            timestamp, self.start_timestamp,
-                            timeout_secs * Gst.SECOND))
+                    if timestamp - self.start_timestamp > timeout_secs:
+                        debug("timed out: %.3f - %.3f > %.3f" % (
+                            timestamp, self.start_timestamp, timeout_secs))
                         return
 
                 try:
@@ -1594,6 +1647,17 @@ class Display(object):
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
+
+        running_time = sample.get_segment().to_running_time(
+            Gst.Format.TIME, sample.get_buffer().pts)
+        sample.time = (
+            float(appsink.base_time + running_time) / 1e9)
+
+        if (sample.time > self.init_time + 31536000 or
+                sample.time < self.init_time - 31536000):  # 1 year
+            warn("Received frame with suspicious timestamp: %f. Check your "
+                 "source-pipeline configuration." % sample.time)
+
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
@@ -1612,9 +1676,8 @@ class Display(object):
             ddebug("glib thread: reporting exception to user thread: %s" %
                    sample_or_exception)
         else:
-            ddebug("glib thread: new sample (timestamp=%s). Queue.qsize: %d" %
-                   (sample_or_exception.get_buffer().pts,
-                    self.last_sample.qsize()))
+            ddebug("glib thread: new sample (time=%s). Queue.qsize: %d" %
+                   (sample_or_exception.time, self.last_sample.qsize()))
 
         # Drop old frame
         try:
@@ -1631,10 +1694,10 @@ class Display(object):
                     datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
-                    {"text": obj, "duration": duration_secs * Gst.SECOND})
+                    {"text": obj, "duration": duration_secs})
             elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
                 annotation = _Annotation.from_result(obj, label=label)
-                if annotation.pts:
+                if annotation.time:
                     self.annotations.append(annotation)
             else:
                 raise TypeError(
@@ -1642,7 +1705,7 @@ class Display(object):
 
     def push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
-        now = sample.get_buffer().pts
+        now = sample.time
         texts = []
         annotations = []
         with self.annotations_lock:
@@ -1652,9 +1715,9 @@ class Display(object):
                     texts.append(x)
             self.text_annotations = texts[:]
             for annotation in list(self.annotations):
-                if annotation.pts == now:
+                if annotation.time == now:
                     annotations.append(annotation)
-                if now >= annotation.pts:
+                if now >= annotation.time:
                     self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
@@ -1665,7 +1728,7 @@ class Display(object):
             (10, 30), (255, 255, 255))
         for i, x in enumerate(reversed(texts)):
             origin = (10, (i + 2) * 30)
-            age = float(now - x['start_time']) / (3 * Gst.SECOND)
+            age = float(now - x['start_time']) / 3
             color = (int(255 * max([1 - age, 0.5])),) * 3
             _draw_text(img, x['text'], origin, color)
 
@@ -2585,12 +2648,23 @@ def _hocr_elem_region(elem):
 
 def test_wait_for_motion_half_motion_str_2of4():
     with _fake_frames_at_half_motion() as dut:
-        dut.wait_for_motion(consecutive_frames='2/4')
+        res = dut.wait_for_motion(consecutive_frames='2/4')
+        print res
+        assert res.time == 1466084612.
 
 
 def test_wait_for_motion_half_motion_str_2of3():
     with _fake_frames_at_half_motion() as dut:
-        dut.wait_for_motion(consecutive_frames='2/3')
+        res = dut.wait_for_motion(consecutive_frames='2/3')
+        print res
+        assert res.time == 1466084612.
+
+
+def test_wait_for_motion_half_motion_str_4of10():
+    with _fake_frames_at_half_motion() as dut:
+        # Time is not affected by consecutive_frames parameter
+        res = dut.wait_for_motion(consecutive_frames='4/10')
+        assert res.time == 1466084612.
 
 
 def test_wait_for_motion_half_motion_str_3of4():
@@ -2615,13 +2689,18 @@ def test_wait_for_motion_half_motion_int():
 def _fake_frames_at_half_motion():
     class FakeDisplay(object):
         def frames(self, _timeout_secs=10):
-            from _stbt.gst_utils import CapturedFrame
             data = [
                 numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
                 numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
             ]
-            for i in range(10):
-                yield CapturedFrame(data[(i // 2) % 2], _gst_pts=int(i * 1e9))
+            # Start with no motion
+            for i in range(6):
+                yield Frame(data[0], time=1466084606. + i)
+            # Motion starts on 6th frame at time 1466084612.
+            for i in range(6, 20):
+                yield Frame(data[i % len(data)], time=1466084606. + i)
 
         def draw(self, *_args, **_kwargs):
             pass
