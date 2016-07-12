@@ -14,12 +14,6 @@ Paste in the following checklists:
 * [ ] `git tag -a v$version`
 * [ ] `git push origin v$version`
 
-Fedora packages:
-
-* [ ] `extra/fedora/fedora-shell.sh -c "make srpm && sudo make rpm"`
-* [ ] `extra/fedora/test-rpm.sh stb-tester-$version-1.fc23.x86_64.rpm`
-* [ ] `extra/fedora/copr-publish.sh stb-tester-$version-1.fc23.src.rpm`
-
 Ubuntu packages:
 
 * [ ] `extra/debian/ubuntu-shell.sh -c "make deb"`

@@ -52,12 +52,8 @@ Here are a few guidelines to keep in mind when submitting a pull request:
 
 * If you add new run-time dependencies:
 
-    * The dependencies must be available in the Ubuntu and Fedora repositories
-      for all [Ubuntu current releases] and [Fedora current releases]. Python
-      packages that are only available from PyPI or from PPAs aren't allowed.
-
-    * Add the dependencies to the Fedora package in
-      `extra/fedora/stb-tester.spec.in`.
+    * The dependencies should be available in the Ubuntu repositories for all
+      [Ubuntu current releases].
 
     * Add the dependencies to the Ubuntu package in `extra/debian/control`.
       Note that you may need to list the new dependency under "Build-Depends"
@@ -80,5 +76,4 @@ really do appreciate your contribution.
 [Travis set-up instructions]: http://docs.travis-ci.com/user/getting-started/
 [GitHub branches view]: https://github.com/stb-tester/stb-tester/branches
 [Ubuntu current releases]: https://wiki.ubuntu.com/Releases#Current
-[Fedora current releases]: https://fedoraproject.org/wiki/Releases#Current_Supported_Releases
 [MAINTAINERS.md]: https://github.com/stb-tester/stb-tester/blob/master/MAINTAINERS.md

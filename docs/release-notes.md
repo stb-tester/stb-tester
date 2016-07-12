@@ -20,6 +20,10 @@ UNRELEASED
 
 ##### Breaking changes since 25
 
+* We no longer provide RPM packages for Fedora. Download statistics indicate
+  that everybody is using Ubuntu. Please contact the mailing list if you'd like
+  to maintain the Fedora packages.
+
 * `TextMatchResult` (returned from `match_text`) and `MotionResult` (returned
   from `wait_for_motion`) no longer derive from `tuple`. We don't expect that
   this will break any real-life test scripts.
