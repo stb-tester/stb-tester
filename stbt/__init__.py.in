@@ -11,6 +11,8 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 from __future__ import absolute_import
 
+import sys
+sys.path.insert(0, "@LIBEXECDIR@/stbt")
 import _stbt.core
 from _stbt.core import \
     as_precondition, \
@@ -33,6 +35,7 @@ from _stbt.core import \
     UITestError, \
     UITestFailure, \
     wait_until
+del sys.path[0]
 
 __all__ = [
     "as_precondition",

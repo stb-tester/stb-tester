@@ -10,6 +10,7 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
+pythondir?=$(prefix)/lib/python2.7/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Support installing GStreamer elements under $HOME
@@ -47,9 +48,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-all: stbt.sh defaults.conf extra/fedora/stb-tester.spec
-
-extra/fedora/stb-tester.spec stbt.sh: \
+extra/fedora/stb-tester.spec stbt.sh stbt/__init__.py: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
@@ -86,7 +85,6 @@ INSTALL_CORE_FILES = \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
-    stbt/__init__.py \
     stbt_auto_selftest.py \
     stbt-batch \
     stbt-batch.d/instaweb \
@@ -108,21 +106,26 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES)
+all: $(INSTALL_CORE_FILES) \
+    defaults.conf \
+    stbt.sh \
+    stbt/__init__.py
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
 
 install: install-core install-virtual-stb
-install-core: stbt.sh defaults.conf $(INSTALL_CORE_FILES)
+install-core: all
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
+	    $(DESTDIR)$(pythondir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
+	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(pythondir)/stbt/
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -144,6 +147,7 @@ uninstall:
 	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
 	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
+	rm -rf $(DESTDIR)$(pythondir)/stbt
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/stbt
@@ -152,13 +156,15 @@ uninstall:
 clean:
 	git clean -Xfd || true
 
-PYTHON_FILES = $(shell (git ls-files '*.py' && \
-           git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
-           | grep -v '^vendor/' \
-           | sort | uniq | grep -v tests/webminspector)
+PYTHON_FILES := \
+    $(shell (git ls-files '*.py' && \
+             git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+             | grep -v '^vendor/' \
+             | sort | uniq | grep -v tests/webminspector) \
+    stbt/__init__.py
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests: $(INSTALL_CORE_FILES) tests/buttons.png tests/ocr/menu.png
+check-nosetests: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
@@ -173,17 +179,20 @@ check-nosetests: $(INSTALL_CORE_FILES) tests/buttons.png tests/ocr/menu.png
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/) \
+	    stbt/__init__.py \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
 	    $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-hardware: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
-check-pylint: $(INSTALL_CORE_FILES)
+check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
@@ -200,6 +209,7 @@ ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
 check-cameratests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" \
 	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
 	tests/run-tests.sh -i tests/test-camera.sh
 endif
@@ -207,7 +217,7 @@ endif
 install-for-test:
 	rm -rf tests/test-install && \
 	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir \
-	      gstpluginsdir mandir man1dir sysconfdir && \
+	      gstpluginsdir mandir man1dir pythondir sysconfdir && \
 	make install prefix=$$PWD/tests/test-install \
 	     gstpluginsdir=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins
 

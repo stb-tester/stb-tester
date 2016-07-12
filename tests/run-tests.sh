@@ -46,7 +46,8 @@ if [[ "$test_the_installed_version" != "true" ]]; then
          "gstpluginsdir=$test_installation_prefix/lib/gstreamer-1.0/plugins" ||
     { echo "run-tests.sh: error: Failed to install stbt" >&2; exit 2; }
     export PATH="$test_installation_prefix/bin:$PATH" \
-           GST_PLUGIN_PATH=$test_installation_prefix/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH
+           GST_PLUGIN_PATH=$test_installation_prefix/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH \
+           PYTHONPATH=$test_installation_prefix/lib/python2.7/site-packages:$PYTHONPATH
 fi
 
 . $testdir/utils.sh

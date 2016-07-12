@@ -47,6 +47,13 @@ UNRELEASED
 
 ##### Minor fixes and packaging fixes
 
+* The `stbt` Python package is now installed to the system Python path. This
+  means that you can `import stbt` from a python script that is run with
+  `python` instead of `stbt run`. Video-capture won't work, but you can use
+  `stbt.match` and `stbt.ocr` if you pass in an explicit `frame` parameter.
+  This can be useful for self-tests using screenshots, and for using
+  stb-tester's image-matching with other frameworks such as Selenium.
+
 * `MotionResult` now defines `__nonzero__`. This means you can write
   `if result:` rather than having to write `if result.motion`. This is a minor
   ergonomic improvement for consistency with `MatchResult` and
