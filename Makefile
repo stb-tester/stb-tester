@@ -398,7 +398,6 @@ stbt_camera_files=\
 	_stbt/camera/__init__.py \
 	_stbt/camera/chessboard-720p-40px-border-white.png \
 	_stbt/camera/chessboard.py \
-	_stbt/gst_utils.py \
 	_stbt/tv_driver.py \
 	stbt-camera \
 	stbt-camera.d/colours.svg \
