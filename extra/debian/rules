@@ -3,6 +3,7 @@
 export prefix=/usr
 export libexecdir=/usr/lib
 export sysconfdir=/etc
+export pythondir=/usr/lib/python2.7/dist-packages
 
 %:
 	dh $@

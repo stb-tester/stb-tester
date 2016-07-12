@@ -324,7 +324,7 @@ test_match_searches_in_caller_directory() {
 	        raise Exception("'No match' when expecting match.")
 	EOF
     cp "$testdir"/videotestsrc-bw.png stbt_tests/in-caller-dir.png
-    PYTHONPATH="$PWD:$PYTHONPATH" stbt run -v test.py
+    stbt run -v test.py
 }
 
 test_changing_input_video_with_the_test_control() {
