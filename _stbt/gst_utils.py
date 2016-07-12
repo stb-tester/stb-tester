@@ -87,8 +87,8 @@ class Frame(numpy.ndarray):
     a subclass of `numpy.ndarray`, which is the type that OpenCV uses to
     represent images. Data is stored in 8-bit, 3 channel BGR format.
 
-    In addition to the members inherited from `numpy.ndarray`, `Frame` defines
-    the following attributes:
+    In addition to the members inherited from `numpy.ndarray`, ``Frame``
+    defines the following attributes:
 
     * ``time`` (float) - the wall-clock time that this video-frame was captured
       as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This is
