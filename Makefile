@@ -48,7 +48,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt.sh stbt/_vars.py: \
+extra/fedora/stb-tester.spec stbt.sh: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
@@ -108,8 +108,7 @@ INSTALL_CORE_FILES = \
 
 all: $(INSTALL_CORE_FILES) \
     defaults.conf \
-    stbt.sh \
-    stbt/_vars.py
+    stbt.sh
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -125,8 +124,7 @@ install-core: all
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0644 stbt/__init__.py stbt/_vars.py \
-	    $(DESTDIR)$(pythondir)/stbt/
+	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(pythondir)/stbt/
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -134,6 +132,8 @@ install-core: all
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
+	echo "_libexecdir = '$(libexecdir)'" > $(DESTDIR)$(pythondir)/stbt/_vars.py
+	chmod 0644 $(DESTDIR)$(pythondir)/stbt/_vars.py
 
 install-virtual-stb: $(INSTALL_VSTB_FILES)
 	$(INSTALL) -m 0755 -d \
@@ -161,8 +161,7 @@ PYTHON_FILES := \
     $(shell (git ls-files '*.py' && \
              git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
              | grep -v '^vendor/' \
-             | sort | uniq | grep -v tests/webminspector) \
-    stbt/_vars.py
+             | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: all tests/buttons.png tests/ocr/menu.png
