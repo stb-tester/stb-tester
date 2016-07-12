@@ -29,7 +29,7 @@
  * gst-launch -v v4l2src ! video/x-raw,width=1080,height=720 ! videoconvert \
  *     ! geometriccorrection camera-matrix="1650.9498393436943 0.0 929.0144682177463 0.0 1650.0877603121983 558.55148343511712 0.0 0.0 1.0" \
  *                  distortion-coefficients="0.10190074279957002 -0.18199960394082984 0.00054709946447197304 0.00039158751563262209 -0.0479346424607551" \
- *                  homography-matrix="1363.1288390747131 7.438063312178901 643.25417659039442 38.730496461642169 1354.6127277059686 388.87669488396085 0.040142377232467538 0.043862451595691403 1.0" \
+ *                  inv-homography-matrix="1363.1288390747131 7.438063312178901 643.25417659039442 38.730496461642169 1354.6127277059686 388.87669488396085 0.040142377232467538 0.043862451595691403 1.0" \
  *     ! videoconvert ! autoimagesink
  * ]|
  * Captures a video of a TV from your webcam and shows you a video of what's
@@ -79,7 +79,7 @@ enum
   PROP_0,
   PROP_CAMERA_MATRIX,
   PROP_DISTORTION_COEFFICIENTS,
-  PROP_HOMOGRAPHY_MATRIX
+  PROP_INV_HOMOGRAPHY_MATRIX
 };
 
 /* pad templates */
@@ -101,10 +101,10 @@ enum
 #define DEFAULT_DISTORTION_COEFFICIENTS \
     "0.0   0.0   0.0   0.0   0.0"
 
-#define DEFAULT_HOMOGRAPHY_MATRIX \
-    "0.6666666   0.0         -0.1666666 " \
-    "0.0         0.6666666   -0.1666666 " \
-    "0.0         0.0          1.0       "
+#define DEFAULT_INV_HOMOGRAPHY_MATRIX \
+    "1.5  0.0  0.25 " \
+    "0.0  1.5  0.25 " \
+    "0.0  0.0  1.0  "
 
 /* class initialization */
 
@@ -156,10 +156,10 @@ stbt_geometric_correction_class_init (StbtGeometricCorrectionClass * klass)
           "The distortion coefficients of the camera used to capture the input",
           DEFAULT_DISTORTION_COEFFICIENTS,
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
-  g_object_class_install_property (gobject_class, PROP_HOMOGRAPHY_MATRIX,
-      g_param_spec_string ("homography-matrix", "Homography Matrix",
-          "The homography matrix describing the region of interest",
-          DEFAULT_HOMOGRAPHY_MATRIX, G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
+  g_object_class_install_property (gobject_class, PROP_INV_HOMOGRAPHY_MATRIX,
+      g_param_spec_string ("inv-homography-matrix", "Homography Matrix",
+          "The inverse homography matrix describing the region of interest",
+          DEFAULT_INV_HOMOGRAPHY_MATRIX, G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 }
 
 static void
@@ -192,8 +192,8 @@ stbt_geometric_correction_set_property (GObject * object, guint property_id,
   switch (property_id) {
     case PROP_CAMERA_MATRIX:
       m = geometriccorrection->camera_matrix;
-    case PROP_HOMOGRAPHY_MATRIX:
-      m = m ? m : geometriccorrection->homography_matrix;
+    case PROP_INV_HOMOGRAPHY_MATRIX:
+      m = m ? m : geometriccorrection->inv_homography_matrix;
 
       values_read = sscanf (g_value_get_string (value),
           "%f %f %f %f %f %f %f %f %f",
@@ -230,8 +230,8 @@ stbt_geometric_correction_get_property (GObject * object, guint property_id,
   switch (property_id) {
     case PROP_CAMERA_MATRIX:
       m = geometriccorrection->camera_matrix;
-    case PROP_HOMOGRAPHY_MATRIX:
-      m = m ? m : geometriccorrection->homography_matrix;
+    case PROP_INV_HOMOGRAPHY_MATRIX:
+      m = m ? m : geometriccorrection->inv_homography_matrix;
 
       str = g_strdup_printf ("%f %f %f %f %f %f %f %f %f",
           m[0][0], m[0][1], m[0][2],
@@ -297,9 +297,7 @@ regenerate_remapping_matrix (StbtGeometricCorrection * geometriccorrection)
   CvMat camera_matrix = cvMat (3, 3, CV_32F, geometriccorrection->camera_matrix);
   CvMat distortion_coefficients =
       cvMat (5, 1, CV_32F, geometriccorrection->distortion_coefficients);
-  CvMat homography_matrix = cvMat (3, 3, CV_32F, geometriccorrection->homography_matrix);
-  float inv_homog_data[3][3];
-  CvMat inv_homography_matrix = cvMat (3, 3, CV_32F, inv_homog_data);
+  CvMat inv_homography_matrix = cvMat (3, 3, CV_32F, geometriccorrection->inv_homography_matrix);
   float no_transform_data[3] = { 0.0, 0.0, 0.0 };
   CvMat no_transform = cvMat (3, 1, CV_32F, no_transform_data);
 
@@ -318,8 +316,6 @@ regenerate_remapping_matrix (StbtGeometricCorrection * geometriccorrection)
 
      By transforming coordinates from dest to src remap will transform values
      from src to dest. */
-  cvInvert ((const CvArr *) &homography_matrix,
-      (CvArr *) & inv_homography_matrix, CV_LU);
   cvPerspectiveTransform ((const CvArr *) remapping, (CvArr *) remapping,
       &inv_homography_matrix);
 

@@ -52,13 +52,13 @@ def distance(a, b):
 def off_to_arrow(off):
     """
     >>> print off_to_arrow((1, 1))
-    ↗
+    ↘
     >>> print off_to_arrow((-1, 0))
     ←
     """
-    arrows = list('→↗↑↖←↙↓↘')
+    arrows = list('←↙↓↘→↗↑↖')
     if numpy.linalg.norm(off) > 0.5:
-        angle = math.atan2(off[1], off[0])
+        angle = math.atan2(off[1], -off[0])
         return arrows[int(angle / 2 / math.pi * len(arrows) + len(arrows) + 0.5)
                       % len(arrows)]
     else:
@@ -178,7 +178,7 @@ def validate(video, driver, validate_match=True):
                 rating = 2
             else:
                 rating = 1 if result.first_pass_result > 0.9 else 0
-            quality = "0123456789"[int(result.first_pass_result * 10)]
+            quality = "01234567899"[int(result.first_pass_result * 10)]
             sys.stdout.write(
                 "%s%s" % ([FAIL, WARNING, OKGREEN][rating], quality))
             if square.x == 15:

@@ -43,7 +43,7 @@ struct _StbtGeometricCorrection
    * for more information.  These are used to create remapping below: */
   float camera_matrix[3][3];
   float distortion_coefficients[5];
-  float homography_matrix[3][3];
+  float inv_homography_matrix[3][3];
 
   gboolean needs_regen;
 
