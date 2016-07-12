@@ -48,7 +48,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt.sh stbt/__init__.py: \
+extra/fedora/stb-tester.spec stbt.sh stbt/_vars.py: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
@@ -109,7 +109,7 @@ INSTALL_CORE_FILES = \
 all: $(INSTALL_CORE_FILES) \
     defaults.conf \
     stbt.sh \
-    stbt/__init__.py
+    stbt/_vars.py
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -125,7 +125,8 @@ install-core: all
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(pythondir)/stbt/
+	$(INSTALL) -m 0644 stbt/__init__.py stbt/_vars.py \
+	    $(DESTDIR)$(pythondir)/stbt/
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -161,7 +162,7 @@ PYTHON_FILES := \
              git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector) \
-    stbt/__init__.py
+    stbt/_vars.py
 
 check: check-pylint check-nosetests check-integrationtests check-bashcompletion
 check-nosetests: all tests/buttons.png tests/ocr/menu.png
@@ -179,7 +180,6 @@ check-nosetests: all tests/buttons.png tests/ocr/menu.png
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/) \
-	    stbt/__init__.py \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test

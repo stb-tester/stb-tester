@@ -11,8 +11,10 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 from __future__ import absolute_import
 
+from stbt._vars import _libexecdir
+
 import sys
-sys.path.insert(0, "@LIBEXECDIR@/stbt")
+sys.path.insert(0, _libexecdir + "/stbt")
 import _stbt.core
 from _stbt.core import \
     as_precondition, \

@@ -24,7 +24,7 @@ stb-tester_*.deb
 stbt-controlc
 stbt-debug
 stbt.sh
-stbt/__init__.py
+stbt/_vars.py
 TAGS
 tests/ocr/menu.png
 tests/test-install
