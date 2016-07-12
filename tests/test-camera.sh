@@ -185,7 +185,7 @@ fake_video_src_show() {
 stop_fake_video_src() {
     kill "$FAKE_VIDEO_SRC_PID"
     unset FAKE_VIDEO_SRC_PID
-    rm uri_playlist gst-shm-socket
+    rm -f uri_playlist gst-shm-socket
     true
 }
 
