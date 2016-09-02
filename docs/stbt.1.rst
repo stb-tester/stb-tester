@@ -180,11 +180,11 @@ CONFIGURATION
 
 All parameters that can be passed to the stbt tools can also be specified in
 configuration files. Configuration is searched for in the following files (with
-later files taking precedence):
+earlier files taking precedence):
 
-1. /etc/stbt/stbt.conf
+1. $STBT_CONFIG_FILE
 2. ~/.config/stbt/stbt.conf
-3. $STBT_CONFIG_FILE
+3. /etc/stbt/stbt.conf
 
 $STBT_CONFIG_FILE is a colon-separated list of files where the item specified
 at the beginning takes precedence.
