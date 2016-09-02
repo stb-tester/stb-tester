@@ -119,7 +119,7 @@ Global options
     http://www.cl.cam.ac.uk/~mgk25/ucs/keysyms.txt .
 
     stbt provides some sensible default mappings when there is an obvious match
-    for our `standard key names <https://stb-tester.com/stb-tester-one/rev2015.1/getting-started#remote-control-key-names>`_.
+    for our `standard key names <https://stb-tester.com/manual/getting-started#remote-control-key-names>`_.
 
     The x11 control requires that `xdotool` is installed.
 
@@ -233,7 +233,7 @@ TEST SCRIPT FORMAT
 ==================
 
 Testcases are written in Python, using the ``stbt`` API documented at
-https://stb-tester.com/stb-tester-one/rev2015.1/python-api
+https://stb-tester.com/manual/python-api
 
 
 SEE ALSO

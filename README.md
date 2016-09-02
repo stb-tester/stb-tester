@@ -36,6 +36,6 @@ and mailing list, see the [wiki], in particular [Getting Started].
 
 
 [LICENSE]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
-[Python API documentation]: http://stb-tester.com/stb-tester-one/rev2015.1/python-api
+[Python API documentation]: http://stb-tester.com/manual/python-api
 [wiki]: https://github.com/stb-tester/stb-tester/wiki
 [Getting Started]: https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
