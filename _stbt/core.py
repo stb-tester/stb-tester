@@ -550,7 +550,7 @@ class OcrMode(IntEnum):
     """Options to control layout analysis and assume a certain form of image.
 
     For a (brief) description of each option, see the `tesseract(1)
-    <http://tesseract-ocr.googlecode.com/svn/trunk/doc/tesseract.1.html#_options>`_
+    <https://github.com/tesseract-ocr/tesseract/blob/3.04.01/doc/tesseract.1.asc#options>`_
     man page.
     """
     ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
