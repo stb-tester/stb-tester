@@ -447,9 +447,7 @@ class MatchResult(object):
                 self.match,
                 self.region,
                 self.first_pass_result,
-                "None" if self.frame is None else "%dx%dx%d" % (
-                    self.frame.shape[1], self.frame.shape[0],
-                    self.frame.shape[2]),
+                _str_frame_dimensions(self.frame),
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
@@ -466,6 +464,15 @@ class MatchResult(object):
 
     def __nonzero__(self):
         return self.match
+
+
+def _str_frame_dimensions(frame):
+    if frame is None:
+        return "None"
+    if len(frame.shape) == 3:
+        return "%dx%dx%d" % (frame.shape[1], frame.shape[0], frame.shape[2])
+    else:
+        return "%dx%d" % (frame.shape[1], frame.shape[0])
 
 
 class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate',
@@ -608,8 +615,7 @@ class TextMatchResult(object):
                 self.time,
                 self.match,
                 self.region,
-                "%dx%dx%d" % (self.frame.shape[1], self.frame.shape[0],
-                              self.frame.shape[2]),
+                _str_frame_dimensions(self.frame),
                 self.text))
 
     @property
