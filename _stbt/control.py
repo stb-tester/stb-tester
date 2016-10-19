@@ -159,6 +159,46 @@ class LircRemote(object):
         _read_lircd_reply(s)
         debug("Pressed " + key)
 
+
+def _read_lircd_reply(stream):
+    """Waits for lircd reply and checks if a LIRC send command was successful.
+
+    Waits for a reply message from lircd (called "reply packet" in the LIRC
+    reference) for a SEND_ONCE command, raises exception if it times out or
+    the reply contains an error message.
+
+    The structure of a lircd reply message for a SEND_ONCE command is the
+    following:
+
+    BEGIN
+    <command>
+    (SUCCESS|ERROR)
+    [DATA
+    <number-of-data-lines>
+    <error-message>]
+    END
+
+    See: http://www.lirc.org/html/technical.html#applications
+    """
+    reply = []
+    try:
+        for line in read_records(stream, "\n"):
+            if line == "BEGIN":
+                reply = []
+            reply.append(line)
+            if line == "END" and "SEND_ONCE" in reply[1]:
+                break
+    except socket.timeout:
+        raise RuntimeError(
+            "Timed out: No reply from LIRC remote control within %d seconds"
+            % stream.gettimeout())
+    if "SUCCESS" not in reply:
+        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
+            num_data_lines = int(reply[4])
+            raise RuntimeError("LIRC remote control returned error: %s"
+                               % " ".join(reply[5:5 + num_data_lines]))
+        raise RuntimeError("LIRC remote control returned unknown error")
+
 DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
 
 
@@ -513,46 +553,6 @@ def _connect_tcp_socket(address, port, timeout=3):
             address, port, e)),)
         e.strerror = e.args[0]
         raise
-
-
-def _read_lircd_reply(stream):
-    """Waits for lircd reply and checks if a LIRC send command was successful.
-
-    Waits for a reply message from lircd (called "reply packet" in the LIRC
-    reference) for a SEND_ONCE command, raises exception if it times out or
-    the reply contains an error message.
-
-    The structure of a lircd reply message for a SEND_ONCE command is the
-    following:
-
-    BEGIN
-    <command>
-    (SUCCESS|ERROR)
-    [DATA
-    <number-of-data-lines>
-    <error-message>]
-    END
-
-    See: http://www.lirc.org/html/technical.html#applications
-    """
-    reply = []
-    try:
-        for line in read_records(stream, "\n"):
-            if line == "BEGIN":
-                reply = []
-            reply.append(line)
-            if line == "END" and "SEND_ONCE" in reply[1]:
-                break
-    except socket.timeout:
-        raise RuntimeError(
-            "Timed out: No reply from LIRC remote control within %d seconds"
-            % stream.gettimeout())
-    if "SUCCESS" not in reply:
-        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
-            num_data_lines = int(reply[4])
-            raise RuntimeError("LIRC remote control returned error: %s"
-                               % " ".join(reply[5:5 + num_data_lines]))
-        raise RuntimeError("LIRC remote control returned unknown error")
 
 
 class FileToSocket(object):
