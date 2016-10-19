@@ -14,6 +14,24 @@ changes, along with upgrade instructions where necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
+#### v27
+
+_TODO: Summary._
+
+UNRELEASED
+
+##### Breaking changes since v26
+
+##### New features
+
+##### Minor fixes and packaging fixes
+
+* Python API: `stbt.match_text` can take single-channel images (black-and-white
+  or greyscale).
+
+##### Maintainer-visible changes
+
+
 #### 26
 
 New APIs to support frame-accurate performance measurements.

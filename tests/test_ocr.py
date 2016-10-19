@@ -194,3 +194,8 @@ def test_that_match_text_gives_tesseract_a_hint():
     if "ITV Player" not in stbt.ocr(frame=frame, tesseract_user_words=["ITV"]):
         raise SkipTest("Giving tesseract a hint doesn't help")
     assert stbt.match_text("ITV Player", frame=frame)
+
+
+def test_match_text_on_single_channel_image():
+    frame = cv2.imread("tests/ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    assert stbt.match_text("Onion Bhaji", frame)
