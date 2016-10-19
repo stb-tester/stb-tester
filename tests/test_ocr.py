@@ -6,6 +6,7 @@ from textwrap import dedent
 from unittest import SkipTest
 
 import cv2
+import pytest
 from nose.tools import raises
 
 import _stbt.core
@@ -220,3 +221,31 @@ def test_ocr_on_text_next_to_image_match():
     m = stbt.match("tests/action-panel-blue-button.png", frame)
     assert "YOUVIEW MENU" == stbt.ocr(frame,
                                       region=m.region.right_of(width=150))
+
+
+@pytest.mark.parametrize("image,color,expected,region", [
+    # This region has a selected "Summary" button (white on light blue) and
+    # unselected buttons "Details" and "More Episodes" (light grey on black).
+    # Without specifying text_color, OCR only sees the latter two.
+    # Testing without specifying a region would also work, but with a small
+    # region the test runs much faster (0.1s instead of 3s per ocr call).
+    ("tests/action-panel.png", (235, 235, 235), "Summary",
+     stbt.Region(0, 370, right=1280, bottom=410)),
+
+    # This is a light "8" on a dark background. Without the context of any
+    # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
+    # is reading the *holes* in the "8" instead of the letter itself, because
+    # it's assuming that it's seeing printed matter (a scanned book with black
+    # text on white background). Expanding the region to include other text
+    # would solve the problem, but so does specifying the text color.
+    ("tests/ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
+])
+def test_ocr_text_color(image, color, expected, region):
+    frame = cv2.imread(image)
+    mode = stbt.OcrMode.SINGLE_LINE
+
+    assert expected not in stbt.ocr(frame, region, mode)
+    assert expected == stbt.ocr(frame, region, mode, text_color=color)
+
+    assert not stbt.match_text(expected, frame, region, mode)
+    assert stbt.match_text(expected, frame, region, mode, text_color=color)

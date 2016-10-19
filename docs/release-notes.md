@@ -50,6 +50,11 @@ UNRELEASED
   the return value to stabilise (for example to wait for the position of a
   `MatchResult` to stabilise).
 
+* Python API: `stbt.ocr` and `stbt.match_text` have a new parameter
+  `text_color`. Specifying this can improve OCR results when tesseract's
+  default thresholding algorithm doesn't detect the text, for example for
+  light-colored text or text on a translucent overlay.
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox

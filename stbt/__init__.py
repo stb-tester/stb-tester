@@ -334,7 +334,7 @@ def wait_for_motion(
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang="eng", tesseract_config=None, tesseract_user_words=None,
-        tesseract_user_patterns=None):
+        tesseract_user_patterns=None, text_color=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -388,14 +388,20 @@ def ocr(frame=None, region=Region.ALL,
             \A         [A-Z]
             \*         *
 
+    :type text_color: 3-element tuple of integers between 0 and 255, BGR order.
+    :param text_color:
+        Color of the text. Specifying this can improve OCR results when
+        tesseract's default thresholding algorithm doesn't detect the text,
+        for example for white text on a light-colored background.
+
     """
     return _dut.ocr(frame, region, mode, lang, tesseract_config,
-                    tesseract_user_words, tesseract_user_patterns)
+                    tesseract_user_words, tesseract_user_patterns, text_color)
 
 
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
-               tesseract_config=None, case_sensitive=False):
+               tesseract_config=None, case_sensitive=False, text_color=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -407,6 +413,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param mode: See `ocr`.
     :param lang: See `ocr`.
     :param tesseract_config: See `ocr`.
+    :param text_color: See `ocr`.
     :param case_sensitive bool: Ignore case if False (the default).
 
     :returns:
@@ -425,7 +432,8 @@ def match_text(text, frame=None, region=Region.ALL,
     ignored case.
     """
     return _dut.match_text(
-        text, frame, region, mode, lang, tesseract_config, case_sensitive)
+        text, frame, region, mode, lang, tesseract_config, case_sensitive,
+        text_color)
 
 
 def frames(timeout_secs=None):
