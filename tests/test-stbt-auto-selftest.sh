@@ -7,7 +7,7 @@ test_auto_selftest_generate()
     stbt --with-experimental auto-selftest generate &&
     cd .. &&
 
-    find . -name '*.pyc' -delete &&
+    find . -name '*.pyc' -delete -o -name __pycache__ -delete &&
     diff -ur "pristine" "regenerated"
 }
 

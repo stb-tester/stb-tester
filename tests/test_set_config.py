@@ -75,7 +75,7 @@ def test_that_set_config_preserves_file_comments_and_formatting():
     # comments and whitespace are not currently stored in Python's internal
     # ConfigParser representation and multiline values makes just using regex
     # tricky.
-    from nose import SkipTest
+    from unittest import SkipTest
     raise SkipTest("set_config doesn't currently preserve formatting")
     with set_config_test():
         set_config('global', 'test', 'goodbye')

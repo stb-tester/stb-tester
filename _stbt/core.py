@@ -2737,12 +2737,12 @@ def test_ocr_on_static_images():
 
 
 def test_region_replace():
-    from nose.tools import eq_, raises
+    from nose.tools import raises
 
     r = Region(x=10, y=20, width=20, height=30)
 
     def t(kwargs, expected):
-        eq_(r.replace(**kwargs), expected)
+        assert r.replace(**kwargs) == expected
 
     @raises(ValueError)
     def e(kwargs):

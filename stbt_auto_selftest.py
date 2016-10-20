@@ -465,7 +465,7 @@ def update_doctests(infilename, outfile):
 
 
 def test_update_doctests():
-    # We test that what we generate is what we expect.  make check-nosetests
+    # We test that what we generate is what we expect.  make check-pytest
     # will check that the generated doctest passes as a doctest itself.
     import subprocess
     from tempfile import NamedTemporaryFile

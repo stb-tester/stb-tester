@@ -699,7 +699,7 @@ def test_samsung_tcp_remote():
 
 
 def test_x11_remote():
-    from nose.plugins.skip import SkipTest
+    from unittest import SkipTest
     from .x11 import x_server
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Remote requires X11 and xterm")

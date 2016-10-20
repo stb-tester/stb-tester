@@ -3,10 +3,10 @@
 import distutils
 import re
 from textwrap import dedent
+from unittest import SkipTest
 
 import cv2
-from nose.plugins.skip import SkipTest
-from nose.tools import eq_, raises
+from nose.tools import raises
 
 import _stbt.core
 import stbt
@@ -19,12 +19,13 @@ def test_that_ocr_returns_unicode():
 
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
-    eq_(u'£500\nRöthlisberger', text)
+    assert u'£500\nRöthlisberger' == text
 
 
 def test_that_ocr_can_read_small_text():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/small.png'))
-    eq_(u'Small anti-aliased text is hard to read\nunless you magnify', text)
+    assert u'Small anti-aliased text is hard to read\nunless you magnify' == \
+        text
 
 
 ligature_text = dedent(u"""\
@@ -43,7 +44,7 @@ ligature_text = dedent(u"""\
 def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png'))
     text = text.replace("horizonta|", "horizontal")  # for tesseract < 3.03
-    eq_(ligature_text, text)
+    assert ligature_text == text
 
 
 def test_that_setting_config_options_has_an_effect():
@@ -80,10 +81,10 @@ def test_that_passing_patterns_helps_reading_serial_codes():
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
-    eq_(u'UJJM2LGE', stbt.ocr(
+    assert u'UJJM2LGE' == stbt.ocr(
         frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
-        tesseract_user_patterns=[r'\n\n\n\n\n\n\n\n']))
+        tesseract_user_patterns=[r'\n\n\n\n\n\n\n\n'])
 
 
 @raises(RuntimeError)
@@ -100,11 +101,11 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
 
 
 def test_user_dictionary_with_non_english_language():
-    eq_(u'UJJM2LGE', stbt.ocr(
+    assert u'UJJM2LGE' == stbt.ocr(
         frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
-        tesseract_user_words=[u'UJJM2LGE']))
+        tesseract_user_words=[u'UJJM2LGE'])
 
 # Menu as listed in menu.svg:
 menu = [
