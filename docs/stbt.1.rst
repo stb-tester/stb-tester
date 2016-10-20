@@ -163,8 +163,14 @@ Additional options to stbt record
   The source of remote control presses.  `uri` can be:
 
   lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
-    A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
-    Control) daemon. Parameters are as for `--control`.
+    This reports the keypresses that lircd (Linux Infrared Remote Control
+    daemon) receives from a hardware infrared receiver. Parameters are as for
+    `--control`.
+
+  lircd[:<lircd_socket>]
+    This pretends to be lircd, and reports the keypresses that it receives from
+    a lirc client such as the ``irsend`` command-line tool or another
+    ``stbt run`` process.
 
   file://<filename>
     Reads remote control keypresses from a newline-separated list of key names.

@@ -51,6 +51,7 @@ def uri_to_remote_recorder(uri):
          lirc_remote_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
+        (r'lircd(:(?P<lircd_socket>[^:]+))?', fake_lircd_listen),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
         (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
     ]
@@ -498,7 +499,8 @@ def virtual_remote_listen(address, port=None):
 
 def lirc_remote_listen(lircd_socket, control_name):
     """Returns an iterator yielding keypresses received from a lircd file
-    socket.
+    socket -- that is, the keypresses that lircd received from a hardware
+    infrared receiver and is now sending on to us.
 
     See http://www.lirc.org/html/technical.html#applications
     """
@@ -554,6 +556,25 @@ def lirc_key_reader(cmd_iter, control_name):
             s)
         if m and int(m.group('repeat_count')) == 0:
             yield m.group('key')
+
+
+def fake_lircd_listen(lircd_socket=None):
+    """Pretend to be lircd, yielding keys that are sent to us by a lirc client
+    such as ``irsend``.
+    """
+    if lircd_socket is None:
+        lircd_socket = DEFAULT_LIRCD_SOCKET
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.bind(lircd_socket)
+    s.listen(5)
+
+    while True:
+        control, _ = s.accept()
+        for cmd in control.makefile():
+            m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
+            control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+            yield m.groupdict()["key"]
+        control.close()
 
 
 def _connect_tcp_socket(address, port, timeout=3):
