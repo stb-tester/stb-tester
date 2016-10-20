@@ -29,6 +29,9 @@ UNRELEASED
 * Python API: `stbt.match_text` can take single-channel images (black-and-white
   or greyscale).
 
+* Python API: `stbt.match_text` normalises punctuation such as em-dash and
+  en-dash, just like `stbt.ocr` already does.
+
 ##### Maintainer-visible changes
 
 

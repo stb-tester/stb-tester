@@ -2628,14 +2628,15 @@ def _hocr_iterate(hocr):
 
 
 def _hocr_find_phrase(hocr, phrase):
-    l = list(_hocr_iterate(hocr))
-    words_only = [(w, elem) for w, elem in l if w.strip() != u'']
+    words_only = [(w.lower().translate(_ocr_transtab), elem)
+                  for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
+    phrase = [unicode(w).lower().translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
     if len(phrase) <= len(words_only):
         for x in range(0, len(words_only)):
             sublist = words_only[x:x + len(phrase)]
-            if all(w[0].lower() == p.lower() for w, p in zip(sublist, phrase)):
+            if all(w[0] == p for w, p in zip(sublist, phrase)):
                 return sublist
     return None
 
