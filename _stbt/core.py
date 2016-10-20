@@ -32,6 +32,7 @@ import gi
 import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
+from numpy import inf
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
@@ -378,8 +379,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region.from_extents(self.x + x, self.y + y,
                                    self.right + x, self.bottom + y)
 
-Region.ALL = Region(x=float("-inf"), y=float("-inf"),
-                    right=float("inf"), bottom=float("inf"))
+Region.ALL = Region(x=-inf, y=-inf, right=inf, bottom=inf)
 
 
 def _bounding_box(a, b):
