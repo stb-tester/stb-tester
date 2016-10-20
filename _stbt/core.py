@@ -32,6 +32,7 @@ import gi
 import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
+from numpy import inf
 
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
@@ -233,6 +234,16 @@ class Region(namedtuple('Region', 'x y right bottom')):
     Region.ALL
     >>> print Region.ALL
     Region.ALL
+    >>> c.above()
+    Region(x=10, y=-inf, right=13, bottom=4)
+    >>> c.below()
+    Region(x=10, y=6, right=13, bottom=inf)
+    >>> a.right_of()
+    Region(x=8, y=0, right=inf, bottom=8)
+    >>> a.right_of(width=2)
+    Region(x=8, y=0, right=10, bottom=8)
+    >>> c.left_of()
+    Region(x=-inf, y=4, right=10, bottom=6)
 
     .. py:attribute:: x
 
@@ -378,8 +389,36 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region.from_extents(self.x + x, self.y + y,
                                    self.right + x, self.bottom + y)
 
-Region.ALL = Region(x=float("-inf"), y=float("-inf"),
-                    right=float("inf"), bottom=float("inf"))
+    def above(self, height=inf):
+        """
+        :returns: A new region above the current region, extending to the top
+            of the frame (or to the specified height).
+        """
+        return self.replace(y=self.y - height, bottom=self.y)
+
+    def below(self, height=inf):
+        """
+        :returns: A new region below the current region, extending to the bottom
+            of the frame (or to the specified height).
+        """
+        return self.replace(y=self.bottom, bottom=self.bottom + height)
+
+    def right_of(self, width=inf):
+        """
+        :returns: A new region to the right of the current region, extending to
+            the right edge of the frame (or to the specified width).
+        """
+        return self.replace(x=self.right, right=self.right + width)
+
+    def left_of(self, width=inf):
+        """
+        :returns: A new region to the left of the current region, extending to
+            the left edge of the frame (or to the specified width).
+        """
+        return self.replace(x=self.x - width, right=self.x)
+
+
+Region.ALL = Region(x=-inf, y=-inf, right=inf, bottom=inf)
 
 
 def _bounding_box(a, b):
