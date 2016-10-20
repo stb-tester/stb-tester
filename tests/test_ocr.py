@@ -3,9 +3,9 @@
 import distutils
 import re
 from textwrap import dedent
+from unittest import SkipTest
 
 import cv2
-from nose.plugins.skip import SkipTest
 from nose.tools import eq_, raises
 
 import _stbt.core
