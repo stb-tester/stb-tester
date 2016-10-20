@@ -324,7 +324,7 @@ def test_memoize_iterator_on_empty_iterator():
 
 def test_that_cache_speeds_up_match():
     import stbt
-    black = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
+    black = numpy.zeros((1440, 2560, 3), dtype=numpy.uint8)
 
     def match():
         return stbt.match('tests/red-black.png', frame=black)
