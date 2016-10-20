@@ -24,6 +24,10 @@ UNRELEASED
 
 ##### New features
 
+* Python API: `stbt.Region` has the following new methods: `above`, `below`,
+  `right_of` and `left_of`. They return a new Region relative to the current
+  region.
+
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white
