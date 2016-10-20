@@ -503,7 +503,7 @@ def lirc_remote_listen(lircd_socket, control_name):
     See http://www.lirc.org/html/technical.html#applications
     """
     if lircd_socket is None:
-        lircd_socket = '/var/run/lirc/lircd'
+        lircd_socket = DEFAULT_LIRCD_SOCKET
     lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     debug("control-recorder connecting to lirc file socket '%s'..." %
           lircd_socket)
