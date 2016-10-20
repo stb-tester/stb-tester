@@ -3,10 +3,12 @@
 *.srpm
 *_orc.c
 *_orc.h
+.cache
 .DS_Store
 .stbt-cflags
 .stbt-ldflags
 .stbt-prefix
+__pycache__
 _stbt/libxxhash.so
 _stbt/lmdb/
 debian-packages

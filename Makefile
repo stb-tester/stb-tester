@@ -163,19 +163,20 @@ PYTHON_FILES := \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
-check: check-pylint check-nosetests check-integrationtests check-bashcompletion
-check-nosetests: all tests/buttons.png tests/ocr/menu.png
+check: check-pylint check-pytest check-integrationtests check-bashcompletion
+check-pytest: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
-	PYTHONPATH=$$PWD NOSE_REDNOSE=1 \
-	nosetests --with-doctest -v --match "^test_" \
-	    --doctest-options=+ELLIPSIS \
+	PYTHONPATH=$$PWD \
+	py.test -v --doctest-modules \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
 		      -e tests/test.py \
 	              -e tests/test2.py \
 	              -e tests/test_functions.py \
 	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
+	              -e tests/auto-selftest-example-test-pack/tests/example_with_no_tests.py \
+	              -e tests/auto-selftest-example-test-pack/tests/empty_dir/subdir/example_with_no_tests.py \
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/) \
@@ -453,7 +454,7 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-bashcompletion check-hardware check-integrationtests
-.PHONY: check-nosetests check-pylint install-for-test
+.PHONY: check-pytest check-pylint install-for-test
 .PHONY: ppa-publish rpm srpm
 .PHONY: check-cameratests install-stbt-camera
 .PHONY: FORCE TAGS
