@@ -28,6 +28,10 @@ UNRELEASED
   `right_of` and `left_of`. They return a new Region relative to the current
   region.
 
+* Added helper utility `stbt control-relay` which allows you to use any stbt
+  remote control using the lirc socket protocol. This for example allows you to
+  control a roku via its HTTP REST API using `irsend`.
+
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white

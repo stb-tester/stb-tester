@@ -69,6 +69,18 @@ class NullRemote(object):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
 
+class MultiRemote(object):
+    """Allows sending press events on multiple remotes at a time.
+    """
+    def __init__(self, controls):
+        from multiprocessing.pool import ThreadPool
+        self.pool = ThreadPool()
+        self._controls = list(controls)
+
+    def press(self, key):
+        self.pool.map(lambda r: r.press(key), self._controls)
+
+
 class FileControl(object):
     """Writes keypress events to file.  Mostly useful for testing.  Defaults to
     writing to stdout.
