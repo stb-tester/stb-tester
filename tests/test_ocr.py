@@ -15,7 +15,7 @@ import stbt
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, unicode)
-    assert u'£500\nRöthlisberger' == text
+    assert u'£500\nDavid Röthlisberger' == text
 
 
 def test_that_ocr_can_read_small_text():
@@ -44,6 +44,13 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     assert ligature_text == text
     assert stbt.match_text("em-dash,", frame)
     assert stbt.match_text(u"em\u2014dash,", frame)
+
+
+def test_that_match_text_accepts_unicode():
+    f = cv2.imread("tests/ocr/unicode.png")
+    assert stbt.match_text("David", f, lang='eng+deu')  # ascii
+    assert stbt.match_text(u"Röthlisberger", f, lang='eng+deu')  # unicode
+    assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # utf-8 bytes
 
 
 def test_that_setting_config_options_has_an_effect():
