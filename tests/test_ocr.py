@@ -12,13 +12,9 @@ import _stbt.core
 import stbt
 
 
-def test_that_ocr_returns_unicode():
-    text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'))
-    assert isinstance(text, unicode)
-
-
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
+    assert isinstance(text, unicode)
     assert u'£500\nRöthlisberger' == text
 
 
