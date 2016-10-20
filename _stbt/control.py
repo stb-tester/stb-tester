@@ -35,6 +35,7 @@ def uri_to_remote(uri, display=None):
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
+        (r'file(:(?P<filename>[^,]+))?', FileControl),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -65,6 +66,21 @@ class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
+
+
+class FileControl(object):
+    """Writes keypress events to file.  Mostly useful for testing.  Defaults to
+    writing to stdout.
+    """
+    def __init__(self, filename):
+        if filename is None:
+            self.outfile = sys.stdout
+        else:
+            self.outfile = open(filename, 'w+')
+
+    def press(self, key):
+        self.outfile.write(key + '\n')
+        self.outfile.flush()
 
 
 class VideoTestSrcControl(object):

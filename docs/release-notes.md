@@ -36,6 +36,9 @@ UNRELEASED
 * Python API: `stbt.match_text` normalises punctuation such as em-dash and
   en-dash, just like `stbt.ocr` already does.
 
+* Remote controls: Added `file:` remote control which writes keys pressed to a
+  file.  Mostly intended for debugging.
+
 ##### Maintainer-visible changes
 
 

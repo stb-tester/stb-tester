@@ -123,6 +123,11 @@ Global options
 
     The x11 control requires that `xdotool` is installed.
 
+  file[:<filename>]
+    Append a newline seperated key name to the given file for each press.
+    Mostly useful for testing.  If a filename is not specified it defaults to
+    stdout.
+
 --source-pipeline=<pipeline>
   A GStreamer pipeline providing a video stream to use as video output from the
   set-top box under test.  For the Hauppauge HD PVR use::
