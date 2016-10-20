@@ -28,6 +28,10 @@ UNRELEASED
   `right_of` and `left_of`. They return a new Region relative to the current
   region.
 
+* Added helper utility `stbt control-relay` which allows you to use any stbt
+  remote control using the lirc socket protocol. This for example allows you to
+  control a roku via its HTTP REST API using `irsend`.
+
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white
@@ -35,6 +39,14 @@ UNRELEASED
 
 * Python API: `stbt.match_text` normalises punctuation such as em-dash and
   en-dash, just like `stbt.ocr` already does.
+
+* Remote controls: Added `file:` remote control which writes keys pressed to a
+  file.  Mostly intended for debugging.
+
+* Remote controls: Added a `lircd` remote control listener which pretends to
+  be lircd. This is distinct from the existing `lirc` remote control listener
+  which connects to a running `lircd` instance and reads which keys have been
+  pressed.
 
 ##### Maintainer-visible changes
 

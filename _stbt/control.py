@@ -35,6 +35,7 @@ def uri_to_remote(uri, display=None):
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
+        (r'file(:(?P<filename>[^,]+))?', FileControl),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -50,6 +51,7 @@ def uri_to_remote_recorder(uri):
          lirc_remote_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
+        (r'lircd(:(?P<lircd_socket>[^:]+))?', fake_lircd_listen),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
         (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
     ]
@@ -65,6 +67,33 @@ class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
+
+
+class MultiRemote(object):
+    """Allows sending press events on multiple remotes at a time.
+    """
+    def __init__(self, controls):
+        from multiprocessing.pool import ThreadPool
+        self.pool = ThreadPool()
+        self._controls = list(controls)
+
+    def press(self, key):
+        self.pool.map(lambda r: r.press(key), self._controls)
+
+
+class FileControl(object):
+    """Writes keypress events to file.  Mostly useful for testing.  Defaults to
+    writing to stdout.
+    """
+    def __init__(self, filename):
+        if filename is None:
+            self.outfile = sys.stdout
+        else:
+            self.outfile = open(filename, 'w+')
+
+    def press(self, key):
+        self.outfile.write(key + '\n')
+        self.outfile.flush()
 
 
 class VideoTestSrcControl(object):
@@ -158,6 +187,46 @@ class LircRemote(object):
         s.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         _read_lircd_reply(s)
         debug("Pressed " + key)
+
+
+def _read_lircd_reply(stream):
+    """Waits for lircd reply and checks if a LIRC send command was successful.
+
+    Waits for a reply message from lircd (called "reply packet" in the LIRC
+    reference) for a SEND_ONCE command, raises exception if it times out or
+    the reply contains an error message.
+
+    The structure of a lircd reply message for a SEND_ONCE command is the
+    following:
+
+    BEGIN
+    <command>
+    (SUCCESS|ERROR)
+    [DATA
+    <number-of-data-lines>
+    <error-message>]
+    END
+
+    See: http://www.lirc.org/html/technical.html#applications
+    """
+    reply = []
+    try:
+        for line in read_records(stream, "\n"):
+            if line == "BEGIN":
+                reply = []
+            reply.append(line)
+            if line == "END" and "SEND_ONCE" in reply[1]:
+                break
+    except socket.timeout:
+        raise RuntimeError(
+            "Timed out: No reply from LIRC remote control within %d seconds"
+            % stream.gettimeout())
+    if "SUCCESS" not in reply:
+        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
+            num_data_lines = int(reply[4])
+            raise RuntimeError("LIRC remote control returned error: %s"
+                               % " ".join(reply[5:5 + num_data_lines]))
+        raise RuntimeError("LIRC remote control returned unknown error")
 
 DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
 
@@ -442,12 +511,13 @@ def virtual_remote_listen(address, port=None):
 
 def lirc_remote_listen(lircd_socket, control_name):
     """Returns an iterator yielding keypresses received from a lircd file
-    socket.
+    socket -- that is, the keypresses that lircd received from a hardware
+    infrared receiver and is now sending on to us.
 
     See http://www.lirc.org/html/technical.html#applications
     """
     if lircd_socket is None:
-        lircd_socket = '/var/run/lirc/lircd'
+        lircd_socket = DEFAULT_LIRCD_SOCKET
     lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     debug("control-recorder connecting to lirc file socket '%s'..." %
           lircd_socket)
@@ -500,6 +570,25 @@ def lirc_key_reader(cmd_iter, control_name):
             yield m.group('key')
 
 
+def fake_lircd_listen(lircd_socket=None):
+    """Pretend to be lircd, yielding keys that are sent to us by a lirc client
+    such as ``irsend``.
+    """
+    if lircd_socket is None:
+        lircd_socket = DEFAULT_LIRCD_SOCKET
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.bind(lircd_socket)
+    s.listen(5)
+
+    while True:
+        control, _ = s.accept()
+        for cmd in control.makefile():
+            m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
+            control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+            yield m.groupdict()["key"]
+        control.close()
+
+
 def _connect_tcp_socket(address, port, timeout=3):
     """Connects to a TCP listener on 'address':'port'."""
     try:
@@ -513,46 +602,6 @@ def _connect_tcp_socket(address, port, timeout=3):
             address, port, e)),)
         e.strerror = e.args[0]
         raise
-
-
-def _read_lircd_reply(stream):
-    """Waits for lircd reply and checks if a LIRC send command was successful.
-
-    Waits for a reply message from lircd (called "reply packet" in the LIRC
-    reference) for a SEND_ONCE command, raises exception if it times out or
-    the reply contains an error message.
-
-    The structure of a lircd reply message for a SEND_ONCE command is the
-    following:
-
-    BEGIN
-    <command>
-    (SUCCESS|ERROR)
-    [DATA
-    <number-of-data-lines>
-    <error-message>]
-    END
-
-    See: http://www.lirc.org/html/technical.html#applications
-    """
-    reply = []
-    try:
-        for line in read_records(stream, "\n"):
-            if line == "BEGIN":
-                reply = []
-            reply.append(line)
-            if line == "END" and "SEND_ONCE" in reply[1]:
-                break
-    except socket.timeout:
-        raise RuntimeError(
-            "Timed out: No reply from LIRC remote control within %d seconds"
-            % stream.gettimeout())
-    if "SUCCESS" not in reply:
-        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
-            num_data_lines = int(reply[4])
-            raise RuntimeError("LIRC remote control returned error: %s"
-                               % " ".join(reply[5:5 + num_data_lines]))
-        raise RuntimeError("LIRC remote control returned unknown error")
 
 
 class FileToSocket(object):

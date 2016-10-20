@@ -123,6 +123,11 @@ Global options
 
     The x11 control requires that `xdotool` is installed.
 
+  file[:<filename>]
+    Append a newline seperated key name to the given file for each press.
+    Mostly useful for testing.  If a filename is not specified it defaults to
+    stdout.
+
 --source-pipeline=<pipeline>
   A GStreamer pipeline providing a video stream to use as video output from the
   set-top box under test.  For the Hauppauge HD PVR use::
@@ -158,8 +163,14 @@ Additional options to stbt record
   The source of remote control presses.  `uri` can be:
 
   lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
-    A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
-    Control) daemon. Parameters are as for `--control`.
+    This reports the keypresses that lircd (Linux Infrared Remote Control
+    daemon) receives from a hardware infrared receiver. Parameters are as for
+    `--control`.
+
+  lircd[:<lircd_socket>]
+    This pretends to be lircd, and reports the keypresses that it receives from
+    a lirc client such as the ``irsend`` command-line tool or another
+    ``stbt run`` process.
 
   file://<filename>
     Reads remote control keypresses from a newline-separated list of key names.
