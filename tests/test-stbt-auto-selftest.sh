@@ -1,14 +1,15 @@
+cd_example_testpack()
+{
+    cp -R "$testdir/auto-selftest-example-test-pack" test-pack &&
+    cd test-pack || fail "Test setup failed"
+}
+
 test_auto_selftest_generate()
 {
-    cp -R "$testdir/auto-selftest-example-test-pack" pristine &&
-    cp -R "pristine" "regenerated" &&
-    rm -rf regenerated/selftest/auto_selftest &&
-    cd regenerated &&
+    cd_example_testpack &&
     stbt auto-selftest generate &&
-    cd .. &&
-
-    find . -name '*.pyc' -delete -o -name __pycache__ -delete &&
-    diff -ur "pristine" "regenerated"
+    diff -ur --exclude="*.pyc" --exclude=__pycache__ \
+        "$testdir"/auto-selftest-example-test-pack .
 }
 
 test_that_generated_auto_selftests_pass_as_doctests()
@@ -16,13 +17,6 @@ test_that_generated_auto_selftests_pass_as_doctests()
     PYTHONPATH=$srcdir python -m doctest \
         "$testdir/auto-selftest-example-test-pack/selftest/auto_selftest/tests/example_selftest.py"
 }
-
-cd_example_testpack()
-{
-    cp -R "$testdir/auto-selftest-example-test-pack" test-pack &&
-    cd test-pack || fail "Test setup failed"
-}
-
 
 test_that_generated_auto_selftests_pass_stbt_auto_selftest_validate()
 {
