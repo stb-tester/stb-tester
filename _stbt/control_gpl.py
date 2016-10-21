@@ -207,7 +207,10 @@ def test_hdmi_cec_control_defaults():
 @contextmanager
 def _fake_cec():
     import StringIO
+    import pytest
     from mock import patch
+
+    pytest.importorskip("cec")
 
     io = StringIO.StringIO()
 
