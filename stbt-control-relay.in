@@ -1,0 +1,3 @@
+#!/bin/sh
+
+PYTHONPATH=@LIBEXECDIR@/stbt-control-relay exec @LIBEXECDIR@/stbt-control-relay/stbt_control_relay.py "$@"
