@@ -7,9 +7,6 @@ import sys
 from collections import OrderedDict
 from contextlib import contextmanager
 
-import cv2
-import numpy
-
 from .config import get_config
 from .utils import mkdir_p
 
@@ -122,6 +119,8 @@ class ImageLogger(object):
             self.data[k].append(v)
 
     def imwrite(self, name, image, region=None, colour=None):
+        import cv2
+        import numpy
         if not self.enabled:
             return
         if name in self.images:
