@@ -1,5 +1,6 @@
 Source: stb-tester
 Maintainer: William Manley <will@stb-tester.com>
+Homepage: https://stb-tester.com
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
@@ -83,10 +84,10 @@ Depends: ${shlibs:Depends},
          tesseract-ocr,
          tesseract-ocr-eng
 Description: Automated User Interface testing for set-top boxes. 
- stb-tester tests a set-top-box by issuing commands to it using a remote-control
- and checking that it has done the right thing by analysing what is on screen.
- Test scripts are written in Python and can be generated with the `stbt record`
- command.
+ stb-tester tests a set-top-box by issuing commands (typically using an
+ infrared transmitter) and checking that it has done the right thing by
+ analysing what is on screen (typically using an HDMI video-capture card).
+ Test scripts are written in Python.
 
 Package: stb-tester-camera
 Architecture: any
@@ -99,8 +100,9 @@ Depends: stb-tester (>> ${source:Upstream-Version}),
          v4l-utils
 Recommends: python-matplotlib,
             python-scipy
-Description: Support for using a camera pointed at a TV as input for
- stb-tester.  This is useful for testing apps running on Smart TVs.
+Description: stb-tester support for using a camera pointed at a TV as input.
+ This is useful for testing apps running on Smart TVs that don't have an HDMI
+ output. Installs the "stbt camera" command.
 
 Package: stb-tester-virtual-stb
 Architecture: any
@@ -110,12 +112,13 @@ Depends: stb-tester (>> ${source:Upstream-Version}),
          xdotool,
          xserver-xorg-input-void,
          xserver-xorg-video-dummy
-Description: Support for "virtual" set-top boxes where the stb software runs on
- the host PC rather than on specific hardware.
+Description: stb-tester support for "virtual" set-top boxes.
+ Allows testing software that runs on the host PC rather than on set-top box
+ hardware. Installs the "stbt virtual-stb" command.
 
 Package: stb-tester-gpl
 Architecture: any
 Depends: stb-tester (>> ${source:Upstream-Version}),
          python-libcec
-Description: Support for additional stb-tester features that depend on GPLed
- libraries, rather than the LGPL that the rest of stb-tester uses.
+Description: Optional stb-tester features that depend on GPL libraries.
+ Installs the "hdmi-cec" control mechanism.
