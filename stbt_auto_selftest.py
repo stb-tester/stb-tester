@@ -171,16 +171,20 @@ def init_worker():
 
 
 def iterate_with_progress(sequence, width=20, stream=sys.stderr):
-    ANSI_ERASE_LINE = '\033[K'
     stream.write('\n')
     total = len(sequence)
     for n, v in enumerate(sequence):
-        progress = (n * width) // total
-        stream.write(
-            ANSI_ERASE_LINE + '[%s] %8d / %d - Processing %s\r' % (
-                '#' * progress + ' ' * (width - progress), n, total, str(v)))
+        stream.write(_progress_line(width, n, total) +
+                     " - Processing %s\r" % v)
         yield v
-    stream.write('\n')
+    stream.write(_progress_line(width, total, total) + "\n")
+
+
+def _progress_line(width, n, total):
+    ANSI_ERASE_LINE = '\033[K'
+    progress = (n * width) // total
+    return '\r' + ANSI_ERASE_LINE + '[%s] %3d / %d' % (
+        '#' * progress + ' ' * (width - progress), n, total)
 
 
 def generate_into_tmpdir(source_files=None):
