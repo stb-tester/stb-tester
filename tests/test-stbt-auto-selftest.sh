@@ -96,3 +96,27 @@ test_auto_selftest_caching()
     python -c "assert ($(<hot_cache.time) * 2) < $(<without_cache.time)" \
         || fail "caching isn't fast"
 }
+
+test_auto_selftest_generate_with_single_source_file() {
+    cd_example_testpack &&
+    sed '/^class FalseyFrameObject/,/return/ s/return False/return True/' \
+        tests/example.py | sponge tests/example.py &&
+    stbt auto-selftest generate tests/example.py &&
+    grep -q 'FalseyFrameObject(is_visible=True)' \
+        selftest/auto_selftest/tests/example_selftest.py \
+        || fail "Didn't regenerate selftest"
+    diff -ur --exclude="*.pyc" --exclude=__pycache__ \
+        --exclude=example.py --exclude=example_selftest.py \
+        "$testdir"/auto-selftest-example-test-pack . \
+        || fail "Changed other selftest files"
+}
+
+test_auto_selftest_generate_with_single_invalid_source_file() {
+    cd_example_testpack &&
+    ! stbt auto-selftest generate tests/syntax_error.py
+}
+
+test_auto_selftest_generate_with_single_empty_source_file() {
+    cd_example_testpack &&
+    ! stbt auto-selftest generate tests/example_with_no_tests.py
+}
