@@ -175,8 +175,6 @@ def iterate_with_progress(sequence, width=20, stream=sys.stderr):
     stream.write('\n')
     total = len(sequence)
     for n, v in enumerate(sequence):
-        if n == total:
-            break
         progress = (n * width) // total
         stream.write(
             ANSI_ERASE_LINE + '[%s] %8d / %d - Processing %s\r' % (
