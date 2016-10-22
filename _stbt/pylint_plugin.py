@@ -44,7 +44,7 @@ class StbtChecker(BaseChecker):
     }
 
     def visit_const(self, node):
-        if (type(node.value) is str and
+        if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
@@ -56,7 +56,7 @@ class StbtChecker(BaseChecker):
     def visit_callfunc(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
                      node.func.as_string()):
-            if type(node.parent) == Discard:
+            if isinstance(node.parent, Discard):
                 for inferred in node.func.infer():
                     if inferred.root().name in ('stbt', '_stbt.core'):
                         self.add_message(
@@ -69,7 +69,7 @@ class StbtChecker(BaseChecker):
                     # Note that when `infer()` fails it returns `YES` which
                     # returns True to everything (including `callable()`).
                     if inferred.callable() and not (
-                            type(arg) is CallFunc and inferred == YES):
+                            isinstance(arg, CallFunc) and inferred == YES):
                         break
                 else:
                     self.add_message('E7003', node=node, args=arg.as_string())
@@ -77,9 +77,9 @@ class StbtChecker(BaseChecker):
 
 def _is_calculated_value(node):
     return (
-        type(node.parent) is BinOp or
-        (type(node.parent) is CallFunc and
-         type(node.parent.func) is Getattr and
+        isinstance(node.parent, BinOp) or
+        (isinstance(node.parent, CallFunc) and
+         isinstance(node.parent.func, Getattr) and
          node.parent.func.attrname == 'join'))
 
 
@@ -93,7 +93,7 @@ def _is_whitelisted_name(filename):
 
 def _in_whitelisted_functions(node):
     return (
-        type(node.parent) is CallFunc and
+        isinstance(node.parent, CallFunc) and
         node.parent.func.as_string() in (
             "cv2.imwrite",
             "re.match",

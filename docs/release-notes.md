@@ -48,6 +48,9 @@ UNRELEASED
   which connects to a running `lircd` instance and reads which keys have been
   pressed.
 
+* Command-line tools: Updated `stbt lint` to support pylint version 1.5.0 and
+  newer (including the latest version as of this writing, pylint v1.6.4).
+
 ##### Maintainer-visible changes
 
 
