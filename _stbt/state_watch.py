@@ -169,7 +169,7 @@ def new_state_sender(filename=None):
         socket_.connect(os.environ['STBT_TRACING_SOCKET'])
         file_ = _SocketAndFileWriter(socket_, fsfile_)
     except (KeyError, socket.error):
-        file_ = fsfile_
+        file_ = fsfile_  # pylint:disable=redefined-variable-type
     return StateSender(file_)
 
 

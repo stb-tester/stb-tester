@@ -198,7 +198,7 @@ class IRNetBoxProxy(object):
         except Exception, e:  # pylint: disable=W0703
             del self.read_sockets[sock.fileno()]
             sock.close()
-            if isinstance(e, SocketClosed) and e.socket is sock:
+            if isinstance(e, SocketClosed) and e.socket is sock:  # pylint:disable=no-member
                 self.info("Client connection closed")
             else:
                 self.error(e, "Error reading from client. Connection closed",
