@@ -58,9 +58,9 @@ install:
         xserver-xorg-video-dummy
         xterm
  - sudo pip install
-        astroid==1.2.1
+        astroid==1.4.8
         isort==3.9.0
-        pylint==1.3.1
+        pylint==1.6.4
         pytest==3.0.3
         responses==0.5.1
  - |

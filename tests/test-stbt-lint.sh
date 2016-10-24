@@ -42,13 +42,13 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	cv2.imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
-    stbt lint --errors-only test.py
+    stbt lint --errors-only --extension-pkg-whitelist=cv2 test.py
 }
 
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
-    stbt lint --errors-only "$srcdir"/stbt_pylint_plugin.py
+    stbt lint --errors-only "$srcdir"/_stbt/pylint_plugin.py
 }
 
 test_that_stbt_lint_checks_uses_of_stbt_return_values() {

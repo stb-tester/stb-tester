@@ -72,7 +72,7 @@ class Run(object):
         try:
             self.exit_status = int(self.read("exit-status"))
         except ValueError:
-            self.exit_status = "still running"
+            self.exit_status = "still running"  # pylint:disable=redefined-variable-type
 
         self.duration = self.read_seconds("duration")
         self.failure_reason = self.read("failure-reason")

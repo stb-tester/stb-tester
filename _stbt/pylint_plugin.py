@@ -24,7 +24,7 @@ from pylint.interfaces import IAstroidChecker
 
 
 class StbtChecker(BaseChecker):
-    __implements__ = IAstroidChecker  # pylint: disable=F0220
+    __implements__ = IAstroidChecker
     name = 'stb-tester'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057

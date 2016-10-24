@@ -242,7 +242,7 @@ def test_that_cache_is_disabled_when_debug_match():
 
 def _fields_eq(a, b, fields):
     for x in fields:
-        assert type(getattr(a, x)) == type(getattr(b, x))  # noqa (pep8 E721)
+        assert type(getattr(a, x)) == type(getattr(b, x))  # pylint:disable=unidiomatic-typecheck
         if isinstance(getattr(a, x), numpy.ndarray):
             assert (getattr(a, x) == getattr(b, x)).all()
         else:
@@ -309,7 +309,7 @@ def test_memoize_iterator_on_empty_iterator():
     @memoize_iterator()
     def cached_function():
         counter[0] += 1
-        if False:
+        if False:  # pylint:disable=using-constant-test
             yield
 
     with named_temporary_directory() as tmpdir, cache(tmpdir):
@@ -370,7 +370,7 @@ def test_that_cache_speeds_up_ocr():
         _check_cache_behaviour(ocr))
 
     assert uncached_time > (cached_time * 10)
-    assert type(cached_result) == type(uncached_result)
+    assert type(cached_result) == type(uncached_result)  # pylint:disable=unidiomatic-typecheck
 
     assert cached_result == uncached_result
 
