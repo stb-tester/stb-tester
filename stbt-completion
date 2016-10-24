@@ -51,7 +51,7 @@ _stbt_run() {
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
-        --save-video=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        --save-video=*) COMPREPLY=($(_stbt_filenames "$cur"));;
         *) COMPREPLY=(
                 $(compgen -W "$(_stbt_trailing_space \
                         --help --verbose --restart-source --save-video \
@@ -70,7 +70,7 @@ _stbt_record() {
         --source-pipeline=*) COMPREPLY=();;
         --sink-pipeline=*) COMPREPLY=();;
         --control-recorder=*) COMPREPLY=($(_stbt_control_recorder_uri));;
-        -o=*|--output-file=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        -o=*|--output-file=*) COMPREPLY=($(_stbt_filenames "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
                     --help --verbose --restart-source \
@@ -133,7 +133,7 @@ _stbt_control() {
     local prev="$_stbt_prev"
 
     case "$prev" in
-        --keymap=*) COMPREPLY=($(compgen -f -- "$cur"));;
+        --keymap=*) COMPREPLY=($(_stbt_filenames "$cur"));;
         --control=*) COMPREPLY=($(_stbt_control_uri));;
         *) COMPREPLY=($(compgen -W "$(_stbt_trailing_space \
                             --help --help-keymap --keymap --control)" \
@@ -171,7 +171,7 @@ _stbt_match() {
         ,2) COMPREPLY=($(compgen \
                 -f -W "$(_stbt_trailing_space --help -v)" \
                 -- "$cur"));;
-        *,3|-v,4) COMPREPLY=($(compgen -f -- "$cur"));;
+        *,3|-v,4) COMPREPLY=($(_stbt_filenames "$cur"));;
         ,4|*,*)
             case "$prev" in
                 match_method=) COMPREPLY=($(compgen \
@@ -226,7 +226,7 @@ _stbt_control_recorder_uri() {
         --control-recorder=vr:*:) _stbt_vr_port;;
         --control-recorder=vr:) _stbt_hostname;;
         --control-recorder=file:) _stbt_control_recorder_file;;
-        --control-recorder=stbt-control:) compgen -f -- "$cur";;
+        --control-recorder=stbt-control:) _stbt_filenames "$cur";;
         *) compgen -W "$( \
                     _stbt_no_space lirc: vr: file://
                     _stbt_trailing_space stbt-control)" \
@@ -243,7 +243,7 @@ _stbt_irnetbox_output() {
 
 _stbt_irnetbox_config() {
     local cur="$_stbt_cur"
-    compgen -f -- "$cur"
+    _stbt_filenames "$cur"
 }
 
 _stbt_lirc_socket_or_port_or_hostname() {
@@ -367,6 +367,17 @@ _stbt_filename_possibly_with_test_functions() {
     else
         cat
     fi
+}
+
+# Returns filenames and directories, appending a slash to directory names.
+_stbt_filenames() {
+    # Files, excluding directories:
+    grep -v -F -f <(compgen -d -P ^ -S '$' -- "$1") \
+        <(compgen -f -P ^ -S '$' -- "$1") |
+    sed -e 's/^\^//' -e 's/\$$/ /'
+
+    # Directories:
+    compgen -d -S / -- "$1"
 }
 
 # Walks backward from the current word, collecting the entire preceding

@@ -115,6 +115,15 @@ EOF
     fail "unexpected completions for file + unambiguous function prefix"
 }
 
+test_completion_filenames() {
+    cd "$srcdir" && . stbt-completion
+    diff -u - <(_stbt_filenames "stbt-ca") <<-EOF ||
+	stbt-camera 
+	stbt-camera.d/
+	EOF
+    fail "unexpected completions for files + directories"
+}
+
 completion_config_for_tests() {
     cat <<-EOF
 	[global]
