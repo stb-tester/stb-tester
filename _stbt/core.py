@@ -1276,7 +1276,7 @@ def as_precondition(message):
               % (type(e).__name__, traceback.format_exc(e)))
         exc = PreconditionError(message, e)
         if hasattr(e, 'screenshot'):
-            exc.screenshot = e.screenshot  # pylint: disable=W0201
+            exc.screenshot = e.screenshot  # pylint: disable=attribute-defined-outside-init,no-member
         raise exc
 
 

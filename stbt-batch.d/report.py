@@ -51,7 +51,7 @@ def index(parentdir):
     runs = [Run(d) for d in sorted(rundirs, reverse=True)]
     if len(runs) == 0:
         die("Directory '%s' doesn't contain any testruns" % parentdir)
-    print templates.get_template("index.html").render(
+    print templates.get_template("index.html").render(  # pylint:disable=no-member
         name=basename(abspath(parentdir)).replace("_", " "),
         runs=runs,
         extra_columns=set(
@@ -60,7 +60,7 @@ def index(parentdir):
 
 
 def testrun(rundir):
-    print templates.get_template("testrun.html").render(
+    print templates.get_template("testrun.html").render(  # pylint:disable=no-member
         run=Run(rundir),
     ).encode('utf-8')
 

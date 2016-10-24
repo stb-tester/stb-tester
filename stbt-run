@@ -131,8 +131,8 @@ except Exception as e:  # pylint: disable=W0703
         error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
     sys.stdout.write("FAIL: %s: %s: %s\n" % (
         args.script, type(e).__name__, error_message))
-    if hasattr(e, "screenshot") and e.screenshot is not None:
-        screenshot = e.screenshot
+    if hasattr(e, "screenshot") and e.screenshot is not None:  # pylint:disable=no-member
+        screenshot = e.screenshot  # pylint:disable=no-member
     elif stbt._dut._display:  # pylint: disable=W0212
         screenshot = stbt._dut._display.last_used_frame  # pylint: disable=W0212
     else:
