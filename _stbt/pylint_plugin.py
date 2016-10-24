@@ -18,9 +18,15 @@ import os
 import re
 
 from astroid import YES
-from astroid.node_classes import BinOp, CallFunc, Discard, Getattr
+from astroid.node_classes import BinOp
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
+
+try:
+    from astroid.node_classes import Call, Expr, Attribute
+except ImportError:
+    from astroid.node_classes import (
+        CallFunc as Call, Discard as Expr, Getattr as Attribute)
 
 
 class StbtChecker(BaseChecker):
@@ -56,7 +62,7 @@ class StbtChecker(BaseChecker):
     def visit_callfunc(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
                      node.func.as_string()):
-            if isinstance(node.parent, Discard):
+            if isinstance(node.parent, Expr):
                 for inferred in node.func.infer():
                     if inferred.root().name in ('stbt', '_stbt.core'):
                         self.add_message(
@@ -69,7 +75,7 @@ class StbtChecker(BaseChecker):
                     # Note that when `infer()` fails it returns `YES` which
                     # returns True to everything (including `callable()`).
                     if inferred.callable() and not (
-                            isinstance(arg, CallFunc) and inferred == YES):
+                            isinstance(arg, Call) and inferred == YES):
                         break
                 else:
                     self.add_message('E7003', node=node, args=arg.as_string())
@@ -78,8 +84,8 @@ class StbtChecker(BaseChecker):
 def _is_calculated_value(node):
     return (
         isinstance(node.parent, BinOp) or
-        (isinstance(node.parent, CallFunc) and
-         isinstance(node.parent.func, Getattr) and
+        (isinstance(node.parent, Call) and
+         isinstance(node.parent.func, Attribute) and
          node.parent.func.attrname == 'join'))
 
 
@@ -93,7 +99,7 @@ def _is_whitelisted_name(filename):
 
 def _in_whitelisted_functions(node):
     return (
-        isinstance(node.parent, CallFunc) and
+        isinstance(node.parent, Call) and
         node.parent.func.as_string() in (
             "cv2.imwrite",
             "re.match",
