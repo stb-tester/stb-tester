@@ -2158,7 +2158,7 @@ def _upsample(position, levels):
     return Position(position.x * 2 ** levels, position.y * 2 ** levels)
 
 
-# Order of parameters consistent with ``cv2.boudingRect``.
+# Order of parameters consistent with ``cv2.boundingRect``.
 class _Rect(namedtuple("_Rect", "x y w h")):
     def expand(self, size):
         return _Rect(self.x, self.y, self.w + size.w, self.h + size.h)
