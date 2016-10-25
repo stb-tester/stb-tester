@@ -8,7 +8,7 @@ they still behave correctly.
 
 Usage:
 
-    stbt auto-selftest generate
+    stbt auto-selftest generate [source_file.py ...]
     stbt auto-selftest validate
 
 ``stbt auto-selftest generate`` generates a doctest for every `FrameObject` in
@@ -76,8 +76,12 @@ def main(argv):
         formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser(
+    subparser_generate = subparsers.add_parser(
         'generate', help="Regenerate auto-selftests from screenshots")
+    subparser_generate.add_argument(
+        "source_files", nargs="*", help="""Python source file(s) to search for
+        FrameObjects (defaults to all python files in the test-pack)""")
+
     subparsers.add_parser('validate', help='Run (and check) the auto-selftests')
 
     cmdline_args = parser.parse_args(argv[1:])
@@ -85,30 +89,48 @@ def main(argv):
     root = _find_test_pack_root()
     if root is None:
         sys.stderr.write(
-            "This command must be run within a test pack.  Couldn't find a "
-            ".stbt.conf in this or any parent directory.\n")
+            "error: This command must be run within a test pack. Couldn't find "
+            "a .stbt.conf in this or any parent directory.\n")
         return 1
 
     os.chdir(root)
 
     if cmdline_args.command == 'generate':
-        generate()
+        return generate(cmdline_args.source_files)
     elif cmdline_args.command == 'validate':
         return validate()
     else:
         assert False
 
 
-def generate():
-    tmpdir = generate_into_tmpdir()
+def generate(source_files):
+    tmpdir = generate_into_tmpdir(source_files)
     try:
-        target = "%s/selftest/auto_selftest" % os.curdir
-        if os.path.exists(target):
-            shutil.rmtree(target)
-        os.rename(tmpdir, target)
-    except:
-        shutil.rmtree(tmpdir)
-        raise
+        if source_files:
+            # Only replace the selftests for the specified files.
+            for f in source_files:
+                newfile = os.path.join(tmpdir, selftest_filename(f))
+                target = os.path.join(os.curdir, "selftest/auto_selftest",
+                                      selftest_filename(f))
+                if os.path.exists(newfile):
+                    mkdir_p(os.path.dirname(target))
+                    os.rename(os.path.join(tmpdir, selftest_filename(f)),
+                              target)
+                else:
+                    sys.stderr.write(
+                        "error: '%s' isn't a valid source file.\n" % f)
+                    return 1
+
+        else:
+            # Replace all selftests, deleting selftests for source files that
+            # no longer exist.
+            target = "%s/selftest/auto_selftest" % os.curdir
+            if os.path.exists(target):
+                shutil.rmtree(target)
+                os.rename(tmpdir, target)
+
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def validate():
@@ -149,21 +171,23 @@ def init_worker():
 
 
 def iterate_with_progress(sequence, width=20, stream=sys.stderr):
-    ANSI_ERASE_LINE = '\033[K'
     stream.write('\n')
     total = len(sequence)
     for n, v in enumerate(sequence):
-        if n == total:
-            break
-        progress = (n * width) // total
-        stream.write(
-            ANSI_ERASE_LINE + '[%s] %8d / %d - Processing %s\r' % (
-                '#' * progress + ' ' * (width - progress), n, total, str(v)))
+        stream.write(_progress_line(width, n, total) +
+                     " - Processing %s\r" % v)
         yield v
-    stream.write('\n')
+    stream.write(_progress_line(width, total, total) + "\n")
 
 
-def generate_into_tmpdir():
+def _progress_line(width, n, total):
+    ANSI_ERASE_LINE = '\033[K'
+    progress = (n * width) // total
+    return '\r' + ANSI_ERASE_LINE + '[%s] %3d / %d' % (
+        '#' * progress + ' ' * (width - progress), n, total)
+
+
+def generate_into_tmpdir(source_files=None):
     start_time = time.time()
 
     selftest_dir = "%s/selftest" % os.curdir
@@ -173,20 +197,12 @@ def generate_into_tmpdir():
         processes=1, maxtasksperchild=1, initializer=init_worker)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
     try:
-        filenames = []
-        for module_filename in _recursive_glob('*.py'):
-            if module_filename.startswith('selftest'):
-                continue
-            if not is_valid_python_identifier(
-                    os.path.basename(module_filename)[:-3]):
-                continue
-            filenames.append(module_filename)
-
+        if not source_files:
+            source_files = valid_source_files(_recursive_glob('*.py'))
         perf_log = []
         test_file_count = 0
-        for module_filename in iterate_with_progress(filenames):
-            outname = os.path.join(
-                tmpdir, re.sub('.py$', '_selftest.py', module_filename))
+        for module_filename in iterate_with_progress(source_files):
+            outname = os.path.join(tmpdir, selftest_filename(module_filename))
             barename = re.sub('.py$', '_bare.py', outname)
             mkdir_p(os.path.dirname(outname))
 
@@ -218,6 +234,24 @@ def generate_into_tmpdir():
         pool.join()
         shutil.rmtree(tmpdir)
         raise
+
+
+def valid_source_files(source_files):
+    filenames = []
+    for module_filename in source_files:
+        if module_filename.startswith('selftest'):
+            continue
+        if not is_valid_python_identifier(
+                os.path.basename(module_filename)[:-3]):
+            continue
+        if not os.path.exists(module_filename):
+            continue
+        filenames.append(module_filename)
+    return filenames
+
+
+def selftest_filename(module_filename):
+    return re.sub('.py$', '_selftest.py', module_filename)
 
 
 class Module(namedtuple('Module', "filename items")):
