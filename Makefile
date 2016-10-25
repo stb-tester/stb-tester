@@ -164,7 +164,7 @@ PYTHON_FILES := \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
-check: check-pylint check-pytest check-integrationtests check-bashcompletion
+check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
@@ -197,14 +197,6 @@ check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
-check-bashcompletion:
-	@echo Running stbt-completion unit tests
-	@bash -c ' \
-	    set -e; \
-	    . ./stbt-completion; \
-	    for t in `declare -F | awk "/_stbt_test_/ {print \\$$3}"`; do \
-	        ($$t); \
-	    done'
 
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
@@ -454,7 +446,7 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean deb dist doc install install-core uninstall
-.PHONY: check check-bashcompletion check-hardware check-integrationtests
+.PHONY: check check-hardware check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
 .PHONY: ppa-publish rpm srpm
 .PHONY: check-cameratests install-stbt-camera
