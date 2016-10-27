@@ -49,7 +49,10 @@ def main(argv):
     listener = uri_to_remote_recorder(args.input)
     for key in listener:
         sys.stderr.write("Received %s\n" % key)
-        r.press(key)
+        try:
+            r.press(key)
+        except Exception as e:
+            sys.stderr.write("Error pressing key %r: %s\n" % (key, e))
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
