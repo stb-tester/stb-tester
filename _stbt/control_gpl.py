@@ -111,8 +111,13 @@ class HdmiCecControl(object):
             source = 1
         if destination is None:
             destination = 4
-        self.source = int(source, 16)
-        self.destination = int(destination, 16)
+        if isinstance(source, (str, unicode)):
+            source = int(source, 16)
+        if isinstance(destination, (str, unicode)):
+            destination = int(destination, 16)
+
+        self.source = source
+        self.destination = destination
 
         self.cecconfig = cec.libcec_configuration()
         self.cecconfig.strDeviceName = "stb-tester"
