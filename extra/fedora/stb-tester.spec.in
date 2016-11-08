@@ -77,6 +77,16 @@ Requires: xorg-x11-drv-dummy
 Support for "virtual" set-top boxes where the stb software runs on the host PC
 rather than on specific hardware.
 
+%package gpl
+Summary: stb-tester GPL package
+
+Requires: stb-tester
+Requires: python-libcec
+
+%description gpl
+Support for additional stb-tester features that depend on GPLed libraries,
+rather than the LGPL that the rest of stb-tester uses.
+
 %prep
 %setup -n stb-tester-@VERSION@
 
@@ -104,3 +114,6 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir
 
 %files virtual-stb
 %{_libexecdir}/stbt/stbt_virtual_stb.py
+
+%files gpl
+%{_libexecdir}/stbt/_stbt/control_gpl.py

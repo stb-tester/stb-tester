@@ -144,6 +144,17 @@ install-virtual-stb: $(INSTALL_VSTB_FILES)
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
 
+INSTALL_GPL_FILES = \
+    _stbt/control_gpl.py
+
+install-gpl: $(INSTALL_GPL_FILES)
+	$(INSTALL) -m 0755 -d \
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_GPL_FILES))))
+	for filename in $(INSTALL_GPL_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	done
+
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
 	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
