@@ -23,6 +23,7 @@ nosetest-issue-49-workaround-stbt-control.py
 rpmbuild
 stb-tester-*.tar.gz
 stb-tester_*.deb
+stbt-control-relay
 stbt-controlc
 stbt-debug
 stbt.sh

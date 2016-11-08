@@ -48,7 +48,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt.sh: \
+extra/fedora/stb-tester.spec stbt.sh stbt-control-relay: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
@@ -154,6 +154,29 @@ install-gpl: $(INSTALL_GPL_FILES)
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
+
+STBT_CONTROL_RELAY_FILES = \
+    _stbt/__init__.py \
+    _stbt/config.py \
+    _stbt/control.py \
+    _stbt/control_gpl.py \
+    _stbt/irnetbox.py \
+    _stbt/logging.py \
+    _stbt/utils.py \
+    stbt_control_relay.py
+
+install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay defaults.conf
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 0755 -d \
+	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt-control-relay/%,$(sort $(dir $(STBT_CONTROL_RELAY_FILES))))
+	for filename in $(STBT_CONTROL_RELAY_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename \
+	        $(DESTDIR)$(libexecdir)/stbt-control-relay/$$filename; \
+	done
+	$(INSTALL) -m 0644 defaults.conf \
+	    $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt.conf
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
