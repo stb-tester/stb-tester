@@ -207,11 +207,9 @@ _stbt_control_uri() {
         --control=lirc:*:) _stbt_lirc_port_or_name;;
         --control=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
         --control=samsung:*) _stbt_hostname;;
-        --control=vr:*:) _stbt_vr_port;;
-        --control=vr:) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc: vr: samsung: x11:
+                    _stbt_no_space irnetbox: lirc: samsung: x11:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac
@@ -224,12 +222,10 @@ _stbt_control_recorder_uri() {
         --control-recorder=lirc:*:*:) _stbt_lirc_name;;
         --control-recorder=lirc:*:) _stbt_lirc_port_or_name;;
         --control-recorder=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
-        --control-recorder=vr:*:) _stbt_vr_port;;
-        --control-recorder=vr:) _stbt_hostname;;
         --control-recorder=file:) _stbt_control_recorder_file;;
         --control-recorder=stbt-control:) _stbt_filenames "$cur";;
         *) compgen -W "$( \
-                    _stbt_no_space lirc: vr: file://
+                    _stbt_no_space lirc: file://
                     _stbt_trailing_space stbt-control)" \
                 -- "$cur";;
     esac
@@ -268,11 +264,6 @@ _stbt_lirc_name() {
 _stbt_hostname() {
     local cur="$_stbt_cur"
     compgen -A hostname -S ":" -- "$cur"
-}
-
-_stbt_vr_port() {
-    local cur="$_stbt_cur"
-    compgen -W "$(_stbt_trailing_space 2033)" -- "$cur"
 }
 
 _stbt_control_recorder_file() {
