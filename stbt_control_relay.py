@@ -34,6 +34,7 @@ import signal
 import sys
 
 from _stbt.control import MultiRemote, uri_to_remote, uri_to_remote_recorder
+from _stbt.logging import argparser_add_verbose_argument, debug
 
 
 def main(argv):
@@ -44,6 +45,7 @@ def main(argv):
         presses. Values are the same as stbt record's --control-recorder.""")
     parser.add_argument("output", nargs="+", help="""One or more remote control
         configurations. Values are the same as stbt run's --control.""")
+    argparser_add_verbose_argument(parser)
     args = parser.parse_args(argv[1:])
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
@@ -51,7 +53,7 @@ def main(argv):
     r = MultiRemote(uri_to_remote(x) for x in args.output)
     listener = uri_to_remote_recorder(args.input)
     for key in listener:
-        sys.stderr.write("Received %s\n" % key)
+        debug("Received %s" % key)
         try:
             r.press(key)
         except Exception as e:  # pylint: disable=broad-except
