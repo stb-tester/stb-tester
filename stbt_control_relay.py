@@ -40,7 +40,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--input", default="lircd")
-    parser.add_argument("output", nargs="*")
+    parser.add_argument("output", nargs="+")
     args = parser.parse_args(argv[1:])
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
