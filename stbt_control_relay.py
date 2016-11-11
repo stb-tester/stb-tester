@@ -39,8 +39,11 @@ from _stbt.control import MultiRemote, uri_to_remote, uri_to_remote_recorder
 def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--input", default="lircd")
-    parser.add_argument("output", nargs="+")
+    parser.add_argument(
+        "--input", default="lircd", help="""The source of remote control
+        presses. Values are the same as stbt record's --control-recorder.""")
+    parser.add_argument("output", nargs="+", help="""One or more remote control
+        configurations. Values are the same as stbt run's --control.""")
     args = parser.parse_args(argv[1:])
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
