@@ -65,12 +65,6 @@ def argparser_add_verbose_argument(argparser):
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
 
-    argparser.add_argument(
-        '--structured-logging', metavar="FILENAME", default=None,
-        help="Writes structed logging data to given filename.  The format of "
-             "the data is newline delimited JSON objects with xz compression "
-             "applied")
-
 
 class ImageLogger(object):
     """Log intermediate images used in image processing (such as `match`).
