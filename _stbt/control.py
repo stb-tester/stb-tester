@@ -5,7 +5,6 @@ import re
 import socket
 import subprocess
 import sys
-import threading
 import time
 from contextlib import contextmanager
 from distutils.spawn import find_executable
@@ -42,7 +41,6 @@ def uri_to_remote(uri, display=None):
         (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
-        (r'vr:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', VirtualRemote),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
     ]
@@ -65,7 +63,6 @@ def uri_to_remote_recorder(uri):
          lirc_remote_listen),
         (r'lircd(:(?P<lircd_socket>[^:]+))?', fake_lircd_listen),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
-        (r'vr:(?P<address>[^:/]*)(:(?P<port>\d+))?', virtual_remote_listen),
     ]
 
     for regex, factory in remotes:
@@ -157,31 +154,6 @@ class VideoTestSrcControl(object):
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
-
-
-class VirtualRemote(object):
-    """Send a key-press to a set-top box running a VirtualRemote listener.
-
-        control = VirtualRemote("192.168.0.123")
-        control.press("MENU")
-    """
-
-    def __init__(self, hostname, port=None):
-        self.hostname = hostname
-        self.port = int(port or 2033)
-        # Connect once so that the test fails immediately if STB not found
-        # (instead of failing at the first `press` in the script).
-        debug("VirtualRemote: Connecting to %s:%d" % (hostname, self.port))
-        self._connect()
-        debug("VirtualRemote: Connected to %s:%d" % (hostname, self.port))
-
-    def press(self, key):
-        self._connect().sendall(
-            "D\t%s\n\x00U\t%s\n\x00" % (key, key))  # key Down, then Up
-        debug("Pressed " + key)
-
-    def _connect(self):
-        return _connect_tcp_socket(self.hostname, self.port)
 
 
 class LircRemote(object):
@@ -490,37 +462,6 @@ def read_records(stream, sep):
             yield i
 
 
-def vr_key_reader(cmd_iter):
-    r"""Converts virtual remote records into list of keypresses
-
-    >>> list(vr_key_reader(['D\tHELLO', 'U\tHELLO']))
-    ['HELLO']
-    >>> list(vr_key_reader(['D\tCHEESE', 'D\tHELLO', 'U\tHELLO', 'U\tCHEESE']))
-    ['HELLO', 'CHEESE']
-    """
-    for i in cmd_iter:
-        (action, key) = i.split('\t')
-        if action == 'U':
-            yield key
-
-
-def virtual_remote_listen(address, port=None):
-    """Waits for a VirtualRemote to connect, and returns an iterator yielding
-    keypresses."""
-    if port is None:
-        port = 2033
-    port = int(port)
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serversocket.bind((address, port))
-    serversocket.listen(5)
-    sys.stderr.write("Waiting for connection from virtual remote control "
-                     "on %s:%d...\n" % (address, port))
-    (connection, address) = serversocket.accept()
-    sys.stderr.write("Accepted connection from %s\n" % str(address))
-    return vr_key_reader(read_records(connection, '\n\x00'))
-
-
 def lirc_remote_listen(lircd_socket, control_name):
     """Returns an iterator yielding keypresses received from a lircd file
     socket -- that is, the keypresses that lircd received from a hardware
@@ -631,29 +572,6 @@ class FileToSocket(object):
 
     def recv(self, bufsize, flags=0):  # pylint: disable=W0613
         return self.file.read(bufsize)
-
-
-def test_that_virtual_remote_is_symmetric_with_virtual_remote_listen():
-    received = []
-    keys = ['DOWN', 'DOWN', 'UP', 'GOODBYE']
-
-    def listener():
-        # "* 2" is once for VirtualRemote's __init__ and once for press.
-        for _ in range(len(keys) * 2):
-            for k in uri_to_remote_recorder('vr:localhost:2033'):
-                received.append(k)
-
-    t = threading.Thread()
-    t.daemon = True
-    t.run = listener
-    t.start()
-    for k in keys:
-        time.sleep(0.1)  # Give listener a chance to start listening (sorry)
-        vr = uri_to_remote('vr:localhost:2033')
-        time.sleep(0.1)
-        vr.press(k)
-    t.join()
-    assert received == keys
 
 
 @contextmanager
