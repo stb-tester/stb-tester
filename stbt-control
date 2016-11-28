@@ -151,7 +151,8 @@ def main_loop(control_uri, keymap_file):
             {mapping}
 
             """).format(keymap_file=keymap_file[:term_width - len("Keymap:  ")],
-                        control_uri=control_uri,
+                        control_uri=control_uri[:77] + (
+                            control_uri[77:] and "..."),
                         mapping=keymap_string(keymap))
         if keymap_fits_terminal(term, printed_keymap):
             term.addstr(printed_keymap)
