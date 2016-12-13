@@ -222,6 +222,8 @@ class IRNetBoxProxy(object):
     def connect(self):
         try:
             self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.listen_sock.setsockopt(socket.SOL_SOCKET,
+                                        socket.SO_REUSEADDR, 1)
             self.listen_sock.bind(self.listen_addr)
             self.listen_sock.listen(5)
         except Exception, e:  # pylint: disable=W0703
