@@ -174,9 +174,9 @@ class HdmiCecControl(object):
             debug(
                 dedent("""\
                     Found a CEC adapter:"
-                    Port:     %s" + adapter.strComName)
-                    Vendor:   %x" + hex(adapter.iVendorId))
-                    Product:  %x" + hex(adapter.iProductId))""") %
+                    Port:     %s
+                    Vendor:   %x
+                    Product:  %x""") %
                 (adapter.strComName, adapter.iVendorId, adapter.iProductId))
             retval = adapter.strComName
         return retval
