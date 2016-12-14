@@ -110,15 +110,10 @@ class HdmiCecControl(object):
         import cec
         if source is None:
             source = 1
-        if destination is None:
-            destination = 4
         if isinstance(source, (str, unicode)):
             source = int(source, 16)
         if isinstance(destination, (str, unicode)):
             destination = int(destination, 16)
-
-        self.source = source
-        self.destination = destination
 
         self.cecconfig = cec.libcec_configuration()
         self.cecconfig.strDeviceName = "stb-tester"
@@ -137,6 +132,21 @@ class HdmiCecControl(object):
         if not self.lib.Open(device):
             raise HdmiCecError("Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
+
+        if destination is None:
+            ds = list(self._list_active_devices())
+            debug("HDMI-CEC scan complete.  Found %r" % ds)
+            if len(ds) == 0:
+                raise HdmiCecError(
+                    "Failed to find a device on the CEC bus to talk to.")
+            # Choose the last one, the first one is likely to be a TV if there's
+            # one plugged in
+            destination = ds[-1]
+            debug("HDMI-CEC: Chose to talk to device %i %r" % (
+                destination, self.lib.GetDeviceOSDName(destination)))
+
+        self.source = source
+        self.destination = destination
 
     def press(self, key):
         from .control import UnknownKeyError
@@ -171,6 +181,17 @@ class HdmiCecControl(object):
             retval = adapter.strComName
         return retval
 
+    def _list_active_devices(self):
+        self.lib.RescanActiveDevices()
+        active = self.lib.GetActiveDevices()
+
+        # We get a fixed size array back.  libcec-python doesn't implement
+        # iteration or bounds checking:
+        for n in range(16):
+            # active.primary is us
+            if n != active.primary and active[n]:
+                yield n
+
 
 def test_hdmi_cec_control():
     from .control import uri_to_remote
@@ -199,6 +220,9 @@ def test_hdmi_cec_control_defaults():
 
     assert io.getvalue() == dedent("""\
         Open('test-device')
+        RescanActiveDevices()
+        GetActiveDevices()
+        GetDeviceOSDName(4)
         Transmit(dest: 0x4, src: 0x1, op: 0x44, data: <00>)
         Transmit(dest: 0x4, src: 0x1, op: 0x45, data: <>)
         """)
@@ -214,7 +238,7 @@ def _fake_cec():
 
     io = StringIO.StringIO()
 
-    def fake_open(_, device):
+    def Open(_, device):
         io.write('Open(%r)\n' % device)
         return True
 
@@ -225,14 +249,34 @@ def _fake_cec():
             int(cmd.parameters.data), ctypes.POINTER(ctypes.c_uint8)).contents,
             0, cmd.parameters.size))
 
-    def fake_transmit(_, cmd):
+    def Transmit(_, cmd):
         io.write("Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
             cmd.destination, cmd.initiator, cmd.opcode,
             cec_cmd_get_data(cmd).encode('hex')))
         return True
 
-    with patch('cec.ICECAdapter.Open', fake_open), \
-            patch('cec.ICECAdapter.Transmit', fake_transmit):
+    def RescanActiveDevices(_):
+        io.write("RescanActiveDevices()\n")
+
+    def GetActiveDevices(_):
+        io.write("GetActiveDevices()\n")
+
+        class _L(list):
+            @property
+            def primary(self):
+                return 1
+
+        return _L([False, True, False, False, True] + [False] * 11)
+
+    def GetDeviceOSDName(_, destination):
+        io.write("GetDeviceOSDName(%r)\n" % destination)
+        return "Test"
+
+    with patch('cec.ICECAdapter.Open', Open), \
+            patch('cec.ICECAdapter.Transmit', Transmit), \
+            patch('cec.ICECAdapter.RescanActiveDevices', RescanActiveDevices), \
+            patch('cec.ICECAdapter.GetActiveDevices', GetActiveDevices), \
+            patch('cec.ICECAdapter.GetDeviceOSDName', GetDeviceOSDName):
         yield io
 
 controls = [
