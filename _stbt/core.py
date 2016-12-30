@@ -1176,9 +1176,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
     * The exception message won't contain the reason why the match failed
       (unless you specify it as a second parameter to `assert`, which is
       tedious and we don't expect you to do it), and
-    * The exception won't have the offending video-frame attached (so the
-      screenshot in the test-run artifacts will be a few frames later than the
-      frame that actually caused the test to fail).
+    * The exception won't have the offending video-frame attached.
 
     We hope to solve both of the above drawbacks at some point in the future.
 
