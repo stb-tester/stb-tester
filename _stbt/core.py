@@ -1187,12 +1187,12 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
     import time
     expiry_time = time.time() + timeout_secs
     while True:
-        e = callable_()
-        if e:
-            return e
+        value = callable_()
+        if value:
+            return value
         if time.time() > expiry_time:
             debug("wait_until timed out: %s" % _callable_description(callable_))
-            return e
+            return value
         time.sleep(interval_secs)
 
 
