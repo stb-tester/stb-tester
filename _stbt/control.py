@@ -61,7 +61,6 @@ def uri_to_remote_recorder(uri):
          lirc_remote_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
          lirc_remote_listen),
-        (r'lircd(:(?P<lircd_socket>[^:]+))?', fake_lircd_listen),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
     ]
 
@@ -76,18 +75,6 @@ class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
-
-
-class MultiRemote(object):
-    """Allows sending press events on multiple remotes at a time.
-    """
-    def __init__(self, controls):
-        from multiprocessing.pool import ThreadPool
-        self.pool = ThreadPool()
-        self._controls = list(controls)
-
-    def press(self, key):
-        self.pool.map(lambda r: r.press(key), self._controls)
 
 
 class FileControl(object):
@@ -521,25 +508,6 @@ def lirc_key_reader(cmd_iter, control_name):
             s)
         if m and int(m.group('repeat_count')) == 0:
             yield m.group('key')
-
-
-def fake_lircd_listen(lircd_socket=None):
-    """Pretend to be lircd, yielding keys that are sent to us by a lirc client
-    such as ``irsend``.
-    """
-    if lircd_socket is None:
-        lircd_socket = DEFAULT_LIRCD_SOCKET
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.bind(lircd_socket)
-    s.listen(5)
-
-    while True:
-        control, _ = s.accept()
-        for cmd in control.makefile():
-            m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
-            control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
-            yield m.groupdict()["key"]
-        control.close()
 
 
 def _connect_tcp_socket(address, port, timeout=3):

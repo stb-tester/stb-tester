@@ -62,8 +62,8 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
             return os.path.join(tmpdir, filename)
         proc = subprocess.Popen(
             ["stbt-control-relay",
-             "--input=lircd:" + t("lircd.sock"),
-             "file:" + t("one-file"), "file:" + t("another")])
+             "--socket", t("lircd.sock"),
+             "file:" + t("one-file")])
         with scoped_process(proc):
             wait_until(lambda: (
                 os.path.exists(t("lircd.sock")) or proc.poll() is not None))
@@ -73,15 +73,4 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
             testremote.press("KEY_DOWN")
             expected = "KEY_UP\nKEY_DOWN\n"
 
-            def filecontains(filename, text):
-                try:
-                    with open(t(filename)) as f:
-                        return text == f.read()
-                except OSError:
-                    return None
-
-            wait_until(lambda: (
-                filecontains("one-file", expected) and
-                filecontains("another", expected)))
             assert open(t("one-file")).read() == expected
-            assert open(t("another")).read() == expected

@@ -52,17 +52,11 @@ UNRELEASED
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
 
-* Remote controls: Added a `lircd` remote control listener which pretends to
-  be lircd. This is distinct from the existing `lirc` remote control listener
-  which connects to a running `lircd` instance and reads which keys have been
-  pressed.
-
 * `stbt lint`: Updated to support pylint version 1.5.0 and newer (including the
   latest version as of this writing, pylint v1.6.4).
 
 * `stbt lint`: Added FrameObject checker. It checks that FrameObject properties
   pass an explicit `frame` parameter to functions like `stbt.match`.
-
 
 ##### Maintainer-visible changes
 
