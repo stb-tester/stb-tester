@@ -81,18 +81,16 @@ Global options
     "IR Signal Database Utility".
     stbt supports the irNetBox models II and III.
 
-  hdmi-cec:[<device>]:[<source>]:[<destination>]
+  hdmi-cec[:<device>[:<source>[:<destination>]]]
     In conjuction with a USB-CEC adaptor this controls a set-top box by sending
     key-presses over HDMI.  This is useful for devices that lack an IR input
     such as the Playstation 4.
 
-    * The USB-CEC adaptor to use.  Leave empty to auto-detect.
+    * device - The USB-CEC adaptor to use. Leave empty to auto-detect.
 
     * source/destination - A hexidecimal number between 0 and f indicating the
-      HDMI source/destination.  Source defaults to 1 (Recording 1), destination
-      defaults to 4 (Playback 1).
-
-      The different values mean:
+      HDMI source/destination. Source defaults to 1 (Recording 1). Destination
+      defaults to the last device present on the CEC bus.
 
         * 0 - TV
         * 1 - Recording 1
