@@ -28,10 +28,6 @@ UNRELEASED
   `right_of` and `left_of`. They return a new Region relative to the current
   region.
 
-* Added helper utility `stbt control-relay` which allows you to use any stbt
-  remote control using the lirc socket protocol. This for example allows you to
-  control a roku via its HTTP REST API using `irsend`.
-
 * New remote-control type "hdmi-cec". With the help of a USB-CEC adapter such
   as <https://www.pulse-eight.com/p/104/usb-hdmi-cec-adapter> this allows
   stb-tester to send keypresses over HDMI, to control devices that don't have
