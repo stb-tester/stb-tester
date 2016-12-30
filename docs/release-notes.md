@@ -28,6 +28,10 @@ UNRELEASED
 
 ##### Breaking changes since v27
 
+* The definition of equality for `stbt.MatchResult` objects has changed (see
+  below for details). This should only affect you if you were storing
+  `MatchResult` objects in a set or as the keys of a dict.
+
 ##### New features
 
 * New Android control mechanism to send taps, swipes, and key events. See the
@@ -57,6 +61,13 @@ UNRELEASED
 * Python API: `stbt.wait_until` will try one last time after the timeout is
   reached. This allows you to use a short `timeout_secs` with operations that
   can take a long time.
+
+* Python API: `stbt.MatchResult` objects are now considered equal if they
+  correspond to the same reference image, matching (or not matching) at the
+  same position. That is, two `MatchResult` objects corresponding to different
+  video-frames (with different timestamps) can now be considered equal. This
+  makes it more convenient to use `stbt.match` with `wait_until`'s
+  `stable_secs` parameter.
 
 ##### Maintainer-visible changes
 

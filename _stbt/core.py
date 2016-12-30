@@ -490,6 +490,19 @@ class MatchResult(object):
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
+    def __nonzero__(self):
+        return self.match
+
+    def __eq__(self, other):
+        return (self.match == other.match and self.region == other.region and
+                self.image == other.image)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.match, self.region, self.image))
+
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
@@ -500,9 +513,6 @@ class MatchResult(object):
             return None
         else:
             return int(self.time * 1e9)
-
-    def __nonzero__(self):
-        return self.match
 
 
 def _str_frame_dimensions(frame):
