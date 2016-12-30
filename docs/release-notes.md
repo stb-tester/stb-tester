@@ -42,6 +42,10 @@ UNRELEASED
   <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
   for a discussion of the trade-offs of each video-capture mechanism.
 
+* Python API: `stbt.wait_until` has a new parameter `stable_secs` to wait for
+  the return value to stabilise (for example to wait for the position of a
+  `MatchResult` to stabilise).
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox
