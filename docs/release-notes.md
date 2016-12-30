@@ -50,6 +50,10 @@ UNRELEASED
 
 * `stbt lint`: Catch & ignore pylint inference exceptions.
 
+* Python API: `stbt.wait_until` will try one last time after the timeout is
+  reached. This allows you to use a short `timeout_secs` with operations that
+  can take a long time.
+
 ##### Maintainer-visible changes
 
 
