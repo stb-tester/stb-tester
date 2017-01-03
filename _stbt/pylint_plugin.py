@@ -86,7 +86,7 @@ class StbtChecker(BaseChecker):
                 else:
                     self.add_message('E7003', node=node, args=arg.as_string())
 
-        if _in_frameobject(node):
+        if _in_frameobject(node) and _in_property(node):
             for funcdef in node.func.infer():
                 if (isinstance(funcdef, FunctionDef) and
                         funcdef != YES and
@@ -109,6 +109,15 @@ def _in_frameobject(node):
         if isinstance(node, ClassDef):
             if "stbt.FrameObject" in [
                     base.qname() for base in node.ancestors()]:
+                return True
+        node = node.parent
+    return False
+
+
+def _in_property(node):
+    while node is not None:
+        if isinstance(node, FunctionDef):
+            if "__builtin__.property" in node.decoratornames():
                 return True
         node = node.parent
     return False

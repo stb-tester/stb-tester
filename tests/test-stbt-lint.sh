@@ -149,6 +149,9 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	    def property2(self):
 	        return bool(match("videotestsrc-redblue.png", frame=self._frame))
 	
+	    def not_a_property(self):
+	        return bool(match("videotestsrc-redblue.png"))
+	
 	def normal_test():
 	    assert match("videotestsrc-redblue.png")
 	EOF

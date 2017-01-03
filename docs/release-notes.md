@@ -64,7 +64,7 @@ UNRELEASED
 * `stbt lint`: Updated to support pylint version 1.5.0 and newer (including the
   latest version as of this writing, pylint v1.6.4).
 
-* `stbt lint`: Added FrameObject checker. It checks that FrameObject methods
+* `stbt lint`: Added FrameObject checker. It checks that FrameObject properties
   pass an explicit `frame` parameter to functions like `stbt.match`.
 
 
