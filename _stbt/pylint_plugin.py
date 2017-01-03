@@ -23,10 +23,12 @@ from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
 try:
-    from astroid.node_classes import Call, Expr, Attribute
+    from astroid.node_classes import Attribute, Call, Expr, Keyword
+    from astroid.scoped_nodes import ClassDef, FunctionDef
 except ImportError:
     from astroid.node_classes import (
-        CallFunc as Call, Discard as Expr, Getattr as Attribute)
+        Getattr as Attribute, CallFunc as Call, Discard as Expr, Keyword)
+    from astroid.scoped_nodes import Class as ClassDef, Function as FunctionDef
 
 
 class StbtChecker(BaseChecker):
@@ -47,6 +49,10 @@ class StbtChecker(BaseChecker):
                   'stbt-wait-until-callable',
                   '"wait_until" takes a callable (such as a function or a '
                   'lambda expression'),
+        'E7004': ('"%s" missing "frame" argument',
+                  'stbt-frame-object-missing-frame',
+                  'FrameObject methods must always provide "self._frame" as '
+                  'the "frame" parameter to functions such as stbt.match'),
     }
 
     def visit_const(self, node):
@@ -79,6 +85,42 @@ class StbtChecker(BaseChecker):
                         break
                 else:
                     self.add_message('E7003', node=node, args=arg.as_string())
+
+        if _in_frameobject(node) and _in_property(node):
+            for funcdef in node.func.infer():
+                if (isinstance(funcdef, FunctionDef) and
+                        funcdef != YES and
+                        "frame" in funcdef.argnames()):
+                    index = funcdef.argnames().index("frame")
+                    args = [a for a in node.args if not isinstance(a, Keyword)]
+                    if hasattr(node, "keywords"):  # astroid >= 1.4
+                        keywords = node.keywords or []
+                        kwargs = [k.arg for k in keywords]
+                    else:  # astroid < 1.4
+                        kwargs = [a.arg for a in node.args
+                                  if isinstance(a, Keyword)]
+                    if len(args) <= index and "frame" not in kwargs:
+                        self.add_message('E7004', node=node,
+                                         args=node.as_string())
+
+
+def _in_frameobject(node):
+    while node is not None:
+        if isinstance(node, ClassDef):
+            if "stbt.FrameObject" in [
+                    base.qname() for base in node.ancestors()]:
+                return True
+        node = node.parent
+    return False
+
+
+def _in_property(node):
+    while node is not None:
+        if isinstance(node, FunctionDef):
+            if "__builtin__.property" in node.decoratornames():
+                return True
+        node = node.parent
+    return False
 
 
 def _is_calculated_value(node):

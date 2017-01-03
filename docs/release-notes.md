@@ -61,8 +61,12 @@ UNRELEASED
   which connects to a running `lircd` instance and reads which keys have been
   pressed.
 
-* Command-line tools: Updated `stbt lint` to support pylint version 1.5.0 and
-  newer (including the latest version as of this writing, pylint v1.6.4).
+* `stbt lint`: Updated to support pylint version 1.5.0 and newer (including the
+  latest version as of this writing, pylint v1.6.4).
+
+* `stbt lint`: Added FrameObject checker. It checks that FrameObject properties
+  pass an explicit `frame` parameter to functions like `stbt.match`.
+
 
 ##### Maintainer-visible changes
 
