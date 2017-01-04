@@ -1043,7 +1043,7 @@ class DeviceUnderTest(object):
 
     def match_text(self, text, frame=None, region=Region.ALL,
                    mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
-                   tesseract_config=None):
+                   tesseract_config=None, case_sensitive=False):
 
         import lxml.etree
         if frame is None:
@@ -1062,7 +1062,7 @@ class DeviceUnderTest(object):
             result = TextMatchResult(rts, False, None, frame, text)
         else:
             hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-            p = _hocr_find_phrase(hocr, text.split())
+            p = _hocr_find_phrase(hocr, text.split(), case_sensitive)
             if p:
                 # Find bounding box
                 box = None
@@ -2666,10 +2666,15 @@ def _hocr_iterate(hocr):
                     need_space = True
 
 
-def _hocr_find_phrase(hocr, phrase):
-    words_only = [(w.lower().translate(_ocr_transtab), elem)
+def _hocr_find_phrase(hocr, phrase, case_sensitive):
+    if case_sensitive:
+        lower = lambda s: s
+    else:
+        lower = lambda s: s.lower()
+
+    words_only = [(lower(w).translate(_ocr_transtab), elem)
                   for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
-    phrase = [_to_unicode(w).lower().translate(_ocr_transtab) for w in phrase]
+    phrase = [lower(_to_unicode(w)).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
     if len(phrase) <= len(words_only):

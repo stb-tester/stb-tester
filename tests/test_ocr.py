@@ -208,6 +208,13 @@ def test_match_text_on_single_channel_image():
     assert stbt.match_text("Onion Bhaji", frame)
 
 
+def test_match_text_case_sensitivity():
+    frame = cv2.imread("tests/ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    assert stbt.match_text("ONION BHAJI", frame)
+    assert stbt.match_text("ONION BHAJI", frame, case_sensitive=False)
+    assert not stbt.match_text("ONION BHAJI", frame, case_sensitive=True)
+
+
 def test_ocr_on_text_next_to_image_match():
     frame = cv2.imread("tests/action-panel.png")
     m = stbt.match("tests/action-panel-blue-button.png", frame)

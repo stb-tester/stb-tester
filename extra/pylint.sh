@@ -12,7 +12,8 @@ pep8options() {
     # E402: module level import not at top of file (because isort does it)
     # E501: line too long > 80 chars (because pylint does it)
     # E721: do not compare types, use 'isinstance()' (because pylint does it)
-    echo --ignore=E402,E501,E721
+    # E731: do not assign a lambda expression, use a def
+    echo --ignore=E402,E501,E721,E731
 }
 
 ret=0

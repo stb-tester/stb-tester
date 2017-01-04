@@ -393,7 +393,7 @@ def ocr(frame=None, region=Region.ALL,
 
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
-               tesseract_config=None):
+               tesseract_config=None, case_sensitive=False):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -405,6 +405,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param mode: See `ocr`.
     :param lang: See `ocr`.
     :param tesseract_config: See `ocr`.
+    :param case_sensitive bool: Ignore case if False (the default).
 
     :returns:
       A `TextMatchResult`, which will evaluate to True if the text was found,
@@ -418,9 +419,11 @@ def match_text(text, frame=None, region=Region.ALL,
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
 
+    The ``case_sensitive`` parameter was added in v27. Previously it always
+    ignored case.
     """
     return _dut.match_text(
-        text, frame, region, mode, lang, tesseract_config)
+        text, frame, region, mode, lang, tesseract_config, case_sensitive)
 
 
 def frames(timeout_secs=None):

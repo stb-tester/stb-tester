@@ -49,6 +49,9 @@ UNRELEASED
 * Python API: `stbt.match_text` normalises punctuation such as em-dash and
   en-dash, just like `stbt.ocr` already does.
 
+* Python API: `stbt.match_text` has a new parameter `case_sensitive`. It
+  defaults to False (that is, ignore case), which was the previous behaviour.
+
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
 
