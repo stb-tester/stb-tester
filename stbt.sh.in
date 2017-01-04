@@ -12,7 +12,6 @@
 #/     auto-selftest  Test your test-cases against saved screenshots
 #/     config         Print configuration value
 #/     control        Send remote control signals
-#/     control-relay  Relay remote control keypresses
 #/     lint           Static analysis of testcases
 #/     match          Compare two images
 #/     power          Control networked power switch
@@ -60,8 +59,6 @@ case "$cmd" in
         echo "stb-tester $STBT_VERSION"; exit 0;;
     auto-selftest)
         exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
-    control-relay)
-        exec @LIBEXECDIR@/stbt/stbt_control_relay.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|match|tv)
         exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility

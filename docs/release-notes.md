@@ -28,10 +28,6 @@ UNRELEASED
   `right_of` and `left_of`. They return a new Region relative to the current
   region.
 
-* Added helper utility `stbt control-relay` which allows you to use any stbt
-  remote control using the lirc socket protocol. This for example allows you to
-  control a roku via its HTTP REST API using `irsend`.
-
 * New remote-control type "hdmi-cec". With the help of a USB-CEC adapter such
   as <https://www.pulse-eight.com/p/104/usb-hdmi-cec-adapter> this allows
   stb-tester to send keypresses over HDMI, to control devices that don't have
@@ -56,17 +52,11 @@ UNRELEASED
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
 
-* Remote controls: Added a `lircd` remote control listener which pretends to
-  be lircd. This is distinct from the existing `lirc` remote control listener
-  which connects to a running `lircd` instance and reads which keys have been
-  pressed.
-
 * `stbt lint`: Updated to support pylint version 1.5.0 and newer (including the
   latest version as of this writing, pylint v1.6.4).
 
 * `stbt lint`: Added FrameObject checker. It checks that FrameObject properties
   pass an explicit `frame` parameter to functions like `stbt.match`.
-
 
 ##### Maintainer-visible changes
 

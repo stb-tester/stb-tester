@@ -18,46 +18,84 @@ written to the file example.  So
 
 Will write the text "KEY_UP" to the file `example`.
 
-    $ stbt control-relay --input=lircd:lircd.sock \\
-          roku:192.168.1.13 samsung:192.168.1.14
+    $ stbt control-relay --socket=lircd.sock roku:192.168.1.13
 
 Listens on lircd.sock and will forward keypresses to the roku at 192.168.1.13
-using its HTTP protocol and to the Samsung TV at 192.168.1.14 using its TCP
-protocol.  So
+using its HTTP protocol.  So
 
     $ irsend -d lircd.sock SEND_ONCE stbt KEY_OK
 
-Will press KEY_OK on both the Samsung and the roku devices simultaneously.
+Will press KEY_OK on the roku device.
 """
 import argparse
+import re
 import signal
+import socket
 import sys
 
-from _stbt.control import MultiRemote, uri_to_remote, uri_to_remote_recorder
-from _stbt.logging import argparser_add_verbose_argument, debug
+import _stbt.logging
+from _stbt.control import uri_to_remote
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
         epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        "--input", default="lircd", help="""The source of remote control
-        presses. Values are the same as stbt record's --control-recorder.""")
-    parser.add_argument("output", nargs="+", help="""One or more remote control
-        configurations. Values are the same as stbt run's --control.""")
-    argparser_add_verbose_argument(parser)
+        "--socket", default="/var/run/lirc/lircd", help="""LIRC socket to read
+        remote control presses from (defaults to %(default)s).""")
+    parser.add_argument("output", help="""Remote control configuration to
+        transmit on. Values are the same as stbt run's --control.""")
+    _stbt.logging.argparser_add_verbose_argument(parser)
     args = parser.parse_args(argv[1:])
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
-    r = MultiRemote(uri_to_remote(x) for x in args.output)
-    listener = uri_to_remote_recorder(args.input)
-    for key in listener:
-        debug("Received %s" % key)
-        try:
-            r.press(key)
-        except Exception as e:  # pylint: disable=broad-except
-            sys.stderr.write("Error pressing key %r: %s\n" % (key, e))
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.bind(args.socket)
+    s.listen(5)
+
+    control = uri_to_remote(args.output)
+
+    while True:
+        conn, _ = s.accept()
+        for cmd in conn.makefile():
+            cmd = cmd.rstrip("\n")
+            m = re.match(r"SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)", cmd)
+            if not m:
+                debug("Ignoring invalid command: %s" % cmd)
+                continue
+            key = m.groupdict()["key"]
+            debug("Received %s" % key)
+            try:
+                control.press(key)
+            except Exception as e:  # pylint: disable=broad-except
+                debug("Error pressing key %r: %r" % (key, e))
+                send_response(conn, cmd, success=False, data=str(e))
+                continue
+            send_response(conn, cmd, success=True)
+
+
+def send_response(sock, request, success, data=""):
+    # See http://www.lirc.org/html/lircd.html
+    message = "BEGIN\n{cmd}\n{status}\n".format(
+        cmd=request,
+        status="SUCCESS" if success else "ERROR")
+    if data:
+        data = data.split("\n")
+        message += "DATA\n{length}\n{data}\n".format(
+            length=len(data),
+            data="\n".join(data))
+    message += "END\n"
+
+    try:
+        sock.sendall(message)
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+
+def debug(s):
+    _stbt.logging.debug("stbt-control-relay: %s" % s)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
