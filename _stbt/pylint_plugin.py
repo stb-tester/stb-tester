@@ -78,13 +78,7 @@ class StbtChecker(BaseChecker):
         if re.search(r"\bwait_until", node.func.as_string()):
             if node.args:
                 arg = node.args[0]
-                for inferred in arg.infer():
-                    # Note that when `infer()` fails it returns `YES` which
-                    # returns True to everything (including `callable()`).
-                    if inferred.callable() and not (
-                            isinstance(arg, Call) and inferred == YES):
-                        break
-                else:
+                if not _is_callable(arg):
                     self.add_message('E7003', node=node, args=arg.as_string())
 
         if _in_frameobject(node) and _in_property(node):
@@ -103,6 +97,22 @@ class StbtChecker(BaseChecker):
                     if len(args) <= index and "frame" not in kwargs:
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
+
+
+def _is_callable(node):
+    failed_to_infer = True
+    for inferred in node.infer():
+        # Note that when `infer()` fails it returns `YES` which
+        # returns True to everything (including `callable()`).
+        if inferred != YES:
+            failed_to_infer = False
+            if inferred.callable():
+                return True
+    if failed_to_infer:
+        if (isinstance(node, Call) and
+                _is_function_named(node.func, "functools.partial")):
+            return True
+    return False
 
 
 def _in_frameobject(node):
