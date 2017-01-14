@@ -23,11 +23,10 @@ from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
 try:
-    from astroid.node_classes import Attribute, Call, Expr, Keyword
+    from astroid.node_classes import Call, Expr, Keyword
     from astroid.scoped_nodes import ClassDef, FunctionDef
 except ImportError:
-    from astroid.node_classes import (
-        Getattr as Attribute, CallFunc as Call, Discard as Expr, Keyword)
+    from astroid.node_classes import CallFunc as Call, Discard as Expr, Keyword
     from astroid.scoped_nodes import Class as ClassDef, Function as FunctionDef
 
 
@@ -128,8 +127,7 @@ def _is_calculated_value(node):
     return (
         isinstance(node.parent, BinOp) or
         (isinstance(node.parent, Call) and
-         isinstance(node.parent.func, Attribute) and
-         node.parent.func.attrname == 'join'))
+         node.parent.func.as_string().split(".")[-1] == "join"))
 
 
 def _is_pattern_value(node):
@@ -143,12 +141,23 @@ def _is_whitelisted_name(filename):
 def _in_whitelisted_functions(node):
     return (
         isinstance(node.parent, Call) and
-        node.parent.func.as_string() in (
+        any(_is_function_named(node.parent.func, x) for x in (
             "cv2.imwrite",
             "re.match",
             "re.search",
             "stbt.save_frame",
-        ))
+            "_stbt.core.save_frame",  # handles "from stbt import save_frame"
+        )))
+
+
+def _is_function_named(func, name):
+    if func.as_string() == name:
+        return True
+    for funcdef in func.infer():
+        if (isinstance(funcdef, FunctionDef) and funcdef != YES and
+                ".".join((funcdef.parent.name, funcdef.name)) == name):
+            return True
+    return False
 
 
 def _file_exists(filename, node):

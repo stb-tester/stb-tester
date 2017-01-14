@@ -20,10 +20,12 @@ test_that_stbt_lint_ignores_generated_image_names() {
     cat > test.py <<-EOF &&
 	import os
 	import stbt
+	from os.path import join
 	var = 'idontexist'
 	stbt.wait_for_match(var + '.png')
 	stbt.wait_for_match('%s.png' % var)
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
+	stbt.wait_for_match(join('directory', 'idontexist.png'))
 	EOF
     stbt lint --errors-only test.py
 }
@@ -41,6 +43,11 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
 	import cv2, stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	cv2.imwrite('neither-do-i.png', stbt.get_frame())
+	
+	from cv2 import imwrite
+	from stbt import save_frame
+	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
+	imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
     stbt lint --errors-only --extension-pkg-whitelist=cv2 test.py
 }
