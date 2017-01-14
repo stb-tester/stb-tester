@@ -55,14 +55,23 @@ UNRELEASED
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
 
+* `stbt auto-selftest generate` now accepts a source filename, to generate
+  self-tests for a single file instead of the whole test-pack.
+
 * `stbt lint`: Updated to support pylint version 1.5.0 and newer (including the
   latest version as of this writing, pylint v1.6.4).
 
 * `stbt lint`: Added FrameObject checker. It checks that FrameObject properties
   pass an explicit `frame` parameter to functions like `stbt.match`.
 
+* Tab-completion for the command-line tools now adds trailing slashes after
+  directory names.
+
 ##### Maintainer-visible changes
 
+* Stb-tester's suite of self-tests now uses [pytest] instead of nose. The tests
+  written in shell still use shell (it would be nice to port them to pytest
+  too, at some point).
 
 #### 26
 
