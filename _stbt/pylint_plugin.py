@@ -58,6 +58,7 @@ class StbtChecker(BaseChecker):
     def visit_const(self, node):
         if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
+                "\n" not in node.value and
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
                 not _is_whitelisted_name(node.value) and

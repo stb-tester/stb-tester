@@ -52,6 +52,17 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     stbt lint --errors-only --extension-pkg-whitelist=cv2 test.py
 }
 
+test_that_stbt_lint_ignores_multiline_image_name() {
+    cat > test.py <<-EOF &&
+	import subprocess
+	subprocess.check_call("""set -e
+	    tvservice -e "CEA 16"  # 1080p60
+	    sudo fbi -T 1 -noverbose original.png
+	    sudo fbi -T 2 -noverbose original.png""")
+	EOF
+    stbt lint --errors-only test.py
+}
+
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
