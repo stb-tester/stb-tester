@@ -36,9 +36,10 @@ class StbtChecker(BaseChecker):
     name = 'stb-tester'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
+        # When you add a new checker update the docstring in ../stbt-lint
         'E7001': ('Image "%s" not found on disk',
                   'stbt-missing-image',
-                  'Used when the image path given to `stbt.wait_for_match` '
+                  'The image path given to "stbt.match" '
                   '(and similar functions) does not exist on disk.'),
         'E7002': ('"%s" return value not used (missing "assert"?)',
                   'stbt-unused-return-value',
@@ -47,12 +48,12 @@ class StbtChecker(BaseChecker):
                   'to use "assert".'),
         'E7003': ('"wait_until" argument "%s" isn\'t callable',
                   'stbt-wait-until-callable',
-                  '"wait_until" takes a callable (such as a function or a '
-                  'lambda expression'),
+                  'The argument given to "wait_until" must be a callable '
+                  '(such as a function or a lambda expression).'),
         'E7004': ('"%s" missing "frame" argument',
                   'stbt-frame-object-missing-frame',
-                  'FrameObject methods must always provide "self._frame" as '
-                  'the "frame" parameter to functions such as stbt.match'),
+                  'FrameObject properties must always provide "self._frame" as '
+                  'the "frame" parameter to functions such as "stbt.match".'),
     }
 
     def visit_const(self, node):
