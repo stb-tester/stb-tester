@@ -351,7 +351,7 @@ install-docs: docs/stbt.1
 
 ### Debian Packaging #########################################################
 
-ubuntu_releases ?= trusty wily xenial
+ubuntu_releases ?= trusty xenial yakkety
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
