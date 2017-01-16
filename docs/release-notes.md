@@ -14,13 +14,26 @@ changes, along with upgrade instructions where necessary.
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
 
-#### v27
+#### v28
 
-_TODO: Summary._
+_TODO: Summary.__
 
 UNRELEASED
 
-##### Breaking changes since v26
+##### Breaking changes since v27
+
+##### New features
+
+##### Minor fixes and packaging fixes
+
+##### Maintainer-visible changes
+
+
+#### v27
+
+Added HDMI CEC control; various API improvements.
+
+16 January 2017.
 
 ##### New features
 
@@ -78,6 +91,7 @@ UNRELEASED
 * Stb-tester's suite of self-tests now uses [pytest] instead of nose. The tests
   written in shell still use shell (it would be nice to port them to pytest
   too, at some point).
+
 
 #### 26
 
