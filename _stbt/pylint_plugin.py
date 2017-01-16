@@ -23,11 +23,10 @@ from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
 try:
-    from astroid.node_classes import Attribute, Call, Expr, Keyword
+    from astroid.node_classes import Call, Expr, Keyword
     from astroid.scoped_nodes import ClassDef, FunctionDef
 except ImportError:
-    from astroid.node_classes import (
-        Getattr as Attribute, CallFunc as Call, Discard as Expr, Keyword)
+    from astroid.node_classes import CallFunc as Call, Discard as Expr, Keyword
     from astroid.scoped_nodes import Class as ClassDef, Function as FunctionDef
 
 
@@ -59,6 +58,7 @@ class StbtChecker(BaseChecker):
     def visit_const(self, node):
         if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
+                "\n" not in node.value and
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
                 not _is_whitelisted_name(node.value) and
@@ -78,13 +78,7 @@ class StbtChecker(BaseChecker):
         if re.search(r"\bwait_until", node.func.as_string()):
             if node.args:
                 arg = node.args[0]
-                for inferred in arg.infer():
-                    # Note that when `infer()` fails it returns `YES` which
-                    # returns True to everything (including `callable()`).
-                    if inferred.callable() and not (
-                            isinstance(arg, Call) and inferred == YES):
-                        break
-                else:
+                if not _is_callable(arg):
                     self.add_message('E7003', node=node, args=arg.as_string())
 
         if _in_frameobject(node) and _in_property(node):
@@ -103,6 +97,22 @@ class StbtChecker(BaseChecker):
                     if len(args) <= index and "frame" not in kwargs:
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
+
+
+def _is_callable(node):
+    failed_to_infer = True
+    for inferred in node.infer():
+        # Note that when `infer()` fails it returns `YES` which
+        # returns True to everything (including `callable()`).
+        if inferred != YES:
+            failed_to_infer = False
+            if inferred.callable():
+                return True
+    if failed_to_infer:
+        if (isinstance(node, Call) and
+                _is_function_named(node.func, "functools.partial")):
+            return True
+    return False
 
 
 def _in_frameobject(node):
@@ -128,8 +138,7 @@ def _is_calculated_value(node):
     return (
         isinstance(node.parent, BinOp) or
         (isinstance(node.parent, Call) and
-         isinstance(node.parent.func, Attribute) and
-         node.parent.func.attrname == 'join'))
+         node.parent.func.as_string().split(".")[-1] == "join"))
 
 
 def _is_pattern_value(node):
@@ -143,12 +152,23 @@ def _is_whitelisted_name(filename):
 def _in_whitelisted_functions(node):
     return (
         isinstance(node.parent, Call) and
-        node.parent.func.as_string() in (
+        any(_is_function_named(node.parent.func, x) for x in (
             "cv2.imwrite",
             "re.match",
             "re.search",
             "stbt.save_frame",
-        ))
+            "_stbt.core.save_frame",  # handles "from stbt import save_frame"
+        )))
+
+
+def _is_function_named(func, name):
+    if func.as_string() == name:
+        return True
+    for funcdef in func.infer():
+        if (isinstance(funcdef, FunctionDef) and funcdef != YES and
+                ".".join((funcdef.parent.name, funcdef.name)) == name):
+            return True
+    return False
 
 
 def _file_exists(filename, node):

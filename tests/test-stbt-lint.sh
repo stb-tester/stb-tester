@@ -20,10 +20,12 @@ test_that_stbt_lint_ignores_generated_image_names() {
     cat > test.py <<-EOF &&
 	import os
 	import stbt
+	from os.path import join
 	var = 'idontexist'
 	stbt.wait_for_match(var + '.png')
 	stbt.wait_for_match('%s.png' % var)
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
+	stbt.wait_for_match(join('directory', 'idontexist.png'))
 	EOF
     stbt lint --errors-only test.py
 }
@@ -41,8 +43,24 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
 	import cv2, stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	cv2.imwrite('neither-do-i.png', stbt.get_frame())
+	
+	from cv2 import imwrite
+	from stbt import save_frame
+	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
+	imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
     stbt lint --errors-only --extension-pkg-whitelist=cv2 test.py
+}
+
+test_that_stbt_lint_ignores_multiline_image_name() {
+    cat > test.py <<-EOF &&
+	import subprocess
+	subprocess.check_call("""set -e
+	    tvservice -e "CEA 16"  # 1080p60
+	    sudo fbi -T 1 -noverbose original.png
+	    sudo fbi -T 2 -noverbose original.png""")
+	EOF
+    stbt lint --errors-only test.py
 }
 
 test_pylint_plugin_on_itself() {
@@ -87,6 +105,8 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 
 test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
     cat > test.py <<-EOF &&
+	import functools
+	from functools import partial
 	from stbt import is_screen_black, press, wait_until
 	
 	def return_a_function():
@@ -100,14 +120,20 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	    assert wait_until(return_a_function()())
 	    assert wait_until(lambda: True)
 	    assert wait_until((lambda: True)())
+	    assert wait_until(functools.partial(lambda x: True, x=3))
+	    assert wait_until(functools.partial(lambda x: True, x=3)())
+	    assert wait_until(partial(lambda x: True, x=3))  # Pylint can't infer functools.partial. pylint:disable=stbt-wait-until-callable
+	    assert wait_until(partial(lambda x: True, x=3)())
 	EOF
     stbt lint --errors-only test.py > lint.log
 
     cat > lint.expected <<-'EOF'
 	************* Module test
-	E:  9,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
-	E: 11,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
-	E: 13,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
+	E: 11,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
+	E: 13,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
+	E: 15,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
+	E: 17,11: "wait_until" argument "functools.partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
+	E: 19,11: "wait_until" argument "partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	EOF
     diff -u lint.expected lint.log
 }
