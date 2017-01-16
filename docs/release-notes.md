@@ -52,6 +52,12 @@ UNRELEASED
 * Python API: `stbt.match_text` has a new parameter `case_sensitive`. It
   defaults to False (that is, ignore case), which was the previous behaviour.
 
+* Remote controls: Added `error:` remote control that raises `RuntimeError`
+  when the test script calls `stbt.press`. If you don't want to use any of the
+  built-in remote controls, this allows you to catch unintended uses of
+  `stbt.press` in your test script, which would be silently ignored if you used
+  the `none` remote control.
+
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
 

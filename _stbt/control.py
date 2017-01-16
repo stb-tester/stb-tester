@@ -27,6 +27,7 @@ class UnknownKeyError(Exception):
 
 def uri_to_remote(uri, display=None):
     remotes = [
+        (r'error(:(?P<message>.*))?', ErrorControl),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
@@ -75,6 +76,16 @@ class NullRemote(object):
     @staticmethod
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
+
+
+class ErrorControl(object):
+    def __init__(self, message):
+        if message is None:
+            message = "No remote control configured"
+        self.message = message
+
+    def press(self, key):  # pylint:disable=unused-argument
+        raise RuntimeError(self.message)
 
 
 class FileControl(object):
