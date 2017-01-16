@@ -202,7 +202,7 @@ check-pytest: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD \
-	py.test -v --doctest-modules \
+	py.test -v -rs --doctest-modules \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
 		      -e tests/test.py \
