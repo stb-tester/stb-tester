@@ -27,6 +27,7 @@ class UnknownKeyError(Exception):
 
 def uri_to_remote(uri, display=None):
     remotes = [
+        (r'file(:(?P<filename>[^,]+))?', FileControl),
         (r'''irnetbox:
              (?P<hostname>[^:]+)
              (:(?P<port>\d+))?
@@ -42,7 +43,6 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
-        (r'file(:(?P<filename>[^,]+))?', FileControl),
     ]
     if gpl_controls is not None:
         remotes += gpl_controls
