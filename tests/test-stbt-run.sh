@@ -272,9 +272,19 @@ test_that_error_control_raises_exception() {
 	import stbt
 	stbt.press("KEY_UP")
 	EOF
-    ! stbt run --control=error test.py &&
+    ! stbt run -v --control=error test.py &&
     grep -q 'FAIL: test.py: RuntimeError: No remote control configured' log &&
 
-    ! stbt run --control="error:My custom error message" test.py &&
+    ! stbt run -v --control="error:My custom error message" test.py &&
     grep -q 'FAIL: test.py: RuntimeError: My custom error message' log
+}
+
+test_that_default_control_raises_exception() {
+    sed '/^control/ d' config/stbt/stbt.conf | sponge config/stbt/stbt.conf
+    cat > test.py <<-EOF
+	import stbt
+	stbt.press("KEY_UP")
+	EOF
+    ! stbt run -v test.py &&
+    grep -q 'FAIL: test.py: RuntimeError: No remote control configured' log
 }
