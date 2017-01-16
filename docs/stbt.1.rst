@@ -122,6 +122,10 @@ Global options
   none
     Ignores key press commands.
 
+  error[:message]
+    Raises `RuntimeError` when the test script calls `stbt.press`, with the
+    optional error message.
+
   test
     Used by the selftests to change the input video stream. Only works with
     `--source-pipeline=videotestsrc`. A script like `press("18")` will change

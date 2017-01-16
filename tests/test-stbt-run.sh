@@ -266,3 +266,15 @@ test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
     LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
     assert_correct_unicode_error
 }
+
+test_that_error_control_raises_exception() {
+    cat > test.py <<-EOF
+	import stbt
+	stbt.press("KEY_UP")
+	EOF
+    ! stbt run --control=error test.py &&
+    grep -q 'FAIL: test.py: RuntimeError: No remote control configured' log &&
+
+    ! stbt run --control="error:My custom error message" test.py &&
+    grep -q 'FAIL: test.py: RuntimeError: My custom error message' log
+}
