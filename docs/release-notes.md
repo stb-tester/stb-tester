@@ -55,8 +55,8 @@ UNRELEASED
 * Remote controls: Added `error:` remote control that raises `RuntimeError`
   when the test script calls `stbt.press`. If you don't want to use any of the
   built-in remote controls, this allows you to catch unintended uses of
-  `stbt.press` in your test script, which would be silently ignored if you used
-  the `none` remote control.
+  `stbt.press` in your test script. This is now the default remote control,
+  instead of `none` (which ignores keypresses).
 
 * Remote controls: Added `file:` remote control which writes keys pressed to a
   file.  Mostly intended for debugging.
