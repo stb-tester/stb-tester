@@ -287,7 +287,7 @@ def _parse_config(config_file):
     """
     d = {}
     for line in config_file:
-        fields = re.split("[\t ]+", line.rstrip(), maxsplit=3)
+        fields = re.split("[\t ]+", line.rstrip(), maxsplit=4)
         if len(fields) == 4:
             # (name, type, max_num_lengths, data)
             name, type_, _, data = fields
