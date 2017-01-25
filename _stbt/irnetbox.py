@@ -294,7 +294,7 @@ def _parse_config(config_file):
             if type_ == "MOD_SIG":
                 d[name] = binascii.unhexlify(data)
         if len(fields) == 5:
-            # (name, type, max_num_lengths, signal_number, data)
+            # (name, type, signal_number, max_num_lengths, data)
             # will always use signal1, but that shouldn't matter
             name, type_, signal, _, data = fields
             if type_ == "DMOD_SIG" and signal == "signal1":
