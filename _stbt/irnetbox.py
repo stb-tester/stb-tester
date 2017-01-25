@@ -287,11 +287,17 @@ def _parse_config(config_file):
     """
     d = {}
     for line in config_file:
-        fields = re.split("[\t ]+", line.rstrip(), maxsplit=3)
+        fields = re.split("[\t ]+", line.rstrip(), maxsplit=4)
         if len(fields) == 4:
             # (name, type, max_num_lengths, data)
             name, type_, _, data = fields
             if type_ == "MOD_SIG":
+                d[name] = binascii.unhexlify(data)
+        if len(fields) == 5:
+            # (name, type, signal_number, max_num_lengths, data)
+            # will always use signal1, but that shouldn't matter
+            name, type_, signal, _, data = fields
+            if type_ == "DMOD_SIG" and signal == "signal1":
                 d[name] = binascii.unhexlify(data)
     return d
 
