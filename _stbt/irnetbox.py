@@ -280,18 +280,22 @@ def _parse_config(config_file):
     """Read irNetBox configuration file.
 
     Which is produced by RedRat's (Windows-only) "IR Signal Database Utility".
-
-    This doesn't support config files with "double signals" (where 2 different
-    signals were recorded from alternate presses of the same button on the
-    remote control unit).
     """
     d = {}
     for line in config_file:
-        fields = re.split("[\t ]+", line.rstrip(), maxsplit=3)
+        fields = re.split("[\t ]+", line.rstrip(), maxsplit=4)
         if len(fields) == 4:
             # (name, type, max_num_lengths, data)
             name, type_, _, data = fields
             if type_ == "MOD_SIG":
+                d[name] = binascii.unhexlify(data)
+        if len(fields) == 5:
+            # "Double signals" where pressing the button on the remote control
+            # alternates between signal1 & signal2. We'll always send signal1,
+            # but that shouldn't matter.
+            # (name, type, signal1 or signal2, max_num_lengths, data)
+            name, type_, signal, _, data = fields
+            if type_ == "DMOD_SIG" and signal == "signal1":
                 d[name] = binascii.unhexlify(data)
     return d
 
@@ -333,10 +337,14 @@ def test_that_parse_config_understands_redrat_format():
             DOWN	MOD_SIG	16 000174F5FF60000000060000004802450222F704540D12116A464F0000000000000000000000000000000000000000000102020202020202020202020202020202020202020202020202030202020202020202020202030202020202020203020202030203020202030203020302020203027F0004027F
 
             UP	MOD_SIG	16 000174FAFF60000000050000004803457422F7045A0D13116A00000000000000000000000000000000000000000000000102020202020202020202020202020202020202020202020202030202020202020203020202020202020202020203020202020203020302030203020302020203027F0004027F
+
+            RED	DMOD_SIG	signal1	16 0002BCAFFF5A0000000300000024010E3206E60DB1000000000000000000000000000000000000000000000000000000010101010200020002000200020101017F00010101010200020002000200020101017F
+            RED	DMOD_SIG	signal2	16 0002BCE3FF5A0000000300000020010E2C0DB006EC00000000000000000000000000000000000000000000000000000001000100010001000100010202027F0001000100010001000100010202027F
             """))
     config = _parse_config(f)
     assert config["DOWN"].startswith("\x00\x01\x74\xF5")
     assert config["UP"].startswith("\x00\x01\x74\xFA")
+    assert config["RED"].startswith("\x00\x02\xBC\xAF")
 
 
 class _FileToSocket(object):
