@@ -266,6 +266,20 @@ class AdbDevice(object):
                 img = cv2.resize(img, (1280, 720))
             else:
                 img = cv2.resize(img, (720, 1280))
+        elif self.coordinate_system == CoordinateSystem.HDMI_720P:
+            if w > h:
+                # Landscape: The device's screen fills the HDMI frame.
+                # (this assumes that the device's aspect ratio is 16:9).
+                img = cv2.resize(img, (1280, 720))
+            else:
+                # Portrait image in a landscape frame, with black letterboxing
+                # on either side.
+                ratio = float(h) / 720
+                w_new = int(w // ratio)
+                img = cv2.resize(img, (w_new, 720))
+                left = (1280 - w_new) // 2
+                img = cv2.copyMakeBorder(img, 0, 0, left, 1280 - w_new - left,
+                                         cv2.BORDER_CONSTANT, (0, 0, 0))
         elif self.coordinate_system == CoordinateSystem.CAMERA_720P:
             # Resize to 720p landscape for compatibility with screenshots from
             # `stbt.get_frame` with the Stb-tester CAMERA.
