@@ -177,6 +177,9 @@ class AdbDevice(object):
             coordinate_system = CoordinateSystem[name]
         self.coordinate_system = coordinate_system
 
+        if self.tcpip:
+            self._connect(timeout_secs=60)
+
     @property
     def adb_device(self):
         if self.tcpip and self._adb_device and ":" not in self._adb_device:
