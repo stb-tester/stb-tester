@@ -113,7 +113,7 @@ def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-n
         return (match("images/galaxy-ace-2/" + basename, f) or
                 match("images/moto-x2/" + basename, f))
 
-    adb.press("HOME")
+    adb.press("KEYCODE_HOME")
     m = wait_until(lambda: match_any("app-icon.png"))
     assert m
     adb.tap(m.region)

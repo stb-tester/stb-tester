@@ -286,15 +286,14 @@ class AdbDevice(object):
         """Send a keypress.
 
         :param str key: An Android keycode as listed in
-            https://developer.android.com/reference/android/view/KeyEvent.html
-            (you can specify it with or without the "KEYCODE_" prefix).
-            Particularly useful key codes are "HOME" and "BACK", which are
-            physical buttons on some phones so you can't hit them with
-            `AdbDevice.tap`.
+            <https://developer.android.com/reference/android/view/KeyEvent.html>.
+            Particularly useful key codes are "KEYCODE_HOME" and
+            "KEYCODE_BACK", which are physical buttons on some phones so you
+            can't hit them with `AdbDevice.tap`.
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
-        if key not in _KEYCODES and "KEYCODE_" + key not in _KEYCODES:
+        if key not in _KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
         stbt.debug("AdbDevice.press(%r)" % key)
         self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
