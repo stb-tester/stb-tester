@@ -124,7 +124,10 @@ install-core: all
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
-	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(pythondir)/stbt/
+	$(INSTALL) -m 0644 \
+	    stbt/__init__.py \
+	    stbt/android.py \
+	    $(DESTDIR)$(pythondir)/stbt/
 	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
