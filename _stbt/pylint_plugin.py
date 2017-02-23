@@ -70,7 +70,7 @@ class StbtChecker(BaseChecker):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
                      node.func.as_string()):
             if isinstance(node.parent, Expr):
-                for inferred in node.func.infer():
+                for inferred in _infer(node.func):
                     if inferred.root().name in ('stbt', '_stbt.core'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
@@ -82,7 +82,7 @@ class StbtChecker(BaseChecker):
                     self.add_message('E7003', node=node, args=arg.as_string())
 
         if _in_frameobject(node) and _in_property(node):
-            for funcdef in node.func.infer():
+            for funcdef in _infer(node.func):
                 if (isinstance(funcdef, FunctionDef) and
                         funcdef != YES and
                         "frame" in funcdef.argnames()):
@@ -101,13 +101,10 @@ class StbtChecker(BaseChecker):
 
 def _is_callable(node):
     failed_to_infer = True
-    for inferred in node.infer():
-        # Note that when `infer()` fails it returns `YES` which
-        # returns True to everything (including `callable()`).
-        if inferred != YES:
-            failed_to_infer = False
-            if inferred.callable():
-                return True
+    for inferred in _infer(node):
+        failed_to_infer = False
+        if inferred.callable():
+            return True
     if failed_to_infer:
         if (isinstance(node, Call) and
                 _is_function_named(node.func, "functools.partial")):
@@ -164,8 +161,8 @@ def _in_whitelisted_functions(node):
 def _is_function_named(func, name):
     if func.as_string() == name:
         return True
-    for funcdef in func.infer():
-        if (isinstance(funcdef, FunctionDef) and funcdef != YES and
+    for funcdef in _infer(func):
+        if (isinstance(funcdef, FunctionDef) and
                 ".".join((funcdef.parent.name, funcdef.name)) == name):
             return True
     return False
@@ -181,6 +178,19 @@ def _file_exists(filename, node):
             filename)):
         return True
     return False
+
+
+def _infer(node):
+    try:
+        for inferred in node.infer():
+            # Sometimes when `infer()` fails it returns `YES` which returns
+            # True to everything, including `callable()` and
+            # `isinstance(YES, <anything else>)`, so it isn't useful.
+            if inferred == YES:
+                continue
+            yield inferred
+    except Exception:  # pylint:disable=broad-except
+        pass
 
 
 def register(linter):

@@ -194,3 +194,18 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	EOF
     diff -u lint.expected lint.log
 }
+
+test_that_stbt_lint_ignores_astroid_inference_exceptions() {
+    cat > test.py <<-EOF
+	import stbt
+	assert stbt.wait_until(InfoPage)
+	EOF
+    stbt lint --errors-only test.py > lint.log
+
+    cat > lint.expected <<-'EOF'
+	************* Module test
+	E:  2, 7: "wait_until" argument "InfoPage" isn't callable (stbt-wait-until-callable)
+	E:  2,23: Undefined variable 'InfoPage' (undefined-variable)
+	EOF
+    diff -u lint.expected lint.log
+}
