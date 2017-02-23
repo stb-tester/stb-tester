@@ -10,7 +10,7 @@ Usage::
 
     from stbt.android import AdbDevice
     adb = AdbDevice()
-    adb.tap(x=100, y=50)
+    adb.tap((100, 50))
 
 For feedback (video from the Android device-under-test) you can use:
 
@@ -27,9 +27,10 @@ Note that you can instead use Stb-tester features such as image-matching
 in your existing Selenium/WebDriver/Appium tests. See
 <https://stb-tester.com/blog/2016/09/20/add-visual-verification-to-your-selenium-tests-with-stb-tester>.
 
-.. _ADB: https://developer.android.com/studio/command-line/adb.html
-.. _Stb-tester CAMERA: https://stb-tester.com/videos/the-stb-tester-camera-for-tvs-and-mobile-devices
+``stbt.android`` was added in stb-tester v28.
 
+.. _ADB: https://developer.android.com/studio/command-line/adb.html
+.. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """
 
 from __future__ import division
@@ -74,41 +75,42 @@ class CoordinateSystem(Enum):
     into logical landscape orientation even if you have switched off auto-rotate
     in the device's settings menu.
 
-    However the video-frames that you analyse in your test scripts may not
-    match the physical resolution of the device. For example if you're using a
-    camera pointed at the device's screen, the resolution of your screenshots
-    (even after geometric correction by the `Stb-tester CAMERA`_) will be the
+    The video-frames that you analyse in your test scripts may not match the
+    physical resolution of the device. For example if you're using a camera
+    pointed at the device's screen, the resolution of your screenshots (even
+    after geometric correction by the `Stb-tester CAMERA`_) will depend on the
     resolution of the camera, not of the device under test.
 
     You can give `AdbDevice.tap` and `AdbDevice.swipe` the coordinates from
     your video-frame (for example, you can pass in ``stbt.match(...).region``)
-    and this setting will ensure that the coordinates are converted to
+    and the CoordinateSystem will ensure that the coordinates are converted to
     physical coordinates in the appropriate way before passing them on to ADB.
     """
 
+    ADB_NATIVE = 0
     """Frames are captured via ADB screenshot.
 
     Frames will be in the same orientation & resolution as the physical device.
     """
-    ADB_NATIVE = 0
 
+    ADB_720P = 1
     """Frames are captured via ADB screenshot and then scaled to 720p.
 
     Frames will be in the same orientation as the physical device, but scaled.
     """
-    ADB_720P = 1
 
+    HDMI_720P = 2
     """
     Frames are captured via HDMI (using an MHL cable) at 720p.
 
     Frames will always be in landscape orientation. If the device is in
     portrait orientation, you'll get black bars to the left & right. If the
     device is in landscape orientation, the frame will match what you see on
-    the device (assuming the device's physical aspect ratio matches the aspect
-    ratio of HDMI).
+    the device (this assumes that the device's physical aspect ratio matches
+    the aspect ratio of HDMI).
     """
-    HDMI_720P = 2
 
+    CAMERA_720P = 3
     """Frames are captured from an `Stb-tester CAMERA`_ pointing at the
     device's screen.
 
@@ -117,7 +119,6 @@ class CoordinateSystem(Enum):
     Frames will always be in landscape orientation; if the device is in logical
     portrait orientation the image will be rotated 90° anti-clockwise.
     """
-    CAMERA_720P = 3
 
 
 class AdbDevice(object):
@@ -189,6 +190,13 @@ class AdbDevice(object):
 
     def adb(self, command, timeout_secs=5 * 60, capture_output=False, **kwargs):
         """Run any ADB command.
+
+        For example, the following code will use "adb shell am start" to launch
+        an app on the device::
+
+            d = AdbDevice(...)
+            d.adb(["shell", "am", "start", "-S",
+                   "com.example.myapp/com.example.myapp.MainActivity"])
 
         ``command`` and ``kwargs`` are the same as `subprocess.check_output`,
         except that ``shell``, ``stdout`` and ``stderr`` are not allowed.
@@ -301,7 +309,7 @@ class AdbDevice(object):
 
         Example::
 
-          swipe((100, 100), (100, 400))
+          d.swipe((100, 100), (100, 400))
 
         """
         x1, y1 = _region_to_tuple(start_position)
@@ -321,8 +329,8 @@ class AdbDevice(object):
 
         Example::
 
-            tap((100, 20))
-            tap(stbt.match(...).region)
+            d.tap((100, 20))
+            d.tap(stbt.match(...).region)
 
         """
         x, y = _region_to_tuple(position)
