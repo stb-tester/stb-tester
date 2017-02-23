@@ -226,7 +226,7 @@ class AdbDevice(object):
             so).
         """
 
-        for attempt in range(1, 11):
+        for attempt in range(1, 4):
             timestamp = time.time()
             data = (self.adb(["shell", "screencap", "-p"],
                              timeout_secs=60, capture_output=True)
