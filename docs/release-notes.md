@@ -24,6 +24,18 @@ UNRELEASED
 
 ##### New features
 
+* New Android control mechanism to send taps, swipes, and key events. See the
+  `stbt.android.AdbDevice` docstrings for usage instructions. You can capture
+  video from an Android mobile device using HDMI video-capture via an "MHL"
+  USB-to-HDMI cable, or with the
+  [Stb-tester CAMERA](https://stb-tester.com/stb-tester-camera) pointed at the
+  device's screen, or even by taking screenshots via `AdbDevice.get_frame` (but
+  if you're using `AdbDevice.get_frame` the Android device wont be visible in
+  the output video as this mechanism bypasses stb-tester's GStreamer pipeline).
+  See
+  <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
+  for a discussion of the trade-offs of each video-capture mechanism.
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox
