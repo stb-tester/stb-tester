@@ -1,7 +1,6 @@
 language: c
+dist: trusty
 sudo: required
-services:
-  - docker
 
 install:
  - cat /etc/os-release
