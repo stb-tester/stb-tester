@@ -238,8 +238,7 @@ class AdbDevice(object):
                 logging.warning(
                     "AdbDevice.get_frame: Failed to get screenshot "
                     "via ADB (attempt %d/10)\n"
-                    "Length of data: %d\n"
-                    "Data: %r", attempt, len(data), data)
+                    "Length of data: %d", attempt, len(data))
             else:
                 break
         else:
