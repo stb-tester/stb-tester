@@ -149,7 +149,7 @@ class AdbDevice(object):
     """
 
     def __init__(self, adb_server=None, adb_device=None, adb_binary=None,
-                 tcpip=False, coordinate_system=None, _config=None):
+                 tcpip=None, coordinate_system=None, _config=None):
 
         if _config is None:
             _config = stbt._stbt.config._config_init()  # pylint:disable=protected-access
