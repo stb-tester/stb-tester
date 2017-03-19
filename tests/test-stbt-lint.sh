@@ -63,6 +63,14 @@ test_that_stbt_lint_ignores_multiline_image_name() {
     stbt lint --errors-only test.py
 }
 
+test_that_stbt_lint_ignores_image_urls() {
+    cat > test.py <<-EOF &&
+	import urllib2
+	urllib2.urlopen("http://example.com/image.png")
+	EOF
+    stbt lint --errors-only test.py
+}
+
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
