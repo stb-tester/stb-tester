@@ -45,7 +45,7 @@ class StateSender(object):
             "state_change": {
                 "time": "2014-11-28T20:55:26.092343Z",
                 "changes": {
-                    "test_job.current_line": {
+                    "test_run.current_line": {
                         "file": "tests/my_file.py",
                         "line": 654
                     }
