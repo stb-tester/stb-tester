@@ -59,6 +59,7 @@ class StbtChecker(BaseChecker):
         if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
                 "\n" not in node.value and
+                not _is_uri(node.value) and
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
                 not _is_whitelisted_name(node.value) and
@@ -129,6 +130,10 @@ def _in_property(node):
                 return True
         node = node.parent
     return False
+
+
+def _is_uri(filename):
+    return re.search(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", filename)
 
 
 def _is_calculated_value(node):
