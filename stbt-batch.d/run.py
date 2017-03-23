@@ -57,6 +57,10 @@ def main(argv):
             report can be slow if there are many results in the output
             directory. You can still generate the HTML reports afterwards with
             'stbt batch report'.""")
+    parser.add_argument(
+        '--no-save-video', action='store_true', help="""
+            Don't generate a video recording of each test-run. Use this if you
+            are saving video another way.""")
     parser.add_argument('test_name', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
 
@@ -105,6 +109,7 @@ def main(argv):
         run_count += 1
         subenv = dict(os.environ)
         subenv['do_html_report'] = "false" if args.no_html_report else "true"
+        subenv['save_video'] = "false" if args.no_save_video else "true"
         subenv['tag'] = tag
         subenv['v'] = '-vv' if args.debug else '-v'
         subenv['verbose'] = str(args.verbose)

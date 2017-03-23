@@ -258,6 +258,22 @@ test_stbt_batch_run_without_html_reports() {
     [[ -f latest/my-classifier-ran ]] || fail "Custom classifier didn't run"
 }
 
+test_stbt_batch_run_no_save_video() {
+    create_test_repo
+    { stbt batch run --no-save-video -1 -t "my label" tests/test.py ||
+        fail "stbt batch run failed"
+    } | sed 's/^/stbt batch run: /'
+
+    local expected_commit="$(git -C tests describe --always)"
+    local expected_commit_sha="$(git -C tests rev-parse HEAD)"
+
+    ! [ -e "latest-my label/video.webm" ] ||
+        fail "Video was written even though it shouldn't have been"
+
+    # We still expect an HTML report even if a video is not available
+    validate_html_report "latest-my label" test.py "$expected_commit" "$expected_commit_sha" "my label"
+}
+
 test_stbt_batch_run_with_custom_recovery_script() {
     create_test_repo
     set_config batch.recover "$PWD/my-recover"
