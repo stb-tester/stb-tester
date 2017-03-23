@@ -172,7 +172,7 @@ check_capture_hardware() {
     decklinksrc)
       ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
         GST_DEBUG=decklinksrc:5 GST_DEBUG_NO_COLOR=1 \
-        "$runner"/../stbt-run --sink-pipeline='fakesink sync=false' \
+        "$runner"/../stbt-run --sink-pipeline='' \
           <(echo "import time; time.sleep(1)") 2>&1
       ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
 

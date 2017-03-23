@@ -740,8 +740,11 @@ def new_device_under_test_from_config(
         display[0].tell_user_thread(exception)
     mainloop = _mainloop()
 
-    sink_pipeline = SinkPipeline(
-        gst_sink_pipeline, raise_in_user_thread, save_video)
+    if not gst_sink_pipeline and not save_video:
+        sink_pipeline = NoSinkPipeline()
+    else:
+        sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
+            gst_sink_pipeline, raise_in_user_thread, save_video)
     display[0] = Display(
         gst_source_pipeline, sink_pipeline, restart_source,
         transformation_pipeline)
@@ -1786,6 +1789,25 @@ class SinkPipeline(object):
             else:
                 raise TypeError(
                     "Can't draw object of type '%s'" % type(obj).__name__)
+
+
+class NoSinkPipeline(object):
+    """
+    Used in place of a SinkPipeline when no video output is required.  Is a lot
+    faster because it doesn't do anything.  It especially doesn't do any copying
+    nor video encoding :).
+    """
+    def startup(self):
+        pass
+
+    def teardown(self):
+        pass
+
+    def push_sample(self, _sample):
+        pass
+
+    def draw(self, _obj, _duration_secs=None, label=""):
+        pass
 
 
 class Display(object):

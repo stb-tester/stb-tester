@@ -260,6 +260,7 @@ test_stbt_batch_run_without_html_reports() {
 
 test_stbt_batch_run_no_save_video() {
     create_test_repo
+    set_config global.sink_pipeline ""
     { stbt batch run --no-save-video -1 -t "my label" tests/test.py ||
         fail "stbt batch run failed"
     } | sed 's/^/stbt batch run: /'

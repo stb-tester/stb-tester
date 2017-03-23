@@ -98,6 +98,10 @@ UNRELEASED
   reached. This allows you to use a short `timeout_secs` with operations that
   can take a long time.
 
+* Configuration: `global.sink_pipeline` can now be set to an empty value
+  (`sink_pipeline=`). This will have the same effect as `sink_pipeline =
+  fakesink` but with lower resource utilisation.
+
 ##### Maintainer-visible changes
 
 
