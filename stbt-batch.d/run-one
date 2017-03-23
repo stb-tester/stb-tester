@@ -13,6 +13,7 @@
 # Input environment variables:
 #
 # * $do_html_report ("true" or "false")
+# * $save_video ("true" or "false")
 # * $tag
 # * $v
 # * $verbose
@@ -71,10 +72,14 @@ main() {
     "$runner"/report --html-only . >/dev/null
   fi
 
+  if [ "$save_video" != "false" ]; then
+    save_video_arg="--save-video=video.webm"
+  fi
+
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
-  "$runner"/../stbt-run $v --save-video "video.webm" "$testpath" -- "$@" \
+  "$runner"/../stbt-run $v $save_video_arg "$testpath" -- "$@" \
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
