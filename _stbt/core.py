@@ -734,11 +734,20 @@ def new_device_under_test_from_config(
     if transformation_pipeline is None:
         gst_sink_pipeline = get_config('global', 'transformation_pipeline')
 
-    display = Display(
-        gst_source_pipeline, gst_sink_pipeline, _mainloop(), save_video,
-        restart_source, transformation_pipeline)
+    display = [None]
+
+    def raise_in_user_thread(exception):
+        display[0].tell_user_thread(exception)
+    mainloop = _mainloop()
+
+    sink_pipeline = SinkPipeline(
+        gst_sink_pipeline, raise_in_user_thread, save_video)
+    display[0] = Display(
+        gst_source_pipeline, sink_pipeline, restart_source,
+        transformation_pipeline)
     return DeviceUnderTest(
-        display=display, control=uri_to_remote(control_uri, display))
+        display=display[0], control=uri_to_remote(control_uri, display[0]),
+        sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
 def _pixel_bounding_box(img):
@@ -783,20 +792,28 @@ def _pixel_bounding_box(img):
 
 
 class DeviceUnderTest(object):
-    def __init__(self, display=None, control=None):
+    def __init__(self, display=None, control=None, sink_pipeline=None,
+                 mainloop=None):
         self._time_of_last_press = None
         self._display = display
         self._control = control
+        self._sink_pipeline = sink_pipeline
+        self._mainloop = mainloop
 
     def __enter__(self):
         if self._display:
+            self._mainloop.__enter__()
+            self._sink_pipeline.startup()
             self._display.startup()
         return self
 
-    def __exit__(self, _exc_type, _exc_value, _traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         if self._display:
             self._display.teardown()
             self._display = None
+            self._sink_pipeline.teardown()
+            self._sink_pipeline = None
+            self._mainloop.__exit__(exc_type, exc_value, tb)
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
@@ -822,7 +839,7 @@ class DeviceUnderTest(object):
         self.draw_text(key, duration_secs=3)
 
     def draw_text(self, text, duration_secs=3):
-        self._display.draw(text, duration_secs)
+        self._sink_pipeline.draw(text, duration_secs)
 
     def match(self, image, frame=None, match_parameters=None,
               region=Region.ALL):
@@ -887,7 +904,7 @@ class DeviceUnderTest(object):
                     first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
-                    self._display.draw(
+                    self._sink_pipeline.draw(
                         result, label="match(%r)" %
                         os.path.basename(template.friendly_name))
                 yield result
@@ -908,8 +925,9 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._display.draw(result, label="match(%r)" %
-                               os.path.basename(template.friendly_name))
+            self._sink_pipeline.draw(
+                result, label="match(%r)" %
+                os.path.basename(template.friendly_name))
             yield result
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
@@ -968,7 +986,7 @@ class DeviceUnderTest(object):
 
             result = MotionResult(getattr(frame, "time", None), motion,
                                   out_region)
-            self._display.draw(result, label="detect_motion()")
+            self._sink_pipeline.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
             yield result
@@ -1771,10 +1789,8 @@ class SinkPipeline(object):
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, user_sink_pipeline,
-                 mainloop, save_video="",
-                 restart_source=False,
-                 transformation_pipeline='identity'):
+    def __init__(self, user_source_pipeline, sink_pipeline,
+                 restart_source=False, transformation_pipeline='identity'):
 
         import time
 
@@ -1789,7 +1805,6 @@ class Display(object):
         self.tearing_down = False
 
         self.restart_source_enabled = restart_source
-
         appsink = (
             "appsink name=appsink max-buffers=1 drop=false sync=true "
             "emit-signals=true "
@@ -1815,11 +1830,9 @@ class Display(object):
             appsink])
         self.create_source_pipeline()
 
-        self._sink_pipeline = SinkPipeline(
-            user_sink_pipeline, self.tell_user_thread, save_video)
+        self._sink_pipeline = sink_pipeline
 
         debug("source pipeline: %s" % self.source_pipeline_description)
-        self.mainloop = mainloop
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
@@ -2017,9 +2030,6 @@ class Display(object):
 
     def startup(self):
         self.set_source_pipeline_playing()
-        self._sink_pipeline.startup()
-
-        self.mainloop.__enter__()
 
     def teardown(self):
         self.tearing_down = True
@@ -2032,10 +2042,6 @@ class Display(object):
                 debug("teardown: Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
-
-        self._sink_pipeline.teardown()
-
-        self.mainloop.__exit__(None, None, None)
 
 
 def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
@@ -2941,7 +2947,7 @@ def _fake_frames_at_half_motion():
         def draw(self, *_args, **_kwargs):
             pass
 
-    dut = DeviceUnderTest(display=FakeDisplay())
+    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline())
     dut.get_frame = lambda: None
     yield dut
 
