@@ -200,7 +200,8 @@ class _ATEN_PE6108G(object):
         self.hostname = hostname
         self.outlet = int(outlet)
         oid_string = "1.3.6.1.4.1.21317.1.3.2.2.2.2.{0}.0"
-        self.outlet_oid = oid_string.format(self.outlet + 1)
+        outlet_offset = 1 if self.outlet <= 8 else 2
+        self.outlet_oid = oid_string.format(self.outlet + outlet_offset)
 
     def set(self, power):
         new_state = self.aten_cmd(power=power)
