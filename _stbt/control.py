@@ -275,51 +275,76 @@ class RemoteFrameBuffer(object):
     def __init__(self, hostname, port=None):
         self.hostname = hostname
         self.port = int(port or 5900)
-        # Connect once so that the test fails immediately if STB not found
-        # (instead of failing at the first `press` in the script).
-        debug("RemoteFrameBuffer: Connecting to %s:%d" % (hostname, self.port))
-        self.socket = self._connect() 
-        debug("RemoteFrameBuffer: Connected to %s:%d" % (hostname, self.port))
 
-    def press(self, key):    
+    def press(self, key, timeout=3, fail_on_error=False): 
+        self.fail_on_error = fail_on_error
+        self._connect_socket(timeout)
+        self._handshake()   
         self._press_down(key)
-        self._press_release(key)
-        debug("Pressed " + key)
-
-    def _connect(self):
-        self.socket =  _connect_tcp_socket(self.hostname, self.port)
-        self._handshake()
+        self._release(key)       
+        self._close()   
+               
+    def _connect_socket(self, timeout):
+        try:
+            self.socket = socket.socket()
+            s = self.socket
+            if timeout:
+                s.settimeout(timeout)
+            s.connect((self.hostname, self.port))            
+            debug("RemoteFrameBuffer: connected to %s:%d" % (self.hostname, self.port))
+        except socket.error as e:
+            message = ("RemoteFrameBuffer: failed to connect to remote control at %s:%d"
+                 % (self.hostname, self.port))
+            self._handling_fail(e, message)
 
     def _handshake(self):
-        s = self.socket
         try:
+            s = self.socket
             prot_info = s.recv(20)
             if prot_info != b'RFB 003.008\n':
-                raise socket.error("RemoteFrameBuffer: wrong RFB protocol info!")
+                raise socket.error("wrong RFB protocol info")
             s.send(b"RFB 003.003\n")
             s.recv(4)
             s.send(b'\0')
             s.recv(24)
-        except socket.error, e:            
-            e.args = (("RemoteFrameBuffer: handshake failure!"),)
-            e.strerror = e.args[0]
-            raise 
-        
+            debug("RemoteFrameBuffer: handshake completed")
+        except socket.error, e:                   
+            message = "RemoteFrameBuffer: handshake failure"
+            self._handling_fail(e, message)  
+                
     def _press_down(self, key):
         try:
-            self.socket.send(struct.pack('!BBxxI', 4, 1, key))
-        except socket.error, e:         
-            e.args = ('RemoteFrameBuffer: failed to send key down (0x%04x)' % key,)
-            e.strerror = e.args[0]
-            raise 
+            self.socket.send(struct.pack('!BBxxI', 4, 1, key))            
+            debug("RemoteFrameBuffer: pressed down " + key) 
+        except socket.error, e:                  
+            message = 'RemoteFrameBuffer: failed to send key down (0x%04x)' % key
+            self._handling_fail(e, message)
     
-    def _press_release(self, key):
+    def _release(self, key):
         try:
-            self.socket.send(struct.pack('!BBxxI', 4, 0, key))
-        except socket.error, e:
-            e.args = ('RemoteFrameBuffer: failed to send key release (0x%04x)' % key,)
-            e.strerror = e.args[0]
-            raise 
+            self.socket.send(struct.pack('!BBxxI', 4, 0, key))            
+            debug("RemoteFrameBuffer: release " + key) 
+        except socket.error, e:      
+            message = 'RemoteFrameBuffer: failed to send key release (0x%04x)' % key
+            self._handling_fail(e, message)
+           
+    def _close(self):
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()  
+            debug("RemoteFrameBuffer: socket connection closed")         
+        except socket.error, e:  
+            message = 'RemoteFrameBuffer: failed to close connection'
+            self._handling_fail(e, message)           
+           
+    def _handling_fail(self, error, message):  
+        error_message = "%s - %s" % (message, error)          
+        if self.fail_on_error:  
+            error.args = ((error_message),)
+            error.strerror = error.args[0]
+            raise
+        else:
+            debug(error_message)
 
 
 class IRNetBoxRemote(object):
