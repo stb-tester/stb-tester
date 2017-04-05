@@ -6,6 +6,7 @@ import socket
 import subprocess
 import sys
 import time
+import struct
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
@@ -44,6 +45,7 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
+        (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
     ]
     if gpl_controls is not None:
         remotes += gpl_controls
@@ -261,6 +263,63 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
     debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
     return LircRemote(control_name, _connect)
+
+
+class RemoteFrameBuffer(object):
+    """Send a key-press to a set-top box running a VNC Remote Frame Buffer 
+        protocol.
+ 
+        control = RemoteFrameBuffer("192.168.0.123")
+        control.press("MENU")
+    """
+    def __init__(self, hostname, port=None):
+        self.hostname = hostname
+        self.port = int(port or 5900)
+        # Connect once so that the test fails immediately if STB not found
+        # (instead of failing at the first `press` in the script).
+        debug("RemoteFrameBuffer: Connecting to %s:%d" % (hostname, self.port))
+        self.socket = self._connect() 
+        debug("RemoteFrameBuffer: Connected to %s:%d" % (hostname, self.port))
+
+    def press(self, key):    
+        self._press_down(key)
+        self._press_release(key)
+        debug("Pressed " + key)
+
+    def _connect(self):
+        self.socket =  _connect_tcp_socket(self.hostname, self.port)
+        self._handshake()
+
+    def _handshake(self):
+        s = self.socket
+        try:
+            prot_info = s.recv(20)
+            if prot_info != b'RFB 003.008\n':
+                raise socket.error("RemoteFrameBuffer: wrong RFB protocol info!")
+            s.send(b"RFB 003.003\n")
+            s.recv(4)
+            s.send(b'\0')
+            s.recv(24)
+        except socket.error, e:            
+            e.args = (("RemoteFrameBuffer: handshake failure!"),)
+            e.strerror = e.args[0]
+            raise 
+        
+    def _press_down(self, key):
+        try:
+            self.socket.send(struct.pack('!BBxxI', 4, 1, key))
+        except socket.error, e:         
+            e.args = ('RemoteFrameBuffer: failed to send key down (0x%04x)' % key,)
+            e.strerror = e.args[0]
+            raise 
+    
+    def _press_release(self, key):
+        try:
+            self.socket.send(struct.pack('!BBxxI', 4, 0, key))
+        except socket.error, e:
+            e.args = ('RemoteFrameBuffer: failed to send key release (0x%04x)' % key,)
+            e.strerror = e.args[0]
+            raise 
 
 
 class IRNetBoxRemote(object):
