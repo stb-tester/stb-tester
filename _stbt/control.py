@@ -268,9 +268,11 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
 class RemoteFrameBuffer(object):
     """Send a key-press to a set-top box running a VNC Remote Frame Buffer 
         protocol.
+        Expected key press input: 
+            <KEY_LABEL>(<KEY_HEX_CODE>)
  
         control = RemoteFrameBuffer("192.168.0.123")
-        control.press("MENU")
+        control.press("MENU(0xE001)")
     """
     def __init__(self, hostname, port=None):
         self.hostname = hostname
