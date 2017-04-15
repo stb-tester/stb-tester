@@ -1,0 +1,249 @@
+#!/bin/bash
+
+# GUI wrapper for stb-tester commands.
+# No command line options are available.
+
+set -u
+
+### Main ###
+
+main() {
+    check_dependency zenity
+    check_dependency xhost
+
+    STBT_DIR="$(dirname "$(abspath "$0")")/.."
+    DEFAULT_CONFIG=~/.config/stbt/stbt.conf
+    DEFAULT_SCREENSHOT=screenshot.png
+
+    # Allow zenity to access display - as needed in OS X
+    xhost +local:$(whoami)
+    ZENITY="zenity --display=:0.0"
+
+    while true; do
+        local cmd="$(
+            $ZENITY --list --separator="," --width=400 --height=450 \
+                --title="stb-tester launcher" \
+                --text="$(echo "Select a command from the list below.\n\n" \
+                    "Commands are executed with default parameters\n" \
+                    "unless overridden in the configuration file.")" \
+                --ok-label="Execute" --cancel-label="Quit" \
+                --column="Command" --column="Description" \
+                "runner"         "Test runner and reporting system" \
+                "run"            "Run a stbt script" \
+                "record"         "Record a stbt script" \
+                "config"         "Edit the configuration file" \
+                "control"        "Send remote control signals" \
+                "power"          "Control networked power switch" \
+                "screenshot"     "Capture a single screenshot" \
+                "templatematch"  "Compare two images" \
+                "tv"             "View live video on screen" \
+            )"
+        [[ -z "$cmd" ]] && exit 0
+        cmd="$(echo "$cmd" | sed s/,.*//)"  # Remove duplicate commands
+
+        echo
+        echo "*** stbt $cmd ***"
+        echo
+        $cmd
+    done
+}
+
+### stbt commands ###
+
+runner() {
+    local cmd="$(
+        $ZENITY --list --separator="," --width=480 --height=220 \
+            --title="Select mode" --text="Select when to stop executions." \
+            --ok-label="Next" --cancel-label="Cancel" \
+            --column="#" --column="Description" \
+            0 "Run an stb-tester script until it fails" \
+            1 "Keep going after uninteresting failures" \
+            2 "Keep going no matter what" \
+        )"
+    [[ -z "$cmd" ]] && return
+    cmd="$(echo "$cmd" | sed s/,.*//)"  # Remove duplicate commands
+    local arg=
+    case $cmd in
+        1) arg=-k;;
+        2) arg=-kk;;
+    esac
+
+    test="$($ZENITY --file-selection --file-filter=*.py \
+                --filename="${test:-}" --title="Select test script")"
+    [[ -z "$test" ]] && return
+
+    workspace="$($ZENITY --file-selection --directory \
+        --filename="${workspace:-$(dirname "$test")}" \
+        --title="Select workspace directory")"
+    [[ -z "$workspace" ]] && return
+
+    cd "$workspace"
+    echo_command runner/run $arg $test
+    "$STBT_DIR/extra/runner/run" $arg "$test"
+
+    echo_command runner/server
+    "$STBT_DIR/extra/runner/server" &
+    local pid=$!
+    open_default http://localhost:5000/
+    trap "kill $pid" SIGINT SIGTERM
+    wait $pid
+}
+
+run() {
+    test="$($ZENITY --file-selection --file-filter=*.py \
+                --filename="${test:-}" --title="Select test script")"
+    [[ -z "$test" ]] && return
+
+    workspace="$($ZENITY --file-selection --directory \
+        --filename="${workspace:-$(dirname "$test")}" \
+        --title="Select workspace directory")"
+    [[ -z "$workspace" ]] && return
+
+    cd "$workspace"
+    echo_command stbt run $test
+    "$STBT_DIR/stbt-run" "$test"
+    local ret=$?
+
+    local text="Finished with exit status $ret."
+    case $ret in
+        0) $ZENITY --info --title="PASS" --text="$text";;
+        *) $ZENITY --warning --title="FAIL" --text="$text";;
+    esac
+}
+
+record() {
+    workspace="$($ZENITY --file-selection --directory \
+                --filename="${workspace:-}" --title="Select output directory")"
+    [[ -z "$workspace" ]] && return
+
+    local output_file="$(stbt config record.output_file)"
+    [[ -e "$workspace/$output_file" ]] && {
+        confirm_overwrite "$output_file" || return
+    }
+
+    cd "$workspace"
+    echo_command stbt record
+    "$STBT_DIR/stbt-record" || error
+}
+
+config() {
+    local config="$DEFAULT_CONFIG"
+    [[ -n "${STBT_CONFIG_FILE:-}" ]] &&
+        config="$(abspath "$STBT_CONFIG_FILE")"
+
+    [[ "$config" == "$DEFAULT_CONFIG" ]] && {
+        [[ -d "$(dirname "$DEFAULT_CONFIG")" ]] ||
+            mkdir -p "$(dirname "$DEFAULT_CONFIG")" ]]
+        [[ -f "$DEFAULT_CONFIG" ]] || touch "$DEFAULT_CONFIG"
+    }
+
+    local temp="$(mktemp)"
+    $ZENITY --text-info --filename="$config" --editable --title="$config" \
+            --ok-label="Save" --cancel-label="Discard" \
+            --width=900 --height=500 --font="monospace" >"$temp" && {
+        cp "$temp" "$config" &&
+            echo "stbt-launcher: $config overwritten" ||
+            error
+    }
+    rm -f "$temp"
+}
+
+control() {
+    echo_command stbt control
+    "$STBT_DIR/stbt-control" || error
+}
+
+power() {
+    local cmd="$(
+        $ZENITY --list --separator="," --title="Select command" \
+            --column="Command" --text="" --ok-label="Send" \
+            --width=200 --height=250 \
+            --text="Select a command to send\nto the power switch." \
+            on off status
+        )"
+    [[ -z "$cmd" ]] && return
+    cmd="$(echo "$cmd" | sed s/,.*//)"  # Remove duplicate commands
+
+    echo_command stbt power $cmd
+    "$STBT_DIR/stbt-power" $cmd || error
+}
+
+screenshot() {
+    workspace="$($ZENITY --file-selection --directory \
+            --filename="${workspace:-}" --title="Select output directory")"
+    [[ -z "$workspace" ]] && return
+
+    [[ -e "$workspace/$DEFAULT_SCREENSHOT" ]] && {
+        confirm_overwrite "$DEFAULT_SCREENSHOT" || return
+    }
+
+    cd "$workspace"
+    echo_command stbt screenshot
+    "$STBT_DIR/stbt-screenshot" &&
+        $ZENITY --info --title="Done" \
+            --text="Screenshot saved to '$DEFAULT_SCREENSHOT'." ||
+        error
+}
+
+templatematch() {
+    frame="$($ZENITY --file-selection --file-filter=*.png \
+            --filename="${frame:-}" --title="Select full frame")"
+    [[ -z "$frame" ]] && return
+
+    template="$($ZENITY --file-selection --file-filter=*.png \
+        --filename="${template:-"$(echo $frame)"}" \
+        --title="Select template image")"
+    [[ -z "$template" ]] && return
+
+    params="$($ZENITY --entry --title="Specify parameters" --width=600 \
+            --entry-text="${params:-}" --cancel-label="Skip" \
+            --text="Optional wait for match parameters:")"
+    [[ $? -eq 0 ]] || params=
+
+    echo_command stbt templatematch $frame $template $params
+    "$STBT_DIR/stbt-templatematch" "$frame" "$template" $params
+    case $? in
+        0) $ZENITY --info --title="PASS" --text="Match found.";;
+        *) $ZENITY --warning --title="FAIL" --text="Didn't find match.";;
+    esac
+}
+
+tv() {
+    echo_command stbt tv
+    "$STBT_DIR/stbt-tv" || error
+}
+
+### Helper functions ###
+
+echo_command() { echo [$(pwd)]$ $*; }
+
+error() {
+    $ZENITY --error --title="Error" \
+        --text="An error occurred.\nPlease see messages in the terminal."
+}
+
+confirm_overwrite() {
+    $ZENITY --question --title="Confirmation" \
+        --text="$(echo "'$1' already exists.\n" \
+                       "Are you sure you wish to overwrite it?")"
+}
+
+# Portable implementation of "readlink -f" to support BSD/OSX.
+abspath() {
+    echo $@ |
+        python -c "import os, sys; print os.path.abspath(sys.stdin.read())"
+}
+
+check_dependency() {
+    which $1 &>/dev/null || {
+        echo "This tool requires $1:" \
+             "sudo <package-manager> install $1" >&2
+        exit 1
+    }
+}
+
+open_default() {
+    which xdg-open &>/dev/null && xdg-open $@ || echo open $@
+}
+
+main
