@@ -56,7 +56,7 @@ def virtual_stb(command, x_keymap=None, verbose=False):
             stderr=subprocess.STDOUT)
 
         os.environ['DISPLAY'] = display
-        child = subprocess.Popen(command)
+        child = subprocess.Popen(command, shell=True)
 
         try:
             config.update({
