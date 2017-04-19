@@ -268,9 +268,9 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
 class RemoteFrameBuffer(object):
     """Send a key-press to a set-top box running a VNC Remote Frame Buffer
         protocol.
-        Expected key press input: 
+        Expected key press input:
             <KEY_LABEL>(<KEY_HEX_CODE>)
- 
+
         control = RemoteFrameBuffer("192.168.0.123")
         control.press("MENU(0xE001)")
     """
@@ -285,18 +285,18 @@ class RemoteFrameBuffer(object):
         self._connect_socket()
         self._handshake() 
         self._press_down(key)
-        self._release(key)       
-        self._close()   
-               
+        self._release(key)
+        self._close()
+
     def _connect_socket(self):
         try:
             self.socket = socket.socket()
             s = self.socket
             if self.timeout:
                 s.settimeout(self.timeout)
-            s.connect((self.hostname, self.port))            
+            s.connect((self.hostname, self.port))
             debug(
-                "RemoteFrameBuffer: connected to %s:%d" 
+                "RemoteFrameBuffer: connected to %s:%d"
                 % (self.hostname, self.port))
         except socket.error as e:
             message = (
@@ -315,50 +315,50 @@ class RemoteFrameBuffer(object):
             s.send(b'\0')
             s.recv(24)
             debug("RemoteFrameBuffer: handshake completed")
-        except socket.error, e:                   
+        except socket.error, e:
             message = "RemoteFrameBuffer: handshake failure"
-            self._handling_fail(e, message)  
-                
+            self._handling_fail(e, message)
+
     def _press_down(self, key):
-        try:        
-            key_code = self._get_key_code(key) 
-            self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))            
+        try:
+            key_code = self._get_key_code(key)
+            self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
             debug(
-                "RemoteFrameBuffer: pressed down (0x%04x)" 
-                % key_code) 
-        except socket.error, e:                  
+                "RemoteFrameBuffer: pressed down (0x%04x)"
+                % key_code)
+        except socket.error, e:
             message = (
-                "RemoteFrameBuffer: failed to press key (0x%04x)" 
+                "RemoteFrameBuffer: failed to press key (0x%04x)"
                 % key_code)
             self._handling_fail(e, message)
-    
+
     def _release(self, key):
         try:
-            key_code = self._get_key_code(key) 
-            self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))            
-            debug("RemoteFrameBuffer: release (0x%04x)" % key_code) 
-        except socket.error, e:      
+            key_code = self._get_key_code(key)
+            self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+            debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
+        except socket.error, e:
             message = (
-                "RemoteFrameBuffer: failed to release key (0x%04x)" 
+                "RemoteFrameBuffer: failed to release key (0x%04x)"
                 % key_code)
             self._handling_fail(e, message)
-           
+
     def _close(self):
         try:
             self.socket.shutdown(socket.SHUT_RDWR)
-            self.socket.close()  
-            debug("RemoteFrameBuffer: socket connection closed")         
-        except socket.error, e:  
+            self.socket.close()
+            debug("RemoteFrameBuffer: socket connection closed")
+        except socket.error, e:
             message = "RemoteFrameBuffer: failed to close connection"
-            self._handling_fail(e, message) 
-    
-    def _get_key_code(self, key):  
-        key_code = int(key[key.find("(") + 1:key.find(")")], 16) 
-        return key_code          
-           
-    def _handling_fail(self, error, message):  
-        error_message = "%s - %s" % (message, error)          
-        if self.fail_on_error:  
+            self._handling_fail(e, message)
+
+    def _get_key_code(self, key):
+        key_code = int(key[key.find("(") + 1:key.find(")")], 16)
+        return key_code
+
+    def _handling_fail(self, error, message):
+        error_message = "%s - %s" % (message, error)
+        if self.fail_on_error:
             error.args = ((error_message),)
             error.strerror = error.args[0]
             raise error
