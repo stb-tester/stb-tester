@@ -281,9 +281,9 @@ class RemoteFrameBuffer(object):
         self.timeout = 3
         self.socket = None
 
-    def press(self, key): 
+    def press(self, key):
         self._connect_socket()
-        self._handshake() 
+        self._handshake()
         self._press_down(key)
         self._release(key)
         self._close()
