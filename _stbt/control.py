@@ -3,10 +3,10 @@ from __future__ import absolute_import
 import os
 import re
 import socket
+import struct
 import subprocess
 import sys
 import time
-import struct
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
@@ -277,7 +277,6 @@ class RemoteFrameBuffer(object):
     def __init__(self, hostname, port=None):
         self.hostname = hostname
         self.port = int(port or 5900)
-        self.fail_on_error = True
         self.timeout = 3
         self.socket = None
 
@@ -289,81 +288,46 @@ class RemoteFrameBuffer(object):
         self._close()
 
     def _connect_socket(self):
-        try:
-            self.socket = socket.socket()
-            s = self.socket
-            if self.timeout:
-                s.settimeout(self.timeout)
-            s.connect((self.hostname, self.port))
-            debug(
-                "RemoteFrameBuffer: connected to %s:%d"
-                % (self.hostname, self.port))
-        except socket.error as e:
-            message = (
-                "RemoteFrameBuffer: failed to connect at %s:%d"
-                % (self.hostname, self.port))
-            self._handling_fail(e, message)
+        self.socket = socket.socket()
+        s = self.socket
+        if self.timeout:
+            s.settimeout(self.timeout)
+        s.connect((self.hostname, self.port))
+        debug(
+            "RemoteFrameBuffer: connected to %s:%d"
+            % (self.hostname, self.port))
 
     def _handshake(self):
-        try:
-            s = self.socket
-            prot_info = s.recv(20)
-            if prot_info != b'RFB 003.008\n':
-                raise socket.error("wrong RFB protocol info")
-            s.send(b"RFB 003.003\n")
-            s.recv(4)
-            s.send(b'\0')
-            s.recv(24)
-            debug("RemoteFrameBuffer: handshake completed")
-        except socket.error, e:
-            message = "RemoteFrameBuffer: handshake failure"
-            self._handling_fail(e, message)
+        s = self.socket
+        prot_info = s.recv(20)
+        if prot_info != b'RFB 003.008\n':
+            raise socket.error("wrong RFB protocol info")
+        s.send(b"RFB 003.003\n")
+        s.recv(4)
+        s.send(b'\0')
+        s.recv(24)
+        debug("RemoteFrameBuffer: handshake completed")
 
     def _press_down(self, key):
-        try:
-            key_code = self._get_key_code(key)
-            self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
-            debug(
-                "RemoteFrameBuffer: pressed down (0x%04x)"
-                % key_code)
-        except socket.error, e:
-            message = (
-                "RemoteFrameBuffer: failed to press key (0x%04x)"
-                % key_code)
-            self._handling_fail(e, message)
+        key_code = self._get_key_code(key)
+        self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
+        debug(
+            "RemoteFrameBuffer: pressed down (0x%04x)"
+            % key_code)
 
     def _release(self, key):
-        try:
-            key_code = self._get_key_code(key)
-            self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
-            debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
-        except socket.error, e:
-            message = (
-                "RemoteFrameBuffer: failed to release key (0x%04x)"
-                % key_code)
-            self._handling_fail(e, message)
+        key_code = self._get_key_code(key)
+        self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+        debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
 
     def _close(self):
-        try:
-            self.socket.shutdown(socket.SHUT_RDWR)
-            self.socket.close()
-            debug("RemoteFrameBuffer: socket connection closed")
-        except socket.error, e:
-            message = "RemoteFrameBuffer: failed to close connection"
-            self._handling_fail(e, message)
+        self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
+        debug("RemoteFrameBuffer: socket connection closed")
 
     def _get_key_code(self, key):
         key_code = int(key[key.find("(") + 1:key.find(")")], 16)
         return key_code
-
-    def _handling_fail(self, error, message):
-        error_message = "%s - %s" % (message, error)
-        if self.fail_on_error:
-            error.args = ((error_message),)
-            error.strerror = error.args[0]
-            raise error
-        else:
-            debug(error_message)
 
 
 class IRNetBoxRemote(object):
