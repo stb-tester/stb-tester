@@ -266,7 +266,7 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
 
 
 class RemoteFrameBuffer(object):
-    """Send a key-press to a set-top box running a VNC Remote Frame Buffer 
+    """Send a key-press to a set-top box running a VNC Remote Frame Buffer
         protocol.
         Expected key press input: 
             <KEY_LABEL>(<KEY_HEX_CODE>)
@@ -279,6 +279,7 @@ class RemoteFrameBuffer(object):
         self.port = int(port or 5900)
         self.fail_on_error = True
         self.timeout = 3
+        self.socket = None
 
     def press(self, key): 
         self._connect_socket()
@@ -294,10 +295,13 @@ class RemoteFrameBuffer(object):
             if self.timeout:
                 s.settimeout(self.timeout)
             s.connect((self.hostname, self.port))            
-            debug("RemoteFrameBuffer: connected to %s:%d" % (self.hostname, self.port))
+            debug(
+                "RemoteFrameBuffer: connected to %s:%d" 
+                % (self.hostname, self.port))
         except socket.error as e:
-            message = ("RemoteFrameBuffer: failed to connect to remote control at %s:%d"
-                 % (self.hostname, self.port))
+            message = (
+                "RemoteFrameBuffer: failed to connect at %s:%d"
+                % (self.hostname, self.port))
             self._handling_fail(e, message)
 
     def _handshake(self):
@@ -319,9 +323,13 @@ class RemoteFrameBuffer(object):
         try:        
             key_code = self._get_key_code(key) 
             self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))            
-            debug("RemoteFrameBuffer: pressed down (0x%04x)" % key_code) 
+            debug(
+                "RemoteFrameBuffer: pressed down (0x%04x)" 
+                % key_code) 
         except socket.error, e:                  
-            message = 'RemoteFrameBuffer: failed to send key down (0x%04x)' % key_code
+            message = (
+                "RemoteFrameBuffer: failed to press key (0x%04x)" 
+                % key_code)
             self._handling_fail(e, message)
     
     def _release(self, key):
@@ -330,7 +338,9 @@ class RemoteFrameBuffer(object):
             self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))            
             debug("RemoteFrameBuffer: release (0x%04x)" % key_code) 
         except socket.error, e:      
-            message = 'RemoteFrameBuffer: failed to send key release (0x%04x)' % key_code
+            message = (
+                "RemoteFrameBuffer: failed to release key (0x%04x)" 
+                % key_code)
             self._handling_fail(e, message)
            
     def _close(self):
@@ -339,11 +349,11 @@ class RemoteFrameBuffer(object):
             self.socket.close()  
             debug("RemoteFrameBuffer: socket connection closed")         
         except socket.error, e:  
-            message = 'RemoteFrameBuffer: failed to close connection'
+            message = "RemoteFrameBuffer: failed to close connection"
             self._handling_fail(e, message) 
     
     def _get_key_code(self, key):  
-        key_code = int(key[key.find("(")+1:key.find(")")], 16) 
+        key_code = int(key[key.find("(") + 1:key.find(")")], 16) 
         return key_code          
            
     def _handling_fail(self, error, message):  
@@ -351,7 +361,7 @@ class RemoteFrameBuffer(object):
         if self.fail_on_error:  
             error.args = ((error_message),)
             error.strerror = error.args[0]
-            raise
+            raise error
         else:
             debug(error_message)
 
