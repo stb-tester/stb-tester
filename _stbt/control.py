@@ -269,11 +269,63 @@ class RemoteFrameBuffer(object):
     """Send a key-press to a set-top box running a VNC Remote Frame Buffer
         protocol.
         Expected key press input:
-            <KEY_LABEL>(<KEY_HEX_CODE>)
+            <KEY_LABEL>
 
         control = RemoteFrameBuffer("192.168.0.123")
-        control.press("MENU(0xE001)")
+        control.press("KEY_MENU")
     """
+    
+    # Map our recommended keynames (from linux input-event-codes.h) to the
+    # equivalent RFB keyname.
+    _KEYNAMES = {
+        'KEY_BACK': 0xE002,
+        'KEY_BLUE': 0xE203,
+        'KEY_CHANNELDOWN ': 0xE007,
+        'KEY_CHANNELUP': 0xE006,
+        'KEY_DOWN': 0xE101,
+        'KEY_ELPS': 0xEF00,
+        'KEY_FASTFORWARD': 0xE405,
+        'KEY_GREEN': 0xE201,
+        'KEY_GUIDE': 0xE00B,
+        'KEY_HELP': 0xE00A,
+        'KEY_HOME': 0xE015,
+        'KEY_INFO': 0xE00E,
+        'KEY_INPUTSELECT': 0xE010,
+        'KEY_INTERACT': 0xE008,
+        'KEY_0': 0xE300,
+        'KEY_1': 0xE301,
+        'KEY_2': 0xE302,
+        'KEY_3': 0xE303,
+        'KEY_4': 0xE304,
+        'KEY_5': 0xE305,
+        'KEY_6': 0xE306,
+        'KEY_7': 0xE307,
+        'KEY_8': 0xE308,
+        'KEY_9': 0xE309,
+        'KEY_LEFT': 0xE102,
+        'KEY_MENU': 0xE00A,
+        'KEY_MUTE': 0xE005,
+        'KEY_MYTV': 0xE009,
+        'KEY_PAUSE': 0xE401,
+        'KEY_PLAY': 0xE400,
+        'KEY_PLAYPAUSE': 0xE40A,
+        'KEY_POWER': 0xE000,
+        'KEY_PRIMAFILA': 0xEF00,
+        'KEY_RECORD': 0xE403,
+        'KEY_RED': 0xE200,
+        'KEY_REWIND': 0xE407,
+        'KEY_RIGHT': 0xE103,
+        'KEY_SEARCH': 0xEF03,
+        'KEY_SELECT': 0xE001,
+        'KEY_SKY': 0xEF01,
+        'KEY_STOP': 0xE402,
+        'KEY_TEXT': 0xE00F,
+        'KEY_UP': 0xE100,
+        'KEY_VOLUMEDOWN': 0xE004,
+        'KEY_VOLUMEUP': 0xE003,
+        'KEY_YELLOW': 0xE202
+    }
+    
     def __init__(self, hostname, port=None):
         self.hostname = hostname
         self.port = int(port or 5900)
@@ -326,7 +378,7 @@ class RemoteFrameBuffer(object):
         debug("RemoteFrameBuffer: socket connection closed")
 
     def _get_key_code(self, key):
-        key_code = int(key[key.find("(") + 1:key.find(")")], 16)
+        key_code = self._KEYNAMES.get(key, key)
         return key_code
 
 
