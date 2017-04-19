@@ -274,7 +274,7 @@ class RemoteFrameBuffer(object):
         control = RemoteFrameBuffer("192.168.0.123")
         control.press("KEY_MENU")
     """
-    
+
     # Map our recommended keynames (from linux input-event-codes.h) to the
     # equivalent RFB keyname.
     _KEYNAMES = {
@@ -325,7 +325,7 @@ class RemoteFrameBuffer(object):
         'KEY_VOLUMEUP': 0xE003,
         'KEY_YELLOW': 0xE202
     }
-    
+
     def __init__(self, hostname, port=None):
         self.hostname = hostname
         self.port = int(port or 5900)
