@@ -280,7 +280,7 @@ class RemoteFrameBuffer(object):
     _KEYNAMES = {
         'KEY_BACK': 0xE002,
         'KEY_BLUE': 0xE203,
-        'KEY_CHANNELDOWN ': 0xE007,
+        'KEY_CHANNELDOWN': 0xE007,
         'KEY_CHANNELUP': 0xE006,
         'KEY_DOWN': 0xE101,
         'KEY_ELPS': 0xEF00,
