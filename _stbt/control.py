@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import re
 import socket
+import struct
 import subprocess
 import sys
 import time
@@ -44,6 +45,7 @@ def uri_to_remote(uri, display=None):
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
+        (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
     ]
     if gpl_controls is not None:
         remotes += gpl_controls
@@ -261,6 +263,123 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
     debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
 
     return LircRemote(control_name, _connect)
+
+
+class RemoteFrameBuffer(object):
+    """Send a key-press to a set-top box running a VNC Remote Frame Buffer
+        protocol.
+        Expected key press input:
+            <KEY_LABEL>
+
+        control = RemoteFrameBuffer("192.168.0.123")
+        control.press("KEY_MENU")
+    """
+
+    # Map our recommended keynames (from linux input-event-codes.h) to the
+    # equivalent RFB keyname.
+    _KEYNAMES = {
+        'KEY_BACK': 0xE002,
+        'KEY_BLUE': 0xE203,
+        'KEY_CHANNELDOWN': 0xE007,
+        'KEY_CHANNELUP': 0xE006,
+        'KEY_DOWN': 0xE101,
+        'KEY_ELPS': 0xEF00,
+        'KEY_FASTFORWARD': 0xE405,
+        'KEY_GREEN': 0xE201,
+        'KEY_GUIDE': 0xE00B,
+        'KEY_HELP': 0xE00A,
+        'KEY_HOME': 0xE015,
+        'KEY_INFO': 0xE00E,
+        'KEY_INPUTSELECT': 0xE010,
+        'KEY_INTERACT': 0xE008,
+        'KEY_0': 0xE300,
+        'KEY_1': 0xE301,
+        'KEY_2': 0xE302,
+        'KEY_3': 0xE303,
+        'KEY_4': 0xE304,
+        'KEY_5': 0xE305,
+        'KEY_6': 0xE306,
+        'KEY_7': 0xE307,
+        'KEY_8': 0xE308,
+        'KEY_9': 0xE309,
+        'KEY_LEFT': 0xE102,
+        'KEY_MENU': 0xE00A,
+        'KEY_MUTE': 0xE005,
+        'KEY_MYTV': 0xE009,
+        'KEY_PAUSE': 0xE401,
+        'KEY_PLAY': 0xE400,
+        'KEY_PLAYPAUSE': 0xE40A,
+        'KEY_POWER': 0xE000,
+        'KEY_PRIMAFILA': 0xEF00,
+        'KEY_RECORD': 0xE403,
+        'KEY_RED': 0xE200,
+        'KEY_REWIND': 0xE407,
+        'KEY_RIGHT': 0xE103,
+        'KEY_SEARCH': 0xEF03,
+        'KEY_SELECT': 0xE001,
+        'KEY_SKY': 0xEF01,
+        'KEY_STOP': 0xE402,
+        'KEY_TEXT': 0xE00F,
+        'KEY_UP': 0xE100,
+        'KEY_VOLUMEDOWN': 0xE004,
+        'KEY_VOLUMEUP': 0xE003,
+        'KEY_YELLOW': 0xE202
+    }
+
+    def __init__(self, hostname, port=None):
+        self.hostname = hostname
+        self.port = int(port or 5900)
+        self.timeout = 3
+        self.socket = None
+
+    def press(self, key):
+        self._connect_socket()
+        self._handshake()
+        self._press_down(key)
+        self._release(key)
+        self._close()
+
+    def _connect_socket(self):
+        self.socket = socket.socket()
+        s = self.socket
+        if self.timeout:
+            s.settimeout(self.timeout)
+        s.connect((self.hostname, self.port))
+        debug(
+            "RemoteFrameBuffer: connected to %s:%d"
+            % (self.hostname, self.port))
+
+    def _handshake(self):
+        s = self.socket
+        prot_info = s.recv(20)
+        if prot_info != b'RFB 003.008\n':
+            raise socket.error("wrong RFB protocol info")
+        s.send(b"RFB 003.003\n")
+        s.recv(4)
+        s.send(b'\0')
+        s.recv(24)
+        debug("RemoteFrameBuffer: handshake completed")
+
+    def _press_down(self, key):
+        key_code = self._get_key_code(key)
+        self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
+        debug(
+            "RemoteFrameBuffer: pressed down (0x%04x)"
+            % key_code)
+
+    def _release(self, key):
+        key_code = self._get_key_code(key)
+        self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+        debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
+
+    def _close(self):
+        self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
+        debug("RemoteFrameBuffer: socket connection closed")
+
+    def _get_key_code(self, key):
+        key_code = self._KEYNAMES.get(key, key)
+        return key_code
 
 
 class IRNetBoxRemote(object):

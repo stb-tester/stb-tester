@@ -206,10 +206,12 @@ _stbt_control_uri() {
         --control=lirc:*:*:) _stbt_lirc_name;;
         --control=lirc:*:) _stbt_lirc_port_or_name;;
         --control=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
+        --control=rfb:*:) _stbt_rfb_port;;
+        --control=rfb:) _stbt_hostname;;
         --control=samsung:*) _stbt_hostname;;
         *)
             compgen -W "$( \
-                    _stbt_no_space irnetbox: lirc: samsung: x11:
+                    _stbt_no_space irnetbox: lirc: rfb: samsung: x11:
                     _stbt_trailing_space none test)" \
                 -- "$cur";;
     esac
@@ -264,6 +266,11 @@ _stbt_lirc_name() {
 _stbt_hostname() {
     local cur="$_stbt_cur"
     compgen -A hostname -S ":" -- "$cur"
+}
+
+_stbt_rfb_port() {
+    local cur="$_stbt_cur"
+    compgen -W "$(_stbt_trailing_space 5900)" -- "$cur"
 }
 
 _stbt_control_recorder_file() {
