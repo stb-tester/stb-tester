@@ -1,15 +1,16 @@
-stb-tester release notes
+Stb-tester release notes
 ========================
 
-[stb-tester](http://stb-tester.com) Python APIs for use in test scripts are
-stable: If better APIs are introduced, the existing API will be marked as
-deprecated but not removed for one year. Similarly, the command-line interfaces
-of *stbt run*, *stbt auto-selftest*, *stbt batch*, *stbt config*, *stbt
-control*, *stbt power*, *stbt record*, *stbt screenshot*, *stbt match*, *stbt
-tv*, and *stbt virtual-stb* are stable. Other command-line utilities are
-considered experimental, but we always endeavour to keep backwards
-compatibility. The release notes always provide an exhaustive list of any
-changes, along with upgrade instructions where necessary.
+[Stb-tester](http://stb-tester.com) Python APIs for use in test scripts are
+stable: Upgrading to a newer stb-tester version shouldn't affect any of your
+test scripts. Occasionally we might break some rare edge cases, but we don't
+expect them to affect most users, and we mention such changes under "Breaking
+changes" in the release notes.
+
+Similarly, the command-line interfaces of *stbt run*, *stbt auto-selftest*,
+*stbt batch*, *stbt config*, *stbt control*, *stbt match*, *stbt power*, *stbt
+record*, *stbt screenshot*, *stbt tv*, and *stbt virtual-stb* are stable. Other
+command-line utilities are considered experimental.
 
 For installation instructions see [Getting Started](
 https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
