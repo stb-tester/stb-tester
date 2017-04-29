@@ -12,8 +12,13 @@ Similarly, the command-line interfaces of *stbt run*, *stbt auto-selftest*,
 record*, *stbt screenshot*, *stbt tv*, and *stbt virtual-stb* are stable. Other
 command-line utilities are considered experimental.
 
-For installation instructions see [Getting Started](
-https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester).
+For installation instructions see [Getting Started] if you're using the
+open-source project, or [test_pack.stbt_version] if you're using the
+[Stb-tester hardware].
+
+[Getting Started]: https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
+[test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
+[Stb-tester hardware]: https://stb-tester.com/solutions
 
 #### v28
 
