@@ -41,6 +41,8 @@ from _stbt.core import \
     wait_until
 del sys.path[0]
 
+gi.require_version("Gst", "1.0")
+
 __all__ = [
     "as_precondition",
     "Frame",
