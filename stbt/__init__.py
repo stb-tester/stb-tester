@@ -260,7 +260,8 @@ def press_until_match(
         image,
         interval_secs=None,
         max_presses=None,
-        match_parameters=None):
+        match_parameters=None,
+        region=Region.ALL):
     """Call `press` as many times as necessary to find the specified image.
 
     :param key: See `press`.
@@ -283,12 +284,13 @@ def press_until_match(
         in the ``[press_until_match]`` section of stbt.conf.
 
     :param match_parameters: See `match`.
+    :param region: See `match`.
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
     """
     return _dut.press_until_match(
-        key, image, interval_secs, max_presses, match_parameters)
+        key, image, interval_secs, max_presses, match_parameters, region)
 
 
 def wait_for_motion(
