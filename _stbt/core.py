@@ -949,7 +949,8 @@ class DeviceUnderTest(object):
             image,
             interval_secs=None,
             max_presses=None,
-            match_parameters=None):
+            match_parameters=None,
+            region=Region.ALL):
 
         if interval_secs is None:
             # Should this be float?
@@ -967,7 +968,8 @@ class DeviceUnderTest(object):
         while True:
             try:
                 return self.wait_for_match(image, timeout_secs=interval_secs,
-                                           match_parameters=match_parameters)
+                                           match_parameters=match_parameters,
+                                           region=region)
             except MatchTimeout:
                 if i < max_presses:
                     self.press(key)
