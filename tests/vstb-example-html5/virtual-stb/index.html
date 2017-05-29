@@ -9,17 +9,17 @@
     }
     function keypress(event) {
       logo = document.getElementById('logo');
-      switch (event.keyIdentifier) {
-      case "Left":
+      switch (event.key) {
+      case "ArrowLeft":
         rotate(logo, 207);
         break;
-      case "Right":
+      case "ArrowRight":
         rotate(logo, 27);
         break;
-      case "Down":
+      case "ArrowDown":
         rotate(logo, 117);
         break;
-      case "Up":
+      case "ArrowUp":
         rotate(logo, 297);
         break;
       case "Enter":
