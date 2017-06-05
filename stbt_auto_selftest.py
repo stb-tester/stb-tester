@@ -114,8 +114,7 @@ def generate(source_files):
                                       selftest_filename(f))
                 if os.path.exists(newfile):
                     mkdir_p(os.path.dirname(target))
-                    os.rename(os.path.join(tmpdir, selftest_filename(f)),
-                              target)
+                    os.rename(newfile, target)
                 else:
                     sys.stderr.write(
                         "error: '%s' isn't a valid source file.\n" % f)
