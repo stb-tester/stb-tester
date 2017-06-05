@@ -114,8 +114,7 @@ def generate(source_files):
                                       selftest_filename(f))
                 if os.path.exists(newfile):
                     mkdir_p(os.path.dirname(target))
-                    os.rename(os.path.join(tmpdir, selftest_filename(f)),
-                              target)
+                    os.rename(newfile, target)
                 else:
                     sys.stderr.write(
                         "error: '%s' isn't a valid source file.\n" % f)
@@ -127,7 +126,7 @@ def generate(source_files):
             target = "%s/selftest/auto_selftest" % os.curdir
             if os.path.exists(target):
                 shutil.rmtree(target)
-                os.rename(tmpdir, target)
+            os.rename(tmpdir, target)
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

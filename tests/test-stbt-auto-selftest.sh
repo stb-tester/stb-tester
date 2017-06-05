@@ -12,6 +12,14 @@ test_auto_selftest_generate()
         "$testdir"/auto-selftest-example-test-pack .
 }
 
+test_auto_selftest_generate_first_time() {
+    cd_example_testpack &&
+    rm -rf selftest/auto_selftest &&
+    stbt auto-selftest generate &&
+    diff -ur --exclude="*.pyc" --exclude=__pycache__ \
+        "$testdir"/auto-selftest-example-test-pack .
+}
+
 test_that_generated_auto_selftests_pass_as_doctests()
 {
     PYTHONPATH=$srcdir python -m doctest \
@@ -109,6 +117,14 @@ test_auto_selftest_generate_with_single_source_file() {
         --exclude=example.py --exclude=example_selftest.py \
         "$testdir"/auto-selftest-example-test-pack . \
         || fail "Changed other selftest files"
+}
+
+test_auto_selftest_generate_first_time_with_single_source_file() {
+    cd_example_testpack &&
+    rm -rf selftest/auto_selftest &&
+    stbt auto-selftest generate tests/example.py &&
+    diff -u selftest/auto_selftest/tests/example_selftest.py \
+         "$testdir"/auto-selftest-example-test-pack/selftest/auto_selftest/tests/example_selftest.py
 }
 
 test_auto_selftest_generate_with_single_invalid_source_file() {
