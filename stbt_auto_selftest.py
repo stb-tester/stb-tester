@@ -126,7 +126,7 @@ def generate(source_files):
             target = "%s/selftest/auto_selftest" % os.curdir
             if os.path.exists(target):
                 shutil.rmtree(target)
-                os.rename(tmpdir, target)
+            os.rename(tmpdir, target)
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
