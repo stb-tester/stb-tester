@@ -168,7 +168,8 @@ class AdbDevice(object):
         self.tcpip = tcpip
 
         if coordinate_system is None:
-            name = _get_config("android", "coordinate_system", "ADB_NATIVE")
+            name = _get_config(_config, "android", "coordinate_system",
+                               "ADB_NATIVE")
             if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "
@@ -794,12 +795,9 @@ def _parse_display_dimensions(dumpsys_output):
     raise RuntimeError("AdbDevice: Didn't find display size in dumpsys output")
 
 
-def _get_config(configparser, section, key, default=ConfigParser.Error):
+def _get_config(configparser, section, key, default):
     """Convenience function because ConfigParser.get doesn't take a default."""
     try:
         return configparser.get(section, key)
     except ConfigParser.Error:
-        if default == ConfigParser.Error:
-            raise
-        else:
-            return default
+        return default
