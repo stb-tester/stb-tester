@@ -11,8 +11,8 @@ import pytest
 
 from stbt import match, Region, wait_until
 from stbt.android import (_Dimensions, _parse_display_dimensions,
-                          _region_to_tuple, _to_native_coordinates, AdbDevice,
-                          AdbError, CoordinateSystem)
+                          _region_to_tuple, _resize, _to_native_coordinates,
+                          AdbDevice, AdbError, CoordinateSystem)
 
 
 @pytest.mark.parametrize("r", [
@@ -33,6 +33,30 @@ def test_region_to_tuple(r):
 def test_region_to_tuple_raises(r):
     with pytest.raises(TypeError):
         _region_to_tuple(r)
+
+
+@pytest.mark.parametrize("orientation", [
+    "portrait",
+    "landscape",
+])
+@pytest.mark.parametrize("coordinate_system", [
+    CoordinateSystem.ADB_NATIVE,
+    CoordinateSystem.ADB_720P,
+    CoordinateSystem.HDMI_720P,
+    CoordinateSystem.CAMERA_720P,
+])
+def test_that_get_frame_resizes_to_match_coordinate_system(
+        orientation, coordinate_system):
+
+    source = cv2.imread(_find_file(
+        "images/android/resize/source-1080p-%s.png" % orientation))
+    out = _resize(source, coordinate_system)
+    expected_filename = \
+        "images/android/resize/expected-{system}-{orientation}.png".format(
+            system=coordinate_system.name.lower().replace("_", "-"),
+            orientation=orientation)
+    expected = cv2.imread(_find_file(expected_filename))
+    assert match(expected, out)
 
 
 @pytest.mark.parametrize("orientation,device_resolution,expected_coordinates", [

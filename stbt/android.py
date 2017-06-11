@@ -257,44 +257,7 @@ class AdbDevice(object):
             raise RuntimeError(
                 "Failed to capture screenshot from android device")
 
-        w, h = img.shape[1], img.shape[0]
-
-        if self.coordinate_system == CoordinateSystem.ADB_NATIVE:
-            pass
-        elif self.coordinate_system == CoordinateSystem.ADB_720P:
-            # Resize to 720p preserving orientation
-            if w > h:
-                img = cv2.resize(img, (1280, 720))
-            else:
-                img = cv2.resize(img, (720, 1280))
-        elif self.coordinate_system == CoordinateSystem.HDMI_720P:
-            if w > h:
-                # Landscape: The device's screen fills the HDMI frame.
-                # (this assumes that the device's aspect ratio is 16:9).
-                img = cv2.resize(img, (1280, 720))
-            else:
-                # Portrait image in a landscape frame, with black letterboxing
-                # on either side.
-                ratio = float(h) / 720
-                w_new = int(w // ratio)
-                img = cv2.resize(img, (w_new, 720))
-                left = (1280 - w_new) // 2
-                img = cv2.copyMakeBorder(img, 0, 0, left, 1280 - w_new - left,
-                                         cv2.BORDER_CONSTANT, (0, 0, 0))
-        elif self.coordinate_system == CoordinateSystem.CAMERA_720P:
-            # Resize to 720p landscape for compatibility with screenshots from
-            # `stbt.get_frame` with the Stb-tester CAMERA.
-            if w > h:
-                img = cv2.resize(img, (1280, 720))
-            else:
-                img = numpy.rot90(cv2.resize(img, (720, 1280)))
-        else:
-            raise NotImplementedError(
-                "AdbDevice.get_frame not implemented for %s. "
-                "Use a separate AdbDevice instance with "
-                "coordinate_system=CoordinateSystem.ADB_NATIVE"
-                % self.coordinate_system)
-
+        img = _resize(img, self.coordinate_system)
         return stbt.Frame(img, time=timestamp)
 
     def press(self, key):
@@ -708,6 +671,48 @@ _KEYCODES = [
     "KEYCODE_ZOOM_IN",
     "KEYCODE_ZOOM_OUT",
 ]
+
+
+def _resize(img, coordinate_system):
+    w, h = img.shape[1], img.shape[0]
+
+    if coordinate_system == CoordinateSystem.ADB_NATIVE:
+        pass
+    elif coordinate_system == CoordinateSystem.ADB_720P:
+        # Resize to 720p preserving orientation
+        if w > h:
+            img = cv2.resize(img, (1280, 720))
+        else:
+            img = cv2.resize(img, (720, 1280))
+    elif coordinate_system == CoordinateSystem.HDMI_720P:
+        if w > h:
+            # Landscape: The device's screen fills the HDMI frame.
+            # (this assumes that the device's aspect ratio is 16:9).
+            img = cv2.resize(img, (1280, 720))
+        else:
+            # Portrait image in a landscape frame, with black letterboxing
+            # on either side.
+            ratio = float(h) / 720
+            w_new = int(w // ratio)
+            img = cv2.resize(img, (w_new, 720))
+            left = (1280 - w_new) // 2
+            img = cv2.copyMakeBorder(img, 0, 0, left, 1280 - w_new - left,
+                                     cv2.BORDER_CONSTANT, (0, 0, 0))
+    elif coordinate_system == CoordinateSystem.CAMERA_720P:
+        # Resize to 720p landscape for compatibility with screenshots from
+        # `stbt.get_frame` with the Stb-tester CAMERA.
+        if w > h:
+            img = cv2.resize(img, (1280, 720))
+        else:
+            img = numpy.rot90(cv2.resize(img, (720, 1280)))
+    else:
+        raise NotImplementedError(
+            "AdbDevice.get_frame not implemented for %s. "
+            "Use a separate AdbDevice instance with "
+            "coordinate_system=CoordinateSystem.ADB_NATIVE"
+            % coordinate_system)
+
+    return img
 
 
 def _region_to_tuple(r):
