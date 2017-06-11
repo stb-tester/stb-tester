@@ -248,7 +248,7 @@ class AdbDevice(object):
             if img is None:
                 logging.warning(
                     "AdbDevice.get_frame: Failed to get screenshot "
-                    "via ADB (attempt %d/10)\n"
+                    "via ADB (attempt %d/3)\n"
                     "Length of data: %d", attempt, len(data))
             else:
                 break
