@@ -133,11 +133,13 @@ def test_parse_display_dimensions():
 
 # This is a regression test.
 def test_adbdevice_default_constructor():
-    adb = AdbDevice()  # pylint:disable=redefined-outer-name
+    adb = AdbDevice()
     assert adb.coordinate_system == CoordinateSystem.ADB_NATIVE
 
 
-def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-name
+def test_get_frame_press_tap_and_swipe(real_adb_device):  # pylint:disable=redefined-outer-name
+    adb = real_adb_device
+
     def match_any(basename):
         f = adb.get_frame()
         return (match("images/android/galaxy-ace-2/" + basename, f) or
@@ -152,10 +154,12 @@ def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-n
     assert wait_until(lambda: match_any("settings-icon.png"))
 
 
-def test_adb_tcpip(adb):  # pylint:disable=redefined-outer-name
+def test_adb_tcpip(real_adb_device):  # pylint:disable=redefined-outer-name
 
     # Expects a phone connected via USB. Set it to TCP/IP mode, test it over
     # TCP/IP, then use the TCP/IP connection to set it back to USB mode.
+
+    adb = real_adb_device
 
     if "7278681B045C937CEB770FD31542B16" in adb.devices():
         raise SkipTest("adb tcpip doesn't work with our old Galaxy Ace 2.")
@@ -183,7 +187,15 @@ def test_adb_tcpip(adb):  # pylint:disable=redefined-outer-name
 
 
 @pytest.fixture(scope="function")
-def adb():
+def real_adb_device():
+    """Fixture for testing a real Android phone.
+
+    Expects our CI phone (an old Samsung Galaxy Ace 2) connected via USB. You
+    can specify your own phone via $ANDROID_SERIAL (it must match the output of
+    ``adb devices -l``) but you might have to update the tests that use this
+    fixture (for example you might need to provide reference screenshots that
+    match your phone).
+    """
     _adb = AdbDevice(
         adb_server=os.environ.get("ADB_SERVER", "localhost"),
         adb_device=os.environ.get("ANDROID_SERIAL", None),
