@@ -28,6 +28,10 @@ UNRELEASED
 
 ##### Breaking changes since v27
 
+* The definition of equality for `stbt.MatchResult` objects has changed (see
+  below for details). This should only affect you if you were storing
+  `MatchResult` objects in a set or as the keys of a dict.
+
 ##### New features
 
 * New Android control mechanism to send taps, swipes, and key events. See the
@@ -42,6 +46,10 @@ UNRELEASED
   <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
   for a discussion of the trade-offs of each video-capture mechanism.
 
+* Python API: `stbt.wait_until` has a new parameter `stable_secs` to wait for
+  the return value to stabilise (for example to wait for the position of a
+  `MatchResult` to stabilise).
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox
@@ -49,6 +57,17 @@ UNRELEASED
   Rinaldo Merlo for the fix.
 
 * `stbt lint`: Catch & ignore pylint inference exceptions.
+
+* Python API: `stbt.wait_until` will try one last time after the timeout is
+  reached. This allows you to use a short `timeout_secs` with operations that
+  can take a long time.
+
+* Python API: `stbt.MatchResult` objects are now considered equal if they
+  correspond to the same reference image, matching (or not matching) at the
+  same position. That is, two `MatchResult` objects corresponding to different
+  video-frames (with different timestamps) can now be considered equal. This
+  makes it more convenient to use `stbt.match` with `wait_until`'s
+  `stable_secs` parameter.
 
 ##### Maintainer-visible changes
 

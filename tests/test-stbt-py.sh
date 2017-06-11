@@ -264,32 +264,6 @@ test_that_is_screen_black_with_mask_writes_debugging_information() {
         || fail "masked debug image not written"
 }
 
-test_that_wait_until_returns_on_success() {
-    cat > test.py <<-EOF
-	import stbt
-	count = 0
-	def t():
-	    global count
-	    count += 1
-	    return True
-	assert stbt.wait_until(t)
-	assert count == 1, "Unexpected count %d" % count
-	EOF
-    stbt run -v test.py
-}
-
-test_that_wait_until_times_out() {
-    cat > test.py <<-EOF
-	import time, stbt
-	start = time.time()
-	assert not stbt.wait_until(lambda: False, timeout_secs=1)
-	end = time.time()
-	assert 1 < end - start < 2, \
-	    "wait_until took too long (%ds)" % (end - start)
-	EOF
-    stbt run -v test.py
-}
-
 test_that_video_index_is_written_on_eos() {
     _test_that_video_index_is_written_on_eos 5 && return
     echo "Failed with 5s video; trying again with 20s video"

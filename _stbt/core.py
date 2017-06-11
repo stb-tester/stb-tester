@@ -490,6 +490,19 @@ class MatchResult(object):
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
+    def __nonzero__(self):
+        return self.match
+
+    def __eq__(self, other):
+        return (self.match == other.match and self.region == other.region and
+                self.image == other.image)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.match, self.region, self.image))
+
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
@@ -500,9 +513,6 @@ class MatchResult(object):
             return None
         else:
             return int(self.time * 1e9)
-
-    def __nonzero__(self):
-        return self.match
 
 
 def _str_frame_dimensions(frame):
@@ -1130,7 +1140,7 @@ def save_frame(image, filename):
     cv2.imwrite(filename, image)
 
 
-def wait_until(callable_, timeout_secs=10, interval_secs=0):
+def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
     ``callable_`` is any python callable, such as a function or a lambda
@@ -1138,6 +1148,15 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
     seconds between successive calls) until it succeeds (that is, it returns a
     truthy value) or until ``timeout_secs`` seconds have passed. In both cases,
     ``wait_until`` returns the value that ``callable_`` returns.
+
+    If ``stable_secs`` is specified then ``wait_until`` returns:
+
+    * ``callable_``'s return value if it was truthy and remained the same
+      (as determined by ``==``) for ``stable_secs`` seconds.
+    * ``None`` if ``callable_``'s return value was truthy but didn't stay
+      the same for ``stable_secs`` before we reached ``timeout_secs``.
+    * ``callable_``'s last return value if it was falsey when we reached
+      ``timeout_secs``.
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
@@ -1176,23 +1195,42 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0):
     * The exception message won't contain the reason why the match failed
       (unless you specify it as a second parameter to `assert`, which is
       tedious and we don't expect you to do it), and
-    * The exception won't have the offending video-frame attached (so the
-      screenshot in the test-run artifacts will be a few frames later than the
-      frame that actually caused the test to fail).
+    * The exception won't have the offending video-frame attached.
 
     We hope to solve both of the above drawbacks at some point in the future.
 
-    ``wait_until`` was added in stb-tester v22.
+    ``wait_until`` was added in stb-tester v22. The ``stable_secs`` parameter
+    was added in v28.
     """
     import time
+
+    class NoValue(object):
+        pass
+
+    stable_value = NoValue
+    stable_since = None
     expiry_time = time.time() + timeout_secs
+
     while True:
-        e = callable_()
-        if e:
-            return e
-        if time.time() > expiry_time:
+        t = time.time()
+        value = callable_()
+
+        if value != stable_value:
+            stable_since = t
+            stable_value = value
+
+        stable_duration = t - stable_since
+
+        if value and stable_duration >= stable_secs:
+            return value
+
+        if t >= expiry_time:
             debug("wait_until timed out: %s" % _callable_description(callable_))
-            return e
+            if stable_secs == 0:
+                return value
+            else:
+                return None
+
         time.sleep(interval_secs)
 
 
