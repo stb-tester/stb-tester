@@ -58,8 +58,8 @@ def test_to_native_coordinates(
         source=coordinate_system.name.lower().replace("_", "-"),
         orientation=orientation)
     screenshot = cv2.imread(_find_file(
-        "images/android-%s-screenshot.png" % description))
-    icon = "images/android-%s-reference.png" % description
+        "images/android/coordinates/%s-screenshot.png" % description))
+    icon = "images/android/coordinates/%s-reference.png" % description
 
     m = match(icon, screenshot)
     screenshot_x, screenshot_y = _region_to_tuple(m.region)
@@ -116,8 +116,8 @@ def test_adbdevice_default_constructor():
 def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-name
     def match_any(basename):
         f = adb.get_frame()
-        return (match("images/galaxy-ace-2/" + basename, f) or
-                match("images/moto-x2/" + basename, f))
+        return (match("images/android/galaxy-ace-2/" + basename, f) or
+                match("images/android/moto-x2/" + basename, f))
 
     adb.press("KEYCODE_HOME")
     m = wait_until(lambda: match_any("app-icon.png"))
