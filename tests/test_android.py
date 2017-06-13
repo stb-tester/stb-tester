@@ -11,8 +11,8 @@ import pytest
 
 from stbt import match, Region, wait_until
 from stbt.android import (_Dimensions, _parse_display_dimensions,
-                          _region_to_tuple, _to_native_coordinates, AdbDevice,
-                          AdbError, CoordinateSystem)
+                          _region_to_tuple, _resize, _to_native_coordinates,
+                          AdbDevice, AdbError, CoordinateSystem)
 
 
 @pytest.mark.parametrize("r", [
@@ -33,6 +33,30 @@ def test_region_to_tuple(r):
 def test_region_to_tuple_raises(r):
     with pytest.raises(TypeError):
         _region_to_tuple(r)
+
+
+@pytest.mark.parametrize("orientation", [
+    "portrait",
+    "landscape",
+])
+@pytest.mark.parametrize("coordinate_system", [
+    CoordinateSystem.ADB_NATIVE,
+    CoordinateSystem.ADB_720P,
+    CoordinateSystem.HDMI_720P,
+    CoordinateSystem.CAMERA_720P,
+])
+def test_that_get_frame_resizes_to_match_coordinate_system(
+        orientation, coordinate_system):
+
+    source = cv2.imread(_find_file(
+        "images/android/resize/source-1080p-%s.png" % orientation))
+    out = _resize(source, coordinate_system)
+    expected_filename = \
+        "images/android/resize/expected-{system}-{orientation}.png".format(
+            system=coordinate_system.name.lower().replace("_", "-"),
+            orientation=orientation)
+    expected = cv2.imread(_find_file(expected_filename))
+    assert match(expected, out)
 
 
 @pytest.mark.parametrize("orientation,device_resolution,expected_coordinates", [
@@ -58,8 +82,8 @@ def test_to_native_coordinates(
         source=coordinate_system.name.lower().replace("_", "-"),
         orientation=orientation)
     screenshot = cv2.imread(_find_file(
-        "images/android-%s-screenshot.png" % description))
-    icon = "images/android-%s-reference.png" % description
+        "images/android/coordinates/%s-screenshot.png" % description))
+    icon = "images/android/coordinates/%s-reference.png" % description
 
     m = match(icon, screenshot)
     screenshot_x, screenshot_y = _region_to_tuple(m.region)
@@ -107,11 +131,19 @@ def test_parse_display_dimensions():
         _Dimensions(width=480, height=800)
 
 
-def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-name
+# This is a regression test.
+def test_adbdevice_default_constructor():
+    adb = AdbDevice()
+    assert adb.coordinate_system == CoordinateSystem.ADB_NATIVE
+
+
+def test_get_frame_press_tap_and_swipe(real_adb_device):  # pylint:disable=redefined-outer-name
+    adb = real_adb_device
+
     def match_any(basename):
         f = adb.get_frame()
-        return (match("images/galaxy-ace-2/" + basename, f) or
-                match("images/moto-x2/" + basename, f))
+        return (match("images/android/galaxy-ace-2/" + basename, f) or
+                match("images/android/moto-x2/" + basename, f))
 
     adb.press("KEYCODE_HOME")
     m = wait_until(lambda: match_any("app-icon.png"))
@@ -122,10 +154,12 @@ def test_get_frame_press_tap_and_swipe(adb):  # pylint:disable=redefined-outer-n
     assert wait_until(lambda: match_any("settings-icon.png"))
 
 
-def test_adb_tcpip(adb):  # pylint:disable=redefined-outer-name
+def test_adb_tcpip(real_adb_device):  # pylint:disable=redefined-outer-name
 
     # Expects a phone connected via USB. Set it to TCP/IP mode, test it over
     # TCP/IP, then use the TCP/IP connection to set it back to USB mode.
+
+    adb = real_adb_device
 
     if "7278681B045C937CEB770FD31542B16" in adb.devices():
         raise SkipTest("adb tcpip doesn't work with our old Galaxy Ace 2.")
@@ -153,7 +187,15 @@ def test_adb_tcpip(adb):  # pylint:disable=redefined-outer-name
 
 
 @pytest.fixture(scope="function")
-def adb():
+def real_adb_device():
+    """Fixture for testing a real Android phone.
+
+    Expects our CI phone (an old Samsung Galaxy Ace 2) connected via USB. You
+    can specify your own phone via $ANDROID_SERIAL (it must match the output of
+    ``adb devices -l``) but you might have to update the tests that use this
+    fixture (for example you might need to provide reference screenshots that
+    match your phone).
+    """
     _adb = AdbDevice(
         adb_server=os.environ.get("ADB_SERVER", "localhost"),
         adb_device=os.environ.get("ANDROID_SERIAL", None),
