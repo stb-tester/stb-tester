@@ -6,6 +6,10 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+import sys
+from elapsed_print import elapsed_print
+elapsed_print("STARTING stbt run ", *sys.argv[1:])
+
 import argparse
 import os
 import sys
@@ -14,6 +18,7 @@ import traceback
 import _stbt.core
 import stbt
 from _stbt.state_watch import new_state_sender
+
 
 parser = _stbt.core.argparser()
 parser.prog = 'stbt run'
@@ -84,11 +89,13 @@ _tracer = None
 try:
     # pylint: disable=W0611
 
+    elapsed_print("stbt-run: init_run")
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
         stbt.get_config('global', 'transformation_pipeline'))
     _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
+    elapsed_print("stbt-run: init complete")
 
     _absfilename = None
 
@@ -105,7 +112,9 @@ try:
         _tracer.log_test_starting(args.script, _filename, funcname,
                                   function.func_code.co_firstlineno)
         sys.settrace(tracefunc)
+        elapsed_print("stbt run: Starting test function", _filename, funcname)
         function()
+        elapsed_print("stbt run: test function complete")
     else:
         _filename = os.path.abspath(args.script)
         _absfilename = os.path.abspath(_filename)
@@ -125,6 +134,7 @@ try:
         sys.path.insert(0, os.path.dirname(_filename))
         execfile(_filename)
 except Exception as e:  # pylint: disable=W0703
+    elapsed_print("stbt run: test function complete")
     from kitchen.text.converters import exception_to_bytes
     error_message = exception_to_bytes(e)
     if not error_message and isinstance(e, AssertionError):
@@ -151,4 +161,6 @@ finally:
     if _tracer:
         _tracer.log_test_ended()
         _tracer.close()
+    elapsed_print("stbt run teardown()")
     stbt.teardown_run()
+    elapsed_print("TEARDOWN complete stbt run")

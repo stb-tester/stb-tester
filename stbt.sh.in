@@ -43,6 +43,8 @@ fi
 cmd=$1
 shift
 
+elapsed-print $0 $@
+
 check_experimental() {
     if [ "$experimental" != 1 ]; then
         echo "stbt $cmd is an experimental feature which may change in" 1>&2

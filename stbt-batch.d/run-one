@@ -35,6 +35,8 @@ main() {
   runner=$(dirname "$(realpath "$0")")
   local test testpath tmpdir rundir
 
+  elapsed-print "STARTED: stbt batch run-one" $@
+
   test="$1" && shift &&
   testpath=$(realpath "$test") &&
   test_script_dir=$(dirname "$testpath") &&
@@ -74,6 +76,7 @@ main() {
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
+  elapsed-print run-one: Starting stbt run "$@"
   "$runner"/../stbt-run $v --save-video "video.webm" "$testpath" -- "$@" \
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
@@ -88,6 +91,8 @@ main() {
 
   wait $stbtpid
   exit_status=$?
+
+  elapsed-print run-one: stbt run complete
 
   [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
 
@@ -131,6 +136,9 @@ main() {
   send_state_change active_results_directory null
   rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
   popd >/dev/null
+
+  elapsed-print "DONE: stbt batch run-one" $@
+
   return $exit_status
 }
 

@@ -12,8 +12,12 @@ import subprocess
 import sys
 from distutils.spawn import find_executable
 
+from elapsed_print import elapsed_print
+
 
 def main(argv):
+    elapsed_print("stbt batch run", *argv[1:])
+
     runner = os.path.dirname(os.path.abspath(__file__))
 
     parser = argparse.ArgumentParser(usage=(
@@ -111,10 +115,12 @@ def main(argv):
         subenv['outputdir'] = os.path.abspath(args.output)
         child = None
         try:
+            elapsed_print("stbt batch run: Launching run-one", *test)
             child = subprocess.Popen(
                 ("%s/run-one" % runner,) + test, stdin=DEVNULL_R, env=subenv,
                 preexec_fn=lambda: os.setpgid(0, 0))
             last_exit_status = child.wait()
+            elapsed_print("stbt batch run: run-one complete")
         except SystemExit:
             if child:
                 os.kill(-child.pid, signal.SIGTERM)
@@ -136,6 +142,8 @@ def main(argv):
             continue
         else:
             break
+
+    elapsed_print("stbt batch run: All done")
 
     if run_count == 1:
         # If we only run a single test a single time propagate the result
