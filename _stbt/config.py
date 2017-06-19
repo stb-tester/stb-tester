@@ -2,8 +2,6 @@ import ConfigParser
 import os
 from contextlib import contextmanager
 
-from . import utils
-
 _config = None
 
 
@@ -47,6 +45,8 @@ def set_config(section, option, value):
     Writes to the first item in `$STBT_CONFIG_FILE` if set falling back to
     `$HOME/stbt/stbt.conf`.
     """
+    from .utils import mkdir_p
+
     user_config = '%s/stbt/stbt.conf' % xdg_config_dir()
     # Write to the config file with the highest precedence
     custom_config = os.environ.get('STBT_CONFIG_FILE', '').split(':')[0] \
@@ -67,7 +67,7 @@ def set_config(section, option, value):
             pass
 
     d = os.path.dirname(custom_config)
-    utils.mkdir_p(d)
+    mkdir_p(d)
     with _sponge(custom_config) as f:
         parser.write(f)
 

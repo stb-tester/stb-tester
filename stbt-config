@@ -9,7 +9,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import argparse
 import sys
 
-import stbt
+from _stbt.config import ConfigurationError, get_config
 
 
 def error(s):
@@ -35,6 +35,6 @@ if args.name.rfind(".") == -1:
 section, key = args.name.rsplit(".", 1)
 
 try:
-    print stbt.get_config(section, key)
-except stbt.ConfigurationError as e:
+    print get_config(section, key)
+except ConfigurationError as e:
     error(e.message)
