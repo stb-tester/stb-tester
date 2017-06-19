@@ -56,6 +56,8 @@ main() {
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
+  elapsed-print run-one: start: git
+
   git -C "$test_script_dir" describe --always --dirty 2>/dev/null \
     > git-commit || rm -f git-commit
 
@@ -66,6 +68,8 @@ main() {
     gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir 2>/dev/null)")") &&
     echo "${testpath#$gitdir/}" || echo "$testpath"
   ) > test-name
+
+  elapsed-print run-one: done: git
 
   printf "%s\n" "$@" > test-args
 
@@ -99,6 +103,7 @@ main() {
 
   # Data that must be collected ASAP
   echo $(( $(date +%s) - $start_time )) > duration
+
   which sensors &>/dev/null && sensors &> sensors.log
   echo $exit_status > exit-status
 
@@ -109,7 +114,10 @@ main() {
   echo "$STBT_VERSION" > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
+
+  elapsed-print run-one: start: classify
   STBT_TRACING_SOCKET="" "$runner"/report --classify-only . >/dev/null
+  elapsed-print run-one: done: classify
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || touch unrecoverable-error; }
 
@@ -158,9 +166,12 @@ backtrace() {
 }
 
 user_command() {
+  elapsed-print run-one: start: $1
   local c=$("$runner"/../stbt-config batch.$1 2>/dev/null)
-  [[ -z "$c" ]] && return
-  "$c" $2 </dev/null
+  if [[ -n "$c" ]]; then
+      "$c" $2 </dev/null
+  fi
+  elapsed-print run-one: end: $1
 }
 
 check_capture_hardware() {
