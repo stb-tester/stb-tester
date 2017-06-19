@@ -122,6 +122,8 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	$(INSTALL) -m 0755 elapsed_print.py $(DESTDIR)$(bindir)/elapsed-print
+	$(INSTALL) -m 0755 elapsed_print.py $(DESTDIR)$(pythondir)/elapsed_print.py
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 \
