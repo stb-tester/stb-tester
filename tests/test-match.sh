@@ -42,7 +42,7 @@ test_wait_for_match_nonexistent_template() {
 
 test_wait_for_match_opencv_image_can_be_used_as_template() {
     cat > test.py <<-EOF &&
-	import stbt, cv2
+	import stbt, _stbt.opencv_shim as cv2
 	stbt.wait_for_match(cv2.imread("$testdir/videotestsrc-redblue.png"))
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
@@ -374,7 +374,7 @@ test_matchresult_frame_is_readonly() {
 
 test_match_searches_in_provided_frame() {
     cat > test.py <<-EOF
-	import cv2, stbt
+	import stbt, _stbt.opencv_shim as cv2
 	assert stbt.match(
 	    "$testdir/videotestsrc-redblue.png",
 	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))

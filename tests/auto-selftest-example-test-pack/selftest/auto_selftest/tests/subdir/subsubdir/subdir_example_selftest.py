@@ -28,7 +28,7 @@ _FRAME_CACHE = {}
 def f(name):
     img = _FRAME_CACHE.get(name)
     if img is None:
-        import cv2
+        import _stbt.opencv_shim as cv2
         filename = os.path.join(os.path.dirname(__file__),
                                 '../../../../screenshots', name)
         img = cv2.imread(filename)

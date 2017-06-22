@@ -34,9 +34,10 @@ import argparse
 import os
 import sys
 
-import cv2
 import jinja2
 import yaml
+
+import _stbt.opencv_shim as cv2
 
 
 def check(imgname, phrases, params):

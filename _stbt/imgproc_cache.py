@@ -339,7 +339,7 @@ def test_that_cache_speeds_up_match():
 
 def test_that_cache_speeds_up_match_all():
     import stbt
-    import cv2
+    import _stbt.opencv_shim as cv2
 
     frame = cv2.imread('tests/buttons.png')
 
@@ -359,7 +359,7 @@ def test_that_cache_speeds_up_match_all():
 
 def test_that_cache_speeds_up_ocr():
     import stbt
-    import cv2
+    import _stbt.opencv_shim as cv2
 
     frame = cv2.imread('tests/red-black.png')
 
@@ -377,7 +377,7 @@ def test_that_cache_speeds_up_ocr():
 
 def test_that_cache_speeds_up_match_text():
     import stbt
-    import cv2
+    import _stbt.opencv_shim as cv2
 
     frame = cv2.imread('tests/red-black.png')
 

@@ -333,7 +333,7 @@ def write_bare_doctest(module, output_filename):
         def f(name):
             img = _FRAME_CACHE.get(name)
             if img is None:
-                import cv2
+                import _stbt.opencv_shim as cv2
                 filename = os.path.join(os.path.dirname(__file__),
                                         {screenshots_rel}, name)
                 img = cv2.imread(filename)

@@ -7,12 +7,12 @@ from contextlib import contextmanager
 from textwrap import dedent
 from unittest import SkipTest
 
-import cv2
 import pytest
 from nose.tools import raises
 
 import _stbt.config
 import _stbt.core
+import _stbt.opencv_shim as cv2
 import stbt
 from _stbt.utils import named_temporary_directory
 

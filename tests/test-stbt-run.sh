@@ -107,7 +107,8 @@ test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
     [ -f screenshot.png ] &&
     ! [ -f thumbnail.jpg ] &&
     python <<-EOF
-	import cv2, numpy
+	import numpy
+	import _stbt.opencv_shim as cv2
 	ss = cv2.imread('screenshot.png')
 	gf = cv2.imread('grabbed-frame.png')
 	assert ss is not None and gf is not None

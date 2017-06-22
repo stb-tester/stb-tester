@@ -6,9 +6,9 @@ import time
 from textwrap import dedent
 from unittest import SkipTest
 
-import cv2
 import pytest
 
+import _stbt.opencv_shim as cv2
 from stbt import match, Region, wait_until
 from stbt.android import (_Dimensions, _parse_display_dimensions,
                           _region_to_tuple, _resize, _to_native_coordinates,
@@ -228,17 +228,17 @@ def _parse_ip_address(output):
     >>> from pprint import pprint
     >>> from textwrap import dedent
     >>> pprint(_parse_ip_address(dedent('''\
-    ...     1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue state UNKNOWN 
+    ...     1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue state UNKNOWN
     ...         link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     ...         inet 127.0.0.1/8 scope host lo
-    ...         inet6 ::1/128 scope host 
+    ...         inet6 ::1/128 scope host
     ...            valid_lft forever preferred_lft forever
-    ...     2: dummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN 
+    ...     2: dummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN
     ...         link/ether 46:ed:31:1b:fa:33 brd ff:ff:ff:ff:ff:ff
-    ...         inet6 fe80::44ed:31ff:fe1b:fa33/64 scope link 
+    ...         inet6 fe80::44ed:31ff:fe1b:fa33/64 scope link
     ...            valid_lft forever preferred_lft forever
     ...     3: rmnet0: <> mtu 1410 qdisc noop state DOWN qlen 1000
-    ...         link/[530] 
+    ...         link/[530]
     ...     [...]
     ...     11: rmnet_usb0: <BROADCAST,MULTICAST> mtu 2000 qdisc noop state DOWN qlen 1000
     ...         link/ether 62:eb:12:3b:97:94 brd ff:ff:ff:ff:ff:ff
@@ -246,7 +246,7 @@ def _parse_ip_address(output):
     ...     24: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP qlen 1000
     ...         link/ether 5c:51:88:34:aa:e2 brd ff:ff:ff:ff:ff:ff
     ...         inet 192.168.2.163/24 brd 192.168.2.255 scope global wlan0
-    ...         inet6 fe80::5e51:88ff:fe34:aae2/64 scope link 
+    ...         inet6 fe80::5e51:88ff:fe34:aae2/64 scope link
     ...            valid_lft forever preferred_lft forever
     ...     25: p2p0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN qlen 1000
     ...         link/ether 5c:51:88:34:aa:e3 brd ff:ff:ff:ff:ff:ff
