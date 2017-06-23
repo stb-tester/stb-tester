@@ -2779,6 +2779,48 @@ def _hocr_elem_region(elem):
             return Region.from_extents(*extents)
         elem = elem.getparent()
 
+
+def remove_transparency(frame, color):
+    """
+    Often stb UIs consist of a transparent overlay over live TV or some other
+    changable image.  The transparency can cause OCR and match failures due to
+    the background bleeding through.  This function replaces these transparent
+    background with solid colour which can be used as a pre-processing step
+    before performing a `match` or `ocr`.
+
+    color is an HTML-style hex colour string of the form #rrggbbaa.
+
+    It assumes that an overlay image was alpha-blended according to:
+
+        frame = color[rgb] * color[alpha] + underlay * (1 - color[alpha])
+
+    where color specifies overlay and alpha.
+
+    See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending
+
+    Usage:
+
+        remove_transparency('#bf000079', frame=...)
+    """
+    if color[0] != '#' or len(color) != 9:
+        raise ValueError("color must be a rgba hex color string")
+    r, g, b, a_ = [int(color[n * 2 + 1:n * 2 + 3], 16) for n in range(4)]
+
+    frame = frame.copy()
+    flat = frame.view().reshape(frame.shape[0] * frame.shape[1], 3)
+
+    a = float(a_) / 255.
+    c_a = numpy.array([b, g, r])
+    bottom = numpy.uint8(c_a * a)
+    top = numpy.uint8(c_a * a + (1 - a) * 255)
+
+    mask = ((flat >= bottom) * (flat <= top)).all(axis=1)
+    mask.shape = (frame.shape[0], frame.shape[1])
+    frame[mask, :] = c_a
+
+    return frame
+
+
 # Tests
 # ===========================================================================
 
