@@ -13,6 +13,24 @@ import _stbt.core
 import stbt
 
 
+def test_ocr_on_static_images():
+    for image, expected_text, region, mode in [
+        # pylint: disable=line-too-long
+        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
+        ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40), None),
+        ("Connection-status--white-on-dark-blue.png", "", None, None),
+        ("programme--white-on-black.png", "programme", stbt.Region.ALL, None),
+        ("UJJM--white-text-on-grey-boxes.png", "", stbt.Region.ALL, None),
+        ("UJJM--white-text-on-grey-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
+    ]:
+        kwargs = {"region": region}
+        if mode is not None:
+            kwargs["mode"] = mode
+        text = stbt.ocr(cv2.imread("tests/ocr/" + image), **kwargs)
+        assert text == expected_text, (
+            "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
+
+
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, unicode)
