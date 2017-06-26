@@ -27,8 +27,7 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
     if mode is not None:
         kwargs["mode"] = mode
     text = stbt.ocr(cv2.imread("tests/ocr/" + image), **kwargs)
-    assert text == expected_text, (
-        "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
+    assert text == expected_text
 
 
 def test_that_ocr_reads_unicode():
