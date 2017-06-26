@@ -175,18 +175,26 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
     assert region.contains(result.region)
 
 
-def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame():
+@pytest.mark.parametrize("region", [
+    stbt.Region(1280, 0, 1280, 720),
+    None,
+])
+def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
+        region):
     frame = cv2.imread("tests/ocr/menu.png")
-    result = stbt.match_text("Onion Bhaji", frame=frame,
-                             region=stbt.Region(1280, 0, 1280, 720))
+    result = stbt.match_text("Onion Bhaji", frame=frame, region=region)
     assert result.match is False
     assert result.region is None
     assert result.text == "Onion Bhaji"
 
 
-def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame():
+@pytest.mark.parametrize("region", [
+    stbt.Region(1280, 0, 1280, 720),
+    None,
+])
+def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame(region):
     frame = cv2.imread("tests/ocr/menu.png")
-    result = stbt.ocr(frame=frame, region=stbt.Region(1280, 0, 1280, 720))
+    result = stbt.ocr(frame=frame, region=region)
     assert result == u''
 
 

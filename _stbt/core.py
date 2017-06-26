@@ -1037,14 +1037,6 @@ class DeviceUnderTest(object):
         if frame is None:
             frame = self._display.pull_frame()
 
-        if region is None:
-            warnings.warn(
-                "Passing region=None to ocr is deprecated since 0.21 and the "
-                "meaning will change in a future version.  To OCR an entire "
-                "video frame pass region=Region.ALL instead",
-                DeprecationWarning, stacklevel=2)
-            region = Region.ALL
-
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
             tesseract_user_patterns, tesseract_user_words, text_color)
@@ -2822,12 +2814,13 @@ def _fake_frames_at_half_motion():
 
 def test_ocr_on_static_images():
     for image, expected_text, region, mode in [
-        # pylint: disable=C0301
-        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None, None),
+        # pylint: disable=line-too-long
+        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", Region.ALL, None),
         ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40), None),
-        ("programme--white-on-black.png", "programme", None, None),
-        ("UJJM--white-text-on-grey-boxes.png", "", None, None),
-        ("UJJM--white-text-on-grey-boxes.png", "UJJM", None, OcrMode.SINGLE_LINE),
+        ("Connection-status--white-on-dark-blue.png", "", None, None),
+        ("programme--white-on-black.png", "programme", Region.ALL, None),
+        ("UJJM--white-text-on-grey-boxes.png", "", Region.ALL, None),
+        ("UJJM--white-text-on-grey-boxes.png", "UJJM", Region.ALL, OcrMode.SINGLE_LINE),
     ]:
         kwargs = {"region": region}
         if mode is not None:

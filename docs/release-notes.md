@@ -28,6 +28,11 @@ UNRELEASED
 
 ##### Breaking changes since v27
 
+* Passing `region=None` to `stbt.ocr` means that OCR will return an empty
+  string, instead of treating it as `Region.ALL`. This is consistent with
+  `stbt.match_text`, and it means that you can pass in
+  programmatically-calculated regions, for example from `Region.intersect`.
+
 * The definition of equality for `stbt.MatchResult` objects has changed (see
   below for details). This should only affect you if you were storing
   `MatchResult` objects in a set or as the keys of a dict.
