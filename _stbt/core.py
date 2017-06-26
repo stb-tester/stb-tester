@@ -1032,7 +1032,7 @@ class DeviceUnderTest(object):
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             lang="eng", tesseract_config=None, tesseract_user_words=None,
-            tesseract_user_patterns=None):
+            tesseract_user_patterns=None, text_color=None):
 
         if frame is None:
             frame = self._display.pull_frame()
@@ -1047,15 +1047,15 @@ class DeviceUnderTest(object):
 
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
-            user_patterns=tesseract_user_patterns,
-            user_words=tesseract_user_words)
+            tesseract_user_patterns, tesseract_user_words, text_color)
         text = text.strip().translate(_ocr_transtab)
         debug(u"OCR in region %s read '%s'." % (region, text))
         return text
 
     def match_text(self, text, frame=None, region=Region.ALL,
                    mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
-                   tesseract_config=None, case_sensitive=False):
+                   tesseract_config=None, case_sensitive=False,
+                   text_color=None):
 
         import lxml.etree
         if frame is None:
@@ -1069,7 +1069,7 @@ class DeviceUnderTest(object):
         rts = getattr(frame, "time", None)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
-                                 user_words=text.split())
+                                 user_words=text.split(), text_color=text_color)
         if xml == '':
             result = TextMatchResult(rts, False, None, frame, text)
         else:
@@ -2592,7 +2592,7 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config,
-               user_patterns=None, user_words=None):
+               user_patterns=None, user_words=None, text_color=None):
 
     if _config is None:
         _config = {}
@@ -2606,21 +2606,33 @@ def _tesseract(frame, region, mode, lang, _config,
     else:
         region = intersection
 
-    return (_tesseract_subprocess(_crop(frame, region), mode, lang,
-                                  _config, user_patterns, user_words),
+    return (_tesseract_subprocess(_crop(frame, region), mode, lang, _config,
+                                  user_patterns, user_words, text_color),
             region)
 
 
 @imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
-                        "version": "25"})
+                        "version": "28"})
 def _tesseract_subprocess(
-        frame, mode, lang, _config, user_patterns, user_words):
+        frame, mode, lang, _config, user_patterns, user_words, text_color):
+
     # We scale image up 3x before feeding it to tesseract as this
     # significantly reduces the error rate by more than 6x in tests.  This
     # uses bilinear interpolation which produces the best results.  See
     # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
     outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
-    subframe = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
+    frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
+
+    if text_color is not None:
+        # Calculate distance of each pixel from `text_color`, then discard
+        # everything further than `threshold` distance away.
+        diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
+        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
+                            diff[:, :, 1] ** 2 +
+                            diff[:, :, 2] ** 2) / 3) \
+                     .astype(numpy.uint8)
+        threshold = 25
+        _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -2677,7 +2689,7 @@ def _tesseract_subprocess(
                         cfg.write("%s %s\n" % (k, to_bytes(v)))
             cmd += ['stbtester']
 
-        cv2.imwrite(tmp + '/input.png', subframe)
+        cv2.imwrite(tmp + '/input.png', frame)
         subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return outfile.read().decode('utf-8')
