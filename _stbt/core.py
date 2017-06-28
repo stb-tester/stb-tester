@@ -1038,12 +1038,11 @@ class DeviceUnderTest(object):
             frame = self._display.pull_frame()
 
         if region is None:
-            warnings.warn(
-                "Passing region=None to ocr is deprecated since 0.21 and the "
-                "meaning will change in a future version.  To OCR an entire "
-                "video frame pass region=Region.ALL instead",
-                DeprecationWarning, stacklevel=2)
-            region = Region.ALL
+            raise TypeError(
+                "Passing region=None to ocr is deprecated since v0.21. "
+                "In a future version, region=None will mean an empty region "
+                "instead. To OCR an entire video frame, use "
+                "`region=Region.ALL`.")
 
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
@@ -2818,26 +2817,6 @@ def _fake_frames_at_half_motion():
     dut = DeviceUnderTest(display=FakeDisplay())
     dut.get_frame = lambda: None
     yield dut
-
-
-def test_ocr_on_static_images():
-    for image, expected_text, region, mode in [
-        # pylint: disable=C0301
-        ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", None, None),
-        ("Connection-status--white-on-dark-blue.png", "Connected", Region(x=210, y=0, width=120, height=40), None),
-        ("programme--white-on-black.png", "programme", None, None),
-        ("UJJM--white-text-on-grey-boxes.png", "", None, None),
-        ("UJJM--white-text-on-grey-boxes.png", "UJJM", None, OcrMode.SINGLE_LINE),
-    ]:
-        kwargs = {"region": region}
-        if mode is not None:
-            kwargs["mode"] = mode
-        text = DeviceUnderTest().ocr(
-            cv2.imread(os.path.join(
-                os.path.dirname(__file__), "..", "tests", "ocr", image)),
-            **kwargs)
-        assert text == expected_text, (
-            "Unexpected text. Expected '%s'. Got: %s" % (expected_text, text))
 
 
 def test_region_replace():

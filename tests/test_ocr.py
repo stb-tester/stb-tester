@@ -13,6 +13,29 @@ import _stbt.core
 import stbt
 
 
+@pytest.mark.parametrize("image, expected_text, region, mode", [
+    # pylint: disable=line-too-long
+    ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
+    ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40), None),
+    # ("Connection-status--white-on-dark-blue.png", "", None, None),  # uncomment when region=None doesn't raise -- see #433
+    ("programme--white-on-black.png", "programme", stbt.Region.ALL, None),
+    ("UJJM--white-text-on-grey-boxes.png", "", stbt.Region.ALL, None),
+    ("UJJM--white-text-on-grey-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
+])
+def test_ocr_on_static_images(image, expected_text, region, mode):
+    kwargs = {"region": region}
+    if mode is not None:
+        kwargs["mode"] = mode
+    text = stbt.ocr(cv2.imread("tests/ocr/" + image), **kwargs)
+    assert text == expected_text
+
+
+# Remove when region=None doesn't raise -- see #433
+@raises(TypeError)
+def test_that_ocr_region_none_isnt_allowed():
+    stbt.ocr(frame=cv2.imread("tests/ocr/small.png"), region=None)
+
+
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, unicode)
@@ -175,18 +198,26 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
     assert region.contains(result.region)
 
 
-def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame():
+@pytest.mark.parametrize("region", [
+    stbt.Region(1280, 0, 1280, 720),
+    None,
+])
+def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
+        region):
     frame = cv2.imread("tests/ocr/menu.png")
-    result = stbt.match_text("Onion Bhaji", frame=frame,
-                             region=stbt.Region(1280, 0, 1280, 720))
+    result = stbt.match_text("Onion Bhaji", frame=frame, region=region)
     assert result.match is False
     assert result.region is None
     assert result.text == "Onion Bhaji"
 
 
-def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame():
+@pytest.mark.parametrize("region", [
+    stbt.Region(1280, 0, 1280, 720),
+    # None,  # uncomment when region=None doesn't raise -- see #433
+])
+def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame(region):
     frame = cv2.imread("tests/ocr/menu.png")
-    result = stbt.ocr(frame=frame, region=stbt.Region(1280, 0, 1280, 720))
+    result = stbt.ocr(frame=frame, region=region)
     assert result == u''
 
 

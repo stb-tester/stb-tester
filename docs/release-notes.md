@@ -28,6 +28,13 @@ UNRELEASED
 
 ##### Breaking changes since v27
 
+* Passing `region=None` to `stbt.ocr` raises a TypeError. Use
+  `region=stbt.Region.ALL` instead. Note that passing `None` has printed a
+  deprecation warning since v0.21 (two and a half years ago); raising an
+  exception will force users to update their test scripts, allowing us to
+  change the behaviour again in a future release to be consistent with
+  `stbt.match_text` where `None` means an empty region.
+
 * The definition of equality for `stbt.MatchResult` objects has changed (see
   below for details). This should only affect you if you were storing
   `MatchResult` objects in a set or as the keys of a dict.
