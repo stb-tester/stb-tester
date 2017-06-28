@@ -1037,6 +1037,13 @@ class DeviceUnderTest(object):
         if frame is None:
             frame = self._display.pull_frame()
 
+        if region is None:
+            raise TypeError(
+                "Passing region=None to ocr is deprecated since v0.21. "
+                "In a future version, region=None will mean an empty region "
+                "instead. To OCR an entire video frame, use "
+                "`region=Region.ALL`.")
+
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
             tesseract_user_patterns, tesseract_user_words, text_color)
