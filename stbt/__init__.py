@@ -89,8 +89,15 @@ def press(key, interpress_delay_secs=None):
     """Send the specified key-press to the system under test.
 
     :param str key:
-        The name of the key/button (as specified in your remote-control
-        configuration file).
+        The name of the key/button.
+
+        If you are using infrared control, this is a key name from your
+        lircd.conf configuration file.
+
+        If you are using HDMI CEC control, see the available key names
+        `here <https://github.com/stb-tester/stb-tester/blob/v27/_stbt/control_gpl.py#L16-L107>`_.
+        Note that some devices might not understand all of the CEC commands in
+        that list.
 
     :type interpress_delay_secs: int or float
     :param interpress_delay_secs:
