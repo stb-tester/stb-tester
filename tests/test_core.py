@@ -5,9 +5,10 @@ import sys
 import time
 
 import mock
+import numpy
 import pytest
 
-from stbt import wait_until
+from stbt import MatchResult, Region, wait_until
 
 
 # pylint:disable=redefined-outer-name,unused-argument
@@ -106,3 +107,34 @@ def test_wait_until(mock_time, f, kwargs, expected):
 def test_that_wait_until_times_out(mock_time):
     assert not wait_until(Zero, interval_secs=1)
     assert time.time() == 1497000010
+
+
+def test_that_wait_until_returns_first_stable_value(mock_time):
+
+    def MR(match, x):
+        time.sleep(1)  # advance the mock time by 1 second
+        return MatchResult(
+            time.time(), match, Region(x=x, y=0, width=10, height=2),
+            first_pass_result=1,
+            frame=numpy.random.randint(0, 255, (2, 2, 3), numpy.uint8),
+            image="reference.png")
+
+    def g():
+        yield MR(False, x=1)
+        yield MR(True, x=2)
+        yield MR(True, x=3)
+        yield MR(True, x=4)
+        yield MR(True, x=4)
+        yield MR(True, x=4)
+        yield MR(True, x=4)
+        yield MR(True, x=4)
+
+    results = g()
+
+    def match():
+        return next(results)
+
+    result = wait_until(match, stable_secs=2)
+    assert result.match
+    assert result.region.x == 4
+    assert result.time == 1497000004
