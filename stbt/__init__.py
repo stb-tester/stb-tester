@@ -497,6 +497,8 @@ def is_screen_black(frame=None, mask=None, threshold=None):
       range 0 (black) to 255 (white). The global default can be changed by
       setting `threshold` in the `[is_screen_black]` section of stbt.conf.
 
+    :returns: True or False.
+
     Before stb-tester v22, the ``frame`` parameter had to be passed in
     explicitly by the caller.
     """
