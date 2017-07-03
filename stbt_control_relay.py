@@ -63,7 +63,11 @@ def main(argv):
 
     while True:
         conn, _ = s.accept()
-        for cmd in conn.makefile():
+        f = conn.makefile('r', 0)
+        while True:
+            cmd = f.readline()
+            if not cmd:
+                break
             cmd = cmd.rstrip("\n")
             m = re.match(r"SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)", cmd)
             if not m:
