@@ -28,6 +28,7 @@ using its HTTP protocol.  So
 Will press KEY_OK on the roku device.
 """
 import argparse
+import os
 import re
 import signal
 import socket
@@ -50,15 +51,23 @@ def main(argv):
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.bind(args.socket)
-    s.listen(5)
+    if os.environ.get('LISTEN_FDS') == '1' and \
+            os.environ.get('LISTEN_PID') == str(os.getpid()):
+        s = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_STREAM)
+    else:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(args.socket)
+        s.listen(5)
 
     control = uri_to_remote(args.output)
 
     while True:
         conn, _ = s.accept()
-        for cmd in conn.makefile():
+        f = conn.makefile('r', 0)
+        while True:
+            cmd = f.readline()
+            if not cmd:
+                break
             cmd = cmd.rstrip("\n")
             m = re.match(r"SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)", cmd)
             if not m:

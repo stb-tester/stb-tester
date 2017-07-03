@@ -1,6 +1,8 @@
 import os
+import socket
 import subprocess
 from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -74,3 +76,34 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
             expected = "KEY_UP\nKEY_DOWN\n"
 
             assert open(t("one-file")).read() == expected
+
+
+def socket_passing_setup(socket):
+    def preexec_fn():
+        fd = socket.fileno()
+        os.environ['LISTEN_FDS'] = '1'
+        os.environ['LISTEN_PID'] = str(os.getpid())
+        if fd != 3:
+            os.dup2(fd, 3)
+        os.closerange(4, 100)
+
+    return preexec_fn
+
+
+def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # pylint: disable=unused-argument
+    with NamedTemporaryFile(prefix="stbt-control-relay-test-") as tmpfile:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('127.0.0.1', 0))
+        s.listen(5)
+
+        proc = subprocess.Popen(
+            ["stbt-control-relay", "-vv", "file:" + tmpfile.name],
+            preexec_fn=socket_passing_setup(s))
+        with scoped_process(proc):
+            testremote = uri_to_remote("lirc:%s:%i:stbt" % s.getsockname())
+
+            testremote.press("KEY_UP")
+            testremote.press("KEY_DOWN")
+            expected = "KEY_UP\nKEY_DOWN\n"
+
+            assert tmpfile.read() == expected
