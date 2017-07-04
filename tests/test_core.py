@@ -116,7 +116,7 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
         return MatchResult(
             time.time(), match, Region(x=x, y=0, width=10, height=2),
             first_pass_result=1,
-            frame=numpy.random.randint(0, 255, (2, 2, 3), numpy.uint8),
+            frame=numpy.random.randint(0, 255, (2, 2, 3)).astype(numpy.uint8),
             image="reference.png")
 
     def g():
