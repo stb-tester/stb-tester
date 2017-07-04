@@ -507,8 +507,8 @@ class MatchResult(object):
         return self.match
 
     def __eq__(self, other):
-        return (self.match == other.match and self.region == other.region and
-                self.image == other.image)
+        return (isinstance(other, MatchResult) and self.match == other.match and
+                self.region == other.region and self.image == other.image)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1189,7 +1189,10 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
 
         If ``stable_secs`` is specified then ``wait_until`` returns:
 
-        * ``callable_``'s return value if it was truthy and stable.
+        * ``callable_``'s return value if it was truthy and stable. This will
+          be the *first* stable value, so that you can use ``wait_until`` for
+          performance measurements (for example to measure the time for an
+          animation to complete).
         * ``None`` if ``callable_``'s return value was truthy but not stable
           before we reached ``timeout_secs``.
         * ``callable_``'s last return value if it was falsey when we reached
@@ -1241,11 +1244,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     """
     import time
 
-    class NoValue(object):
-        pass
-
-    stable_value = NoValue
-    stable_since = None
+    stable_value = None
     expiry_time = time.time() + timeout_secs
 
     while True:
@@ -1256,10 +1255,8 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
             stable_since = t
             stable_value = value
 
-        stable_duration = t - stable_since
-
-        if value and stable_duration >= stable_secs:
-            return value
+        if value and t - stable_since >= stable_secs:
+            return stable_value
 
         if t >= expiry_time:
             debug("wait_until timed out: %s" % _callable_description(callable_))
