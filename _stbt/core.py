@@ -471,7 +471,14 @@ class MatchResult(object):
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
 
-    The ``time`` attribute was added in stb-tester v26.
+    Two ``MatchResult`` objects compare equal to each other if the same
+    reference image matches at the same position (even if the frames and
+    timestamps are different). This makes it possible to use `match` with
+    `wait_until`'s ``stable_secs`` parameter, for example to wait for a
+    selection to stop moving.
+
+    The ``time`` attribute was added in stb-tester v26. The equality rules
+    where changed in stb-tester v28.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
