@@ -507,8 +507,8 @@ class MatchResult(object):
         return self.match
 
     def __eq__(self, other):
-        return (self.match == other.match and self.region == other.region and
-                self.image == other.image)
+        return (isinstance(other, MatchResult) and self.match == other.match and
+                self.region == other.region and self.image == other.image)
 
     def __ne__(self, other):
         return not self.__eq__(other)
