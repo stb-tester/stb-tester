@@ -1142,20 +1142,37 @@ def save_frame(image, filename):
 def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
-    ``callable_`` is any python callable, such as a function or a lambda
-    expression. It will be called repeatedly (with a delay of ``interval_secs``
-    seconds between successive calls) until it succeeds (that is, it returns a
-    truthy value) or until ``timeout_secs`` seconds have passed. In both cases,
-    ``wait_until`` returns the value that ``callable_`` returns.
+    Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
+    between successive calls) until it succeeds (that is, it returns a
+    `truthy`_ value) or until ``timeout_secs`` seconds have passed.
 
-    If ``stable_secs`` is specified then ``wait_until`` returns:
+    .. _truthy: https://docs.python.org/2/library/stdtypes.html#truth-value-testing
 
-    * ``callable_``'s return value if it was truthy and remained the same
-      (as determined by ``==``) for ``stable_secs`` seconds.
-    * ``None`` if ``callable_``'s return value was truthy but didn't stay
-      the same for ``stable_secs`` before we reached ``timeout_secs``.
-    * ``callable_``'s last return value if it was falsey when we reached
-      ``timeout_secs``.
+    :param callable_: any Python callable (such as a function or a lambda
+        expression) with no arguments.
+
+    :type timeout_secs: int or float, in seconds
+    :param timeout_secs: After this timeout elapses, ``wait_until`` will return
+        the last value that ``callable_`` returned, even if it's falsey.
+
+    :type interval_secs: int or float, in seconds
+    :param interval_secs: Delay between successive invocations of ``callable_``.
+
+    :type stable_secs: int or float, in seconds
+    :param stable_secs: Wait for ``callable_``'s return value to remain the same
+        (as determined by ``==``) for this duration before returning. This can
+        be used to wait for the position of a `MatchResult` to stabilise.
+
+    :returns: The return value from ``callable_`` (which will be truthy if it
+        succeeded, or falsey if ``wait_until`` timed out).
+
+        If ``stable_secs`` is specified then ``wait_until`` returns:
+
+        * ``callable_``'s return value if it was truthy and stable.
+        * ``None`` if ``callable_``'s return value was truthy but not stable
+          before we reached ``timeout_secs``.
+        * ``callable_``'s last return value if it was falsey when we reached
+          ``timeout_secs``.
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
@@ -1169,12 +1186,12 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
         press("KEY_EPG")
         assert wait_until(lambda: match("guide.png"))
 
-    Note that instead of the above `assert wait_until(...)` you could use
-    `wait_for_match("guide.png")`. `wait_until` is a generic solution that
+    Note that instead of the above ``assert wait_until(...)`` you could use
+    ``wait_for_match("guide.png")``. ``wait_until`` is a generic solution that
     also works with stbt's other functions, like `match_text` and
     `is_screen_black`.
 
-    `wait_until` allows composing more complex conditions, such as::
+    ``wait_until`` allows composing more complex conditions, such as::
 
         # Wait until something disappears:
         assert wait_until(lambda: not match("xyz.png"))
