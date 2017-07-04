@@ -13,6 +13,8 @@ with_html5_vstb()
 
 test_that_virtual_stb_configures_stb_tester_for_testing_virtual_stbs()
 {
+    skip "virtual-stb tests don't work with chromium-browser 59.0.3071.109"
+
     with_html5_vstb --x-keymap=$testdir/vstb-example-html5/key-mapping.conf
 
     stbt run $rotate_py::wait_for_vstb_startup &&
@@ -23,6 +25,8 @@ test_that_virtual_stb_configures_stb_tester_for_testing_virtual_stbs()
 
 test_that_virtual_stb_works_without_keymap_file()
 {
+    skip "virtual-stb tests don't work with chromium-browser 59.0.3071.109"
+
     with_html5_vstb
 
     stbt run $rotate_py::wait_for_vstb_startup &&
@@ -32,6 +36,8 @@ test_that_virtual_stb_works_without_keymap_file()
 
 test_that_virtual_stb_stop_clears_up()
 {
+    skip "virtual-stb tests don't work with chromium-browser 59.0.3071.109"
+
     with_html5_vstb &&
     VSTB_PID="$(stbt config global.vstb_pid)"
     kill -0 "$VSTB_PID" || fail "setup failed"
@@ -43,6 +49,8 @@ test_that_virtual_stb_stop_clears_up()
 # Regression test:
 test_that_virtual_stb_works_with_keymap_file_at_relative_path()
 {
+    skip "virtual-stb tests don't work with chromium-browser 59.0.3071.109"
+
     cp $testdir/vstb-example-html5/key-mapping.conf . &&
     with_html5_vstb --x-keymap=key-mapping.conf &&
 
