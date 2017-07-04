@@ -449,23 +449,36 @@ def _bounding_box(a, b):
 class MatchResult(object):
     """The result from `match`.
 
-    * ``time`` (float): The time at which the video-frame was captured in
-      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).
-    * ``match``: Boolean result, the same as evaluating `MatchResult` as a bool.
-      That is, ``if match_result:`` will behave the same as
-      ``if match_result.match:``.
-    * ``region``: The `Region` in the video frame where the image was found.
-    * ``first_pass_result``: Value between 0 (poor) and 1.0 (excellent match)
-      from the first pass of stb-tester's two-pass image matching algorithm
-      (see `MatchParameters` for details).
-    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
-      searched, as given to `match`.
-    * ``image``: The template image that was searched for, as given to `match`.
-    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
-      instead.
+    :ivar float time: The time at which the video-frame was captured, in
+        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
+        system time (``time.time()``).
 
-    The ``time`` attribute was added in stb-tester v26.
+    :ivar bool match: True if a match was found. This is the same as evaluating
+        ``MatchResult`` as a bool. That is, ``if result:`` will behave the same
+        as ``if result.match:``.
+
+    :ivar Region region: Coordinates where the image was found (or of the
+        nearest match, if no match was found).
+
+    :ivar float first_pass_result: Value between 0 (poor) and 1.0 (excellent
+        match) from the first pass of stb-tester's image matching algorithm
+        (see `MatchParameters` for details).
+
+    :ivar Frame frame: The video frame that was searched, as given to `match`.
+
+    :ivar image: The reference image that was searched for, as given to `match`.
+
+    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
+        instead.
+
+    Two ``MatchResult`` objects compare equal to each other if the same
+    reference image matches at the same position (even if the frames and
+    timestamps are different). This makes it possible to use `match` with
+    `wait_until`'s ``stable_secs`` parameter, for example to wait for a
+    selection to stop moving.
+
+    The ``time`` attribute was added in stb-tester v26. The equality rules
+    where changed in stb-tester v28.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
@@ -561,16 +574,19 @@ def _image_region(image):
 class MotionResult(object):
     """The result from `detect_motion` and `wait_for_motion`.
 
-    * ``time`` (float): The time at which the video-frame was captured in
-      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).
-    * ``motion``: Boolean result, the same as evaluating `MotionResult` as a
-      bool. That is, ``if result:`` will behave the same as
-      ``if result.motion:``.
-    * ``region``: The `Region` of the video frame that contained the motion.
-      ``None`` if no motion detected.
-    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
-      instead.
+    :ivar float time: The time at which the video-frame was captured, in
+        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
+        system time (``time.time()``).
+
+    :ivar bool motion: True if motion was found. This is the same as evaluating
+        ``MotionResult`` as a bool. That is, ``if result:`` will behave the
+        same as ``if result.motion:``.
+
+    :ivar Region region: Bounding box where the motion was found, or ``None``
+        if no motion was found.
+
+    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
+        instead.
 
     The ``time`` attribute was added in stb-tester v26.
     """
@@ -629,20 +645,25 @@ class OcrMode(IntEnum):
 class TextMatchResult(object):
     """The result from `match_text`.
 
-    * ``time`` (float): The time at which the video-frame was captured in
-      seconds since 1970-01-01T00:00Z.  This timestamp can be compared with
-      system time (`time.time()`).
-    * ``match``: Boolean result, the same as evaluating `TextMatchResult` as a
-      bool. That is, ``if result:`` will behave the same as
-      ``if result.match:``.
-    * ``region``: The `Region` (bounding box) of the text found, or ``None`` if
-      no text was found.
-    * ``frame`` (`Frame` or `numpy.ndarray`): The video frame that was
-      searched, as given to `match_text`.
-    * ``text``: The text (unicode string) that was searched for, as given to
-      `match_text`.
-    * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use ``time``
-      instead.
+    :ivar float time: The time at which the video-frame was captured, in
+        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
+        system time (``time.time()``).
+
+    :ivar bool match: True if a match was found. This is the same as evaluating
+        ``MatchResult`` as a bool. That is, ``if result:`` will behave the same
+        as ``if result.match:``.
+
+    :ivar Region region: Bounding box where the text was found, or ``None`` if
+        the text wasn't found.
+
+    :ivar Frame frame: The video frame that was searched, as given to
+        `match_text`.
+
+    :ivar unicode text: The text that was searched for, as given to
+        `match_text`.
+
+    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
+        instead.
 
     The ``time`` attribute was added in stb-tester v26.
     """
@@ -1142,20 +1163,37 @@ def save_frame(image, filename):
 def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
-    ``callable_`` is any python callable, such as a function or a lambda
-    expression. It will be called repeatedly (with a delay of ``interval_secs``
-    seconds between successive calls) until it succeeds (that is, it returns a
-    truthy value) or until ``timeout_secs`` seconds have passed. In both cases,
-    ``wait_until`` returns the value that ``callable_`` returns.
+    Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
+    between successive calls) until it succeeds (that is, it returns a
+    `truthy`_ value) or until ``timeout_secs`` seconds have passed.
 
-    If ``stable_secs`` is specified then ``wait_until`` returns:
+    .. _truthy: https://docs.python.org/2/library/stdtypes.html#truth-value-testing
 
-    * ``callable_``'s return value if it was truthy and remained the same
-      (as determined by ``==``) for ``stable_secs`` seconds.
-    * ``None`` if ``callable_``'s return value was truthy but didn't stay
-      the same for ``stable_secs`` before we reached ``timeout_secs``.
-    * ``callable_``'s last return value if it was falsey when we reached
-      ``timeout_secs``.
+    :param callable_: any Python callable (such as a function or a lambda
+        expression) with no arguments.
+
+    :type timeout_secs: int or float, in seconds
+    :param timeout_secs: After this timeout elapses, ``wait_until`` will return
+        the last value that ``callable_`` returned, even if it's falsey.
+
+    :type interval_secs: int or float, in seconds
+    :param interval_secs: Delay between successive invocations of ``callable_``.
+
+    :type stable_secs: int or float, in seconds
+    :param stable_secs: Wait for ``callable_``'s return value to remain the same
+        (as determined by ``==``) for this duration before returning. This can
+        be used to wait for the position of a `MatchResult` to stabilise.
+
+    :returns: The return value from ``callable_`` (which will be truthy if it
+        succeeded, or falsey if ``wait_until`` timed out).
+
+        If ``stable_secs`` is specified then ``wait_until`` returns:
+
+        * ``callable_``'s return value if it was truthy and stable.
+        * ``None`` if ``callable_``'s return value was truthy but not stable
+          before we reached ``timeout_secs``.
+        * ``callable_``'s last return value if it was falsey when we reached
+          ``timeout_secs``.
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
@@ -1169,12 +1207,12 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
         press("KEY_EPG")
         assert wait_until(lambda: match("guide.png"))
 
-    Note that instead of the above `assert wait_until(...)` you could use
-    `wait_for_match("guide.png")`. `wait_until` is a generic solution that
+    Note that instead of the above ``assert wait_until(...)`` you could use
+    ``wait_for_match("guide.png")``. ``wait_until`` is a generic solution that
     also works with stbt's other functions, like `match_text` and
     `is_screen_black`.
 
-    `wait_until` allows composing more complex conditions, such as::
+    ``wait_until`` allows composing more complex conditions, such as::
 
         # Wait until something disappears:
         assert wait_until(lambda: not match("xyz.png"))
@@ -1340,10 +1378,13 @@ class NoVideo(UITestFailure):
 class MatchTimeout(UITestFailure):
     """Exception raised by `wait_for_match`.
 
-    * ``screenshot``: The last video frame that `wait_for_match` checked before
-      timing out.
-    * ``expected``: Filename of the image that was being searched for.
-    * ``timeout_secs``: Number of seconds that the image was searched for.
+    :ivar Frame screenshot: The last video frame that `wait_for_match` checked
+        before timing out.
+
+    :ivar str expected: Filename of the image that was being searched for.
+
+    :vartype timeout_secs: int or float
+    :ivar timeout_secs: Number of seconds that the image was searched for.
     """
     def __init__(self, screenshot, expected, timeout_secs):
         super(MatchTimeout, self).__init__()
@@ -1359,10 +1400,14 @@ class MatchTimeout(UITestFailure):
 class MotionTimeout(UITestFailure):
     """Exception raised by `wait_for_motion`.
 
-    * ``screenshot``: The last video frame that `wait_for_motion` checked before
-      timing out.
-    * ``mask``: Filename of the mask that was used, if any.
-    * ``timeout_secs``: Number of seconds that motion was searched for.
+    :ivar Frame screenshot: The last video frame that `wait_for_motion` checked
+        before timing out.
+
+    :vartype mask: str or None
+    :ivar mask: Filename of the mask that was used, if any.
+
+    :vartype timeout_secs: int or float
+    :ivar timeout_secs: Number of seconds that motion was searched for.
     """
     def __init__(self, screenshot, mask, timeout_secs):
         super(MotionTimeout, self).__init__()
