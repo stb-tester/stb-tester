@@ -305,10 +305,12 @@ class Region(namedtuple('Region', 'x y right bottom')):
         """Create a Region using right and bottom extents rather than width and
         height.
 
-        Deprecated since we added ``right`` and ``bottom`` to Region
-        constructor.
+        Typically you'd use the ``right`` and ``bottom`` parameters of the
+        ``Region`` constructor instead, but this factory function is useful
+        if you need to create a ``Region`` from a tuple.
 
-        >>> Region.from_extents(4, 4, 13, 10)
+        >>> extents = (4, 4, 13, 10)
+        >>> Region.from_extents(*extents)
         Region(x=4, y=4, right=13, bottom=10)
         """
         return Region(x, y, right=right, bottom=bottom)
