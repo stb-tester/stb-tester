@@ -1213,15 +1213,6 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
         if not wait_until(lambda: match("xyz.png")):
             do_something_else()
 
-    There are some drawbacks to using `assert` instead of `wait_for_match`:
-
-    * The exception message won't contain the reason why the match failed
-      (unless you specify it as a second parameter to `assert`, which is
-      tedious and we don't expect you to do it), and
-    * The exception won't have the offending video-frame attached.
-
-    We hope to solve both of the above drawbacks at some point in the future.
-
     ``wait_until`` was added in stb-tester v22. The ``stable_secs`` parameter
     was added in v28.
     """
