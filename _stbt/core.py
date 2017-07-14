@@ -536,7 +536,7 @@ def _load_template(template):
         return _AnnotatedTemplate(template, None, None)
     else:
         relative_filename = template
-        absolute_filename = _find_path(relative_filename)
+        absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename or not os.path.isfile(absolute_filename):
             raise ValueError("No such template file: %s" % relative_filename)
         image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
@@ -573,7 +573,7 @@ def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
         image file.
     """
 
-    absolute_filename = _find_path(filename)
+    absolute_filename = _find_user_file(filename)
     if not absolute_filename or not os.path.isfile(absolute_filename):
         raise ValueError("No such file: %s" % filename)
     image = cv2.imread(absolute_filename, flags)
@@ -2538,7 +2538,7 @@ def _iter_frames(depth=1):
         frame = frame.f_back
 
 
-def _find_path(filename):
+def _find_user_file(filename):
     """Searches for the given filename and returns the full path.
 
     Searches in the directory of the script that called `load_image` (or
@@ -2552,8 +2552,8 @@ def _find_path(filename):
     # the _stbt installation directory (this file's directory). We can ignore
     # the first 2 stack-frames:
     #
-    # * stack()[0] is _find_path;
-    # * stack()[1] is _find_path's caller: load_image or _load_template;
+    # * stack()[0] is _find_user_file;
+    # * stack()[1] is _find_user_file's caller: load_image or _load_template;
     # * stack()[2] is load_image's caller (the user script). It could also be
     #   _load_template's caller (e.g. `match`) so we still need to check until
     #   we're outside of the _stbt directory.
@@ -2578,7 +2578,7 @@ def _find_path(filename):
 
 def _load_mask(filename):
     """Loads the given mask file and returns it as an OpenCV image."""
-    absolute_filename = _find_path(filename)
+    absolute_filename = _find_user_file(filename)
     debug("Using mask %s" % absolute_filename)
     if not absolute_filename or not os.path.isfile(absolute_filename):
         raise ValueError("No such mask file: %s" % filename)
