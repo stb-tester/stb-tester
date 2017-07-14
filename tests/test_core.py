@@ -15,6 +15,21 @@ from stbt import wait_until
 # pylint:disable=redefined-outer-name,unused-argument
 
 
+class C(object):
+    """A class with a single property, used by the tests."""
+    def __init__(self, prop):
+        self.prop = prop
+
+    def __repr__(self):
+        return "C(%r)" % self.prop
+
+    def __eq__(self, other):
+        return isinstance(other, C) and self.prop == other.prop
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class f(object):
     """Helper factory for wait_until selftests. Creates a callable object that
     returns the specified values one by one each time it is called.
@@ -23,7 +38,7 @@ class f(object):
     `F` means `False`.
     """
 
-    mapping = {".": None, "F": False}
+    mapping = {".": None, "F": False, "C1": C(1), "C2": C(2), "C3": C(3)}
 
     def __init__(self, spec):
         self.spec = spec
@@ -81,10 +96,18 @@ class Zero(object):
     # wait_until with zero timeout tries once
     (lambda: True, {"timeout_secs": 0}, True),
 
+    # predicate behaviour
+    (f("a b b"), {"predicate": lambda x: x == "b"}, "b"),
+    (f("F F F"), {"predicate": lambda x: x == "b"}, False),
+    (f("C1 C2"), {"predicate": lambda x: x.prop == 2}, C(2)),
+    (f("C1 C2"), {"predicate": lambda x: x.prop == 3}, None),
+
     # stable_secs behaviour
     (f("a b b"), {}, "a"),
     (f("a b b"), {"stable_secs": 1}, "b"),
     (f("a b c"), {"stable_secs": 1}, None),
+    (f("C1 C2 C3"), {"stable_secs": 1,
+                     "predicate": lambda x: 2 <= x.prop <= 3}, C(2)),
 
     # timeout_secs elapsed
     #        |   ┌ stable_secs needed
@@ -134,11 +157,13 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
     results = g()
 
     def match():
-        match_result = next(results)
-        return match_result and match_result.region
+        return next(results)
 
-    result = wait_until(match, stable_secs=2)
-    assert result == stbt.Region(x=4, y=0, width=10, height=2)
+    result = wait_until(match, predicate=lambda x: x and x.region,
+                        stable_secs=2)
+    assert result.match
+    assert result.region.x == 4
+    assert result.time == 1497000004
 
 
 def test_that_wait_until_doesnt_compare_return_values(mock_time):
