@@ -8,7 +8,8 @@ import mock
 import numpy
 import pytest
 
-from stbt import MatchResult, Region, wait_until
+import stbt
+from stbt import wait_until
 
 
 # pylint:disable=redefined-outer-name,unused-argument
@@ -113,8 +114,8 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
 
     def MR(match, x):
         time.sleep(1)  # advance the mock time by 1 second
-        return MatchResult(
-            time.time(), match, Region(x=x, y=0, width=10, height=2),
+        return stbt.MatchResult(
+            time.time(), match, stbt.Region(x=x, y=0, width=10, height=2),
             first_pass_result=1,
             frame=numpy.random.randint(0, 255, (2, 2, 3)).astype(numpy.uint8),
             image="reference.png")
@@ -132,9 +133,31 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
     results = g()
 
     def match():
-        return next(results)
+        match_result = next(results)
+        return match_result and match_result.region
 
     result = wait_until(match, stable_secs=2)
-    assert result.match
-    assert result.region.x == 4
-    assert result.time == 1497000004
+    assert result == stbt.Region(x=4, y=0, width=10, height=2)
+
+
+def test_that_wait_until_doesnt_compare_return_values(mock_time):
+    class MR(object):
+        def __init__(self, eq_allowed=False):
+            time.sleep(1)  # advance the mock time by 1 second
+            self.eq_allowed = eq_allowed
+
+        def __eq__(self, other):
+            if self.eq_allowed:
+                return isinstance(other, MR)
+            else:
+                assert False, "Got unexpected call to MR.__eq__"
+
+        def __ne__(self, other):
+            return not self.__eq__(other)
+
+    result = wait_until(MR)
+    assert isinstance(result, MR)
+
+    # But it does compare values if you specify `stable_secs`
+    with pytest.raises(AssertionError):
+        result = wait_until(MR, stable_secs=2)
