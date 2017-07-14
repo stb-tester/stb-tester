@@ -520,11 +520,13 @@ def _str_frame_dimensions(frame):
         return "%dx%d" % (frame.shape[1], frame.shape[0])
 
 
-class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate',
-                                    'image name filename')):
+class _AnnotatedTemplate(namedtuple(
+        '_AnnotatedTemplate',
+        'image relative_filename absolute_filename')):
+
     @property
     def friendly_name(self):
-        return self.filename or '<Custom Image>'
+        return self.absolute_filename or '<Custom Image>'
 
 
 def _load_template(template):
@@ -533,14 +535,15 @@ def _load_template(template):
     if isinstance(template, numpy.ndarray):
         return _AnnotatedTemplate(template, None, None)
     else:
-        template_name = _find_path(template)
-        if not template_name or not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % template)
-        image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        relative_filename = template
+        absolute_filename = _find_path(relative_filename)
+        if not absolute_filename or not os.path.isfile(absolute_filename):
+            raise UITestError("No such template file: %s" % relative_filename)
+        image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
             raise UITestError("Failed to load template file: %s" %
-                              template_name)
-        return _AnnotatedTemplate(image, template, template_name)
+                              absolute_filename)
+        return _AnnotatedTemplate(image, relative_filename, absolute_filename)
 
 
 def _crop(frame, region):
@@ -844,7 +847,7 @@ class DeviceUnderTest(object):
                 result = MatchResult(
                     getattr(frame, "time", None), matched, match_region,
                     first_pass_certainty, frame,
-                    (template.name or template.image),
+                    (template.relative_filename or template.image),
                     first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
@@ -2499,43 +2502,43 @@ def _iter_frames(depth=1):
         frame = frame.f_back
 
 
-def _find_path(image):
+def _find_path(filename):
     """Searches for the given filename and returns the full path.
 
     Searches in the directory of the script that called (for example)
     detect_match, then in the directory of that script's caller, etc.
     """
 
-    if os.path.isabs(image):
-        return image
+    if os.path.isabs(filename):
+        return filename
 
     # stack()[0] is _find_path;
     # stack()[1] is _find_path's caller, e.g. detect_match;
     # stack()[2] is detect_match's caller (the user script).
     for caller in _iter_frames(depth=2):
-        caller_image = os.path.join(
+        caller_path = os.path.join(
             os.path.dirname(inspect.getframeinfo(caller).filename),
-            image)
-        if os.path.isfile(caller_image):
-            return os.path.abspath(caller_image)
+            filename)
+        if os.path.isfile(caller_path):
+            return os.path.abspath(caller_path)
 
     # Fall back to image from cwd, for convenience of the selftests
-    if os.path.isfile(image):
-        return os.path.abspath(image)
+    if os.path.isfile(filename):
+        return os.path.abspath(filename)
 
     return None
 
 
-def _load_mask(mask):
+def _load_mask(filename):
     """Loads the given mask file and returns it as an OpenCV image."""
-    mask_path = _find_path(mask)
-    debug("Using mask %s" % mask_path)
-    if not mask_path or not os.path.isfile(mask_path):
-        raise UITestError("No such mask file: %s" % mask)
-    mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-    if mask_image is None:
-        raise UITestError("Failed to load mask file: %s" % mask_path)
-    return mask_image
+    absolute_filename = _find_path(filename)
+    debug("Using mask %s" % absolute_filename)
+    if not absolute_filename or not os.path.isfile(absolute_filename):
+        raise UITestError("No such mask file: %s" % filename)
+    image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    if image is None:
+        raise UITestError("Failed to load mask file: %s" % absolute_filename)
+    return image
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
