@@ -98,8 +98,9 @@ class Zero(object):
 
     # Falsey values
     (f("F F F"), {}, False),
-    (f("F F F"), {"stable_secs": 1}, None),
-    (Zero, {"interval_secs": 1}, Zero())
+    (f("F F F"), {"stable_secs": 1}, False),
+    (Zero, {"interval_secs": 1}, Zero()),
+    (Zero, {"interval_secs": 1, "stable_secs": 1}, Zero()),
 ])
 def test_wait_until(mock_time, f, kwargs, expected):
     assert wait_until(f, **kwargs) == expected
