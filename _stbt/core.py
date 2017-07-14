@@ -1234,19 +1234,22 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
         t = time.time()
         value = callable_()
 
-        if value != stable_value:
-            stable_since = t
-            stable_value = value
-
-        if value and t - stable_since >= stable_secs:
-            return stable_value
+        if stable_secs:
+            if value != stable_value:
+                stable_since = t
+                stable_value = value
+            if value and t - stable_since >= stable_secs:
+                return stable_value
+        else:
+            if value:
+                return value
 
         if t >= expiry_time:
             debug("wait_until timed out: %s" % _callable_description(callable_))
-            if stable_secs == 0:
-                return value
-            else:
+            if stable_secs:
                 return None
+            else:
+                return value  # it's falsey
 
         time.sleep(interval_secs)
 
