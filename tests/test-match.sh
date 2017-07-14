@@ -444,31 +444,6 @@ test_match_reports_no_match() {
     stbt run -v test.py
 }
 
-test_matchresults_are_equal() {
-    cat > test.py <<-EOF
-	import stbt
-	m1 = stbt.match("$testdir/videotestsrc-redblue.png")
-	m2 = stbt.match("$testdir/videotestsrc-redblue.png")
-	assert m1 == m2
-	EOF
-    stbt run -v test.py
-}
-
-test_matchresults_are_not_equal() {
-    cat > test.py <<-EOF
-	import stbt, time
-	mp = stbt.MatchParameters(confirm_method="none")
-	m1 = stbt.match("$testdir/videotestsrc-ball.png", match_parameters=mp)
-	time.sleep(0.1)
-	m2 = stbt.match("$testdir/videotestsrc-ball.png", match_parameters=mp)
-	assert m1 != m2
-	EOF
-    stbt run -v --source-pipeline \
-        "videotestsrc pattern=ball is-live=true \
-         ! video/x-raw,format=BGR,width=320,height=240" \
-        test.py
-}
-
 test_detect_match_times_out() {
     cat > test.py <<-EOF
 	for match_result in detect_match("$testdir/videotestsrc-redblue.png",

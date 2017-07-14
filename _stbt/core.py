@@ -471,14 +471,7 @@ class MatchResult(object):
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
 
-    Two ``MatchResult`` objects compare equal to each other if the same
-    reference image matches at the same position (even if the frames and
-    timestamps are different). This makes it possible to use `match` with
-    `wait_until`'s ``stable_secs`` parameter, for example to wait for a
-    selection to stop moving.
-
-    The ``time`` attribute was added in stb-tester v26. The equality rules
-    where changed in stb-tester v28.
+    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
@@ -505,16 +498,6 @@ class MatchResult(object):
 
     def __nonzero__(self):
         return self.match
-
-    def __eq__(self, other):
-        return (isinstance(other, MatchResult) and self.match == other.match and
-                self.region == other.region and self.image == other.image)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.match, self.region, self.image))
 
     @property
     def position(self):
@@ -1182,7 +1165,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     :type stable_secs: int or float, in seconds
     :param stable_secs: Wait for ``callable_``'s return value to remain the same
         (as determined by ``==``) for this duration before returning. This can
-        be used to wait for the position of a `MatchResult` to stabilise.
+        be used to wait for a `FrameObject` to stabilise.
 
     :returns: The return value from ``callable_`` (which will be truthy if it
         succeeded, or falsey if ``wait_until`` timed out).

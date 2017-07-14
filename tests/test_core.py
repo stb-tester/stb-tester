@@ -133,9 +133,8 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
     results = g()
 
     def match():
-        return next(results)
+        match_result = next(results)
+        return match_result and match_result.region
 
     result = wait_until(match, stable_secs=2)
-    assert result.match
-    assert result.region.x == 4
-    assert result.time == 1497000004
+    assert result == stbt.Region(x=4, y=0, width=10, height=2)
