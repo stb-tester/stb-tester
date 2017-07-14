@@ -537,7 +537,7 @@ def _load_template(template):
     else:
         relative_filename = template
         absolute_filename = _find_user_file(relative_filename)
-        if not absolute_filename or not os.path.isfile(absolute_filename):
+        if not absolute_filename:
             raise ValueError("No such template file: %s" % relative_filename)
         image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
@@ -574,7 +574,7 @@ def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
     """
 
     absolute_filename = _find_user_file(filename)
-    if not absolute_filename or not os.path.isfile(absolute_filename):
+    if not absolute_filename:
         raise ValueError("No such file: %s" % filename)
     image = cv2.imread(absolute_filename, flags)
     if image is None:
@@ -2543,9 +2543,12 @@ def _find_user_file(filename):
 
     Searches in the directory of the script that called `load_image` (or
     `match`, etc), then in the directory of that script's caller, etc.
+    Falls back to searching the current working directory.
+
+    :returns: Absolute filename, or None if it can't find the file.
     """
 
-    if os.path.isabs(filename):
+    if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
 
     # Start searching from the first parent stack-frame that is outside of
@@ -2580,7 +2583,7 @@ def _load_mask(filename):
     """Loads the given mask file and returns it as an OpenCV image."""
     absolute_filename = _find_user_file(filename)
     debug("Using mask %s" % absolute_filename)
-    if not absolute_filename or not os.path.isfile(absolute_filename):
+    if not absolute_filename:
         raise ValueError("No such mask file: %s" % filename)
     image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
     if image is None:
