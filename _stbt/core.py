@@ -2558,12 +2558,15 @@ def _find_path(filename):
     #   _load_template's caller (e.g. `match`) so we still need to check until
     #   we're outside of the _stbt directory.
 
+    _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     for caller in _iter_frames(depth=2):
-        caller_path = os.path.join(
-            os.path.dirname(inspect.getframeinfo(caller).filename),
-            filename)
+        caller_dir = os.path.abspath(
+            os.path.dirname(inspect.getframeinfo(caller).filename))
+        if caller_dir.startswith(_stbt_dir):
+            continue
+        caller_path = os.path.join(caller_dir, filename)
         if os.path.isfile(caller_path):
-            return os.path.abspath(caller_path)
+            return caller_path
 
     # Fall back to image from cwd, to allow loading an image saved previously
     # during the same test-run.
