@@ -49,6 +49,9 @@ UNRELEASED
   <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
   for a discussion of the trade-offs of each video-capture mechanism.
 
+* Python API: New function `stbt.load_image` to load an image from disk, using
+  the same path lookup algorithm that `stbt.match` uses.
+
 * Python API: `stbt.wait_until` has two new parameters: `predicate` and
   `stable_secs`. Together they allow waiting for something to stabilise (for
   example to wait for the position of a moving selection to stop moving).
