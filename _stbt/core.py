@@ -546,6 +546,42 @@ def _load_template(template):
         return _AnnotatedTemplate(image, relative_filename, absolute_filename)
 
 
+def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
+    """Find & read an image from disk.
+
+    If given a relative filename, this will search in the directory of the
+    Python file that called ``load_image``, then in the directory of that
+    file's caller, etc. This allows you to use ``load_image`` in a helper
+    function, and then call that helper function from a different Python file
+    passing in a filename relative to the caller.
+
+    Finally this will search in the current working directory. This allows
+    loading an image that you had previously saved to disk during the same
+    test run.
+
+    This is the same lookup algorithm used by `stbt.match` and similar
+    functions.
+
+    :type filename: str or unicode
+    :param filename: A relative or absolute filename.
+
+    :param flags: Flags to pass to `cv2.imread`.
+
+    :returns: An image in OpenCV format (a `numpy.ndarray` of 8-bit values, 3
+        channel BGR).
+    :raises: `ValueError` if the specified path doesn't exist or isn't a valid
+        image file.
+    """
+
+    absolute_filename = _find_path(filename)
+    if not absolute_filename or not os.path.isfile(absolute_filename):
+        raise ValueError("No such file: %s" % filename)
+    image = cv2.imread(absolute_filename, flags)
+    if image is None:
+        raise ValueError("Failed to load image: %s" % absolute_filename)
+    return image
+
+
 def _crop(frame, region):
     if not _image_region(frame).contains(region):
         raise ValueError("'frame' doesn't contain 'region'")
@@ -2505,16 +2541,23 @@ def _iter_frames(depth=1):
 def _find_path(filename):
     """Searches for the given filename and returns the full path.
 
-    Searches in the directory of the script that called (for example)
-    detect_match, then in the directory of that script's caller, etc.
+    Searches in the directory of the script that called `load_image` (or
+    `match`, etc), then in the directory of that script's caller, etc.
     """
 
     if os.path.isabs(filename):
         return filename
 
-    # stack()[0] is _find_path;
-    # stack()[1] is _find_path's caller, e.g. detect_match;
-    # stack()[2] is detect_match's caller (the user script).
+    # Start searching from the first parent stack-frame that is outside of
+    # the _stbt installation directory (this file's directory). We can ignore
+    # the first 2 stack-frames:
+    #
+    # * stack()[0] is _find_path;
+    # * stack()[1] is _find_path's caller: load_image or _load_template;
+    # * stack()[2] is load_image's caller (the user script). It could also be
+    #   _load_template's caller (e.g. `match`) so we still need to check until
+    #   we're outside of the _stbt directory.
+
     for caller in _iter_frames(depth=2):
         caller_path = os.path.join(
             os.path.dirname(inspect.getframeinfo(caller).filename),
@@ -2522,7 +2565,8 @@ def _find_path(filename):
         if os.path.isfile(caller_path):
             return os.path.abspath(caller_path)
 
-    # Fall back to image from cwd, for convenience of the selftests
+    # Fall back to image from cwd, to allow loading an image saved previously
+    # during the same test-run.
     if os.path.isfile(filename):
         return os.path.abspath(filename)
 
