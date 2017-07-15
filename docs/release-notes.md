@@ -49,8 +49,9 @@ UNRELEASED
   <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
   for a discussion of the trade-offs of each video-capture mechanism.
 
-* Python API: `stbt.wait_until` has a new parameter `stable_secs` to wait for
-  the return value to stabilise.
+* Python API: `stbt.wait_until` has two new parameters: `predicate` and
+  `stable_secs`. Together they allow waiting for something to stabilise (for
+  example to wait for the position of a moving selection to stop moving).
 
 * Python API: `stbt.ocr` and `stbt.match_text` have a new parameter
   `text_color`. Specifying this can improve OCR results when tesseract's
