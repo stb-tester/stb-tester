@@ -2781,26 +2781,29 @@ def _hocr_elem_region(elem):
 
 
 def remove_transparency(frame, color):
-    """
-    Often stb UIs consist of a transparent overlay over live TV or some other
-    changable image.  The transparency can cause OCR and match failures due to
-    the background bleeding through.  This function replaces these transparent
-    background with solid colour which can be used as a pre-processing step
-    before performing a `match` or `ocr`.
+    """Remove background images under a translucent overlay.
 
-    color is an HTML-style hex colour string of the form #rrggbbaa.
+    Set-top box UIs often have a translucent overlay over live TV or some other
+    changeable image. The live TV showing through can cause OCR and match
+    failures. This function replaces the translucent background with a solid
+    color, while preserving the foreground content. It can be used as a
+    pre-processing step before performing a `stbt.match` or `stbt.ocr` (in the
+    case of `stbt.match`, you'll need to pre-process both the video-frame and
+    the reference image).
 
-    It assumes that an overlay image was alpha-blended according to:
+    It assumes that an overlay image was alpha-blended according to::
 
-        frame = color[rgb] * color[alpha] + underlay * (1 - color[alpha])
-
-    where color specifies overlay and alpha.
+        frame = color * alpha + underlay * (1 - alpha)
 
     See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending
 
-    Usage:
+    :type frame: `stbt.Frame` or `numpy.ndarray`
+    :param frame: The image to process.
 
-        remove_transparency('#bf000079', frame=...)
+    :param str color: An HTML-style hex color string of the form "#RRGGBBAA"
+        describing the color and alpha of the background.
+
+    :returns: A `numpy.ndarray` (that is, an image in OpenCV BGR format).
     """
     if color[0] != '#' or len(color) != 9:
         raise ValueError("color must be a rgba hex color string")
