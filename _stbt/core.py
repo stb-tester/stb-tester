@@ -2780,7 +2780,7 @@ def _hocr_elem_region(elem):
         elem = elem.getparent()
 
 
-def remove_transparency(frame, color):
+def remove_transparency(image, color):
     """Remove background images under a translucent overlay.
 
     Set-top box UIs often have a translucent overlay over live TV or some other
@@ -2797,8 +2797,8 @@ def remove_transparency(frame, color):
 
     See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending
 
-    :type frame: `stbt.Frame` or `numpy.ndarray`
-    :param frame: The image to process.
+    :type image: `stbt.Frame` or `numpy.ndarray`
+    :param image: The image to process.
 
     :param str color: An HTML-style hex color string of the form "#RRGGBBAA"
         describing the color and alpha of the background.
@@ -2809,8 +2809,8 @@ def remove_transparency(frame, color):
         raise ValueError("color must be a rgba hex color string")
     r, g, b, a_ = [int(color[n * 2 + 1:n * 2 + 3], 16) for n in range(4)]
 
-    frame = frame.copy()
-    flat = frame.view().reshape(frame.shape[0] * frame.shape[1], 3)
+    image = image.copy()
+    flat = image.view().reshape(image.shape[0] * image.shape[1], 3)
 
     a = float(a_) / 255.
     c_a = numpy.array([b, g, r])
@@ -2818,10 +2818,10 @@ def remove_transparency(frame, color):
     top = numpy.uint8(c_a * a + (1 - a) * 255)
 
     mask = ((flat >= bottom) * (flat <= top)).all(axis=1)
-    mask.shape = (frame.shape[0], frame.shape[1])
-    frame[mask, :] = c_a
+    mask.shape = (image.shape[0], image.shape[1])
+    image[mask, :] = c_a
 
-    return frame
+    return image
 
 
 # Tests
