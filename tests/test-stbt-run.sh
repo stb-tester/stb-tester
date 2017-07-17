@@ -224,13 +224,13 @@ test_that_stbt_run_tracing_is_written_to_socket() {
 assert_correct_unicode_error() {
     cat >expected.log <<-EOF
 		FAIL: test.py: AssertionError: ü
-		Saved screenshot to 'screenshot.png'.
 		Traceback (most recent call last):
 		  File ".../stbt-run", line ..., in <module>
 		    execfile(_filename)
 		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
+		Saved screenshot to 'screenshot.png'.
 		EOF
     diff -u <(grep -v -e File expected.log) \
             <(grep -v -e 'libdc1394 error: Failed to initialize libdc1394' \

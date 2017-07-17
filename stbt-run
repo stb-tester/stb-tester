@@ -168,8 +168,11 @@ except Exception as e:  # pylint: disable=W0703
         error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
     sys.stdout.write("FAIL: %s: %s: %s\n" % (
         args.script, type(e).__name__, error_message))
-    _save_screenshot(exception=e)
     _print_exc_utf8(file_=sys.stderr)
+    try:
+        _save_screenshot(exception=e)
+    except Exception:  # pylint: disable=broad-except
+        pass
     if isinstance(e, (stbt.UITestFailure, AssertionError)):
         sys.exit(1)  # Failure
     else:
