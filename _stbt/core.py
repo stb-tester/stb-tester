@@ -1143,7 +1143,8 @@ def save_frame(image, filename):
     cv2.imwrite(filename, image)
 
 
-def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
+def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
+               stable_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
     Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
@@ -1162,24 +1163,22 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
     :type interval_secs: int or float, in seconds
     :param interval_secs: Delay between successive invocations of ``callable_``.
 
+    :param predicate: A function that takes a single value. It will be given
+        the return value from ``callable_``. The return value of *this* function
+        will then be used to determine truthiness. ``wait_until`` will still
+        return the original value from ``callable_``, not the predicate value.
+
     :type stable_secs: int or float, in seconds
     :param stable_secs: Wait for ``callable_``'s return value to remain the same
-        (as determined by ``==``) for this duration before returning. This can
-        be used to wait for a `FrameObject` to stabilise.
+        (as determined by ``==``) for this duration before returning. If
+        ``predicate`` is also given, the values returned from ``predicate``
+        will be compared.
 
     :returns: The return value from ``callable_`` (which will be truthy if it
-        succeeded, or falsey if ``wait_until`` timed out).
-
-        If ``stable_secs`` is specified then ``wait_until`` returns:
-
-        * ``callable_``'s return value if it was truthy and stable. This will
-          be the *first* stable value, so that you can use ``wait_until`` for
-          performance measurements (for example to measure the time for an
-          animation to complete).
-        * ``None`` if ``callable_``'s return value was truthy but not stable
-          before we reached ``timeout_secs``.
-        * ``callable_``'s last return value if it was falsey when we reached
-          ``timeout_secs``.
+        succeeded, or falsey if ``wait_until`` timed out). If the value was
+        truthy when the timeout was reached but it failed the ``predicate`` or
+        ``stable_secs`` conditions (if any) then ``wait_until`` returns
+        ``None``.
 
     After you send a remote-control signal to the system-under-test it usually
     takes a few frames to react, so a test script like this would probably
@@ -1213,43 +1212,57 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, stable_secs=0):
         if not wait_until(lambda: match("xyz.png")):
             do_something_else()
 
-    There are some drawbacks to using `assert` instead of `wait_for_match`:
+        # Wait for a menu selection to change. Here ``Menu`` is a `FrameObject`
+        # with a property called `selection` that returns a string with the
+        # name of the currently-selected menu item:
+        # The return value (``menu``) is an instance of ``Menu``.
+        menu = wait_until(Menu, predicate=lambda x: x.selection == "Home")
 
-    * The exception message won't contain the reason why the match failed
-      (unless you specify it as a second parameter to `assert`, which is
-      tedious and we don't expect you to do it), and
-    * The exception won't have the offending video-frame attached.
+        # Wait for a match to stabilise position, returning the first stable
+        # match. Used in performance measurements, for example to wait for a
+        # selection highlight to finish moving:
+        press("KEY_DOWN")
+        start_time = time.time()
+        match_result = wait_until(lambda: stbt.match("selection.png"),
+                                  predicate=lambda x: x and x.region,
+                                  stable_secs=2)
+        assert match_result
+        end_time = match_result.time  # this is the first stable frame
+        print "Transition took %s seconds" % (end_time - start_time)
 
-    We hope to solve both of the above drawbacks at some point in the future.
-
-    ``wait_until`` was added in stb-tester v22. The ``stable_secs`` parameter
-    was added in v28.
+    ``wait_until`` was added in stb-tester v22. The ``predicate`` and
+    ``stable_secs`` parameters were added in v28.
     """
     import time
 
+    if predicate is None:
+        predicate = lambda x: x
     stable_value = None
+    stable_predicate_value = None
     expiry_time = time.time() + timeout_secs
 
     while True:
         t = time.time()
         value = callable_()
+        predicate_value = predicate(value)
 
         if stable_secs:
-            if value != stable_value:
+            if predicate_value != stable_predicate_value:
                 stable_since = t
                 stable_value = value
-            if value and t - stable_since >= stable_secs:
+                stable_predicate_value = predicate_value
+            if predicate_value and t - stable_since >= stable_secs:
                 return stable_value
         else:
-            if value:
+            if predicate_value:
                 return value
 
         if t >= expiry_time:
             debug("wait_until timed out: %s" % _callable_description(callable_))
-            if stable_secs:
-                return None
-            else:
+            if not value:
                 return value  # it's falsey
+            else:
+                return None  # must have failed stable_secs or predicate checks
 
         time.sleep(interval_secs)
 
