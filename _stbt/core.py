@@ -520,11 +520,13 @@ def _str_frame_dimensions(frame):
         return "%dx%d" % (frame.shape[1], frame.shape[0])
 
 
-class _AnnotatedTemplate(namedtuple('_AnnotatedTemplate',
-                                    'image name filename')):
+class _AnnotatedTemplate(namedtuple(
+        '_AnnotatedTemplate',
+        'image relative_filename absolute_filename')):
+
     @property
     def friendly_name(self):
-        return self.filename or '<Custom Image>'
+        return self.absolute_filename or '<Custom Image>'
 
 
 def _load_template(template):
@@ -533,14 +535,51 @@ def _load_template(template):
     if isinstance(template, numpy.ndarray):
         return _AnnotatedTemplate(template, None, None)
     else:
-        template_name = _find_path(template)
-        if not template_name or not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % template)
-        image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        relative_filename = template
+        absolute_filename = _find_user_file(relative_filename)
+        if not absolute_filename:
+            raise IOError("No such template file: %s" % relative_filename)
+        image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
-            raise UITestError("Failed to load template file: %s" %
-                              template_name)
-        return _AnnotatedTemplate(image, template, template_name)
+            raise IOError("Failed to load template file: %s" %
+                          absolute_filename)
+        return _AnnotatedTemplate(image, relative_filename, absolute_filename)
+
+
+def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
+    """Find & read an image from disk.
+
+    If given a relative filename, this will search in the directory of the
+    Python file that called ``load_image``, then in the directory of that
+    file's caller, etc. This allows you to use ``load_image`` in a helper
+    function, and then call that helper function from a different Python file
+    passing in a filename relative to the caller.
+
+    Finally this will search in the current working directory. This allows
+    loading an image that you had previously saved to disk during the same
+    test run.
+
+    This is the same lookup algorithm used by `stbt.match` and similar
+    functions.
+
+    :type filename: str or unicode
+    :param filename: A relative or absolute filename.
+
+    :param flags: Flags to pass to `cv2.imread`.
+
+    :returns: An image in OpenCV format (a `numpy.ndarray` of 8-bit values, 3
+        channel BGR).
+    :raises: `IOError` if the specified path doesn't exist or isn't a valid
+        image file.
+    """
+
+    absolute_filename = _find_user_file(filename)
+    if not absolute_filename:
+        raise IOError("No such file: %s" % filename)
+    image = cv2.imread(absolute_filename, flags)
+    if image is None:
+        raise IOError("Failed to load image: %s" % absolute_filename)
+    return image
 
 
 def _crop(frame, region):
@@ -844,7 +883,7 @@ class DeviceUnderTest(object):
                 result = MatchResult(
                     getattr(frame, "time", None), matched, match_region,
                     first_pass_certainty, frame,
-                    (template.name or template.image),
+                    (template.relative_filename or template.image),
                     first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
@@ -2499,43 +2538,57 @@ def _iter_frames(depth=1):
         frame = frame.f_back
 
 
-def _find_path(image):
+def _find_user_file(filename):
     """Searches for the given filename and returns the full path.
 
-    Searches in the directory of the script that called (for example)
-    detect_match, then in the directory of that script's caller, etc.
+    Searches in the directory of the script that called `load_image` (or
+    `match`, etc), then in the directory of that script's caller, etc.
+    Falls back to searching the current working directory.
+
+    :returns: Absolute filename, or None if it can't find the file.
     """
 
-    if os.path.isabs(image):
-        return image
+    if os.path.isabs(filename) and os.path.isfile(filename):
+        return filename
 
-    # stack()[0] is _find_path;
-    # stack()[1] is _find_path's caller, e.g. detect_match;
-    # stack()[2] is detect_match's caller (the user script).
+    # Start searching from the first parent stack-frame that is outside of
+    # the _stbt installation directory (this file's directory). We can ignore
+    # the first 2 stack-frames:
+    #
+    # * stack()[0] is _find_user_file;
+    # * stack()[1] is _find_user_file's caller: load_image or _load_template;
+    # * stack()[2] is load_image's caller (the user script). It could also be
+    #   _load_template's caller (e.g. `match`) so we still need to check until
+    #   we're outside of the _stbt directory.
+
+    _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     for caller in _iter_frames(depth=2):
-        caller_image = os.path.join(
-            os.path.dirname(inspect.getframeinfo(caller).filename),
-            image)
-        if os.path.isfile(caller_image):
-            return os.path.abspath(caller_image)
+        caller_dir = os.path.abspath(
+            os.path.dirname(inspect.getframeinfo(caller).filename))
+        if caller_dir.startswith(_stbt_dir):
+            continue
+        caller_path = os.path.join(caller_dir, filename)
+        if os.path.isfile(caller_path):
+            return caller_path
 
-    # Fall back to image from cwd, for convenience of the selftests
-    if os.path.isfile(image):
-        return os.path.abspath(image)
+    # Fall back to image from cwd, to allow loading an image saved previously
+    # during the same test-run.
+    if os.path.isfile(filename):
+        return os.path.abspath(filename)
 
     return None
 
 
-def _load_mask(mask):
+def _load_mask(filename):
     """Loads the given mask file and returns it as an OpenCV image."""
-    mask_path = _find_path(mask)
-    debug("Using mask %s" % mask_path)
-    if not mask_path or not os.path.isfile(mask_path):
-        raise UITestError("No such mask file: %s" % mask)
-    mask_image = cv2.imread(mask_path, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-    if mask_image is None:
-        raise UITestError("Failed to load mask file: %s" % mask_path)
-    return mask_image
+    absolute_filename = _find_user_file(filename)
+    debug("Using mask %s" % absolute_filename)
+    if not absolute_filename:
+        raise IOError("No such mask file: %s" % filename)
+    image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    if image is None:
+        raise IOError("Failed to load mask file: %s" % absolute_filename)
+    return image
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as

@@ -1,9 +1,11 @@
 # coding: utf-8
 
 import itertools
+import os
 import sys
 import time
 
+import cv2
 import mock
 import numpy
 import pytest
@@ -13,6 +15,18 @@ from stbt import wait_until
 
 
 # pylint:disable=redefined-outer-name,unused-argument
+
+
+def test_that_load_image_looks_in_callers_directory():
+    # See also the test with the same name in
+    # ./subdirectory/test_load_image_from_subdirectory.py
+    assert numpy.array_equal(
+        stbt.load_image("videotestsrc-redblue.png"),
+        cv2.imread(os.path.join(os.path.dirname(__file__),
+                                "videotestsrc-redblue.png")))
+
+    with pytest.raises(IOError):
+        stbt.load_image("info2.png")
 
 
 class C(object):

@@ -24,6 +24,7 @@ from _stbt.core import \
     get_config, \
     Frame, \
     ConfigurationError, \
+    load_image, \
     MatchParameters, \
     MatchResult, \
     MatchTimeout, \
@@ -54,6 +55,7 @@ __all__ = [
     "get_config",
     "get_frame",
     "is_screen_black",
+    "load_image",
     "match",
     "match_all",
     "match_text",
