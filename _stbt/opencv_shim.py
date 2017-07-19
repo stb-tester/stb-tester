@@ -7,7 +7,7 @@ from v3 are used.
 
 from __future__ import absolute_import
 
-from logging import warn
+import warnings
 
 import cv2
 
@@ -15,6 +15,15 @@ import cv2
 # pylint: disable=redefined-builtin
 # pylint: disable=wildcard-import,unused-wildcard-import
 from cv2 import *  # isort:skip
+
+
+# Disable printing the source line of the warning, which is completely pointless
+def _warning_no_traceback(message, category, filename, lineno, file=None, **_):
+    warnings._show_warning(  # pylint: disable=protected-access
+        message, category, filename, lineno, file=file, line='')
+
+
+warnings.showwarning = _warning_no_traceback
 
 _CV2 = 2
 _CV3 = 3
@@ -38,8 +47,9 @@ if _CV_VERSION == _CV2:
         contours, hierarchy = cv2.findContours(
             image, mode, method, contours=contours, hierarchy=hierarchy,
             offset=offset)
-        warn("You are using OpenCV v2, so `opencv_shim.findContours` is "
-             "returning `None` for `image`")
+        warnings.warn(
+            "You are using OpenCV v2, so `opencv_shim.findContours` is "
+            "returning `None` for `image`")
         return None, contours, hierarchy
 
     # `imread` flags
