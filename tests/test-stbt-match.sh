@@ -15,10 +15,12 @@ test_that_stbt_match_doesnt_find_match() {
 test_that_stbt_match_applies_confirm_threshold_parameter() {
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
-        "$testdir"/videotestsrc-redblue-with-dots.png &&
+        "$testdir"/videotestsrc-redblue-with-dots.png \
+        confirm_method=absdiff confirm_threshold=0.16 &&
     stbt match \
         "$testdir"/videotestsrc-full-frame.png \
-        "$testdir"/videotestsrc-redblue-with-dots.png confirm_threshold=0.9
+        "$testdir"/videotestsrc-redblue-with-dots.png \
+        confirm_method=absdiff confirm_threshold=0.9
 }
 
 test_that_stbt_match_rejects_invalid_parameters() {

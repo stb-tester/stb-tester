@@ -28,6 +28,27 @@ UNRELEASED
 
 ##### Breaking changes since v27
 
+* The default parameters for the image-matching algorithm have changed from
+  `MatchParameters(confirm_method="absdiff", confirm_threshold=0.16)` to
+  `MatchParameters(confirm_method="normed-absdiff" confirm_threshold=0.30)`.
+  This has been our recommended setting for several years; now it's the
+  default. The "normed-absdiff" algorithm works better in most cases, except
+  when you're looking for an image with very little structure (for example a
+  plain patch of a single colour). We recommend that you always include some
+  structure (edges) in your reference images; if you really need to match a
+  plain blob of colour, you can override the algorithm for specific invocations
+  of `stbt.match` by passing a `match_parameters` argument.
+
+  To keep using the previous defaults, add this to the `[match]` section of
+  your stbt config file:
+
+      confirm_method=absdiff
+      confirm_threshold=0.16
+
+  Note that users of the [Stb-tester hardware] have always been been using
+  these new values, as the Stb-tester hardware ships with a custom stbt.conf
+  file.
+
 * Passing `region=None` to `stbt.ocr` raises a TypeError. Use
   `region=stbt.Region.ALL` instead. Note that passing `None` has printed a
   deprecation warning since v0.21 (two and a half years ago); raising an
