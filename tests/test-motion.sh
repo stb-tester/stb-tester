@@ -52,9 +52,9 @@ test_wait_for_motion_nonexistent_mask() {
     timeout 10 stbt run -v test.py &> test.log
     local ret=$?
     [ $ret -ne $timedout -a $ret -ne 0 ] || fail "Unexpected exit status $ret"
-    grep -q "No such mask file: idontexist.png" test.log ||
+    grep -q "No such mask file: 'idontexist.png'" test.log ||
         fail "Expected 'No such mask file: idontexist.png' but saw '$(
-            grep 'No such mask file' test.log | head -n1)'"
+            grep FAIL test.log)'"
 }
 
 test_wait_for_motion_with_high_noisethreshold_reports_motion() {
