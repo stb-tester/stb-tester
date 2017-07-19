@@ -10,6 +10,7 @@ test_that_invalid_control_doesnt_hang() {
 test_invalid_source_pipeline() {
     touch test.py
     stbt run -v --source-pipeline viddily-boo test.py &> stbt.log
+    cat stbt.log
     tail -n1 stbt.log | grep -q 'no element "viddily-boo"' ||
         fail "The last error message in '$scratchdir/stbt.log' wasn't the" \
             "expected 'no element \"viddily-boo\"', " \

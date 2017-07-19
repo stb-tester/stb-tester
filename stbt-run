@@ -25,6 +25,14 @@ parser.add_argument(
     '--save-trace', metavar='FILE', default=None,
     help='Write state to this file, as xz compressed newline-seperated JSON')
 parser.add_argument(
+    '--save-screenshot', default='on-failure',
+    choices=['always', 'on-failure', 'never'],
+    help="Save a screenshot at the end of the test to screenshot.png")
+parser.add_argument(
+    '--save-thumbnail', default='never',
+    choices=['always', 'on-failure', 'never'],
+    help="Save a thumbnail at the end of the test to thumbnail.jpg")
+parser.add_argument(
     'script', metavar='FILE[::TESTCASE]', help=(
         "The python test script to run. Optionally specify a python function "
         "name to run that function; otherwise only the script's top-level will "
@@ -70,6 +78,35 @@ def _print_exc_utf8(file_=None):
         traceback.print_exc(file=file_)
     finally:
         traceback._some_str = _old_some_str
+
+
+def _save_screenshot(exception):
+    import cv2
+
+    jpg = (args.save_thumbnail == 'always' or
+           (args.save_thumbnail == 'on-failure' and exception))
+    png = (args.save_screenshot == 'always' or
+           (args.save_screenshot == 'on-failure' and exception))
+
+    if not jpg and not png:
+        return
+
+    screenshot = getattr(exception, "screenshot", None)
+    if screenshot is None and stbt._dut._display:  # pylint: disable=protected-access
+        screenshot = stbt._dut._display.last_used_frame  # pylint: disable=protected-access
+    if screenshot is None:
+        screenshot = stbt._dut.get_frame()  # pylint: disable=protected-access
+
+    if png:
+        cv2.imwrite("screenshot.png", screenshot)
+        sys.stderr.write("Saved screenshot to 'screenshot.png'.\n")
+
+    if jpg:
+        cv2.imwrite(
+            'thumbnail.jpg',
+            cv2.resize(screenshot, (
+                640, 640 * screenshot.shape[0] // screenshot.shape[1])),
+            [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
 
 
 def import_by_filename(filename_):
@@ -131,21 +168,17 @@ except Exception as e:  # pylint: disable=W0703
         error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
     sys.stdout.write("FAIL: %s: %s: %s\n" % (
         args.script, type(e).__name__, error_message))
-    if hasattr(e, "screenshot") and e.screenshot is not None:  # pylint:disable=no-member
-        screenshot = e.screenshot  # pylint:disable=no-member
-    elif stbt._dut._display:  # pylint: disable=W0212
-        screenshot = stbt._dut._display.last_used_frame  # pylint: disable=W0212
-    else:
-        screenshot = None
-
-    if screenshot is not None:
-        stbt.save_frame(screenshot, "screenshot.png")
-        sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     _print_exc_utf8(file_=sys.stderr)
+    try:
+        _save_screenshot(exception=e)
+    except Exception:  # pylint: disable=broad-except
+        pass
     if isinstance(e, (stbt.UITestFailure, AssertionError)):
         sys.exit(1)  # Failure
     else:
         sys.exit(2)  # Error
+else:
+    _save_screenshot(exception=None)
 finally:
     sys.settrace(None)
     if _tracer:

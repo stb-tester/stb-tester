@@ -78,7 +78,8 @@ test_that_stbt_run_saves_screenshot_on_match_timeout() {
 	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
 	EOF
     ! stbt run -v test.py &&
-    [ -f screenshot.png ]
+    [ -f screenshot.png ] &&
+    ! [ -f thumbnail.jpg ]
 }
 
 test_that_stbt_run_saves_screenshot_on_precondition_error() {
@@ -89,7 +90,8 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
 	EOF
     ! stbt run -v test.py &&
-    [ -f screenshot.png ]
+    [ -f screenshot.png ] &&
+    ! [ -f thumbnail.jpg ]
 }
 
 test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
@@ -103,6 +105,7 @@ test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
 	EOF
     ! stbt run -v test.py &&
     [ -f screenshot.png ] &&
+    ! [ -f thumbnail.jpg ] &&
     python <<-EOF
 	import cv2, numpy
 	ss = cv2.imread('screenshot.png')
@@ -227,6 +230,7 @@ assert_correct_unicode_error() {
 		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
+		Saved screenshot to 'screenshot.png'.
 		EOF
     diff -u <(grep -v -e File expected.log) \
             <(grep -v -e 'libdc1394 error: Failed to initialize libdc1394' \
