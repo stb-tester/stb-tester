@@ -1165,8 +1165,9 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
 
     :param predicate: A function that takes a single value. It will be given
         the return value from ``callable_``. The return value of *this* function
-        will then be used to determine truthiness. ``wait_until`` will still
-        return the original value from ``callable_``, not the predicate value.
+        will then be used to determine truthiness. If the predicate test
+        succeeds, ``wait_until`` will still return the original value from
+        ``callable_``, not the predicate value.
 
     :type stable_secs: int or float, in seconds
     :param stable_secs: Wait for ``callable_``'s return value to remain the same
