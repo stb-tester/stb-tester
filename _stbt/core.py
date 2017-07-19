@@ -538,11 +538,11 @@ def _load_template(template):
         relative_filename = template
         absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename:
-            raise ValueError("No such template file: %s" % relative_filename)
+            raise IOError("No such template file: %s" % relative_filename)
         image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
-            raise ValueError("Failed to load template file: %s" %
-                             absolute_filename)
+            raise IOError("Failed to load template file: %s" %
+                          absolute_filename)
         return _AnnotatedTemplate(image, relative_filename, absolute_filename)
 
 
@@ -569,16 +569,16 @@ def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
 
     :returns: An image in OpenCV format (a `numpy.ndarray` of 8-bit values, 3
         channel BGR).
-    :raises: `ValueError` if the specified path doesn't exist or isn't a valid
+    :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
     """
 
     absolute_filename = _find_user_file(filename)
     if not absolute_filename:
-        raise ValueError("No such file: %s" % filename)
+        raise IOError("No such file: %s" % filename)
     image = cv2.imread(absolute_filename, flags)
     if image is None:
-        raise ValueError("Failed to load image: %s" % absolute_filename)
+        raise IOError("Failed to load image: %s" % absolute_filename)
     return image
 
 
@@ -2584,10 +2584,10 @@ def _load_mask(filename):
     absolute_filename = _find_user_file(filename)
     debug("Using mask %s" % absolute_filename)
     if not absolute_filename:
-        raise ValueError("No such mask file: %s" % filename)
+        raise IOError("No such mask file: %s" % filename)
     image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
     if image is None:
-        raise ValueError("Failed to load mask file: %s" % absolute_filename)
+        raise IOError("Failed to load mask file: %s" % absolute_filename)
     return image
 
 

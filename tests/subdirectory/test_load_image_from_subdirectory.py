@@ -14,5 +14,5 @@ def test_that_load_image_looks_in_callers_directory():
         cv2.imread(os.path.join(os.path.dirname(__file__),
                                 "../videotestsrc-redblue-flipped.png")))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(IOError):
         stbt.load_image("info.png")

@@ -187,8 +187,8 @@ test_match_nonexistent_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Trying to match an non-existant template should throw"
-    cat log | grep -q "FAIL: test.py: ValueError: No such template file: idontexist.png" \
-        || fail "Didn't see 'ValueError: No such template file'"
+    cat log | grep -q "FAIL: test.py: IOError: No such template file: idontexist.png" \
+        || fail "Didn't see 'IOError: No such template file'"
 }
 
 test_match_invalid_template() {
