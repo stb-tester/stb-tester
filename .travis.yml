@@ -108,3 +108,15 @@ install:
 script:
  - tesseract --version
  - make enable_stbt_camera=no check
+
+env:
+  global:
+    secure: "fnpkggSWsTra7Tm0hTr2Zqg+FbRRYrqyX/f+Ur/aDeOJwfYeH/i9+bTX8WruHPaJhTBfxvePgJ4HvJmXGc2yCZRtbWhkm8QJDj3mV2OBYaDkjQnFE3joD9UvJDucLB10ZLkifOSQLF+5wDkgevwbIi8YE/c4cGArpC9bHV/DChk="
+
+deploy:
+  provider: script
+  script:
+    - gpg --import extra/travis.key
+    - make ppa-publish DPUT_HOST=ppa:stb-tester/stb-tester-nightly DPKG_OPTS="-k E0B66DA7A9A712E9 -p'gpg --keyring=extra/travis.keyring --batch --passphrase=$signing_passphrase'"
+  on:
+    branch: nightly-ppa
