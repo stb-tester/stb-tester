@@ -1698,6 +1698,7 @@ class SinkPipeline(object):
         self.annotations = []
         self._raise_in_user_thread = raise_in_user_thread
         self.received_eos = threading.Event()
+        self._frames = deque(maxlen=35)
 
         if save_video:
             if not save_video.endswith(".webm"):
@@ -1754,6 +1755,10 @@ class SinkPipeline(object):
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
     def teardown(self):
+        # Drain the frame queue
+        while self._frames:
+            self._push_sample(self._frames.pop())
+
         debug("teardown: Sending eos on sink pipeline")
         if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
             if not self.received_eos.wait(10):
@@ -1767,7 +1772,26 @@ class SinkPipeline(object):
         # we won't be raising any errors from now on anyway:
         self._raise_in_user_thread = None
 
-    def push_sample(self, sample):
+    def on_sample(self, sample):
+        """
+        Called from `Display` for each frame.
+        """
+        # The test script can draw on the video, but this happens in a different
+        # thread.  We don't know when they're finished drawing so we just give
+        # them 0.5s instead.
+        SINK_LATENCY_SECS = 0.5
+
+        now = sample.time
+        self._frames.appendleft(sample)
+
+        while self._frames:
+            oldest = self._frames.pop()
+            if oldest.time > now - SINK_LATENCY_SECS:
+                self._frames.append(oldest)
+                break
+            self._push_sample(oldest)
+
+    def _push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.time
         texts = []
@@ -1832,7 +1856,7 @@ class NoSinkPipeline(object):
     def teardown(self):
         pass
 
-    def push_sample(self, _sample):
+    def on_sample(self, _sample):
         pass
 
     def draw(self, _obj, _duration_secs=None, label=""):
@@ -1847,7 +1871,6 @@ class Display(object):
         import time
 
         self.novideo = False
-        self.lock = threading.RLock()  # Held by whoever is consuming frames
         self.last_sample = Queue.Queue(maxsize=1)
         self.last_used_frame = None
         self.source_pipeline = None
@@ -1950,24 +1973,18 @@ class Display(object):
             end_time = time.time() + timeout_secs
         first = True
 
-        with self.lock:
-            while True:
-                ddebug("user thread: Getting sample at %s" % time.time())
-                sample = self._get_sample(max(10, timeout_secs))
-                ddebug("user thread: Got sample at %s" % time.time())
-                timestamp = sample.time
+        while True:
+            ddebug("user thread: Getting sample at %s" % time.time())
+            sample = self._get_sample(max(10, timeout_secs))
+            ddebug("user thread: Got sample at %s" % time.time())
+            timestamp = sample.time
 
-                if (not first and timeout_secs is not None and
-                        timestamp > end_time):
-                    debug("timed out: %.3f > %.3f" % (timestamp, end_time))
-                    return
+            if not first and timeout_secs is not None and timestamp > end_time:
+                debug("timed out: %.3f > %.3f" % (timestamp, end_time))
+                return
 
-                try:
-                    yield array_from_sample(sample)
-                finally:
-                    self._sink_pipeline.push_sample(sample)
-
-                first = False
+            yield array_from_sample(sample)
+            first = False
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -1983,11 +2000,7 @@ class Display(object):
                  "source-pipeline configuration." % sample.time)
 
         self.tell_user_thread(sample)
-        if self.lock.acquire(False):  # non-blocking
-            try:
-                self._sink_pipeline.push_sample(sample)
-            finally:
-                self.lock.release()
+        self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
 
     def tell_user_thread(self, sample_or_exception):

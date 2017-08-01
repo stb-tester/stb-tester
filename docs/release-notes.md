@@ -112,6 +112,11 @@ UNRELEASED
   working properly with OpenCV 3. OpenCV 2.4 is still our primary supported
   target version of OpenCV.
 
+* Output video now runs a the full frame-rate of the input video rather than
+  slowing down during `wait_for_match`. As a side-effect the latency of the
+  video has increased by 0.5s and if the image processing is particularly slow
+  the annotations won't appear on the output video.
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox
