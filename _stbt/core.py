@@ -1870,7 +1870,6 @@ class Display(object):
 
         import time
 
-        self.novideo = False
         self.last_sample = Queue.Queue(maxsize=1)
         self.last_used_frame = None
         self.source_pipeline = None
@@ -1948,9 +1947,7 @@ class Display(object):
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
             gst_sample = self.last_sample.get(timeout=timeout_secs)
-            self.novideo = False
         except Queue.Empty:
-            self.novideo = True
             pipeline = self.source_pipeline
             if pipeline:
                 Gst.debug_bin_to_dot_file_with_ts(
