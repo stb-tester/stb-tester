@@ -1942,7 +1942,7 @@ class Display(object):
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
-    def _get_sample(self, timeout_secs=10):
+    def _get_frame(self, timeout_secs=10):
         try:
             # Timeout in case no frames are received. This happens when the
             # Hauppauge HDPVR video-capture device loses video.
@@ -1956,13 +1956,13 @@ class Display(object):
         if isinstance(gst_sample, Exception):
             raise UITestError(str(gst_sample))
 
-        if isinstance(gst_sample, Gst.Sample):
-            self.last_used_frame = array_from_sample(gst_sample)
+        if isinstance(gst_sample, Frame):
+            self.last_used_frame = gst_sample
 
         return gst_sample
 
     def pull_frame(self, timeout_secs=10):
-        return array_from_sample(self._get_sample(timeout_secs))
+        return self._get_frame(timeout_secs)
 
     def frames(self, timeout_secs=None):
         import time
@@ -1972,15 +1972,15 @@ class Display(object):
 
         while True:
             ddebug("user thread: Getting sample at %s" % time.time())
-            sample = self._get_sample(max(10, timeout_secs))
+            frame = self._get_frame(max(10, timeout_secs))
             ddebug("user thread: Got sample at %s" % time.time())
-            timestamp = sample.time
+            timestamp = frame.time
 
             if not first and timeout_secs is not None and timestamp > end_time:
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
                 return
 
-            yield array_from_sample(sample)
+            yield frame
             first = False
 
     def on_new_sample(self, appsink):
@@ -1996,22 +1996,22 @@ class Display(object):
             warn("Received frame with suspicious timestamp: %f. Check your "
                  "source-pipeline configuration." % sample.time)
 
-        self.tell_user_thread(sample)
+        self.tell_user_thread(array_from_sample(sample))
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
 
-    def tell_user_thread(self, sample_or_exception):
+    def tell_user_thread(self, frame_or_exception):
         # `self.last_sample` (a synchronised Queue) is how we communicate from
         # this thread (the GLib main loop) to the main application thread
         # running the user's script. Note that only this thread writes to the
         # Queue.
 
-        if isinstance(sample_or_exception, Exception):
+        if isinstance(frame_or_exception, Exception):
             ddebug("glib thread: reporting exception to user thread: %s" %
-                   sample_or_exception)
+                   frame_or_exception)
         else:
             ddebug("glib thread: new sample (time=%s). Queue.qsize: %d" %
-                   (sample_or_exception.time, self.last_sample.qsize()))
+                   (frame_or_exception.time, self.last_sample.qsize()))
 
         # Drop old frame
         try:
@@ -2019,7 +2019,7 @@ class Display(object):
         except Queue.Empty:
             pass
 
-        self.last_sample.put_nowait(sample_or_exception)
+        self.last_sample.put_nowait(frame_or_exception)
 
     def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
