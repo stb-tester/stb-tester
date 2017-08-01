@@ -578,3 +578,42 @@ test_that_transformation_pipeline_transforms_video() {
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
+
+test_multithreaded() {
+    cat > test.py <<-EOF &&
+	import time
+	from multiprocessing.pool import ThreadPool
+	
+	import stbt
+	
+	stbt.press('black')
+	assert stbt.wait_until(stbt.is_screen_black)
+	
+	# Kick off the threads
+	pool = ThreadPool(processes=2)
+	result_iter = pool.imap_unordered(apply, [
+	    lambda: wait_for_motion(timeout_secs=2),
+	    lambda: wait_for_match(
+	        "$testdir/videotestsrc-checkers-8.png", timeout_secs=2)
+	])
+	
+	# Change the pattern
+	stbt.press(sys.argv[1])
+	
+	# See which matched
+	result = result_iter.next()
+	if isinstance(result, MotionResult):
+	    print "Motion"
+	elif isinstance(result, MatchResult):
+	    print "Checkers"
+	EOF
+
+    stbt run -v test.py checkers-8 >out.log
+    grep -q "Checkers" out.log || fail "Expected checkers pattern"
+
+    stbt run -v test.py smpte >out.log
+    grep -q "Motion" out.log || fail "Expected motion"
+
+    stbt run -v test.py black >out.log
+    grep -q "Timeout" out.log || fail "Expected timeout"
+}

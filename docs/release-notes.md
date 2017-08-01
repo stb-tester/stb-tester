@@ -77,7 +77,31 @@ UNRELEASED
   of your stbt config file, and let us know on the mailing list as we may
   remove the workaround completely in a future release.
 
+* A call to `stbt.get_frame()` is no-longer guaranteed to return a new frame, it
+  may return the same frame that the previous call to `stbt.get_frame()`
+  returned. This may have subtle effects on the timing of existing test-scripts.
+  Functions that depend on this behaviour should be refactored to use the
+  `stbt.frames()` iterator method instead.
+
+  The benefit is that you can now call `stbt.get_frame()` from multiple threads
+  and usage like `wait_until(lambda: match('a.png') or match('b.png'))` will run
+  faster as the second `match` will no longer block waiting for a new frame.
+
 ##### New features
+
+* Python API: stbt can now be used from multiple threads simultaneously. Each
+  call to `stbt.frames()` returns an independent iterator that can be used
+  concurrently.  Example, wait for tv to start playing or an error screen:
+
+      pool = multiprocessing.pool.ThreadPool()
+      result = pool.imap_unordered(apply, [
+            lambda: wait_for_motion(),
+            lambda: wait_for_match("error-screen.png")
+        ]).next()
+      if isinstance(result, MotionResult):
+          print "TV is playing ok"
+      else:
+          print "Error screen"
 
 * New Android control mechanism to send taps, swipes, and key events. See the
   `stbt.android.AdbDevice` docstrings for usage instructions. You can capture

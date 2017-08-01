@@ -17,7 +17,6 @@ import functools
 import inspect
 import itertools
 import os
-import Queue
 import re
 import subprocess
 import threading
@@ -903,7 +902,7 @@ class DeviceUnderTest(object):
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
-            frame = self._display.pull_frame()
+            frame = self._display.get_frame()
 
         imglog = logging.ImageLogger(
             "match", match_parameters=match_parameters,
@@ -1124,7 +1123,7 @@ class DeviceUnderTest(object):
             tesseract_user_patterns=None, text_color=None):
 
         if frame is None:
-            frame = self._display.pull_frame()
+            frame = self._display.get_frame()
 
         if region is None:
             raise TypeError(
@@ -1194,7 +1193,7 @@ class DeviceUnderTest(object):
             yield f.copy(), int(f.time * 1e9)
 
     def get_frame(self):
-        return self._display.pull_frame().copy()
+        return self._display.get_frame().copy()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -1202,7 +1201,7 @@ class DeviceUnderTest(object):
         if mask:
             mask = _load_mask(mask)
         if frame is None:
-            frame = self._display.pull_frame()
+            frame = self._display.get_frame()
         greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
@@ -1870,7 +1869,8 @@ class Display(object):
 
         import time
 
-        self.last_sample = Queue.Queue(maxsize=1)
+        self._condition = threading.Condition()  # Protects last_frame
+        self.last_frame = None
         self.last_used_frame = None
         self.source_pipeline = None
         self.init_time = time.time()
@@ -1942,37 +1942,44 @@ class Display(object):
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
-    def _get_frame(self, timeout_secs=10):
-        try:
-            # Timeout in case no frames are received. This happens when the
-            # Hauppauge HDPVR video-capture device loses video.
-            gst_sample = self.last_sample.get(timeout=timeout_secs)
-        except Queue.Empty:
-            pipeline = self.source_pipeline
-            if pipeline:
-                Gst.debug_bin_to_dot_file_with_ts(
-                    pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
-            raise NoVideo("No video")
-        if isinstance(gst_sample, Exception):
-            raise UITestError(str(gst_sample))
+    def get_frame(self, timeout_secs=10, since=None):
+        import time
+        t = time.time()
+        end_time = t + timeout_secs
+        if since is None:
+            # If you want to wait 10s for a frame you're probably not interested
+            # in a frame from 10s ago.
+            since = t - timeout_secs
 
-        if isinstance(gst_sample, Frame):
-            self.last_used_frame = gst_sample
+        with self._condition:
+            while True:
+                if (isinstance(self.last_frame, Frame) and
+                        self.last_frame.time > since):
+                    self.last_used_frame = self.last_frame
+                    return self.last_frame
+                elif isinstance(self.last_frame, Exception):
+                    raise UITestError(str(self.last_frame))
+                t = time.time()
+                if t > end_time:
+                    break
+                self._condition.wait(end_time - t)
 
-        return gst_sample
-
-    def pull_frame(self, timeout_secs=10):
-        return self._get_frame(timeout_secs)
+        pipeline = self.source_pipeline
+        if pipeline:
+            Gst.debug_bin_to_dot_file_with_ts(
+                pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
+        raise NoVideo("No video")
 
     def frames(self, timeout_secs=None):
         import time
         if timeout_secs is not None:
             end_time = time.time() + timeout_secs
+        timestamp = None
         first = True
 
         while True:
             ddebug("user thread: Getting sample at %s" % time.time())
-            frame = self._get_frame(max(10, timeout_secs))
+            frame = self.get_frame(max(10, timeout_secs), since=timestamp)
             ddebug("user thread: Got sample at %s" % time.time())
             timestamp = frame.time
 
@@ -2001,25 +2008,20 @@ class Display(object):
         return Gst.FlowReturn.OK
 
     def tell_user_thread(self, frame_or_exception):
-        # `self.last_sample` (a synchronised Queue) is how we communicate from
-        # this thread (the GLib main loop) to the main application thread
-        # running the user's script. Note that only this thread writes to the
-        # Queue.
+        # `self.last_frame` is how we communicate from this thread (the GLib
+        # main loop) to the main application thread running the user's script.
+        # Note that only this thread writes to self.last_frame.
 
         if isinstance(frame_or_exception, Exception):
             ddebug("glib thread: reporting exception to user thread: %s" %
                    frame_or_exception)
         else:
-            ddebug("glib thread: new sample (time=%s). Queue.qsize: %d" %
-                   (frame_or_exception.time, self.last_sample.qsize()))
+            ddebug("glib thread: new sample (time=%s)." %
+                   frame_or_exception.time)
 
-        # Drop old frame
-        try:
-            self.last_sample.get_nowait()
-        except Queue.Empty:
-            pass
-
-        self.last_sample.put_nowait(frame_or_exception)
+        with self._condition:
+            self.last_frame = frame_or_exception
+            self._condition.notify_all()
 
     def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
