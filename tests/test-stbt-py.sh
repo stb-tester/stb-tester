@@ -426,6 +426,63 @@ test_clock_visualisation() {
         verify.py
 }
 
+test_that_visualisation_doesnt_write_to_user_frame() {
+    cat > test.py <<-EOF
+	import numpy, stbt, time
+	
+	f = stbt.get_frame()
+	orig = f.copy()
+	stbt.draw_text("Hello")
+	time.sleep(1)  # wait for sink pipeline buffer to process the frame
+	# Can't use is_screen_black because on ubuntu 14.04 videotestsrc
+	# has a green bar along the bottom of the frame.
+	assert numpy.all(f == orig)
+	EOF
+    stbt run -v \
+        --source-pipeline 'videotestsrc pattern=black is-live=true' \
+        --save-video=video.webm \
+        test.py
+}
+
+test_that_frames_are_read_only() {
+    cat > test.py <<-EOF
+	import stbt
+	
+	f = stbt.get_frame()
+	try:
+	    f[0,0,0] = 0
+	    assert False, "Frame from stbt.get_frame is writeable"
+	except (ValueError, RuntimeError):
+	    # Different versions of numpy raise different exceptions
+	    pass
+	
+	for f, _ in stbt.frames():
+	    try:
+	        f[0,0,0] = 0
+	        assert False, "frame from stbt.frames is writeable"
+	    except (ValueError, RuntimeError):
+	        pass
+	    break
+	
+	class F(stbt.FrameObject):
+	    pass
+	f = F()
+	try:
+	    f._frame[0,0,0] = 0
+	    assert False, "stbt.FrameObject._frame is writeable"
+	except (ValueError, RuntimeError):
+	    pass
+	
+	m = stbt.match("$testdir/videotestsrc-redblue.png")
+	try:
+	    m.frame[0,0,0] = 0
+	    assert False, "stbt.MatchResult.frame is writeable"
+	except (ValueError, RuntimeError):
+	    pass
+	EOF
+    stbt run -v test.py
+}
+
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
 	import stbt, time

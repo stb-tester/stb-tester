@@ -933,11 +933,6 @@ class DeviceUnderTest(object):
 
         region = Region.intersect(_image_region(frame), region)
 
-        # Remove this copy once we've confirmed that doing so won't cause
-        # push_sample to doodle on the frame later.
-        frame = frame.copy()
-        frame.flags.writeable = False
-
         # pylint:disable=undefined-loop-variable
         try:
             for (matched, match_region, first_pass_matched,
@@ -1234,7 +1229,7 @@ class DeviceUnderTest(object):
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
                 return
 
-            yield frame.copy(), int(frame.time * 1e9)
+            yield frame, int(frame.time * 1e9)
             first = False
 
     def get_frame(self):
@@ -1244,7 +1239,7 @@ class DeviceUnderTest(object):
             self._last_grabbed_frame_time = frame.time
             return frame
         else:
-            return self._display.get_frame().copy()
+            return self._display.get_frame()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -2034,7 +2029,9 @@ class Display(object):
             warn("Received frame with suspicious timestamp: %f. Check your "
                  "source-pipeline configuration." % sample.time)
 
-        self.tell_user_thread(array_from_sample(sample))
+        frame = array_from_sample(sample)
+        frame.flags.writeable = False
+        self.tell_user_thread(frame)
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
 

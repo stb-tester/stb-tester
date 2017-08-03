@@ -359,19 +359,6 @@ test_match_reports_match_region() {
     stbt run -v test.py
 }
 
-test_matchresult_frame_is_readonly() {
-    cat > test.py <<-EOF
-	import stbt
-	m = stbt.match("$testdir/videotestsrc-redblue.png")
-	try:
-	    m.frame[0,0,0] = 0
-	    assert False, "Modifying the frame from 'match' should have failed"
-	except ValueError:
-	    pass
-	EOF
-    stbt run -v test.py
-}
-
 test_match_searches_in_provided_frame() {
     cat > test.py <<-EOF
 	import cv2, stbt

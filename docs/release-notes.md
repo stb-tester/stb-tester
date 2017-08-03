@@ -96,6 +96,9 @@ UNRELEASED
   and usage like `wait_until(lambda: match('a.png') or match('b.png'))` will run
   faster as the second `match` will no longer block waiting for a new frame.
 
+* `stbt.get_frame()` and `stbt.frames()` now return read-only frames for better
+  performance.  Use `frame.copy()` to make a frame read-write.
+
 [stb-tester/stb-tester#449]: https://github.com/stb-tester/stb-tester/pull/449
 
 ##### New features
