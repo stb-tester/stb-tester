@@ -55,9 +55,8 @@ validate_html_report() {
 
 test_stbt_batch_run_once() {
     create_test_repo
-    { stbt batch run -1 -t "my label" tests/test.py ||
+    stbt batch run -1 -t "my label" tests/test.py ||
         fail "stbt batch run failed"
-    } | sed 's/^/stbt batch run: /'
 
     local expected_commit="$(git -C tests describe --always)"
     local expected_commit_sha="$(git -C tests rev-parse HEAD)"
@@ -109,8 +108,7 @@ test_stbt_batch_run_when_test_script_isnt_in_git_repo() {
     create_test_repo
     rm -rf tests/.git
 
-    { stbt batch run -1 tests/test.py || fail "stbt batch run failed"; } \
-        | sed 's/^/stbt batch run: /'
+    stbt batch run -1 tests/test.py || fail "stbt batch run failed"
 
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
     [[ ! -f latest/git-commit ]] || fail "didn't expect to see latest/git-commit"
@@ -261,9 +259,8 @@ test_stbt_batch_run_without_html_reports() {
 test_stbt_batch_run_no_save_video() {
     create_test_repo
     set_config global.sink_pipeline ""
-    { stbt batch run --no-save-video -1 -t "my label" tests/test.py ||
+    stbt batch run --no-save-video -1 -t "my label" tests/test.py ||
         fail "stbt batch run failed"
-    } | sed 's/^/stbt batch run: /'
 
     local expected_commit="$(git -C tests describe --always)"
     local expected_commit_sha="$(git -C tests rev-parse HEAD)"
