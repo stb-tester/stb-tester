@@ -744,8 +744,11 @@ def new_device_under_test_from_config(
     if not gst_sink_pipeline and not save_video:
         sink_pipeline = NoSinkPipeline()
     else:
+        if not gst_sink_pipeline:
+            gst_sink_pipeline = "fakesink sync=false"
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
             gst_sink_pipeline, raise_in_user_thread, save_video)
+
     display[0] = Display(
         gst_source_pipeline, sink_pipeline, restart_source,
         transformation_pipeline)
