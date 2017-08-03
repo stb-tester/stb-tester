@@ -13,7 +13,7 @@
 # Input environment variables:
 #
 # * $do_html_report ("true" or "false")
-# * $save_video ("true" or "false")
+# * $do_save_video ("true" or "false")
 # * $tag
 # * $v
 # * $verbose
@@ -72,7 +72,7 @@ main() {
     "$runner"/report --html-only . >/dev/null
   fi
 
-  if [ "$save_video" != "false" ]; then
+  if [ "$do_save_video" != "false" ]; then
     save_video_arg="--save-video=video.webm"
   fi
 

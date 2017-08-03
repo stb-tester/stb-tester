@@ -52,13 +52,13 @@ def main(argv):
             "Run the test cases in a random order attempting to spend the same "
             "total amount of time executing each test case."))
     parser.add_argument(
-        '--no-html-report', action='store_false', dest='html_report', help="""
-            Don't generate an HTML report after each testrun; generating the
+        '--no-html-report', action='store_false', dest='do_html_report',
+        help="""Don't generate an HTML report after each testrun; generating the
             report can be slow if there are many results in the output
             directory. You can still generate the HTML reports afterwards with
             'stbt batch report'.""")
     parser.add_argument(
-        '--no-save-video', action='store_false', dest='save_video', help="""
+        '--no-save-video', action='store_false', dest='do_save_video', help="""
             Don't generate a video recording of each test-run. Use this if you
             are saving video another way.""")
     parser.add_argument('test_name', nargs=argparse.REMAINDER)
@@ -108,8 +108,8 @@ def main(argv):
             break
         run_count += 1
         subenv = dict(os.environ)
-        subenv['do_html_report'] = "true" if args.html_report else "false"
-        subenv['save_video'] = "true" if args.save_video else "false"
+        subenv['do_html_report'] = "true" if args.do_html_report else "false"
+        subenv['do_save_video'] = "true" if args.do_save_video else "false"
         subenv['tag'] = tag
         subenv['v'] = '-vv' if args.debug else '-v'
         subenv['verbose'] = str(args.verbose)
