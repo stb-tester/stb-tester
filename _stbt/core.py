@@ -820,12 +820,15 @@ def _pixel_bounding_box(img):
 
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None, sink_pipeline=None,
-                 mainloop=None):
+                 mainloop=None, _time=None):
+        if _time is None:
+            import time as _time
         self._time_of_last_press = None
         self._display = display
         self._control = control
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
+        self._time = _time
 
     def __enter__(self):
         if self._display:
@@ -844,7 +847,6 @@ class DeviceUnderTest(object):
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
-        import time
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
@@ -857,7 +859,7 @@ class DeviceUnderTest(object):
                     datetime.timedelta(seconds=interpress_delay_secs)
                 ).total_seconds()
                 if seconds_to_wait > 0:
-                    time.sleep(seconds_to_wait)
+                    self._time.sleep(seconds_to_wait)
                 else:
                     break
 
@@ -1189,8 +1191,24 @@ class DeviceUnderTest(object):
         return result
 
     def frames(self, timeout_secs=None):
-        for f in self._display.frames(timeout_secs):
-            yield f.copy(), int(f.time * 1e9)
+        if timeout_secs is not None:
+            end_time = self._time.time() + timeout_secs
+        timestamp = None
+        first = True
+
+        while True:
+            ddebug("user thread: Getting sample at %s" % self._time.time())
+            frame = self._display.get_frame(
+                max(10, timeout_secs), since=timestamp)
+            ddebug("user thread: Got sample at %s" % self._time.time())
+            timestamp = frame.time
+
+            if not first and timeout_secs is not None and timestamp > end_time:
+                debug("timed out: %.3f > %.3f" % (timestamp, end_time))
+                return
+
+            yield frame.copy(), int(frame.time * 1e9)
+            first = False
 
     def get_frame(self):
         return self._display.get_frame().copy()
@@ -1969,26 +1987,6 @@ class Display(object):
             Gst.debug_bin_to_dot_file_with_ts(
                 pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
         raise NoVideo("No video")
-
-    def frames(self, timeout_secs=None):
-        import time
-        if timeout_secs is not None:
-            end_time = time.time() + timeout_secs
-        timestamp = None
-        first = True
-
-        while True:
-            ddebug("user thread: Getting sample at %s" % time.time())
-            frame = self.get_frame(max(10, timeout_secs), since=timestamp)
-            ddebug("user thread: Got sample at %s" % time.time())
-            timestamp = frame.time
-
-            if not first and timeout_secs is not None and timestamp > end_time:
-                debug("timed out: %.3f > %.3f" % (timestamp, end_time))
-                return
-
-            yield frame
-            first = False
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -2969,7 +2967,7 @@ def test_wait_for_motion_half_motion_str_2of3():
 def test_wait_for_motion_half_motion_str_4of10():
     with _fake_frames_at_half_motion() as dut:
         # Time is not affected by consecutive_frames parameter
-        res = dut.wait_for_motion(consecutive_frames='4/10')
+        res = dut.wait_for_motion(consecutive_frames='4/10', timeout_secs=20)
         assert res.time == 1466084612.
 
 
@@ -2993,26 +2991,41 @@ def test_wait_for_motion_half_motion_int():
 
 @contextmanager
 def _fake_frames_at_half_motion():
+    FRAMES = []
+    data = [
+        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
+        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
+        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
+    ]
+    # Start with no motion
+    for i in range(6):
+        FRAMES.append(Frame(data[0], time=1466084606. + i))
+    # Motion starts on 6th frame at time 1466084612.
+    for i in range(6, 20):
+        FRAMES.append(Frame(data[i % len(data)], time=1466084606. + i))
+
     class FakeDisplay(object):
-        def frames(self, _timeout_secs=10):
-            data = [
-                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-            ]
-            # Start with no motion
-            for i in range(6):
-                yield Frame(data[0], time=1466084606. + i)
-            # Motion starts on 6th frame at time 1466084612.
-            for i in range(6, 20):
-                yield Frame(data[i % len(data)], time=1466084606. + i)
+        def get_frame(self, timeout_secs=10, since=0):  # pylint: disable=unused-argument
+            for f in FRAMES:
+                if f.time > since:
+                    return f
+            f = FRAMES[-1].copy()
+            f.time = since + 1
+            return f
 
-        def draw(self, *_args, **_kwargs):
-            pass
+    class FakeTime(object):
+        def __init__(self, now):
+            self._now = now
 
-    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline())
-    dut.get_frame = lambda: None
+        def time(self):
+            return self._now
+
+        def sleep(self, duration):
+            self._now += duration
+
+    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline(),
+                          _time=FakeTime(FRAMES[0].time))
     yield dut
 
 
