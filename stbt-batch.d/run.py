@@ -44,7 +44,7 @@ def main(argv):
             '(defaults to the current directory).'))
     parser.add_argument(
         '-t', '--tag', help=(
-            'Tag to add to test run directory names (useful to differentiate '
+            'Tag to add to test-run directory names (useful to differentiate '
             'directories when you intend to merge test results from multiple '
             'machines).'))
     parser.add_argument(
@@ -52,11 +52,15 @@ def main(argv):
             "Run the test cases in a random order attempting to spend the same "
             "total amount of time executing each test case."))
     parser.add_argument(
-        '--no-html-report', action='store_true', help="""
-            Don't generate an HTML report after each testrun; generating the
-            report can be slow if there are many results in the output
+        '--no-html-report', action='store_false', dest='do_html_report',
+        help="""Don't generate an HTML report after each test-run; generating
+            the report can be slow if there are many results in the output
             directory. You can still generate the HTML reports afterwards with
             'stbt batch report'.""")
+    parser.add_argument(
+        '--no-save-video', action='store_false', dest='do_save_video', help="""
+            Don't generate a video recording of each test-run. Use this if you
+            are saving video another way.""")
     parser.add_argument('test_name', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv[1:])
 
@@ -104,7 +108,8 @@ def main(argv):
             break
         run_count += 1
         subenv = dict(os.environ)
-        subenv['do_html_report'] = "false" if args.no_html_report else "true"
+        subenv['do_html_report'] = "true" if args.do_html_report else "false"
+        subenv['do_save_video'] = "true" if args.do_save_video else "false"
         subenv['tag'] = tag
         subenv['v'] = '-vv' if args.debug else '-v'
         subenv['verbose'] = str(args.verbose)

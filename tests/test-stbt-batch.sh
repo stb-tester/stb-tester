@@ -55,9 +55,8 @@ validate_html_report() {
 
 test_stbt_batch_run_once() {
     create_test_repo
-    { stbt batch run -1 -t "my label" tests/test.py ||
+    stbt batch run -1 -t "my label" tests/test.py ||
         fail "stbt batch run failed"
-    } | sed 's/^/stbt batch run: /'
 
     local expected_commit="$(git -C tests describe --always)"
     local expected_commit_sha="$(git -C tests rev-parse HEAD)"
@@ -109,8 +108,7 @@ test_stbt_batch_run_when_test_script_isnt_in_git_repo() {
     create_test_repo
     rm -rf tests/.git
 
-    { stbt batch run -1 tests/test.py || fail "stbt batch run failed"; } \
-        | sed 's/^/stbt batch run: /'
+    stbt batch run -1 tests/test.py || fail "stbt batch run failed"
 
     [[ $(cat latest/exit-status) == 0 ]] || fail "wrong latest/exit-status"
     [[ ! -f latest/git-commit ]] || fail "didn't expect to see latest/git-commit"
@@ -256,6 +254,42 @@ test_stbt_batch_run_without_html_reports() {
 
     # classify should still run.
     [[ -f latest/my-classifier-ran ]] || fail "Custom classifier didn't run"
+}
+
+test_stbt_batch_run_no_save_video_no_sink_pipeline() {
+    do_test_stbt_batch_run_no_save_video --no-save-video ""
+}
+
+test_stbt_batch_run_no_save_video_fakesink() {
+    do_test_stbt_batch_run_no_save_video --no-save-video fakesink
+}
+
+test_stbt_batch_run_no_sink_pipeline() {
+    do_test_stbt_batch_run_no_save_video "" ""
+}
+
+do_test_stbt_batch_run_no_save_video() {
+    local no_save_video="$1" sink_pipeline="$2"
+
+    create_test_repo
+    set_config global.sink_pipeline "$sink_pipeline"
+    stbt batch run $no_save_video -1 -t "my label" tests/test.py ||
+        fail "stbt batch run failed"
+
+    local expected_commit="$(git -C tests describe --always)"
+    local expected_commit_sha="$(git -C tests rev-parse HEAD)"
+
+    case "$no_save_video" in
+        --no-save-video)
+            ! [ -e "latest-my label/video.webm" ] ||
+            fail "Video was written even though it shouldn't have been";;
+        *)
+            [ -e "latest-my label/video.webm" ] ||
+            fail "Video wasn't written even though it should have been";;
+    esac
+
+    # We still expect an HTML report even if a video is not available
+    validate_html_report "latest-my label" test.py "$expected_commit" "$expected_commit_sha" "my label"
 }
 
 test_stbt_batch_run_with_custom_recovery_script() {

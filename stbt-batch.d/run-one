@@ -13,6 +13,7 @@
 # Input environment variables:
 #
 # * $do_html_report ("true" or "false")
+# * $do_save_video ("true" or "false")
 # * $tag
 # * $v
 # * $verbose
@@ -71,10 +72,14 @@ main() {
     "$runner"/report --html-only . >/dev/null
   fi
 
+  if [ "$do_save_video" != "false" ]; then
+    save_video_arg="--save-video=video.webm"
+  fi
+
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
-  "$runner"/../stbt-run $v --save-thumbnail=always --save-video "video.webm" \
+  "$runner"/../stbt-run $v --save-thumbnail=always $save_video_arg \
     "$testpath" -- "$@" \
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
@@ -167,7 +172,7 @@ check_capture_hardware() {
     decklinksrc)
       ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
         GST_DEBUG=decklinksrc:5 GST_DEBUG_NO_COLOR=1 \
-        "$runner"/../stbt-run --sink-pipeline='fakesink sync=false' \
+        "$runner"/../stbt-run --sink-pipeline='' \
           <(echo "import time; time.sleep(1)") 2>&1
       ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
 

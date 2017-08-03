@@ -732,13 +732,29 @@ def new_device_under_test_from_config(
     if restart_source is None:
         restart_source = get_config('global', 'restart_source')
     if transformation_pipeline is None:
-        gst_sink_pipeline = get_config('global', 'transformation_pipeline')
+        transformation_pipeline = get_config('global',
+                                             'transformation_pipeline')
 
-    display = Display(
-        gst_source_pipeline, gst_sink_pipeline, _mainloop(), save_video,
-        restart_source, transformation_pipeline)
+    display = [None]
+
+    def raise_in_user_thread(exception):
+        display[0].tell_user_thread(exception)
+    mainloop = _mainloop()
+
+    if not gst_sink_pipeline and not save_video:
+        sink_pipeline = NoSinkPipeline()
+    else:
+        if not gst_sink_pipeline:
+            gst_sink_pipeline = "fakesink sync=false"
+        sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
+            gst_sink_pipeline, raise_in_user_thread, save_video)
+
+    display[0] = Display(
+        gst_source_pipeline, sink_pipeline, restart_source,
+        transformation_pipeline)
     return DeviceUnderTest(
-        display=display, control=uri_to_remote(control_uri, display))
+        display=display[0], control=uri_to_remote(control_uri, display[0]),
+        sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
 def _pixel_bounding_box(img):
@@ -783,20 +799,28 @@ def _pixel_bounding_box(img):
 
 
 class DeviceUnderTest(object):
-    def __init__(self, display=None, control=None):
+    def __init__(self, display=None, control=None, sink_pipeline=None,
+                 mainloop=None):
         self._time_of_last_press = None
         self._display = display
         self._control = control
+        self._sink_pipeline = sink_pipeline
+        self._mainloop = mainloop
 
     def __enter__(self):
         if self._display:
+            self._mainloop.__enter__()
+            self._sink_pipeline.startup()
             self._display.startup()
         return self
 
-    def __exit__(self, _exc_type, _exc_value, _traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         if self._display:
             self._display.teardown()
             self._display = None
+            self._sink_pipeline.teardown()
+            self._sink_pipeline = None
+            self._mainloop.__exit__(exc_type, exc_value, tb)
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
@@ -822,7 +846,7 @@ class DeviceUnderTest(object):
         self.draw_text(key, duration_secs=3)
 
     def draw_text(self, text, duration_secs=3):
-        self._display.draw(text, duration_secs)
+        self._sink_pipeline.draw(text, duration_secs)
 
     def match(self, image, frame=None, match_parameters=None,
               region=Region.ALL):
@@ -887,7 +911,7 @@ class DeviceUnderTest(object):
                     first_pass_matched)
                 imglog.append(matches=result)
                 if grabbed_from_live:
-                    self._display.draw(
+                    self._sink_pipeline.draw(
                         result, label="match(%r)" %
                         os.path.basename(template.friendly_name))
                 yield result
@@ -908,8 +932,9 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._display.draw(result, label="match(%r)" %
-                               os.path.basename(template.friendly_name))
+            self._sink_pipeline.draw(
+                result, label="match(%r)" %
+                os.path.basename(template.friendly_name))
             yield result
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
@@ -968,7 +993,7 @@ class DeviceUnderTest(object):
 
             result = MotionResult(getattr(frame, "time", None), motion,
                                   out_region)
-            self._display.draw(result, label="detect_motion()")
+            self._sink_pipeline.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
             yield result
@@ -1641,11 +1666,157 @@ class _Annotation(namedtuple("_Annotation", "time region label colour")):
         _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
 
 
+class SinkPipeline(object):
+    def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
+        self.annotations_lock = threading.Lock()
+        self.text_annotations = []
+        self.annotations = []
+        self._raise_in_user_thread = raise_in_user_thread
+        self.received_eos = threading.Event()
+
+        if save_video:
+            if not save_video.endswith(".webm"):
+                save_video += ".webm"
+            debug("Saving video to '%s'" % save_video)
+            video_pipeline = (
+                "t. ! queue leaky=downstream ! videoconvert ! "
+                "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
+                "webmmux ! filesink location=%s" % save_video)
+        else:
+            video_pipeline = ""
+
+        sink_pipeline_description = " ".join([
+            "appsrc name=appsrc format=time " +
+            "caps=video/x-raw,format=(string)BGR !",
+            "tee name=t",
+            video_pipeline,
+            "t. ! queue leaky=downstream ! videoconvert !",
+            user_sink_pipeline
+        ])
+
+        self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
+        sink_bus = self.sink_pipeline.get_bus()
+        sink_bus.connect("message::error", self._on_error)
+        sink_bus.connect("message::warning", self._on_warning)
+        sink_bus.connect("message::eos", self._on_eos_from_sink_pipeline)
+        sink_bus.add_signal_watch()
+        self.appsrc = self.sink_pipeline.get_by_name("appsrc")
+
+        debug("sink pipeline: %s" % sink_pipeline_description)
+
+    def _on_eos_from_sink_pipeline(self, _bus, _message):
+        debug("Got EOS from sink pipeline")
+        self.received_eos.set()
+
+    def _on_warning(self, _bus, message):
+        assert message.type == Gst.MessageType.WARNING
+        Gst.debug_bin_to_dot_file_with_ts(
+            self.sink_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
+        err, dbg = message.parse_warning()
+        warn("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+
+    def _on_error(self, _bus, message):
+        assert message.type == Gst.MessageType.ERROR
+        if self.sink_pipeline is not None:
+            Gst.debug_bin_to_dot_file_with_ts(
+                self.sink_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
+        err, dbg = message.parse_error()
+        self._raise_in_user_thread(
+            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+
+    def startup(self):
+        self.received_eos.clear()
+        self.sink_pipeline.set_state(Gst.State.PLAYING)
+
+    def teardown(self):
+        debug("teardown: Sending eos on sink pipeline")
+        if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+            if not self.received_eos.wait(10):
+                debug("Timeout waiting for sink EOS")
+        else:
+            debug("Sending EOS to sink pipeline failed")
+
+        self.sink_pipeline.set_state(Gst.State.NULL)
+
+        # Don't want to cause the Display object to hang around on our account,
+        # we won't be raising any errors from now on anyway:
+        self._raise_in_user_thread = None
+
+    def push_sample(self, sample):
+        # Calculate whether we need to draw any annotations on the output video.
+        now = sample.time
+        texts = []
+        annotations = []
+        with self.annotations_lock:
+            for x in self.text_annotations:
+                x.setdefault('start_time', now)
+                if now < x['start_time'] + x['duration']:
+                    texts.append(x)
+            self.text_annotations = texts[:]
+            for annotation in list(self.annotations):
+                if annotation.time == now:
+                    annotations.append(annotation)
+                if now >= annotation.time:
+                    self.annotations.remove(annotation)
+
+        sample = gst_sample_make_writable(sample)
+        img = array_from_sample(sample, readwrite=True)
+        # Text:
+        _draw_text(
+            img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
+            (10, 30), (255, 255, 255))
+        for i, x in enumerate(reversed(texts)):
+            origin = (10, (i + 2) * 30)
+            age = float(now - x['start_time']) / 3
+            color = (int(255 * max([1 - age, 0.5])),) * 3
+            _draw_text(img, x['text'], origin, color)
+
+        # Regions:
+        for annotation in annotations:
+            annotation.draw(img)
+
+        self.appsrc.props.caps = sample.get_caps()
+        self.appsrc.emit("push-buffer", sample.get_buffer())
+
+    def draw(self, obj, duration_secs=None, label=""):
+        with self.annotations_lock:
+            if isinstance(obj, str) or isinstance(obj, unicode):
+                obj = (
+                    datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
+                    ' ' + obj)
+                self.text_annotations.append(
+                    {"text": obj, "duration": duration_secs})
+            elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
+                annotation = _Annotation.from_result(obj, label=label)
+                if annotation.time:
+                    self.annotations.append(annotation)
+            else:
+                raise TypeError(
+                    "Can't draw object of type '%s'" % type(obj).__name__)
+
+
+class NoSinkPipeline(object):
+    """
+    Used in place of a SinkPipeline when no video output is required.  Is a lot
+    faster because it doesn't do anything.  It especially doesn't do any copying
+    nor video encoding :).
+    """
+    def startup(self):
+        pass
+
+    def teardown(self):
+        pass
+
+    def push_sample(self, _sample):
+        pass
+
+    def draw(self, _obj, _duration_secs=None, label=""):
+        pass
+
+
 class Display(object):
-    def __init__(self, user_source_pipeline, user_sink_pipeline,
-                 mainloop, save_video="",
-                 restart_source=False,
-                 transformation_pipeline='identity'):
+    def __init__(self, user_source_pipeline, sink_pipeline,
+                 restart_source=False, transformation_pipeline='identity'):
 
         import time
 
@@ -1658,14 +1829,8 @@ class Display(object):
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
-        self.received_eos = threading.Event()
-
-        self.annotations_lock = threading.Lock()
-        self.text_annotations = []
-        self.annotations = []
 
         self.restart_source_enabled = restart_source
-
         appsink = (
             "appsink name=appsink max-buffers=1 drop=false sync=true "
             "emit-signals=true "
@@ -1691,47 +1856,15 @@ class Display(object):
             appsink])
         self.create_source_pipeline()
 
-        if save_video:
-            if not save_video.endswith(".webm"):
-                save_video += ".webm"
-            debug("Saving video to '%s'" % save_video)
-            video_pipeline = (
-                "t. ! queue leaky=downstream ! videoconvert ! "
-                "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
-                "webmmux ! filesink location=%s" % save_video)
-        else:
-            video_pipeline = ""
-
-        sink_pipeline_description = " ".join([
-            "appsrc name=appsrc format=time " +
-            "caps=video/x-raw,format=(string)BGR !",
-            "tee name=t",
-            video_pipeline,
-            "t. ! queue leaky=downstream ! videoconvert !",
-            user_sink_pipeline
-        ])
-
-        self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
-        sink_bus = self.sink_pipeline.get_bus()
-        sink_bus.connect(
-            "message::error",
-            lambda bus, msg: self.on_error(self.sink_pipeline, bus, msg))
-        sink_bus.connect("message::warning", self.on_warning)
-        sink_bus.connect("message::eos", self.on_eos_from_sink_pipeline)
-        sink_bus.add_signal_watch()
-        self.appsrc = self.sink_pipeline.get_by_name("appsrc")
+        self._sink_pipeline = sink_pipeline
 
         debug("source pipeline: %s" % self.source_pipeline_description)
-        debug("sink pipeline: %s" % sink_pipeline_description)
-        self.mainloop = mainloop
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
             self.source_pipeline_description)
         source_bus = self.source_pipeline.get_bus()
-        source_bus.connect(
-            "message::error",
-            lambda bus, msg: self.on_error(self.source_pipeline, bus, msg))
+        source_bus.connect("message::error", self.on_error)
         source_bus.connect("message::warning", self.on_warning)
         source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
@@ -1808,7 +1941,7 @@ class Display(object):
                 try:
                     yield array_from_sample(sample)
                 finally:
-                    self.push_sample(sample)
+                    self._sink_pipeline.push_sample(sample)
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -1826,7 +1959,7 @@ class Display(object):
         self.tell_user_thread(sample)
         if self.lock.acquire(False):  # non-blocking
             try:
-                self.push_sample(sample)
+                self._sink_pipeline.push_sample(sample)
             finally:
                 self.lock.release()
         return Gst.FlowReturn.OK
@@ -1852,60 +1985,9 @@ class Display(object):
 
         self.last_sample.put_nowait(sample_or_exception)
 
-    def draw(self, obj, duration_secs=None, label=""):
-        with self.annotations_lock:
-            if isinstance(obj, str) or isinstance(obj, unicode):
-                obj = (
-                    datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
-                    ' ' + obj)
-                self.text_annotations.append(
-                    {"text": obj, "duration": duration_secs})
-            elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
-                annotation = _Annotation.from_result(obj, label=label)
-                if annotation.time:
-                    self.annotations.append(annotation)
-            else:
-                raise TypeError(
-                    "Can't draw object of type '%s'" % type(obj).__name__)
-
-    def push_sample(self, sample):
-        # Calculate whether we need to draw any annotations on the output video.
-        now = sample.time
-        texts = []
-        annotations = []
-        with self.annotations_lock:
-            for x in self.text_annotations:
-                x.setdefault('start_time', now)
-                if now < x['start_time'] + x['duration']:
-                    texts.append(x)
-            self.text_annotations = texts[:]
-            for annotation in list(self.annotations):
-                if annotation.time == now:
-                    annotations.append(annotation)
-                if now >= annotation.time:
-                    self.annotations.remove(annotation)
-
-        sample = gst_sample_make_writable(sample)
-        img = array_from_sample(sample, readwrite=True)
-        # Text:
-        _draw_text(
-            img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
-            (10, 30), (255, 255, 255))
-        for i, x in enumerate(reversed(texts)):
-            origin = (10, (i + 2) * 30)
-            age = float(now - x['start_time']) / 3
-            color = (int(255 * max([1 - age, 0.5])),) * 3
-            _draw_text(img, x['text'], origin, color)
-
-        # Regions:
-        for annotation in annotations:
-            annotation.draw(img)
-
-        self.appsrc.props.caps = sample.get_caps()
-        self.appsrc.emit("push-buffer", sample.get_buffer())
-
-    def on_error(self, pipeline, _bus, message):
+    def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
+        pipeline = self.source_pipeline
         if pipeline is not None:
             Gst.debug_bin_to_dot_file_with_ts(
                 pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
@@ -1924,10 +2006,6 @@ class Display(object):
         if not self.tearing_down:
             warn("Got EOS from source pipeline")
             self.restart_source()
-
-    def on_eos_from_sink_pipeline(self, _bus, _message):
-        debug("Got EOS")
-        self.received_eos.set()
 
     def on_underrun(self, _element):
         if self.underrun_timeout:
@@ -1978,10 +2056,6 @@ class Display(object):
 
     def startup(self):
         self.set_source_pipeline_playing()
-        self.sink_pipeline.set_state(Gst.State.PLAYING)
-        self.received_eos.clear()
-
-        self.mainloop.__enter__()
 
     def teardown(self):
         self.tearing_down = True
@@ -1994,16 +2068,6 @@ class Display(object):
                 debug("teardown: Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
-
-        debug("teardown: Sending eos")
-        if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
-            if not self.received_eos.wait(10):
-                debug("Timeout waiting for sink EOS")
-        else:
-            debug("Sending EOS to sink pipeline failed")
-        self.sink_pipeline.set_state(Gst.State.NULL)
-
-        self.mainloop.__exit__(None, None, None)
 
 
 def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
@@ -2909,7 +2973,7 @@ def _fake_frames_at_half_motion():
         def draw(self, *_args, **_kwargs):
             pass
 
-    dut = DeviceUnderTest(display=FakeDisplay())
+    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline())
     dut.get_frame = lambda: None
     yield dut
 
