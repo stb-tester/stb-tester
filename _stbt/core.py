@@ -732,7 +732,8 @@ def new_device_under_test_from_config(
     if restart_source is None:
         restart_source = get_config('global', 'restart_source')
     if transformation_pipeline is None:
-        gst_sink_pipeline = get_config('global', 'transformation_pipeline')
+        transformation_pipeline = get_config('global',
+                                             'transformation_pipeline')
 
     display = [None]
 
