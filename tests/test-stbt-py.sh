@@ -617,3 +617,70 @@ test_multithreaded() {
     stbt run -v test.py black >out.log
     grep -q "Timeout" out.log || fail "Expected timeout"
 }
+
+test_global_use_old_threading_behaviour() {
+    set_config global.use_old_threading_behaviour true
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	print "Saw %i unique frames" % len(ts)
+	assert len(ts) == 10
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+
+    grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour Warning not printed"
+
+    set_config global.use_old_threading_behaviour false
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	print "Saw %i unique frames" % len(ts)
+	assert len(ts) < 5
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+    ! grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour warning shouldn't be printed"
+}
+
+test_global_use_old_threading_behaviour_frames() {
+    set_config global.use_old_threading_behaviour true
+
+    cat > test.py <<-EOF &&
+	import itertools
+	sa = set()
+	sb = set()
+	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	    if len(sa) >= 10:
+	        break
+	    sa.add(a.time)
+	    sb.add(b.time)
+	assert len(sa) == 10
+	assert len(sb) == 10
+	# sa and sb contain unique frames:
+	assert sa.isdisjoint(sb)
+	EOF
+    stbt run -vv test.py || fail "Incorrect frames() behaviour"
+
+    set_config global.use_old_threading_behaviour false
+
+    cat > test.py <<-EOF &&
+	import itertools
+	sa = set()
+	sb = set()
+	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	    if len(sa) >= 10:
+	        break
+	    sa.add(a.time)
+	    sb.add(b.time)
+	assert len(sa) == 10
+	assert len(sb) == 10
+	# sa and sb contain the same frames:
+	assert sa == sb
+	EOF
+    stbt run -vv test.py || fail "Incorrect frames() behaviour"
+}

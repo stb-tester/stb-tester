@@ -25,6 +25,7 @@ import warnings
 from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import cv2
 import gi
@@ -754,6 +755,22 @@ def new_device_under_test_from_config(
     if source_teardown_eos is None:
         source_teardown_eos = get_config('global', 'source_teardown_eos',
                                          type_=bool)
+    use_old_threading_behaviour = get_config(
+        'global', 'use_old_threading_behaviour', type_=bool)
+    if use_old_threading_behaviour:
+        warn(dedent("""\
+            global.use_old_threading_behaviour is enabled.  This is intended as
+            a stop-gap measure to allow upgrading to stb-tester v28. We
+            recommend porting functions that depend on stbt.get_frame()
+            returning consecutive frames on each call to use stbt.frames()
+            instead.  This should make your functions usable from multiple
+            threads.
+
+            If porting to stbt.frames is not suitable please let us know on
+            https://github.com/stb-tester/stb-tester/pull/449 otherwise this
+            configuration option will be removed in a future release of
+            stb-tester.
+            """))
 
     display = [None]
 
@@ -774,7 +791,8 @@ def new_device_under_test_from_config(
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_remote(control_uri, display[0]),
-        sink_pipeline=sink_pipeline, mainloop=mainloop)
+        sink_pipeline=sink_pipeline, mainloop=mainloop,
+        use_old_threading_behaviour=use_old_threading_behaviour)
 
 
 def _pixel_bounding_box(img):
@@ -820,7 +838,7 @@ def _pixel_bounding_box(img):
 
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None, sink_pipeline=None,
-                 mainloop=None, _time=None):
+                 mainloop=None, use_old_threading_behaviour=False, _time=None):
         if _time is None:
             import time as _time
         self._time_of_last_press = None
@@ -829,6 +847,9 @@ class DeviceUnderTest(object):
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
         self._time = _time
+
+        self._use_old_threading_behaviour = use_old_threading_behaviour
+        self._last_grabbed_frame_time = 0
 
     def __enter__(self):
         if self._display:
@@ -904,7 +925,7 @@ class DeviceUnderTest(object):
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
-            frame = self._display.get_frame()
+            frame = self.get_frame()
 
         imglog = logging.ImageLogger(
             "match", match_parameters=match_parameters,
@@ -950,7 +971,7 @@ class DeviceUnderTest(object):
 
         debug("Searching for " + template.friendly_name)
 
-        for sample in self._display.frames(timeout_secs):
+        for sample, _ in self.frames(timeout_secs):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
@@ -972,7 +993,7 @@ class DeviceUnderTest(object):
 
         previous_frame_gray = None
 
-        for frame in self._display.frames(timeout_secs):
+        for frame, _ in self.frames(timeout_secs):
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if previous_frame_gray is None:
@@ -1125,7 +1146,7 @@ class DeviceUnderTest(object):
             tesseract_user_patterns=None, text_color=None):
 
         if frame is None:
-            frame = self._display.get_frame()
+            frame = self.get_frame()
 
         if region is None:
             raise TypeError(
@@ -1197,11 +1218,17 @@ class DeviceUnderTest(object):
         first = True
 
         while True:
+            if self._use_old_threading_behaviour:
+                timestamp = self._last_grabbed_frame_time
+
             ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
                 max(10, timeout_secs), since=timestamp)
             ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
+
+            if self._use_old_threading_behaviour:
+                self._last_grabbed_frame_time = timestamp
 
             if not first and timeout_secs is not None and timestamp > end_time:
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
@@ -1211,7 +1238,13 @@ class DeviceUnderTest(object):
             first = False
 
     def get_frame(self):
-        return self._display.get_frame().copy()
+        if self._use_old_threading_behaviour:
+            frame = self._display.get_frame(
+                since=self._last_grabbed_frame_time).copy()
+            self._last_grabbed_frame_time = frame.time
+            return frame
+        else:
+            return self._display.get_frame().copy()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -1219,7 +1252,7 @@ class DeviceUnderTest(object):
         if mask:
             mask = _load_mask(mask)
         if frame is None:
-            frame = self._display.get_frame()
+            frame = self.get_frame()
         greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
