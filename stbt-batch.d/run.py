@@ -44,7 +44,7 @@ def main(argv):
             '(defaults to the current directory).'))
     parser.add_argument(
         '-t', '--tag', help=(
-            'Tag to add to test run directory names (useful to differentiate '
+            'Tag to add to test-run directory names (useful to differentiate '
             'directories when you intend to merge test results from multiple '
             'machines).'))
     parser.add_argument(
@@ -53,8 +53,8 @@ def main(argv):
             "total amount of time executing each test case."))
     parser.add_argument(
         '--no-html-report', action='store_false', dest='do_html_report',
-        help="""Don't generate an HTML report after each testrun; generating the
-            report can be slow if there are many results in the output
+        help="""Don't generate an HTML report after each test-run; generating
+            the report can be slow if there are many results in the output
             directory. You can still generate the HTML reports afterwards with
             'stbt batch report'.""")
     parser.add_argument(
