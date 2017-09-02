@@ -1786,7 +1786,7 @@ class SinkPipeline(object):
                     ' ' + obj)
                 self.text_annotations.append(
                     {"text": obj, "duration": duration_secs})
-            elif hasattr(obj, "region") and hasattr(obj, "timestamp"):
+            elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:
                     self.annotations.append(annotation)
