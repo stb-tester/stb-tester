@@ -41,6 +41,7 @@ def uri_to_remote(uri, display=None):
          new_local_lirc_remote),
         (r'none', NullRemote),
         (r'roku:(?P<hostname>[^:]+)', RokuHttpControl),
+        (r'irtrans:(?P<control_name>.+)', new_irtrans_remote),
         (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_remote),
         (r'test', lambda: VideoTestSrcControl(display)),
@@ -540,6 +541,76 @@ class _X11Remote(object):
         subprocess.check_call(
             ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed " + key)
+
+
+def _connect_inet_socket(address, port, timeout=3):
+    """Connects to a TCP listener on 'address':'port'."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if timeout:
+            s.settimeout(timeout)
+        s.connect((address, port))
+        return s
+    except socket.error as e:
+        e.args = (("Failed to connect to remote control at %s:%d: %s" % (
+            address, port, e)),)
+        e.strerror = e.args[0]
+        raise
+
+
+def new_irtrans_remote(control_name):
+
+    hostname = 'localhost'
+    port = 21000
+    port = int(port)
+
+    def _connect():
+        return _connect_inet_socket(hostname, port)
+
+    # Connect once so that the test fails immediately if Lirc isn't running
+    # (instead of failing at the first `press` in the script).
+    debug("IRTRansRemote: Connecting to %s:%d" % (hostname, port))
+    _connect()
+    debug("IRTRansRemote: Connected to %s:%d" % (hostname, port))
+
+    return IRTRansRemote(control_name, _connect)
+
+
+class IRTRansRemote(object):
+    """Send a key-press via a IRSERVER-enabled infrared blaster.
+
+    """
+
+    def __init__(self, control_name, connect_fn):
+        self.control_name = control_name
+        self._connect = connect_fn
+
+    def press(self, key):
+        s = self._connect()
+        data = "Asnd %s,%s\n" % (self.control_name, key)
+        s.send(data)
+        _read_irtrans_reply(s)
+        #debug("Pressed " + key)
+
+def _read_irtrans_reply(stream):
+    """Waits for irtrans reply and checks if a irtrans send command successful.
+    if request key is done we expected ** RESULT OK
+    """
+    try:
+        reply = ""
+        s = stream.recv(256)
+        debug ("Received Data: " + s)
+        if len(s) == 0:
+            raise RuntimeError("No reply from IRtrans remote control unknown error")
+        reply += s
+    except socket.timeout:
+        raise RuntimeError(
+            "Timed out: No reply from IRtrans remote control within %d seconds"
+            % stream.gettimeout())
+    if "OK" not in reply:
+        #raise RuntimeError("IRtrans remote control returned unknown error")
+        #raise UnknownKeyError("IRtrans remote control returned unknown error %s" % reply)
+        debug ("IRtrans remote control returned unknown error %s" % reply)
 
 
 def file_remote_recorder(filename):
