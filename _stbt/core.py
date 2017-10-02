@@ -2285,11 +2285,14 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
     else:
         _, contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        rois = [
-            _Rect(*cv2.boundingRect(x))
-            # findContours ignores 1-pixel border of the image
-            .shift(Position(-1, -1)).expand(_Size(2, 2))
-            for x in contours]
+        # In opencv < 3.2.0 findContours ignores 1-pixel border of the image
+        if cv2.CV_MAJOR_VERSION == 3 and cv2.CV_MINOR_VERSION >= 2:
+            rois = [_Rect(*cv2.boundingRect(x)) for x in contours]
+        else:
+            rois = [
+                _Rect(*cv2.boundingRect(x))
+                .shift(Position(-1, -1)).expand(_Size(2, 2))
+                for x in contours]
 
     if logging.get_debug_level() > 1:
         source_with_rois = image.copy()

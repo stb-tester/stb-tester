@@ -25,18 +25,17 @@ def _warning_no_traceback(message, category, filename, lineno, file=None, **_):
 
 warnings.showwarning = _warning_no_traceback
 
-_CV2 = 2
-_CV3 = 3
+# Upack the version number for opencv.  Some opencv versions have 4 parts
+# (e.g. 2.4.12.2) and some have 3 (e.g. 3.2.0).
+_cv2_split_version = [int(v) for v in cv2.__version__.split(".")]
+CV_MAJOR_VERSION = _cv2_split_version[0]
+CV_MINOR_VERSION = _cv2_split_version[1]
+CV_SUBMINOR_VERSION = _cv2_split_version[2]
 
-if cv2.__version__.startswith('2'):
-    _CV_VERSION = _CV2
-elif cv2.__version__.startswith('3'):
-    _CV_VERSION = _CV3
-else:
+if CV_MAJOR_VERSION not in [2, 3]:
     raise RuntimeError("Unsupported OpenCV version %s" % cv2.__version__)
 
-
-if _CV_VERSION == _CV2:
+if CV_MAJOR_VERSION == 2:
     _cv_submod = getattr(cv2, 'cv')
 
     # functions
