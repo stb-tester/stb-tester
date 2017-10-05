@@ -58,9 +58,9 @@ class MatchParameters(object):
     `match`, `wait_for_match`, and `press_until_match`.
 
     You can change the default values for these parameters by setting a key
-    (with the same name as the corresponding python parameter) in the `[match]`
-    section of stbt.conf. But we strongly recommend that you don't change the
-    default values from what is documented here.
+    (with the same name as the corresponding python parameter) in the
+    ``[match]`` section of :ref:`.stbt.conf`. But we strongly recommend that
+    you don't change the default values from what is documented here.
 
     You should only need to change these parameters when you're trying to match
     a template image that isn't actually a perfect match -- for example if
