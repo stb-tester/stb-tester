@@ -397,9 +397,11 @@ test_clock_visualisation() {
 	
 	def read_time(frame):
 	    s = stbt.ocr(
-	        frame, mode=stbt.OcrMode.SINGLE_LINE,
-	        tesseract_user_patterns=["\d\d:\d\d:\d\d.\d\d"],
-	        region=stbt.Region(x=5, y=5, right=200, bottom=35)).replace(" ", "")
+	            frame, mode=stbt.OcrMode.SINGLE_LINE,
+	            tesseract_user_patterns=["\d\d:\d\d:\d\d.\d\d"],
+	            region=stbt.Region(x=5, y=5, right=200, bottom=35)) \\
+	        .replace(" ", "") \\
+	        .replace("O", "0")
 	    d = datetime.date.today()
 	    return datetime.datetime(
 	        d.year, d.month, d.day, int(s[0:2]), int(s[3:5]), int(s[6:8]),
