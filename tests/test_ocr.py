@@ -1,7 +1,9 @@
 # coding: utf-8
 
 import distutils
+import os
 import re
+from contextlib import contextmanager
 from textwrap import dedent
 from unittest import SkipTest
 
@@ -9,8 +11,10 @@ import cv2
 import pytest
 from nose.tools import raises
 
+import _stbt.config
 import _stbt.core
 import stbt
+from _stbt.utils import named_temporary_directory
 
 
 @pytest.mark.parametrize("image, expected_text, region, mode", [
@@ -75,6 +79,29 @@ def test_that_match_text_accepts_unicode():
     assert stbt.match_text("David", f, lang='eng+deu')  # ascii
     assert stbt.match_text(u"Röthlisberger", f, lang='eng+deu')  # unicode
     assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # utf-8 bytes
+
+
+def test_that_default_language_is_configurable():
+    f = cv2.imread("tests/ocr/unicode.png")
+    assert not stbt.match_text(u"Röthlisberger", f)  # reads Réthlisberger
+    with temporary_config({"ocr.lang": "deu"}):
+        assert stbt.match_text(u"Röthlisberger", f)
+        assert u"Röthlisberger" in stbt.ocr(f)
+
+
+@contextmanager
+def temporary_config(config):
+    with named_temporary_directory(prefix="stbt-test-ocr") as d:
+        original_env = os.environ.get("STBT_CONFIG_FILE", "")
+        os.environ["STBT_CONFIG_FILE"] = "%s/stbt.conf:%s" % (d, original_env)
+        for key, value in config.items():
+            section, option = key.split(".")
+            _stbt.config.set_config(section, option, value)
+        try:
+            yield
+        finally:
+            os.environ["STBT_CONFIG_FILE"] = original_env
+            _stbt.config._config_init(force=True)  # pylint:disable=protected-access
 
 
 def test_that_setting_config_options_has_an_effect():

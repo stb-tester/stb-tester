@@ -342,7 +342,7 @@ def wait_for_motion(
 
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang="eng", tesseract_config=None, tesseract_user_words=None,
+        lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, text_color=None):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -365,8 +365,9 @@ def ocr(frame=None, region=Region.ALL,
         language code of the language you are attempting to read; for example
         "eng" for English or "deu" for German. More than one language can be
         specified by joining with '+'; for example "eng+deu" means that the
-        text to be read may be in a mixture of English and German. Defaults to
-        English.
+        text to be read may be in a mixture of English and German. This defaults
+        to "eng" (English). You can override the global default value by setting
+        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
@@ -409,7 +410,7 @@ def ocr(frame=None, region=Region.ALL,
 
 
 def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, text_color=None):
     """Search for the specified text in a single video frame.
 
