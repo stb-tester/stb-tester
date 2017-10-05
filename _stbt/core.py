@@ -2614,6 +2614,9 @@ def _find_user_file(filename):
     :returns: Absolute filename, or None if it can't find the file.
     """
 
+    if isinstance(filename, unicode):
+        filename = filename.encode("utf-8")
+
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
 
