@@ -29,6 +29,13 @@ def test_that_load_image_looks_in_callers_directory():
         stbt.load_image("info2.png")
 
 
+def test_load_image_with_unicode_filename():
+    print sys.getfilesystemencoding()
+    assert stbt.load_image("Röthlisberger.png") is not None
+    assert stbt.load_image(u"Röthlisberger.png") is not None
+    assert stbt.load_image(u"R\xf6thlisberger.png") is not None
+
+
 class C(object):
     """A class with a single property, used by the tests."""
     def __init__(self, prop):
