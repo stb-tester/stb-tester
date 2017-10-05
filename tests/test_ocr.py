@@ -127,12 +127,6 @@ def test_that_setting_config_options_has_an_effect():
 
 
 def test_that_passing_patterns_helps_reading_serial_codes():
-    # Test that this test is valid (e.g. tesseract will read it wrong without
-    # help):
-    assert u'UJJM2LGE' != stbt.ocr(
-        frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
-        mode=stbt.OcrMode.SINGLE_WORD)
-
     # pylint: disable=W0212
     if _stbt.core._tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
