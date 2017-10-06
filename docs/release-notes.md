@@ -106,6 +106,9 @@ UNRELEASED
   (`sink_pipeline=`). This will have the same effect as `sink_pipeline =
   fakesink` but with lower resource utilisation.
 
+* Configuration: The video-recording pipeline is now configurable
+  (`global.save_video_pipeline`).
+
 ##### Maintainer-visible changes
 
 

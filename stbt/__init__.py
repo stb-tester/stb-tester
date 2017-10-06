@@ -805,12 +805,13 @@ class FrameObject(_stbt.core.FrameObject):
 
 
 def init_run(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False, transformation_pipeline='identity'):
+        gst_source_pipeline, gst_sink_pipeline, control_uri,
+        restart_source=False, transformation_pipeline='identity',
+        save_video_pipeline=''):
     global _dut
     dut = _stbt.core.new_device_under_test_from_config(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video,
-        restart_source, transformation_pipeline)
+        gst_source_pipeline, gst_sink_pipeline, control_uri,
+        restart_source, transformation_pipeline, save_video_pipeline)
     dut.__enter__()
     _dut = dut
 

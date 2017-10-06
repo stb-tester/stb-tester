@@ -303,6 +303,18 @@ test_save_video() {
         test.py
 }
 
+test_save_video_pipeline() {
+    set_config run.save_video "video.webm" &&
+    set_config run.save_video_pipeline \
+               "pngenc ! multifilesink location=%%05d.png" && \
+    cat > record.py <<-EOF &&
+	import time
+	time.sleep(2)
+	EOF
+    stbt run -v record.py &&
+    stbt match 00000.png "$testdir/videotestsrc-redblue.png"
+}
+
 test_that_verbosity_level_is_read_from_config_file() {
     set_config global.verbose "2" &&
     touch test.py &&

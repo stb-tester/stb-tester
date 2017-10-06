@@ -722,7 +722,7 @@ class TextMatchResult(object):
 
 def new_device_under_test_from_config(
         gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
-        save_video=False, restart_source=None, transformation_pipeline=None):
+        save_video_pipeline=""):
     from _stbt.control import uri_to_remote
 
     if gst_source_pipeline is None:
@@ -743,13 +743,13 @@ def new_device_under_test_from_config(
         display[0].tell_user_thread(exception)
     mainloop = _mainloop()
 
-    if not gst_sink_pipeline and not save_video:
+    if not gst_sink_pipeline and not save_video_pipeline:
         sink_pipeline = NoSinkPipeline()
     else:
         if not gst_sink_pipeline:
             gst_sink_pipeline = "fakesink sync=false"
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
-            gst_sink_pipeline, raise_in_user_thread, save_video)
+            gst_sink_pipeline, save_video_pipeline, raise_in_user_thread)
 
     display[0] = Display(
         gst_source_pipeline, sink_pipeline, restart_source,
@@ -1674,29 +1674,25 @@ class _Annotation(namedtuple("_Annotation", "time region label colour")):
 
 
 class SinkPipeline(object):
-    def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
+    def __init__(self, user_sink_pipeline, save_video_pipeline,
+                 raise_in_user_thread):
+
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.annotations = []
         self._raise_in_user_thread = raise_in_user_thread
         self.received_eos = threading.Event()
 
-        if save_video:
-            if not save_video.endswith(".webm"):
-                save_video += ".webm"
-            debug("Saving video to '%s'" % save_video)
-            video_pipeline = (
-                "t. ! queue leaky=downstream ! videoconvert ! "
-                "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
-                "webmmux ! filesink location=%s" % save_video)
-        else:
-            video_pipeline = ""
+        if save_video_pipeline:
+            save_video_pipeline = (
+                "t. ! queue leaky=downstream ! videoconvert ! " +
+                save_video_pipeline)
 
         sink_pipeline_description = " ".join([
             "appsrc name=appsrc format=time " +
             "caps=video/x-raw,format=(string)BGR !",
             "tee name=t",
-            video_pipeline,
+            save_video_pipeline,
             "t. ! queue leaky=downstream ! videoconvert !",
             user_sink_pipeline
         ])
