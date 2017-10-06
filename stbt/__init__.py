@@ -369,7 +369,9 @@ def ocr(frame=None, region=Region.ALL,
         specified by joining with '+'; for example "eng+deu" means that the
         text to be read may be in a mixture of English and German. This defaults
         to "eng" (English). You can override the global default value by setting
-        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
+        install the tesseract language pack; see installation instructions
+        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`_.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
