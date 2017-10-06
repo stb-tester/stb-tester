@@ -58,9 +58,9 @@ class MatchParameters(object):
     `match`, `wait_for_match`, and `press_until_match`.
 
     You can change the default values for these parameters by setting a key
-    (with the same name as the corresponding python parameter) in the `[match]`
-    section of stbt.conf. But we strongly recommend that you don't change the
-    default values from what is documented here.
+    (with the same name as the corresponding python parameter) in the
+    ``[match]`` section of :ref:`.stbt.conf`. But we strongly recommend that
+    you don't change the default values from what is documented here.
 
     You should only need to change these parameters when you're trying to match
     a template image that isn't actually a perfect match -- for example if
@@ -1101,7 +1101,7 @@ class DeviceUnderTest(object):
 
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-            lang="eng", tesseract_config=None, tesseract_user_words=None,
+            lang=None, tesseract_config=None, tesseract_user_words=None,
             tesseract_user_patterns=None, text_color=None):
 
         if frame is None:
@@ -1114,6 +1114,9 @@ class DeviceUnderTest(object):
                 "instead. To OCR an entire video frame, use "
                 "`region=Region.ALL`.")
 
+        if lang is None:
+            lang = get_config("ocr", "lang", "eng")
+
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
             tesseract_user_patterns, tesseract_user_words, text_color)
@@ -1122,13 +1125,15 @@ class DeviceUnderTest(object):
         return text
 
     def match_text(self, text, frame=None, region=Region.ALL,
-                   mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
+                   mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                    tesseract_config=None, case_sensitive=False,
                    text_color=None):
 
         import lxml.etree
         if frame is None:
             frame = self.get_frame()
+        if lang is None:
+            lang = get_config("ocr", "lang", "eng")
 
         _config = dict(tesseract_config or {})
         _config['tessedit_create_hocr'] = 1

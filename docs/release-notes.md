@@ -82,6 +82,10 @@ UNRELEASED
   default thresholding algorithm doesn't detect the text, for example for
   light-colored text or text on a translucent overlay.
 
+* Python API: The default `lang` (language) parameter to `stbt.ocr` and
+  `stbt.match_text` is now configurable. Set `lang` in the `[ocr]` section
+  of your configuration file.
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox

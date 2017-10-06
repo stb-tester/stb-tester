@@ -108,7 +108,7 @@ def press(key, interpress_delay_secs=None):
 
         This defaults to 0.3. You can override the global default value by
         setting ``interpress_delay_secs`` in the ``[press]`` section of
-        stbt.conf.
+        :ref:`.stbt.conf`.
     """
     return _dut.press(key, interpress_delay_secs)
 
@@ -225,7 +225,8 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         difference is considered motion).
 
         This defaults to 0.84. You can override the global default value by
-        setting ``noise_threshold`` in the ``[motion]`` section of stbt.conf.
+        setting ``noise_threshold`` in the ``[motion]`` section of
+        :ref:`.stbt.conf`.
 
     :param str mask:
         The filename of a black & white image that specifies which part of the
@@ -283,14 +284,14 @@ def press_until_match(
         Defaults to 3.
 
         You can override the global default value by setting ``interval_secs``
-        in the ``[press_until_match]`` section of stbt.conf.
+        in the ``[press_until_match]`` section of :ref:`.stbt.conf`.
 
     :param int max_presses:
         The number of times to try pressing the key and looking for the image
         before giving up and raising `MatchTimeout`. Defaults to 10.
 
         You can override the global default value by setting ``max_presses``
-        in the ``[press_until_match]`` section of stbt.conf.
+        in the ``[press_until_match]`` section of :ref:`.stbt.conf`.
 
     :param match_parameters: See `match`.
     :param region: See `match`.
@@ -324,7 +325,8 @@ def wait_for_motion(
           motion detected out of a sliding window of "y" frames.
 
         This defaults to "10/20". You can override the global default value by
-        setting ``consecutive_frames`` in the ``[motion]`` section of stbt.conf.
+        setting ``consecutive_frames`` in the ``[motion]`` section of
+        :ref:`.stbt.conf`.
 
     :param float noise_threshold: See `detect_motion`.
 
@@ -342,7 +344,7 @@ def wait_for_motion(
 
 def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang="eng", tesseract_config=None, tesseract_user_words=None,
+        lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, text_color=None):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -365,8 +367,11 @@ def ocr(frame=None, region=Region.ALL,
         language code of the language you are attempting to read; for example
         "eng" for English or "deu" for German. More than one language can be
         specified by joining with '+'; for example "eng+deu" means that the
-        text to be read may be in a mixture of English and German. Defaults to
-        English.
+        text to be read may be in a mixture of English and German. This defaults
+        to "eng" (English). You can override the global default value by setting
+        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
+        install the tesseract language pack; see installation instructions
+        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`_.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
@@ -409,7 +414,7 @@ def ocr(frame=None, region=Region.ALL,
 
 
 def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, text_color=None):
     """Search for the specified text in a single video frame.
 
@@ -495,9 +500,10 @@ def is_screen_black(frame=None, mask=None, threshold=None):
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
       is not always 0. To differentiate almost-black from non-black pixels, a
-      binary threshold is applied to the frame. The `threshold` value is in the
-      range 0 (black) to 255 (white). The global default can be changed by
-      setting `threshold` in the `[is_screen_black]` section of stbt.conf.
+      binary threshold is applied to the frame. The ``threshold`` value is in
+      the range 0 (black) to 255 (white). The global default can be changed by
+      setting ``threshold`` in the ``[is_screen_black]`` section of
+      :ref:`.stbt.conf`.
 
     :returns: True or False.
 
