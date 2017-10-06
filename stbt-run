@@ -70,7 +70,7 @@ def _print_exc_utf8(file_=None):
 
     This is not thread-safe, but will only be called at the end of execution.
     """
-    # pylint: disable=W0212
+    # pylint: disable=protected-access
     from kitchen.text.converters import to_bytes
     _old_some_str = traceback._some_str
     try:
@@ -119,13 +119,12 @@ def import_by_filename(filename_):
 
 _tracer = None
 try:
-    # pylint: disable=W0611
 
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
         stbt.get_config('global', 'transformation_pipeline'))
-    _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
+    _tracer = new_state_sender(args.save_trace)
 
     _absfilename = None
 
@@ -149,7 +148,7 @@ try:
         _tracer.log_test_starting(args.script, args.script, "", 1)
         sys.settrace(tracefunc)
 
-        # pylint: disable=W0612
+        # pylint: disable=unused-import
         from stbt import (
             # For backwards compatibility. We want to encourage people to expli-
             # citly import stbt in their scripts, so don't add new APIs here.
@@ -161,7 +160,7 @@ try:
         __file__ = args.script
         sys.path.insert(0, os.path.dirname(_filename))
         execfile(_filename)
-except Exception as e:  # pylint: disable=W0703
+except Exception as e:  # pylint: disable=broad-except
     from kitchen.text.converters import exception_to_bytes
     error_message = exception_to_bytes(e)
     if not error_message and isinstance(e, AssertionError):
