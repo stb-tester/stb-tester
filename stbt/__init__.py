@@ -799,7 +799,7 @@ class FrameObject(_stbt.core.FrameObject):
 
 
 def init_run(
-        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
+        gst_source_pipeline, gst_sink_pipeline, control_uri, save_video="",
         restart_source=False, transformation_pipeline='identity'):
     global _dut
     dut = _stbt.core.new_device_under_test_from_config(

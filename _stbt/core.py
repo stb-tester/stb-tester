@@ -722,7 +722,7 @@ class TextMatchResult(object):
 
 def new_device_under_test_from_config(
         gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
-        save_video=False, restart_source=None, transformation_pipeline=None):
+        save_video="", restart_source=None, transformation_pipeline=None):
     from _stbt.control import uri_to_remote
 
     if gst_source_pipeline is None:
