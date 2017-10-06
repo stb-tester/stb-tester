@@ -231,8 +231,9 @@ check-hardware: install-for-test
 	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
-	| grep -v tests/auto-selftest-example-test-pack/tests/syntax_error.py \
-	| PYTHONPATH=$$PWD $(parallel) extra/pylint.sh
+	| grep -v -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
+	          -e tests/auto-selftest-example-test-pack/selftest \
+	| PYTHONPATH=$$PWD xargs extra/pylint.sh
 
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
