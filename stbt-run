@@ -120,10 +120,21 @@ def import_by_filename(filename_):
 _tracer = None
 try:
 
+    if args.save_video:
+        stbt.debug("Saving video to '%s'" % args.save_video)
+        _save_video_pipeline = stbt.get_config("run", "save_video_pipeline", "")
+        if not _save_video_pipeline:
+            _save_video_pipeline = (
+                "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
+                "webmmux ! filesink location={filename}")
+        _save_video_pipeline = _save_video_pipeline.format(
+            filename=args.save_video)
+
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
-        args.save_video, args.restart_source,
-        stbt.get_config('global', 'transformation_pipeline'))
+        args.restart_source,
+        stbt.get_config('global', 'transformation_pipeline'),
+        _save_video_pipeline)
     _tracer = new_state_sender(args.save_trace)
 
     _absfilename = None
