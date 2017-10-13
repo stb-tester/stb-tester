@@ -722,7 +722,8 @@ class TextMatchResult(object):
 
 def new_device_under_test_from_config(
         gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
-        save_video=False, restart_source=None, transformation_pipeline=None):
+        save_video=False, restart_source=None, transformation_pipeline=None,
+        source_teardown_eos=None):
 
     # Note that all callers (stbt-run etc, via stbt.init_run) pass in all
     # parameters explicitly; but the behaviour of reading the default values
@@ -742,6 +743,9 @@ def new_device_under_test_from_config(
     if transformation_pipeline is None:
         transformation_pipeline = get_config('global',
                                              'transformation_pipeline')
+    if source_teardown_eos is None:
+        source_teardown_eos = get_config('global', 'source_teardown_eos',
+                                         type_=bool)
 
     display = [None]
 
@@ -759,7 +763,7 @@ def new_device_under_test_from_config(
 
     display[0] = Display(
         gst_source_pipeline, sink_pipeline, restart_source,
-        transformation_pipeline)
+        transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_remote(control_uri, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop)
@@ -1828,7 +1832,8 @@ class NoSinkPipeline(object):
 
 class Display(object):
     def __init__(self, user_source_pipeline, sink_pipeline,
-                 restart_source=False, transformation_pipeline='identity'):
+                 restart_source=False, transformation_pipeline='identity',
+                 source_teardown_eos=False):
 
         import time
 
@@ -1841,8 +1846,9 @@ class Display(object):
         self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
-
         self.restart_source_enabled = restart_source
+        self.source_teardown_eos = source_teardown_eos
+
         appsink = (
             "appsink name=appsink max-buffers=1 drop=false sync=true "
             "emit-signals=true "
@@ -2073,11 +2079,13 @@ class Display(object):
         self.tearing_down = True
         self.source_pipeline, source = None, self.source_pipeline
         if source:
-            for elem in gst_iterate(source.iterate_sources()):
-                elem.send_event(Gst.Event.new_eos())
-            if not self.appsink_await_eos(
-                    source.get_by_name('appsink'), timeout=10):
-                debug("teardown: Source pipeline did not teardown gracefully")
+            if self.source_teardown_eos:
+                debug("teardown: Sending eos on source pipeline")
+                for elem in gst_iterate(source.iterate_sources()):
+                    elem.send_event(Gst.Event.new_eos())
+                if not self.appsink_await_eos(
+                        source.get_by_name('appsink'), timeout=10):
+                    debug("Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
 
