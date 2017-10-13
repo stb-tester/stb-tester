@@ -238,3 +238,19 @@ test_detect_motion_visualisation() {
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
+
+test_that_wait_for_motion_returns_first_frame_with_motion() {
+    # Frames are: (0) black - (1) black - (2) black - (3) green - repeat
+    # Frame 3 is the first one with motion (black->green), then frame 0 is also
+    # motion (green -> black). Then we have a couple of frames with no motion.
+    # wait_for_motion should return the green frame.
+    cat > test.py <<-EOF &&
+	import stbt
+	m = stbt.wait_for_motion(consecutive_frames="2/2")
+	assert stbt.match("$testdir/box-00003.png", m.frame)
+	EOF
+    stbt run -v \
+        --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true \
+                           ! image/png,framerate=25/1" \
+        test.py
+}
