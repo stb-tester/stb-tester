@@ -56,6 +56,10 @@ UNRELEASED
   change the behaviour again in a future release to be consistent with
   `stbt.match_text` where `None` means an empty region.
 
+* Passing `type_=bool` to `stbt.get_config` now returns False for values of
+  "0", "false", "off", and "no" (all of these are checked in a case-insensitive
+  manner). Previously it would always return True for any non-empty value.
+
 ##### New features
 
 * New Android control mechanism to send taps, swipes, and key events. See the

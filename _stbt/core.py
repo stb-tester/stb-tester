@@ -738,7 +738,7 @@ def new_device_under_test_from_config(
     if control_uri is None:
         control_uri = get_config('global', 'control')
     if restart_source is None:
-        restart_source = get_config('global', 'restart_source')
+        restart_source = get_config('global', 'restart_source', type_=bool)
     if transformation_pipeline is None:
         transformation_pipeline = get_config('global',
                                              'transformation_pipeline')
@@ -1530,8 +1530,7 @@ def argparser():
              '(default: %(default)s)')
     parser.add_argument(
         '--restart-source', action='store_true',
-        default=(get_config('global', 'restart_source').lower() in
-                 ("1", "yes", "true", "on")),
+        default=get_config('global', 'restart_source', type_=bool),
         help='Restart the GStreamer source pipeline when video loss is '
              'detected')
 
