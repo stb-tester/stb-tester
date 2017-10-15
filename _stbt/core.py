@@ -1133,7 +1133,7 @@ class DeviceUnderTest(object):
         if frame is None:
             frame = self.get_frame()
         if threshold is None:
-            threshold = get_config ("match_text", "threshold")
+            threshold = get_config("match_text", "threshold")
 
         _config = dict(tesseract_config or {})
         _config['tessedit_create_hocr'] = 1
