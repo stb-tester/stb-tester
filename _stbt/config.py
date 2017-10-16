@@ -23,7 +23,10 @@ def get_config(section, key, default=None, type_=str):
     config = _config_init()
 
     try:
-        return type_(config.get(section, key))
+        if type_ is bool:
+            return config.getboolean(section, key)
+        else:
+            return type_(config.get(section, key))
     except ConfigParser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)

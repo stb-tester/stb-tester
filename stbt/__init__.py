@@ -806,11 +806,12 @@ class FrameObject(_stbt.core.FrameObject):
 
 def init_run(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video=False,
-        restart_source=False, transformation_pipeline='identity'):
+        restart_source=False, transformation_pipeline='identity',
+        source_teardown_eos=False):
     global _dut
     dut = _stbt.core.new_device_under_test_from_config(
         gst_source_pipeline, gst_sink_pipeline, control_uri, save_video,
-        restart_source, transformation_pipeline)
+        restart_source, transformation_pipeline, source_teardown_eos)
     dut.__enter__()
     _dut = dut
 

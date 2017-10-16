@@ -43,6 +43,8 @@ test_get_config() {
 	assert stbt.get_config("global", "test_key") == "this is a test value"
 	assert stbt.get_config("special", "test_key") == \
 	    "not the global value"
+	assert stbt.get_config("global", "should_be_true", type_=bool) is True
+	assert stbt.get_config("global", "should_be_false", type_=bool) is False
 	try:
 	    stbt.get_config("global", "no_such_key")
 	    assert False

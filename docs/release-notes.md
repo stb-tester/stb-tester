@@ -56,6 +56,15 @@ UNRELEASED
   change the behaviour again in a future release to be consistent with
   `stbt.match_text` where `None` means an empty region.
 
+* Passing `type_=bool` to `stbt.get_config` now returns False for values of
+  "0", "false", "off", and "no" (all of these are checked in a case-insensitive
+  manner). Previously it would always return True for any non-empty value.
+
+* Removed workaround for 3½ year old deadlock bug in decklinksrc. If this is
+  still necessary, set `source_teardown_eos = True` in the `[global]` section
+  of your stbt config file, and let us know on the mailing list as we may
+  remove the workaround completely in a future release.
+
 ##### New features
 
 * New Android control mechanism to send taps, swipes, and key events. See the
