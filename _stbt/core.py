@@ -609,23 +609,27 @@ class MotionResult(object):
     :ivar Region region: Bounding box where the motion was found, or ``None``
         if no motion was found.
 
+    :ivar Frame frame: The video frame in which motion was (or wasn't) found.
+
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
 
     The ``time`` attribute was added in stb-tester v26.
     """
-    def __init__(self, time, motion, region):
+    def __init__(self, time, motion, region, frame):
         self.time = time
         self.motion = motion
         self.region = region
+        self.frame = frame
 
     def __nonzero__(self):
         return self.motion
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r)" % (
-                self.time, self.motion, self.region))
+            "MotionResult(time=%r, motion=%r, region=%r, frame=<%s>)" % (
+                self.time, self.motion, self.region,
+                _str_frame_dimensions(self.frame)))
 
     @property
     def timestamp(self):
@@ -636,10 +640,14 @@ class MotionResult(object):
 
 
 def test_motionresult_repr():
-    txt = ("MotionResult("
-           "time=1466002032.335607, motion=True, "
-           "region=Region(x=321, y=32, right=334, bottom=42))")
-    assert repr(eval(txt)) == txt  # pylint: disable=eval-used
+    assert repr(MotionResult(
+        time=1466002032.335607, motion=True,
+        region=Region(x=321, y=32, right=334, bottom=42),
+        frame=numpy.zeros((720, 1280, 3)))) \
+        == ("MotionResult("
+            "time=1466002032.335607, motion=True, "
+            "region=Region(x=321, y=32, right=334, bottom=42), "
+            "frame=<1280x720x3>)")
 
 
 class OcrMode(IntEnum):
@@ -994,7 +1002,7 @@ class DeviceUnderTest(object):
             motion = bool(out_region)
 
             result = MotionResult(getattr(frame, "time", None), motion,
-                                  out_region)
+                                  out_region, frame)
             self._sink_pipeline.draw(result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))

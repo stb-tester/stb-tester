@@ -102,6 +102,11 @@ UNRELEASED
   reached. This allows you to use a short `timeout_secs` with operations that
   can take a long time.
 
+* Python API: The `stbt.MotionResult` object returned by `stbt.detect_motion`
+  and `stbt.wait_for_motion` includes the video-frame that was analysed.
+  This allows you to perform additional analysis -- for example if there was
+  no motion is the frame black?
+
 * Configuration: `global.sink_pipeline` can now be set to an empty value
   (`sink_pipeline=`). This will have the same effect as `sink_pipeline =
   fakesink` but with lower resource utilisation.
