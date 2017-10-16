@@ -723,6 +723,12 @@ class TextMatchResult(object):
 def new_device_under_test_from_config(
         gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
         save_video=False, restart_source=None, transformation_pipeline=None):
+
+    # Note that all callers (stbt-run etc, via stbt.init_run) pass in all
+    # parameters explicitly; but the behaviour of reading the default values
+    # from config is useful for integrating with a different test-runner like
+    # pytest, or from a Jupyter Notebook.
+
     from _stbt.control import uri_to_remote
 
     if gst_source_pipeline is None:
