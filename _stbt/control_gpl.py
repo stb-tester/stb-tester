@@ -1,3 +1,4 @@
+import re
 from contextlib import contextmanager
 from textwrap import dedent
 
@@ -162,6 +163,14 @@ class HdmiCecControl(object):
         from .control import UnknownKeyError
         keycode = self._KEYNAMES.get(key)
         if keycode is None:
+            if isinstance(key, int):
+                keycode = key
+            elif re.match(r"^[0-9]+$", key):
+                keycode = int(key, base=10)
+            elif re.match(r"^0[xX][0-9a-fA-F]+$", key):
+                keycode = int(key, base=16)
+        if keycode is None or (isinstance(keycode, int) and
+                               not 0 <= keycode <= 255):
             raise UnknownKeyError("HdmiCecControl: Unknown key %r" % key)
         cec_command = "%X%X:44:%02X" % (self.source, self.destination, keycode)
         key_down_cmd = self.lib.CommandFromString(cec_command)
@@ -210,6 +219,10 @@ def test_hdmi_cec_control():
         r.press("KEY_UP")
         r.press("KEY_UP")
         r.press("KEY_POWER")
+        r.press(74)
+        r.press("74")
+        r.press("0x4A")
+        r.press("0x4a")
 
     assert io.getvalue() == dedent("""\
         Open('test-device')
@@ -218,6 +231,14 @@ def test_hdmi_cec_control():
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <40>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         """)
 
