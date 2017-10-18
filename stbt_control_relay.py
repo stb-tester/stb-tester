@@ -69,9 +69,11 @@ def main(argv):
             if not cmd:
                 break
             cmd = cmd.rstrip("\n")
-            m = re.match(r"SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)", cmd)
+            m = re.match(r"SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)", cmd)
             if not m:
-                debug("Ignoring invalid command: %s" % cmd)
+                debug("Invalid command: %s" % cmd)
+                send_response(conn, cmd, success=False,
+                              data="Invalid command: %s" % cmd)
                 continue
             key = m.groupdict()["key"]
             debug("Received %s" % key)
