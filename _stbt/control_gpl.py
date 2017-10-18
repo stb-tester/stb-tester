@@ -73,8 +73,11 @@ class HdmiCecControl(object):
         "KEY_TIMER_PROGRAMMING": 84,  # <- not in input-event-codes.h
         "KEY_CONFIG": 85,
 
-        # Not sure what the difference is between KEY_PLAY and KEY_PLAY_FUNCTION
-        # is but none of these _FUNCTION keys are in linux-event-codes.h:
+        # Deterministic UI Functions; unlike some normal keys these never act
+        # as toggles. Some of these take additional operands but we don't
+        # support that (the additional operands are always optional according
+        # to the CEC spec).
+        # None of these _FUNCTION names are in linux-event-codes.h.
         "KEY_PLAY_FUNCTION": 96,
         "KEY_PAUSE_PLAY_FUNCTION": 97,
         "KEY_RECORD_FUNCTION": 98,
