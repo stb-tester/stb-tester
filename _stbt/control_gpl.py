@@ -28,6 +28,7 @@ class HdmiCecControl(object):
         "KEY_CONTENTS_MENU": 11,  # <- not in input-event-codes.h
         "KEY_FAVORITE_MENU": 12,  # <- not in input-event-codes.h
         "KEY_BACK": 13,
+        # 0x0E - 0x1F Reserved
         "KEY_0": 32,
         "KEY_1": 33,
         "KEY_2": 34,
@@ -51,6 +52,7 @@ class HdmiCecControl(object):
         "KEY_HELP": 54,
         "KEY_PAGEUP": 55,
         "KEY_PAGEDOWN": 56,
+        # 0x39 - 0x3F Reserved
         "KEY_POWER": 64,
         "KEY_VOLUMEUP": 65,
         "KEY_VOLUMEDOWN": 66,
@@ -66,12 +68,14 @@ class HdmiCecControl(object):
         "KEY_BACKWARD": 76,
         "KEY_STOP_RECORD": 77,
         "KEY_PAUSE_RECORD": 78,
+        # 0x4F Reserved
         "KEY_ANGLE": 80,
         "KEY_SUB_PICTURE": 81,  # <- not in input-event-codes.h
         "KEY_VOD": 82,
         "KEY_EPG": 83,
         "KEY_TIMER_PROGRAMMING": 84,  # <- not in input-event-codes.h
-        "KEY_CONFIG": 85,
+        "KEY_CONFIG": 85,  # Initial Configuration
+        # 0x56 - 0x5F Reserved
 
         # Deterministic UI Functions; unlike some normal keys these never act
         # as toggles. Some of these take additional operands but we don't
@@ -92,9 +96,11 @@ class HdmiCecControl(object):
         "KEY_POWER_TOGGLE_FUNCTION": 107,
         "KEY_POWER_OFF_FUNCTION": 108,
         "KEY_POWER_ON_FUNCTION": 109,
+        # Back to normal keys.
 
-        # Back to normal keys.  We duplicate these colour buttons because HDMI
-        # doesn't make a distinction:
+        # 0x6E - 0x70 Reserved
+
+        # These have 2 names:
         "KEY_F1": 113,
         "KEY_BLUE": 113,
         "KEY_F2": 114,
@@ -107,6 +113,7 @@ class HdmiCecControl(object):
         # And back to normal keys:
         "KEY_F5": 117,
         "KEY_DATA": 118,
+        # 0x77 - 0xFF Reserved
     }
 
     def __init__(self, device, source, destination):
