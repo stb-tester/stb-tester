@@ -692,7 +692,7 @@ def _fake_lircd():
             while True:
                 control, _ = s.accept()
                 for cmd in control.makefile():
-                    m = re.match(r'SEND_ONCE (?P<ctrl>\w+) (?P<key>\w+)', cmd)
+                    m = re.match(r'SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)', cmd)
                     if m:
                         listener.sendall(
                             '00000000 0 %(key)s %(ctrl)s\n' % m.groupdict())

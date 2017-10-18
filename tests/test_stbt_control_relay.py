@@ -69,7 +69,7 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
         with scoped_process(proc):
             wait_until(lambda: (
                 os.path.exists(t("lircd.sock")) or proc.poll() is not None))
-            testremote = uri_to_remote("lirc:%s:stbt" % t("lircd.sock"))
+            testremote = uri_to_remote("lirc:%s:stbt-test" % t("lircd.sock"))
 
             testremote.press("KEY_UP")
             testremote.press("KEY_DOWN")
