@@ -1,3 +1,4 @@
+import re
 from contextlib import contextmanager
 from textwrap import dedent
 
@@ -28,6 +29,7 @@ class HdmiCecControl(object):
         "KEY_CONTENTS_MENU": 11,  # <- not in input-event-codes.h
         "KEY_FAVORITE_MENU": 12,  # <- not in input-event-codes.h
         "KEY_BACK": 13,
+        # 0x0E - 0x1F Reserved
         "KEY_0": 32,
         "KEY_1": 33,
         "KEY_2": 34,
@@ -51,6 +53,7 @@ class HdmiCecControl(object):
         "KEY_HELP": 54,
         "KEY_PAGEUP": 55,
         "KEY_PAGEDOWN": 56,
+        # 0x39 - 0x3F Reserved
         "KEY_POWER": 64,
         "KEY_VOLUMEUP": 65,
         "KEY_VOLUMEDOWN": 66,
@@ -66,15 +69,20 @@ class HdmiCecControl(object):
         "KEY_BACKWARD": 76,
         "KEY_STOP_RECORD": 77,
         "KEY_PAUSE_RECORD": 78,
+        # 0x4F Reserved
         "KEY_ANGLE": 80,
         "KEY_SUB_PICTURE": 81,  # <- not in input-event-codes.h
         "KEY_VOD": 82,
         "KEY_EPG": 83,
         "KEY_TIMER_PROGRAMMING": 84,  # <- not in input-event-codes.h
-        "KEY_CONFIG": 85,
+        "KEY_CONFIG": 85,  # Initial Configuration
+        # 0x56 - 0x5F Reserved
 
-        # Not sure what the difference is between KEY_PLAY and KEY_PLAY_FUNCTION
-        # is but none of these _FUNCTION keys are in linux-event-codes.h:
+        # Deterministic UI Functions; unlike some normal keys these never act
+        # as toggles. Some of these take additional operands but we don't
+        # support that (the additional operands are always optional according
+        # to the CEC spec).
+        # None of these _FUNCTION names are in linux-event-codes.h.
         "KEY_PLAY_FUNCTION": 96,
         "KEY_PAUSE_PLAY_FUNCTION": 97,
         "KEY_RECORD_FUNCTION": 98,
@@ -89,9 +97,11 @@ class HdmiCecControl(object):
         "KEY_POWER_TOGGLE_FUNCTION": 107,
         "KEY_POWER_OFF_FUNCTION": 108,
         "KEY_POWER_ON_FUNCTION": 109,
+        # Back to normal keys.
 
-        # Back to normal keys.  We duplicate these colour buttons because HDMI
-        # doesn't make a distinction:
+        # 0x6E - 0x70 Reserved
+
+        # These have 2 names:
         "KEY_F1": 113,
         "KEY_BLUE": 113,
         "KEY_F2": 114,
@@ -104,6 +114,7 @@ class HdmiCecControl(object):
         # And back to normal keys:
         "KEY_F5": 117,
         "KEY_DATA": 118,
+        # 0x77 - 0xFF Reserved
     }
 
     def __init__(self, device, source, destination):
@@ -152,6 +163,14 @@ class HdmiCecControl(object):
         from .control import UnknownKeyError
         keycode = self._KEYNAMES.get(key)
         if keycode is None:
+            if isinstance(key, int):
+                keycode = key
+            elif re.match(r"^[0-9]+$", key):
+                keycode = int(key, base=10)
+            elif re.match(r"^0[xX][0-9a-fA-F]+$", key):
+                keycode = int(key, base=16)
+        if keycode is None or (isinstance(keycode, int) and
+                               not 0 <= keycode <= 255):
             raise UnknownKeyError("HdmiCecControl: Unknown key %r" % key)
         cec_command = "%X%X:44:%02X" % (self.source, self.destination, keycode)
         key_down_cmd = self.lib.CommandFromString(cec_command)
@@ -200,6 +219,10 @@ def test_hdmi_cec_control():
         r.press("KEY_UP")
         r.press("KEY_UP")
         r.press("KEY_POWER")
+        r.press(74)
+        r.press("74")
+        r.press("0x4A")
+        r.press("0x4a")
 
     assert io.getvalue() == dedent("""\
         Open('test-device')
@@ -208,6 +231,14 @@ def test_hdmi_cec_control():
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <40>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         """)
 
