@@ -46,8 +46,20 @@ UNRELEASED
       confirm_threshold=0.16
 
   Note that users of the [Stb-tester hardware] have always been been using
-  these new values, as the Stb-tester hardware ships with a custom stbt.conf
-  file.
+  these new values, as we provide a custom stbt.conf file to our customers.
+
+* The default `interpress_delay_secs` for `stbt.press` is now 0.3 instead of 0.
+  This matches best practices and what the documentation actually says. To keep
+  using the previous default, add this to the `[press]` section of your stbt
+  config file:
+
+      interpress_delay_secs = 0
+
+  Thanks to Rinaldo Merlo for the bug report.
+
+  Note that users of the [Stb-tester hardware] have always been using the
+  best-practices default value of 0.3, as we provide a custom stbt.conf file to
+  our customers.
 
 * Passing `region=None` to `stbt.ocr` raises a TypeError. Use
   `region=stbt.Region.ALL` instead. Note that passing `None` has printed a
