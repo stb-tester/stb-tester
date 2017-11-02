@@ -39,6 +39,62 @@ def iter_timeout(timeout=10, now=None):
         now = time.time()
 
 
+class LocalThread(object):
+    def __init__(self, fn):
+        self._ctx = StbtThreadContext()
+        self._fn = self._ctx.wrap(fn)
+        self._thread = threading.Thread(target=self._thread_fn)
+        self._started = False
+        self._stopped = False
+        self._value = (0, None)
+
+    def _thread_fn(self):
+        try:
+            self._value = (1, self._fn())
+        except:
+            self._value = (2, sys.exc_info())
+
+    def join(self):
+        self._thread.join()
+        state, value = self._value
+        if state == 1:
+            return value
+        elif state == 2:
+            raise value[0], value[1], value[2]
+
+    def start(self):
+        if not self._started:
+            self._started = True
+            self._thread.start()
+
+    def stop(self, wait=True):
+        if self._thread.is_alive():
+            self._ctx.interrupt()
+            if wait:
+                self._thread.join()
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, exc_type, _2, _3):
+        self.stop(wait=True)
+        if exc_type is None:
+            # Raise any exceptions so they don't get lost
+            self.join()
+
+    def __del__(self):
+        self.stop(wait=False)
+
+
+def spawn(start=True):
+    def decorator(fn):
+        t = LocalThread(fn)
+        if start:
+            t.start()
+        return t
+    return decorator
+
+
 _global_condition = threading.Condition()
 _threads_interrupted = weakref.WeakSet()
 _condvars = {}
