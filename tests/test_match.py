@@ -40,7 +40,7 @@ def test_matchresult_region_when_first_pyramid_level_fails_to_match():
 
 @raises(ValueError)
 def test_that_match_rejects_greyscale_template():
-    grey = cv2.cvtColor(_load_template("black.png").image, cv2.cv.CV_BGR2GRAY)
+    grey = cv2.cvtColor(_load_template("black.png").image, cv2.COLOR_BGR2GRAY)
     stbt.match(grey, frame=black())
 
 

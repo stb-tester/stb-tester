@@ -245,7 +245,7 @@ class AdbDevice(object):
                     .replace("\r\n", "\n"))
             img = cv2.imdecode(
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
-                cv2.CV_LOAD_IMAGE_COLOR)
+                cv2.IMREAD_COLOR)
             if img is None:
                 logging.warning(
                     "AdbDevice.get_frame: Failed to get screenshot "

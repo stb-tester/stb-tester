@@ -541,14 +541,14 @@ def _load_template(template):
         absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename:
             raise IOError("No such template file: %s" % relative_filename)
-        image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
+        image = cv2.imread(absolute_filename, cv2.IMREAD_COLOR)
         if image is None:
             raise IOError("Failed to load template file: %s" %
                           absolute_filename)
         return _AnnotatedTemplate(image, relative_filename, absolute_filename)
 
 
-def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
+def load_image(filename, flags=cv2.IMREAD_COLOR):
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -2680,7 +2680,7 @@ def _load_mask(filename):
     debug("Using mask %s" % absolute_filename)
     if not absolute_filename:
         raise IOError("No such mask file: %s" % filename)
-    image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    image = cv2.imread(absolute_filename, cv2.IMREAD_GRAYSCALE)
     if image is None:
         raise IOError("Failed to load mask file: %s" % absolute_filename)
     return image
