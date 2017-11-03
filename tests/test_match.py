@@ -6,8 +6,8 @@ from glob import glob
 import numpy
 from nose.tools import raises
 
-import stbt
 import _stbt.opencv_shim as cv2
+import stbt
 from _stbt.core import _crop, _load_template
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
