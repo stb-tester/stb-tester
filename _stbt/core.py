@@ -2984,21 +2984,21 @@ def test_wait_for_motion_half_motion_str_2of4():
     with _fake_frames_at_half_motion() as dut:
         res = dut.wait_for_motion(consecutive_frames='2/4')
         print res
-        assert res.time == 1466084612.
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_2of3():
     with _fake_frames_at_half_motion() as dut:
         res = dut.wait_for_motion(consecutive_frames='2/3')
         print res
-        assert res.time == 1466084612.
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_4of10():
     with _fake_frames_at_half_motion() as dut:
         # Time is not affected by consecutive_frames parameter
         res = dut.wait_for_motion(consecutive_frames='4/10', timeout_secs=20)
-        assert res.time == 1466084612.
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_3of4():
@@ -3022,18 +3022,16 @@ def test_wait_for_motion_half_motion_int():
 @contextmanager
 def _fake_frames_at_half_motion():
     FRAMES = []
-    data = [
-        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-        numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-        numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-    ]
-    # Start with no motion
-    for i in range(6):
-        FRAMES.append(Frame(data[0], time=1466084606. + i))
-    # Motion starts on 6th frame at time 1466084612.
-    for i in range(6, 20):
-        FRAMES.append(Frame(data[i % len(data)], time=1466084606. + i))
+    a = numpy.zeros((2, 2, 3), dtype=numpy.uint8)
+    b = numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255
+
+    # Motion:                 v     v     v     v     v     v     v     v     v
+    data = [a, a, a, a, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b]
+    #       ^                 ^
+    #       |                 L Motion starts here at timestamp 1466084606.
+    #       L Video starts here at timestamp 1466084600
+
+    FRAMES = [Frame(x, time=1466084600. + n) for n, x in enumerate(data)]
 
     class FakeDisplay(object):
         def get_frame(self, timeout_secs=10, since=0):  # pylint: disable=unused-argument
