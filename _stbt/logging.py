@@ -113,8 +113,8 @@ class ImageLogger(object):
             self.data[k].append(v)
 
     def imwrite(self, name, image, region=None, colour=None):
-        import cv2
         import numpy
+        from . import opencv_shim as cv2
         if not self.enabled:
             return
         if name in self.images:

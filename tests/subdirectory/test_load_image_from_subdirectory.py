@@ -1,9 +1,9 @@
 import os
 
-import cv2
 import numpy
 import pytest
 
+import _stbt.opencv_shim as cv2
 import stbt
 
 

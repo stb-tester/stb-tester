@@ -11,9 +11,8 @@ import os
 import sys
 from contextlib import contextmanager
 
-import cv2
-
 import _stbt.logging
+import _stbt.opencv_shim as cv2
 import stbt
 
 

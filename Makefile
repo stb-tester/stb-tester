@@ -76,6 +76,7 @@ INSTALL_CORE_FILES = \
     _stbt/lmdb/cpython.so \
     _stbt/lmdb/LICENSE \
     _stbt/logging.py \
+    _stbt/opencv_shim.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
     _stbt/state_watch.py \

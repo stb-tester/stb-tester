@@ -27,13 +27,13 @@ from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 
-import cv2
 import gi
 import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
 from numpy import inf
 
+from _stbt import opencv_shim as cv2
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
@@ -541,14 +541,14 @@ def _load_template(template):
         absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename:
             raise IOError("No such template file: %s" % relative_filename)
-        image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_COLOR)
+        image = cv2.imread(absolute_filename, cv2.IMREAD_COLOR)
         if image is None:
             raise IOError("Failed to load template file: %s" %
                           absolute_filename)
         return _AnnotatedTemplate(image, relative_filename, absolute_filename)
 
 
-def load_image(filename, flags=cv2.CV_LOAD_IMAGE_COLOR):
+def load_image(filename, flags=cv2.IMREAD_COLOR):
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -2108,10 +2108,10 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
     cv2.rectangle(
         numpy_image, (origin[0] - 2, origin[1] + 2),
         (origin[0] + width + 2, origin[1] - height - 2),
-        thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
+        thickness=cv2.FILLED, color=(0, 0, 0))
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX,
-        fontScale=font_scale, color=color, lineType=cv2.CV_AA)
+        fontScale=font_scale, color=color, lineType=cv2.LINE_AA)
 
 
 class GObjectTimeout(object):
@@ -2260,7 +2260,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
-            mask_value, cv2.cv.CV_FILLED)
+            mask_value, thickness=cv2.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, method, threshold, level)
@@ -2283,13 +2283,16 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        contours, _ = cv2.findContours(
+        _, contours, _ = cv2.findContours(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        rois = [
-            _Rect(*cv2.boundingRect(x))
-            # findContours ignores 1-pixel border of the image
-            .shift(Position(-1, -1)).expand(_Size(2, 2))
-            for x in contours]
+        # In opencv < 3.2.0 findContours ignores 1-pixel border of the image
+        if cv2.CV_MAJOR_VERSION == 3 and cv2.CV_MINOR_VERSION >= 2:
+            rois = [_Rect(*cv2.boundingRect(x)) for x in contours]
+        else:
+            rois = [
+                _Rect(*cv2.boundingRect(x))
+                .shift(Position(-1, -1)).expand(_Size(2, 2))
+                for x in contours]
 
     if logging.get_debug_level() > 1:
         source_with_rois = image.copy()
@@ -2680,7 +2683,7 @@ def _load_mask(filename):
     debug("Using mask %s" % absolute_filename)
     if not absolute_filename:
         raise IOError("No such mask file: %s" % filename)
-    image = cv2.imread(absolute_filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    image = cv2.imread(absolute_filename, cv2.IMREAD_GRAYSCALE)
     if image is None:
         raise IOError("Failed to load mask file: %s" % absolute_filename)
     return image

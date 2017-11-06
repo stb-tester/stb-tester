@@ -89,8 +89,8 @@ class PrintingFrameObject(stbt.FrameObject):
 
 
 def _load_frame(name):
-    import cv2
     from os.path import abspath, dirname
+    import _stbt.opencv_shim as cv2
     filename = "%s/%s/frame-object-%s.png" % (
         dirname(abspath(__file__)),
         "auto-selftest-example-test-pack/selftest/screenshots",

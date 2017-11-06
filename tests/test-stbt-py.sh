@@ -99,10 +99,10 @@ test_that_frames_raises_NoVideo() {
 
 test_using_frames_to_measure_black_screen() {
     cat > test.py <<-EOF &&
-	import cv2
 	import stbt
 	import threading
 	import time
+	import _stbt.opencv_shim as cv2
 	
 	def presser():
 	    time.sleep(1)
@@ -222,8 +222,8 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 
 test_that_is_screen_black_respects_passed_in_frame() {
     cat > test.py <<-EOF
-	import cv2
 	import stbt
+	import _stbt.opencv_shim as cv2
 	almost_black = cv2.imread("$testdir/almost-black.png")
 	assert not stbt.is_screen_black(almost_black, threshold=0)
 	assert stbt.is_screen_black(almost_black, threshold=3)

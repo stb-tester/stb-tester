@@ -2,7 +2,7 @@
 
 test_importing_stbt_without_stbt_run() {
     cat > test.py <<-EOF
-	import stbt, cv2
+	import stbt, _stbt.opencv_shim as cv2
 	assert stbt.match(
 	    "$testdir/videotestsrc-redblue.png",
 	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))

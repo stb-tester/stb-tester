@@ -11,12 +11,12 @@ import time
 from contextlib import contextmanager
 from os.path import dirname
 
-import cv2
 import gi
 import numpy
 
 import _stbt.camera.chessboard as chessboard
 import _stbt.core
+import _stbt.opencv_shim as cv2
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
