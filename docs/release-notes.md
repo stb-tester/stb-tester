@@ -107,6 +107,11 @@ UNRELEASED
   `stbt.match_text` is now configurable. Set `lang` in the `[ocr]` section
   of your configuration file.
 
+* OpenCV 3 compatibility: stb-tester will now work with either OpenCV 2.4 or
+  OpenCV 3. This support is in beta, please let us know if you see anything not
+  working properly with OpenCV 3. OpenCV 2.4 is still our primary supported
+  target version of OpenCV.
+
 ##### Minor fixes and packaging fixes
 
 * The `irnetbox` control now understands "double signals" in the irNetBox

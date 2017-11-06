@@ -106,7 +106,7 @@ def _save_screenshot(exception):
             'thumbnail.jpg',
             cv2.resize(screenshot, (
                 640, 640 * screenshot.shape[0] // screenshot.shape[1])),
-            [cv2.cv.CV_IMWRITE_JPEG_QUALITY, 50])
+            [cv2.IMWRITE_JPEG_QUALITY, 50])
 
 
 def import_by_filename(filename_):

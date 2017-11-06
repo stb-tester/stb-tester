@@ -67,6 +67,7 @@ INSTALL_CORE_FILES = \
     _stbt/config.py \
     _stbt/control.py \
     _stbt/core.py \
+    _stbt/cv2_compat.py \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
     _stbt/imgproc_cache.py \

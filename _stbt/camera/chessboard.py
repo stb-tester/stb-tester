@@ -81,7 +81,7 @@ def find_corrected_corners(params, frame):
 
 def _find_chessboard(input_image):
     success, corners = cv2.findChessboardCorners(
-        input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
+        input_image, (29, 15), flags=cv2.CALIB_CB_ADAPTIVE_THRESH)
 
     if not success:
         raise NoChessboardError()
