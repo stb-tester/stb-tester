@@ -106,7 +106,7 @@ test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
     ! stbt run -v test.py &&
     [ -f screenshot.png ] &&
     ! [ -f thumbnail.jpg ] &&
-    python <<-EOF
+    PYTHONPATH=$srcdir python <<-EOF
 	import numpy
 	import _stbt.opencv_shim as cv2
 	ss = cv2.imread('screenshot.png')
