@@ -1415,7 +1415,7 @@ Minor user-visible fixes:
 -   The GLib main loop, and the source-restarting functionality,
     operate continuously, not just inside *wait_for_match* (etc).
     User scripts that expect momentary video loss (e.g. scripts that
-    reboot the system-under-test) can now be written as:
+    reboot the device-under-test) can now be written as:
 
         wait_for_match("splash.png", timeout_secs=30)
 
@@ -1671,7 +1671,7 @@ man-page.
 Bugfixes:
 
 -   Fixes a deadlock (introduced in 0.7) after GStreamer errors or
-    video loss from the system under test.
+    video loss from the device under test.
 -   Improves GStreamer pipeline restarting after transient video loss
     (see commit [2c434b2d] for details).
 -   Fixes segfault in *stbt-motiondetect* GStreamer element when

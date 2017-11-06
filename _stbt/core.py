@@ -1271,7 +1271,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         ``stable_secs`` conditions (if any) then ``wait_until`` returns
         ``None``.
 
-    After you send a remote-control signal to the system-under-test it usually
+    After you send a remote-control signal to the device-under-test it usually
     takes a few frames to react, so a test script like this would probably
     fail::
 
@@ -1450,7 +1450,7 @@ class UITestError(Exception):
 
 
 class UITestFailure(Exception):
-    """The test failed because the system under test didn't behave as expected.
+    """The test failed because the device under test didn't behave as expected.
 
     Inherit from this if you need to define your own test-failure exceptions.
     """

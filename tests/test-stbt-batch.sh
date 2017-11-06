@@ -384,7 +384,7 @@ test_stbt_batch_instaweb() {
     assert grep -q "manual failure reason" index.html
 
     curl --silent --show-error \
-        -F "value=UITestError: Not the system-under-test's fault" \
+        -F "value=UITestError: Not the device-under-test's fault" \
         http://127.0.0.1:5787/$rundir/failure-reason || fail 'Got HTTP failure'
     expect_runner_to_say "POST /$rundir/failure-reason"
     wait_for_report $server

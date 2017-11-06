@@ -88,7 +88,7 @@ _dut = _stbt.core.DeviceUnderTest()
 
 
 def press(key, interpress_delay_secs=None):
-    """Send the specified key-press to the system under test.
+    """Send the specified key-press to the device under test.
 
     :param str key:
         The name of the key/button.
@@ -135,12 +135,12 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
 
       8-bit BGR numpy arrays are the same format that OpenCV uses for images.
       This allows generating templates on the fly (possibly using OpenCV) or
-      searching for images captured from the system-under-test earlier in the
+      searching for images captured from the device-under-test earlier in the
       test script.
 
     :param `numpy.ndarray` frame:
       If this is specified it is used as the video frame to search in;
-      otherwise a new frame is grabbed from the system-under-test. This is an
+      otherwise a new frame is grabbed from the device-under-test. This is an
       image in OpenCV format (for example as returned by `frames` and
       `get_frame`).
 
@@ -189,7 +189,7 @@ def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
 def detect_match(image, timeout_secs=10, match_parameters=None,
                  region=Region.ALL):
     """Generator that yields a sequence of one `MatchResult` for each frame
-    processed from the system-under-test's video stream.
+    processed from the device-under-test's video stream.
 
     `image` is the image used as the template during matching.  See `stbt.match`
     for more information.
@@ -205,7 +205,7 @@ def detect_match(image, timeout_secs=10, match_parameters=None,
 
 def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
-    processed from the system-under-test's video stream.
+    processed from the device-under-test's video stream.
 
     The `MotionResult` indicates whether any motion was detected -- that is,
     any difference between two consecutive frames.
@@ -238,7 +238,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    match_parameters=None, region=Region.ALL):
-    """Search for an image in the system-under-test's video stream.
+    """Search for an image in the device-under-test's video stream.
 
     :param image: The image to search for. See `match`.
 
@@ -306,7 +306,7 @@ def press_until_match(
 def wait_for_motion(
         timeout_secs=10, consecutive_frames=None,
         noise_threshold=None, mask=None):
-    """Search for motion in the system-under-test's video stream.
+    """Search for motion in the device-under-test's video stream.
 
     "Motion" is difference in pixel values between two consecutive frames.
 
@@ -353,7 +353,7 @@ def ocr(frame=None, region=Region.ALL,
 
     :param frame:
         The video frame to process. If not specified, take a frame from the
-        system-under-test.
+        device-under-test.
 
     :param region: Only search within the specified region of the video frame.
     :type region: `Region`
@@ -451,7 +451,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
 
 def frames(timeout_secs=None):
-    """Generator that yields video frames captured from the system-under-test.
+    """Generator that yields video frames captured from the device-under-test.
 
     :type timeout_secs: int or float or None
     :param timeout_secs:
@@ -475,7 +475,7 @@ def frames(timeout_secs=None):
 
 
 def get_frame():
-    """Grabs a video frame captured from the system-under-test.
+    """Grabs a video frame captured from the device-under-test.
 
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
 
@@ -490,7 +490,7 @@ def is_screen_black(frame=None, mask=None, threshold=None):
 
     :param `numpy.ndarray` frame:
       If this is specified it is used as the video frame to check; otherwise a
-      new frame is grabbed from the system-under-test. This is an image in
+      new frame is grabbed from the device-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).
 
     :param str mask:

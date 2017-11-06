@@ -24,8 +24,8 @@ DESCRIPTION
 ===========
 
 **stbt run** will run the given testcase, using the live video-stream captured
-from the system-under-test as input, and a remote control (usually an infrared
-transmitter) to control the system-under-test.
+from the device-under-test as input, and a remote control (usually an infrared
+transmitter) to control the device-under-test.
 
 Testcases are written in the Python programming language. They look like this::
 
@@ -249,11 +249,11 @@ EXIT STATUS
 **stbt run** returns 0 on success; 1 on test script failure; 2 on any other
 error.
 
-Test scripts indicate **failure** (the system under test didn't behave as
+Test scripts indicate **failure** (the device under test didn't behave as
 expected) by raising an instance of `stbt.UITestFailure` (or a subclass
 thereof) or `AssertionError` (which is raised by Python's `assert` statement).
 Any other exception is considered a test **error** (a logic error in the test
-script, an error in the system under test's environment, or an error in the
+script, an error in the device under test's environment, or an error in the
 test framework itself).
 
 

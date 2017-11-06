@@ -67,8 +67,8 @@ directory set to the directory containing the test run logs:
 
 **batch.recover**
   Invoked after the test has failed. This program should restore the
-  system-under-test to a state where it is ready to run the next test (for
-  example by power-cycling the system-under-test and ensuring the boot sequence
+  device-under-test to a state where it is ready to run the next test (for
+  example by power-cycling the device-under-test and ensuring the boot sequence
   completes). This program is invoked after the built-in classification and the
   custom ``classify`` program, so the output from that classification is
   available (see below).

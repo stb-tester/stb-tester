@@ -6,7 +6,7 @@
 
 #/ usage: stbt screenshot [-h] [filename]
 #/
-#/ Capture a screenshot from the system-under-test to the specified filename
+#/ Capture a screenshot from the device-under-test to the specified filename
 #/ (defaults to 'screenshot.png'), using the GStreamer source pipeline
 #/ specified in your stbt config file.
 #/

@@ -130,7 +130,7 @@ class Run(object):
         elif self.exit_status == 0:
             return "success"
         elif self.exit_status == 1:
-            return "error"  # Red: Possible system-under-test failure
+            return "error"  # Red: Possible device-under-test failure
         else:
             return "warning"  # Yellow: Test infrastructure error
 
