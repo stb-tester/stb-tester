@@ -34,6 +34,7 @@ from enum import IntEnum
 from kitchen.text.converters import to_bytes
 from numpy import inf
 
+import _stbt.cv2_compat as cv2_compat
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
@@ -2108,10 +2109,10 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
     cv2.rectangle(
         numpy_image, (origin[0] - 2, origin[1] + 2),
         (origin[0] + width + 2, origin[1] - height - 2),
-        thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
+        thickness=cv2_compat.FILLED, color=(0, 0, 0))
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX,
-        fontScale=font_scale, color=color, lineType=cv2.CV_AA)
+        fontScale=font_scale, color=color, lineType=cv2_compat.LINE_AA)
 
 
 class GObjectTimeout(object):
@@ -2260,7 +2261,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
-            mask_value, cv2.cv.CV_FILLED)
+            mask_value, cv2_compat.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, method, threshold, level)
@@ -2283,13 +2284,8 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        contours, _ = cv2.findContours(
-            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        rois = [
-            _Rect(*cv2.boundingRect(x))
-            # findContours ignores 1-pixel border of the image
-            .shift(Position(-1, -1)).expand(_Size(2, 2))
-            for x in contours]
+        rois = [_Rect(*x) for x in cv2_compat.find_contour_boxes(
+            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
 
     if logging.get_debug_level() > 1:
         source_with_rois = image.copy()
