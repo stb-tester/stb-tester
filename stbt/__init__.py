@@ -224,9 +224,10 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         considered noise; a value of 0 will never report motion) to 1.0 (any
         difference is considered motion).
 
-        This defaults to 0.84. You can override the global default value by
-        setting ``noise_threshold`` in the ``[motion]`` section of
-        :ref:`.stbt.conf`.
+        This defaults to 1.0. Reduce it if you are capturing from noisy sources
+        (for example if your UI rendering involves video compression). You can
+        override the global default value by setting ``noise_threshold`` in the
+        ``[motion]`` section of :ref:`.stbt.conf`.
 
     :param str mask:
         The filename of a black & white image that specifies which part of the
