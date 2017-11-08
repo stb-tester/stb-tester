@@ -716,12 +716,15 @@ test_global_use_old_threading_behaviour_frames() {
 	        break
 	    sa.add(a.time)
 	    sb.add(b.time)
+	print sorted(sa)
+	print sorted(sb)
 	assert len(sa) == 10
 	assert len(sb) == 10
 	# sa and sb contain unique frames:
 	assert sa.isdisjoint(sb)
 	EOF
-    stbt run -vv test.py || fail "Incorrect frames() behaviour"
+    stbt run -vv test.py ||
+        fail "Incorrect frames() behaviour (use_old_threading_behaviour=true)"
 
     set_config global.use_old_threading_behaviour false
 
@@ -734,10 +737,13 @@ test_global_use_old_threading_behaviour_frames() {
 	        break
 	    sa.add(a.time)
 	    sb.add(b.time)
+	print sorted(sa)
+	print sorted(sb)
 	assert len(sa) == 10
 	assert len(sb) == 10
 	# sa and sb contain the same frames:
 	assert sa == sb
 	EOF
-    stbt run -vv test.py || fail "Incorrect frames() behaviour"
+    stbt run -vv test.py ||
+        fail "Incorrect frames() behaviour (use_old_threading_behaviour=false)"
 }
