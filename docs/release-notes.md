@@ -77,7 +77,45 @@ UNRELEASED
   of your stbt config file, and let us know on the mailing list as we may
   remove the workaround completely in a future release.
 
+* A call to `stbt.get_frame()` is no-longer guaranteed to return a new frame, it
+  may return the same frame that the previous call to `stbt.get_frame()`
+  returned. This may have subtle effects on the timing of existing test-scripts.
+  Functions that depend on this behaviour should be refactored to use the
+  `stbt.frames()` iterator method instead.
+
+  If this change causes you problems you can add:
+
+      [global]
+      use_old_threading_behaviour = true
+
+  to your `stbt.conf` to restore the old behaviour. This option may be removed
+  in the future. Please let us know on [stb-tester/stb-tester#449] if this will
+  cause you problems.
+
+  The benefit is that you can now call `stbt.get_frame()` from multiple threads
+  and usage like `wait_until(lambda: match('a.png') or match('b.png'))` will run
+  faster as the second `match` will no longer block waiting for a new frame.
+
+* `stbt.get_frame()` and `stbt.frames()` now return read-only frames for better
+  performance.  Use `frame.copy()` to make a frame read-write.
+
+[stb-tester/stb-tester#449]: https://github.com/stb-tester/stb-tester/pull/449
+
 ##### New features
+
+* Python API: stbt can now be used from multiple threads simultaneously. Each
+  call to `stbt.frames()` returns an independent iterator that can be used
+  concurrently.  Example, wait for tv to start playing or an error screen:
+
+      pool = multiprocessing.pool.ThreadPool()
+      result = pool.imap_unordered(apply, [
+            lambda: wait_for_motion(),
+            lambda: wait_for_match("error-screen.png")
+        ]).next()
+      if isinstance(result, MotionResult):
+          print "TV is playing ok"
+      else:
+          print "Error screen"
 
 * New Android control mechanism to send taps, swipes, and key events. See the
   `stbt.android.AdbDevice` docstrings for usage instructions. You can capture
@@ -111,6 +149,11 @@ UNRELEASED
   OpenCV 3. This support is in beta, please let us know if you see anything not
   working properly with OpenCV 3. OpenCV 2.4 is still our primary supported
   target version of OpenCV.
+
+* Output video now runs a the full frame-rate of the input video rather than
+  slowing down during `wait_for_match`. As a side-effect the latency of the
+  video has increased by 0.5s and if the image processing is particularly slow
+  the annotations won't appear on the output video.
 
 ##### Minor fixes and packaging fixes
 

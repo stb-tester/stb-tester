@@ -17,7 +17,6 @@ import functools
 import inspect
 import itertools
 import os
-import Queue
 import re
 import subprocess
 import threading
@@ -26,6 +25,7 @@ import warnings
 from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import cv2
 import gi
@@ -755,6 +755,22 @@ def new_device_under_test_from_config(
     if source_teardown_eos is None:
         source_teardown_eos = get_config('global', 'source_teardown_eos',
                                          type_=bool)
+    use_old_threading_behaviour = get_config(
+        'global', 'use_old_threading_behaviour', type_=bool)
+    if use_old_threading_behaviour:
+        warn(dedent("""\
+            global.use_old_threading_behaviour is enabled.  This is intended as
+            a stop-gap measure to allow upgrading to stb-tester v28. We
+            recommend porting functions that depend on stbt.get_frame()
+            returning consecutive frames on each call to use stbt.frames()
+            instead.  This should make your functions usable from multiple
+            threads.
+
+            If porting to stbt.frames is not suitable please let us know on
+            https://github.com/stb-tester/stb-tester/pull/449 otherwise this
+            configuration option will be removed in a future release of
+            stb-tester.
+            """))
 
     display = [None]
 
@@ -775,7 +791,8 @@ def new_device_under_test_from_config(
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_remote(control_uri, display[0]),
-        sink_pipeline=sink_pipeline, mainloop=mainloop)
+        sink_pipeline=sink_pipeline, mainloop=mainloop,
+        use_old_threading_behaviour=use_old_threading_behaviour)
 
 
 def _pixel_bounding_box(img):
@@ -821,12 +838,18 @@ def _pixel_bounding_box(img):
 
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None, sink_pipeline=None,
-                 mainloop=None):
+                 mainloop=None, use_old_threading_behaviour=False, _time=None):
+        if _time is None:
+            import time as _time
         self._time_of_last_press = None
         self._display = display
         self._control = control
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
+        self._time = _time
+
+        self._use_old_threading_behaviour = use_old_threading_behaviour
+        self._last_grabbed_frame_time = 0
 
     def __enter__(self):
         if self._display:
@@ -845,7 +868,6 @@ class DeviceUnderTest(object):
         self._control = None
 
     def press(self, key, interpress_delay_secs=None):
-        import time
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
@@ -858,7 +880,7 @@ class DeviceUnderTest(object):
                     datetime.timedelta(seconds=interpress_delay_secs)
                 ).total_seconds()
                 if seconds_to_wait > 0:
-                    time.sleep(seconds_to_wait)
+                    self._time.sleep(seconds_to_wait)
                 else:
                     break
 
@@ -903,18 +925,13 @@ class DeviceUnderTest(object):
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
-            frame = self._display.pull_frame()
+            frame = self.get_frame()
 
         imglog = logging.ImageLogger(
             "match", match_parameters=match_parameters,
             template_name=template.friendly_name)
 
         region = Region.intersect(_image_region(frame), region)
-
-        # Remove this copy once we've confirmed that doing so won't cause
-        # push_sample to doodle on the frame later.
-        frame = frame.copy()
-        frame.flags.writeable = False
 
         # pylint:disable=undefined-loop-variable
         try:
@@ -949,7 +966,7 @@ class DeviceUnderTest(object):
 
         debug("Searching for " + template.friendly_name)
 
-        for sample in self._display.frames(timeout_secs):
+        for sample, _ in self.frames(timeout_secs):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
@@ -971,7 +988,7 @@ class DeviceUnderTest(object):
 
         previous_frame_gray = None
 
-        for frame in self._display.frames(timeout_secs):
+        for frame, _ in self.frames(timeout_secs):
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if previous_frame_gray is None:
@@ -1124,7 +1141,7 @@ class DeviceUnderTest(object):
             tesseract_user_patterns=None, text_color=None):
 
         if frame is None:
-            frame = self._display.pull_frame()
+            frame = self.get_frame()
 
         if region is None:
             raise TypeError(
@@ -1190,11 +1207,39 @@ class DeviceUnderTest(object):
         return result
 
     def frames(self, timeout_secs=None):
-        for f in self._display.frames(timeout_secs):
-            yield f.copy(), int(f.time * 1e9)
+        if timeout_secs is not None:
+            end_time = self._time.time() + timeout_secs
+        timestamp = None
+        first = True
+
+        while True:
+            if self._use_old_threading_behaviour:
+                timestamp = self._last_grabbed_frame_time
+
+            ddebug("user thread: Getting sample at %s" % self._time.time())
+            frame = self._display.get_frame(
+                max(10, timeout_secs), since=timestamp)
+            ddebug("user thread: Got sample at %s" % self._time.time())
+            timestamp = frame.time
+
+            if self._use_old_threading_behaviour:
+                self._last_grabbed_frame_time = timestamp
+
+            if not first and timeout_secs is not None and timestamp > end_time:
+                debug("timed out: %.3f > %.3f" % (timestamp, end_time))
+                return
+
+            yield frame, int(frame.time * 1e9)
+            first = False
 
     def get_frame(self):
-        return self._display.pull_frame().copy()
+        if self._use_old_threading_behaviour:
+            frame = self._display.get_frame(
+                since=self._last_grabbed_frame_time).copy()
+            self._last_grabbed_frame_time = frame.time
+            return frame
+        else:
+            return self._display.get_frame()
 
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
@@ -1202,7 +1247,7 @@ class DeviceUnderTest(object):
         if mask:
             mask = _load_mask(mask)
         if frame is None:
-            frame = self._display.pull_frame()
+            frame = self.get_frame()
         greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
@@ -1698,6 +1743,7 @@ class SinkPipeline(object):
         self.annotations = []
         self._raise_in_user_thread = raise_in_user_thread
         self.received_eos = threading.Event()
+        self._frames = deque(maxlen=35)
 
         if save_video:
             if not save_video.endswith(".webm"):
@@ -1754,6 +1800,10 @@ class SinkPipeline(object):
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
     def teardown(self):
+        # Drain the frame queue
+        while self._frames:
+            self._push_sample(self._frames.pop())
+
         debug("teardown: Sending eos on sink pipeline")
         if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
             if not self.received_eos.wait(10):
@@ -1767,7 +1817,26 @@ class SinkPipeline(object):
         # we won't be raising any errors from now on anyway:
         self._raise_in_user_thread = None
 
-    def push_sample(self, sample):
+    def on_sample(self, sample):
+        """
+        Called from `Display` for each frame.
+        """
+        # The test script can draw on the video, but this happens in a different
+        # thread.  We don't know when they're finished drawing so we just give
+        # them 0.5s instead.
+        SINK_LATENCY_SECS = 0.5
+
+        now = sample.time
+        self._frames.appendleft(sample)
+
+        while self._frames:
+            oldest = self._frames.pop()
+            if oldest.time > now - SINK_LATENCY_SECS:
+                self._frames.append(oldest)
+                break
+            self._push_sample(oldest)
+
+    def _push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.time
         texts = []
@@ -1832,7 +1901,7 @@ class NoSinkPipeline(object):
     def teardown(self):
         pass
 
-    def push_sample(self, _sample):
+    def on_sample(self, _sample):
         pass
 
     def draw(self, _obj, _duration_secs=None, label=""):
@@ -1846,13 +1915,11 @@ class Display(object):
 
         import time
 
-        self.novideo = False
-        self.lock = threading.RLock()  # Held by whoever is consuming frames
-        self.last_sample = Queue.Queue(maxsize=1)
+        self._condition = threading.Condition()  # Protects last_frame
+        self.last_frame = None
         self.last_used_frame = None
         self.source_pipeline = None
         self.init_time = time.time()
-        self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
         self.restart_source_enabled = restart_source
@@ -1907,7 +1974,6 @@ class Display(object):
             # Hauppauge HDPVR capture device.
             source_queue = self.source_pipeline.get_by_name(
                 "_stbt_user_data_queue")
-            self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
 
@@ -1922,53 +1988,33 @@ class Display(object):
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
-    def _get_sample(self, timeout_secs=10):
-        try:
-            # Timeout in case no frames are received. This happens when the
-            # Hauppauge HDPVR video-capture device loses video.
-            gst_sample = self.last_sample.get(timeout=timeout_secs)
-            self.novideo = False
-        except Queue.Empty:
-            self.novideo = True
-            pipeline = self.source_pipeline
-            if pipeline:
-                Gst.debug_bin_to_dot_file_with_ts(
-                    pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
-            raise NoVideo("No video")
-        if isinstance(gst_sample, Exception):
-            raise UITestError(str(gst_sample))
-
-        if isinstance(gst_sample, Gst.Sample):
-            self.last_used_frame = array_from_sample(gst_sample)
-
-        return gst_sample
-
-    def pull_frame(self, timeout_secs=10):
-        return array_from_sample(self._get_sample(timeout_secs))
-
-    def frames(self, timeout_secs=None):
+    def get_frame(self, timeout_secs=10, since=None):
         import time
-        self.start_timestamp = None
+        t = time.time()
+        end_time = t + timeout_secs
+        if since is None:
+            # If you want to wait 10s for a frame you're probably not interested
+            # in a frame from 10s ago.
+            since = t - timeout_secs
 
-        with self.lock:
+        with self._condition:
             while True:
-                ddebug("user thread: Getting sample at %s" % time.time())
-                sample = self._get_sample(max(10, timeout_secs))
-                ddebug("user thread: Got sample at %s" % time.time())
-                timestamp = sample.time
+                if (isinstance(self.last_frame, Frame) and
+                        self.last_frame.time > since):
+                    self.last_used_frame = self.last_frame
+                    return self.last_frame
+                elif isinstance(self.last_frame, Exception):
+                    raise UITestError(str(self.last_frame))
+                t = time.time()
+                if t > end_time:
+                    break
+                self._condition.wait(end_time - t)
 
-                if timeout_secs is not None:
-                    if not self.start_timestamp:
-                        self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs:
-                        debug("timed out: %.3f - %.3f > %.3f" % (
-                            timestamp, self.start_timestamp, timeout_secs))
-                        return
-
-                try:
-                    yield array_from_sample(sample)
-                finally:
-                    self._sink_pipeline.push_sample(sample)
+        pipeline = self.source_pipeline
+        if pipeline:
+            Gst.debug_bin_to_dot_file_with_ts(
+                pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
+        raise NoVideo("No video")
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -1983,34 +2029,27 @@ class Display(object):
             warn("Received frame with suspicious timestamp: %f. Check your "
                  "source-pipeline configuration." % sample.time)
 
-        self.tell_user_thread(sample)
-        if self.lock.acquire(False):  # non-blocking
-            try:
-                self._sink_pipeline.push_sample(sample)
-            finally:
-                self.lock.release()
+        frame = array_from_sample(sample)
+        frame.flags.writeable = False
+        self.tell_user_thread(frame)
+        self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
 
-    def tell_user_thread(self, sample_or_exception):
-        # `self.last_sample` (a synchronised Queue) is how we communicate from
-        # this thread (the GLib main loop) to the main application thread
-        # running the user's script. Note that only this thread writes to the
-        # Queue.
+    def tell_user_thread(self, frame_or_exception):
+        # `self.last_frame` is how we communicate from this thread (the GLib
+        # main loop) to the main application thread running the user's script.
+        # Note that only this thread writes to self.last_frame.
 
-        if isinstance(sample_or_exception, Exception):
+        if isinstance(frame_or_exception, Exception):
             ddebug("glib thread: reporting exception to user thread: %s" %
-                   sample_or_exception)
+                   frame_or_exception)
         else:
-            ddebug("glib thread: new sample (time=%s). Queue.qsize: %d" %
-                   (sample_or_exception.time, self.last_sample.qsize()))
+            ddebug("glib thread: new sample (time=%s)." %
+                   frame_or_exception.time)
 
-        # Drop old frame
-        try:
-            self.last_sample.get_nowait()
-        except Queue.Empty:
-            pass
-
-        self.last_sample.put_nowait(sample_or_exception)
+        with self._condition:
+            self.last_frame = frame_or_exception
+            self._condition.notify_all()
 
     def on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
@@ -2945,21 +2984,21 @@ def test_wait_for_motion_half_motion_str_2of4():
     with _fake_frames_at_half_motion() as dut:
         res = dut.wait_for_motion(consecutive_frames='2/4')
         print res
-        assert res.time == 1466084612.
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_2of3():
     with _fake_frames_at_half_motion() as dut:
         res = dut.wait_for_motion(consecutive_frames='2/3')
         print res
-        assert res.time == 1466084612.
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_4of10():
     with _fake_frames_at_half_motion() as dut:
         # Time is not affected by consecutive_frames parameter
-        res = dut.wait_for_motion(consecutive_frames='4/10')
-        assert res.time == 1466084612.
+        res = dut.wait_for_motion(consecutive_frames='4/10', timeout_secs=20)
+        assert res.time == 1466084606.
 
 
 def test_wait_for_motion_half_motion_str_3of4():
@@ -2982,26 +3021,39 @@ def test_wait_for_motion_half_motion_int():
 
 @contextmanager
 def _fake_frames_at_half_motion():
+    FRAMES = []
+    a = numpy.zeros((2, 2, 3), dtype=numpy.uint8)
+    b = numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255
+
+    # Motion:                 v     v     v     v     v     v     v     v     v
+    data = [a, a, a, a, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b]
+    #       ^                 ^
+    #       |                 L Motion starts here at timestamp 1466084606.
+    #       L Video starts here at timestamp 1466084600
+
+    FRAMES = [Frame(x, time=1466084600. + n) for n, x in enumerate(data)]
+
     class FakeDisplay(object):
-        def frames(self, _timeout_secs=10):
-            data = [
-                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-                numpy.zeros((2, 2, 3), dtype=numpy.uint8),
-                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-                numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255,
-            ]
-            # Start with no motion
-            for i in range(6):
-                yield Frame(data[0], time=1466084606. + i)
-            # Motion starts on 6th frame at time 1466084612.
-            for i in range(6, 20):
-                yield Frame(data[i % len(data)], time=1466084606. + i)
+        def get_frame(self, timeout_secs=10, since=0):  # pylint: disable=unused-argument
+            for f in FRAMES:
+                if f.time > since:
+                    return f
+            f = FRAMES[-1].copy()
+            f.time = since + 1
+            return f
 
-        def draw(self, *_args, **_kwargs):
-            pass
+    class FakeTime(object):
+        def __init__(self, now):
+            self._now = now
 
-    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline())
-    dut.get_frame = lambda: None
+        def time(self):
+            return self._now
+
+        def sleep(self, duration):
+            self._now += duration
+
+    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline(),
+                          _time=FakeTime(FRAMES[0].time))
     yield dut
 
 

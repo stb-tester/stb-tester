@@ -426,6 +426,63 @@ test_clock_visualisation() {
         verify.py
 }
 
+test_that_visualisation_doesnt_write_to_user_frame() {
+    cat > test.py <<-EOF
+	import numpy, stbt, time
+	
+	f = stbt.get_frame()
+	orig = f.copy()
+	stbt.draw_text("Hello")
+	time.sleep(1)  # wait for sink pipeline buffer to process the frame
+	# Can't use is_screen_black because on ubuntu 14.04 videotestsrc
+	# has a green bar along the bottom of the frame.
+	assert numpy.all(f == orig)
+	EOF
+    stbt run -v \
+        --source-pipeline 'videotestsrc pattern=black is-live=true' \
+        --save-video=video.webm \
+        test.py
+}
+
+test_that_frames_are_read_only() {
+    cat > test.py <<-EOF
+	import stbt
+	
+	f = stbt.get_frame()
+	try:
+	    f[0,0,0] = 0
+	    assert False, "Frame from stbt.get_frame is writeable"
+	except (ValueError, RuntimeError):
+	    # Different versions of numpy raise different exceptions
+	    pass
+	
+	for f, _ in stbt.frames():
+	    try:
+	        f[0,0,0] = 0
+	        assert False, "frame from stbt.frames is writeable"
+	    except (ValueError, RuntimeError):
+	        pass
+	    break
+	
+	class F(stbt.FrameObject):
+	    pass
+	f = F()
+	try:
+	    f._frame[0,0,0] = 0
+	    assert False, "stbt.FrameObject._frame is writeable"
+	except (ValueError, RuntimeError):
+	    pass
+	
+	m = stbt.match("$testdir/videotestsrc-redblue.png")
+	try:
+	    m.frame[0,0,0] = 0
+	    assert False, "stbt.MatchResult.frame is writeable"
+	except (ValueError, RuntimeError):
+	    pass
+	EOF
+    stbt run -v test.py
+}
+
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
 	import stbt, time
@@ -577,4 +634,116 @@ test_that_transformation_pipeline_transforms_video() {
 	    "$testdir/videotestsrc-redblue.png", timeout_secs=0)
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
+}
+
+test_multithreaded() {
+    cat > test.py <<-EOF &&
+	import time
+	from multiprocessing.pool import ThreadPool
+	
+	import stbt
+	
+	stbt.press('black')
+	assert stbt.wait_until(stbt.is_screen_black)
+	
+	# Kick off the threads
+	pool = ThreadPool(processes=2)
+	result_iter = pool.imap_unordered(apply, [
+	    lambda: wait_for_motion(timeout_secs=2),
+	    lambda: wait_for_match(
+	        "$testdir/videotestsrc-checkers-8.png", timeout_secs=2)
+	])
+	
+	# Change the pattern
+	stbt.press(sys.argv[1])
+	
+	# See which matched
+	result = result_iter.next()
+	if isinstance(result, MotionResult):
+	    print "Motion"
+	elif isinstance(result, MatchResult):
+	    print "Checkers"
+	EOF
+
+    stbt run -v test.py checkers-8 >out.log
+    grep -q "Checkers" out.log || fail "Expected checkers pattern"
+
+    stbt run -v test.py smpte >out.log
+    grep -q "Motion" out.log || fail "Expected motion"
+
+    stbt run -v test.py black >out.log
+    grep -q "Timeout" out.log || fail "Expected timeout"
+}
+
+test_global_use_old_threading_behaviour() {
+    set_config global.use_old_threading_behaviour true
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	print "Saw %i unique frames" % len(ts)
+	assert len(ts) == 10
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+
+    grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour Warning not printed"
+
+    set_config global.use_old_threading_behaviour false
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	print "Saw %i unique frames" % len(ts)
+	assert len(ts) < 5
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+    ! grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour warning shouldn't be printed"
+}
+
+test_global_use_old_threading_behaviour_frames() {
+    set_config global.use_old_threading_behaviour true
+
+    cat > test.py <<-EOF &&
+	import itertools
+	sa = set()
+	sb = set()
+	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	    if len(sa) >= 10:
+	        break
+	    sa.add(a.time)
+	    sb.add(b.time)
+	print sorted(sa)
+	print sorted(sb)
+	assert len(sa) == 10
+	assert len(sb) == 10
+	# sa and sb contain unique frames:
+	assert sa.isdisjoint(sb)
+	EOF
+    stbt run -vv test.py ||
+        fail "Incorrect frames() behaviour (use_old_threading_behaviour=true)"
+
+    set_config global.use_old_threading_behaviour false
+
+    cat > test.py <<-EOF &&
+	import itertools
+	sa = set()
+	sb = set()
+	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	    if len(sa) >= 10:
+	        break
+	    sa.add(a.time)
+	    sb.add(b.time)
+	print sorted(sa)
+	print sorted(sb)
+	assert len(sa) == 10
+	assert len(sb) == 10
+	# sa and sb contain the same frames:
+	assert sa == sb
+	EOF
+    stbt run -vv test.py ||
+        fail "Incorrect frames() behaviour (use_old_threading_behaviour=false)"
 }
