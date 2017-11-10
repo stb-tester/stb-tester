@@ -223,8 +223,11 @@ test_that_stbt_run_tracing_is_written_to_socket() {
 
 assert_correct_unicode_error() {
     cat >expected.log <<-EOF
+		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: ü
 		Traceback (most recent call last):
+		  File ".../stbt-run", line ..., in sane_unicode_and_exception_handling
+		    yield
 		  File ".../stbt-run", line ..., in <module>
 		    test_function.call()
 		  File ".../stbt-run", line ..., in fn
@@ -232,7 +235,6 @@ assert_correct_unicode_error() {
 		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
-		Saved screenshot to 'screenshot.png'.
 		EOF
     diff -u <(grep -v -e File expected.log) \
             <(grep -v -e 'libdc1394 error: Failed to initialize libdc1394' \
