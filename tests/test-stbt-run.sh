@@ -228,7 +228,7 @@ assert_correct_unicode_error() {
 		Traceback (most recent call last):
 		  File ".../stbt-run", line ..., in sane_unicode_and_exception_handling
 		    yield
-		  File ".../stbt-run", line ..., in <module>
+		  File ".../stbt-run", line ..., in main
 		    test_function.call()
 		  File ".../stbt-run", line ..., in fn
 		    execfile(filename, test_globals)

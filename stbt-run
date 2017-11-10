@@ -17,32 +17,41 @@ import _stbt.core
 import stbt
 from _stbt.state_watch import new_state_sender
 
-parser = _stbt.core.argparser()
-parser.prog = 'stbt run'
-parser.description = 'Run an stb-tester test script'
-parser.add_argument(
-    '--save-trace', metavar='FILE', default=None,
-    help='Write state to this file, as xz compressed newline-seperated JSON')
-parser.add_argument(
-    '--save-screenshot', default='on-failure',
-    choices=['always', 'on-failure', 'never'],
-    help="Save a screenshot at the end of the test to screenshot.png")
-parser.add_argument(
-    '--save-thumbnail', default='never',
-    choices=['always', 'on-failure', 'never'],
-    help="Save a thumbnail at the end of the test to thumbnail.jpg")
-parser.add_argument(
-    'script', metavar='FILE[::TESTCASE]', help=(
-        "The python test script to run. Optionally specify a python function "
-        "name to run that function; otherwise only the script's top-level will "
-        "be executed."))
-parser.add_argument(
-    'args', nargs=argparse.REMAINDER, metavar='ARG',
-    help='Additional arguments passed on to the test script (in sys.argv)')
 
-args = parser.parse_args(sys.argv[1:])
-stbt.debug("Arguments:\n" + "\n".join([
-    "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
+def main(argv):
+    parser = _stbt.core.argparser()
+    parser.prog = 'stbt run'
+    parser.description = 'Run an stb-tester test script'
+    parser.add_argument(
+        '--save-trace', metavar='FILE', default=None,
+        help='Write state to this file, as xz compressed newline-seperated '
+        'JSON')
+    parser.add_argument(
+        '--save-screenshot', default='on-failure',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a screenshot at the end of the test to screenshot.png")
+    parser.add_argument(
+        '--save-thumbnail', default='never',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a thumbnail at the end of the test to thumbnail.jpg")
+    parser.add_argument(
+        'script', metavar='FILE[::TESTCASE]', help=(
+            "The python test script to run. Optionally specify a python "
+            "function name to run that function; otherwise only the script's "
+            "top-level will be executed."))
+    parser.add_argument(
+        'args', nargs=argparse.REMAINDER, metavar='ARG',
+        help='Additional arguments passed on to the test script (in sys.argv)')
+
+    args = parser.parse_args(argv[1:])
+    stbt.debug("Arguments:\n" + "\n".join([
+        "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
+
+    dut = _stbt.core.new_device_under_test_from_config(args)
+    with sane_unicode_and_exception_handling(args.script), video(args, dut):
+        test_function = _load_test_function(args.script, args.args)
+        with tracing(args.save_trace, test_function):
+            test_function.call()
 
 
 def _save_screenshot(dut, exception, save_jpg, save_png):
@@ -198,8 +207,5 @@ def tracing(save_trace_arg, test_function):
         _tracer.close()
 
 
-dut = _stbt.core.new_device_under_test_from_config(args)
-with sane_unicode_and_exception_handling(args.script), video(args, dut):
-    test_function = _load_test_function(args.script, args.args)
-    with tracing(args.save_trace, test_function):
-        test_function.call()
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
