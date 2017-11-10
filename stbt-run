@@ -45,33 +45,47 @@ stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
 
-def _save_screenshot(exception):
+def _save_screenshot(dut, exception, save_jpg, save_png):
     import cv2
 
-    jpg = (args.save_thumbnail == 'always' or
-           (args.save_thumbnail == 'on-failure' and exception))
-    png = (args.save_screenshot == 'always' or
-           (args.save_screenshot == 'on-failure' and exception))
-
-    if not jpg and not png:
+    if not save_jpg and not save_png:
         return
 
     screenshot = getattr(exception, "screenshot", None)
-    if screenshot is None and stbt._dut._display:  # pylint: disable=protected-access
-        screenshot = stbt._dut._display.last_used_frame  # pylint: disable=protected-access
+    if screenshot is None and dut._display:  # pylint: disable=protected-access
+        screenshot = dut._display.last_used_frame  # pylint: disable=protected-access
     if screenshot is None:
-        screenshot = stbt._dut.get_frame()  # pylint: disable=protected-access
+        screenshot = dut.get_frame()  # pylint: disable=protected-access
 
-    if png:
+    if save_png:
         cv2.imwrite("screenshot.png", screenshot)
         sys.stderr.write("Saved screenshot to 'screenshot.png'.\n")
 
-    if jpg:
+    if save_jpg:
         cv2.imwrite(
             'thumbnail.jpg',
             cv2.resize(screenshot, (
                 640, 640 * screenshot.shape[0] // screenshot.shape[1])),
             [cv2.IMWRITE_JPEG_QUALITY, 50])
+
+
+@contextmanager
+def video(args, dut):
+    with stbt._set_dut_singleton(dut), dut:  # pylint: disable=protected-access
+        try:
+            yield
+        except Exception:  # pylint: disable=W0703
+            try:
+                _save_screenshot(dut, exception=None,
+                                 save_jpg=(args.save_thumbnail != 'never'),
+                                 save_png=(args.save_screenshot != 'never'))
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise
+        else:
+            _save_screenshot(dut, exception=None,
+                             save_jpg=(args.save_thumbnail == 'always'),
+                             save_png=(args.save_screenshot == 'always'))
 
 
 def import_by_filename(filename_):
@@ -184,17 +198,8 @@ def tracing(save_trace_arg, test_function):
         _tracer.close()
 
 
-with sane_unicode_and_exception_handling(args.script):
-    dut = _stbt.core.new_device_under_test_from_config(args)
-    with stbt._set_dut_singleton(dut), dut:
-        try:
-            test_function = _load_test_function(args.script, args.args)
-            with tracing(args.save_trace, test_function):
-                test_function.call()
-        except Exception as e:  # pylint: disable=W0703
-            try:
-                _save_screenshot(exception=e)
-            except Exception:  # pylint: disable=broad-except
-                pass
-        else:
-            _save_screenshot(exception=None)
+dut = _stbt.core.new_device_under_test_from_config(args)
+with sane_unicode_and_exception_handling(args.script), video(args, dut):
+    test_function = _load_test_function(args.script, args.args)
+    with tracing(args.save_trace, test_function):
+        test_function.call()
