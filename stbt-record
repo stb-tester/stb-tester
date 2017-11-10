@@ -46,28 +46,28 @@ def main(argv):
 
 def record(control_recorder, script_out):
     stbt.get_frame()  # Fail early if no video
-    count = itertools.count()
+    count = itertools.count(1)
     old_key = None
+
+    def write_wait_for_match():
+        if old_key is None:
+            return
+        filename = "%04d-%s-complete.png" % (count.next(), old_key)
+        stbt.save_frame(stbt.get_frame(), filename)
+        script_out.write("    stbt.wait_for_match('%s')\n" % filename)
+
     script_out.write("import stbt\n\n\n")
     script_out.write("def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():\n")
     try:
         for key in _stbt.control.uri_to_remote_recorder(control_recorder):
-            write_wait_for_match(script_out, count.next(), old_key)
+            write_wait_for_match()
             script_out.write("    stbt.press('%s')\n" % key)
             stbt.press(key)
             old_key = key
     except KeyboardInterrupt:
-        write_wait_for_match(script_out, count.next(), old_key)
+        write_wait_for_match()
         return
-    write_wait_for_match(script_out, count.next(), old_key)
-
-
-def write_wait_for_match(script_out, i, old_key):
-    if old_key is None:
-        return
-    filename = "%04d-%s-complete.png" % (i, old_key)
-    stbt.save_frame(stbt.get_frame(), filename)
-    script_out.write("    stbt.wait_for_match('%s')\n" % filename)
+    write_wait_for_match()
 
 
 if __name__ == "__main__":
