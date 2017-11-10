@@ -185,17 +185,16 @@ def tracing(save_trace_arg, test_function):
 
 
 with sane_unicode_and_exception_handling(args.script):
-    try:
-        stbt._init_run(args)
-        test_function = _load_test_function(args.script, args.args)
-        with tracing(args.save_trace, test_function):
-            test_function.call()
-    except Exception as e:  # pylint: disable=W0703
+    dut = _stbt.core.new_device_under_test_from_config(args)
+    with stbt._set_dut_singleton(dut), dut:
         try:
-            _save_screenshot(exception=e)
-        except Exception:  # pylint: disable=broad-except
-            pass
-    else:
-        _save_screenshot(exception=None)
-    finally:
-        stbt.teardown_run()
+            test_function = _load_test_function(args.script, args.args)
+            with tracing(args.save_trace, test_function):
+                test_function.call()
+        except Exception as e:  # pylint: disable=W0703
+            try:
+                _save_screenshot(exception=e)
+            except Exception:  # pylint: disable=broad-except
+                pass
+        else:
+            _save_screenshot(exception=None)
