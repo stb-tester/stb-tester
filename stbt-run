@@ -162,25 +162,34 @@ def sane_unicode_and_exception_handling(script):
             sys.exit(2)  # Error
 
 
-with sane_unicode_and_exception_handling(args.script):
-    _tracer = None
+@contextmanager
+def tracing(save_trace_arg, test_function):
+    _tracer = new_state_sender(save_trace_arg)  # pylint: disable=W0212
+
+    absfilename = os.path.abspath(test_function.filename)
+
+    def tracefunc(frame_, event, _):
+        if event == "line" and frame_.f_code.co_filename == absfilename:
+            _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
+        return tracefunc
+
+    _tracer.log_test_starting(test_function)
+    sys.settrace(tracefunc)
+
     try:
-        # pylint: disable=W0611
+        yield
+    finally:
+        sys.settrace(None)
+        _tracer.log_test_ended()
+        _tracer.close()
 
+
+with sane_unicode_and_exception_handling(args.script):
+    try:
         stbt._init_run(args)
-        _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
-
         test_function = _load_test_function(args.script, args.args)
-        absfilename = os.path.abspath(test_function.filename)
-
-        def tracefunc(frame_, event, _):
-            if event == "line" and frame_.f_code.co_filename == absfilename:
-                _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
-            return tracefunc
-
-        _tracer.log_test_starting(test_function)
-        sys.settrace(tracefunc)
-        test_function.call()
+        with tracing(args.save_trace, test_function):
+            test_function.call()
     except Exception as e:  # pylint: disable=W0703
         try:
             _save_screenshot(exception=e)
@@ -189,8 +198,4 @@ with sane_unicode_and_exception_handling(args.script):
     else:
         _save_screenshot(exception=None)
     finally:
-        sys.settrace(None)
-        if _tracer:
-            _tracer.log_test_ended()
-            _tracer.close()
         stbt.teardown_run()

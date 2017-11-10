@@ -83,6 +83,12 @@ class StateSender(object):
     def __init__(self, file_):
         self._file = file_
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, _, _1, _2):
+        self.close()
+
     def set(self, items, time=None):
         """
         >>> sw = StateSender(StringIO())
