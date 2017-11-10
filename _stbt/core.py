@@ -730,31 +730,32 @@ class TextMatchResult(object):
 
 
 def new_device_under_test_from_config(
-        gst_source_pipeline=None, gst_sink_pipeline=None, control_uri=None,
-        save_video=False, restart_source=None, transformation_pipeline=None,
-        source_teardown_eos=None):
-
-    # Note that all callers (stbt-run etc, via stbt.init_run) pass in all
-    # parameters explicitly; but the behaviour of reading the default values
-    # from config is useful for integrating with a different test-runner like
-    # pytest, or from a Jupyter Notebook.
-
+        parsed_args=None, transformation_pipeline=None):
+    """
+    `parsed_args` if present should come from calling argparser().parse_args().
+    """
     from _stbt.control import uri_to_remote
 
-    if gst_source_pipeline is None:
-        gst_source_pipeline = get_config('global', 'source_pipeline')
-    if gst_sink_pipeline is None:
-        gst_sink_pipeline = get_config('global', 'sink_pipeline')
-    if control_uri is None:
-        control_uri = get_config('global', 'control')
-    if restart_source is None:
-        restart_source = get_config('global', 'restart_source', type_=bool)
+    if parsed_args is None:
+        args = argparser().parse_args([])
+    else:
+        args = parsed_args
+
+    if args.source_pipeline is None:
+        args.source_pipeline = get_config('global', 'source_pipeline')
+    if args.sink_pipeline is None:
+        args.sink_pipeline = get_config('global', 'sink_pipeline')
+    if args.control is None:
+        args.control = get_config('global', 'control')
+    if args.save_video is None:
+        args.save_video = False
+    if args.restart_source is None:
+        args.restart_source = get_config('global', 'restart_source', type_=bool)
     if transformation_pipeline is None:
         transformation_pipeline = get_config('global',
                                              'transformation_pipeline')
-    if source_teardown_eos is None:
-        source_teardown_eos = get_config('global', 'source_teardown_eos',
-                                         type_=bool)
+    source_teardown_eos = get_config('global', 'source_teardown_eos',
+                                     type_=bool)
     use_old_threading_behaviour = get_config(
         'global', 'use_old_threading_behaviour', type_=bool)
     if use_old_threading_behaviour:
@@ -778,19 +779,19 @@ def new_device_under_test_from_config(
         display[0].tell_user_thread(exception)
     mainloop = _mainloop()
 
-    if not gst_sink_pipeline and not save_video:
+    if not args.sink_pipeline and not args.save_video:
         sink_pipeline = NoSinkPipeline()
     else:
-        if not gst_sink_pipeline:
-            gst_sink_pipeline = "fakesink sync=false"
+        if not args.sink_pipeline:
+            args.sink_pipeline = "fakesink sync=false"
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
-            gst_sink_pipeline, raise_in_user_thread, save_video)
+            args.sink_pipeline, raise_in_user_thread, args.save_video)
 
     display[0] = Display(
-        gst_source_pipeline, sink_pipeline, restart_source,
+        args.source_pipeline, sink_pipeline, args.restart_source,
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
-        display=display[0], control=uri_to_remote(control_uri, display[0]),
+        display=display[0], control=uri_to_remote(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop,
         use_old_threading_behaviour=use_old_threading_behaviour)
 
@@ -1591,6 +1592,9 @@ def argparser():
         default=get_config('global', 'restart_source', type_=bool),
         help='Restart the GStreamer source pipeline when video loss is '
              'detected')
+    parser.add_argument(
+        '--save-video', help='Record video to the specified file',
+        metavar='FILE', default=get_config('run', 'save_video'))
 
     logging.argparser_add_verbose_argument(parser)
 

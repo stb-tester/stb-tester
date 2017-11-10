@@ -38,13 +38,7 @@ def main(argv):
         raise
 
     try:
-        stbt.init_run(
-            args.source_pipeline, args.sink_pipeline, args.control,
-            restart_source=args.restart_source,
-            transformation_pipeline=(
-                stbt.get_config('global', 'transformation_pipeline')),
-            source_teardown_eos=(
-                stbt.get_config('global', 'source_teardown_eos', type_=bool)))
+        stbt._init_run(args)
         record(args.control_recorder, script)
     finally:
         stbt.teardown_run()

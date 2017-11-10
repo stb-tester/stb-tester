@@ -611,11 +611,11 @@ def main(argv):
         (args.sink_pipeline,
          stbt.get_config('global', 'transformation_pipeline')))
 
-    sink_pipeline = ('textoverlay text="After correction" ! ' +
-                     args.sink_pipeline)
+    args.sink_pipeline = ('textoverlay text="After correction" ! ' +
+                          args.sink_pipeline)
+    args.control = 'none'
 
-    stbt.init_run(args.source_pipeline, sink_pipeline, 'none',
-                  transformation_pipeline=transformation_pipeline)
+    stbt.init_run(args, transformation_pipeline=transformation_pipeline)
 
     tv = tv_driver.create_from_args(args, videos)
 
