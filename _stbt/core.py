@@ -855,15 +855,15 @@ class DeviceUnderTest(object):
     def __enter__(self):
         if self._display:
             self._mainloop.__enter__()
-            self._sink_pipeline.startup()
-            self._display.startup()
+            self._sink_pipeline.__enter__()
+            self._display.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
         if self._display:
-            self._display.teardown()
+            self._display.__exit__(exc_type, exc_value, tb)
             self._display = None
-            self._sink_pipeline.teardown()
+            self._sink_pipeline.__exit__(exc_type, exc_value, tb)
             self._sink_pipeline = None
             self._mainloop.__exit__(exc_type, exc_value, tb)
         self._control = None
@@ -1799,11 +1799,11 @@ class SinkPipeline(object):
         self._raise_in_user_thread(
             UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
-    def startup(self):
+    def __enter__(self):
         self.received_eos.clear()
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
-    def teardown(self):
+    def __exit__(self, _1, _2, _3):
         # Drain the frame queue
         while self._frames:
             self._push_sample(self._frames.pop())
@@ -1899,10 +1899,10 @@ class NoSinkPipeline(object):
     faster because it doesn't do anything.  It especially doesn't do any copying
     nor video encoding :).
     """
-    def startup(self):
+    def __enter__(self):
         pass
 
-    def teardown(self):
+    def __exit__(self, _1, _2, _3):
         pass
 
     def on_sample(self, _sample):
@@ -2124,10 +2124,10 @@ class Display(object):
         appsink.disconnect(hid)
         return d
 
-    def startup(self):
+    def __enter__(self):
         self.set_source_pipeline_playing()
 
-    def teardown(self):
+    def __exit__(self, _1, _2, _3):
         self.tearing_down = True
         self.source_pipeline, source = None, self.source_pipeline
         if source:
