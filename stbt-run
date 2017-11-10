@@ -10,6 +10,7 @@ import argparse
 import os
 import sys
 import traceback
+from collections import namedtuple
 
 import _stbt.core
 import stbt
@@ -39,7 +40,6 @@ parser.add_argument(
     help='Additional arguments passed on to the test script (in sys.argv)')
 
 args = parser.parse_args(sys.argv[1:])
-sys.argv[1:] = args.args
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
@@ -114,6 +114,48 @@ def import_by_filename(filename_):
     sys.path = [os.path.abspath(module_dir)] + sys.path
     return __import__(module_name)
 
+
+_TestFunction = namedtuple(
+    "_TestFunction", "script filename funcname line call")
+
+
+def _load_test_function(script, args):
+    sys.argv = [script] + args
+    if '::' in script:
+        filename, funcname = script.split('::', 1)
+        module = import_by_filename(filename)
+        function = getattr(module, funcname)
+        return _TestFunction(
+            script, filename, funcname, function.func_code.co_firstlineno,
+            function)
+    else:
+        filename = os.path.abspath(script)
+
+        test_globals = {
+            '__builtins__': __builtins__,
+            '__name__': '__main__',
+            '__file__': script,
+            '__doc__': None,
+            '__package__': None,
+            'stbt': stbt,
+        }
+
+        # For backwards compatibility. We want to encourage people to expli-
+        # citly import stbt in their scripts, so don't add new APIs here.
+        for x in '''press press_until_match wait_for_match wait_for_motion
+                    detect_match MatchResult Position detect_motion
+                    MotionResult save_frame get_frame MatchParameters
+                    debug UITestError UITestFailure MatchTimeout MotionTimeout
+                    ConfigurationError'''.split():
+            test_globals[x] = getattr(stbt, x)
+
+        def fn():
+            sys.path.insert(0, os.path.dirname(filename))
+            execfile(filename, test_globals)
+
+        return _TestFunction(script, script, "", 1, fn)
+
+
 _tracer = None
 try:
     # pylint: disable=W0611
@@ -121,40 +163,17 @@ try:
     stbt._init_run(args)
     _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
 
-    _absfilename = None
+    test_function = _load_test_function(args.script, args.args)
+    absfilename = os.path.abspath(test_function.filename)
 
     def tracefunc(frame_, event, _):
-        if event == "line" and frame_.f_code.co_filename == _absfilename:
+        if event == "line" and frame_.f_code.co_filename == absfilename:
             _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
         return tracefunc
 
-    if '::' in args.script:
-        _filename, funcname = args.script.split('::', 1)
-        _absfilename = os.path.abspath(_filename)
-        module = import_by_filename(_filename)
-        function = getattr(module, funcname)
-        _tracer.log_test_starting(args.script, _filename, funcname,
-                                  function.func_code.co_firstlineno)
-        sys.settrace(tracefunc)
-        function()
-    else:
-        _filename = os.path.abspath(args.script)
-        _absfilename = os.path.abspath(_filename)
-        _tracer.log_test_starting(args.script, args.script, "", 1)
-        sys.settrace(tracefunc)
-
-        # pylint: disable=W0612
-        from stbt import (
-            # For backwards compatibility. We want to encourage people to expli-
-            # citly import stbt in their scripts, so don't add new APIs here.
-            press, press_until_match, wait_for_match, wait_for_motion,
-            detect_match, MatchResult, Position, detect_motion,
-            MotionResult, save_frame, get_frame, MatchParameters,
-            debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
-            ConfigurationError)
-        __file__ = args.script
-        sys.path.insert(0, os.path.dirname(_filename))
-        execfile(_filename)
+    _tracer.log_test_starting(test_function)
+    sys.settrace(tracefunc)
+    test_function.call()
 except Exception as e:  # pylint: disable=W0703
     from kitchen.text.converters import exception_to_bytes
     error_message = exception_to_bytes(e)
