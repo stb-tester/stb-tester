@@ -22,6 +22,7 @@ case "$cmd" in
     -h|--help)
         usage; exit 0;;
     run)
+        PYTHONPATH=$(dirname "$0"):$PYTHONPATH \
         exec "$(dirname "$0")"/stbt-batch.d/run.py "$@";;
     report|instaweb)
         exec "$(dirname "$0")"/stbt-batch.d/$cmd "$@";;

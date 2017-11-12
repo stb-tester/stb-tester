@@ -17,12 +17,10 @@
 # * $tag
 # * $v
 # * $verbose
-# * $outputdir
 #
 # Outputs:
 #
-# * A test-run directory under $outputdir
-# * $outputdir/latest pointing to this directory
+# * Files in the current working directory
 #
 # IPC:
 #
@@ -34,24 +32,15 @@ die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
   runner=$(dirname "$(realpath "$0")")
-  local test testpath tmpdir rundir
+  local test testpath tmpdir
 
   test="$1" && shift &&
   testpath=$(realpath "$test") &&
   test_script_dir=$(dirname "$testpath") &&
-  mkdir -p "$outputdir" &&
-  pushd "$outputdir" >/dev/null &&
-  rundir=$(date +%Y-%m-%d_%H.%M.%S)"$tag" &&
-  { mkdir "$rundir" ||
-    # Avoid directory name clashes if the previous test took <1s to run
-    { sleep 1 && mkdir "$rundir"; }
-  } &&
-  send_state_change active_results_directory "\"$outputdir/$rundir\"" &&
-  rm -f current"$tag" && ln -s "$rundir" current"$tag" &&
-  cd "$rundir" &&
+  send_state_change active_results_directory "\"$PWD\"" &&
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
-  die "Failed to set up test-run directory '$outputdir/$rundir'."
+  die "Failed to set up test-run directory '$PWD'."
 
   [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
 
@@ -123,8 +112,6 @@ main() {
 
   cd ..
   send_state_change active_results_directory null
-  rm -f latest"$tag"; ln -s "$rundir" latest"$tag"
-  popd >/dev/null
   return $exit_status
 }
 

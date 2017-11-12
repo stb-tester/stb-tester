@@ -6,11 +6,18 @@
 
 
 import argparse
+import datetime
+import errno
 import os
+import random
 import signal
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from distutils.spawn import find_executable
+
+from _stbt.utils import mkdir_p
 
 
 def main(argv):
@@ -100,11 +107,15 @@ def main(argv):
     else:
         test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
+    mkdir_p(args.output)
+
     for test in test_generator:
         if term_count[0] > 0:
             break
         run_count += 1
-        last_exit_status = run_one(test, args, tag)
+
+        with setup_dirs(args.output, tag) as rundir:
+            last_exit_status = run_one(test, args, tag, cwd=rundir)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -132,25 +143,63 @@ def main(argv):
         return 1
 
 
+def make_rundir(outputdir, tag):
+    for n in range(2):
+        rundir = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S") + tag
+        try:
+            os.mkdir(os.path.join(outputdir, rundir))
+            return rundir
+        except OSError as e:
+            if e.errno == errno.EEXIST and n == 0:
+                # Avoid directory name clashes if the previous test took <1s to
+                # run
+                time.sleep(1)
+            else:
+                raise
+
+
+@contextmanager
+def setup_dirs(outputdir, tag):
+    mkdir_p(outputdir)
+
+    rundir = make_rundir(outputdir, tag)
+
+    symlink_f(rundir, os.path.join(outputdir, "current" + tag))
+
+    try:
+        yield os.path.join(outputdir, rundir)
+    finally:
+        # Now test has finished...
+        symlink_f(rundir, os.path.join(outputdir, "latest" + tag))
+
+
+def symlink_f(source, link_name):
+    name = "%s-%06i~" % (link_name, random.randint(0, 999999))
+    os.symlink(source, name)
+    os.rename(name, link_name)
+
+
 DEVNULL_R = open('/dev/null')
 
 
-def run_one(test, args, tag):
+def run_one(test, args, tag, cwd):
     """
     Invoke the run-one shell-script with the appropriate arguments.
     """
+    test_file = os.path.abspath(test[0])
+    test_args = list(test[1:])
+
     subenv = dict(os.environ)
     subenv['do_html_report'] = "true" if args.do_html_report else "false"
     subenv['do_save_video'] = "true" if args.do_save_video else "false"
     subenv['tag'] = tag
     subenv['v'] = '-vv' if args.debug else '-v'
     subenv['verbose'] = str(args.verbose)
-    subenv['outputdir'] = os.path.abspath(args.output)
     child = None
     try:
         child = subprocess.Popen(
-            (_find_file("run-one"),) + test, stdin=DEVNULL_R, env=subenv,
-            preexec_fn=lambda: os.setpgid(0, 0))
+            (_find_file("run-one"), test_file) + test_args, stdin=DEVNULL_R,
+            env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
         return child.wait()
     except SystemExit:
         if child:
@@ -217,7 +266,6 @@ def weighted_choice(choices):
     """
     See http://stackoverflow.com/questions/3679694/
     """
-    import random
     total = sum(w for c, w in choices)
     r = random.uniform(0, total)
     upto = 0
@@ -229,8 +277,6 @@ def weighted_choice(choices):
 
 
 def shuffle(test_cases, repeat=True):
-    import random
-    import time
     test_cases = test_cases[:]
     random.shuffle(test_cases)
     timings = {test: [0.0, 0] for test in test_cases}
