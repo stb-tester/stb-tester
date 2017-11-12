@@ -8,14 +8,14 @@
 #
 # Input command-line arguments:
 #
-# * testname [args...]
+# * command to run
 #
 # Input environment variables:
 #
 # * $do_html_report ("true" or "false")
-# * $do_save_video ("true" or "false")
 # * $tag
-# * $v
+# * $testpath
+# * $test_displayname
 # * $verbose
 #
 # Outputs:
@@ -32,10 +32,8 @@ die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
   runner=$(dirname "$(realpath "$0")")
-  local test testpath tmpdir
+  local tmpdir
 
-  test="$1" && shift &&
-  testpath=$(realpath "$test") &&
   test_script_dir=$(dirname "$testpath") &&
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
@@ -60,16 +58,10 @@ main() {
     "$runner"/report --html-only . >/dev/null
   fi
 
-  if [ "$do_save_video" != "false" ]; then
-    save_video_arg="--save-video=video.webm"
-  fi
-
   user_command pre_run start
 
-  [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
-  "$runner"/../stbt-run $v --save-thumbnail=always $save_video_arg \
-    "$testpath" -- "$@" \
-    >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
+  [ $verbose -gt 0 ] && printf "\n$test_displayname ...\n" || printf "$test_displayname ... "
+  "$@" >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
   local start_time=$(date +%s)
 

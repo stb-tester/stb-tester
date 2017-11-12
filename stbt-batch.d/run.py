@@ -192,19 +192,28 @@ def run_one(test, args, tag, cwd):
     """
     Invoke the run-one shell-script with the appropriate arguments.
     """
-    test_file = os.path.abspath(test[0])
+    test_file = test[0]
     test_args = list(test[1:])
+
+    cmd = [_find_file('../stbt-run'), '--save-thumbnail=always']
+    if args.do_save_video:
+        cmd += ['--save-video=video.webm']
+    if args.debug:
+        cmd += ['-vv']
+    else:
+        cmd += ['-v']
+    cmd += [os.path.abspath(test_file), '--'] + test_args
 
     subenv = dict(os.environ)
     subenv['do_html_report'] = "true" if args.do_html_report else "false"
-    subenv['do_save_video'] = "true" if args.do_save_video else "false"
     subenv['tag'] = tag
-    subenv['v'] = '-vv' if args.debug else '-v'
+    subenv['test_displayname'] = " ".join([test_file] + test_args)
+    subenv['testpath'] = os.path.abspath(test_file)
     subenv['verbose'] = str(args.verbose)
     child = None
     try:
         child = subprocess.Popen(
-            (_find_file("run-one"), test_file) + test_args, stdin=DEVNULL_R,
+            [_find_file("run-one")] + cmd, stdin=DEVNULL_R,
             env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
         return child.wait()
     except SystemExit:
