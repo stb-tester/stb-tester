@@ -14,8 +14,6 @@ from distutils.spawn import find_executable
 
 
 def main(argv):
-    runner = os.path.dirname(os.path.abspath(__file__))
-
     parser = argparse.ArgumentParser(usage=(
         "\n  stbt batch run [options] test.py [test.py ...]"
         "\n  stbt batch run [options] test.py arg [arg ...] -- "
@@ -95,7 +93,6 @@ def main(argv):
 
     test_cases = parse_test_args(args.test_name)
 
-    DEVNULL_R = open('/dev/null', 'r')
     run_count = 0
 
     if args.shuffle:
@@ -107,24 +104,7 @@ def main(argv):
         if term_count[0] > 0:
             break
         run_count += 1
-        subenv = dict(os.environ)
-        subenv['do_html_report'] = "true" if args.do_html_report else "false"
-        subenv['do_save_video'] = "true" if args.do_save_video else "false"
-        subenv['tag'] = tag
-        subenv['v'] = '-vv' if args.debug else '-v'
-        subenv['verbose'] = str(args.verbose)
-        subenv['outputdir'] = os.path.abspath(args.output)
-        child = None
-        try:
-            child = subprocess.Popen(
-                ("%s/run-one" % runner,) + test, stdin=DEVNULL_R, env=subenv,
-                preexec_fn=lambda: os.setpgid(0, 0))
-            last_exit_status = child.wait()
-        except SystemExit:
-            if child:
-                os.kill(-child.pid, signal.SIGTERM)
-                child.wait()
-            raise
+        last_exit_status = run_one(test, args, tag)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -150,6 +130,33 @@ def main(argv):
         return 0
     else:
         return 1
+
+
+DEVNULL_R = open('/dev/null')
+
+
+def run_one(test, args, tag):
+    """
+    Invoke the run-one shell-script with the appropriate arguments.
+    """
+    subenv = dict(os.environ)
+    subenv['do_html_report'] = "true" if args.do_html_report else "false"
+    subenv['do_save_video'] = "true" if args.do_save_video else "false"
+    subenv['tag'] = tag
+    subenv['v'] = '-vv' if args.debug else '-v'
+    subenv['verbose'] = str(args.verbose)
+    subenv['outputdir'] = os.path.abspath(args.output)
+    child = None
+    try:
+        child = subprocess.Popen(
+            (_find_file("run-one"),) + test, stdin=DEVNULL_R, env=subenv,
+            preexec_fn=lambda: os.setpgid(0, 0))
+        return child.wait()
+    except SystemExit:
+        if child:
+            os.kill(-child.pid, signal.SIGTERM)
+            child.wait()
+        raise
 
 
 def listsplit(l, v):
@@ -303,6 +310,11 @@ def test_that_shuffle_equalises_time_across_tests():
     assert 30000 < time_spent_in_test["test1"] < 36000
     assert 30000 < time_spent_in_test["test2"] < 36000
     assert 30000 < time_spent_in_test["test3"] < 36000
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
