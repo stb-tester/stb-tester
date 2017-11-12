@@ -80,7 +80,6 @@ Depends: ${shlibs:Depends},
          python-pysnmp4,
          python-requests,
          python-serial,
-         socat,
          tesseract-ocr,
          tesseract-ocr-eng
 Description: Automated User Interface testing for set-top boxes. 

@@ -17,6 +17,7 @@ import time
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
+from _stbt.state_watch import new_state_sender
 from _stbt.utils import mkdir_p
 
 
@@ -108,13 +109,14 @@ def main(argv):
         test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
     mkdir_p(args.output)
+    state_sender = new_state_sender()
 
     for test in test_generator:
         if term_count[0] > 0:
             break
         run_count += 1
 
-        with setup_dirs(args.output, tag) as rundir:
+        with setup_dirs(args.output, tag, state_sender) as rundir:
             last_exit_status = run_one(test, args, tag, cwd=rundir)
 
         if last_exit_status != 0:
@@ -159,18 +161,22 @@ def make_rundir(outputdir, tag):
 
 
 @contextmanager
-def setup_dirs(outputdir, tag):
+def setup_dirs(outputdir, tag, state_sender):
     mkdir_p(outputdir)
 
     rundir = make_rundir(outputdir, tag)
 
     symlink_f(rundir, os.path.join(outputdir, "current" + tag))
 
+    state_sender.set({
+        "active_results_directory":
+        os.path.abspath(os.path.join(outputdir, rundir))})
     try:
         yield os.path.join(outputdir, rundir)
     finally:
         # Now test has finished...
         symlink_f(rundir, os.path.join(outputdir, "latest" + tag))
+        state_sender.set({"active_results_directory": None})
 
 
 def symlink_f(source, link_name):

@@ -37,7 +37,6 @@ main() {
   test="$1" && shift &&
   testpath=$(realpath "$test") &&
   test_script_dir=$(dirname "$testpath") &&
-  send_state_change active_results_directory "\"$PWD\"" &&
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
   die "Failed to set up test-run directory '$PWD'."
@@ -110,20 +109,7 @@ main() {
     "$runner"/report --html-only . >/dev/null
   fi
 
-  cd ..
-  send_state_change active_results_directory null
   return $exit_status
-}
-
-send_state_change() {
-  if [ -z "$STBT_TRACING_SOCKET" ]; then
-    return
-  fi
-
-  date='"'$(date --iso-8601=ns)'"'
-  echo '{"state_change": {"changes": {"'"$1"'": '"$2"'}, "time": '"$date"'}}' \
-    | socat STDIN "UNIX-CONNECT:$STBT_TRACING_SOCKET"
-  true
 }
 
 template() {
