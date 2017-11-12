@@ -206,6 +206,7 @@ def run_one(test, args, tag, cwd):
 
     subenv = dict(os.environ)
     subenv['do_html_report'] = "true" if args.do_html_report else "false"
+    subenv['stbt_root'] = _find_file('..')
     subenv['tag'] = tag
     subenv['test_displayname'] = " ".join([test_file] + test_args)
     subenv['testpath'] = os.path.abspath(test_file)

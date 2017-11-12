@@ -13,6 +13,7 @@
 # Input environment variables:
 #
 # * $do_html_report ("true" or "false")
+# * $stbt_root
 # * $tag
 # * $testpath
 # * $test_displayname
@@ -31,7 +32,6 @@
 die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
-  runner=$(dirname "$(realpath "$0")")
   local tmpdir
 
   test_script_dir=$(dirname "$testpath") &&
@@ -55,7 +55,7 @@ main() {
   printf "%s\n" "$@" > test-args
 
   if $do_html_report; then
-    "$runner"/report --html-only . >/dev/null
+    "$stbt_root"/stbt-batch.d/report --html-only . >/dev/null
   fi
 
   user_command pre_run start
@@ -89,7 +89,7 @@ main() {
   echo "$STBT_VERSION" > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
-  STBT_TRACING_SOCKET="" "$runner"/report --classify-only . >/dev/null
+  STBT_TRACING_SOCKET="" "$stbt_root"/stbt-batch.d/report --classify-only . >/dev/null
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || touch unrecoverable-error; }
 
@@ -98,7 +98,7 @@ main() {
   fi
 
   if $do_html_report; then
-    "$runner"/report --html-only . >/dev/null
+    "$stbt_root"/stbt-batch.d/report --html-only . >/dev/null
   fi
 
   return $exit_status
@@ -120,13 +120,13 @@ backtrace() {
 }
 
 user_command() {
-  local c=$("$runner"/../stbt-config batch.$1 2>/dev/null)
+  local c=$("$stbt_root"/stbt-config batch.$1 2>/dev/null)
   [[ -z "$c" ]] && return
   "$c" $2 </dev/null
 }
 
 check_capture_hardware() {
-  case "$("$runner"/../stbt-config global.source_pipeline | awk '{print $1}')" in
+  case "$("$stbt_root"/stbt-config global.source_pipeline | awk '{print $1}')" in
     v4l2src)
       if grep -q "Cannot identify device '/dev/v" failure-reason; then
         echo "v4l2 device not found; exiting."
@@ -137,13 +137,13 @@ check_capture_hardware() {
     decklinksrc)
       ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
         GST_DEBUG=decklinksrc:5 GST_DEBUG_NO_COLOR=1 \
-        "$runner"/../stbt-run --sink-pipeline='' \
+        "$stbt_root"/stbt-run --sink-pipeline='' \
           <(echo "import time; time.sleep(1)") 2>&1
       ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
 
       if grep -q "enable video input failed" decklinksrc.log; then
         local subdevice=$(
-          "$runner"/../stbt-config global.source_pipeline |
+          "$stbt_root"/stbt-config global.source_pipeline |
           grep -o device-number=. | awk -F= '{print $2}')
         local users=$(
           lsof -F Lnc \
