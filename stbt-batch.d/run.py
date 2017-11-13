@@ -115,14 +115,14 @@ def main(argv):
     # We assume that all test-cases are in the same git repo:
     git_info = read_git_info(os.path.dirname(test_cases[0][0]))
 
-    for test in test_generator:
+    for test_name, test_args in test_generator:
         if term_count[0] > 0:
             break
         run_count += 1
 
         with setup_dirs(args.output, tag, state_sender) as rundir:
-            fill_in_data_files(rundir, test, git_info, args.tag)
-            last_exit_status = run_one(test, args, cwd=rundir)
+            fill_in_data_files(rundir, test_name, test_args, git_info, args.tag)
+            last_exit_status = run_one(test_name, test_args, args, cwd=rundir)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -184,7 +184,7 @@ def make_rundir(outputdir, tag):
                 raise
 
 
-def fill_in_data_files(rundir, test, git_info, tag):
+def fill_in_data_files(rundir, test_name, test_args, git_info, tag):
     def write_file(name, data):
         with open(os.path.join(rundir, name), 'w') as f:
             f.write(data)
@@ -192,10 +192,10 @@ def fill_in_data_files(rundir, test, git_info, tag):
     if git_info:
         write_file("git-commit", git_info.commit)
         write_file("git-commit-sha", git_info.commit_sha)
-        write_file("test-name", os.path.relpath(test[0], git_info.git_dir))
+        write_file("test-name", os.path.relpath(test_name, git_info.git_dir))
     else:
-        write_file("test-name", os.path.abspath(test[0]))
-    write_file("test-args", "\n".join(test[1:]))
+        write_file("test-name", os.path.abspath(test_name))
+    write_file("test-args", "\n".join(test_args))
 
     if tag:
         write_file("extra-columns", "Tag\t%s\n" % tag)
@@ -229,27 +229,25 @@ def symlink_f(source, link_name):
 DEVNULL_R = open('/dev/null')
 
 
-def run_one(test, args, cwd):
+def run_one(test_name, test_args, batch_args, cwd):
     """
     Invoke the run-one shell-script with the appropriate arguments.
     """
-    test_file = test[0]
-    test_args = list(test[1:])
 
     cmd = [_find_file('../stbt-run'), '--save-thumbnail=always']
-    if args.do_save_video:
+    if batch_args.do_save_video:
         cmd += ['--save-video=video.webm']
-    if args.debug:
+    if batch_args.debug:
         cmd += ['-vv']
     else:
         cmd += ['-v']
-    cmd += [os.path.abspath(test_file), '--'] + test_args
+    cmd += [os.path.abspath(test_name), '--'] + list(test_args)
 
     subenv = dict(os.environ)
-    subenv['do_html_report'] = "true" if args.do_html_report else "false"
+    subenv['do_html_report'] = "true" if batch_args.do_html_report else "false"
     subenv['stbt_root'] = _find_file('..')
-    subenv['test_displayname'] = " ".join([test_file] + test_args)
-    subenv['verbose'] = str(args.verbose)
+    subenv['test_displayname'] = " ".join((test_name,) + test_args)
+    subenv['verbose'] = str(batch_args.verbose)
     child = None
     try:
         child = subprocess.Popen(
@@ -287,26 +285,26 @@ def listsplit(l, v):
 def parse_test_args(args):
     """
     >>> parse_test_args(['test 1.py', 'test2.py', 'test3.py'])
-    [('test 1.py',), ('test2.py',), ('test3.py',)]
+    [('test 1.py', ()), ('test2.py', ()), ('test3.py', ())]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', '--'])
-    [('test1.py',)]
+    [('test1.py', ())]
     >>> parse_test_args(['test1.py', '--', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', '--', 'test2.py', '--'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(
     ...     ['test1.py', 'arg1', 'arg2', '--', 'test2.py', 'arg', '--',
     ...      'test3.py'])
-    [('test1.py', 'arg1', 'arg2'), ('test2.py', 'arg'), ('test3.py',)]
+    [('test1.py', ('arg1', 'arg2')), ('test2.py', ('arg',)), ('test3.py', ())]
     """
     if '--' in args:
-        return [tuple(x) for x in listsplit(args, '--')]
+        return [(x[0], tuple(x[1:])) for x in listsplit(args, '--')]
     else:
-        return [(x,) for x in args]
+        return [(x, ()) for x in args]
 
 
 def loop_tests(test_cases, repeat=True):
