@@ -80,6 +80,7 @@ INSTALL_CORE_FILES = \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
     _stbt/state_watch.py \
+    _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
