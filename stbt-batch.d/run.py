@@ -6,16 +6,23 @@
 
 
 import argparse
+import datetime
+import errno
 import os
+import random
 import signal
 import subprocess
 import sys
+import time
+from collections import namedtuple
+from contextlib import contextmanager
 from distutils.spawn import find_executable
+
+from _stbt.state_watch import new_state_sender
+from _stbt.utils import mkdir_p
 
 
 def main(argv):
-    runner = os.path.dirname(os.path.abspath(__file__))
-
     parser = argparse.ArgumentParser(usage=(
         "\n  stbt batch run [options] test.py [test.py ...]"
         "\n  stbt batch run [options] test.py arg [arg ...] -- "
@@ -95,7 +102,6 @@ def main(argv):
 
     test_cases = parse_test_args(args.test_name)
 
-    DEVNULL_R = open('/dev/null', 'r')
     run_count = 0
 
     if args.shuffle:
@@ -103,28 +109,20 @@ def main(argv):
     else:
         test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
-    for test in test_generator:
+    mkdir_p(args.output)
+    state_sender = new_state_sender()
+
+    # We assume that all test-cases are in the same git repo:
+    git_info = read_git_info(os.path.dirname(test_cases[0][0]))
+
+    for test_name, test_args in test_generator:
         if term_count[0] > 0:
             break
         run_count += 1
-        subenv = dict(os.environ)
-        subenv['do_html_report'] = "true" if args.do_html_report else "false"
-        subenv['do_save_video'] = "true" if args.do_save_video else "false"
-        subenv['tag'] = tag
-        subenv['v'] = '-vv' if args.debug else '-v'
-        subenv['verbose'] = str(args.verbose)
-        subenv['outputdir'] = os.path.abspath(args.output)
-        child = None
-        try:
-            child = subprocess.Popen(
-                ("%s/run-one" % runner,) + test, stdin=DEVNULL_R, env=subenv,
-                preexec_fn=lambda: os.setpgid(0, 0))
-            last_exit_status = child.wait()
-        except SystemExit:
-            if child:
-                os.kill(-child.pid, signal.SIGTERM)
-                child.wait()
-            raise
+
+        with setup_dirs(args.output, tag, state_sender) as rundir:
+            fill_in_data_files(rundir, test_name, test_args, git_info, args.tag)
+            last_exit_status = run_one(test_name, test_args, args, cwd=rundir)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -152,6 +150,117 @@ def main(argv):
         return 1
 
 
+GitInfo = namedtuple('GitInfo', 'commit commit_sha git_dir')
+
+
+def read_git_info(testdir):
+    try:
+        def git(*cmd):
+            return subprocess.check_output(('git',) + cmd, cwd=testdir).strip()
+        return GitInfo(
+            git('describe', '--always', '--dirty'),
+            git('rev-parse', 'HEAD'),
+            git('rev-parse', '--show-toplevel'))
+    except subprocess.CalledProcessError:
+        return None
+    except OSError as e:
+        # ENOENT means that git is not in $PATH
+        if e.errno != errno.ENOENT:
+            raise
+
+
+def make_rundir(outputdir, tag):
+    for n in range(2):
+        rundir = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S") + tag
+        try:
+            os.mkdir(os.path.join(outputdir, rundir))
+            return rundir
+        except OSError as e:
+            if e.errno == errno.EEXIST and n == 0:
+                # Avoid directory name clashes if the previous test took <1s to
+                # run
+                time.sleep(1)
+            else:
+                raise
+
+
+def fill_in_data_files(rundir, test_name, test_args, git_info, tag):
+    def write_file(name, data):
+        with open(os.path.join(rundir, name), 'w') as f:
+            f.write(data)
+
+    if git_info:
+        write_file("git-commit", git_info.commit)
+        write_file("git-commit-sha", git_info.commit_sha)
+        write_file("test-name", os.path.relpath(test_name, git_info.git_dir))
+    else:
+        write_file("test-name", os.path.abspath(test_name))
+    write_file("test-args", "\n".join(test_args))
+
+    if tag:
+        write_file("extra-columns", "Tag\t%s\n" % tag)
+
+
+@contextmanager
+def setup_dirs(outputdir, tag, state_sender):
+    mkdir_p(outputdir)
+
+    rundir = make_rundir(outputdir, tag)
+
+    symlink_f(rundir, os.path.join(outputdir, "current" + tag))
+
+    state_sender.set({
+        "active_results_directory":
+        os.path.abspath(os.path.join(outputdir, rundir))})
+    try:
+        yield os.path.join(outputdir, rundir)
+    finally:
+        # Now test has finished...
+        symlink_f(rundir, os.path.join(outputdir, "latest" + tag))
+        state_sender.set({"active_results_directory": None})
+
+
+def symlink_f(source, link_name):
+    name = "%s-%06i~" % (link_name, random.randint(0, 999999))
+    os.symlink(source, name)
+    os.rename(name, link_name)
+
+
+DEVNULL_R = open('/dev/null')
+
+
+def run_one(test_name, test_args, batch_args, cwd):
+    """
+    Invoke the run-one shell-script with the appropriate arguments.
+    """
+
+    cmd = [_find_file('../stbt-run'), '--save-thumbnail=always']
+    if batch_args.do_save_video:
+        cmd += ['--save-video=video.webm']
+    if batch_args.debug:
+        cmd += ['-vv']
+    else:
+        cmd += ['-v']
+    cmd += [os.path.abspath(test_name), '--'] + list(test_args)
+
+    subenv = dict(os.environ)
+    subenv['do_html_report'] = "true" if batch_args.do_html_report else "false"
+    subenv['stbt_root'] = _find_file('..')
+    subenv['test_displayname'] = " ".join((test_name,) + test_args)
+    subenv['verbose'] = str(batch_args.verbose)
+    child = None
+    try:
+        child = subprocess.Popen(
+            [_find_file("run-one")] + cmd, stdin=DEVNULL_R,
+            env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
+        return child.wait()
+    except SystemExit:
+        if child:
+            os.kill(-child.pid, signal.SIGTERM)
+            child.wait()
+        raise
+
+
 def listsplit(l, v):
     """
     A bit like str.split, but for lists
@@ -176,26 +285,26 @@ def listsplit(l, v):
 def parse_test_args(args):
     """
     >>> parse_test_args(['test 1.py', 'test2.py', 'test3.py'])
-    [('test 1.py',), ('test2.py',), ('test3.py',)]
+    [('test 1.py', ()), ('test2.py', ()), ('test3.py', ())]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', '--'])
-    [('test1.py',)]
+    [('test1.py', ())]
     >>> parse_test_args(['test1.py', '--', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', '--', 'test2.py', '--'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(['test1.py', 'test2.py'])
-    [('test1.py',), ('test2.py',)]
+    [('test1.py', ()), ('test2.py', ())]
     >>> parse_test_args(
     ...     ['test1.py', 'arg1', 'arg2', '--', 'test2.py', 'arg', '--',
     ...      'test3.py'])
-    [('test1.py', 'arg1', 'arg2'), ('test2.py', 'arg'), ('test3.py',)]
+    [('test1.py', ('arg1', 'arg2')), ('test2.py', ('arg',)), ('test3.py', ())]
     """
     if '--' in args:
-        return [tuple(x) for x in listsplit(args, '--')]
+        return [(x[0], tuple(x[1:])) for x in listsplit(args, '--')]
     else:
-        return [(x,) for x in args]
+        return [(x, ()) for x in args]
 
 
 def loop_tests(test_cases, repeat=True):
@@ -210,7 +319,6 @@ def weighted_choice(choices):
     """
     See http://stackoverflow.com/questions/3679694/
     """
-    import random
     total = sum(w for c, w in choices)
     r = random.uniform(0, total)
     upto = 0
@@ -222,8 +330,6 @@ def weighted_choice(choices):
 
 
 def shuffle(test_cases, repeat=True):
-    import random
-    import time
     test_cases = test_cases[:]
     random.shuffle(test_cases)
     timings = {test: [0.0, 0] for test in test_cases}
@@ -303,6 +409,11 @@ def test_that_shuffle_equalises_time_across_tests():
     assert 30000 < time_spent_in_test["test1"] < 36000
     assert 30000 < time_spent_in_test["test2"] < 36000
     assert 30000 < time_spent_in_test["test3"] < 36000
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
