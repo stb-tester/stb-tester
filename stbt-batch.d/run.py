@@ -14,6 +14,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections import namedtuple
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
@@ -111,13 +112,17 @@ def main(argv):
     mkdir_p(args.output)
     state_sender = new_state_sender()
 
+    # We assume that all test-cases are in the same git repo:
+    git_info = read_git_info(os.path.dirname(test_cases[0][0]))
+
     for test in test_generator:
         if term_count[0] > 0:
             break
         run_count += 1
 
         with setup_dirs(args.output, tag, state_sender) as rundir:
-            last_exit_status = run_one(test, args, tag, cwd=rundir)
+            fill_in_data_files(rundir, test, git_info, args.tag)
+            last_exit_status = run_one(test, args, cwd=rundir)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -145,6 +150,25 @@ def main(argv):
         return 1
 
 
+GitInfo = namedtuple('GitInfo', 'commit commit_sha git_dir')
+
+
+def read_git_info(testdir):
+    try:
+        def git(*cmd):
+            return subprocess.check_output(('git',) + cmd, cwd=testdir).strip()
+        return GitInfo(
+            git('describe', '--always', '--dirty'),
+            git('rev-parse', 'HEAD'),
+            git('rev-parse', '--show-toplevel'))
+    except subprocess.CalledProcessError:
+        return None
+    except OSError as e:
+        # ENOENT means that git is not in $PATH
+        if e.errno != errno.ENOENT:
+            raise
+
+
 def make_rundir(outputdir, tag):
     for n in range(2):
         rundir = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S") + tag
@@ -158,6 +182,23 @@ def make_rundir(outputdir, tag):
                 time.sleep(1)
             else:
                 raise
+
+
+def fill_in_data_files(rundir, test, git_info, tag):
+    def write_file(name, data):
+        with open(os.path.join(rundir, name), 'w') as f:
+            f.write(data)
+
+    if git_info:
+        write_file("git-commit", git_info.commit)
+        write_file("git-commit-sha", git_info.commit_sha)
+        write_file("test-name", os.path.relpath(test[0], git_info.git_dir))
+    else:
+        write_file("test-name", os.path.abspath(test[0]))
+    write_file("test-args", "\n".join(test[1:]))
+
+    if tag:
+        write_file("extra-columns", "Tag\t%s\n" % tag)
 
 
 @contextmanager
@@ -188,7 +229,7 @@ def symlink_f(source, link_name):
 DEVNULL_R = open('/dev/null')
 
 
-def run_one(test, args, tag, cwd):
+def run_one(test, args, cwd):
     """
     Invoke the run-one shell-script with the appropriate arguments.
     """
@@ -207,9 +248,7 @@ def run_one(test, args, tag, cwd):
     subenv = dict(os.environ)
     subenv['do_html_report'] = "true" if args.do_html_report else "false"
     subenv['stbt_root'] = _find_file('..')
-    subenv['tag'] = tag
     subenv['test_displayname'] = " ".join([test_file] + test_args)
-    subenv['testpath'] = os.path.abspath(test_file)
     subenv['verbose'] = str(args.verbose)
     child = None
     try:

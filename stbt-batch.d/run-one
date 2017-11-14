@@ -14,8 +14,6 @@
 #
 # * $do_html_report ("true" or "false")
 # * $stbt_root
-# * $tag
-# * $testpath
 # * $test_displayname
 # * $verbose
 #
@@ -34,25 +32,9 @@ die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 main() {
   local tmpdir
 
-  test_script_dir=$(dirname "$testpath") &&
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
   die "Failed to set up test-run directory '$PWD'."
-
-  [ -n "$tag" ] && echo "Tag	${tag#-}" > extra-columns
-
-  git -C "$test_script_dir" describe --always --dirty 2>/dev/null \
-    > git-commit || rm -f git-commit
-
-  git -C "$test_script_dir" rev-parse HEAD \
-    > git-commit-sha || rm -f git-commit-sha
-
-  ( cd "$test_script_dir" &&
-    gitdir=$(dirname "$(realpath "$(git rev-parse --git-dir 2>/dev/null)")") &&
-    echo "${testpath#$gitdir/}" || echo "$testpath"
-  ) > test-name
-
-  printf "%s\n" "$@" > test-args
 
   if $do_html_report; then
     "$stbt_root"/stbt-batch.d/report --html-only . >/dev/null
@@ -179,11 +161,6 @@ on_term() {
     # Ignore SIGTERM.  It will have been sent to the whole process group, but we
     # want this process to finish running to write out the right results files.
     true;
-}
-
-# Portable implementation of GNU "readlink -f" to support BSD/OSX.
-realpath() {
-  python -c 'import os, sys; print os.path.realpath(sys.argv[1])' "$1"
 }
 
 main "$@"
