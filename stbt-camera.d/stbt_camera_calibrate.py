@@ -92,26 +92,26 @@ def print_error_map(outstream, ideal_points, measured_points):
     outstream.write("\n" + ENDC)
 
 
-def geometric_calibration(tv, device, interactive=True):
+def geometric_calibration(dut, tv, device, interactive=True):
     tv.show('chessboard')
 
     sys.stdout.write("Performing Geometric Calibration\n")
 
-    chessboard_calibration()
+    chessboard_calibration(dut)
     if interactive:
         while prompt_for_adjustment(device):
             try:
-                chessboard_calibration()
+                chessboard_calibration(dut)
             except chessboard.NoChessboardError:
                 tv.show('chessboard')
-                chessboard_calibration()
+                chessboard_calibration(dut)
 
 
-def chessboard_calibration(timeout=10):
+def chessboard_calibration(dut, timeout=10):
     from _stbt.gst_utils import array_from_sample
 
     undistorted_appsink = \
-        stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
+        dut._display.source_pipeline.get_by_name('undistorted_appsink')
 
     sys.stderr.write("Searching for chessboard\n")
     endtime = time.time() + timeout
@@ -125,7 +125,7 @@ def chessboard_calibration(timeout=10):
             if time.time() > endtime:
                 raise
 
-    geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
+    geometriccorrection = dut._display.source_pipeline.get_by_name(
         'geometric_correction')
 
     geometriccorrection_params = {
@@ -192,12 +192,12 @@ class QRScanner(object):
         return [s.data for s in zimg]
 
 
-def analyse_colours_video(number=None):
+def analyse_colours_video(dut, number=None):
     """RGB!"""
     errors_in_a_row = 0
     n = 0
     qrscanner = QRScanner()
-    for frame, _ in stbt.frames():
+    for frame, _ in dut.frames():
         if number is not None and n >= number:
             return
         n = n + 1
@@ -359,7 +359,7 @@ def fit_fn(ideals, measureds):
 
 
 @contextmanager
-def colour_graph():
+def colour_graph(dut):
     if not _can_show_graphs():
         sys.stderr.write("Install matplotlib and scipy for graphical "
                          "assistance with colour calibration\n")
@@ -383,7 +383,7 @@ def colour_graph():
         pyplot.grid()
 
         for n, ideal, measured in pop_with_progress(
-                analyse_colours_video(), COLOUR_SAMPLES):
+                analyse_colours_video(dut), COLOUR_SAMPLES):
             pyplot.draw()
             for c in [0, 1, 2]:
                 ideals[c].append(ideal[c])
@@ -417,9 +417,9 @@ def _can_show_graphs():
         return False
 
 
-def adjust_levels(tv, device):
+def adjust_levels(dut, tv, device):
     tv.show("colours2")
-    with colour_graph() as update_graph:
+    with colour_graph(dut) as update_graph:
         update_graph()
         while prompt_for_adjustment(device):
             update_graph()
@@ -439,12 +439,12 @@ videos['blank-black'] = (
     lambda: [(bytearray([0, 0, 0]) * 1280 * 720, 60 * Gst.SECOND)])
 
 
-def _create_reference_png(filename):
+def _create_reference_png(dut, filename):
     # Throw away some frames to let everything settle
-    pop_with_progress(stbt.frames(), 50)
+    pop_with_progress(dut.frames(), 50)
 
     average = None
-    for frame in pop_with_progress(stbt.frames(), FRAME_AVERAGE_COUNT):
+    for frame in pop_with_progress(dut.frames(), FRAME_AVERAGE_COUNT):
         if average is None:
             average = numpy.zeros(shape=frame[0].shape, dtype=numpy.uint16)
         average += frame[0]
@@ -452,8 +452,8 @@ def _create_reference_png(filename):
     cv2.imwrite(filename, numpy.array(average, dtype=numpy.uint8))
 
 
-def await_blank(brightness):
-    for frame, _ in stbt.frames(10):
+def await_blank(dut, brightness):
+    for frame, _ in dut.frames(10):
         grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         min_, max_, _, _ = cv2.minMaxLoc(grayscale)
         contrast = max_ - min_
@@ -464,7 +464,7 @@ def await_blank(brightness):
             "WARNING: Did not detect blank frame of brightness %i" % brightness)
 
 
-def calibrate_illumination(tv):
+def calibrate_illumination(dut, tv):
     img_dir = xdg_config_dir() + '/stbt/'
 
     props = {
@@ -473,13 +473,13 @@ def calibrate_illumination(tv):
     }
 
     tv.show("blank-white")
-    await_blank(255)
-    _create_reference_png(props['white-reference-image'])
+    await_blank(dut, 255)
+    _create_reference_png(dut, props['white-reference-image'])
     tv.show("blank-black")
-    await_blank(0)
-    _create_reference_png(props['black-reference-image'])
+    await_blank(dut, 0)
+    _create_reference_png(dut, props['black-reference-image'])
 
-    contraststretch = stbt._dut._display.source_pipeline.get_by_name(
+    contraststretch = dut._display.source_pipeline.get_by_name(
         'illumination_correction')
     for k, v in reversed(props.items()):
         contraststretch.set_property(k, v)
@@ -611,24 +611,24 @@ def main(argv):
         (args.sink_pipeline,
          stbt.get_config('global', 'transformation_pipeline')))
 
-    sink_pipeline = ('textoverlay text="After correction" ! ' +
-                     args.sink_pipeline)
+    args.sink_pipeline = ('textoverlay text="After correction" ! ' +
+                          args.sink_pipeline)
+    args.control = 'none'
 
-    stbt.init_run(args.source_pipeline, sink_pipeline, 'none',
-                  transformation_pipeline=transformation_pipeline)
+    with _stbt.core.new_device_under_test_from_config(
+            args, transformation_pipeline=transformation_pipeline) as dut:
+        tv = tv_driver.create_from_args(args, videos)
 
-    tv = tv_driver.create_from_args(args, videos)
+        if not args.skip_geometric:
+            geometric_calibration(dut, tv, device, interactive=args.interactive)
+        if args.interactive:
+            adjust_levels(dut, tv, device)
+        if not args.skip_illumination:
+            calibrate_illumination(dut, tv)
 
-    if not args.skip_geometric:
-        geometric_calibration(tv, device, interactive=args.interactive)
-    if args.interactive:
-        adjust_levels(tv, device)
-    if not args.skip_illumination:
-        calibrate_illumination(tv)
-
-    if args.interactive:
-        raw_input("Calibration complete.  Press <ENTER> to exit")
-    return 0
+        if args.interactive:
+            raw_input("Calibration complete.  Press <ENTER> to exit")
+        return 0
 
 
 if __name__ == '__main__':

@@ -638,7 +638,7 @@ test_that_transformation_pipeline_transforms_video() {
 
 test_multithreaded() {
     cat > test.py <<-EOF &&
-	import time
+	import sys, time
 	from multiprocessing.pool import ThreadPool
 	
 	import stbt

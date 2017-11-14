@@ -83,6 +83,12 @@ class StateSender(object):
     def __init__(self, file_):
         self._file = file_
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, _, _1, _2):
+        self.close()
+
     def set(self, items, time=None):
         """
         >>> sw = StateSender(StringIO())
@@ -102,14 +108,14 @@ class StateSender(object):
         self._file.close()
         self._file = None
 
-    def log_test_starting(self, name, file_, function, line):
+    def log_test_starting(self, func):
         self.set({"test_run": {
             "current_line": {},
             "test_case": {
-                "name": name,
-                "file": file_,
-                "function": function,
-                "line": line
+                "name": func.script,
+                "file": func.filename,
+                "function": func.funcname,
+                "line": func.line
             }}})
 
     def log_test_ended(self):

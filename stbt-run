@@ -2,187 +2,56 @@
 
 """
 Copyright 2012-2013 YouView TV Ltd.
+          2014-2017 stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import argparse
-import os
 import sys
-import traceback
 
 import _stbt.core
 import stbt
-from _stbt.state_watch import new_state_sender
-
-parser = _stbt.core.argparser()
-parser.prog = 'stbt run'
-parser.description = 'Run an stb-tester test script'
-parser.add_argument(
-    '--save-video', help='Record video to the specified file', metavar='FILE',
-    default=stbt.get_config('run', 'save_video'))
-parser.add_argument(
-    '--save-trace', metavar='FILE', default=None,
-    help='Write state to this file, as xz compressed newline-seperated JSON')
-parser.add_argument(
-    '--save-screenshot', default='on-failure',
-    choices=['always', 'on-failure', 'never'],
-    help="Save a screenshot at the end of the test to screenshot.png")
-parser.add_argument(
-    '--save-thumbnail', default='never',
-    choices=['always', 'on-failure', 'never'],
-    help="Save a thumbnail at the end of the test to thumbnail.jpg")
-parser.add_argument(
-    'script', metavar='FILE[::TESTCASE]', help=(
-        "The python test script to run. Optionally specify a python function "
-        "name to run that function; otherwise only the script's top-level will "
-        "be executed."))
-parser.add_argument(
-    'args', nargs=argparse.REMAINDER, metavar='ARG',
-    help='Additional arguments passed on to the test script (in sys.argv)')
-
-args = parser.parse_args(sys.argv[1:])
-sys.argv[1:] = args.args
-stbt.debug("Arguments:\n" + "\n".join([
-    "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
+from _stbt.stbt_run import (load_test_function,
+                            sane_unicode_and_exception_handling, tracing,
+                            video)
 
 
-def _setup_utf8_output():
-    """
-    Simulates python3's defaulting to utf-8 output so we don't get confusing
-    `UnicodeEncodeError`s when printing unicode characters.
-    """
-    from kitchen.text.converters import getwriter
-    if sys.stdout.encoding is None:
-        sys.stdout = getwriter('utf8')(sys.stdout)
-    if sys.stderr.encoding is None:
-        sys.stderr = getwriter('utf8')(sys.stderr)
+def main(argv):
+    parser = _stbt.core.argparser()
+    parser.prog = 'stbt run'
+    parser.description = 'Run an stb-tester test script'
+    parser.add_argument(
+        '--save-trace', metavar='FILE', default=None,
+        help='Write state to this file, as xz compressed newline-seperated '
+        'JSON')
+    parser.add_argument(
+        '--save-screenshot', default='on-failure',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a screenshot at the end of the test to screenshot.png")
+    parser.add_argument(
+        '--save-thumbnail', default='never',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a thumbnail at the end of the test to thumbnail.jpg")
+    parser.add_argument(
+        'script', metavar='FILE[::TESTCASE]', help=(
+            "The python test script to run. Optionally specify a python "
+            "function name to run that function; otherwise only the script's "
+            "top-level will be executed."))
+    parser.add_argument(
+        'args', nargs=argparse.REMAINDER, metavar='ARG',
+        help='Additional arguments passed on to the test script (in sys.argv)')
 
-_setup_utf8_output()
+    args = parser.parse_args(argv[1:])
+    stbt.debug("Arguments:\n" + "\n".join([
+        "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
-
-def _print_exc_utf8(file_=None):
-    r"""
-    This is a hack to allow printing exceptions that have unicode messages
-    attached to them.  The default behaviour of Python 2.7 is to replace
-    unicode charactors with \x023-like backslash escapes.  Instead we format
-    them as utf-8 bytes.
-
-    This is not thread-safe, but will only be called at the end of execution.
-    """
-    # pylint: disable=W0212
-    from kitchen.text.converters import to_bytes
-    _old_some_str = traceback._some_str
-    try:
-        traceback._some_str = to_bytes
-        traceback.print_exc(file=file_)
-    finally:
-        traceback._some_str = _old_some_str
-
-
-def _save_screenshot(exception):
-    import cv2
-
-    jpg = (args.save_thumbnail == 'always' or
-           (args.save_thumbnail == 'on-failure' and exception))
-    png = (args.save_screenshot == 'always' or
-           (args.save_screenshot == 'on-failure' and exception))
-
-    if not jpg and not png:
-        return
-
-    screenshot = getattr(exception, "screenshot", None)
-    if screenshot is None and stbt._dut._display:  # pylint: disable=protected-access
-        screenshot = stbt._dut._display.last_used_frame  # pylint: disable=protected-access
-    if screenshot is None:
-        screenshot = stbt._dut.get_frame()  # pylint: disable=protected-access
-
-    if png:
-        cv2.imwrite("screenshot.png", screenshot)
-        sys.stderr.write("Saved screenshot to 'screenshot.png'.\n")
-
-    if jpg:
-        cv2.imwrite(
-            'thumbnail.jpg',
-            cv2.resize(screenshot, (
-                640, 640 * screenshot.shape[0] // screenshot.shape[1])),
-            [cv2.IMWRITE_JPEG_QUALITY, 50])
+    dut = _stbt.core.new_device_under_test_from_config(args)
+    with sane_unicode_and_exception_handling(args.script), video(args, dut):
+        test_function = load_test_function(args.script, args.args)
+        with tracing(args.save_trace, test_function):
+            test_function.call()
 
 
-def import_by_filename(filename_):
-    module_dir, module_file = os.path.split(filename_)
-    module_name, module_ext = os.path.splitext(module_file)
-    if module_ext != '.py':
-        raise ImportError("Invalid module filename '%s'" % filename_)
-    sys.path = [os.path.abspath(module_dir)] + sys.path
-    return __import__(module_name)
-
-_tracer = None
-try:
-    # pylint: disable=W0611
-
-    stbt.init_run(
-        args.source_pipeline, args.sink_pipeline, args.control,
-        args.save_video, args.restart_source,
-        stbt.get_config('global', 'transformation_pipeline'),
-        stbt.get_config('global', 'source_teardown_eos', type_=bool))
-    _tracer = new_state_sender(args.save_trace)  # pylint: disable=W0212
-
-    _absfilename = None
-
-    def tracefunc(frame_, event, _):
-        if event == "line" and frame_.f_code.co_filename == _absfilename:
-            _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
-        return tracefunc
-
-    if '::' in args.script:
-        _filename, funcname = args.script.split('::', 1)
-        _absfilename = os.path.abspath(_filename)
-        module = import_by_filename(_filename)
-        function = getattr(module, funcname)
-        _tracer.log_test_starting(args.script, _filename, funcname,
-                                  function.func_code.co_firstlineno)
-        sys.settrace(tracefunc)
-        function()
-    else:
-        _filename = os.path.abspath(args.script)
-        _absfilename = os.path.abspath(_filename)
-        _tracer.log_test_starting(args.script, args.script, "", 1)
-        sys.settrace(tracefunc)
-
-        # pylint: disable=W0612
-        from stbt import (
-            # For backwards compatibility. We want to encourage people to expli-
-            # citly import stbt in their scripts, so don't add new APIs here.
-            press, press_until_match, wait_for_match, wait_for_motion,
-            detect_match, MatchResult, Position, detect_motion,
-            MotionResult, save_frame, get_frame, MatchParameters,
-            debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
-            ConfigurationError)
-        __file__ = args.script
-        sys.path.insert(0, os.path.dirname(_filename))
-        execfile(_filename)
-except Exception as e:  # pylint: disable=W0703
-    from kitchen.text.converters import exception_to_bytes
-    error_message = exception_to_bytes(e)
-    if not error_message and isinstance(e, AssertionError):
-        error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-    sys.stdout.write("FAIL: %s: %s: %s\n" % (
-        args.script, type(e).__name__, error_message))
-    _print_exc_utf8(file_=sys.stderr)
-    try:
-        _save_screenshot(exception=e)
-    except Exception:  # pylint: disable=broad-except
-        pass
-    if isinstance(e, (stbt.UITestFailure, AssertionError)):
-        sys.exit(1)  # Failure
-    else:
-        sys.exit(2)  # Error
-else:
-    _save_screenshot(exception=None)
-finally:
-    sys.settrace(None)
-    if _tracer:
-        _tracer.log_test_ended()
-        _tracer.close()
-    stbt.teardown_run()
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
