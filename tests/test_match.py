@@ -1,3 +1,4 @@
+import itertools
 import os
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from nose.tools import raises
 
 import stbt
 from _stbt.core import _crop, _load_template
+from _stbt.logging import ImageLogger
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
 
@@ -136,6 +138,10 @@ def test_match_all_with_an_image_that_matches_everywhere():
 
 def test_match_debug():
     expected = _find_file("stbt-debug-expected-output")
+
+    # So that the output directory name doesn't depend on how many tests
+    # were run before this one.
+    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
 
     with scoped_curdir(), scoped_debug_level(2):
         # First pass gives no matches:
