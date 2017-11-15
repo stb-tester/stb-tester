@@ -1,0 +1,81 @@
+
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <style>
+            h5 { margin-top: 40px; }
+            .table th { font-weight: normal; background-color: #eee; }
+            img {
+                vertical-align: middle; max-width: 150px; max-height: 36px;
+                padding: 1px; border: 1px solid #ccc; }
+            p { line-height: 40px; }
+            .table td { vertical-align: middle; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+        <h4>
+            <i>/home/drothlis/work/stb-tester.com/stb-tester/tests/videotestsrc-redblue-flipped.png</i>
+            didn't match
+        </h4>
+
+        <h5>First pass (find candidate matches):</h5>
+
+        <p>Searching for <b>template</b> <a href='template.png'><img src='template.png'></a>
+            within <b>source</b> image <a href='source.png'><img src='source.png'></a>
+
+        <table class="table">
+        <tr>
+          <th>Pyramid level</th>
+          <th>Match #</th>
+          <th>Searching for <b>template</b></th>
+          <th>within <b>source regions of interest</b></th>
+          <th>
+            OpenCV <b>matchTemplate heatmap</b>
+            with method sqdiff-normed
+            (darkest
+            pixel indicates position of best match).
+          </th>
+          <th>
+            matchTemplate heatmap <b>above match_threshold</b>
+            of 0.8
+            (white pixels indicate positions above the threshold).
+          </th>
+          <th><b>Matched?<b></th>
+          <th>Best match <b>position</b></th>
+          <th>&nbsp;</th>
+          <th><b>certainty</b></th>
+        </tr>
+
+        
+        <tr>
+          <td><b>2</b></td>
+          <td><b></b></td>
+          <td><a href='level2-template.png'><img src='level2-template.png'></a></td>
+          <td><a href='level2-source_with_rois.png'><img src='level2-source_with_rois.png'></a></td>
+          <td><a href='level2-source_matchtemplate.png'><img src='level2-source_matchtemplate.png'></a></td>
+          <td>
+            
+          </td>
+          <td>Didn't match</td>
+          <td>Position(x=46, y=0)</td>
+          <td><a href='level2-source_with_match.png'><img src='level2-source_with_match.png'></a></td>
+          <td>0.5738</td>
+        </tr>
+        
+
+        
+
+        </table>
+
+        
+
+        <p>For further help please read
+            <a href="http://stb-tester.com/match-parameters.html">stb-tester
+            image matching parameters</a>.
+
+        </div>
+        </body>
+        </html>
+    
