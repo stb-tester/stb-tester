@@ -2653,6 +2653,7 @@ def _log_match_image_debug(imglog):
         f.write(template.render(
             link=link,
             match_parameters=imglog.data["match_parameters"],
+            matched=any(imglog.data["matches"]),
             matches=imglog.data["matches"],
             min=min,
             pyramid_levels=imglog.data["pyramid_levels"],
