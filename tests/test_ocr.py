@@ -126,16 +126,20 @@ def test_that_setting_config_options_has_an_effect():
             stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png')))
 
 
-def test_that_passing_patterns_helps_reading_serial_codes():
+@pytest.mark.parametrize("patterns", [
+    pytest.param(None, marks=pytest.mark.xfail),
+    [r'\d\*.\d\*.\d\*.\d\*'],
+])
+def test_tesseract_user_patterns(patterns):
     # pylint: disable=W0212
     if _stbt.core._tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
-    assert u'UJJM2LGE' == stbt.ocr(
-        frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
+    assert u'192.168.10.1' == stbt.ocr(
+        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
-        tesseract_user_patterns=[r'\n\n\n\n\n\n\n\n'])
+        tesseract_user_patterns=patterns)
 
 
 @raises(RuntimeError)
@@ -146,17 +150,21 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
         raise SkipTest('tesseract is too new')
 
     stbt.ocr(
-        frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
+        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
-        tesseract_user_patterns=[r'\n\n\n\n\n\n\n\n'])
+        tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
 
 
-def test_user_dictionary_with_non_english_language():
-    assert u'UJJM2LGE' == stbt.ocr(
-        frame=cv2.imread('tests/ocr/UJJM2LGE.png'),
+@pytest.mark.parametrize("words", [
+    pytest.param(None, marks=pytest.mark.xfail),
+    ['192.168.10.1'],
+])
+def test_user_dictionary_with_non_english_language(words):
+    assert u'192.168.10.1' == stbt.ocr(
+        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
-        tesseract_user_words=[u'UJJM2LGE'])
+        tesseract_user_words=words)
 
 # Menu as listed in menu.svg:
 menu = [
