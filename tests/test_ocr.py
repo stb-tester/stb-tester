@@ -129,6 +129,7 @@ def test_that_setting_config_options_has_an_effect():
 @pytest.mark.parametrize("patterns", [
     pytest.param(None, marks=pytest.mark.xfail),
     [r'\d\*.\d\*.\d\*.\d\*'],
+    r'\d\*.\d\*.\d\*.\d\*',
 ])
 def test_tesseract_user_patterns(patterns):
     # pylint: disable=W0212
@@ -158,6 +159,7 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],
+    '192.168.10.1',
 ])
 def test_user_dictionary_with_non_english_language(words):
     assert u'192.168.10.1' == stbt.ocr(
