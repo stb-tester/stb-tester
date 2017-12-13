@@ -1154,6 +1154,12 @@ class DeviceUnderTest(object):
         if lang is None:
             lang = get_config("ocr", "lang", "eng")
 
+        if isinstance(tesseract_user_words, (str, unicode)):
+            tesseract_user_words = [tesseract_user_words]
+
+        if isinstance(tesseract_user_patterns, (str, unicode)):
+            tesseract_user_patterns = [tesseract_user_patterns]
+
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
             tesseract_user_patterns, tesseract_user_words, text_color)

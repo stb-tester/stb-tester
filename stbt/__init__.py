@@ -381,14 +381,14 @@ def ocr(frame=None, region=Region.ALL,
         <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`_
         for details.
 
-    :type tesseract_user_words: list of unicode strings
+    :type tesseract_user_words: unicode string, or list of unicode strings
     :param tesseract_user_words:
         List of words to be added to the tesseract dictionary. To replace the
         tesseract system dictionary altogether, also set
         ``tesseract_config={'load_system_dawg': False, 'load_freq_dawg':
         False}``.
 
-    :type tesseract_user_patterns: list of unicode strings
+    :type tesseract_user_patterns: unicode string, or list of unicode strings
     :param tesseract_user_patterns:
         List of patterns to add to the tesseract dictionary. The tesseract
         pattern language corresponds roughly to the following regular
