@@ -9,6 +9,7 @@ install:
  - sudo apt-get update
  - sudo apt-get -y install
         chromium-browser
+        cmake
         expect
         expect-dev
         gdb
@@ -20,8 +21,6 @@ install:
         gstreamer1.0-plugins-good
         gstreamer1.0-tools
         gstreamer1.0-x
-        libcec-dev
-        libcec2
         libgstreamer1.0-dev
         libgstreamer-plugins-base1.0-dev
         liblockdev1-dev
@@ -65,11 +64,33 @@ install:
         xterm
  - sudo pip install
         astroid==1.4.8
-        cec==0.2.6
         isort==3.9.0
         pylint==1.6.4
         pytest==3.3.1
         responses==0.5.1
+ - |
+     date &&
+     ls -l /usr/include/python* &&
+     ls -l /usr/lib/x86_64-linux-gnu/libpython* && \
+     git clone -b libcec-3.1.0 https://github.com/Pulse-Eight/libcec.git &&
+     git clone -b p8-platform-2.0.1 https://github.com/Pulse-Eight/platform.git &&
+     mkdir platform/build &&
+     cd platform/build &&
+     cmake .. &&
+     make &&
+     sudo make install &&
+     cd ../.. &&
+     mkdir libcec/build &&
+     cd libcec/build &&
+     cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+         -DPYTHON_INCLUDE_DIR:PATH=/usr/include/python2.7 \
+         -DPYTHON_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libpython2.7.so \
+         -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python2.7 \
+         .. &&
+     make &&
+     sudo make install &&
+     cd ../.. &&
+     date
  - |
      {
        wget http://ftpmirror.gnu.org/parallel/parallel-20140522.tar.bz2 ||
