@@ -71,7 +71,6 @@ install:
  - |
      date &&
      python -c 'from distutils.sysconfig import get_python_inc; print get_python_inc(); import sysconfig; print sysconfig.get_config_var("LIBDIR"); print sysconfig.get_config_var("LDLIBRARY"); print sysconfig.get_paths()' &&
-     ls -l /usr/lib/libpython* /usr/bin/python* &&
      git clone -b libcec-3.1.0 https://github.com/Pulse-Eight/libcec.git &&
      git clone -b p8-platform-2.0.1 https://github.com/Pulse-Eight/platform.git &&
      mkdir platform/build &&
