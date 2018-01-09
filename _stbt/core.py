@@ -529,7 +529,7 @@ class _AnnotatedTemplate(namedtuple(
 
     @property
     def friendly_name(self):
-        return self.absolute_filename or '<Custom Image>'
+        return self.relative_filename or '<Custom Image>'
 
 
 def _load_template(template):
@@ -2724,12 +2724,15 @@ def _find_user_file(filename):
             continue
         caller_path = os.path.join(caller_dir, filename)
         if os.path.isfile(caller_path):
+            ddebug("Resolved relative path %r to %r" % (filename, caller_path))
             return caller_path
 
     # Fall back to image from cwd, to allow loading an image saved previously
     # during the same test-run.
     if os.path.isfile(filename):
-        return os.path.abspath(filename)
+        abspath = os.path.abspath(filename)
+        ddebug("Resolved relative path %r to %r" % (filename, abspath))
+        return abspath
 
     return None
 

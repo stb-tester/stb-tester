@@ -444,8 +444,6 @@ def test_match_debug():
 
         subprocess.check_call([
             "diff", "-u", "--exclude=*.png",
-            # Ignore absolute pathnames in debug html:
-            r"--ignore-matching-lines=stb-tester/tests/*\.png",
             # The exact output of cv2.matchtemplate isn't deterministic across
             # different versions of OpenCV:
             r"--ignore-matching-lines=0\.99",
