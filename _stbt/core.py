@@ -532,21 +532,21 @@ class _ImageFromUser(namedtuple(
         return self.relative_filename or '<Custom Image>'
 
 
-def _load_template(template):
-    if isinstance(template, _ImageFromUser):
-        return template
-    if isinstance(template, numpy.ndarray):
-        return _ImageFromUser(template, None, None)
+def _load_image(image):
+    if isinstance(image, _ImageFromUser):
+        return image
+    if isinstance(image, numpy.ndarray):
+        return _ImageFromUser(image, None, None)
     else:
-        relative_filename = template
+        relative_filename = image
         absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename:
-            raise IOError("No such template file: %s" % relative_filename)
-        image = cv2.imread(absolute_filename, cv2.IMREAD_COLOR)
-        if image is None:
-            raise IOError("Failed to load template file: %s" %
+            raise IOError("No such file: %s" % relative_filename)
+        numpy_image = cv2.imread(absolute_filename, cv2.IMREAD_COLOR)
+        if numpy_image is None:
+            raise IOError("Failed to load image: %s" %
                           absolute_filename)
-        return _ImageFromUser(image, relative_filename, absolute_filename)
+        return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
 
 
 def load_image(filename, flags=cv2.IMREAD_COLOR):
@@ -936,7 +936,7 @@ class DeviceUnderTest(object):
         if match_parameters is None:
             match_parameters = MatchParameters()
 
-        template = _load_template(image)
+        template = _load_image(image)
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
@@ -977,7 +977,7 @@ class DeviceUnderTest(object):
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):
-        template = _load_template(image)
+        template = _load_image(image)
 
         debug("Searching for " + template.friendly_name)
 
@@ -1059,7 +1059,7 @@ class DeviceUnderTest(object):
 
         match_count = 0
         last_pos = Position(0, 0)
-        image = _load_template(image)
+        image = _load_image(image)
         for res in self.detect_match(
                 image, timeout_secs, match_parameters=match_parameters,
                 region=region):
@@ -2711,9 +2711,9 @@ def _find_user_file(filename):
     # the first 2 stack-frames:
     #
     # * stack()[0] is _find_user_file;
-    # * stack()[1] is _find_user_file's caller: load_image or _load_template;
+    # * stack()[1] is _find_user_file's caller: load_image or _load_image;
     # * stack()[2] is load_image's caller (the user script). It could also be
-    #   _load_template's caller (e.g. `match`) so we still need to check until
+    #   _load_image's caller (e.g. `match`) so we still need to check until
     #   we're outside of the _stbt directory.
 
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
