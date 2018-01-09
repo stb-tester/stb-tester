@@ -10,7 +10,7 @@ import numpy
 from nose.tools import raises
 
 import stbt
-from _stbt.core import _crop, _load_template
+from _stbt.core import _crop
 from _stbt.logging import ImageLogger
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
@@ -43,7 +43,7 @@ def test_matchresult_region_when_first_pyramid_level_fails_to_match():
 
 @raises(ValueError)
 def test_that_match_rejects_greyscale_template():
-    grey = cv2.cvtColor(_load_template("black.png").image, cv2.COLOR_BGR2GRAY)
+    grey = cv2.cvtColor(stbt.load_image("black.png"), cv2.COLOR_BGR2GRAY)
     stbt.match(grey, frame=black())
 
 
