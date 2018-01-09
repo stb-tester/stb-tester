@@ -523,8 +523,8 @@ def _str_frame_dimensions(frame):
         return "%dx%d" % (frame.shape[1], frame.shape[0])
 
 
-class _AnnotatedTemplate(namedtuple(
-        '_AnnotatedTemplate',
+class _ImageFromUser(namedtuple(
+        '_ImageFromUser',
         'image relative_filename absolute_filename')):
 
     @property
@@ -533,10 +533,10 @@ class _AnnotatedTemplate(namedtuple(
 
 
 def _load_template(template):
-    if isinstance(template, _AnnotatedTemplate):
+    if isinstance(template, _ImageFromUser):
         return template
     if isinstance(template, numpy.ndarray):
-        return _AnnotatedTemplate(template, None, None)
+        return _ImageFromUser(template, None, None)
     else:
         relative_filename = template
         absolute_filename = _find_user_file(relative_filename)
@@ -546,7 +546,7 @@ def _load_template(template):
         if image is None:
             raise IOError("Failed to load template file: %s" %
                           absolute_filename)
-        return _AnnotatedTemplate(image, relative_filename, absolute_filename)
+        return _ImageFromUser(image, relative_filename, absolute_filename)
 
 
 def load_image(filename, flags=cv2.IMREAD_COLOR):
