@@ -129,6 +129,8 @@ UNRELEASED
   <https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>
   for a discussion of the trade-offs of each video-capture mechanism.
 
+* Python API: New function `stbt.crop` to crop a region from a video-frame.
+
 * Python API: New function `stbt.load_image` to load an image from disk, using
   the same path lookup algorithm that `stbt.match` uses.
 
