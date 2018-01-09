@@ -1168,15 +1168,15 @@ class DeviceUnderTest(object):
         return text
 
     def match_text(self, text, frame=None, region=Region.ALL,
-                   mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+                   mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang="eng",
                    tesseract_config=None, case_sensitive=False,
-                   text_color=None):
+                   text_color=None, threshold=None):
 
         import lxml.etree
         if frame is None:
             frame = self.get_frame()
-        if lang is None:
-            lang = get_config("ocr", "lang", "eng")
+        if threshold is None:
+            threshold = get_config("match_text", "threshold")
 
         _config = dict(tesseract_config or {})
         _config['tessedit_create_hocr'] = 1
@@ -1191,7 +1191,7 @@ class DeviceUnderTest(object):
             result = TextMatchResult(rts, False, None, frame, text)
         else:
             hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-            p = _hocr_find_phrase(hocr, text.split(), case_sensitive)
+            p = _hocr_find_phrase(hocr, text.split(), case_sensitive, threshold)
             if p:
                 # Find bounding box
                 box = None
@@ -2953,7 +2953,13 @@ def _hocr_iterate(hocr):
                     need_space = True
 
 
-def _hocr_find_phrase(hocr, phrase, case_sensitive):
+def fuzzy_match(string1, string2, threshold):
+    import difflib
+    return difflib.SequenceMatcher(None, string1, string2).ratio() >= threshold
+
+
+def _hocr_find_phrase(hocr, phrase, case_sensitive, threshold):
+    from unidecode import unidecode
     if case_sensitive:
         lower = lambda s: s
     else:
@@ -2964,10 +2970,12 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
     phrase = [lower(_to_unicode(w)).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
-    if len(phrase) <= len(words_only):
-        for x in range(0, len(words_only)):
-            sublist = words_only[x:x + len(phrase)]
-            if all(w[0] == p for w, p in zip(sublist, phrase)):
+    # if len(phrase) <= len(words_only):
+    for x in range(0, len(words_only)):
+        sublist = words_only[x:x + len(phrase)]
+        # print sublist
+        for w, p in zip(sublist, phrase):
+            if fuzzy_match(unidecode(w[0]), p, threshold):
                 return sublist
     return None
 
