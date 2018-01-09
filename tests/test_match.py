@@ -1,7 +1,9 @@
+import itertools
 import os
+import subprocess
 import sys
 from contextlib import contextmanager
-from glob import glob
+from textwrap import dedent
 
 import cv2
 import numpy
@@ -9,6 +11,7 @@ from nose.tools import raises
 
 import stbt
 from _stbt.core import _crop, _load_template
+from _stbt.logging import ImageLogger
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
 
@@ -133,322 +136,327 @@ def test_match_all_with_an_image_that_matches_everywhere():
     assert matches == expected_matches
 
 
-# These ImageLogger tests are very basic regression tests. Possible
-# improvements include opening the debug html in a browser under "stbt
-# virtual-stb" and compare a screenshot; or using "stbt auto-selftest" to
-# generate the tests.
+def test_match_debug():
+    expected = _find_file("stbt-debug-expected-output")
 
-def test_match_all_image_debug_when_first_pass_gives_no_matches():
+    # So that the output directory name doesn't depend on how many tests
+    # were run before this one.
+    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+
     with scoped_curdir(), scoped_debug_level(2):
+        # First pass gives no matches:
         matches = list(stbt.match_all(
             "videotestsrc-redblue-flipped.png",
             frame=_imread("videotestsrc-full-frame.png")))
         print matches
         assert len(matches) == 0
-        _verify_stbt_debug_dir([
-            'index.html',
-            'level2-source.png',
-            'level2-source_matchtemplate.png',
-            'level2-source_with_match.png',
-            'level2-source_with_rois.png',
-            'level2-template.png',
-            'match0-heatmap.png',
-            'match0-source_with_match.png',
-            'source.png',
-            'template.png',
-        ])
 
-
-def test_match_all_image_debug_when_first_pass_stops_with_a_nonmatch():
-    with scoped_curdir(), scoped_debug_level(2):
+        # Multiple matches; first pass stops with a non-match:
         matches = list(stbt.match_all(
             "button.png", frame=_imread("buttons.png"),
             match_parameters=mp(match_threshold=0.99)))
         print matches
         assert len(matches) == 6
-        _verify_stbt_debug_dir([
-            'index.html',
-            'level0-source.png',
-            'level0-source_matchtemplate.png',
-            'level0-source_matchtemplate_threshold.png',
-            'level0-source_with_match.png',
-            'level0-source_with_rois.png',
-            'level0-template.png',
-            'level1-source.png',
-            'level1-source_matchtemplate.png',
-            'level1-source_matchtemplate_threshold.png',
-            'level1-source_with_match.png',
-            'level1-source_with_rois.png',
-            'level1-template.png',
-            'level2-source.png',
-            'level2-source_matchtemplate.png',
-            'level2-source_matchtemplate_threshold.png',
-            'level2-source_with_match.png',
-            'level2-source_with_rois.png',
-            'level2-template.png',
-            'match0-confirm-absdiff.png',
-            'match0-confirm-absdiff_threshold.png',
-            'match0-confirm-absdiff_threshold_erode.png',
-            'match0-confirm-source_roi.png',
-            'match0-confirm-source_roi_gray.png',
-            'match0-confirm-source_roi_gray_normalized.png',
-            'match0-confirm-template_gray.png',
-            'match0-confirm-template_gray_normalized.png',
-            'match0-heatmap.png',
-            'match0-source_with_match.png',
-            'match1-confirm-absdiff.png',
-            'match1-confirm-absdiff_threshold.png',
-            'match1-confirm-absdiff_threshold_erode.png',
-            'match1-confirm-source_roi.png',
-            'match1-confirm-source_roi_gray.png',
-            'match1-confirm-source_roi_gray_normalized.png',
-            'match1-confirm-template_gray.png',
-            'match1-confirm-template_gray_normalized.png',
-            'match1-heatmap.png',
-            'match1-source_with_match.png',
-            'match2-confirm-absdiff.png',
-            'match2-confirm-absdiff_threshold.png',
-            'match2-confirm-absdiff_threshold_erode.png',
-            'match2-confirm-source_roi.png',
-            'match2-confirm-source_roi_gray.png',
-            'match2-confirm-source_roi_gray_normalized.png',
-            'match2-confirm-template_gray.png',
-            'match2-confirm-template_gray_normalized.png',
-            'match2-heatmap.png',
-            'match2-source_with_match.png',
-            'match3-confirm-absdiff.png',
-            'match3-confirm-absdiff_threshold.png',
-            'match3-confirm-absdiff_threshold_erode.png',
-            'match3-confirm-source_roi.png',
-            'match3-confirm-source_roi_gray.png',
-            'match3-confirm-source_roi_gray_normalized.png',
-            'match3-confirm-template_gray.png',
-            'match3-confirm-template_gray_normalized.png',
-            'match3-heatmap.png',
-            'match3-source_with_match.png',
-            'match4-confirm-absdiff.png',
-            'match4-confirm-absdiff_threshold.png',
-            'match4-confirm-absdiff_threshold_erode.png',
-            'match4-confirm-source_roi.png',
-            'match4-confirm-source_roi_gray.png',
-            'match4-confirm-source_roi_gray_normalized.png',
-            'match4-confirm-template_gray.png',
-            'match4-confirm-template_gray_normalized.png',
-            'match4-heatmap.png',
-            'match4-source_with_match.png',
-            'match5-confirm-absdiff.png',
-            'match5-confirm-absdiff_threshold.png',
-            'match5-confirm-absdiff_threshold_erode.png',
-            'match5-confirm-source_roi.png',
-            'match5-confirm-source_roi_gray.png',
-            'match5-confirm-source_roi_gray_normalized.png',
-            'match5-confirm-template_gray.png',
-            'match5-confirm-template_gray_normalized.png',
-            'match5-heatmap.png',
-            'match5-source_with_match.png',
-            'match6-heatmap.png',
-            'match6-source_with_match.png',
-            'source.png',
-            'template.png',
-        ])
 
-
-def test_match_all_image_debug_when_second_pass_stops_with_a_nonmatch():
-    with scoped_curdir(), scoped_debug_level(2):
+        # Multiple matches; second pass stops with a non-match:
         matches = list(stbt.match_all(
             "button.png", frame=_imread("buttons.png")))
         print matches
         assert len(matches) == 6
-        _verify_stbt_debug_dir([
-            'index.html',
-            'level0-source.png',
-            'level0-source_matchtemplate.png',
-            'level0-source_matchtemplate_threshold.png',
-            'level0-source_with_match.png',
-            'level0-source_with_rois.png',
-            'level0-template.png',
-            'level1-source.png',
-            'level1-source_matchtemplate.png',
-            'level1-source_matchtemplate_threshold.png',
-            'level1-source_with_match.png',
-            'level1-source_with_rois.png',
-            'level1-template.png',
-            'level2-source.png',
-            'level2-source_matchtemplate.png',
-            'level2-source_matchtemplate_threshold.png',
-            'level2-source_with_match.png',
-            'level2-source_with_rois.png',
-            'level2-template.png',
-            'match0-confirm-absdiff.png',
-            'match0-confirm-absdiff_threshold.png',
-            'match0-confirm-absdiff_threshold_erode.png',
-            'match0-confirm-source_roi.png',
-            'match0-confirm-source_roi_gray.png',
-            'match0-confirm-source_roi_gray_normalized.png',
-            'match0-confirm-template_gray.png',
-            'match0-confirm-template_gray_normalized.png',
-            'match0-heatmap.png',
-            'match0-source_with_match.png',
-            'match1-confirm-absdiff.png',
-            'match1-confirm-absdiff_threshold.png',
-            'match1-confirm-absdiff_threshold_erode.png',
-            'match1-confirm-source_roi.png',
-            'match1-confirm-source_roi_gray.png',
-            'match1-confirm-source_roi_gray_normalized.png',
-            'match1-confirm-template_gray.png',
-            'match1-confirm-template_gray_normalized.png',
-            'match1-heatmap.png',
-            'match1-source_with_match.png',
-            'match2-confirm-absdiff.png',
-            'match2-confirm-absdiff_threshold.png',
-            'match2-confirm-absdiff_threshold_erode.png',
-            'match2-confirm-source_roi.png',
-            'match2-confirm-source_roi_gray.png',
-            'match2-confirm-source_roi_gray_normalized.png',
-            'match2-confirm-template_gray.png',
-            'match2-confirm-template_gray_normalized.png',
-            'match2-heatmap.png',
-            'match2-source_with_match.png',
-            'match3-confirm-absdiff.png',
-            'match3-confirm-absdiff_threshold.png',
-            'match3-confirm-absdiff_threshold_erode.png',
-            'match3-confirm-source_roi.png',
-            'match3-confirm-source_roi_gray.png',
-            'match3-confirm-source_roi_gray_normalized.png',
-            'match3-confirm-template_gray.png',
-            'match3-confirm-template_gray_normalized.png',
-            'match3-heatmap.png',
-            'match3-source_with_match.png',
-            'match4-confirm-absdiff.png',
-            'match4-confirm-absdiff_threshold.png',
-            'match4-confirm-absdiff_threshold_erode.png',
-            'match4-confirm-source_roi.png',
-            'match4-confirm-source_roi_gray.png',
-            'match4-confirm-source_roi_gray_normalized.png',
-            'match4-confirm-template_gray.png',
-            'match4-confirm-template_gray_normalized.png',
-            'match4-heatmap.png',
-            'match4-source_with_match.png',
-            'match5-confirm-absdiff.png',
-            'match5-confirm-absdiff_threshold.png',
-            'match5-confirm-absdiff_threshold_erode.png',
-            'match5-confirm-source_roi.png',
-            'match5-confirm-source_roi_gray.png',
-            'match5-confirm-source_roi_gray_normalized.png',
-            'match5-confirm-template_gray.png',
-            'match5-confirm-template_gray_normalized.png',
-            'match5-heatmap.png',
-            'match5-source_with_match.png',
-            'match6-confirm-absdiff.png',
-            'match6-confirm-absdiff_threshold.png',
-            'match6-confirm-absdiff_threshold_erode.png',
-            'match6-confirm-source_roi.png',
-            'match6-confirm-source_roi_gray.png',
-            'match6-confirm-source_roi_gray_normalized.png',
-            'match6-confirm-template_gray.png',
-            'match6-confirm-template_gray_normalized.png',
-            'match6-heatmap.png',
-            'match6-source_with_match.png',
-            'source.png',
-            'template.png',
-        ])
 
-
-def test_match_all_image_debug_with_absdiff():
-    with scoped_curdir(), scoped_debug_level(2):
+        # With absdiff:
         matches = list(stbt.match_all(
             "button.png", frame=_imread("buttons.png"),
             match_parameters=mp(confirm_method="absdiff",
                                 confirm_threshold=0.16)))
         print matches
         assert len(matches) == 6
-        _verify_stbt_debug_dir([
-            'index.html',
-            'level0-source.png',
-            'level0-source_matchtemplate.png',
-            'level0-source_matchtemplate_threshold.png',
-            'level0-source_with_match.png',
-            'level0-source_with_rois.png',
-            'level0-template.png',
-            'level1-source.png',
-            'level1-source_matchtemplate.png',
-            'level1-source_matchtemplate_threshold.png',
-            'level1-source_with_match.png',
-            'level1-source_with_rois.png',
-            'level1-template.png',
-            'level2-source.png',
-            'level2-source_matchtemplate.png',
-            'level2-source_matchtemplate_threshold.png',
-            'level2-source_with_match.png',
-            'level2-source_with_rois.png',
-            'level2-template.png',
-            'match0-confirm-absdiff.png',
-            'match0-confirm-absdiff_threshold.png',
-            'match0-confirm-absdiff_threshold_erode.png',
-            'match0-confirm-source_roi.png',
-            'match0-confirm-source_roi_gray.png',
-            'match0-confirm-template_gray.png',
-            'match0-heatmap.png',
-            'match0-source_with_match.png',
-            'match1-confirm-absdiff.png',
-            'match1-confirm-absdiff_threshold.png',
-            'match1-confirm-absdiff_threshold_erode.png',
-            'match1-confirm-source_roi.png',
-            'match1-confirm-source_roi_gray.png',
-            'match1-confirm-template_gray.png',
-            'match1-heatmap.png',
-            'match1-source_with_match.png',
-            'match2-confirm-absdiff.png',
-            'match2-confirm-absdiff_threshold.png',
-            'match2-confirm-absdiff_threshold_erode.png',
-            'match2-confirm-source_roi.png',
-            'match2-confirm-source_roi_gray.png',
-            'match2-confirm-template_gray.png',
-            'match2-heatmap.png',
-            'match2-source_with_match.png',
-            'match3-confirm-absdiff.png',
-            'match3-confirm-absdiff_threshold.png',
-            'match3-confirm-absdiff_threshold_erode.png',
-            'match3-confirm-source_roi.png',
-            'match3-confirm-source_roi_gray.png',
-            'match3-confirm-template_gray.png',
-            'match3-heatmap.png',
-            'match3-source_with_match.png',
-            'match4-confirm-absdiff.png',
-            'match4-confirm-absdiff_threshold.png',
-            'match4-confirm-absdiff_threshold_erode.png',
-            'match4-confirm-source_roi.png',
-            'match4-confirm-source_roi_gray.png',
-            'match4-confirm-template_gray.png',
-            'match4-heatmap.png',
-            'match4-source_with_match.png',
-            'match5-confirm-absdiff.png',
-            'match5-confirm-absdiff_threshold.png',
-            'match5-confirm-absdiff_threshold_erode.png',
-            'match5-confirm-source_roi.png',
-            'match5-confirm-source_roi_gray.png',
-            'match5-confirm-template_gray.png',
-            'match5-heatmap.png',
-            'match5-source_with_match.png',
-            'match6-confirm-absdiff.png',
-            'match6-confirm-absdiff_threshold.png',
-            'match6-confirm-absdiff_threshold_erode.png',
-            'match6-confirm-source_roi.png',
-            'match6-confirm-source_roi_gray.png',
-            'match6-confirm-template_gray.png',
-            'match6-heatmap.png',
-            'match6-source_with_match.png',
-            'source.png',
-            'template.png'
-        ])
 
+        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        assert files == dedent("""\
+            stbt-debug
+            stbt-debug/match
+            stbt-debug/match/00001
+            stbt-debug/match/00001/index.html
+            stbt-debug/match/00001/level2-source_matchtemplate.png
+            stbt-debug/match/00001/level2-source.png
+            stbt-debug/match/00001/level2-source_with_match.png
+            stbt-debug/match/00001/level2-source_with_rois.png
+            stbt-debug/match/00001/level2-template.png
+            stbt-debug/match/00001/match0-heatmap.png
+            stbt-debug/match/00001/match0-source_with_match.png
+            stbt-debug/match/00001/source.png
+            stbt-debug/match/00001/template.png
+            stbt-debug/match/00002
+            stbt-debug/match/00002/index.html
+            stbt-debug/match/00002/level0-source_matchtemplate.png
+            stbt-debug/match/00002/level0-source_matchtemplate_threshold.png
+            stbt-debug/match/00002/level0-source.png
+            stbt-debug/match/00002/level0-source_with_match.png
+            stbt-debug/match/00002/level0-source_with_rois.png
+            stbt-debug/match/00002/level0-template.png
+            stbt-debug/match/00002/level1-source_matchtemplate.png
+            stbt-debug/match/00002/level1-source_matchtemplate_threshold.png
+            stbt-debug/match/00002/level1-source.png
+            stbt-debug/match/00002/level1-source_with_match.png
+            stbt-debug/match/00002/level1-source_with_rois.png
+            stbt-debug/match/00002/level1-template.png
+            stbt-debug/match/00002/level2-source_matchtemplate.png
+            stbt-debug/match/00002/level2-source_matchtemplate_threshold.png
+            stbt-debug/match/00002/level2-source.png
+            stbt-debug/match/00002/level2-source_with_match.png
+            stbt-debug/match/00002/level2-source_with_rois.png
+            stbt-debug/match/00002/level2-template.png
+            stbt-debug/match/00002/match0-confirm-absdiff.png
+            stbt-debug/match/00002/match0-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match0-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match0-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match0-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match0-confirm-source_roi.png
+            stbt-debug/match/00002/match0-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match0-confirm-template_gray.png
+            stbt-debug/match/00002/match0-heatmap.png
+            stbt-debug/match/00002/match0-source_with_match.png
+            stbt-debug/match/00002/match1-confirm-absdiff.png
+            stbt-debug/match/00002/match1-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match1-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match1-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match1-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match1-confirm-source_roi.png
+            stbt-debug/match/00002/match1-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match1-confirm-template_gray.png
+            stbt-debug/match/00002/match1-heatmap.png
+            stbt-debug/match/00002/match1-source_with_match.png
+            stbt-debug/match/00002/match2-confirm-absdiff.png
+            stbt-debug/match/00002/match2-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match2-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match2-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match2-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match2-confirm-source_roi.png
+            stbt-debug/match/00002/match2-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match2-confirm-template_gray.png
+            stbt-debug/match/00002/match2-heatmap.png
+            stbt-debug/match/00002/match2-source_with_match.png
+            stbt-debug/match/00002/match3-confirm-absdiff.png
+            stbt-debug/match/00002/match3-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match3-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match3-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match3-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match3-confirm-source_roi.png
+            stbt-debug/match/00002/match3-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match3-confirm-template_gray.png
+            stbt-debug/match/00002/match3-heatmap.png
+            stbt-debug/match/00002/match3-source_with_match.png
+            stbt-debug/match/00002/match4-confirm-absdiff.png
+            stbt-debug/match/00002/match4-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match4-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match4-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match4-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match4-confirm-source_roi.png
+            stbt-debug/match/00002/match4-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match4-confirm-template_gray.png
+            stbt-debug/match/00002/match4-heatmap.png
+            stbt-debug/match/00002/match4-source_with_match.png
+            stbt-debug/match/00002/match5-confirm-absdiff.png
+            stbt-debug/match/00002/match5-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00002/match5-confirm-absdiff_threshold.png
+            stbt-debug/match/00002/match5-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00002/match5-confirm-source_roi_gray.png
+            stbt-debug/match/00002/match5-confirm-source_roi.png
+            stbt-debug/match/00002/match5-confirm-template_gray_normalized.png
+            stbt-debug/match/00002/match5-confirm-template_gray.png
+            stbt-debug/match/00002/match5-heatmap.png
+            stbt-debug/match/00002/match5-source_with_match.png
+            stbt-debug/match/00002/match6-heatmap.png
+            stbt-debug/match/00002/match6-source_with_match.png
+            stbt-debug/match/00002/source.png
+            stbt-debug/match/00002/template.png
+            stbt-debug/match/00003
+            stbt-debug/match/00003/index.html
+            stbt-debug/match/00003/level0-source_matchtemplate.png
+            stbt-debug/match/00003/level0-source_matchtemplate_threshold.png
+            stbt-debug/match/00003/level0-source.png
+            stbt-debug/match/00003/level0-source_with_match.png
+            stbt-debug/match/00003/level0-source_with_rois.png
+            stbt-debug/match/00003/level0-template.png
+            stbt-debug/match/00003/level1-source_matchtemplate.png
+            stbt-debug/match/00003/level1-source_matchtemplate_threshold.png
+            stbt-debug/match/00003/level1-source.png
+            stbt-debug/match/00003/level1-source_with_match.png
+            stbt-debug/match/00003/level1-source_with_rois.png
+            stbt-debug/match/00003/level1-template.png
+            stbt-debug/match/00003/level2-source_matchtemplate.png
+            stbt-debug/match/00003/level2-source_matchtemplate_threshold.png
+            stbt-debug/match/00003/level2-source.png
+            stbt-debug/match/00003/level2-source_with_match.png
+            stbt-debug/match/00003/level2-source_with_rois.png
+            stbt-debug/match/00003/level2-template.png
+            stbt-debug/match/00003/match0-confirm-absdiff.png
+            stbt-debug/match/00003/match0-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match0-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match0-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match0-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match0-confirm-source_roi.png
+            stbt-debug/match/00003/match0-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match0-confirm-template_gray.png
+            stbt-debug/match/00003/match0-heatmap.png
+            stbt-debug/match/00003/match0-source_with_match.png
+            stbt-debug/match/00003/match1-confirm-absdiff.png
+            stbt-debug/match/00003/match1-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match1-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match1-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match1-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match1-confirm-source_roi.png
+            stbt-debug/match/00003/match1-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match1-confirm-template_gray.png
+            stbt-debug/match/00003/match1-heatmap.png
+            stbt-debug/match/00003/match1-source_with_match.png
+            stbt-debug/match/00003/match2-confirm-absdiff.png
+            stbt-debug/match/00003/match2-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match2-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match2-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match2-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match2-confirm-source_roi.png
+            stbt-debug/match/00003/match2-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match2-confirm-template_gray.png
+            stbt-debug/match/00003/match2-heatmap.png
+            stbt-debug/match/00003/match2-source_with_match.png
+            stbt-debug/match/00003/match3-confirm-absdiff.png
+            stbt-debug/match/00003/match3-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match3-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match3-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match3-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match3-confirm-source_roi.png
+            stbt-debug/match/00003/match3-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match3-confirm-template_gray.png
+            stbt-debug/match/00003/match3-heatmap.png
+            stbt-debug/match/00003/match3-source_with_match.png
+            stbt-debug/match/00003/match4-confirm-absdiff.png
+            stbt-debug/match/00003/match4-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match4-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match4-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match4-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match4-confirm-source_roi.png
+            stbt-debug/match/00003/match4-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match4-confirm-template_gray.png
+            stbt-debug/match/00003/match4-heatmap.png
+            stbt-debug/match/00003/match4-source_with_match.png
+            stbt-debug/match/00003/match5-confirm-absdiff.png
+            stbt-debug/match/00003/match5-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match5-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match5-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match5-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match5-confirm-source_roi.png
+            stbt-debug/match/00003/match5-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match5-confirm-template_gray.png
+            stbt-debug/match/00003/match5-heatmap.png
+            stbt-debug/match/00003/match5-source_with_match.png
+            stbt-debug/match/00003/match6-confirm-absdiff.png
+            stbt-debug/match/00003/match6-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00003/match6-confirm-absdiff_threshold.png
+            stbt-debug/match/00003/match6-confirm-source_roi_gray_normalized.png
+            stbt-debug/match/00003/match6-confirm-source_roi_gray.png
+            stbt-debug/match/00003/match6-confirm-source_roi.png
+            stbt-debug/match/00003/match6-confirm-template_gray_normalized.png
+            stbt-debug/match/00003/match6-confirm-template_gray.png
+            stbt-debug/match/00003/match6-heatmap.png
+            stbt-debug/match/00003/match6-source_with_match.png
+            stbt-debug/match/00003/source.png
+            stbt-debug/match/00003/template.png
+            stbt-debug/match/00004
+            stbt-debug/match/00004/index.html
+            stbt-debug/match/00004/level0-source_matchtemplate.png
+            stbt-debug/match/00004/level0-source_matchtemplate_threshold.png
+            stbt-debug/match/00004/level0-source.png
+            stbt-debug/match/00004/level0-source_with_match.png
+            stbt-debug/match/00004/level0-source_with_rois.png
+            stbt-debug/match/00004/level0-template.png
+            stbt-debug/match/00004/level1-source_matchtemplate.png
+            stbt-debug/match/00004/level1-source_matchtemplate_threshold.png
+            stbt-debug/match/00004/level1-source.png
+            stbt-debug/match/00004/level1-source_with_match.png
+            stbt-debug/match/00004/level1-source_with_rois.png
+            stbt-debug/match/00004/level1-template.png
+            stbt-debug/match/00004/level2-source_matchtemplate.png
+            stbt-debug/match/00004/level2-source_matchtemplate_threshold.png
+            stbt-debug/match/00004/level2-source.png
+            stbt-debug/match/00004/level2-source_with_match.png
+            stbt-debug/match/00004/level2-source_with_rois.png
+            stbt-debug/match/00004/level2-template.png
+            stbt-debug/match/00004/match0-confirm-absdiff.png
+            stbt-debug/match/00004/match0-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match0-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match0-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match0-confirm-source_roi.png
+            stbt-debug/match/00004/match0-confirm-template_gray.png
+            stbt-debug/match/00004/match0-heatmap.png
+            stbt-debug/match/00004/match0-source_with_match.png
+            stbt-debug/match/00004/match1-confirm-absdiff.png
+            stbt-debug/match/00004/match1-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match1-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match1-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match1-confirm-source_roi.png
+            stbt-debug/match/00004/match1-confirm-template_gray.png
+            stbt-debug/match/00004/match1-heatmap.png
+            stbt-debug/match/00004/match1-source_with_match.png
+            stbt-debug/match/00004/match2-confirm-absdiff.png
+            stbt-debug/match/00004/match2-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match2-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match2-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match2-confirm-source_roi.png
+            stbt-debug/match/00004/match2-confirm-template_gray.png
+            stbt-debug/match/00004/match2-heatmap.png
+            stbt-debug/match/00004/match2-source_with_match.png
+            stbt-debug/match/00004/match3-confirm-absdiff.png
+            stbt-debug/match/00004/match3-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match3-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match3-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match3-confirm-source_roi.png
+            stbt-debug/match/00004/match3-confirm-template_gray.png
+            stbt-debug/match/00004/match3-heatmap.png
+            stbt-debug/match/00004/match3-source_with_match.png
+            stbt-debug/match/00004/match4-confirm-absdiff.png
+            stbt-debug/match/00004/match4-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match4-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match4-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match4-confirm-source_roi.png
+            stbt-debug/match/00004/match4-confirm-template_gray.png
+            stbt-debug/match/00004/match4-heatmap.png
+            stbt-debug/match/00004/match4-source_with_match.png
+            stbt-debug/match/00004/match5-confirm-absdiff.png
+            stbt-debug/match/00004/match5-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match5-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match5-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match5-confirm-source_roi.png
+            stbt-debug/match/00004/match5-confirm-template_gray.png
+            stbt-debug/match/00004/match5-heatmap.png
+            stbt-debug/match/00004/match5-source_with_match.png
+            stbt-debug/match/00004/match6-confirm-absdiff.png
+            stbt-debug/match/00004/match6-confirm-absdiff_threshold_erode.png
+            stbt-debug/match/00004/match6-confirm-absdiff_threshold.png
+            stbt-debug/match/00004/match6-confirm-source_roi_gray.png
+            stbt-debug/match/00004/match6-confirm-source_roi.png
+            stbt-debug/match/00004/match6-confirm-template_gray.png
+            stbt-debug/match/00004/match6-heatmap.png
+            stbt-debug/match/00004/match6-source_with_match.png
+            stbt-debug/match/00004/source.png
+            stbt-debug/match/00004/template.png
+            """)
 
-def _verify_stbt_debug_dir(expected_files):
-    debug_dir = glob("stbt-debug/match/*")[0]
-    print debug_dir
-    actual_files = sorted(os.listdir(debug_dir))
-    print actual_files
-    assert sorted(expected_files) == actual_files
+        subprocess.check_call([
+            "diff", "-u", "--exclude=*.png",
+            # Ignore absolute pathnames in debug html:
+            r"--ignore-matching-lines=stb-tester/tests/*\.png",
+            # The exact output of cv2.matchtemplate isn't deterministic across
+            # different versions of OpenCV:
+            r"--ignore-matching-lines=0\.99",
+            "--ignore-matching-lines=Region",
+            expected, "stbt-debug"])
+
+        # To update expected results in source checkout:
+        # import shutil
+        # shutil.rmtree(expected)
+        # shutil.move("stbt-debug", expected)
 
 
 @contextmanager
@@ -469,3 +477,7 @@ def _imread(filename):
     img = cv2.imread(os.path.join(TESTS_DIR, filename))
     assert img is not None
     return img
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)

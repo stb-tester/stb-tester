@@ -1,0 +1,319 @@
+
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <style>
+            h5 { margin-top: 40px; }
+            .table th { font-weight: normal; background-color: #eee; }
+            img {
+                vertical-align: middle; max-width: 150px; max-height: 36px;
+                padding: 1px; border: 1px solid #ccc; }
+            p { line-height: 40px; }
+            .table td { vertical-align: middle; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+        <h4>
+            <i>/home/drothlis/work/stb-tester.com/stb-tester/tests/button.png</i>
+            matched
+        </h4>
+
+        <h5>First pass (find candidate matches):</h5>
+
+        <p>Searching for <b>template</b> <a href='template.png'><img src='template.png'></a>
+            within <b>source</b> image <a href='source.png'><img src='source.png'></a>
+
+        <table class="table">
+        <tr>
+          <th>Pyramid level</th>
+          <th>Match #</th>
+          <th>Searching for <b>template</b></th>
+          <th>within <b>source regions of interest</b></th>
+          <th>
+            OpenCV <b>matchTemplate heatmap</b>
+            with method sqdiff-normed
+            (darkest
+            pixel indicates position of best match).
+          </th>
+          <th>
+            matchTemplate heatmap <b>above match_threshold</b>
+            of 0.99
+            (white pixels indicate positions above the threshold).
+          </th>
+          <th><b>Matched?<b></th>
+          <th>Best match <b>position</b></th>
+          <th>&nbsp;</th>
+          <th><b>certainty</b></th>
+        </tr>
+
+        
+        <tr>
+          <td><b>2</b></td>
+          <td><b></b></td>
+          <td><a href='level2-template.png'><img src='level2-template.png'></a></td>
+          <td><a href='level2-source_with_rois.png'><img src='level2-source_with_rois.png'></a></td>
+          <td><a href='level2-source_matchtemplate.png'><img src='level2-source_matchtemplate.png'></a></td>
+          <td>
+            <a href='level2-source_matchtemplate_threshold.png'><img src='level2-source_matchtemplate_threshold.png'></a>
+          </td>
+          <td>Matched</td>
+          <td>Position(x=41, y=0)</td>
+          <td><a href='level2-source_with_match.png'><img src='level2-source_with_match.png'></a></td>
+          <td>0.9948</td>
+        </tr>
+        
+        <tr>
+          <td><b>1</b></td>
+          <td><b></b></td>
+          <td><a href='level1-template.png'><img src='level1-template.png'></a></td>
+          <td><a href='level1-source_with_rois.png'><img src='level1-source_with_rois.png'></a></td>
+          <td><a href='level1-source_matchtemplate.png'><img src='level1-source_matchtemplate.png'></a></td>
+          <td>
+            <a href='level1-source_matchtemplate_threshold.png'><img src='level1-source_matchtemplate_threshold.png'></a>
+          </td>
+          <td>Matched</td>
+          <td>Position(x=149, y=1)</td>
+          <td><a href='level1-source_with_match.png'><img src='level1-source_with_match.png'></a></td>
+          <td>0.9882</td>
+        </tr>
+        
+        <tr>
+          <td><b>0</b></td>
+          <td><b>0</b></td>
+          <td><a href='level0-template.png'><img src='level0-template.png'></a></td>
+          <td><a href='level0-source_with_rois.png'><img src='level0-source_with_rois.png'></a></td>
+          <td><a href='level0-source_matchtemplate.png'><img src='level0-source_matchtemplate.png'></a></td>
+          <td>
+            <a href='level0-source_matchtemplate_threshold.png'><img src='level0-source_matchtemplate_threshold.png'></a>
+          </td>
+          <td>Matched</td>
+          <td>Region(x=163, y=1, right=298, bottom=45)</td>
+          <td><a href='level0-source_with_match.png'><img src='level0-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>1</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match1-heatmap.png'><img src='match1-heatmap.png'></a></td>
+          <td></td>
+          <td>Matched</td>
+          <td>Region(x=177, y=119, right=312, bottom=163)</td>
+          <td><a href='match1-source_with_match.png'><img src='match1-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>2</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match2-heatmap.png'><img src='match2-heatmap.png'></a></td>
+          <td></td>
+          <td>Matched</td>
+          <td>Region(x=177, y=75, right=312, bottom=119)</td>
+          <td><a href='match2-source_with_match.png'><img src='match2-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>3</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match3-heatmap.png'><img src='match3-heatmap.png'></a></td>
+          <td></td>
+          <td>Matched</td>
+          <td>Region(x=28, y=1, right=163, bottom=45)</td>
+          <td><a href='match3-source_with_match.png'><img src='match3-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>4</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match4-heatmap.png'><img src='match4-heatmap.png'></a></td>
+          <td></td>
+          <td>Matched</td>
+          <td>Region(x=177, y=163, right=312, bottom=207)</td>
+          <td><a href='match4-source_with_match.png'><img src='match4-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>5</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match5-heatmap.png'><img src='match5-heatmap.png'></a></td>
+          <td></td>
+          <td>Matched</td>
+          <td>Region(x=298, y=1, right=433, bottom=45)</td>
+          <td><a href='match5-source_with_match.png'><img src='match5-source_with_match.png'></a></td>
+          <td>0.9999</td>
+        </tr>
+        
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td><b>6</b></td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td><a href='match6-heatmap.png'><img src='match6-heatmap.png'></a></td>
+          <td></td>
+          <td>Didn't match</td>
+          <td>Region(x=1, y=65, right=136, bottom=109)</td>
+          <td><a href='match6-source_with_match.png'><img src='match6-source_with_match.png'></a></td>
+          <td>0.9835</td>
+        </tr>
+        
+
+        </table>
+
+        
+          <h5>Second pass (confirmation):</h5>
+
+          <p><b>Confirm method:</b> normed-absdiff</p>
+
+          
+            <table class="table">
+            <tr>
+              <th>Match #</th>
+              <th>Comparing <b>template</b></th>
+              <th>against <b>source image's region of interest</b></th>
+              
+                <th><b>Normalised template</b></th>
+                <th><b>Normalised source</b></th>
+              
+              <th><b>Absolute differences</b></th>
+              <th>
+                Differences <b>above confirm_threshold</b>
+                of 0.30
+              </th>
+              <th>
+                After <b>eroding</b>
+                1
+                time;
+                the template matches if any differences (white pixels) remain
+              </th>
+            </tr>
+
+            
+              
+                <tr>
+                  <td><b>0</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match0-confirm-source_roi_gray.png'><img src='match0-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match0-confirm-template_gray_normalized.png'><img src='match0-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match0-confirm-source_roi_gray_normalized.png'><img src='match0-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match0-confirm-absdiff.png'><img src='match0-confirm-absdiff.png'></a></td>
+                  <td><a href='match0-confirm-absdiff_threshold.png'><img src='match0-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match0-confirm-absdiff_threshold_erode.png'><img src='match0-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+                <tr>
+                  <td><b>1</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match1-confirm-source_roi_gray.png'><img src='match1-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match1-confirm-template_gray_normalized.png'><img src='match1-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match1-confirm-source_roi_gray_normalized.png'><img src='match1-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match1-confirm-absdiff.png'><img src='match1-confirm-absdiff.png'></a></td>
+                  <td><a href='match1-confirm-absdiff_threshold.png'><img src='match1-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match1-confirm-absdiff_threshold_erode.png'><img src='match1-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+                <tr>
+                  <td><b>2</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match2-confirm-source_roi_gray.png'><img src='match2-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match2-confirm-template_gray_normalized.png'><img src='match2-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match2-confirm-source_roi_gray_normalized.png'><img src='match2-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match2-confirm-absdiff.png'><img src='match2-confirm-absdiff.png'></a></td>
+                  <td><a href='match2-confirm-absdiff_threshold.png'><img src='match2-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match2-confirm-absdiff_threshold_erode.png'><img src='match2-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+                <tr>
+                  <td><b>3</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match3-confirm-source_roi_gray.png'><img src='match3-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match3-confirm-template_gray_normalized.png'><img src='match3-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match3-confirm-source_roi_gray_normalized.png'><img src='match3-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match3-confirm-absdiff.png'><img src='match3-confirm-absdiff.png'></a></td>
+                  <td><a href='match3-confirm-absdiff_threshold.png'><img src='match3-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match3-confirm-absdiff_threshold_erode.png'><img src='match3-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+                <tr>
+                  <td><b>4</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match4-confirm-source_roi_gray.png'><img src='match4-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match4-confirm-template_gray_normalized.png'><img src='match4-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match4-confirm-source_roi_gray_normalized.png'><img src='match4-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match4-confirm-absdiff.png'><img src='match4-confirm-absdiff.png'></a></td>
+                  <td><a href='match4-confirm-absdiff_threshold.png'><img src='match4-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match4-confirm-absdiff_threshold_erode.png'><img src='match4-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+                <tr>
+                  <td><b>5</b></td>
+                  <td><a href='match0-confirm-template_gray.png'><img src='match0-confirm-template_gray.png'></a></td>
+                  <td><a href='match5-confirm-source_roi_gray.png'><img src='match5-confirm-source_roi_gray.png'></a></td>
+                  
+                    <td><a href='match5-confirm-template_gray_normalized.png'><img src='match5-confirm-template_gray_normalized.png'></a></td>
+                    <td><a href='match5-confirm-source_roi_gray_normalized.png'><img src='match5-confirm-source_roi_gray_normalized.png'></a></td>
+                  
+                  <td><a href='match5-confirm-absdiff.png'><img src='match5-confirm-absdiff.png'></a></td>
+                  <td><a href='match5-confirm-absdiff_threshold.png'><img src='match5-confirm-absdiff_threshold.png'></a></td>
+                  <td><a href='match5-confirm-absdiff_threshold_erode.png'><img src='match5-confirm-absdiff_threshold_erode.png'></a></td>
+                </tr>
+              
+            
+              
+            
+
+            </table>
+          
+        
+
+        <p>For further help please read
+            <a href="http://stb-tester.com/match-parameters.html">stb-tester
+            image matching parameters</a>.
+
+        </div>
+        </body>
+        </html>
+    
