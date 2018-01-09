@@ -10,7 +10,6 @@ import numpy
 from nose.tools import raises
 
 import stbt
-from _stbt.core import _crop
 from _stbt.logging import ImageLogger
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
@@ -85,7 +84,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     button = _imread('button.png')
 
     text = [
-        stbt.ocr(frame=cv2.absdiff(_crop(frame, m.region), button))
+        stbt.ocr(frame=cv2.absdiff(stbt.crop(frame, m.region), button))
         for m in stbt.match_all(
             button, frame=frame, match_parameters=mp(confirm_method='none'))]
     text = sorted([t for t in text if t not in ['', '\\s']])

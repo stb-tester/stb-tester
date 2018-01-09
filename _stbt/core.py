@@ -585,9 +585,23 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
     return image
 
 
-def _crop(frame, region):
+def crop(frame, region):
+    """Returns an image containing the specified region of ``frame``.
+
+    :type frame: `stbt.Frame` or `numpy.ndarray`
+    :param frame: An image in OpenCV format (for example as returned by
+      `frames`, `get_frame` and `load_image`, or the ``frame`` parameter of
+      `MatchResult`).
+
+    :type Region region: The region to crop.
+
+    :returns: An OpenCV image (`numpy.ndarray`) containing the specified region
+      of the source frame. This is a view onto the original data, so if you
+      want to modify the cropped image call its ``copy()`` method first.
+    """
     if not _image_region(frame).contains(region):
-        raise ValueError("'frame' doesn't contain 'region'")
+        raise ValueError("frame with dimensions %r doesn't contain %r"
+                         % (frame.shape, region))
     return frame[region.y:region.bottom, region.x:region.right]
 
 
@@ -938,7 +952,7 @@ class DeviceUnderTest(object):
         try:
             for (matched, match_region, first_pass_matched,
                  first_pass_certainty) in _find_matches(
-                    _crop(frame, region), template.image,
+                    crop(frame, region), template.image,
                     match_parameters, imglog):
 
                 match_region = Region.from_extents(*match_region) \
@@ -2841,7 +2855,7 @@ def _tesseract(frame, region, mode, lang, _config,
     else:
         region = intersection
 
-    return (_tesseract_subprocess(_crop(frame, region), mode, lang, _config,
+    return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, text_color),
             region)
 

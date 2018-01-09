@@ -23,6 +23,7 @@ import _stbt.core
 from _stbt.core import \
     as_precondition, \
     ConfigurationError, \
+    crop, \
     debug, \
     Frame, \
     get_config, \
@@ -47,6 +48,7 @@ del sys.path[0]
 __all__ = [
     "as_precondition",
     "ConfigurationError",
+    "crop",
     "debug",
     "detect_match",
     "detect_motion",
@@ -140,7 +142,8 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       searching for images captured from the device-under-test earlier in the
       test script.
 
-    :param `numpy.ndarray` frame:
+    :type frame: `stbt.Frame` or `numpy.ndarray`
+    :param frame:
       If this is specified it is used as the video frame to search in;
       otherwise a new frame is grabbed from the device-under-test. This is an
       image in OpenCV format (for example as returned by `frames` and
@@ -354,8 +357,9 @@ def ocr(frame=None, region=Region.ALL,
     open-source OCR engine.
 
     :param frame:
-        The video frame to process. If not specified, take a frame from the
-        device-under-test.
+      If this is specified it is used as the video frame to process; otherwise
+      a new frame is grabbed from the device-under-test. This is an image in
+      OpenCV format (for example as returned by `frames` and `get_frame`).
 
     :param region: Only search within the specified region of the video frame.
     :type region: `Region`
@@ -490,7 +494,8 @@ def get_frame():
 def is_screen_black(frame=None, mask=None, threshold=None):
     """Check for the presence of a black screen in a video frame.
 
-    :param `numpy.ndarray` frame:
+    :type frame: `stbt.Frame` or `numpy.ndarray`
+    :param frame:
       If this is specified it is used as the video frame to check; otherwise a
       new frame is grabbed from the device-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).

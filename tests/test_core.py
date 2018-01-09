@@ -36,6 +36,23 @@ def test_load_image_with_unicode_filename():
     assert stbt.load_image(u"R\xf6thlisberger.png") is not None
 
 
+def test_crop():
+    f = stbt.load_image("action-panel.png")
+    cropped = stbt.crop(f, stbt.Region(x=1045, y=672, right=1081, bottom=691))
+    reference = stbt.load_image("action-panel-blue-button.png")
+    assert numpy.array_equal(reference, cropped)
+
+    # It's a view onto the same memory:
+    assert cropped[0, 0, 0] == f[672, 1045, 0]
+    cropped[0, 0, 0] = 0
+    assert cropped[0, 0, 0] == f[672, 1045, 0]
+
+    # Region must be inside the frame (unfortunately this means that you can't
+    # use stbt.Region.ALL):
+    with pytest.raises(ValueError):
+        stbt.crop(f, stbt.Region(x=1045, y=672, right=1281, bottom=721))
+
+
 class C(object):
     """A class with a single property, used by the tests."""
     def __init__(self, prop):
