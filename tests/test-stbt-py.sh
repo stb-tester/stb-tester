@@ -151,51 +151,6 @@ test_that_frames_doesnt_deadlock() {
 EOF
 }
 
-test_that_is_screen_black_is_true_for_black_pattern() {
-    cat > test.py <<-EOF
-	import stbt
-	assert stbt.is_screen_black()
-	EOF
-    stbt run -v \
-        --source-pipeline 'videotestsrc pattern=black is-live=true ! video/x-raw,format=BGR' \
-        test.py
-}
-
-test_that_is_screen_black_is_false_for_smpte_pattern() {
-    cat > test.py <<-EOF
-	import stbt
-	assert not stbt.is_screen_black()
-	EOF
-    stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
-        test.py
-}
-
-test_that_is_screen_black_is_true_for_smpte_pattern_when_masked() {
-    cat > test.py <<-EOF
-	import stbt
-	assert stbt.is_screen_black(
-	    mask="$testdir/videotestsrc-mask-non-black.png"
-	)
-	EOF
-    stbt run -v \
-        --source-pipeline 'videotestsrc pattern=smpte is-live=true ! video/x-raw,format=BGR' \
-        test.py
-}
-
-test_is_screen_black_threshold_bounds_for_almost_black_frame() {
-    cat > test.py <<-EOF
-	import stbt
-	assert stbt.is_screen_black(threshold=3)
-	assert not stbt.is_screen_black(threshold=2)
-	EOF
-    stbt run -v --control none \
-        --source-pipeline \
-            "filesrc location=$testdir/almost-black.png ! decodebin !
-             imagefreeze" \
-        test.py
-}
-
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
@@ -218,17 +173,6 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
             "filesrc location=$testdir/almost-black.png ! decodebin !
              imagefreeze" \
         test.py
-}
-
-test_that_is_screen_black_respects_passed_in_frame() {
-    cat > test.py <<-EOF
-	import cv2
-	import stbt
-	almost_black = cv2.imread("$testdir/almost-black.png")
-	assert not stbt.is_screen_black(almost_black, threshold=0)
-	assert stbt.is_screen_black(almost_black, threshold=3)
-	EOF
-    stbt run -v test.py
 }
 
 test_that_is_screen_black_writes_debugging_information() {
