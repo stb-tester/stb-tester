@@ -1286,7 +1286,7 @@ def save_frame(image, filename):
 
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
-               stable_secs=0):
+               stable_secs=0, ignored_exceptions=()):
     """Wait until a condition becomes true, or until a timeout.
 
     Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
@@ -1316,6 +1316,11 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         (as determined by ``==``) for this duration before returning. If
         ``predicate`` is also given, the values returned from ``predicate``
         will be compared.
+
+    :type ignored_exceptions: type or tuple of types
+    :param ignored_exceptions: Catch these exceptions if raised by
+        ``callable_`` or ``predicate``, and treat them as if they had returned
+        ``None``.
 
     :returns: The return value from ``callable_`` (which will be truthy if it
         succeeded, or falsey if ``wait_until`` timed out). If the value was
@@ -1373,8 +1378,8 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         end_time = match_result.time  # this is the first stable frame
         print "Transition took %s seconds" % (end_time - start_time)
 
-    ``wait_until`` was added in stb-tester v22. The ``predicate`` and
-    ``stable_secs`` parameters were added in v28.
+    ``wait_until`` was added in stb-tester v22. The ``predicate``,
+    ``stable_secs``, and ``ignored_exceptions`` parameters were added in v28.
     """
     import time
 
@@ -1386,8 +1391,18 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
 
     while True:
         t = time.time()
-        value = callable_()
-        predicate_value = predicate(value)
+        try:
+            value = callable_()
+        except ignored_exceptions as e:
+            debug("wait_until: Ignoring exception %r" % e)
+            value = None
+            predicate_value = None
+        else:
+            try:
+                predicate_value = predicate(value)
+            except ignored_exceptions as e:
+                debug("wait_until: Ignoring exception %r" % e)
+                predicate_value = None
 
         if stable_secs:
             if predicate_value != stable_predicate_value:

@@ -55,11 +55,12 @@ class f(object):
     """Helper factory for wait_until selftests. Creates a callable object that
     returns the specified values one by one each time it is called.
 
-    Values are specified as space-separated characters. `.` means `None` and
-    `F` means `False`.
+    Values are specified as space-separated characters. `.` means `None`,
+    `F` means `False`, and `E` means raise a RuntimeError exception.
     """
 
-    mapping = {".": None, "F": False, "C1": C(1), "C2": C(2), "C3": C(3)}
+    mapping = {".": None, "F": False, "C1": C(1), "C2": C(2), "C3": C(3),
+               "E": RuntimeError("test exception")}
 
     def __init__(self, spec):
         self.spec = spec
@@ -73,6 +74,8 @@ class f(object):
         time.sleep(1)
         v = next(self.iterator)
         sys.stderr.write("f() -> %s\n" % v)
+        if isinstance(v, Exception):
+            raise v
         return v
 
 
@@ -208,3 +211,25 @@ def test_that_wait_until_doesnt_compare_return_values(mock_time):
     # But it does compare values if you specify `stable_secs`
     with pytest.raises(AssertionError):
         result = wait_until(MR, stable_secs=2)
+
+
+def test_wait_until_ignored_exceptions(mock_time):
+    with pytest.raises(RuntimeError):
+        wait_until(f("E E F F T"))
+
+    assert wait_until(f("E E F F T"), ignored_exceptions=RuntimeError) == "T"
+    assert wait_until(f("F E T"), ignored_exceptions=RuntimeError) == "T"
+
+    # Can specify a parent class of the exception:
+    assert wait_until(f("E T"), ignored_exceptions=StandardError) == "T"
+    # Can specify a tuple of exceptions:
+    assert wait_until(f("E T"),
+                      ignored_exceptions=(ValueError, RuntimeError)) == "T"
+
+    def predicate(x):
+        assert x.islower()
+        return x
+
+    # Also catches exceptions raised by the predicate function:
+    assert wait_until(f("A b b"), predicate=predicate,
+                      ignored_exceptions=AssertionError) == "b"

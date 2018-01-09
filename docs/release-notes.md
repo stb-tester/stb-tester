@@ -136,6 +136,10 @@ UNRELEASED
   `stable_secs`. Together they allow waiting for something to stabilise (for
   example to wait for the position of a moving selection to stop moving).
 
+* Python API: `stbt.wait_until` has a new parameter `ignored_exceptions`. If
+  the function you're waiting for raises one of the specified exceptions, it is
+  treated as if the function had returned `None`.
+
 * Python API: `stbt.ocr` and `stbt.match_text` have a new parameter
   `text_color`. Specifying this can improve OCR results when tesseract's
   default thresholding algorithm doesn't detect the text, for example for
