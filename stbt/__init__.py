@@ -22,10 +22,10 @@ except ImportError:
 import _stbt.core
 from _stbt.core import \
     as_precondition, \
-    debug, \
-    get_config, \
-    Frame, \
     ConfigurationError, \
+    debug, \
+    Frame, \
+    get_config, \
     load_image, \
     MatchParameters, \
     MatchResult, \
@@ -46,14 +46,14 @@ del sys.path[0]
 
 __all__ = [
     "as_precondition",
-    "Frame",
     "ConfigurationError",
     "debug",
     "detect_match",
     "detect_motion",
     "draw_text",
-    "frames",
+    "Frame",
     "FrameObject",
+    "frames",
     "get_config",
     "get_frame",
     "is_screen_black",
