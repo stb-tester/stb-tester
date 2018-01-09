@@ -134,6 +134,11 @@ UNRELEASED
 * Python API: New function `stbt.load_image` to load an image from disk, using
   the same path lookup algorithm that `stbt.match` uses.
 
+* Python API: The `mask` parameter to `stbt.detect_motion`,
+  `stbt.wait_for_motion`, and `stbt.is_screen_black` can be an OpenCV image
+  (previously it could only be a filename). This makes it easier to construct
+  masks programmatically.
+
 * Python API: `stbt.wait_until` has two new parameters: `predicate` and
   `stable_secs`. Together they allow waiting for something to stabilise (for
   example to wait for the position of a moving selection to stop moving).

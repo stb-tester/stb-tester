@@ -69,6 +69,13 @@ def test_is_screen_black(frame, mask, threshold, expected):
     assert stbt.is_screen_black(frame, mask, threshold) == expected
 
 
+def test_is_screen_black_with_numpy_mask():
+    frame = stbt.load_image("videotestsrc-full-frame.png")
+    mask = numpy.zeros((240, 320), dtype=numpy.uint8)
+    mask[180:240, 160:213] = 255
+    assert stbt.is_screen_black(frame, mask)
+
+
 class C(object):
     """A class with a single property, used by the tests."""
     def __init__(self, prop):
