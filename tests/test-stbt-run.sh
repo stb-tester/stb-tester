@@ -72,13 +72,19 @@ test_that_stbt_run_prints_assert_statement_if_no_assertion_message_given() {
     assert grep -q "FAIL: test.py: AssertionError: assert 1 + 1 == 3" test.log
 }
 
-test_that_stbt_run_saves_screenshot_on_match_timeout() {
+test_that_stbt_run_saves_screenshot_attached_to_exception() {
     cat > test.py <<-EOF
-	wait_for_match(
-	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	try:
+	    wait_for_match(
+	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	except MatchTimeout:
+	    press("gamut")
+	    wait_for_match("$testdir/videotestsrc-gamut.png")
+	    raise
 	EOF
     ! stbt run -v test.py &&
     [ -f screenshot.png ] &&
+    assert stbt match screenshot.png "$testdir/videotestsrc-redblue.png" &&
     ! [ -f thumbnail.jpg ]
 }
 
