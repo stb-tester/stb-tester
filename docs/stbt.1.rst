@@ -54,8 +54,8 @@ Global options
 
   file[:<filename>]
     Append a newline seperated key name to the given file for each press.
-    Mostly useful for testing.  If a filename is not specified it defaults to
-    stdout.
+    Mostly useful for testing stb-tester itself. If a filename is not specified
+    it defaults to stdout.
 
   hdmi-cec[:<device>[:<source>[:<destination>]]]
     In conjuction with a USB-CEC adaptor this controls a set-top box by sending
@@ -132,9 +132,10 @@ Global options
     UE32F5370 but will probably work with all recent Samsung Smart TVs.
 
   test
-    Used by the selftests to change the input video stream. Only works with
-    `--source-pipeline=videotestsrc`. A script like `press("18")` will change
-    videotestsrc's pattern property (see `gst-inspect videotestsrc`).
+    Used by stb-tester's self-tests to change the input video stream. Only
+    works with `--source-pipeline=videotestsrc`. A script like `press("snow")`
+    will change videotestsrc's pattern property (see `gst-inspect
+    videotestsrc`).
 
   x11:[<display>][,<key_mapping_file>]
     Send keypresses to a given X display using the xtest extension. Can be used
