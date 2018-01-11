@@ -2,6 +2,7 @@
 
 import itertools
 import os
+import shutil
 import sys
 import time
 
@@ -31,6 +32,8 @@ def test_that_load_image_looks_in_callers_directory():
 
 def test_load_image_with_unicode_filename():
     print sys.getfilesystemencoding()
+    shutil.copyfile(_find_file("Rothlisberger.png"),
+                    _find_file("Röthlisberger.png"))
     assert stbt.load_image("Röthlisberger.png") is not None
     assert stbt.load_image(u"Röthlisberger.png") is not None
     assert stbt.load_image(u"R\xf6thlisberger.png") is not None
@@ -225,3 +228,7 @@ def test_that_wait_until_doesnt_compare_return_values(mock_time):
     # But it does compare values if you specify `stable_secs`
     with pytest.raises(AssertionError):
         result = wait_until(MR, stable_secs=2)
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)
