@@ -423,7 +423,8 @@ def ocr(frame=None, region=Region.ALL,
     :param text_color:
         Color of the text. Specifying this can improve OCR results when
         tesseract's default thresholding algorithm doesn't detect the text,
-        for example for white text on a light-colored background.
+        for example white text on a light-colored background or text on a
+        translucent overlay.
 
     Added in v28: Parameters ``upsample`` (to disable stb-tester's
     pre-processing of the image) and ``text_color``.
@@ -450,7 +451,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param tesseract_config: See `ocr`.
     :param upsample: See `ocr`.
     :param text_color: See `ocr`.
-    :param case_sensitive bool: Ignore case if False (the default).
+    :param bool case_sensitive: Ignore case if False (the default).
 
     :returns:
       A `TextMatchResult`, which will evaluate to True if the text was found,
