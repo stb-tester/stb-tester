@@ -8,7 +8,7 @@ MAINTAINER David Röthlisberger "david@stb-tester.com"
 RUN apt-get update && \
     apt-get install -y build-essential devscripts @BUILDDEPENDS@
 
-RUN adduser --gecos "" stb-tester && \
+RUN adduser --gecos "" --disabled-password stb-tester && \
     echo  "stb-tester	ALL=(ALL:ALL)	NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
 
 USER stb-tester
