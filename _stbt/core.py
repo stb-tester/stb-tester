@@ -574,6 +574,8 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
         channel BGR).
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
+
+    Added in v28.
     """
 
     absolute_filename = _find_user_file(filename)

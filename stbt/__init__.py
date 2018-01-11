@@ -137,6 +137,9 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       The image to search for. It can be the filename of a png file on disk, or
       a numpy array containing the pixel data in 8-bit BGR format.
 
+      Filenames should be relative paths. See `stbt.load_image` for the path
+      lookup algorithm.
+
       8-bit BGR numpy arrays are the same format that OpenCV uses for images.
       This allows generating templates on the fly (possibly using OpenCV) or
       searching for images captured from the device-under-test earlier in the
@@ -149,13 +152,13 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       image in OpenCV format (for example as returned by `frames` and
       `get_frame`).
 
+    :type match_parameters: `MatchParameters`
     :param match_parameters:
       Customise the image matching algorithm. See `MatchParameters` for details.
-    :type match_parameters: `MatchParameters`
 
+    :type region: `Region`
     :param region:
       Only search within the specified region of the video frame.
-    :type region: `Region`
 
     :returns:
       A `MatchResult`, which will evaluate to true if a match was found,
@@ -303,6 +306,8 @@ def press_until_match(
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
+
+    Changed in v28: Added ``region``.
     """
     return _dut.press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
@@ -474,8 +479,8 @@ def frames(timeout_secs=None):
       * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use
         ``frame.time`` instead.
 
-    Changed in stb-tester v26: The first item of the tuple is a `stbt.Frame`
-    instead of a `numpy.ndarray`.
+    Changed in v26: The first item of the tuple is a `stbt.Frame` instead of a
+    `numpy.ndarray`.
     """
     return _dut.frames(timeout_secs)
 
@@ -485,8 +490,7 @@ def get_frame():
 
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
 
-    Changed in stb-tester v26: Returns a `stbt.Frame` instead of a
-    `numpy.ndarray`.
+    Changed in v26: Returns a `stbt.Frame` instead of a `numpy.ndarray`.
     """
     return _dut.get_frame()
 
