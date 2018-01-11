@@ -121,6 +121,12 @@ Global options
   none
     Ignores key press commands.
 
+  rfb:<hostname>[:<port>]
+    Use the VNC RFB protocol (RFC6143). This is used by Cisco to control some
+    of their set-top boxes. Traditionally the RFB protocol uses key codes that
+    are the same as used by X, but this control implements Cisco-specific
+    keycodes.
+
   roku:<hostname>
     Controls Roku players using the Roku's HTTP control protocol. Stb-tester's
     standard key names (like "KEY_HOME") will be converted to the corresponding
