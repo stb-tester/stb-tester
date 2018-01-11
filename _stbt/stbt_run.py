@@ -37,9 +37,9 @@ def video(args, dut):
     with stbt._set_dut_singleton(dut), dut:  # pylint: disable=protected-access
         try:
             yield
-        except Exception:  # pylint: disable=W0703
+        except Exception as e:  # pylint: disable=broad-except
             try:
-                _save_screenshot(dut, exception=None,
+                _save_screenshot(dut, exception=e,
                                  save_jpg=(args.save_thumbnail != 'never'),
                                  save_png=(args.save_screenshot != 'never'))
             except Exception:  # pylint: disable=broad-except
