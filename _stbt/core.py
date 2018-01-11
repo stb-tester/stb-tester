@@ -1207,7 +1207,7 @@ class DeviceUnderTest(object):
         rts = getattr(frame, "time", None)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
-                                 user_words=text.split(), text_color=text_color)
+                                 None, text.split(), text_color)
         if xml == '':
             result = TextMatchResult(rts, False, None, frame, text)
         else:
@@ -2863,8 +2863,8 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region, mode, lang, _config,
-               user_patterns=None, user_words=None, text_color=None):
+def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
+               text_color):
 
     if _config is None:
         _config = {}
