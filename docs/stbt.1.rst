@@ -48,38 +48,14 @@ Global options
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
 
-  lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
-    A hardware infrared emitter controlled by the lirc (Linux Infrared Remote
-    Control) daemon.
+  error[:message]
+    Raises `RuntimeError` when the test script calls `stbt.press`, with the
+    optional error message.
 
-    * If `lircd_socket` is specified (or none of `lircd_socket`, `hostname` and
-      `port` are specified) remote control commands are sent via a lircd socket
-      file. `lircd_socket` defaults to `/var/run/lirc/lircd`.
-    * If `port` is specified, remote control commands are sent via a lircd TCP
-      listener on localhost.
-    * If `hostname` and `port` are specified, remote control commands are sent
-      via a lircd TCP listener on a remote host.
-
-    `remote_control_name` is the name of a remote-control specification in
-    lircd.conf.
-
-    Examples:
-        | lirc::myremote
-        | lirc:/var/run/lirc/lircd:myremote
-        | lirc:8700:myremote
-        | lirc:192.168.100.100:8700:myremote
-
-  irnetbox:<hostname>[:<port>]:<output>:<config_file>
-    RedRat irNetBox network-controlled infrared emitter hardware.
-    `hostname` is the hostname or IP address of the irNetBox device.
-    `port` is the TCP port of the irNetBox device. It defaults to 10001, which
-    is the port used by real irNetBox devices; override if using an irNetBox
-    proxy that listens on a different port.
-    `output` is the infrared output to use, a number between 1 and 16
-    (inclusive). `config_file` is the configuration file that describes the
-    infrared protocol to use; it can be created with RedRat's (Windows-only)
-    "IR Signal Database Utility".
-    stbt supports the irNetBox models II and III.
+  file[:<filename>]
+    Append a newline seperated key name to the given file for each press.
+    Mostly useful for testing.  If a filename is not specified it defaults to
+    stdout.
 
   hdmi-cec[:<device>[:<source>[:<destination>]]]
     In conjuction with a USB-CEC adaptor this controls a set-top box by sending
@@ -109,6 +85,42 @@ Global options
         * e - Reserved
         * f - Unregistered (source)/Broadcast (destination)
 
+  irnetbox:<hostname>[:<port>]:<output>:<config_file>
+    RedRat irNetBox network-controlled infrared emitter hardware.
+    `hostname` is the hostname or IP address of the irNetBox device.
+    `port` is the TCP port of the irNetBox device. It defaults to 10001, which
+    is the port used by real irNetBox devices; override if using an irNetBox
+    proxy that listens on a different port.
+    `output` is the infrared output to use, a number between 1 and 16
+    (inclusive). `config_file` is the configuration file that describes the
+    infrared protocol to use; it can be created with RedRat's (Windows-only)
+    "IR Signal Database Utility".
+    stbt supports the irNetBox models II and III.
+
+  lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
+    A hardware infrared emitter controlled by the lirc (Linux Infrared Remote
+    Control) daemon.
+
+    * If `lircd_socket` is specified (or none of `lircd_socket`, `hostname` and
+      `port` are specified) remote control commands are sent via a lircd socket
+      file. `lircd_socket` defaults to `/var/run/lirc/lircd`.
+    * If `port` is specified, remote control commands are sent via a lircd TCP
+      listener on localhost.
+    * If `hostname` and `port` are specified, remote control commands are sent
+      via a lircd TCP listener on a remote host.
+
+    `remote_control_name` is the name of a remote-control specification in
+    lircd.conf.
+
+    Examples:
+        | lirc::myremote
+        | lirc:/var/run/lirc/lircd:myremote
+        | lirc:8700:myremote
+        | lirc:192.168.100.100:8700:myremote
+
+  none
+    Ignores key press commands.
+
   roku:<hostname>
     Controls Roku players using the Roku's HTTP control protocol. Stb-tester's
     standard key names (like "KEY_HOME") will be converted to the corresponding
@@ -118,13 +130,6 @@ Global options
     Can be used to control Samsung Smart TVs using the same TCP network
     protocol that their mobile phone app uses.  Tested against a Samsung
     UE32F5370 but will probably work with all recent Samsung Smart TVs.
-
-  none
-    Ignores key press commands.
-
-  error[:message]
-    Raises `RuntimeError` when the test script calls `stbt.press`, with the
-    optional error message.
 
   test
     Used by the selftests to change the input video stream. Only works with
@@ -154,11 +159,6 @@ Global options
     for our `standard key names <https://stb-tester.com/manual/getting-started#remote-control-key-names>`_.
 
     The x11 control requires that `xdotool` is installed.
-
-  file[:<filename>]
-    Append a newline seperated key name to the given file for each press.
-    Mostly useful for testing.  If a filename is not specified it defaults to
-    stdout.
 
 --source-pipeline=<pipeline>
   A GStreamer pipeline providing a video stream to use as video output from the
