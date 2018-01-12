@@ -144,7 +144,7 @@ class PrintingFrameObject(stbt.FrameObject):
     @property
     def is_visible(self):
         print "is_visible called"
-        return bool(self._helper)
+        return self._helper
 
     @property
     def _helper(self):

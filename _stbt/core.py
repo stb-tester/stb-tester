@@ -1639,7 +1639,7 @@ def _mark_in_is_visible(fn):
         # pylint: disable=protected-access
         self._FrameObject__local.in_is_visible += 1
         try:
-            return fn(self)
+            return bool(fn(self))
         finally:
             self._FrameObject__local.in_is_visible -= 1
     return inner
