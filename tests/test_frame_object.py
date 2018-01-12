@@ -1,3 +1,5 @@
+import threading
+
 import stbt
 
 
@@ -208,6 +210,26 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     def _another(self):
         print "_another called"
         return 11
+
+
+def test_that_is_visible_and_properties_arent_racy():
+    # Calling a public property on a falsey FrameObject must always return
+    # `None`, even if another thread is currently evaluating `is_visible`.
+    f = FalseyPrintingFrameObject(_load_frame("with-dialog"))
+    results = {}
+    threads = []
+
+    def _run(n):
+        results[n] = f.public
+
+    for n in range(10):
+        t = threading.Thread(target=_run, args=(n,))
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
+    print results
+    assert all(v is None for v in results.values())
 
 
 def _load_frame(name):
