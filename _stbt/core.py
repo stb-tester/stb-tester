@@ -1647,12 +1647,16 @@ class _FrameObjectMeta(type):
     def __new__(mcs, name, parents, dct):
         for k, v in dct.iteritems():
             if isinstance(v, property):
+                # Properties must not have setters
                 if v.fset is not None:
                     raise Exception(
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
+                # Public properties return `None` if the FrameObject isn't
+                # visible.
                 if k != 'is_visible' and not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
