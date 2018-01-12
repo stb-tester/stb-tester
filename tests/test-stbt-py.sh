@@ -465,7 +465,9 @@ test_that_frames_are_read_only() {
 	    break
 	
 	class F(stbt.FrameObject):
-	    pass
+	    @property
+	    def is_visible(self):
+	        return True
 	f = F()
 	try:
 	    f._frame[0,0,0] = 0

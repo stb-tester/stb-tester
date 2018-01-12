@@ -1636,7 +1636,7 @@ def _memoize_property_fn(fn):
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if self:
+        if self.is_visible is not False:
             return fn(self)
         else:
             return None
@@ -1652,14 +1652,22 @@ class _FrameObjectMeta(type):
                     raise Exception(
                         "FrameObjects must be immutable but this property has "
                         "a setter")
+                if k == "is_visible":
+                    continue
+
                 f = v.fget
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
+
                 # Public properties return `None` if the FrameObject isn't
                 # visible.
-                if k != 'is_visible' and not k.startswith('_'):
+                if not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
+
+        if 'is_visible' in dct:
+            dct['_FrameObject__is_visible'] = dct['is_visible']
+            del dct['is_visible']
 
         if 'AUTO_SELFTEST_EXPRESSIONS' not in dct:
             dct['AUTO_SELFTEST_EXPRESSIONS'] = ['%s(frame={frame})' % name]
@@ -1670,7 +1678,7 @@ class _FrameObjectMeta(type):
         property_names = sorted([
             p for p in dir(cls)
             if isinstance(getattr(cls, p), property)])
-        assert 'is_visible' in property_names
+        assert '_FrameObject__is_visible' in property_names
         cls._FrameObject__attrs = ["is_visible"] + sorted(
             x for x in property_names
             if x != "is_visible" and not x.startswith('_'))
@@ -1685,6 +1693,9 @@ class FrameObject(object):
             raise ValueError("FrameObject: frame must not be None")
         self.__frame_object_cache = {}
         self._frame = frame
+
+        self.is_visible = None
+        self.is_visible = bool(self.__is_visible)
 
     def __repr__(self):
         args = ", ".join(("%s=%r" % x) for x in self._iter_attrs())

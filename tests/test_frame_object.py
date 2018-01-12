@@ -1,3 +1,5 @@
+import threading
+
 import stbt
 
 
@@ -64,15 +66,19 @@ class FrameObjectWithProperties(stbt.FrameObject):
 
 
 class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
-    """Private properties can be called from is_visible.
+    """Properties can be called from is_visible.
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectThatCallsItsOwnProperties(frame)
-    FrameObjectThatCallsItsOwnProperties(is_visible=True)
+    FrameObjectThatCallsItsOwnProperties(is_visible=True, public=5)
     """
     @property
     def is_visible(self):
-        return bool(self._private)
+        return bool(self.public < self._private)
+
+    @property
+    def public(self):
+        return 5
 
     @property
     def _private(self):
@@ -121,10 +127,8 @@ class PrintingFrameObject(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> m = PrintingFrameObject(frame)
-    >>> m.is_visible
     is_visible called
     _helper called
-    True
     >>> m.is_visible
     True
     >>> m.another
@@ -138,7 +142,7 @@ class PrintingFrameObject(stbt.FrameObject):
     @property
     def is_visible(self):
         print "is_visible called"
-        return bool(self._helper)
+        return self._helper
 
     @property
     def _helper(self):
@@ -149,6 +153,79 @@ class PrintingFrameObject(stbt.FrameObject):
     def another(self):
         print "another called"
         return self._helper + 3
+
+
+class FalseyPrintingFrameObject(stbt.FrameObject):
+    """Another naughty FrameObject. Properties should be cached even when
+    the FrameObject isn't visible.
+
+    >>> frame = _load_frame("with-dialog")
+    >>> m = FalseyPrintingFrameObject(frame)
+    is_visible called
+    public called
+    _private called
+    >>> m.is_visible
+    False
+    >>> print m.public
+    None
+    >>> print m.another
+    None
+    >>> m._private
+    7
+    >>> m._another
+    _another called
+    11
+    >>> m._another
+    11
+    >>> m
+    FalseyPrintingFrameObject(is_visible=False)
+    """
+    @property
+    def is_visible(self):
+        print "is_visible called"
+        ten = self.public
+        seven = self._private
+        return bool(ten < seven)
+
+    @property
+    def _private(self):
+        print "_private called"
+        return 7
+
+    @property
+    def public(self):
+        print "public called"
+        return self._private + 3
+
+    @property
+    def another(self):
+        print "another called"
+        return 10
+
+    @property
+    def _another(self):
+        print "_another called"
+        return 11
+
+
+def test_that_is_visible_and_properties_arent_racy():
+    # Calling a public property on a falsey FrameObject must always return
+    # `None`, even if another thread is currently evaluating `is_visible`.
+    f = FalseyPrintingFrameObject(_load_frame("with-dialog"))
+    results = {}
+    threads = []
+
+    def _run(n):
+        results[n] = f.public
+
+    for n in range(10):
+        t = threading.Thread(target=_run, args=(n,))
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
+    print results
+    assert all(v is None for v in results.values())
 
 
 def _load_frame(name):

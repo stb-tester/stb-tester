@@ -183,6 +183,12 @@ UNRELEASED
 * `stbt auto-selftest`: Fix when running for the first time (when the
   auto_selftest directory doesn't exist).
 
+* Python API: The `is_visible` property of `stbt.FrameObject` subclasses can
+  call other public properties. Furthermore, `is_visible` is now evaluated
+  eagerly when you create an instance of your FrameObject class, and its result
+  is always a bool so you don't have to remember to cast the return value to
+  bool in your implementation.
+
 * Python API: `stbt.wait_until` will try one last time after the timeout is
   reached. This allows you to use a short `timeout_secs` with operations that
   can take a long time.
