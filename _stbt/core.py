@@ -1633,10 +1633,24 @@ def _memoize_property_fn(fn):
     return inner
 
 
+def _mark_in_is_visible(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        # This increment isn't threadsafe but I can't imagine using the same
+        # FrameObject instance in multiple threads.
+        self._FrameObject__in_is_visible += 1
+        try:
+            return fn(self)
+        finally:
+            self._FrameObject__in_is_visible -= 1
+    return inner
+
+
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if self:
+        # pylint: disable=protected-access
+        if self._FrameObject__in_is_visible or self.is_visible:
             return fn(self)
         else:
             return None
@@ -1657,7 +1671,9 @@ class _FrameObjectMeta(type):
                 f = _memoize_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
                 # visible.
-                if k != 'is_visible' and not k.startswith('_'):
+                if k == 'is_visible':
+                    f = _mark_in_is_visible(f)
+                elif not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
 
@@ -1684,6 +1700,7 @@ class FrameObject(object):
         if frame is None:
             raise ValueError("FrameObject: frame must not be None")
         self.__frame_object_cache = {}
+        self.__in_is_visible = 0
         self._frame = frame
 
     def __repr__(self):
