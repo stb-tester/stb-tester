@@ -16,6 +16,69 @@ class TruthyFrameObject(stbt.FrameObject):
         return True
 
 
+class FalseyFrameObject(stbt.FrameObject):
+    """Properties aren't listed in repr if the FrameObject is falsey.
+
+    >>> frame = _load_frame("with-dialog")
+    >>> fo = FalseyFrameObject(frame)
+    >>> bool(fo)
+    False
+    >>> fo
+    FalseyFrameObject(is_visible=False)
+    >>> print fo.public
+    None
+    >>> fo._private
+    6
+    """
+    @property
+    def is_visible(self):
+        return False
+
+    @property
+    def public(self):
+        return 5
+
+    @property
+    def _private(self):
+        return 6
+
+
+class FrameObjectWithProperties(stbt.FrameObject):
+    """Only public properties are listed in repr.
+
+    >>> frame = _load_frame("with-dialog")
+    >>> FrameObjectWithProperties(frame)
+    FrameObjectWithProperties(is_visible=True, public=5)
+    """
+    @property
+    def is_visible(self):
+        return True
+
+    @property
+    def public(self):
+        return 5
+
+    @property
+    def _private(self):
+        return 6
+
+
+class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
+    """Private properties can be called from is_visible.
+
+    >>> frame = _load_frame("with-dialog")
+    >>> FrameObjectThatCallsItsOwnProperties(frame)
+    FrameObjectThatCallsItsOwnProperties(is_visible=True)
+    """
+    @property
+    def is_visible(self):
+        return bool(self._private)
+
+    @property
+    def _private(self):
+        return 6
+
+
 class OrderedFrameObject(stbt.FrameObject):
     """
     FrameObject defines a default sort order based on the values of the
