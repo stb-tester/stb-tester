@@ -1633,15 +1633,10 @@ def _memoize_property_fn(fn):
     return inner
 
 
-def _mark_in_is_visible(fn):
+def _boolify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
-        self._FrameObject__local.in_is_visible += 1
-        try:
-            return bool(fn(self))
-        finally:
-            self._FrameObject__local.in_is_visible -= 1
+        return bool(fn(self))
     return inner
 
 
@@ -1649,7 +1644,7 @@ def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
         # pylint: disable=protected-access
-        if self._FrameObject__local.in_is_visible or self.is_visible:
+        if self._FrameObject__in_is_visible or self.is_visible:
             return fn(self)
         else:
             return None
@@ -1668,11 +1663,12 @@ class _FrameObjectMeta(type):
                 f = v.fget
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
+                # is_visible is always a bool
+                if k == 'is_visible':
+                    f = _boolify_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
                 # visible.
-                if k == 'is_visible':
-                    f = _mark_in_is_visible(f)
-                elif not k.startswith('_'):
+                if k != 'is_visible' and not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
 
@@ -1699,9 +1695,11 @@ class FrameObject(object):
         if frame is None:
             raise ValueError("FrameObject: frame must not be None")
         self.__frame_object_cache = {}
-        self.__local = threading.local()
-        self.__local.in_is_visible = 0
         self._frame = frame
+
+        self.__in_is_visible = True
+        self.is_visible  # pylint:disable=pointless-statement
+        self.__in_is_visible = False
 
     def __repr__(self):
         args = ", ".join(("%s=%r" % x) for x in self._iter_attrs())

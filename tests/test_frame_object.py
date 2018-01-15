@@ -127,10 +127,8 @@ class PrintingFrameObject(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> m = PrintingFrameObject(frame)
-    >>> m.is_visible
     is_visible called
     _helper called
-    True
     >>> m.is_visible
     True
     >>> m.another
@@ -163,11 +161,9 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> m = FalseyPrintingFrameObject(frame)
-    >>> m.is_visible
     is_visible called
     public called
     _private called
-    False
     >>> m.is_visible
     False
     >>> print m.public
