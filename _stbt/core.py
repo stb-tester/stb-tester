@@ -356,8 +356,6 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         This is similar to `extend`, but it takes absolute coordinates within
         the image instead of adjusting by a relative number of pixels.
-
-        ``Region.replace`` was added in stb-tester v24.
         """
         def norm_coords(name_x, name_width, name_right,
                         x, width, right,  # or y, height, bottom
@@ -473,8 +471,6 @@ class MatchResult(object):
 
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
-
-    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
@@ -631,7 +627,7 @@ class MotionResult(object):
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
 
-    The ``time`` attribute was added in stb-tester v26.
+    Added in v28: The ``frame`` attribute.
     """
     def __init__(self, time, motion, region, frame):
         self.time = time
@@ -713,8 +709,6 @@ class TextMatchResult(object):
 
     :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
         instead.
-
-    The ``time`` attribute was added in stb-tester v26.
     """
     def __init__(self, time, match, region, frame, text):
         self.time = time
@@ -1389,8 +1383,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         end_time = match_result.time  # this is the first stable frame
         print "Transition took %s seconds" % (end_time - start_time)
 
-    ``wait_until`` was added in stb-tester v22. The ``predicate`` and
-    ``stable_secs`` parameters were added in v28.
+    Added in v28: The ``predicate`` and ``stable_secs`` parameters.
     """
     import time
 

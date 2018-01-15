@@ -188,8 +188,6 @@ def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
         for match_result in stbt.match_all("button.png"):
             # do something with match_result here
             ...
-
-    ``match_all`` was added in stb-tester v25.
     """
     return _dut.match_all(image, frame, match_parameters, region)
 
@@ -266,8 +264,6 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
-
-    The ``region`` parameter to ``wait_for_match`` was added in stb-tester v24.
     """
     return _dut.wait_for_match(
         image, timeout_secs, consecutive_matches, match_parameters, region)
@@ -307,7 +303,7 @@ def press_until_match(
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
 
-    Changed in v28: Added ``region``.
+    Added in v28: The ``region`` parameter.
     """
     return _dut.press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
@@ -452,9 +448,6 @@ def match_text(text, frame=None, region=Region.ALL,
         assert m.match
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
-
-    The ``case_sensitive`` parameter was added in v27. Previously it always
-    ignored case.
     """
     return _dut.match_text(
         text, frame, region, mode, lang, tesseract_config, case_sensitive,
@@ -478,9 +471,6 @@ def frames(timeout_secs=None):
       * ``frame`` is a `stbt.Frame` (that is, an OpenCV image).
       * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use
         ``frame.time`` instead.
-
-    Changed in v26: The first item of the tuple is a `stbt.Frame` instead of a
-    `numpy.ndarray`.
     """
     return _dut.frames(timeout_secs)
 
@@ -489,8 +479,6 @@ def get_frame():
     """Grabs a video frame captured from the device-under-test.
 
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
-
-    Changed in v26: Returns a `stbt.Frame` instead of a `numpy.ndarray`.
     """
     return _dut.get_frame()
 
@@ -802,9 +790,6 @@ class FrameObject(_stbt.core.FrameObject):
     set([Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')])
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
-
-    ``FrameObject`` was added in stb-tester v25.
-
     '''
     def __init__(self, frame=None):
         if frame is None:
