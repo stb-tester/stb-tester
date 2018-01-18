@@ -40,6 +40,7 @@ from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
                              gst_sample_make_writable, sample_shape)
 from _stbt.logging import ddebug, debug, warn
+from _stbt.thread_interrupt import InterruptibleCondition, iter_timeout
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
@@ -1971,7 +1972,7 @@ class Display(object):
 
         import time
 
-        self._condition = threading.Condition()  # Protects last_frame
+        self._condition = InterruptibleCondition()  # Protects last_frame
         self.last_frame = None
         self.last_used_frame = None
         self.source_pipeline = None
@@ -2047,24 +2048,20 @@ class Display(object):
     def get_frame(self, timeout_secs=10, since=None):
         import time
         t = time.time()
-        end_time = t + timeout_secs
         if since is None:
             # If you want to wait 10s for a frame you're probably not interested
             # in a frame from 10s ago.
             since = t - timeout_secs
 
-        with self._condition:
-            while True:
+        with self._condition.lock_waitable() as wait:
+            for t in iter_timeout(timeout_secs, now=t):
                 if (isinstance(self.last_frame, Frame) and
                         self.last_frame.time > since):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, Exception):
                     raise UITestError(str(self.last_frame))
-                t = time.time()
-                if t > end_time:
-                    break
-                self._condition.wait(end_time - t)
+                wait(t.remaining)
 
         pipeline = self.source_pipeline
         if pipeline:

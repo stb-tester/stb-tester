@@ -82,6 +82,7 @@ INSTALL_CORE_FILES = \
     _stbt/state_watch.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
+    _stbt/thread_interrupt.py \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
