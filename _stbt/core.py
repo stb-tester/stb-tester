@@ -1626,10 +1626,23 @@ def _memoize_property_fn(fn):
     return inner
 
 
+def _mark_in_is_visible(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        # pylint: disable=protected-access
+        self._FrameObject__local.in_is_visible += 1
+        try:
+            return bool(fn(self))
+        finally:
+            self._FrameObject__local.in_is_visible -= 1
+    return inner
+
+
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if self:
+        # pylint: disable=protected-access
+        if self._FrameObject__local.in_is_visible or self.is_visible:
             return fn(self)
         else:
             return None
@@ -1640,13 +1653,19 @@ class _FrameObjectMeta(type):
     def __new__(mcs, name, parents, dct):
         for k, v in dct.iteritems():
             if isinstance(v, property):
+                # Properties must not have setters
                 if v.fset is not None:
                     raise Exception(
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
-                if k != 'is_visible' and not k.startswith('_'):
+                # Public properties return `None` if the FrameObject isn't
+                # visible.
+                if k == 'is_visible':
+                    f = _mark_in_is_visible(f)
+                elif not k.startswith('_'):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
 
@@ -1673,6 +1692,8 @@ class FrameObject(object):
         if frame is None:
             raise ValueError("FrameObject: frame must not be None")
         self.__frame_object_cache = {}
+        self.__local = threading.local()
+        self.__local.in_is_visible = 0
         self._frame = frame
 
     def __repr__(self):
