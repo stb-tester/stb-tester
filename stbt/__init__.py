@@ -234,10 +234,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         setting ``noise_threshold`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
+    :type mask: str or `numpy.ndarray`
     :param str mask:
-        The filename of a black & white image that specifies which part of the
-        image to search for motion. White pixels select the area to search;
-        black pixels select the area to ignore.
+        A black & white image that specifies which part of the image to search
+        for motion. White pixels select the area to analyse; black pixels select
+        the area to ignore. This can be a string (a filename that will be
+        resolved as per `load_image`) or a single-channel image in OpenCV
+        format.
     """
     return _dut.detect_motion(timeout_secs, noise_threshold, mask)
 
@@ -336,7 +339,7 @@ def wait_for_motion(
 
     :param float noise_threshold: See `detect_motion`.
 
-    :param str mask: See `detect_motion`.
+    :param mask: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
@@ -492,9 +495,13 @@ def is_screen_black(frame=None, mask=None, threshold=None):
       new frame is grabbed from the device-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).
 
+    :type mask: str or `numpy.ndarray`
     :param str mask:
-      The filename of a black & white image mask. It must have white pixels for
-      parts of the frame to check and black pixels for any parts to ignore.
+        A black & white image that specifies which part of the image to
+        analyse. White pixels select the area to analyse; black pixels select
+        the area to ignore. This can be a string (a filename that will be
+        resolved as per `load_image`) or a single-channel image in OpenCV
+        format.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels

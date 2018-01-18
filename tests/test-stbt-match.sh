@@ -31,7 +31,7 @@ test_that_stbt_match_rejects_invalid_parameters() {
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         idontexisteither.png &&
-    cat log | grep -q "No such template file: .*/idontexisteither.png" &&
+    cat log | grep -q "No such file: .*/idontexisteither.png" &&
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \

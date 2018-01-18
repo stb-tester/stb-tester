@@ -519,30 +519,32 @@ def _str_frame_dimensions(frame):
         return "%dx%d" % (frame.shape[1], frame.shape[0])
 
 
-class _AnnotatedTemplate(namedtuple(
-        '_AnnotatedTemplate',
+class _ImageFromUser(namedtuple(
+        '_ImageFromUser',
         'image relative_filename absolute_filename')):
 
     @property
     def friendly_name(self):
-        return self.absolute_filename or '<Custom Image>'
+        if self.image is None:
+            return None
+        return self.relative_filename or '<Custom Image>'
 
 
-def _load_template(template):
-    if isinstance(template, _AnnotatedTemplate):
-        return template
-    if isinstance(template, numpy.ndarray):
-        return _AnnotatedTemplate(template, None, None)
+def _load_image(image, flags=cv2.IMREAD_COLOR):
+    if isinstance(image, _ImageFromUser):
+        return image
+    if isinstance(image, numpy.ndarray):
+        return _ImageFromUser(image, None, None)
     else:
-        relative_filename = template
+        relative_filename = image
         absolute_filename = _find_user_file(relative_filename)
         if not absolute_filename:
-            raise IOError("No such template file: %s" % relative_filename)
-        image = cv2.imread(absolute_filename, cv2.IMREAD_COLOR)
-        if image is None:
-            raise IOError("Failed to load template file: %s" %
+            raise IOError("No such file: %s" % relative_filename)
+        numpy_image = cv2.imread(absolute_filename, flags)
+        if numpy_image is None:
+            raise IOError("Failed to load image: %s" %
                           absolute_filename)
-        return _AnnotatedTemplate(image, relative_filename, absolute_filename)
+        return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
 
 
 def load_image(filename, flags=cv2.IMREAD_COLOR):
@@ -932,7 +934,7 @@ class DeviceUnderTest(object):
         if match_parameters is None:
             match_parameters = MatchParameters()
 
-        template = _load_template(image)
+        template = _load_image(image)
 
         grabbed_from_live = (frame is None)
         if grabbed_from_live:
@@ -973,7 +975,7 @@ class DeviceUnderTest(object):
 
     def detect_match(self, image, timeout_secs=10, match_parameters=None,
                      region=Region.ALL):
-        template = _load_template(image)
+        template = _load_image(image)
 
         debug("Searching for " + template.friendly_name)
 
@@ -993,9 +995,11 @@ class DeviceUnderTest(object):
 
         debug("Searching for motion")
 
-        mask_image = None
-        if mask:
-            mask_image = _load_mask(mask)
+        if mask is None:
+            mask = _ImageFromUser(None, None, None)
+        else:
+            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
+            debug("Using mask %s" % mask.friendly_name)
 
         previous_frame_gray = None
 
@@ -1003,12 +1007,13 @@ class DeviceUnderTest(object):
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             if previous_frame_gray is None:
-                if (mask_image is not None and
-                        mask_image.shape[:2] != frame_gray.shape[:2]):
+                if (mask.image is not None and
+                        mask.image.shape[:2] != frame_gray.shape[:2]):
                     raise UITestError(
                         "The dimensions of the mask '%s' %s don't match the "
                         "video frame %s" % (
-                            mask, mask_image.shape, frame_gray.shape))
+                            mask.friendly_name, mask.image.shape,
+                            frame_gray.shape))
                 previous_frame_gray = frame_gray
                 continue
 
@@ -1019,9 +1024,9 @@ class DeviceUnderTest(object):
             previous_frame_gray = frame_gray
             imglog.imwrite("absdiff", absdiff)
 
-            if mask_image is not None:
-                absdiff = cv2.bitwise_and(absdiff, mask_image)
-                imglog.imwrite("mask", mask_image)
+            if mask.image is not None:
+                absdiff = cv2.bitwise_and(absdiff, mask.image)
+                imglog.imwrite("mask", mask.image)
                 imglog.imwrite("absdiff_masked", absdiff)
 
             _, thresholded = cv2.threshold(
@@ -1055,7 +1060,7 @@ class DeviceUnderTest(object):
 
         match_count = 0
         last_pos = Position(0, 0)
-        image = _load_template(image)
+        image = _load_image(image)
         for res in self.detect_match(
                 image, timeout_secs, match_parameters=match_parameters,
                 region=region):
@@ -1126,6 +1131,12 @@ class DeviceUnderTest(object):
         debug("Waiting for %d out of %d frames with motion" % (
             motion_frames, considered_frames))
 
+        if mask is None:
+            mask = _ImageFromUser(None, None, None)
+        else:
+            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
+            debug("Using mask %s" % mask.friendly_name)
+
         matches = deque(maxlen=considered_frames)
         motion_count = 0
         for res in self.detect_motion(timeout_secs, noise_threshold, mask):
@@ -1144,7 +1155,7 @@ class DeviceUnderTest(object):
                                "should never be reached")
 
         screenshot = self.get_frame()
-        raise MotionTimeout(screenshot, mask, timeout_secs)
+        raise MotionTimeout(screenshot, mask.friendly_name, timeout_secs)
 
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -1261,22 +1272,27 @@ class DeviceUnderTest(object):
     def is_screen_black(self, frame=None, mask=None, threshold=None):
         if threshold is None:
             threshold = get_config('is_screen_black', 'threshold', type_=int)
-        if mask:
-            mask = _load_mask(mask)
+
+        if mask is None:
+            mask = _ImageFromUser(None, None, None)
+        else:
+            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
+
         if frame is None:
             frame = self.get_frame()
+
         greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
-        _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask)
+        _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask.image)
 
         if logging.get_debug_level() > 1:
             imglog = logging.ImageLogger("is_screen_black")
             imglog.imwrite("source", frame)
-            if mask is not None:
-                imglog.imwrite('mask', mask)
+            if mask.image is not None:
+                imglog.imwrite('mask', mask.image)
                 imglog.imwrite('non-black-regions-after-masking',
-                               numpy.bitwise_and(greyframe, mask))
+                               numpy.bitwise_and(greyframe, mask.image))
             else:
                 imglog.imwrite('non-black-regions-after-masking', greyframe)
 
@@ -2727,9 +2743,9 @@ def _find_user_file(filename):
     # the first 2 stack-frames:
     #
     # * stack()[0] is _find_user_file;
-    # * stack()[1] is _find_user_file's caller: load_image or _load_template;
+    # * stack()[1] is _find_user_file's caller: load_image or _load_image;
     # * stack()[2] is load_image's caller (the user script). It could also be
-    #   _load_template's caller (e.g. `match`) so we still need to check until
+    #   _load_image's caller (e.g. `match`) so we still need to check until
     #   we're outside of the _stbt directory.
 
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
@@ -2740,26 +2756,17 @@ def _find_user_file(filename):
             continue
         caller_path = os.path.join(caller_dir, filename)
         if os.path.isfile(caller_path):
+            ddebug("Resolved relative path %r to %r" % (filename, caller_path))
             return caller_path
 
     # Fall back to image from cwd, to allow loading an image saved previously
     # during the same test-run.
     if os.path.isfile(filename):
-        return os.path.abspath(filename)
+        abspath = os.path.abspath(filename)
+        ddebug("Resolved relative path %r to %r" % (filename, abspath))
+        return abspath
 
     return None
-
-
-def _load_mask(filename):
-    """Loads the given mask file and returns it as an OpenCV image."""
-    absolute_filename = _find_user_file(filename)
-    debug("Using mask %s" % absolute_filename)
-    if not absolute_filename:
-        raise IOError("No such mask file: %s" % filename)
-    image = cv2.imread(absolute_filename, cv2.IMREAD_GRAYSCALE)
-    if image is None:
-        raise IOError("Failed to load mask file: %s" % absolute_filename)
-    return image
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as

@@ -35,9 +35,9 @@ test_wait_for_match_nonexistent_template() {
 	wait_for_match("idontexist.png")
 	EOF
     ! stbt run -v test.py &> test.log || fail "Test should have failed"
-    grep -q "No such template file: idontexist.png" test.log ||
-        fail "Expected 'No such template file: idontexist.png' but saw '$(
-            grep 'No such template file' test.log | head -n1)'"
+    grep -q "No such file: idontexist.png" test.log ||
+        fail "Expected 'No such file: idontexist.png' but saw '$(
+            grep 'No such file' test.log | head -n1)'"
 }
 
 test_wait_for_match_opencv_image_can_be_used_as_template() {
@@ -189,8 +189,8 @@ test_match_nonexistent_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Trying to match an non-existant template should throw"
-    cat log | grep -q "FAIL: test.py: IOError: No such template file: idontexist.png" \
-        || fail "Didn't see 'IOError: No such template file'"
+    cat log | grep -q "FAIL: test.py: IOError: No such file: idontexist.png" \
+        || fail "Didn't see 'IOError: No such file'"
 }
 
 test_match_invalid_template() {
