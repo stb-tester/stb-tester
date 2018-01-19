@@ -1160,7 +1160,7 @@ class DeviceUnderTest(object):
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             lang=None, tesseract_config=None, tesseract_user_words=None,
-            tesseract_user_patterns=None, text_color=None):
+            tesseract_user_patterns=None, upsample=True, text_color=None):
 
         if frame is None:
             frame = self.get_frame()
@@ -1183,7 +1183,7 @@ class DeviceUnderTest(object):
 
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
-            tesseract_user_patterns, tesseract_user_words, text_color)
+            tesseract_user_patterns, tesseract_user_words, upsample, text_color)
         text = text.strip().translate(_ocr_transtab)
         debug(u"OCR in region %s read '%s'." % (region, text))
         return text
@@ -1191,7 +1191,7 @@ class DeviceUnderTest(object):
     def match_text(self, text, frame=None, region=Region.ALL,
                    mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                    tesseract_config=None, case_sensitive=False,
-                   text_color=None):
+                   upsample=True, text_color=None):
 
         import lxml.etree
         if frame is None:
@@ -1207,7 +1207,7 @@ class DeviceUnderTest(object):
         rts = getattr(frame, "time", None)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
-                                 user_words=text.split(), text_color=text_color)
+                                 None, text.split(), upsample, text_color)
         if xml == '':
             result = TextMatchResult(rts, False, None, frame, text)
         else:
@@ -1220,9 +1220,10 @@ class DeviceUnderTest(object):
                     box = _bounding_box(box, _hocr_elem_region(elem))
                 # _tesseract crops to region and scales up by a factor of 3 so
                 # we must undo this transformation here.
+                n = 3 if upsample else 1
                 box = Region.from_extents(
-                    region.x + box.x // 3, region.y + box.y // 3,
-                    region.x + box.right // 3, region.y + box.bottom // 3)
+                    region.x + box.x // n, region.y + box.y // n,
+                    region.x + box.right // n, region.y + box.bottom // n)
                 result = TextMatchResult(rts, True, box, frame, text)
             else:
                 result = TextMatchResult(rts, False, None, frame, text)
@@ -2863,8 +2864,8 @@ def _tesseract_version(output=None):
     return LooseVersion(line.split()[1])
 
 
-def _tesseract(frame, region, mode, lang, _config,
-               user_patterns=None, user_words=None, text_color=None):
+def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
+               upsample, text_color):
 
     if _config is None:
         _config = {}
@@ -2879,21 +2880,24 @@ def _tesseract(frame, region, mode, lang, _config,
         region = intersection
 
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
-                                  user_patterns, user_words, text_color),
+                                  user_patterns, user_words, upsample,
+                                  text_color),
             region)
 
 
 @imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
                         "version": "28"})
 def _tesseract_subprocess(
-        frame, mode, lang, _config, user_patterns, user_words, text_color):
+        frame, mode, lang, _config, user_patterns, user_words, upsample,
+        text_color):
 
-    # We scale image up 3x before feeding it to tesseract as this
-    # significantly reduces the error rate by more than 6x in tests.  This
-    # uses bilinear interpolation which produces the best results.  See
-    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-    outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
-    frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
+    if upsample:
+        # We scale image up 3x before feeding it to tesseract as this
+        # significantly reduces the error rate by more than 6x in tests.  This
+        # uses bilinear interpolation which produces the best results.  See
+        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+        outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
+        frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
 
     if text_color is not None:
         # Calculate distance of each pixel from `text_color`, then discard

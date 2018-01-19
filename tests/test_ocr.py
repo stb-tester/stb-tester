@@ -197,8 +197,8 @@ def iterate_menu():
 def test_that_text_location_is_recognised():
     frame = cv2.imread("tests/ocr/menu.png")
 
-    def test(text, region):
-        result = stbt.match_text(text, frame=frame)
+    def test(text, region, upsample):
+        result = stbt.match_text(text, frame=frame, upsample=upsample)
         assert result
         assert region.contains(result.region)  # pylint: disable=E1101
 
@@ -207,7 +207,8 @@ def test_that_text_location_is_recognised():
         if multiline:
             continue
 
-        yield (test, text, region)
+        yield (test, text, region, True)
+        yield (test, text, region, False)
 
 
 def test_match_text_stringify_result():
