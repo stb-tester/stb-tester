@@ -23,9 +23,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 #### v28
 
-_TODO: Summary.__
+Better defaults; multithreading support; Android & VNC control mechanisms;
+many API improvements and bugfixes.
 
-UNRELEASED
+22 January 2018.
 
 ##### Breaking changes since v27
 
@@ -209,8 +210,6 @@ UNRELEASED
 * Configuration: `global.sink_pipeline` can now be set to an empty value
   (`sink_pipeline=`). This will have the same effect as `sink_pipeline =
   fakesink` but with lower resource utilisation.
-
-##### Maintainer-visible changes
 
 
 #### v27
