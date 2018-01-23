@@ -216,6 +216,8 @@ test_that_stbt_run_tracing_is_written_to_file() {
 }
 
 test_that_stbt_run_tracing_is_written_to_socket() {
+    which socat &>/dev/null || skip "socat is not installed"
+
     export STBT_TRACING_SOCKET=$PWD/trace-socket
     socat UNIX-LISTEN:$STBT_TRACING_SOCKET,fork OPEN:trace.jsonl,creat,append &
     SOCAT_PID=$!

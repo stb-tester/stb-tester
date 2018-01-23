@@ -471,6 +471,8 @@ test_that_stbt_batch_propagates_exit_status_if_running_a_single_test() {
 }
 
 test_that_stbt_batch_reports_results_directory() {
+    which socat &>/dev/null || skip "socat is not installed"
+
     create_test_repo
     export STBT_TRACING_SOCKET=$PWD/stbt_tracing_socket
     socat -d -d -d -D -t10 UNIX-LISTEN:$STBT_TRACING_SOCKET,fork GOPEN:trace.log &
