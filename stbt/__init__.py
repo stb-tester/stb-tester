@@ -101,7 +101,7 @@ def press(key, interpress_delay_secs=None):
         lircd.conf configuration file.
 
         If you are using HDMI CEC control, see the available key names
-        `here <https://github.com/stb-tester/stb-tester/blob/v27/_stbt/control_gpl.py#L16-L107>`__.
+        `here <https://github.com/stb-tester/stb-tester/blob/v28/_stbt/control_gpl.py#L18-L117>`__.
         Note that some devices might not understand all of the CEC commands in
         that list.
 
