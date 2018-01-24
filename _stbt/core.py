@@ -988,7 +988,9 @@ class DeviceUnderTest(object):
                 os.path.basename(template.friendly_name))
             yield result
 
-    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None):
+    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None,
+                      region=Region.ALL):
+
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
@@ -1001,21 +1003,23 @@ class DeviceUnderTest(object):
             mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
             debug("Using mask %s" % mask.friendly_name)
 
-        previous_frame_gray = None
+        frames = self.frames(timeout_secs)
+        frame, _ = next(frames)
 
-        for frame, _ in self.frames(timeout_secs):
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        region = Region.intersect(_image_region(frame), region)
 
-            if previous_frame_gray is None:
-                if (mask.image is not None and
-                        mask.image.shape[:2] != frame_gray.shape[:2]):
-                    raise UITestError(
-                        "The dimensions of the mask '%s' %s don't match the "
-                        "video frame %s" % (
-                            mask.friendly_name, mask.image.shape,
-                            frame_gray.shape))
-                previous_frame_gray = frame_gray
-                continue
+        previous_frame_gray = cv2.cvtColor(crop(frame, region),
+                                           cv2.COLOR_BGR2GRAY)
+        if (mask.image is not None and
+                mask.image.shape[:2] != previous_frame_gray.shape[:2]):
+            raise ValueError(
+                "The dimensions of the mask '%s' %s don't match the "
+                "video frame %s" % (
+                    mask.friendly_name, mask.image.shape,
+                    previous_frame_gray.shape))
+
+        for frame, _ in frames:
+            frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
 
             imglog = logging.ImageLogger("detect_motion")
             imglog.imwrite("source", frame_gray)
@@ -1042,6 +1046,8 @@ class DeviceUnderTest(object):
             if out_region:
                 # Undo cv2.erode above:
                 out_region = out_region.extend(x=-1, y=-1)
+                # Undo crop:
+                out_region = out_region.translate(region.x, region.y)
 
             motion = bool(out_region)
 
@@ -1111,7 +1117,7 @@ class DeviceUnderTest(object):
 
     def wait_for_motion(
             self, timeout_secs=10, consecutive_frames=None,
-            noise_threshold=None, mask=None):
+            noise_threshold=None, mask=None, region=Region.ALL):
 
         if consecutive_frames is None:
             consecutive_frames = get_config('motion', 'consecutive_frames')
@@ -1139,7 +1145,8 @@ class DeviceUnderTest(object):
 
         matches = deque(maxlen=considered_frames)
         motion_count = 0
-        for res in self.detect_motion(timeout_secs, noise_threshold, mask):
+        for res in self.detect_motion(timeout_secs, noise_threshold, mask,
+                                      region):
             motion_count += bool(res)
             if len(matches) == matches.maxlen:
                 motion_count -= bool(matches.popleft())
@@ -1270,19 +1277,22 @@ class DeviceUnderTest(object):
         else:
             return self._display.get_frame()
 
-    def is_screen_black(self, frame=None, mask=None, threshold=None):
+    def is_screen_black(self, frame=None, mask=None, threshold=None,
+                        region=Region.ALL):
         if threshold is None:
             threshold = get_config('is_screen_black', 'threshold', type_=int)
+
+        if frame is None:
+            frame = self.get_frame()
+
+        region = Region.intersect(_image_region(frame), region)
 
         if mask is None:
             mask = _ImageFromUser(None, None, None)
         else:
             mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
 
-        if frame is None:
-            frame = self.get_frame()
-
-        greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask.image)
@@ -1850,7 +1860,7 @@ class SinkPipeline(object):
                 self.sink_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self._raise_in_user_thread(
-            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
     def __enter__(self):
         self.received_eos.clear()
@@ -2061,7 +2071,7 @@ class Display(object):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, Exception):
-                    raise UITestError(str(self.last_frame))
+                    raise RuntimeError(str(self.last_frame))
                 t = time.time()
                 if t > end_time:
                     break
@@ -2116,7 +2126,7 @@ class Display(object):
                 pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
-            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
     def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
@@ -3027,113 +3037,3 @@ def _hocr_elem_region(elem):
             extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
         elem = elem.getparent()
-
-# Tests
-# ===========================================================================
-
-
-def test_wait_for_motion_half_motion_str_2of4():
-    with _fake_frames_at_half_motion() as dut:
-        res = dut.wait_for_motion(consecutive_frames='2/4')
-        print res
-        assert res.time == 1466084606.
-
-
-def test_wait_for_motion_half_motion_str_2of3():
-    with _fake_frames_at_half_motion() as dut:
-        res = dut.wait_for_motion(consecutive_frames='2/3')
-        print res
-        assert res.time == 1466084606.
-
-
-def test_wait_for_motion_half_motion_str_4of10():
-    with _fake_frames_at_half_motion() as dut:
-        # Time is not affected by consecutive_frames parameter
-        res = dut.wait_for_motion(consecutive_frames='4/10', timeout_secs=20)
-        assert res.time == 1466084606.
-
-
-def test_wait_for_motion_half_motion_str_3of4():
-    with _fake_frames_at_half_motion() as dut:
-        try:
-            dut.wait_for_motion(consecutive_frames='3/4')
-            assert False, "wait_for_motion succeeded unexpectedly"
-        except MotionTimeout:
-            pass
-
-
-def test_wait_for_motion_half_motion_int():
-    with _fake_frames_at_half_motion() as dut:
-        try:
-            dut.wait_for_motion(consecutive_frames=2)
-            assert False, "wait_for_motion succeeded unexpectedly"
-        except MotionTimeout:
-            pass
-
-
-@contextmanager
-def _fake_frames_at_half_motion():
-    FRAMES = []
-    a = numpy.zeros((2, 2, 3), dtype=numpy.uint8)
-    b = numpy.ones((2, 2, 3), dtype=numpy.uint8) * 255
-
-    # Motion:                 v     v     v     v     v     v     v     v     v
-    data = [a, a, a, a, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b, b, a, a, b]
-    #       ^                 ^
-    #       |                 L Motion starts here at timestamp 1466084606.
-    #       L Video starts here at timestamp 1466084600
-
-    FRAMES = [Frame(x, time=1466084600. + n) for n, x in enumerate(data)]
-
-    class FakeDisplay(object):
-        def get_frame(self, timeout_secs=10, since=0):  # pylint: disable=unused-argument
-            for f in FRAMES:
-                if f.time > since:
-                    return f
-            f = FRAMES[-1].copy()
-            f.time = since + 1
-            return f
-
-    class FakeTime(object):
-        def __init__(self, now):
-            self._now = now
-
-        def time(self):
-            return self._now
-
-        def sleep(self, duration):
-            self._now += duration
-
-    dut = DeviceUnderTest(display=FakeDisplay(), sink_pipeline=NoSinkPipeline(),
-                          _time=FakeTime(FRAMES[0].time))
-    yield dut
-
-
-def test_region_replace():
-    from nose.tools import raises
-
-    r = Region(x=10, y=20, width=20, height=30)
-
-    def t(kwargs, expected):
-        assert r.replace(**kwargs) == expected
-
-    @raises(ValueError)
-    def e(kwargs):
-        r.replace(**kwargs)
-
-    # No change
-    yield t, dict(x=10), r
-    yield t, dict(x=10, width=20), r
-    yield t, dict(x=10, right=30), r
-
-    # Not allowed
-    yield e, dict(x=1, width=2, right=3)
-    yield e, dict(y=1, height=2, bottom=3)
-
-    # Allowed  # pylint:disable=C0301
-    yield t, dict(x=11), Region(x=11, y=r.y, width=19, height=r.height)
-    yield t, dict(width=19), Region(x=10, y=r.y, width=19, height=r.height)
-    yield t, dict(right=29), Region(x=10, y=r.y, width=19, height=r.height)
-    yield t, dict(x=11, width=20), Region(x=11, y=r.y, width=20, height=r.height)
-    yield t, dict(x=11, right=21), Region(x=11, y=r.y, width=10, height=r.height)
-    yield t, dict(x=11, right=21, y=0, height=5), Region(x=11, y=0, width=10, height=5)

@@ -209,7 +209,8 @@ def detect_match(image, timeout_secs=10, match_parameters=None,
     return _dut.detect_match(image, timeout_secs, match_parameters, region)
 
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
+def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
+                  region=Region.ALL):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
 
@@ -235,14 +236,24 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None):
         :ref:`.stbt.conf`.
 
     :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :param mask:
         A black & white image that specifies which part of the image to search
         for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore. This can be a string (a filename that will be
-        resolved as per `load_image`) or a single-channel image in OpenCV
-        format.
+        the area to ignore. The mask must be the same size as the video frame.
+
+        This can be a string (a filename that will be resolved as per
+        `load_image`) or a single-channel image in OpenCV format.
+
+    :type region: `Region`
+    :param region:
+        Only analyze the specified region of the video frame.
+
+        If you specify both ``region`` and ``mask``, the mask must be the same
+        size as the region.
+
+    Added in v28: The ``region`` parameter.
     """
-    return _dut.detect_motion(timeout_secs, noise_threshold, mask)
+    return _dut.detect_motion(timeout_secs, noise_threshold, mask, region)
 
 
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
@@ -314,7 +325,7 @@ def press_until_match(
 
 def wait_for_motion(
         timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=None):
+        noise_threshold=None, mask=None, region=Region.ALL):
     """Search for motion in the device-under-test's video stream.
 
     "Motion" is difference in pixel values between two consecutive frames.
@@ -341,14 +352,18 @@ def wait_for_motion(
 
     :param mask: See `detect_motion`.
 
+    :param region: See `detect_motion`.
+
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
         which motion was detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
+
+    Added in v28: The ``region`` parameter.
     """
     return _dut.wait_for_motion(
-        timeout_secs, consecutive_frames, noise_threshold, mask)
+        timeout_secs, consecutive_frames, noise_threshold, mask, region)
 
 
 def ocr(frame=None, region=Region.ALL,
@@ -501,7 +516,7 @@ def get_frame():
     return _dut.get_frame()
 
 
-def is_screen_black(frame=None, mask=None, threshold=None):
+def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
     """Check for the presence of a black screen in a video frame.
 
     :type frame: `stbt.Frame` or `numpy.ndarray`
@@ -511,12 +526,13 @@ def is_screen_black(frame=None, mask=None, threshold=None):
       OpenCV format (for example as returned by `frames` and `get_frame`).
 
     :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :param mask:
         A black & white image that specifies which part of the image to
         analyse. White pixels select the area to analyse; black pixels select
-        the area to ignore. This can be a string (a filename that will be
-        resolved as per `load_image`) or a single-channel image in OpenCV
-        format.
+        the area to ignore. The mask must be the same size as the video frame.
+
+        This can be a string (a filename that will be resolved as per
+        `load_image`) or a single-channel image in OpenCV format.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
@@ -526,12 +542,18 @@ def is_screen_black(frame=None, mask=None, threshold=None):
       setting ``threshold`` in the ``[is_screen_black]`` section of
       :ref:`.stbt.conf`.
 
+    :type region: `Region`
+    :param region:
+        Only analyze the specified region of the video frame.
+
+        If you specify both ``region`` and ``mask``, the mask must be the same
+        size as the region.
+
     :returns: True or False.
 
-    Before stb-tester v22, the ``frame`` parameter had to be passed in
-    explicitly by the caller.
+    Added in v28: The ``region`` parameter.
     """
-    return _dut.is_screen_black(frame, mask, threshold)
+    return _dut.is_screen_black(frame, mask, threshold, region)
 
 
 class FrameObject(_stbt.core.FrameObject):
