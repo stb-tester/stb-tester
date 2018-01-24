@@ -145,6 +145,9 @@ many API improvements and bugfixes.
   (previously it could only be a filename). This makes it easier to construct
   masks programmatically.
 
+* Python API: `stbt.detect_motion`, `stbt.wait_for_motion`, and
+  `stbt.is_screen_black` can take a new `region` parameter.
+
 * Python API: `stbt.wait_until` has two new parameters: `predicate` and
   `stable_secs`. Together they allow waiting for something to stabilise (for
   example to wait for the position of a moving selection to stop moving).
