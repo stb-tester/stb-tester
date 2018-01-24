@@ -1277,19 +1277,22 @@ class DeviceUnderTest(object):
         else:
             return self._display.get_frame()
 
-    def is_screen_black(self, frame=None, mask=None, threshold=None):
+    def is_screen_black(self, frame=None, mask=None, threshold=None,
+                        region=Region.ALL):
         if threshold is None:
             threshold = get_config('is_screen_black', 'threshold', type_=int)
+
+        if frame is None:
+            frame = self.get_frame()
+
+        region = Region.intersect(_image_region(frame), region)
 
         if mask is None:
             mask = _ImageFromUser(None, None, None)
         else:
             mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
 
-        if frame is None:
-            frame = self.get_frame()
-
-        greyframe = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
         _, greyframe = cv2.threshold(
             greyframe, threshold, 255, cv2.THRESH_BINARY)
         _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask.image)
