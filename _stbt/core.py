@@ -1001,21 +1001,20 @@ class DeviceUnderTest(object):
             mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
             debug("Using mask %s" % mask.friendly_name)
 
-        previous_frame_gray = None
+        frames = self.frames(timeout_secs)
 
-        for frame, _ in self.frames(timeout_secs):
+        frame, _ = next(frames)
+        previous_frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if (mask.image is not None and
+                mask.image.shape[:2] != previous_frame_gray.shape[:2]):
+            raise UITestError(
+                "The dimensions of the mask '%s' %s don't match the "
+                "video frame %s" % (
+                    mask.friendly_name, mask.image.shape,
+                    previous_frame_gray.shape))
+
+        for frame, _ in frames:
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            if previous_frame_gray is None:
-                if (mask.image is not None and
-                        mask.image.shape[:2] != frame_gray.shape[:2]):
-                    raise UITestError(
-                        "The dimensions of the mask '%s' %s don't match the "
-                        "video frame %s" % (
-                            mask.friendly_name, mask.image.shape,
-                            frame_gray.shape))
-                previous_frame_gray = frame_gray
-                continue
 
             imglog = logging.ImageLogger("detect_motion")
             imglog.imwrite("source", frame_gray)
