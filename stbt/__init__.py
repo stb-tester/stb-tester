@@ -101,7 +101,7 @@ def press(key, interpress_delay_secs=None):
         lircd.conf configuration file.
 
         If you are using HDMI CEC control, see the available key names
-        `here <https://github.com/stb-tester/stb-tester/blob/v27/_stbt/control_gpl.py#L16-L107>`_.
+        `here <https://github.com/stb-tester/stb-tester/blob/v27/_stbt/control_gpl.py#L16-L107>`__.
         Note that some devices might not understand all of the CEC commands in
         that list.
 
@@ -388,7 +388,7 @@ def ocr(frame=None, region=Region.ALL,
 
     :param str lang:
         The three-letter
-        `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`_
+        `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`__
         language code of the language you are attempting to read; for example
         "eng" for English or "deu" for German. More than one language can be
         specified by joining with '+'; for example "eng+deu" means that the
@@ -396,12 +396,12 @@ def ocr(frame=None, region=Region.ALL,
         to "eng" (English). You can override the global default value by setting
         ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
         install the tesseract language pack; see installation instructions
-        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`_.
+        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`__.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
         See the `tesseract documentation
-        <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`_
+        <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`__
         for details.
 
     :type tesseract_user_words: unicode string, or list of unicode strings
@@ -609,7 +609,7 @@ class FrameObject(_stbt.core.FrameObject):
 
     For more background information on Frame Objects see
     `Improve black-box testing agility: meet the Frame Object pattern
-    <https://stb-tester.com/blog/2015/09/08/meet-the-frame-object-pattern>`_.
+    <https://stb-tester.com/blog/2015/09/08/meet-the-frame-object-pattern>`__.
 
     **Example**
 

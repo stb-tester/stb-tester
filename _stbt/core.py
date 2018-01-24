@@ -76,7 +76,7 @@ class MatchParameters(object):
 
       Allowed values are "sqdiff-normed", "ccorr-normed", and "ccoeff-normed".
       For the meaning of these parameters, see OpenCV's `cvMatchTemplate
-      <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`_.
+      <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`__.
 
       We recommend that you don't change this from its default value of
       "sqdiff-normed".
@@ -669,7 +669,7 @@ class OcrMode(IntEnum):
     """Options to control layout analysis and assume a certain form of image.
 
     For a (brief) description of each option, see the `tesseract(1)
-    <https://github.com/tesseract-ocr/tesseract/blob/3.04.01/doc/tesseract.1.asc#options>`_
+    <https://github.com/tesseract-ocr/tesseract/blob/3.04.01/doc/tesseract.1.asc#options>`__
     man page.
     """
     ORIENTATION_AND_SCRIPT_DETECTION_ONLY = 0
@@ -1496,7 +1496,7 @@ def as_precondition(message):
     errors (yellow) rather than test failures (red), so that you can focus on
     diagnosing the failures that are most likely to be the particular defect
     you are looking for. For more details see `Test failures vs. errors
-    <http://stb-tester.com/preconditions>`_.
+    <http://stb-tester.com/preconditions>`__.
 
     :param str message:
         A description of the precondition. Word this positively: "Channels
