@@ -1007,7 +1007,7 @@ class DeviceUnderTest(object):
         previous_frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if (mask.image is not None and
                 mask.image.shape[:2] != previous_frame_gray.shape[:2]):
-            raise UITestError(
+            raise ValueError(
                 "The dimensions of the mask '%s' %s don't match the "
                 "video frame %s" % (
                     mask.friendly_name, mask.image.shape,
@@ -1849,7 +1849,7 @@ class SinkPipeline(object):
                 self.sink_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self._raise_in_user_thread(
-            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
     def __enter__(self):
         self.received_eos.clear()
@@ -2060,7 +2060,7 @@ class Display(object):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, Exception):
-                    raise UITestError(str(self.last_frame))
+                    raise RuntimeError(str(self.last_frame))
                 t = time.time()
                 if t > end_time:
                     break
@@ -2115,7 +2115,7 @@ class Display(object):
                 pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
         self.tell_user_thread(
-            UITestError("%s: %s\n%s\n" % (err, err.message, dbg)))
+            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
 
     def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
