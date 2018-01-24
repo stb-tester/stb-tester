@@ -75,8 +75,8 @@ class MatchParameters(object):
       within the larger source image.
 
       Allowed values are "sqdiff-normed", "ccorr-normed", and "ccoeff-normed".
-      For the meaning of these parameters, see OpenCV's `cvMatchTemplate
-      <http://docs.opencv.org/modules/imgproc/doc/object_detection.html>`__.
+      For the meaning of these parameters, see OpenCV's
+      :ocv:pyfunc:`cv2.matchTemplate`.
 
       We recommend that you don't change this from its default value of
       "sqdiff-normed".
@@ -566,7 +566,7 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
     :type filename: str or unicode
     :param filename: A relative or absolute filename.
 
-    :param flags: Flags to pass to `cv2.imread`.
+    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
 
     :returns: An image in OpenCV format (a `numpy.ndarray` of 8-bit values, 3
         channel BGR).
