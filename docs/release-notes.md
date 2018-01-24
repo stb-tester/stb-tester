@@ -26,7 +26,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 Better defaults; multithreading support; Android & VNC control mechanisms;
 many API improvements and bugfixes.
 
-22 January 2018.
+24 January 2018.
 
 ##### Breaking changes since v27
 
