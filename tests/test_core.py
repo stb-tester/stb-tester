@@ -56,6 +56,36 @@ def test_crop():
         stbt.crop(f, stbt.Region(x=1045, y=672, right=1281, bottom=721))
 
 
+def test_region_replace():
+    from nose.tools import raises
+
+    r = stbt.Region(x=10, y=20, width=20, height=30)
+
+    def t(kwargs, expected):
+        assert r.replace(**kwargs) == expected
+
+    @raises(ValueError)
+    def e(kwargs):
+        r.replace(**kwargs)
+
+    # No change
+    yield t, dict(x=10), r
+    yield t, dict(x=10, width=20), r
+    yield t, dict(x=10, right=30), r
+
+    # Not allowed
+    yield e, dict(x=1, width=2, right=3)
+    yield e, dict(y=1, height=2, bottom=3)
+
+    # Allowed  # pylint:disable=line-too-long
+    yield t, dict(x=11), stbt.Region(x=11, y=r.y, width=19, height=r.height)
+    yield t, dict(width=19), stbt.Region(x=10, y=r.y, width=19, height=r.height)
+    yield t, dict(right=29), stbt.Region(x=10, y=r.y, width=19, height=r.height)
+    yield t, dict(x=11, width=20), stbt.Region(x=11, y=r.y, width=20, height=r.height)
+    yield t, dict(x=11, right=21), stbt.Region(x=11, y=r.y, width=10, height=r.height)
+    yield t, dict(x=11, right=21, y=0, height=5), stbt.Region(x=11, y=0, width=10, height=5)
+
+
 @pytest.mark.parametrize("frame,mask,threshold,expected", [
     # pylint:disable=line-too-long
     ("black-full-frame.png", None, None, True),
