@@ -176,7 +176,11 @@ many API improvements and bugfixes.
 * Output video now runs a the full frame-rate of the input video rather than
   slowing down during `wait_for_match`. As a side-effect the latency of the
   video has increased by 0.5s and if the image processing is particularly slow
-  the annotations won't appear on the output video.
+  the annotations won't appear on the output video. Apart from that caveat,
+  annotations now appear if you got the frame using `stbt.get_frame()`
+  (previously the annotations only appeared if the frames came from a
+  `stbt.frames()` iterator). "Annotations" means the yellow & red rectangles
+  showing the current match, etc.
 
 ##### Minor fixes and packaging fixes
 
