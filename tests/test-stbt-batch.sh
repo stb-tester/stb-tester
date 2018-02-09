@@ -606,6 +606,12 @@ test_that_stbt_batch_failure_reason_shows_the_failing_assert_statement() {
     assert grep -q "AssertionError: assert 1 + 1 == 3" latest/failure-reason
 }
 
+test_that_stbt_batch_thumbnail_is_present_even_with_chdir() {
+    create_test_repo
+    stbt batch run -1 tests/test_functions.py::test_that_chdirs
+    assert [ -e latest/thumbnail.jpg ]
+}
+
 test_that_stbt_batch_run_shuffle_runs_tests() {
     create_test_repo
     stbt batch run -1 --shuffle \

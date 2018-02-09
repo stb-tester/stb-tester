@@ -8,7 +8,7 @@ import stbt
 from _stbt.state_watch import new_state_sender
 
 
-def _save_screenshot(dut, exception, save_jpg, save_png):
+def _save_screenshot(dut, result_dir, exception, save_jpg, save_png):
     import cv2
 
     if not save_jpg and not save_png:
@@ -21,12 +21,12 @@ def _save_screenshot(dut, exception, save_jpg, save_png):
         screenshot = dut.get_frame()  # pylint: disable=protected-access
 
     if save_png:
-        cv2.imwrite("screenshot.png", screenshot)
+        cv2.imwrite(os.path.join(result_dir, "screenshot.png"), screenshot)
         sys.stderr.write("Saved screenshot to 'screenshot.png'.\n")
 
     if save_jpg:
         cv2.imwrite(
-            'thumbnail.jpg',
+            os.path.join(result_dir, 'thumbnail.jpg'),
             cv2.resize(screenshot, (
                 640, 640 * screenshot.shape[0] // screenshot.shape[1])),
             [cv2.IMWRITE_JPEG_QUALITY, 50])
@@ -34,19 +34,20 @@ def _save_screenshot(dut, exception, save_jpg, save_png):
 
 @contextmanager
 def video(args, dut):
+    result_dir = os.path.abspath(os.curdir)
     with stbt._set_dut_singleton(dut), dut:  # pylint: disable=protected-access
         try:
             yield
         except Exception as e:  # pylint: disable=broad-except
             try:
-                _save_screenshot(dut, exception=e,
+                _save_screenshot(dut, result_dir, exception=e,
                                  save_jpg=(args.save_thumbnail != 'never'),
                                  save_png=(args.save_screenshot != 'never'))
             except Exception:  # pylint: disable=broad-except
                 pass
             raise
         else:
-            _save_screenshot(dut, exception=None,
+            _save_screenshot(dut, result_dir, exception=None,
                              save_jpg=(args.save_thumbnail == 'always'),
                              save_png=(args.save_screenshot == 'always'))
 
