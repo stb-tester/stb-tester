@@ -25,6 +25,7 @@ validate_testrun_dir() {
     diff -u <(cat "$srcdir"/VERSION) "$d/stbt-version.log" || fail "Wrong $d/stbt-version.log"
     [[ -f "$d/video.webm" ]] || fail "$d/video.webm not created"
     [[ -f "$d/thumbnail.jpg" ]] || fail "$d/thumbnail.jpg not created"
+    [[ ! -f "$d/backtrace.log" ]] || fail "$d/backtrace.log shouldn't have been created"
     if [[ -n "$commit" ]]; then
         [[ $(cat "$d/git-commit") == "$commit" ]] || fail "wrong $d/git-commit"
         [[ $(cat "$d/git-commit-sha") == "$expected_commit_sha" ]] \
@@ -619,4 +620,18 @@ test_that_stbt_batch_run_shuffle_runs_tests() {
         tests/test_functions.py::test_that_this_test_is_run
     ls -d ????-??-??_??.??.??* > testruns
     [[ $(cat testruns | wc -l) -eq 2 ]] || fail "Expected 2 test runs"
+}
+
+test_that_stbt_batch_run_extracts_backtrace_from_core_file() {
+    grep -q '^core$' /proc/sys/kernel/core_pattern ||
+    echo core | sudo --non-interactive tee /proc/sys/kernel/core_pattern ||
+    skip "Can't set core pattern"
+
+    ulimit -c unlimited
+    create_test_repo
+    stbt batch run -1 tests/test_functions.py::test_that_dumps_core
+    assert [ -e latest/core ]
+    assert [ -e latest/backtrace.log ]
+    cat latest/backtrace.log
+    assert grep -q abort latest/backtrace.log
 }
