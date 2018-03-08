@@ -26,7 +26,6 @@ stb-tester_*.deb
 stbt-control-relay
 stbt-controlc
 stbt-debug
-stbt.sh
 TAGS
 tests/buttons.png
 tests/ocr/menu.png
