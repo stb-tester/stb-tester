@@ -93,6 +93,7 @@ test_completion_filename_possibly_with_test_functions() {
 	tests/test_functions.py::test_that_does_nothing 
 	tests/test_functions.py::test_that_asserts_the_impossible 
 	tests/test_functions.py::test_that_chdirs 
+	tests/test_functions.py::test_that_dumps_core 
 	EOF
     fail "unexpected completions for file with 'test_' functions"
 
@@ -107,6 +108,7 @@ test_completion_filename_possibly_with_test_functions() {
 	test_that_does_nothing 
 	test_that_asserts_the_impossible 
 	test_that_chdirs 
+	test_that_dumps_core 
 EOF
     fail "unexpected completions for file + ambiguous function prefix"
 

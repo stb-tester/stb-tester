@@ -15,3 +15,7 @@ def test_that_asserts_the_impossible():
 
 def test_that_chdirs():
     os.chdir("/tmp")
+
+
+def test_that_dumps_core():
+    os.abort()
