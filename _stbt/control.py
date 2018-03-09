@@ -28,6 +28,7 @@ class UnknownKeyError(Exception):
 
 def uri_to_remote(uri, display=None):
     remotes = [
+        (r'adb(:(?P<address>.*))?', new_adb_device),
         (r'error(:(?P<message>.*))?', ErrorControl),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
         (r'''irnetbox:
@@ -72,6 +73,12 @@ def uri_to_remote_recorder(uri):
         if m:
             return factory(**m.groupdict())
     raise ConfigurationError('Invalid remote control recorder URI: "%s"' % uri)
+
+
+def new_adb_device(address):
+    from stbt.android import AdbDevice
+    tcpip = bool(re.match(r"\d+\.\d+\.\d+\.\d+", address))
+    return AdbDevice(adb_device=address, tcpip=tcpip)
 
 
 class NullRemote(object):
