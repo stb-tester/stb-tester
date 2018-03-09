@@ -21,6 +21,19 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
 
+#### v29
+
+<SUMMARY>
+
+<DATE>.
+
+##### Breaking changes since v28
+
+##### New features
+
+##### Minor fixes and packaging fixes
+
+
 #### v28
 
 Better defaults; multithreading support; Android & VNC control mechanisms;
