@@ -267,11 +267,14 @@ class AdbDevice(object):
             <https://developer.android.com/reference/android/view/KeyEvent.html>.
             Particularly useful key codes are "KEYCODE_HOME" and
             "KEYCODE_BACK", which are physical buttons on some phones so you
-            can't hit them with `AdbDevice.tap`.
+            can't hit them with `AdbDevice.tap`. Also accepts standard
+            Stb-tester key names like "KEY_HOME" and "KEY_BACK".
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
-        if key not in _KEYCODES:
+        if key in _KEYCODE_MAPPINGS:
+            key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
+        if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
         stbt.debug("AdbDevice.press(%r)" % key)
         self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
@@ -386,7 +389,7 @@ class AdbError(Exception):
 #   curl https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/view/KeyEvent.java?format=TEXT |
 #   base64 -d | grep -o 'KEYCODE_[A-Z0-9_]*' | sort | uniq |
 #   grep -v -e KEYCODE_UNKNOWN -e 'KEYCODE_$' | sed 's/^.*$/    "&",/'
-_KEYCODES = [
+_ANDROID_KEYCODES = [
     "KEYCODE_0",
     "KEYCODE_1",
     "KEYCODE_11",
@@ -672,6 +675,24 @@ _KEYCODES = [
     "KEYCODE_ZOOM_IN",
     "KEYCODE_ZOOM_OUT",
 ]
+
+
+# Map a few standard Stb-tester key names to Android keycodes.
+# So far we just map the buttons on the Amazon Fire TV remote control:
+# https://developer.amazon.com/docs/fire-tv/remote-input.html#input-event-reference
+_KEYCODE_MAPPINGS = {
+    "KEY_BACK": "KEYCODE_BACK",
+    "KEY_DOWN": "KEYCODE_DPAD_DOWN",
+    "KEY_FASTFORWARD": "KEYCODE_MEDIA_FAST_FORWARD",
+    "KEY_HOME": "KEYCODE_HOME",
+    "KEY_LEFT": "KEYCODE_DPAD_LEFT",
+    "KEY_MENU": "KEYCODE_MENU",
+    "KEY_OK": "KEYCODE_ENTER",
+    "KEY_PLAYPAUSE": "KEYCODE_MEDIA_PLAY_PAUSE",
+    "KEY_REWIND": "KEYCODE_MEDIA_REWIND",
+    "KEY_RIGHT": "KEYCODE_DPAD_RIGHT",
+    "KEY_UP": "KEYCODE_DPAD_UP",
+}
 
 
 def _resize(img, coordinate_system):

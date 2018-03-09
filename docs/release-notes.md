@@ -35,6 +35,9 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   `stbt.android.AdbDevice.press`. See the documentation for `--control` in the
   [stbt(1) man page].
 
+* `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
+  like "KEY_OK" to the equivalent Android KeyEvent keycodes.
+
 ##### Minor fixes and packaging fixes
 
 
