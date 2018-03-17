@@ -1657,7 +1657,10 @@ def _mark_in_is_visible(fn):
     @functools.wraps(fn)
     def inner(self):
         # pylint: disable=protected-access
-        self._FrameObject__local.in_is_visible += 1
+        try:
+            self._FrameObject__local.in_is_visible += 1
+        except AttributeError:
+            self._FrameObject__local.in_is_visible = 1
         try:
             return bool(fn(self))
         finally:
@@ -1669,7 +1672,8 @@ def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
         # pylint: disable=protected-access
-        if self._FrameObject__local.in_is_visible or self.is_visible:
+        if (getattr(self._FrameObject__local, "in_is_visible", 0) or
+                self.is_visible):
             return fn(self)
         else:
             return None
@@ -1720,7 +1724,6 @@ class FrameObject(object):
             raise ValueError("FrameObject: frame must not be None")
         self.__frame_object_cache = {}
         self.__local = threading.local()
-        self.__local.in_is_visible = 0
         self._frame = frame
 
     def __repr__(self):

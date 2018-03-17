@@ -229,7 +229,7 @@ def test_that_is_visible_and_properties_arent_racy():
     for t in threads:
         t.join()
     print results
-    assert all(v is None for v in results.values())
+    assert results == {n: None for n in range(10)}
 
 
 def _load_frame(name):
