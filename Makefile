@@ -48,13 +48,12 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt.sh stbt-control-relay: \
+extra/fedora/stb-tester.spec stbt-control-relay: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@RELEASE@,$(RELEASE),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
-	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
 	     $< > $@
 
 defaults.conf: stbt.conf .stbt-prefix
@@ -109,8 +108,7 @@ INSTALL_CORE_FILES = \
     stbt-tv
 
 all: $(INSTALL_CORE_FILES) \
-    defaults.conf \
-    stbt.sh
+    defaults.conf
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -123,7 +121,10 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
-	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	sed -e 's,@VERSION@,$(VERSION),g' \
+	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
+	     bin/stbt >$(DESTDIR)$(bindir)/stbt
+	chmod 0755 $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 \

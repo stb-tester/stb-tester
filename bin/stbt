@@ -30,6 +30,7 @@
 usage() { grep '^#/' "$0" | cut -c4-; }
 
 export STBT_VERSION="@VERSION@"
+STBT_EXEC_PATH=${STBT_EXEC_PATH:-@LIBEXECDIR@/stbt}
 
 [ $# -ge 1 ] || { usage >&2; exit 1; }
 
@@ -52,32 +53,37 @@ check_experimental() {
     fi
 }
 
+exec_stbt() {
+    IFS=':'
+    for x in $STBT_EXEC_PATH; do
+        if [ -x "$x/$1" ]; then
+            exec "$x/$@"
+        fi
+    done
+    echo "Couldn't find $1 in PATH $STBT_EXEC_PATH" 1>&2
+    return 1
+}
+
 case "$cmd" in
     -h|--help)
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
     auto-selftest)
-        exec @LIBEXECDIR@/stbt/stbt_auto_selftest.py "$@";;
+        exec_stbt stbt_auto_selftest.py "$@";;
     run|record|batch|config|control|lint|power|screenshot|match|tv)
-        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
+        exec_stbt stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility
-        exec @LIBEXECDIR@/stbt/stbt-match "$@";;
+        exec_stbt stbt-match "$@";;
     virtual-stb)
-        export PYTHONPATH=$PYTHONPATH:@LIBEXECDIR@/stbt/
-        if ! [ -e @LIBEXECDIR@/stbt/stbt_virtual_stb.py ]; then
-            echo "stbt virtual-stb is not installed." >&2
-            exit 1
-        fi
-        exec @LIBEXECDIR@/stbt/stbt_virtual_stb.py "$@";;
+        exec_stbt stbt_virtual_stb.py "$@"
+        echo "stbt virtual-stb is not installed." >&2
+        exit 1;;
     # Experimental sub-commands:
     camera)
-        if [ ! -e @LIBEXECDIR@/stbt/stbt-"$cmd" ]; then
-            echo "stb-tester camera support is not installed." 1>&2
-            exit 1
-        fi
         check_experimental
-        exec @LIBEXECDIR@/stbt/stbt-"$cmd" "$@";;
+        exec_stbt stbt-"$cmd" "$@"
+        echo "stbt camera support is not installed." 1>&2;;
     *)
         usage >&2; exit 1;;
 esac
