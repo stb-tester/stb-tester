@@ -10,9 +10,10 @@ import cv2
 import pytest
 
 from stbt import match, Region, wait_until
-from stbt.android import (_Dimensions, _parse_display_dimensions,
-                          _region_to_tuple, _resize, _to_native_coordinates,
-                          AdbDevice, AdbError, CoordinateSystem)
+from stbt.android import (_centre_point, _Dimensions,
+                          _parse_display_dimensions, _resize,
+                          _to_native_coordinates, AdbDevice, AdbError,
+                          CoordinateSystem)
 
 
 @pytest.mark.parametrize("r", [
@@ -20,8 +21,8 @@ from stbt.android import (_Dimensions, _parse_display_dimensions,
     (25, 12),
     ("25", "12"),
 ])
-def test_region_to_tuple(r):
-    assert _region_to_tuple(r) == (25, 12)
+def test_centre_point(r):
+    assert _centre_point(r) == (25, 12)
 
 
 @pytest.mark.parametrize("r", [
@@ -30,9 +31,9 @@ def test_region_to_tuple(r):
     (25, 12, 15),
     "25",
 ])
-def test_region_to_tuple_raises(r):
+def test_centre_point_raises(r):
     with pytest.raises(TypeError):
-        _region_to_tuple(r)
+        _centre_point(r)
 
 
 @pytest.mark.parametrize("orientation", [
@@ -86,7 +87,7 @@ def test_to_native_coordinates(
     icon = "images/android/coordinates/%s-reference.png" % description
 
     m = match(icon, screenshot)
-    screenshot_x, screenshot_y = _region_to_tuple(m.region)
+    screenshot_x, screenshot_y = _centre_point(m.region)
     native_x, native_y = _to_native_coordinates(
         screenshot_x, screenshot_y, coordinate_system,
         _Dimensions(*device_resolution))

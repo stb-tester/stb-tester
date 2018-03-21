@@ -295,8 +295,8 @@ class AdbDevice(object):
           d.swipe((100, 100), (100, 400))
 
         """
-        x1, y1 = _region_to_tuple(start_position)
-        x2, y2 = _region_to_tuple(end_position)
+        x1, y1 = _centre_point(start_position)
+        x2, y2 = _centre_point(end_position)
         debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
 
         x1, y1 = self._to_native_coordinates(x1, y1)
@@ -316,7 +316,7 @@ class AdbDevice(object):
             d.tap(stbt.match(...).region)
 
         """
-        x, y = _region_to_tuple(position)
+        x, y = _centre_point(position)
         debug("AdbDevice.tap((%d,%d))" % (x, y))
 
         x, y = self._to_native_coordinates(x, y)
@@ -743,7 +743,7 @@ def _resize(img, coordinate_system):
     return img
 
 
-def _region_to_tuple(r):
+def _centre_point(r):
     try:
         if all(hasattr(r, name) for name in ("x", "y", "right", "bottom")):
             return (int((r.x + r.right) // 2), int((r.y + r.bottom) // 2))
