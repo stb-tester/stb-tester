@@ -15,7 +15,7 @@ import time
 from textwrap import dedent
 
 import _stbt.control
-import stbt
+from _stbt.config import ConfigurationError, get_config
 
 SPECIAL_CHARS = {
     curses.ascii.SP: "Space",
@@ -77,7 +77,7 @@ def argparser():
         help="Load keymap from KEYMAP file; defaults to %(default)s. "
              "See `%(prog)s --help-keymap` for details.")
     parser.add_argument(
-        "--control", default=stbt.get_config("global", "control"),
+        "--control", default=get_config("global", "control"),
         help="Equivalent to the --control parameter of `stbt run`. "
              "See `man stbt` for available remote types and configuration.")
     parser.add_argument(
@@ -246,7 +246,7 @@ def load_keymap(keymap_file):
         if len(items) < 2:
             continue
         if items[0] in keymap:
-            raise stbt.ConfigurationError(
+            raise ConfigurationError(
                 "Multiple remote control keys assigned to keyboard key '%s' "
                 "in the keymap file" % items[0])
         if len(items) == 2:
@@ -268,8 +268,8 @@ def test_load_keymap():
 def test_load_keymap_with_duplicated_key():
     try:
         load_keymap(__import__("StringIO").StringIO("o OK\no OPEN\n"))
-        assert False, "load_keymap should have thrown stbt.ConfigurationError"
-    except stbt.ConfigurationError:
+        assert False, "load_keymap should have thrown ConfigurationError"
+    except ConfigurationError:
         pass
 
 
@@ -293,7 +293,7 @@ def test_validate():
 def default_keymap_file():
     config_dir = os.environ.get(
         'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
-    return stbt.get_config("control", "keymap", "") or \
+    return get_config("control", "keymap", "") or \
         os.path.join(config_dir, "stbt", "control.conf")
 
 

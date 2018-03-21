@@ -43,11 +43,9 @@ import sys
 import time
 from collections import namedtuple
 
-import cv2
-import numpy
 from enum import Enum
 
-import stbt
+from _stbt.logging import debug
 
 
 class CoordinateSystem(Enum):
@@ -152,7 +150,8 @@ class AdbDevice(object):
                  tcpip=None, coordinate_system=None, _config=None):
 
         if _config is None:
-            _config = stbt._stbt.config._config_init()  # pylint:disable=protected-access
+            import _stbt.config
+            _config = _stbt.config._config_init()  # pylint:disable=protected-access
 
         self.adb_server = adb_server or _get_config(_config, "android",
                                                     "adb_server", None)
@@ -238,6 +237,10 @@ class AdbDevice(object):
             so).
         """
 
+        import cv2
+        import numpy
+        import stbt
+
         for attempt in range(1, 4):
             timestamp = time.time()
             data = (self.adb(["shell", "screencap", "-p"],
@@ -267,13 +270,16 @@ class AdbDevice(object):
             <https://developer.android.com/reference/android/view/KeyEvent.html>.
             Particularly useful key codes are "KEYCODE_HOME" and
             "KEYCODE_BACK", which are physical buttons on some phones so you
-            can't hit them with `AdbDevice.tap`.
+            can't hit them with `AdbDevice.tap`. Also accepts standard
+            Stb-tester key names like "KEY_HOME" and "KEY_BACK".
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
-        if key not in _KEYCODES:
+        if key in _KEYCODE_MAPPINGS:
+            key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
+        if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
-        stbt.debug("AdbDevice.press(%r)" % key)
+        debug("AdbDevice.press(%r)" % key)
         self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
 
     def swipe(self, start_position, end_position):
@@ -289,9 +295,9 @@ class AdbDevice(object):
           d.swipe((100, 100), (100, 400))
 
         """
-        x1, y1 = _region_to_tuple(start_position)
-        x2, y2 = _region_to_tuple(end_position)
-        stbt.debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
+        x1, y1 = _centre_point(start_position)
+        x2, y2 = _centre_point(end_position)
+        debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
 
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
@@ -310,8 +316,8 @@ class AdbDevice(object):
             d.tap(stbt.match(...).region)
 
         """
-        x, y = _region_to_tuple(position)
-        stbt.debug("AdbDevice.tap((%d,%d))" % (x, y))
+        x, y = _centre_point(position)
+        debug("AdbDevice.tap((%d,%d))" % (x, y))
 
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
@@ -326,7 +332,7 @@ class AdbDevice(object):
         if self.adb_device:
             _command += ["-s", self.adb_device]
         _command += command
-        stbt.debug("AdbDevice.adb: About to run command: %r\n" % _command)
+        debug("AdbDevice.adb: About to run command: %r\n" % _command)
         output = subprocess.check_output(
             _command, stderr=subprocess.STDOUT, **kwargs)
         return output
@@ -386,7 +392,7 @@ class AdbError(Exception):
 #   curl https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/view/KeyEvent.java?format=TEXT |
 #   base64 -d | grep -o 'KEYCODE_[A-Z0-9_]*' | sort | uniq |
 #   grep -v -e KEYCODE_UNKNOWN -e 'KEYCODE_$' | sed 's/^.*$/    "&",/'
-_KEYCODES = [
+_ANDROID_KEYCODES = [
     "KEYCODE_0",
     "KEYCODE_1",
     "KEYCODE_11",
@@ -401,6 +407,7 @@ _KEYCODES = [
     "KEYCODE_8",
     "KEYCODE_9",
     "KEYCODE_A",
+    "KEYCODE_ALL_APPS",
     "KEYCODE_ALT_LEFT",
     "KEYCODE_ALT_RIGHT",
     "KEYCODE_APOSTROPHE",
@@ -673,7 +680,28 @@ _KEYCODES = [
 ]
 
 
+# Map a few standard Stb-tester key names to Android keycodes.
+# So far we just map the buttons on the Amazon Fire TV remote control:
+# https://developer.amazon.com/docs/fire-tv/remote-input.html#input-event-reference
+_KEYCODE_MAPPINGS = {
+    "KEY_BACK": "KEYCODE_BACK",
+    "KEY_DOWN": "KEYCODE_DPAD_DOWN",
+    "KEY_FASTFORWARD": "KEYCODE_MEDIA_FAST_FORWARD",
+    "KEY_HOME": "KEYCODE_HOME",
+    "KEY_LEFT": "KEYCODE_DPAD_LEFT",
+    "KEY_MENU": "KEYCODE_MENU",
+    "KEY_OK": "KEYCODE_ENTER",
+    "KEY_PLAYPAUSE": "KEYCODE_MEDIA_PLAY_PAUSE",
+    "KEY_REWIND": "KEYCODE_MEDIA_REWIND",
+    "KEY_RIGHT": "KEYCODE_DPAD_RIGHT",
+    "KEY_UP": "KEYCODE_DPAD_UP",
+}
+
+
 def _resize(img, coordinate_system):
+    import cv2
+    import numpy
+
     w, h = img.shape[1], img.shape[0]
 
     if coordinate_system == CoordinateSystem.ADB_NATIVE:
@@ -715,9 +743,9 @@ def _resize(img, coordinate_system):
     return img
 
 
-def _region_to_tuple(r):
+def _centre_point(r):
     try:
-        if isinstance(r, stbt.Region):
+        if all(hasattr(r, name) for name in ("x", "y", "right", "bottom")):
             return (int((r.x + r.right) // 2), int((r.y + r.bottom) // 2))
         elif isinstance(r, tuple) and len(r) == 2:
             return (int(r[0]), int(r[1]))

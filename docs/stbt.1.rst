@@ -48,6 +48,13 @@ Global options
 --control=<uri>
   A remote control to use for controlling the set top box. `uri` can be:
 
+  adb[:address]
+    Uses ADB (Android Debug Bridge) to control an Android TV or Amazon Fire TV
+    device. You will need to enable "ADB Debugging" on the Android device.
+    `address` is the IP address of the Android device, or the serial number of
+    an Android device connected by USB. If `address` is not specified, there
+    must be only one Android device connected by USB.
+
   error[:message]
     Raises `RuntimeError` when the test script calls `stbt.press`, with the
     optional error message.
