@@ -43,11 +43,9 @@ import sys
 import time
 from collections import namedtuple
 
-import cv2
-import numpy
 from enum import Enum
 
-import stbt
+from _stbt.logging import debug
 
 
 class CoordinateSystem(Enum):
@@ -152,7 +150,8 @@ class AdbDevice(object):
                  tcpip=None, coordinate_system=None, _config=None):
 
         if _config is None:
-            _config = stbt._stbt.config._config_init()  # pylint:disable=protected-access
+            import _stbt.config
+            _config = _stbt.config._config_init()  # pylint:disable=protected-access
 
         self.adb_server = adb_server or _get_config(_config, "android",
                                                     "adb_server", None)
@@ -238,6 +237,10 @@ class AdbDevice(object):
             so).
         """
 
+        import cv2
+        import numpy
+        import stbt
+
         for attempt in range(1, 4):
             timestamp = time.time()
             data = (self.adb(["shell", "screencap", "-p"],
@@ -276,7 +279,7 @@ class AdbDevice(object):
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
-        stbt.debug("AdbDevice.press(%r)" % key)
+        debug("AdbDevice.press(%r)" % key)
         self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
 
     def swipe(self, start_position, end_position):
@@ -294,7 +297,7 @@ class AdbDevice(object):
         """
         x1, y1 = _region_to_tuple(start_position)
         x2, y2 = _region_to_tuple(end_position)
-        stbt.debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
+        debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
 
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
@@ -314,7 +317,7 @@ class AdbDevice(object):
 
         """
         x, y = _region_to_tuple(position)
-        stbt.debug("AdbDevice.tap((%d,%d))" % (x, y))
+        debug("AdbDevice.tap((%d,%d))" % (x, y))
 
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
@@ -329,7 +332,7 @@ class AdbDevice(object):
         if self.adb_device:
             _command += ["-s", self.adb_device]
         _command += command
-        stbt.debug("AdbDevice.adb: About to run command: %r\n" % _command)
+        debug("AdbDevice.adb: About to run command: %r\n" % _command)
         output = subprocess.check_output(
             _command, stderr=subprocess.STDOUT, **kwargs)
         return output
@@ -696,6 +699,9 @@ _KEYCODE_MAPPINGS = {
 
 
 def _resize(img, coordinate_system):
+    import cv2
+    import numpy
+
     w, h = img.shape[1], img.shape[0]
 
     if coordinate_system == CoordinateSystem.ADB_NATIVE:
@@ -739,7 +745,7 @@ def _resize(img, coordinate_system):
 
 def _region_to_tuple(r):
     try:
-        if isinstance(r, stbt.Region):
+        if all(hasattr(r, name) for name in ("x", "y", "right", "bottom")):
             return (int((r.x + r.right) // 2), int((r.y + r.bottom) // 2))
         elif isinstance(r, tuple) and len(r) == 2:
             return (int(r[0]), int(r[1]))
