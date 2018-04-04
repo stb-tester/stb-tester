@@ -1545,7 +1545,7 @@ class UITestFailure(Exception):
     pass
 
 
-class NoVideo(UITestFailure):
+class NoVideo(Exception):
     """No video available from the source pipeline."""
     pass
 
