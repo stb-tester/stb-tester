@@ -2675,7 +2675,7 @@ def _log_match_image_debug(imglog):
                 {{match_parameters.erode_passes}}
                 {{"time" if match_parameters.erode_passes == 1
                   else "times"}};
-                the template matches if any differences (white pixels) remain
+                the template matches if no differences (white pixels) remain
               </th>
             </tr>
 
