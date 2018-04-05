@@ -40,9 +40,9 @@ from _stbt.core import \
     UITestFailure, \
     wait_until
 from _stbt.transition import \
+    press_and_wait, \
     TransitionResult, \
     TransitionResultStatus, \
-    wait_for_transition, \
     wait_for_transition_to_end
 
 __all__ = [
@@ -75,6 +75,7 @@ __all__ = [
     "Position",
     "PreconditionError",
     "press",
+    "press_and_wait",
     "press_until_match",
     "Region",
     "save_frame",
@@ -85,7 +86,6 @@ __all__ = [
     "UITestFailure",
     "wait_for_match",
     "wait_for_motion",
-    "wait_for_transition",
     "wait_for_transition_to_end",
     "wait_until",
 ]

@@ -21,7 +21,7 @@ import numpy
 import stbt
 
 
-def wait_for_transition(
+def press_and_wait(
         key, region=stbt.Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
         _dut=None):
 
@@ -57,7 +57,7 @@ def wait_for_transition(
     """
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
-    result = t.wait_for_transition(key)
+    result = t.press_and_wait(key)
     sys.stderr.write("%s\n" % result)
     return result
 
@@ -68,7 +68,7 @@ def wait_for_transition_to_end(
 
     """Wait for the screen to stop changing.
 
-    In most cases you should use `wait_for_transition` to measure a complete
+    In most cases you should use `press_and_wait` to measure a complete
     transition, but if you need to measure several points during a single
     transition you can use `wait_for_transition_to_end` as the last
     measurement. For example::
@@ -83,10 +83,10 @@ def wait_for_transition_to_end(
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
 
-    :param region: See `wait_for_transition`.
-    :param mask: See `wait_for_transition`.
-    :param timeout_secs: See `wait_for_transition`.
-    :param stable_secs: See `wait_for_transition`.
+    :param region: See `press_and_wait`.
+    :param mask: See `press_and_wait`.
+    :param timeout_secs: See `press_and_wait`.
+    :param stable_secs: See `press_and_wait`.
 
     :returns: A `TransitionResult`, which will evaluate to true if the
         transition completed, false otherwise.
@@ -124,7 +124,7 @@ class _Transition(object):
         self.diff = strict_diff
         self.expiry_time = None
 
-    def wait_for_transition(self, key):
+    def press_and_wait(self, key):
         original_frame, _ = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
@@ -202,7 +202,7 @@ def strict_diff(f1, f2, region, mask_image):
 
 
 class TransitionResult(object):
-    """The result from `wait_for_transition`.
+    """The result from `press_and_wait`.
 
     * ``frame`` (`stbt.Frame`): If successful, the first video frame when the
       transition completed; if timed out, the last frame seen.
