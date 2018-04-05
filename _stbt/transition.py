@@ -23,7 +23,7 @@ import stbt
 
 def wait_for_transition(
         key, region=stbt.Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
-        dut=None):
+        _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
     changing.
@@ -56,7 +56,7 @@ def wait_for_transition(
         transition completed, false otherwise.
     """
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, dut)
+    t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition(key)
     sys.stderr.write("%s\n" % result)
     return result
@@ -64,7 +64,7 @@ def wait_for_transition(
 
 def wait_for_transition_to_end(
         initial_frame=None, region=stbt.Region.ALL, mask=None, timeout_secs=10,
-        stable_secs=1, dut=None):
+        stable_secs=1, _dut=None):
 
     """Wait for the screen to stop changing.
 
@@ -91,7 +91,7 @@ def wait_for_transition_to_end(
     :returns: A `TransitionResult`, which will evaluate to true if the
         transition completed, false otherwise.
     """
-    t = _Transition(region, mask, timeout_secs, stable_secs, dut)
+    t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     sys.stderr.write("%s\n" % result)
     return result
