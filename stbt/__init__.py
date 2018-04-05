@@ -39,6 +39,11 @@ from _stbt.core import \
     UITestError, \
     UITestFailure, \
     wait_until
+from _stbt.transition import \
+    TransitionResult, \
+    TransitionResultStatus, \
+    wait_for_transition, \
+    wait_for_transition_to_end
 
 __all__ = [
     "as_precondition",
@@ -74,10 +79,14 @@ __all__ = [
     "Region",
     "save_frame",
     "TextMatchResult",
+    "TransitionResult",
+    "TransitionResultStatus",
     "UITestError",
     "UITestFailure",
     "wait_for_match",
     "wait_for_motion",
+    "wait_for_transition",
+    "wait_for_transition_to_end",
     "wait_until",
 ]
 

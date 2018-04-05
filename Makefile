@@ -77,6 +77,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/stbt.conf \
+    _stbt/transition.py \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
