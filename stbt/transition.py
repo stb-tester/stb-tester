@@ -120,18 +120,18 @@ class _Transition(object):
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
 
+        self.frames = self.dut.frames()
         self.diff = strict_diff
         self.expiry_time = None
 
     def wait_for_transition(self, key):
-        original_frame = self.dut.get_frame()
+        original_frame, _ = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
         self.expiry_time = press_time + self.timeout_secs
 
         # Wait for animation to start
-        while True:
-            f = self.dut.get_frame()
+        for f, _ in self.frames:
             if f.time < press_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
@@ -148,21 +148,21 @@ class _Transition(object):
                     f, TransitionResultStatus.START_TIMEOUT,
                     press_time, None, None)
 
-        end_result = self.wait_for_transition_to_end(f)
+        end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
         return TransitionResult(
             end_result.frame, end_result.status,
             press_time, animation_start_time, end_result.end_time)
 
     def wait_for_transition_to_end(self, initial_frame):
         if initial_frame is None:
-            initial_frame = self.dut.get_frame()
+            initial_frame, _ = next(self.frames)
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
         f = first_stable_frame = initial_frame
         while True:
             prev = f
-            f = self.dut.get_frame()
+            f, _ = next(self.frames)
             if self.diff(prev, f, self.region, self.mask_image):
                 _debug("Animation in progress", f)
                 first_stable_frame = f
