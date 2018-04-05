@@ -6,7 +6,7 @@ new screen such as a Guide and waiting for it to populate fully.
 Because we want these measurements to be frame-accurate, we don't do expensive
 image processing, relying instead on diffs between successive frames.
 
-Copyright 2017 Stb-tester.com Ltd.
+Copyright 2017-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
