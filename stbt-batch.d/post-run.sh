@@ -20,8 +20,6 @@
 die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
-  [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
-
   # Data that must be collected ASAP
   which sensors &>/dev/null && sensors &> sensors.log
   echo $exit_status > exit-status

@@ -166,6 +166,13 @@ def stdout_logging(batch_args, test_name, test_args):
         print "%s ... " % display_name,
 
 
+def post_run_stdout_logging(exit_status):
+    if exit_status == 0:
+        print "OK"
+    else:
+        print "FAILED"
+
+
 @contextmanager
 def record_duration(rundir):
     start_time = time.time()
@@ -195,6 +202,7 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
                 if exit_status < 0:
                     exit_status = 128 - exit_status
 
+            post_run_stdout_logging(exit_status)
             post_run_script(exit_status, rundir)
         return exit_status
 
