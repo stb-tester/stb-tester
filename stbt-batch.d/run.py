@@ -163,6 +163,14 @@ def html_report(batch_args, rundir):
         yield
 
 
+def stdout_logging(batch_args, test_name, test_args):
+    display_name = " ".join((test_name,) + test_args)
+    if batch_args.verbose > 0:
+        print "\n%s ..." % display_name
+    else:
+        print "%s ... " % display_name,
+
+
 def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
              git_info):
     with setup_dirs(batch_args.output, tag_suffix, state_sender) as rundir:
@@ -170,6 +178,7 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
                            batch_args.tag)
         with html_report(batch_args, rundir):
             user_command("pre_run", ["start"], cwd=rundir)
+            stdout_logging(batch_args, test_name, test_args)
             exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
         return exit_status
 
@@ -270,7 +279,6 @@ def run_one(test_name, test_args, batch_args, cwd):
 
     subenv = dict(os.environ)
     subenv['stbt_root'] = _find_file('..')
-    subenv['test_displayname'] = " ".join((test_name,) + test_args)
     subenv['verbose'] = str(batch_args.verbose)
     child = None
     try:
