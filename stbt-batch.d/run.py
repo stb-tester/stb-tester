@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2015 stb-tester.com Ltd.
+# Copyright 2015-2018 stb-tester.com Ltd.
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
@@ -72,9 +72,9 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
     if args.tag is not None:
-        tag = '-' + args.tag
+        tag_suffix = '-' + args.tag
     else:
-        tag = ""
+        tag_suffix = ""
 
     os.environ['PYTHONUNBUFFERED'] = 'x'
 
@@ -120,14 +120,13 @@ def main(argv):
             break
         run_count += 1
 
-        with setup_dirs(args.output, tag, state_sender) as rundir:
-            fill_in_data_files(rundir, test_name, test_args, git_info, args.tag)
-            last_exit_status = run_one(test_name, test_args, args, cwd=rundir)
+        last_exit_status = run_test(
+            args, tag_suffix, state_sender, test_name, test_args, git_info)
 
         if last_exit_status != 0:
             failure_count += 1
         if os.path.exists(
-                "%s/latest%s/unrecoverable-error" % (args.output, tag)):
+                "%s/latest%s/unrecoverable-error" % (args.output, tag_suffix)):
             break
 
         if last_exit_status == 0:
@@ -148,6 +147,15 @@ def main(argv):
         return 0
     else:
         return 1
+
+
+def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
+             git_info):
+    with setup_dirs(batch_args.output, tag_suffix, state_sender) as rundir:
+        fill_in_data_files(rundir, test_name, test_args, git_info,
+                           batch_args.tag)
+        exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
+        return exit_status
 
 
 GitInfo = namedtuple('GitInfo', 'commit commit_sha git_dir')
