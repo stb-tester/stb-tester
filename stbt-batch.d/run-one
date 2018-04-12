@@ -35,8 +35,6 @@ main() {
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
   die "Failed to set up test-run directory '$PWD'."
 
-  user_command pre_run start
-
   [ $verbose -gt 0 ] && printf "\n$test_displayname ...\n" || printf "$test_displayname ... "
   "$@" >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!

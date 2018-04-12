@@ -433,8 +433,9 @@ test_that_stbt_batch_instaweb_shows_directory_listing() {
 test_that_stbt_batch_run_isolates_stdin_of_user_hooks() {
     create_test_repo
     cat >my-logger <<-EOF
+	#!/bin/sh
 	read x
-	[[ -z \$x ]] && echo STDIN=None || echo STDIN=\$x
+	[ -z \$x ] && echo STDIN=None || echo STDIN=\$x
 	EOF
     chmod +x my-logger
 

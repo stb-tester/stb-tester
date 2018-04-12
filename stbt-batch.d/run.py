@@ -169,6 +169,7 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
         fill_in_data_files(rundir, test_name, test_args, git_info,
                            batch_args.tag)
         with html_report(batch_args, rundir):
+            user_command("pre_run", ["start"], cwd=rundir)
             exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
         return exit_status
 
@@ -282,6 +283,15 @@ def run_one(test_name, test_args, batch_args, cwd):
             os.kill(-child.pid, signal.SIGTERM)
             child.wait()
         raise
+
+
+def user_command(name, args, cwd):
+    from _stbt.config import get_config
+    script = get_config("batch", name)
+    if script:
+        return subprocess.call([script] + args, stdin=DEVNULL_R, cwd=cwd)
+    else:
+        return 0
 
 
 def listsplit(l, v):
