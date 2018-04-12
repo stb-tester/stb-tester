@@ -149,12 +149,27 @@ def main(argv):
         return 1
 
 
+@contextmanager
+def html_report(batch_args, rundir):
+    if batch_args.do_html_report:
+        try:
+            subprocess.call([_find_file("report"), '--html-only', rundir],
+                            stdout=DEVNULL_W)
+            yield
+        finally:
+            subprocess.call([_find_file("report"), '--html-only', rundir],
+                            stdout=DEVNULL_W)
+    else:
+        yield
+
+
 def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
              git_info):
     with setup_dirs(batch_args.output, tag_suffix, state_sender) as rundir:
         fill_in_data_files(rundir, test_name, test_args, git_info,
                            batch_args.tag)
-        exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
+        with html_report(batch_args, rundir):
+            exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
         return exit_status
 
 
@@ -235,6 +250,7 @@ def symlink_f(source, link_name):
 
 
 DEVNULL_R = open('/dev/null')
+DEVNULL_W = open('/dev/null', 'w')
 
 
 def run_one(test_name, test_args, batch_args, cwd):
@@ -252,7 +268,6 @@ def run_one(test_name, test_args, batch_args, cwd):
     cmd += [os.path.abspath(test_name), '--'] + list(test_args)
 
     subenv = dict(os.environ)
-    subenv['do_html_report'] = "true" if batch_args.do_html_report else "false"
     subenv['stbt_root'] = _find_file('..')
     subenv['test_displayname'] = " ".join((test_name,) + test_args)
     subenv['verbose'] = str(batch_args.verbose)

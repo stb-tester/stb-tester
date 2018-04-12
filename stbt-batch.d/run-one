@@ -12,7 +12,6 @@
 #
 # Input environment variables:
 #
-# * $do_html_report ("true" or "false")
 # * $stbt_root
 # * $test_displayname
 # * $verbose
@@ -35,10 +34,6 @@ main() {
   tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
   mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
   die "Failed to set up test-run directory '$PWD'."
-
-  if $do_html_report; then
-    "$stbt_root"/stbt-batch.d/report --html-only . >/dev/null
-  fi
 
   user_command pre_run start
 
@@ -77,10 +72,6 @@ main() {
 
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || touch unrecoverable-error
-  fi
-
-  if $do_html_report; then
-    "$stbt_root"/stbt-batch.d/report --html-only . >/dev/null
   fi
 
   return $exit_status
