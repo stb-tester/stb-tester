@@ -22,7 +22,6 @@ die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 main() {
   # Data that must be collected ASAP
   which sensors &>/dev/null && sensors &> sensors.log
-  echo $exit_status > exit-status
 
   user_command post_run stop
 

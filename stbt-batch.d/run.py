@@ -203,6 +203,8 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
                     exit_status = 128 - exit_status
 
             post_run_stdout_logging(exit_status)
+            with open("%s/exit-status" % rundir, 'w') as f:
+                f.write("%i" % exit_status)
             post_run_script(exit_status, rundir)
         return exit_status
 
