@@ -13,10 +13,10 @@ import random
 import signal
 import subprocess
 import sys
+import threading
 import time
 from collections import namedtuple
 from contextlib import contextmanager
-from distutils.spawn import find_executable
 
 from _stbt.state_watch import new_state_sender
 from _stbt.utils import mkdir_p
@@ -95,11 +95,6 @@ def main(argv):
     failure_count = 0
     last_exit_status = 0
 
-    if not find_executable('ts'):
-        sys.stderr.write(
-            "No 'ts' command found; please install 'moreutils' package\n")
-        return 1
-
     test_cases = parse_test_args(args.test_name)
 
     run_count = 0
@@ -171,6 +166,16 @@ def stdout_logging(batch_args, test_name, test_args):
         print "%s ... " % display_name,
 
 
+@contextmanager
+def record_duration(rundir):
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        with open("%s/duration" % rundir, 'w') as f:
+            f.write(str(time.time() - start_time))
+
+
 def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
              git_info):
     with setup_dirs(batch_args.output, tag_suffix, state_sender) as rundir:
@@ -179,7 +184,18 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
         with html_report(batch_args, rundir):
             user_command("pre_run", ["start"], cwd=rundir)
             stdout_logging(batch_args, test_name, test_args)
-            exit_status = run_one(test_name, test_args, batch_args, cwd=rundir)
+            with record_duration(rundir):
+                exit_status = run_stbt_run(
+                    test_name, test_args, batch_args, cwd=rundir)
+
+                # stbt batch run used to be written in bash - so it expects
+                # exit_status to follow the conventions of $?.  If the child
+                # died due to a signal the value should be 128 + signo rather
+                # than Python's -signo:
+                if exit_status < 0:
+                    exit_status = 128 - exit_status
+
+            post_run_script(exit_status, rundir)
         return exit_status
 
 
@@ -263,11 +279,32 @@ DEVNULL_R = open('/dev/null')
 DEVNULL_W = open('/dev/null', 'w')
 
 
-def run_one(test_name, test_args, batch_args, cwd):
-    """
-    Invoke the run-one shell-script with the appropriate arguments.
-    """
+def background_tee(pipe, filename, also_stdout=False):
+    def tee():
+        with open(filename, 'w') as f:
+            while True:
+                line = pipe.readline()
+                if line == "":
+                    # EOF
+                    break
+                t = datetime.datetime.now()
+                line = t.strftime("[%Y-%m-%d %H:%M:%.S %z] ") + line
+                f.write(line)
+                if also_stdout:
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
 
+    t = threading.Thread(target=tee)
+    t.daemon = True
+    t.start()
+    return t
+
+
+def run_stbt_run(test_name, test_args, batch_args, cwd):
+    """
+    Invoke stbt run with the appropriate arguments, redirecting output to log
+    files.
+    """
     cmd = [_find_file('../stbt-run'), '--save-thumbnail=always']
     if batch_args.do_save_video:
         cmd += ['--save-video=video.webm']
@@ -277,20 +314,40 @@ def run_one(test_name, test_args, batch_args, cwd):
         cmd += ['-v']
     cmd += [os.path.abspath(test_name), '--'] + list(test_args)
 
-    subenv = dict(os.environ)
-    subenv['stbt_root'] = _find_file('..')
-    subenv['verbose'] = str(batch_args.verbose)
     child = None
+    t1 = t2 = None
+    child = subprocess.Popen(
+        cmd, stdin=DEVNULL_R,
+        preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        child = subprocess.Popen(
-            [_find_file("run-one")] + cmd, stdin=DEVNULL_R,
-            env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
+        t1 = background_tee(
+            child.stdout, "%s/stdout.log" % cwd, batch_args.verbose > 0)
+        t2 = background_tee(
+            child.stderr, "%s/stderr.log" % cwd, batch_args.verbose > 1)
         return child.wait()
     except SystemExit:
-        if child:
-            os.kill(-child.pid, signal.SIGTERM)
-            child.wait()
-        raise
+        os.kill(-child.pid, signal.SIGTERM)
+        return child.wait()
+    finally:
+        if child.poll() is not None:
+            if t1:
+                t1.join()
+            if t2:
+                t2.join()
+
+
+def post_run_script(exit_status, cwd):
+    """stbt-batch run used to be written in bash.  We're porting to Python
+    incrementally.  This function calls out to the bash implementation that
+    remains.
+    """
+    subenv = dict(os.environ)
+    subenv['stbt_root'] = _find_file('..')
+    subenv['exit_status'] = str(exit_status)
+    subprocess.call(
+        [_find_file("post-run.sh")], stdin=DEVNULL_R,
+        env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
 
 
 def user_command(name, args, cwd):

@@ -6,59 +6,28 @@
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 #
-# Input command-line arguments:
-#
-# * command to run
-#
 # Input environment variables:
 #
 # * $stbt_root
-# * $verbose
+# * $exit_status
 #
 # Outputs:
 #
 # * Files in the current working directory
-#
-# IPC:
-#
-# * SIGTERM signal says stop this test
 #
 
 
 die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
-  local tmpdir
-
-  tmpdir="$(mktemp -dt stbt-batch.XXX)" &&
-  mkfifo "$tmpdir"/rawout "$tmpdir"/rawerr ||
-  die "Failed to set up test-run directory '$PWD'."
-
-  "$@" >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
-  stbtpid=$!
-  local start_time=$(date +%s)
-
-  exec 3>/dev/null 4>/dev/null
-  [ $verbose -gt 0 ] && exec 3>&1
-  [ $verbose -gt 1 ] && exec 4>&1
-
-  ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawout | tee stdout.log >&3 &
-  ts '[%Y-%m-%d %H:%M:%.S %z] ' < "$tmpdir"/rawerr | tee stderr.log >&4 &
-
-  wait $stbtpid
-  exit_status=$?
-
   [[ $exit_status -eq 0 ]] && echo OK || echo FAILED
 
   # Data that must be collected ASAP
-  echo $(( $(date +%s) - $start_time )) > duration
   which sensors &>/dev/null && sensors &> sensors.log
   echo $exit_status > exit-status
 
   user_command post_run stop
 
-  rm "$tmpdir"/rawout "$tmpdir"/rawerr
-  rmdir "$tmpdir"
   echo "$STBT_VERSION" > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
@@ -69,8 +38,6 @@ main() {
   if [[ $exit_status -ne 0 ]]; then
     user_command recover || touch unrecoverable-error
   fi
-
-  return $exit_status
 }
 
 template() {
