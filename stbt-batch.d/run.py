@@ -207,6 +207,7 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
                 f.write("%i" % exit_status)
 
             collect_sensors_data(rundir)
+            user_command("post_run", ["stop"], cwd=rundir)
             post_run_script(exit_status, rundir)
         return exit_status
 
