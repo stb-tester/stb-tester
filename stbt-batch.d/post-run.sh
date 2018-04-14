@@ -20,9 +20,6 @@
 die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
-  # Data that must be collected ASAP
-  which sensors &>/dev/null && sensors &> sensors.log
-
   user_command post_run stop
 
   echo "$STBT_VERSION" > stbt-version.log

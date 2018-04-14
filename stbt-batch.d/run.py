@@ -205,6 +205,8 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
             post_run_stdout_logging(exit_status)
             with open("%s/exit-status" % rundir, 'w') as f:
                 f.write("%i" % exit_status)
+
+            collect_sensors_data(rundir)
             post_run_script(exit_status, rundir)
         return exit_status
 
@@ -345,6 +347,17 @@ def run_stbt_run(test_name, test_args, batch_args, cwd):
                 t1.join()
             if t2:
                 t2.join()
+
+
+def collect_sensors_data(cwd):
+    try:
+        out = subprocess.check_output(['sensors'])
+        with open("%s/sensors.log" % cwd, 'w') as f:
+            f.write(out)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            # sensors is not installed
+            raise
 
 
 def post_run_script(exit_status, cwd):
