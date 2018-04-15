@@ -19,7 +19,6 @@
 die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
 
 main() {
-  echo "$STBT_VERSION" > stbt-version.log
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
 

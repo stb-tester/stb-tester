@@ -268,6 +268,10 @@ def fill_in_data_files(rundir, test_name, test_args, git_info, tag):
         write_file("test-name", os.path.abspath(test_name))
     write_file("test-args", "\n".join(test_args))
 
+    stbt_version = os.environ.get("STBT_VERSION")
+    if stbt_version:
+        write_file("stbt-version.log", stbt_version + "\n")
+
     if tag:
         write_file("extra-columns", "Tag\t%s\n" % tag)
 
