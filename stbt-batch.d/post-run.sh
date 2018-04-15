@@ -15,12 +15,8 @@
 # * Files in the current working directory
 #
 
-
-die() { echo "$(basename "$0"): error: $*" >&2; exit 2; }
-
 main() {
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
-  [ -f core* ] && backtrace core*
 
   LC_ALL=C sort --merge stdout.log stderr.log > combined.log
   STBT_TRACING_SOCKET="" user_command classify
@@ -34,14 +30,6 @@ template() {
     sed -n 's,^.*stbt-run: Searching for \(.*\.png\)$,\1,p' stderr.log |
     tail -1)
   [ -f "$template" ] && cp "$template" template.png
-}
-
-backtrace() {
-  local gdbcommand corefile=$1
-  gdbcommand=$(mktemp -t report.XXX) || die "Failed to create temp file"
-  echo "thread apply all bt" > $gdbcommand
-  gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
-  rm -f $gdbcommand
 }
 
 check_capture_hardware() {

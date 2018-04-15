@@ -90,6 +90,7 @@ INSTALL_CORE_FILES = \
     stbt-batch \
     stbt-batch.d/instaweb \
     stbt-batch.d/post-run.sh \
+    stbt-batch.d/print_backtrace.gdb \
     stbt-batch.d/report \
     stbt-batch.d/report.py \
     stbt-batch.d/run.py \

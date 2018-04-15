@@ -8,6 +8,7 @@
 import argparse
 import datetime
 import errno
+import glob
 import os
 import random
 import signal
@@ -17,6 +18,7 @@ import threading
 import time
 from collections import namedtuple
 from contextlib import contextmanager
+from distutils.spawn import find_executable
 
 from _stbt.state_watch import new_state_sender
 from _stbt.utils import mkdir_p
@@ -211,6 +213,9 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
             with open("%s/failure-reason" % rundir, 'wb') as f:
                 f.write(get_failure_reason(test_name, exit_status, cwd=rundir) +
                         '\n')
+
+            corefiles_to_backtraces(rundir)
+
             post_run_script(exit_status, rundir)
 
             if exit_status != 0:
@@ -415,6 +420,23 @@ def user_command(name, args, cwd):
         return subprocess.call([script] + args, stdin=DEVNULL_R, cwd=cwd)
     else:
         return 0
+
+
+def corefiles_to_backtraces(cwd):
+    for corefile in glob.glob("%s/core*" % cwd):
+        with open("%s/backtrace.log" % cwd, "w") as f:
+            try:
+                subprocess.call(
+                    ['gdb', find_executable('python'), corefile, '-batch',
+                     '-x', _find_file("print_backtrace.gdb")],
+                    stdout=f, stderr=f)
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    sys.stderr.write(
+                        "Failed to generate backtrace from core file %s: gdb "
+                        "not installed\n" % corefile)
+                else:
+                    raise
 
 
 def listsplit(l, v):
