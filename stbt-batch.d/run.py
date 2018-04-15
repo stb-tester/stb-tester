@@ -209,6 +209,12 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
             collect_sensors_data(rundir)
             user_command("post_run", ["stop"], cwd=rundir)
             post_run_script(exit_status, rundir)
+
+            if exit_status != 0:
+                if user_command("recover", [], cwd=rundir) != 0:
+                    with open("%s/unrecoverable-error" % rundir, 'w'):
+                        pass
+
         return exit_status
 
 

@@ -9,7 +9,6 @@
 # Input environment variables:
 #
 # * $stbt_root
-# * $exit_status
 #
 # Outputs:
 #
@@ -26,10 +25,6 @@ main() {
   STBT_TRACING_SOCKET="" "$stbt_root"/stbt-batch.d/report --classify-only . >/dev/null
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || touch unrecoverable-error; }
-
-  if [[ $exit_status -ne 0 ]]; then
-    user_command recover || touch unrecoverable-error
-  fi
 }
 
 template() {
@@ -45,12 +40,6 @@ backtrace() {
   echo "thread apply all bt" > $gdbcommand
   gdb $(which python) $corefile -batch -x $gdbcommand &> backtrace.log
   rm -f $gdbcommand
-}
-
-user_command() {
-  local c=$("$stbt_root"/stbt-config batch.$1 2>/dev/null)
-  [[ -z "$c" ]] && return
-  "$c" $2 </dev/null
 }
 
 check_capture_hardware() {
