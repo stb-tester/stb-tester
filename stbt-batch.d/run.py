@@ -208,6 +208,9 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
 
             collect_sensors_data(rundir)
             user_command("post_run", ["stop"], cwd=rundir)
+            with open("%s/failure-reason" % rundir, 'wb') as f:
+                f.write(get_failure_reason(test_name, exit_status, cwd=rundir) +
+                        '\n')
             post_run_script(exit_status, rundir)
 
             if exit_status != 0:
@@ -378,6 +381,27 @@ def post_run_script(exit_status, cwd):
     subprocess.call(
         [_find_file("post-run.sh")], stdin=DEVNULL_R,
         env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
+
+
+SIGNALS_TO_NAMES_DICT = {
+    getattr(signal, n): n
+    for n in dir(signal)
+    if n.startswith('SIG') and '_' not in n}
+
+
+def get_failure_reason(test_name, exit_status, cwd):
+    if exit_status == 0:
+        return "success"
+    elif exit_status > 128:
+        return "killed (%s)" % SIGNALS_TO_NAMES_DICT[exit_status - 128].lower()
+
+    exception = subprocess.check_output([
+        "sed", "-n", "s/^.*FAIL: .*%s: //p" % os.path.basename(test_name),
+        "%s/stdout.log" % cwd]).strip()
+    if exception:
+        return exception
+    else:
+        return "unknown"
 
 
 def user_command(name, args, cwd):

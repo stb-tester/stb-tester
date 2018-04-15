@@ -23,7 +23,6 @@ main() {
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
   [ -f core* ] && backtrace core*
 
-  classify > failure-reason
   LC_ALL=C sort --merge stdout.log stderr.log > combined.log
   STBT_TRACING_SOCKET="" user_command classify
 
@@ -93,35 +92,6 @@ check_capture_hardware() {
       fi
       ;;
   esac
-}
-
-classify() {
-  local status=$(cat exit-status)
-  local testname=$(cat test-name)
-
-  if [ $status -eq 0 ]; then
-    echo success
-
-  elif [ $status -gt 128 ]; then
-    echo killed "($(signalname $((status - 128))))"
-
-  elif local exception=$(
-      sed -n "s/^.*FAIL: .*$(basename "$testname"): //p" stdout.log);
-    [[ -n "$exception" ]];
-  then
-    echo "$exception"
-
-  else
-    echo unknown
-  fi
-}
-
-signalname() {
-  local num=$1
-  ( set -o pipefail
-    kill -l | grep -Eo "\b$num\) SIG\S+" | awk '{print tolower($2)}' ||
-      echo $num
-  )
 }
 
 user_command() {
