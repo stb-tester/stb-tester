@@ -323,7 +323,7 @@ def background_tee(pipe, filename, also_stdout=False):
                     # EOF
                     break
                 t = datetime.datetime.now()
-                line = t.strftime("[%Y-%m-%d %H:%M:%.S %z] ") + line
+                line = t.strftime("[%Y-%m-%d %H:%M:%S.%f %z] ") + line
                 f.write(line)
                 if also_stdout:
                     sys.stdout.write(line)
