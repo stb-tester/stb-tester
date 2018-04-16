@@ -18,7 +18,6 @@
 main() {
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
 
-  LC_ALL=C sort --merge stdout.log stderr.log > combined.log
   STBT_TRACING_SOCKET="" user_command classify
 
   grep -q "FAIL: .*: NoVideo" stdout.log && {

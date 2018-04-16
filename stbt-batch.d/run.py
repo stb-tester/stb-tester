@@ -218,6 +218,8 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
 
             post_run_script(exit_status, rundir)
 
+            combine_logs(rundir)
+
             if exit_status != 0:
                 if user_command("recover", [], cwd=rundir) != 0:
                     with open("%s/unrecoverable-error" % rundir, 'w'):
@@ -390,6 +392,16 @@ def post_run_script(exit_status, cwd):
     subprocess.call(
         [_find_file("post-run.sh")], stdin=DEVNULL_R,
         env=subenv, preexec_fn=lambda: os.setpgid(0, 0), cwd=cwd)
+
+
+def combine_logs(cwd):
+    # We should do this on the fly really
+    subenv = dict(os.environ)
+    subenv['LC_ALL'] = 'C'
+    with open("%s/combined.log" % cwd, "w") as f:
+        subprocess.check_call(
+            ['sort', '--merge', '%s/stdout.log' % cwd,
+             '%s/stderr.log' % cwd], env=subenv, stdout=f)
 
 
 SIGNALS_TO_NAMES_DICT = {
