@@ -17,9 +17,6 @@
 
 main() {
   grep -q "FAIL: .*: MatchTimeout" stdout.log && template
-
-  STBT_TRACING_SOCKET="" user_command classify
-
   grep -q "FAIL: .*: NoVideo" stdout.log && {
     check_capture_hardware || touch unrecoverable-error; }
 }
@@ -78,12 +75,6 @@ check_capture_hardware() {
       fi
       ;;
   esac
-}
-
-user_command() {
-  local c=$("$stbt_root"/stbt-config batch.$1 2>/dev/null)
-  [[ -z "$c" ]] && return
-  "$c" $2 </dev/null
 }
 
 trap on_term sigterm

@@ -220,6 +220,8 @@ def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
 
             combine_logs(rundir)
 
+            user_command("classify", [], cwd=rundir)
+
             if exit_status != 0:
                 if user_command("recover", [], cwd=rundir) != 0:
                     with open("%s/unrecoverable-error" % rundir, 'w'):
@@ -427,6 +429,9 @@ def get_failure_reason(test_name, exit_status, cwd):
 
 def user_command(name, args, cwd):
     from _stbt.config import get_config
+    subenv = os.environ.copy()
+    if 'STBT_TRACING_SOCKET' in subenv:
+        del subenv['STBT_TRACING_SOCKET']
     script = get_config("batch", name)
     if script:
         return subprocess.call([script] + args, stdin=DEVNULL_R, cwd=cwd)
