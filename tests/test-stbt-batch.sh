@@ -560,8 +560,12 @@ test_printing_unicode_characters_in_scripts() {
     LANG=C.UTF-8 unbuffer bash -c 'stbt run tests/utf8bytestring.py 2>mylog4' &&
 
     echo "stbt batch run:" &&
-    stbt batch run -1 tests/unicode.py
-    stbt batch run -1 tests/utf8bytestring.py
+    stbt batch run -1 tests/unicode.py &&
+    stbt batch run -1 tests/utf8bytestring.py &&
+
+    echo "stbt batch run -v:" &&
+    stbt batch run -v -1 tests/unicode.py &&
+    stbt batch run -v -1 tests/utf8bytestring.py
 }
 
 test_that_stbt_batch_run_can_print_exceptions_with_unicode_characters() {
