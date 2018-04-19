@@ -159,17 +159,14 @@ class _NullFile(object):
 
 
 def new_state_sender(filename=None):
-    try:
-        from lzma import LZMAFile
-    except ImportError:
-        from backports.lzma import LZMAFile  # pylint:disable=E0611,F0401
-
-    socket_ = None
     if filename is not None:
+        try:
+            from lzma import LZMAFile
+        except ImportError:
+            from backports.lzma import LZMAFile  # pylint:disable=E0611,F0401
         fsfile_ = LZMAFile(filename, 'wb')
     else:
         fsfile_ = _NullFile()
-    file_ = None
     try:
         socket_ = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         socket_.connect(os.environ['STBT_TRACING_SOCKET'])
