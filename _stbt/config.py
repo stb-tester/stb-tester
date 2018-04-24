@@ -83,16 +83,13 @@ def set_config(section, option, value):
 def _config_init(force=False):
     global _config
     if force or not _config:
+        config_files = [_find_file('stbt.conf')]
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            from .vars import libexecdir, sysconfdir
-            config_files = [
-                os.path.join(libexecdir, 'stbt/stbt.conf'),
-                os.path.join(sysconfdir, 'stbt/stbt.conf'),
-            ]
+            from .vars import sysconfdir
+            config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
         except ImportError:
-            # Running `stbt` from source (not installed) location.
-            config_files = [os.path.dirname(__file__) + '../stbt.conf']
+            pass
 
         # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
         # directory specification:
@@ -127,3 +124,7 @@ def _sponge(filename):
         except:
             os.remove(f.name)
             raise
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)

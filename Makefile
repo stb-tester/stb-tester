@@ -56,7 +56,7 @@ extra/fedora/stb-tester.spec stbt-control-relay: \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     $< > $@
 
-INSTALL_CORE_FILES = \
+INSTALL_PYLIB_FILES = \
     _stbt/__init__.py \
     _stbt/config.py \
     _stbt/control.py \
@@ -76,12 +76,16 @@ INSTALL_CORE_FILES = \
     _stbt/state_watch.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
+    _stbt/stbt.conf \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
-    stbt.conf \
+    stbt/__init__.py \
+    stbt/android.py
+
+INSTALL_CORE_FILES = \
     stbt_auto_selftest.py \
     stbt-batch \
     stbt-batch.d/instaweb \
@@ -104,7 +108,7 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES)
+all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES)
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -114,6 +118,7 @@ install-core: all
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(pythondir)/stbt \
+	    $(DESTDIR)$(pythondir)/_stbt/lmdb \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
@@ -122,16 +127,15 @@ install-core: all
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
 	chmod 0755 $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0644 \
-	    stbt/__init__.py \
-	    stbt/android.py \
-	    $(DESTDIR)$(pythondir)/stbt/
-	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	for filename in $(INSTALL_CORE_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	done
+	for filename in $(INSTALL_PYLIB_FILES); do \
+	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
 	done
 	printf "libexecdir = '%s'\nsysconfdir = '%s'\n" \
 	    "$(libexecdir)" "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
@@ -153,7 +157,7 @@ install-gpl: $(INSTALL_GPL_FILES)
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_GPL_FILES))))
 	for filename in $(INSTALL_GPL_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
-	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
 	done
 
 STBT_CONTROL_RELAY_FILES = \
@@ -163,8 +167,8 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/control_gpl.py \
     _stbt/irnetbox.py \
     _stbt/logging.py \
+    _stbt/stbt.conf \
     _stbt/utils.py \
-    stbt.conf \
     stbt_control_relay.py
 
 install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
@@ -184,6 +188,7 @@ uninstall:
 	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -rf $(DESTDIR)$(pythondir)/stbt
+	rm -rf $(DESTDIR)$(pythondir)/_stbt
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	-rmdir $(DESTDIR)$(sysconfdir)/stbt
