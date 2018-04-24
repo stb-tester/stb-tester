@@ -12,7 +12,6 @@ __pycache__
 _stbt/libxxhash.so
 _stbt/lmdb/
 debian-packages
-defaults.conf
 docs/stbt.1
 extra/debian/changelog
 extra/fedora/stb-tester.spec

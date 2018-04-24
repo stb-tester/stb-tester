@@ -83,24 +83,27 @@ def set_config(section, option, value):
 def _config_init(force=False):
     global _config
     if force or not _config:
-        config = ConfigParser.SafeConfigParser()
-        config.readfp(
-            open(os.path.join(os.path.dirname(__file__), '..', 'stbt.conf')))
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
+            from .vars import libexecdir, sysconfdir
+            config_files = [
+                os.path.join(libexecdir, 'stbt/stbt.conf'),
+                os.path.join(sysconfdir, 'stbt/stbt.conf'),
+            ]
+        except ImportError:
             # Running `stbt` from source (not installed) location.
-            system_config = ''
-        config.read(
-            [system_config,
-             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-             # directory specification:
-             '%s/stbt/stbt.conf' % xdg_config_dir()] +
-            # Config files specific to the test suite / test run,
-            # with the one at the beginning taking precedence:
-            list(reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
-        )
+            config_files = [os.path.dirname(__file__) + '../stbt.conf']
+
+        # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+        # directory specification:
+        config_files.append('%s/stbt/stbt.conf' % xdg_config_dir())
+
+        # Config files specific to the test suite / test run,
+        # with the one at the beginning taking precedence:
+        config_files.extend(
+            reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
+        config = ConfigParser.SafeConfigParser()
+        config.read(config_files)
         _config = config
     return _config
 

@@ -56,11 +56,6 @@ extra/fedora/stb-tester.spec stbt-control-relay: \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     $< > $@
 
-defaults.conf: stbt.conf .stbt-prefix
-	perl -lpe \
-	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
-	    $< > $@
-
 INSTALL_CORE_FILES = \
     _stbt/__init__.py \
     _stbt/config.py \
@@ -86,6 +81,7 @@ INSTALL_CORE_FILES = \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
+    stbt.conf \
     stbt_auto_selftest.py \
     stbt-batch \
     stbt-batch.d/instaweb \
@@ -108,8 +104,7 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES) \
-    defaults.conf
+all: $(INSTALL_CORE_FILES)
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -127,7 +122,6 @@ install-core: all
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
 	chmod 0755 $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 \
 	    stbt/__init__.py \
 	    stbt/android.py \
@@ -139,8 +133,9 @@ install-core: all
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
-	echo "_libexecdir = '$(libexecdir)'" > $(DESTDIR)$(pythondir)/stbt/_vars.py
-	chmod 0644 $(DESTDIR)$(pythondir)/stbt/_vars.py
+	printf "libexecdir = '%s'\nsysconfdir = '%s'\n" \
+	    "$(libexecdir)" "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
+	chmod 0644 $(DESTDIR)$(pythondir)/_stbt/vars.py
 
 install-virtual-stb: $(INSTALL_VSTB_FILES)
 	$(INSTALL) -m 0755 -d \
@@ -169,9 +164,10 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/irnetbox.py \
     _stbt/logging.py \
     _stbt/utils.py \
+    stbt.conf \
     stbt_control_relay.py
 
-install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay defaults.conf
+install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 0755 -d \
@@ -181,8 +177,6 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay defau
 	    $(INSTALL) -m $$mode $$filename \
 	        $(DESTDIR)$(libexecdir)/stbt-control-relay/$$filename; \
 	done
-	$(INSTALL) -m 0644 defaults.conf \
-	    $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt.conf
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt

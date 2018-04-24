@@ -42,11 +42,17 @@ def srcdir(filename="", here=os.path.abspath(__file__)):
 @pytest.yield_fixture(scope='session')
 def installed_stbt_control_relay():
     with named_temporary_directory("stbt-control-relay-install.XXXXXX") as tmp:
-        oldprefix = open(srcdir(".stbt-prefix")).read()
+        try:
+            oldprefix = open(srcdir(".stbt-prefix")).read()
+        except IOError:
+            oldprefix = None
         subprocess.check_call(
             ["make", "prefix=%s" % tmp, "install-stbt-control-relay"],
             cwd=srcdir())
-        open(srcdir(".stbt-prefix"), 'w').write(oldprefix)
+        if oldprefix is not None:
+            open(srcdir(".stbt-prefix"), 'w').write(oldprefix)
+        else:
+            os.unlink(srcdir(".stbt-prefix"))
 
         os.environ['PATH'] = "%s/bin:%s" % (tmp, os.environ['PATH'])
         yield "%s/bin/stbt-control-relay" % tmp
