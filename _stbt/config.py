@@ -46,7 +46,7 @@ def set_config(section, option, value):
     solve in the future.
 
     Writes to the first item in `$STBT_CONFIG_FILE` if set falling back to
-    `$HOME/stbt/stbt.conf`.
+    `$HOME/.config/stbt/stbt.conf`.
     """
     from .utils import mkdir_p
 
