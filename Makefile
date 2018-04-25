@@ -108,7 +108,7 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES)
+all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES) etc/stbt.conf
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -129,6 +129,8 @@ install-core: all
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
+	$(INSTALL) -m 0644 etc/stbt.conf \
+	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	for filename in $(INSTALL_CORE_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
@@ -159,6 +161,11 @@ install-gpl: $(INSTALL_GPL_FILES)
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
 	done
+
+etc/stbt.conf : _stbt/stbt.conf
+	# Comment out defaults for /etc/stbt/stbt.conf
+	mkdir -p etc
+	awk '/^$$/ { print  }; /^#/ { print "#" $$0}; /^\[/ { print $$0 }; /^[^\[#]/ {print "# " $$0 }' _stbt/stbt.conf >$@
 
 STBT_CONTROL_RELAY_FILES = \
     _stbt/__init__.py \

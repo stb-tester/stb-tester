@@ -13,6 +13,7 @@ _stbt/libxxhash.so
 _stbt/lmdb/
 debian-packages
 docs/stbt.1
+etc/stbt.conf
 extra/debian/changelog
 extra/fedora/stb-tester.spec
 extra/stb-tester*.debian.tar.xz
