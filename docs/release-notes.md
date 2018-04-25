@@ -38,6 +38,11 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
+* `stbt run` will no longer show an output video window by default. This is a
+  better default for headless environments like stbt-docker.  You can re-enable
+  this by setting `global.sink_pipeline = xvimagesink sync=false` in your
+  `$HOME/.config/stbt/stbt.conf`
+
 ##### Minor fixes and packaging fixes
 
 
