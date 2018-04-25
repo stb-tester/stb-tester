@@ -128,23 +128,11 @@ test_completion_filenames() {
     fail "unexpected completions for files + directories"
 }
 
-completion_config_for_tests() {
-    cat <<-EOF
-	[global]
-	key1 = hi there
-	key2=hi there
-	  key3 = hi there
-	  	key4	= hi there
-	  	[run]
-	key5 = hi there
-	EOF
-}
-
 test_completion_config_keys() {
     cd "$srcdir" && . stbt-completion
-    diff \
-        <(completion_config_for_tests | in_unit_test=yes _stbt_config_keys) \
-        <(printf '%s\n' \
-            global.key1 global.key2 global.key3 global.key4 run.key5) ||
+    diff -u \
+        <(printf '%s\n' global.key1 global.key2 global.key3 global.key4 run.key5) \
+        <(STBT_CONFIG_FILE="tests/completion-test.conf" _stbt_config_keys | grep 'key[0-9]') \
+         ||
     fail "_stbt_config_keys unexpected output"
 }

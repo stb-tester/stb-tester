@@ -46,7 +46,7 @@ def set_config(section, option, value):
     solve in the future.
 
     Writes to the first item in `$STBT_CONFIG_FILE` if set falling back to
-    `$HOME/stbt/stbt.conf`.
+    `$HOME/.config/stbt/stbt.conf`.
     """
     from .utils import mkdir_p
 
@@ -83,24 +83,24 @@ def set_config(section, option, value):
 def _config_init(force=False):
     global _config
     if force or not _config:
-        config = ConfigParser.SafeConfigParser()
-        config.readfp(
-            open(os.path.join(os.path.dirname(__file__), '..', 'stbt.conf')))
+        config_files = [_find_file('stbt.conf')]
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
-            # Running `stbt` from source (not installed) location.
-            system_config = ''
-        config.read(
-            [system_config,
-             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-             # directory specification:
-             '%s/stbt/stbt.conf' % xdg_config_dir()] +
-            # Config files specific to the test suite / test run,
-            # with the one at the beginning taking precedence:
-            list(reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
-        )
+            from .vars import sysconfdir
+            config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
+        except ImportError:
+            pass
+
+        # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+        # directory specification:
+        config_files.append('%s/stbt/stbt.conf' % xdg_config_dir())
+
+        # Config files specific to the test suite / test run,
+        # with the one at the beginning taking precedence:
+        config_files.extend(
+            reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
+        config = ConfigParser.SafeConfigParser()
+        config.read(config_files)
         _config = config
     return _config
 
@@ -124,3 +124,7 @@ def _sponge(filename):
         except:
             os.remove(f.name)
             raise
+
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    return os.path.join(root, path)

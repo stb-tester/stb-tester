@@ -619,8 +619,12 @@ def stbt_control_listen(keymap_file):
     """Returns an iterator yielding keypresses received from `stbt control`.
     """
     import imp
-    stbt_control = imp.load_source(
-        'stbt_control', _find_file('../stbt-control'))
+    try:
+        from .vars import libexecdir
+        sc = "%s/stbt/stbt-control" % libexecdir
+    except ImportError:
+        sc = _find_file('../stbt-control')
+    stbt_control = imp.load_source('stbt_control', sc)
 
     with scoped_debug_level(0):
         # Don't mess up printed keymap with debug messages
