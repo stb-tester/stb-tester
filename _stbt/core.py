@@ -1806,14 +1806,23 @@ class _Annotation(namedtuple("_Annotation", "time region label colour")):
         _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
 
 
+class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
+    @property
+    def end_time(self):
+        return self.time + self.duration
+
+
 class SinkPipeline(object):
     def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
+        import time as _time
+
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.annotations = []
         self._raise_in_user_thread = raise_in_user_thread
         self.received_eos = threading.Event()
         self._frames = deque(maxlen=35)
+        self._time = _time
 
         if save_video:
             if not save_video.endswith(".webm"):
@@ -1909,14 +1918,12 @@ class SinkPipeline(object):
     def _push_sample(self, sample):
         # Calculate whether we need to draw any annotations on the output video.
         now = sample.time
-        texts = []
         annotations = []
         with self.annotations_lock:
-            for x in self.text_annotations:
-                x.setdefault('start_time', now)
-                if now < x['start_time'] + x['duration']:
-                    texts.append(x)
-            self.text_annotations = texts[:]
+            # Remove expired annotations
+            self.text_annotations = [x for x in self.text_annotations
+                                     if now < x.end_time]
+            current_texts = [x for x in self.text_annotations if x.time <= now]
             for annotation in list(self.annotations):
                 if annotation.time == now:
                     annotations.append(annotation)
@@ -1929,11 +1936,11 @@ class SinkPipeline(object):
         _draw_text(
             img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
             (10, 30), (255, 255, 255))
-        for i, x in enumerate(reversed(texts)):
+        for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
-            age = float(now - x['start_time']) / 3
+            age = float(now - x.time) / 3
             color = (int(255 * max([1 - age, 0.5])),) * 3
-            _draw_text(img, x['text'], origin, color)
+            _draw_text(img, x.text, origin, color)
 
         # Regions:
         for annotation in annotations:
@@ -1945,11 +1952,13 @@ class SinkPipeline(object):
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
             if isinstance(obj, str) or isinstance(obj, unicode):
-                obj = (
-                    datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4] +
+                start_time = self._time.time()
+                text = (
+                    datetime.datetime.fromtimestamp(start_time).strftime(
+                        "%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
                 self.text_annotations.append(
-                    {"text": obj, "duration": duration_secs})
+                    _TextAnnotation(start_time, text, duration_secs))
             elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:
