@@ -1888,6 +1888,7 @@ class SinkPipeline(object):
 
         debug("teardown: Sending eos on sink pipeline")
         if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+            self.sink_pipeline.send_event(Gst.Event.new_eos())
             if not self.received_eos.wait(10):
                 debug("Timeout waiting for sink EOS")
         else:
