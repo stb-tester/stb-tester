@@ -794,8 +794,6 @@ def new_device_under_test_from_config(
     if not args.sink_pipeline and not args.save_video:
         sink_pipeline = NoSinkPipeline()
     else:
-        if not args.sink_pipeline:
-            args.sink_pipeline = "fakesink sync=false"
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
             args.sink_pipeline, raise_in_user_thread, args.save_video)
 
@@ -1824,25 +1822,30 @@ class SinkPipeline(object):
         self._frames = deque(maxlen=35)
         self._time = _time
 
+        sink_pipeline_description = (
+            "appsrc name=appsrc format=time "
+            "caps=video/x-raw,format=(string)BGR ")
+
+        if save_video and user_sink_pipeline:
+            sink_pipeline_description += "! tee name=t "
+            src = "t. ! queue leaky=downstream"
+        else:
+            src = "appsrc."
+
         if save_video:
             if not save_video.endswith(".webm"):
                 save_video += ".webm"
             debug("Saving video to '%s'" % save_video)
-            video_pipeline = (
-                "t. ! queue leaky=downstream ! videoconvert ! "
+            sink_pipeline_description += (
+                "{src} ! videoconvert ! "
                 "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32 ! "
-                "webmmux ! filesink location=%s" % save_video)
-        else:
-            video_pipeline = ""
+                "webmmux ! filesink location={save_video} ").format(
+                src=src, save_video=save_video)
 
-        sink_pipeline_description = " ".join([
-            "appsrc name=appsrc format=time " +
-            "caps=video/x-raw,format=(string)BGR !",
-            "tee name=t",
-            video_pipeline,
-            "t. ! queue leaky=downstream ! videoconvert !",
-            user_sink_pipeline
-        ])
+        if user_sink_pipeline:
+            sink_pipeline_description += (
+                "{src} ! videoconvert ! {user_sink_pipeline}").format(
+                src=src, user_sink_pipeline=user_sink_pipeline)
 
         self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
         sink_bus = self.sink_pipeline.get_bus()
