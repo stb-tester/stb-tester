@@ -1823,7 +1823,7 @@ class SinkPipeline(object):
         self._time = _time
 
         sink_pipeline_description = (
-            "appsrc name=appsrc format=time "
+            "appsrc name=appsrc format=time is-live=true "
             "caps=video/x-raw,format=(string)BGR ")
 
         if save_video and user_sink_pipeline:
