@@ -1821,9 +1821,10 @@ class SinkPipeline(object):
         self.received_eos = threading.Event()
         self._frames = deque(maxlen=35)
         self._time = _time
+        self._sample_count = 0
 
         sink_pipeline_description = (
-            "appsrc name=appsrc format=time "
+            "appsrc name=appsrc format=time is-live=true "
             "caps=video/x-raw,format=(string)BGR ")
 
         if save_video and user_sink_pipeline:
@@ -1886,13 +1887,16 @@ class SinkPipeline(object):
         while self._frames:
             self._push_sample(self._frames.pop())
 
-        debug("teardown: Sending eos on sink pipeline")
-        if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
-            self.sink_pipeline.send_event(Gst.Event.new_eos())
-            if not self.received_eos.wait(10):
-                debug("Timeout waiting for sink EOS")
+        if self._sample_count > 0:
+            debug("teardown: Sending eos on sink pipeline")
+            if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
+                self.sink_pipeline.send_event(Gst.Event.new_eos())
+                if not self.received_eos.wait(10):
+                    debug("Timeout waiting for sink EOS")
+            else:
+                debug("Sending EOS to sink pipeline failed")
         else:
-            debug("Sending EOS to sink pipeline failed")
+            debug("SinkPipeline teardown: Not sending EOS, no samples sent")
 
         self.sink_pipeline.set_state(Gst.State.NULL)
 
@@ -1952,6 +1956,7 @@ class SinkPipeline(object):
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
+        self._sample_count += 1
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
