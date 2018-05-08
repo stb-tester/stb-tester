@@ -53,12 +53,29 @@ def video(args, dut):
 
 
 def _import_by_filename(filename_):
-    module_dir, module_file = os.path.split(filename_)
+    from importlib import import_module
+    module_dir, module_file = os.path.split(os.path.abspath(filename_))
     module_name, module_ext = os.path.splitext(module_file)
     if module_ext != '.py':
         raise ImportError("Invalid module filename '%s'" % filename_)
-    sys.path = [os.path.abspath(module_dir)] + sys.path
-    return __import__(module_name)
+
+    import_dir = module_dir
+    import_name = module_name
+    while os.path.exists(os.path.join(import_dir, "__init__.py")):
+        import_dir, s = os.path.split(import_dir)
+        import_name = "%s.%s" % (s, import_name)
+
+    sys.path.insert(0, import_dir)
+    try:
+        module = import_module(import_name)
+    finally:
+        # If the test function is not in a module we will need to leave
+        # PYTHONPATH modified here so one python file in the test-pack can
+        # import other files from the same directory.  We also have to be
+        # careful of modules that mess with sys.path:
+        if import_dir != module_dir and sys.path[0] == import_dir:
+            sys.path.pop(0)
+    return module
 
 
 _TestFunction = namedtuple(

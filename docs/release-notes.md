@@ -29,6 +29,11 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 ##### Breaking changes since v28
 
+* `stbt run` will no longer show an output video window by default. This is a
+  better default for headless environments like stbt-docker.  You can re-enable
+  this by setting `global.sink_pipeline = xvimagesink sync=false` in your
+  `$HOME/.config/stbt/stbt.conf`
+
 ##### New features
 
 * `stbt.press` can be configured to use the ADB keypress mechanism from
@@ -38,10 +43,9 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
-* `stbt run` will no longer show an output video window by default. This is a
-  better default for headless environments like stbt-docker.  You can re-enable
-  this by setting `global.sink_pipeline = xvimagesink sync=false` in your
-  `$HOME/.config/stbt/stbt.conf`
+* If your test-pack is a Python module (e.g. contains an `__init__.py` in each
+  directory under `tests/`) relative imports from test scripts will now work.
+  This allows you to organise your tests into multiple directories easily.
 
 ##### Minor fixes and packaging fixes
 
