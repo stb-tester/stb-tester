@@ -164,9 +164,11 @@ test_that_stbt_run_will_run_a_specific_function() {
 }
 
 test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
+    set -x
     mkdir tests
     cat >tests/helpers.py <<-EOF
 	def my_helper():
+	    print "my_helper() called"
 	    open("touched", "w").close()
 	EOF
     cat >tests/test.py <<-EOF
@@ -176,6 +178,44 @@ test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
 	EOF
     stbt run tests/test.py::test_that_this_test_is_run
     [ -e "touched" ] || fail "Test not run"
+
+    # This test is similar but uses a real relative import
+    cat >tests/test_rel.py <<-EOF
+	def test_that_this_test_is_run():
+	    from .helpers import my_helper
+	    my_helper()
+	EOF
+
+    # Fails with "ValueError: Attempted relative import in non-package"
+    ! stbt run tests/test_rel.py::test_that_this_test_is_run \
+         || fail "Relative imports shouldn't work without __init__.py"
+
+    # Now we make it a package and it works again
+    touch tests/__init__.py
+    stbt run tests/test_rel.py::test_that_this_test_is_run \
+         || fail "Relative imports in package should work"
+
+    # And test sub-packages
+    mkdir -p tests/subpackage
+    touch tests/subpackage/__init__.py
+    cat >tests/subpackage/test_subrel.py <<-EOF
+	def test_that_this_test_is_run():
+	    from ..helpers import my_helper
+	    my_helper()
+	EOF
+    stbt run tests/subpackage/test_subrel.py::test_that_this_test_is_run \
+         || fail "Relative imports in package should work"
+
+    # And sub-sub-packages
+    mkdir -p tests/subpackage/subsubpackage
+    touch tests/subpackage/subsubpackage/__init__.py
+    cat >tests/subpackage/subsubpackage/test_subsubrel.py <<-EOF
+	def test_that_this_test_is_run():
+	    from ...helpers import my_helper
+	    my_helper()
+	EOF
+    stbt run tests/subpackage/subsubpackage/test_subsubrel.py::test_that_this_test_is_run \
+         || fail "Relative imports in package should work"
 }
 
 state_printer() {

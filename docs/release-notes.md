@@ -43,6 +43,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
+* If your test-pack is a Python module (e.g. contains an `__init__.py` in each
+  directory under `tests/`) relative imports from test scripts will now work.
+  This allows you to organise your tests into multiple directories easily.
+
 ##### Minor fixes and packaging fixes
 
 
