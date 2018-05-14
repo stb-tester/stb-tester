@@ -428,7 +428,7 @@ class IRNetBoxRemote(object):
 class RokuHttpControl(object):
     """Send a key-press via Roku remote control protocol.
 
-    See https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
+    See https://sdkdocs.roku.com/display/sdkdoc/External+Control+API
     """
 
     # Map our recommended keynames (from linux input-event-codes.h) to the
