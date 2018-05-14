@@ -43,6 +43,12 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
+* `stbt.press` accepts a new `hold_secs` parameter to hold a key down for the
+  specified duration. This is only implemented for the LIRC and Roku controls.
+
+* Added `stbt.pressing`: A context manager that will hold a key down for as
+  long as the code in the `with` block is executing.
+
 * `stbt.is_screen_black` returns an `IsScreenBlackResult` instead of bool.
   This evaluates to True or False so this change is backwards compatible,
   unless you were explicitly comparing the result with `== True` or `is True`.

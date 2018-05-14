@@ -86,6 +86,14 @@ class NullRemote(object):
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
+    @staticmethod
+    def keydown(key):
+        debug('NullRemote: Ignoring request to hold "%s"' % key)
+
+    @staticmethod
+    def keyup(key):
+        debug('NullRemote: Ignoring request to release "%s"' % key)
+
 
 class ErrorControl(object):
     def __init__(self, message):
@@ -94,6 +102,12 @@ class ErrorControl(object):
         self.message = message
 
     def press(self, key):  # pylint:disable=unused-argument
+        raise RuntimeError(self.message)
+
+    def keydown(self, key):
+        raise RuntimeError(self.message)
+
+    def keyup(self, key):
         raise RuntimeError(self.message)
 
 
@@ -109,6 +123,14 @@ class FileControl(object):
 
     def press(self, key):
         self.outfile.write(key + '\n')
+        self.outfile.flush()
+
+    def keydown(self, key):
+        self.outfile.write("Holding %s\n" % key)
+        self.outfile.flush()
+
+    def keyup(self, key):
+        self.outfile.write("Released %s\n" % key)
         self.outfile.flush()
 
 
@@ -158,6 +180,14 @@ class VideoTestSrcControl(object):
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
 
+    def keydown(self, key):
+        raise NotImplementedError(
+            "VideoTestSrcControl: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "VideoTestSrcControl: pressing (holding) not implemented")
+
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
@@ -175,20 +205,35 @@ class LircRemote(object):
 
     def press(self, key):
         s = self._connect()
-        s.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
-        _read_lircd_reply(s)
+        command = "SEND_ONCE %s %s" % (self.control_name, key)
+        s.sendall(command + "\n")
+        _read_lircd_reply(s, command)
         debug("Pressed " + key)
 
+    def keydown(self, key):
+        s = self._connect()
+        command = "SEND_START %s %s" % (self.control_name, key)
+        s.sendall(command + "\n")
+        _read_lircd_reply(s, command)
+        debug("Holding " + key)
 
-def _read_lircd_reply(stream):
+    def keyup(self, key):
+        s = self._connect()
+        command = "SEND_STOP %s %s" % (self.control_name, key)
+        s.sendall(command + "\n")
+        _read_lircd_reply(s, command)
+        debug("Released " + key)
+
+
+def _read_lircd_reply(stream, command):
     """Waits for lircd reply and checks if a LIRC send command was successful.
 
     Waits for a reply message from lircd (called "reply packet" in the LIRC
-    reference) for a SEND_ONCE command, raises exception if it times out or
+    reference) for the specified command; raises exception if it times out or
     the reply contains an error message.
 
-    The structure of a lircd reply message for a SEND_ONCE command is the
-    following:
+    The structure of a lircd reply message for a SEND_ONCE|SEND_START|SEND_STOP
+    command is the following:
 
     BEGIN
     <command>
@@ -206,7 +251,7 @@ def _read_lircd_reply(stream):
             if line == "BEGIN":
                 reply = []
             reply.append(line)
-            if line == "END" and "SEND_ONCE" in reply[1]:
+            if line == "END" and reply[1] == command:
                 break
     except socket.timeout:
         raise RuntimeError(
@@ -349,6 +394,14 @@ class RemoteFrameBuffer(object):
         self._release(key)
         self._close()
 
+    def keydown(self, key):
+        raise NotImplementedError(
+            "RemoteFrameBuffer: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "RemoteFrameBuffer: pressing (holding) not implemented")
+
     def _connect_socket(self):
         self.socket = socket.socket()
         s = self.socket
@@ -418,6 +471,14 @@ class IRNetBoxRemote(object):
                 port=self.output, power=100, data=self.config[key])
         debug("Pressed " + key)
 
+    def keydown(self, key):
+        raise NotImplementedError(
+            "IRNetBoxRemote: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "IRNetBoxRemote: pressing (holding) not implemented")
+
     def _connect(self):
         try:
             return irnetbox.IRNetBox(self.hostname, self.port)
@@ -473,6 +534,24 @@ class RokuHttpControl(object):
         response.raise_for_status()
         debug("Pressed " + key)
 
+    def keydown(self, key):
+        import requests
+
+        roku_keyname = self._KEYNAMES.get(key, key)
+        response = requests.post("http://%s:8060/keydown/%s"
+                                 % (self.hostname, roku_keyname))
+        response.raise_for_status()
+        debug("Holding " + key)
+
+    def keyup(self, key):
+        import requests
+
+        roku_keyname = self._KEYNAMES.get(key, key)
+        response = requests.post("http://%s:8060/keyup/%s"
+                                 % (self.hostname, roku_keyname))
+        response.raise_for_status()
+        debug("Released " + key)
+
 
 class _SamsungTCPRemote(object):
     """Send a key-press via Samsung remote control protocol.
@@ -517,6 +596,14 @@ class _SamsungTCPRemote(object):
         reply = self.socket.recv(4096)
         debug("SamsungTCPRemote reply: %s\n" % reply)
 
+    def keydown(self, key):
+        raise NotImplementedError(
+            "SamsungTCPRemote: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "SamsungTCPRemote: pressing (holding) not implemented")
+
 
 def _new_samsung_tcp_remote(hostname, port):
     return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
@@ -550,6 +637,14 @@ class _X11Remote(object):
         subprocess.check_call(
             ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed " + key)
+
+    def keydown(self, key):
+        raise NotImplementedError(
+            "X11Remote: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "X11Remote: pressing (holding) not implemented")
 
 
 def file_remote_recorder(filename):

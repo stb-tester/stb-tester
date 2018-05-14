@@ -185,6 +185,14 @@ class HdmiCecControl(object):
             raise HdmiCecError(
                 "Failed to send key up command %s" % cec_command)
 
+    def keydown(self, key):
+        raise NotImplementedError(
+            "HdmiCecControl: pressing (holding) not implemented")
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "HdmiCecControl: pressing (holding) not implemented")
+
     # detect an adapter and return the com port path
     def detect_adapter(self):
         retval = None
