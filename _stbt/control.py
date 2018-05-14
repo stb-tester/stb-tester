@@ -214,9 +214,12 @@ def _read_lircd_reply(stream):
             % stream.gettimeout())
     if "SUCCESS" not in reply:
         if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
-            num_data_lines = int(reply[4])
-            raise RuntimeError("LIRC remote control returned error: %s"
-                               % " ".join(reply[5:5 + num_data_lines]))
+            try:
+                num_data_lines = int(reply[4])
+                raise RuntimeError("LIRC remote control returned error: %s"
+                                   % " ".join(reply[5:5 + num_data_lines]))
+            except ValueError:
+                pass
         raise RuntimeError("LIRC remote control returned unknown error")
 
 DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
