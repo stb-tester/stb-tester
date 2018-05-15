@@ -3,6 +3,7 @@ import socket
 import subprocess
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
+from textwrap import dedent
 
 import pytest
 
@@ -77,11 +78,18 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
                 os.path.exists(t("lircd.sock")) or proc.poll() is not None))
             testremote = uri_to_remote("lirc:%s:stbt-test" % t("lircd.sock"))
 
-            testremote.press("KEY_UP")
-            testremote.press("KEY_DOWN")
-            expected = "KEY_UP\nKEY_DOWN\n"
+            testremote.press("KEY_LEFT")
+            testremote.press("KEY_RIGHT")
+            testremote.keydown("KEY_MENU")
+            testremote.keyup("KEY_MENU")
+            expected = dedent("""\
+                KEY_LEFT
+                KEY_RIGHT
+                Holding KEY_MENU
+                Released KEY_MENU
+                """)
 
-            assert open(t("one-file")).read() == expected
+            assert expected == open(t("one-file")).read()
 
 
 def socket_passing_setup(socket):
