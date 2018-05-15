@@ -172,18 +172,18 @@ class HdmiCecControl(object):
         if keycode is None or (isinstance(keycode, int) and
                                not 0 <= keycode <= 255):
             raise UnknownKeyError("HdmiCecControl: Unknown key %r" % key)
-        cec_command = "%X%X:44:%02X" % (self.source, self.destination, keycode)
-        key_down_cmd = self.lib.CommandFromString(cec_command)
-        key_up_cmd = self.lib.CommandFromString(
-            '%X%X:45' % (self.source, self.destination))
 
-        debug("cec: Transmit %s as %s" % (key, cec_command))
+        key_down_str = "%X%X:44:%02X" % (self.source, self.destination, keycode)
+        key_down_cmd = self.lib.CommandFromString(key_down_str)
+        key_up_str = "%X%X:45" % (self.source, self.destination)
+        key_up_cmd = self.lib.CommandFromString(key_up_str)
+
+        debug("cec: Transmit %s as %s" % (key, key_down_str))
         if not self.lib.Transmit(key_down_cmd):
             raise HdmiCecError(
-                "Failed to send key down command %s" % cec_command)
+                "Failed to send key down command %s" % key_down_str)
         if not self.lib.Transmit(key_up_cmd):
-            raise HdmiCecError(
-                "Failed to send key up command %s" % cec_command)
+            raise HdmiCecError("Failed to send key up command %s" % key_up_str)
 
     def keydown(self, key):
         raise NotImplementedError(
