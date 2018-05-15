@@ -44,7 +44,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
 * `stbt.press` accepts a new `hold_secs` parameter to hold a key down for the
-  specified duration. This is only implemented for the LIRC and Roku controls.
+  specified duration. This is implemented for the LIRC, CEC, and Roku controls.
 
 * Added `stbt.pressing`: A context manager that will hold a key down for as
   long as the code in the `with` block is executing.

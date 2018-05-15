@@ -1,4 +1,6 @@
 import re
+import threading
+import time
 from contextlib import contextmanager
 from textwrap import dedent
 
@@ -159,8 +161,88 @@ class HdmiCecControl(object):
         self.source = source
         self.destination = destination
 
+        self.press_and_hold_thread = None
+        self.press_and_holding = False
+        self.lock = threading.Condition()
+
     def press(self, key):
+        with self.lock:
+            if self.press_and_holding:
+                raise HdmiCecError(
+                    "Can't call 'press' while holding another key")
+
+            if not self.lib.Transmit(self.keydown_command(key)):
+                raise HdmiCecError("Failed to send keydown for %s" % key)
+            if not self.lib.Transmit(self.keyup_command()):
+                raise HdmiCecError("Failed to send keyup for %s" % key)
+
+        debug("Pressed %s" % key)
+
+    def keydown(self, key):
+        # CEC spec section 13.13.3 says that the receiver should assume a
+        # keyup if it hasn't seen one within a receiver-determined timeframe
+        # which can't be less than 550ms. For press-and-hold the initiator
+        # should send repeated keydown commands (200 to 450ms apart) followed
+        # by the final keyup.
+
+        with self.lock:
+            if self.press_and_holding:
+                raise HdmiCecError(
+                    "Can't call 'keydown' while holding another key")
+            self.press_and_holding = True
+
+            if not self.lib.Transmit(self.keydown_command(key)):
+                raise HdmiCecError("Failed to send keydown for %s" % key)
+
+            self.press_and_hold_thread = threading.Thread(
+                target=self.send_keydowns, args=(key,))
+            self.press_and_hold_thread.daemon = True
+            self.press_and_hold_thread.start()
+        debug("Holding %s" % key)
+
+    def keyup(self, key):
+        with self.lock:
+            if not self.press_and_holding:
+                raise HdmiCecError("Called 'keyup' when not holding a key down")
+            self.press_and_holding = False
+            thread = self.press_and_hold_thread
+            self.press_and_hold_thread = None
+            self.lock.notify_all()
+
+        thread.join()
+
+        with self.lock:
+            if not self.lib.Transmit(self.keyup_command()):
+                raise HdmiCecError("Failed to send keyup for %s" % key)
+        debug("Released %s" % key)
+
+    def send_keydowns(self, key):
+        end_time = time.time() + 60
+        with self.lock:
+            while True:
+                self.lock.wait(0.450)
+                if not self.press_and_holding:
+                    return
+                if time.time() > end_time:
+                    debug("cec: Warning: Releasing %s as I've been holding it "
+                          "longer than 60 seconds" % key)
+                    return
+                if not self.lib.Transmit(self.keydown_command(key)):
+                    debug("cec: Warning: Failed to send repeated keydown for %s"
+                          % key)
+
+    def keydown_command(self, key):
+        keycode = self.get_keycode(key)
+        keydown_str = "%X%X:44:%02X" % (self.source, self.destination, keycode)
+        return self.lib.CommandFromString(keydown_str)
+
+    def keyup_command(self):
+        keyup_str = "%X%X:45" % (self.source, self.destination)
+        return self.lib.CommandFromString(keyup_str)
+
+    def get_keycode(self, key):
         from .control import UnknownKeyError
+
         keycode = self._KEYNAMES.get(key)
         if keycode is None:
             if isinstance(key, int):
@@ -172,26 +254,7 @@ class HdmiCecControl(object):
         if keycode is None or (isinstance(keycode, int) and
                                not 0 <= keycode <= 255):
             raise UnknownKeyError("HdmiCecControl: Unknown key %r" % key)
-
-        key_down_str = "%X%X:44:%02X" % (self.source, self.destination, keycode)
-        key_down_cmd = self.lib.CommandFromString(key_down_str)
-        key_up_str = "%X%X:45" % (self.source, self.destination)
-        key_up_cmd = self.lib.CommandFromString(key_up_str)
-
-        debug("cec: Transmit %s as %s" % (key, key_down_str))
-        if not self.lib.Transmit(key_down_cmd):
-            raise HdmiCecError(
-                "Failed to send key down command %s" % key_down_str)
-        if not self.lib.Transmit(key_up_cmd):
-            raise HdmiCecError("Failed to send key up command %s" % key_up_str)
-
-    def keydown(self, key):
-        raise NotImplementedError(
-            "HdmiCecControl: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "HdmiCecControl: pressing (holding) not implemented")
+        return keycode
 
     # detect an adapter and return the com port path
     def detect_adapter(self):
@@ -231,8 +294,11 @@ def test_hdmi_cec_control():
         r.press("74")
         r.press("0x4A")
         r.press("0x4a")
+        r.keydown("KEY_ROOT_MENU")
+        time.sleep(1)
+        r.keyup("KEY_ROOT_MENU")
 
-    assert io.getvalue() == dedent("""\
+    expected = dedent("""\
         Open('test-device')
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
@@ -248,7 +314,12 @@ def test_hdmi_cec_control():
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <4a>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <09>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <09>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <09>)
+        Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         """)
+    assert expected == io.getvalue()
 
 
 def test_hdmi_cec_control_defaults():
