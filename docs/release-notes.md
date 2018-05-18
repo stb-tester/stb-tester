@@ -43,6 +43,12 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
   like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
+* `stbt.is_screen_black` returns an `IsScreenBlackResult` instead of bool.
+  This evaluates to True or False so this change is backwards compatible,
+  unless you were explicitly comparing the result with `== True` or `is True`.
+  This change was made so that you can get the exact frame that was analysed,
+  for more precise performance measurements.
+
 * If your test-pack is a Python module (e.g. contains an `__init__.py` in each
   directory under `tests/`) relative imports from test scripts will now work.
   This allows you to organise your tests into multiple directories easily.

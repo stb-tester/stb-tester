@@ -100,7 +100,16 @@ def test_region_replace():
 ])
 def test_is_screen_black(frame, mask, threshold, region, expected):
     frame = stbt.load_image(frame)
-    assert stbt.is_screen_black(frame, mask, threshold, region) == expected
+    assert expected == bool(
+        stbt.is_screen_black(frame, mask, threshold, region))
+
+
+def test_IsScreenBlackResult():
+    frame = stbt.load_image("almost-black.png")
+    result = stbt.is_screen_black(frame)
+    assert result
+    assert numpy.all(result.frame == frame)
+    assert result.result is True
 
 
 def test_is_screen_black_with_numpy_mask():
