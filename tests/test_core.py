@@ -109,7 +109,7 @@ def test_IsScreenBlackResult():
     result = stbt.is_screen_black(frame)
     assert result
     assert numpy.all(result.frame == frame)
-    assert result.result is True
+    assert result.black is True
 
 
 def test_is_screen_black_with_numpy_mask():

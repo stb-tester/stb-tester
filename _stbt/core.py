@@ -668,22 +668,22 @@ def test_motionresult_repr():
 class IsScreenBlackResult(object):
     """The result from `is_screen_black`.
 
-    :ivar Frame frame: The video frame that was analyzed.
-
-    :ivar bool result: True if the screen was black. This is the same as
+    :ivar bool black: True if the screen was black. This is the same as
         evaluating the ``IsScreenBlackResult`` as a bool.
+
+    :ivar Frame frame: The video frame that was analyzed.
     """
-    def __init__(self, frame, result):
+    def __init__(self, black, frame):
+        self.black = black
         self.frame = frame
-        self.result = result
 
     def __nonzero__(self):
-        return self.result
+        return self.black
 
     def __repr__(self):
-        return ("IsScreenBlackResult(frame=<%s>, result=%r)" % (
-            _str_frame_dimensions(self.frame),
-            self.result))
+        return ("IsScreenBlackResult(black=%r, frame=<%s>)" % (
+            self.black,
+            _str_frame_dimensions(self.frame)))
 
 
 class OcrMode(IntEnum):
@@ -1326,7 +1326,7 @@ class DeviceUnderTest(object):
             else:
                 imglog.imwrite('non-black-regions-after-masking', greyframe)
 
-        result = IsScreenBlackResult(frame, maxVal == 0)
+        result = IsScreenBlackResult(maxVal == 0, frame)
         if result:
             debug("is_screen_black: Found black screen: %s" % result)
         else:
