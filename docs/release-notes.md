@@ -49,6 +49,9 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   This change was made so that you can get the exact frame that was analysed,
   for more precise performance measurements.
 
+* `stbt.is_screen_black` logs the result of its analysis, similar to
+  `stbt.match`, `stbt.ocr`, etc.
+
 * If your test-pack is a Python module (e.g. contains an `__init__.py` in each
   directory under `tests/`) relative imports from test scripts will now work.
   This allows you to organise your tests into multiple directories easily.

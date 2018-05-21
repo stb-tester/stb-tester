@@ -1326,7 +1326,12 @@ class DeviceUnderTest(object):
             else:
                 imglog.imwrite('non-black-regions-after-masking', greyframe)
 
-        return IsScreenBlackResult(frame, maxVal == 0)
+        result = IsScreenBlackResult(frame, maxVal == 0)
+        if result:
+            debug("is_screen_black: Found black screen: %s" % result)
+        else:
+            debug("is_screen_black: Didn't find black screen: %s" % result)
+        return result
 
 # Utility functions
 # ===========================================================================
