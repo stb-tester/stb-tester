@@ -1311,26 +1311,29 @@ class DeviceUnderTest(object):
 
         _region = Region.intersect(_image_region(frame), region)
         greyframe = cv2.cvtColor(crop(frame, _region), cv2.COLOR_BGR2GRAY)
-        _, greyframe = cv2.threshold(
-            greyframe, threshold, 255, cv2.THRESH_BINARY)
-        _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask.image)
+        if mask.image is not None:
+            cv2.bitwise_and(greyframe, mask.image, dst=greyframe)
+        maxVal = greyframe.max()
 
         if logging.get_debug_level() > 1:
             imglog = logging.ImageLogger("is_screen_black")
             imglog.imwrite("source", frame)
             if mask.image is not None:
                 imglog.imwrite('mask', mask.image)
-                imglog.imwrite('non-black-regions-after-masking',
-                               numpy.bitwise_and(greyframe, mask.image))
-            else:
-                imglog.imwrite('non-black-regions-after-masking', greyframe)
+            _, thresholded = cv2.threshold(greyframe, threshold, 255,
+                                           cv2.THRESH_BINARY)
+            imglog.imwrite('non-black-regions-after-masking', thresholded)
 
-        result = IsScreenBlackResult(maxVal == 0, frame)
+        result = IsScreenBlackResult(bool(maxVal <= threshold), frame)
         debug("is_screen_black: {found} black screen using mask={mask}, "
-              "threshold={threshold}, region={region}: {result}".format(
+              "threshold={threshold}, region={region}: "
+              "{result}, maximum_intensity={maxVal}".format(
                   found="Found" if result.black else "Didn't find",
                   mask=mask.friendly_name,
-                  threshold=threshold, region=region, result=result))
+                  threshold=threshold,
+                  region=region,
+                  result=result,
+                  maxVal=maxVal))
         return result
 
 # Utility functions
