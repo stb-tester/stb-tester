@@ -52,9 +52,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.is_screen_black` logs the result of its analysis, similar to
   `stbt.match`, `stbt.ocr`, etc.
 
-* If your test-pack is a Python module (e.g. contains an `__init__.py` in each
-  directory under `tests/`) relative imports from test scripts will now work.
-  This allows you to organise your tests into multiple directories easily.
+* If your test-pack is a Python module (that is, it contains an `__init__.py`
+  in each directory under `tests/`) then relative imports from test scripts
+  will now work. This allows you to organise your tests into multiple
+  directories easily.
 
 ##### Minor fixes and packaging fixes
 
