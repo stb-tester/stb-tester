@@ -486,12 +486,12 @@ class MatchResult(object):
     def __repr__(self):
         return (
             "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
-            "frame=<%s>, image=%s)" % (
+            "frame=%s, image=%s)" % (
                 self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
-                _str_frame_dimensions(self.frame),
+                _frame_repr(self.frame),
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
@@ -510,13 +510,15 @@ class MatchResult(object):
             return int(self.time * 1e9)
 
 
-def _str_frame_dimensions(frame):
+def _frame_repr(frame):
     if frame is None:
         return "None"
+    if isinstance(frame, Frame):
+        return repr(frame)
     if len(frame.shape) == 3:
-        return "%dx%dx%d" % (frame.shape[1], frame.shape[0], frame.shape[2])
+        return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])
     else:
-        return "%dx%d" % (frame.shape[1], frame.shape[0])
+        return "<%dx%d>" % (frame.shape[1], frame.shape[0])
 
 
 class _ImageFromUser(namedtuple(
@@ -642,9 +644,9 @@ class MotionResult(object):
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r, frame=<%s>)" % (
+            "MotionResult(time=%r, motion=%r, region=%r, frame=%s)" % (
                 self.time, self.motion, self.region,
-                _str_frame_dimensions(self.frame)))
+                _frame_repr(self.frame)))
 
     @property
     def timestamp(self):
@@ -681,9 +683,9 @@ class IsScreenBlackResult(object):
         return self.black
 
     def __repr__(self):
-        return ("IsScreenBlackResult(black=%r, frame=<%s>)" % (
+        return ("IsScreenBlackResult(black=%r, frame=%s)" % (
             self.black,
-            _str_frame_dimensions(self.frame)))
+            _frame_repr(self.frame)))
 
 
 class OcrMode(IntEnum):
@@ -746,12 +748,12 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(time=%r, match=%r, region=%r, frame=<%s>, "
+            "TextMatchResult(time=%r, match=%r, region=%r, frame=%s, "
             "text=%r)" % (
                 self.time,
                 self.match,
                 self.region,
-                _str_frame_dimensions(self.frame),
+                _frame_repr(self.frame),
                 self.text))
 
     @property

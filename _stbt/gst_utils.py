@@ -107,6 +107,14 @@ class Frame(numpy.ndarray):
             return
         self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
 
+    def __repr__(self):
+        if len(self.shape) == 3:
+            dimensions = "%dx%dx%d" % (
+                self.shape[1], self.shape[0], self.shape[2])
+        else:
+            dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+        return "<stbt.Frame(time=%r, dimensions=%s)>" % (self.time, dimensions)
+
 
 def array_from_sample(sample, readwrite=False):
     return Frame(
