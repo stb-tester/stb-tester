@@ -485,9 +485,9 @@ class MatchResult(object):
 
     def __repr__(self):
         return (
-            "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
+            "MatchResult(time=%s, match=%r, region=%r, first_pass_result=%r, "
             "frame=%s, image=%s)" % (
-                self.time,
+                "None" if self.time is None else "%.3f" % self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
@@ -644,9 +644,9 @@ class MotionResult(object):
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r, frame=%s)" % (
-                self.time, self.motion, self.region,
-                _frame_repr(self.frame)))
+            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
+                "None" if self.time is None else "%.3f" % self.time,
+                self.motion, self.region, _frame_repr(self.frame)))
 
     @property
     def timestamp(self):
@@ -737,9 +737,9 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(time=%r, match=%r, region=%r, frame=%s, "
+            "TextMatchResult(time=%s, match=%r, region=%r, frame=%s, "
             "text=%r)" % (
-                self.time,
+                "None" if self.time is None else "%.3f" % self.time,
                 self.match,
                 self.region,
                 _frame_repr(self.frame),

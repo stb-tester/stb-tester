@@ -9,11 +9,12 @@ def test_motionresult_repr():
     assert repr(stbt.MotionResult(
         time=1466002032.335607, motion=True,
         region=stbt.Region(x=321, y=32, right=334, bottom=42),
-        frame=numpy.zeros((720, 1280, 3)))) \
+        frame=stbt.Frame(numpy.zeros((720, 1280, 3)),
+                         time=1466002032.335607))) \
         == ("MotionResult("
-            "time=1466002032.335607, motion=True, "
+            "time=1466002032.336, motion=True, "
             "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<1280x720x3>)")
+            "frame=<stbt.Frame(time=1466002032.336, dimensions=1280x720x3)>)")
 
 
 def test_wait_for_motion_half_motion_str_2of4():
