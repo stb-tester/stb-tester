@@ -486,12 +486,12 @@ class MatchResult(object):
     def __repr__(self):
         return (
             "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
-            "frame=<%s>, image=%s)" % (
+            "frame=%s, image=%s)" % (
                 self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
-                _str_frame_dimensions(self.frame),
+                _frame_repr(self.frame),
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
@@ -510,13 +510,15 @@ class MatchResult(object):
             return int(self.time * 1e9)
 
 
-def _str_frame_dimensions(frame):
+def _frame_repr(frame):
     if frame is None:
         return "None"
+    if isinstance(frame, Frame):
+        return repr(frame)
     if len(frame.shape) == 3:
-        return "%dx%dx%d" % (frame.shape[1], frame.shape[0], frame.shape[2])
+        return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])
     else:
-        return "%dx%d" % (frame.shape[1], frame.shape[0])
+        return "<%dx%d>" % (frame.shape[1], frame.shape[0])
 
 
 class _ImageFromUser(namedtuple(
@@ -642,9 +644,9 @@ class MotionResult(object):
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r, frame=<%s>)" % (
+            "MotionResult(time=%r, motion=%r, region=%r, frame=%s)" % (
                 self.time, self.motion, self.region,
-                _str_frame_dimensions(self.frame)))
+                _frame_repr(self.frame)))
 
     @property
     def timestamp(self):
@@ -663,6 +665,27 @@ def test_motionresult_repr():
             "time=1466002032.335607, motion=True, "
             "region=Region(x=321, y=32, right=334, bottom=42), "
             "frame=<1280x720x3>)")
+
+
+class IsScreenBlackResult(object):
+    """The result from `is_screen_black`.
+
+    :ivar bool black: True if the screen was black. This is the same as
+        evaluating the ``IsScreenBlackResult`` as a bool.
+
+    :ivar Frame frame: The video frame that was analyzed.
+    """
+    def __init__(self, black, frame):
+        self.black = black
+        self.frame = frame
+
+    def __nonzero__(self):
+        return self.black
+
+    def __repr__(self):
+        return ("IsScreenBlackResult(black=%r, frame=%s)" % (
+            self.black,
+            _frame_repr(self.frame)))
 
 
 class OcrMode(IntEnum):
@@ -725,12 +748,12 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(time=%r, match=%r, region=%r, frame=<%s>, "
+            "TextMatchResult(time=%r, match=%r, region=%r, frame=%s, "
             "text=%r)" % (
                 self.time,
                 self.match,
                 self.region,
-                _str_frame_dimensions(self.frame),
+                _frame_repr(self.frame),
                 self.text))
 
     @property
@@ -1283,29 +1306,37 @@ class DeviceUnderTest(object):
         if frame is None:
             frame = self.get_frame()
 
-        region = Region.intersect(_image_region(frame), region)
-
         if mask is None:
             mask = _ImageFromUser(None, None, None)
         else:
             mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
 
-        greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-        _, greyframe = cv2.threshold(
-            greyframe, threshold, 255, cv2.THRESH_BINARY)
-        _, maxVal, _, _ = cv2.minMaxLoc(greyframe, mask.image)
+        _region = Region.intersect(_image_region(frame), region)
+        greyframe = cv2.cvtColor(crop(frame, _region), cv2.COLOR_BGR2GRAY)
+        if mask.image is not None:
+            cv2.bitwise_and(greyframe, mask.image, dst=greyframe)
+        maxVal = greyframe.max()
 
         if logging.get_debug_level() > 1:
             imglog = logging.ImageLogger("is_screen_black")
             imglog.imwrite("source", frame)
             if mask.image is not None:
                 imglog.imwrite('mask', mask.image)
-                imglog.imwrite('non-black-regions-after-masking',
-                               numpy.bitwise_and(greyframe, mask.image))
-            else:
-                imglog.imwrite('non-black-regions-after-masking', greyframe)
+            _, thresholded = cv2.threshold(greyframe, threshold, 255,
+                                           cv2.THRESH_BINARY)
+            imglog.imwrite('non-black-regions-after-masking', thresholded)
 
-        return maxVal == 0
+        result = IsScreenBlackResult(bool(maxVal <= threshold), frame)
+        debug("is_screen_black: {found} black screen using mask={mask}, "
+              "threshold={threshold}, region={region}: "
+              "{result}, maximum_intensity={maxVal}".format(
+                  found="Found" if result.black else "Didn't find",
+                  mask=mask.friendly_name,
+                  threshold=threshold,
+                  region=region,
+                  result=result,
+                  maxVal=maxVal))
+        return result
 
 # Utility functions
 # ===========================================================================
