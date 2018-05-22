@@ -656,17 +656,6 @@ class MotionResult(object):
             return int(self.time * 1e9)
 
 
-def test_motionresult_repr():
-    assert repr(MotionResult(
-        time=1466002032.335607, motion=True,
-        region=Region(x=321, y=32, right=334, bottom=42),
-        frame=numpy.zeros((720, 1280, 3)))) \
-        == ("MotionResult("
-            "time=1466002032.335607, motion=True, "
-            "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<1280x720x3>)")
-
-
 class IsScreenBlackResult(object):
     """The result from `is_screen_black`.
 
