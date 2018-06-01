@@ -22,6 +22,24 @@ except ImportError:
     gpl_controls = None
 
 
+# pylint: disable=abstract-method
+
+class RemoteControl(object):
+    """Base class for remote-control implementations."""
+
+    def press(self, key):
+        raise NotImplementedError(
+            "%s: 'press' is not implemented" % self.__class__.__name__)
+
+    def keydown(self, key):
+        raise NotImplementedError(
+            "%s: 'keydown' is not implemented" % self.__class__.__name__)
+
+    def keyup(self, key):
+        raise NotImplementedError(
+            "%s: 'keyup' is not implemented" % self.__class__.__name__)
+
+
 class UnknownKeyError(Exception):
     pass
 
@@ -81,21 +99,18 @@ def new_adb_device(address):
     return AdbDevice(adb_device=address, tcpip=tcpip)
 
 
-class NullControl(object):
-    @staticmethod
-    def press(key):
+class NullControl(RemoteControl):
+    def press(self, key):
         debug('NullControl: Ignoring request to press "%s"' % key)
 
-    @staticmethod
-    def keydown(key):
+    def keydown(self, key):
         debug('NullControl: Ignoring request to hold "%s"' % key)
 
-    @staticmethod
-    def keyup(key):
+    def keyup(self, key):
         debug('NullControl: Ignoring request to release "%s"' % key)
 
 
-class ErrorControl(object):
+class ErrorControl(RemoteControl):
     def __init__(self, message):
         if message is None:
             message = "No remote control configured"
@@ -111,7 +126,7 @@ class ErrorControl(object):
         raise RuntimeError(self.message)
 
 
-class FileControl(object):
+class FileControl(RemoteControl):
     """Writes keypress events to file.  Mostly useful for testing.  Defaults to
     writing to stdout.
     """
@@ -134,7 +149,7 @@ class FileControl(object):
         self.outfile.flush()
 
 
-class VideoTestSrcControl(object):
+class VideoTestSrcControl(RemoteControl):
     """Remote control used by selftests.
 
     Changes the videotestsrc image to the specified pattern ("0" to "20").
@@ -180,20 +195,12 @@ class VideoTestSrcControl(object):
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
 
-    def keydown(self, key):
-        raise NotImplementedError(
-            "VideoTestSrcControl: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "VideoTestSrcControl: pressing (holding) not implemented")
-
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
 
 
-class LircControl(object):
+class LircControl(RemoteControl):
     """Send a key-press via a LIRC-enabled infrared blaster.
 
     See http://www.lirc.org/html/technical.html#applications
@@ -320,7 +327,7 @@ def new_tcp_lirc_control(control_name, hostname=None, port=None):
     return LircControl(control_name, _connect)
 
 
-class RemoteFrameBuffer(object):
+class RemoteFrameBuffer(RemoteControl):
     """Send a key-press to a set-top box running a VNC Remote Frame Buffer
         protocol.
         Expected key press input:
@@ -394,14 +401,6 @@ class RemoteFrameBuffer(object):
         self._release(key)
         self._close()
 
-    def keydown(self, key):
-        raise NotImplementedError(
-            "RemoteFrameBuffer: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "RemoteFrameBuffer: pressing (holding) not implemented")
-
     def _connect_socket(self):
         self.socket = socket.socket()
         s = self.socket
@@ -445,7 +444,7 @@ class RemoteFrameBuffer(object):
         return key_code
 
 
-class IRNetBoxControl(object):
+class IRNetBoxControl(RemoteControl):
     """Send a key-press via the network-controlled RedRat IRNetBox IR emitter.
 
     See http://www.redrat.co.uk/products/irnetbox.html
@@ -470,14 +469,6 @@ class IRNetBoxControl(object):
             irnb.irsend_raw(
                 port=self.output, power=100, data=self.config[key])
         debug("Pressed " + key)
-
-    def keydown(self, key):
-        raise NotImplementedError(
-            "IRNetBoxControl: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "IRNetBoxControl: pressing (holding) not implemented")
 
     def _connect(self):
         try:
@@ -553,7 +544,7 @@ class RokuHttpControl(object):
         debug("Released " + key)
 
 
-class _SamsungTCPControl(object):
+class _SamsungTCPControl(RemoteControl):
     """Send a key-press via Samsung remote control protocol.
 
     See http://sc0ty.pl/2012/02/samsung-tv-network-remote-control-protocol/
@@ -596,14 +587,6 @@ class _SamsungTCPControl(object):
         reply = self.socket.recv(4096)
         debug("SamsungTCPControl reply: %s\n" % reply)
 
-    def keydown(self, key):
-        raise NotImplementedError(
-            "SamsungTCPControl: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "SamsungTCPControl: pressing (holding) not implemented")
-
 
 def _new_samsung_tcp_control(hostname, port):
     return _SamsungTCPControl(_connect_tcp_socket(hostname, int(port or 55000)))
@@ -619,7 +602,7 @@ def _load_key_mapping(filename):
     return out
 
 
-class _X11Control(object):
+class _X11Control(RemoteControl):
     """Simulate key presses using xdotool.
     """
     def __init__(self, display=None, mapping=None):
@@ -637,14 +620,6 @@ class _X11Control(object):
         subprocess.check_call(
             ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed " + key)
-
-    def keydown(self, key):
-        raise NotImplementedError(
-            "X11Control: pressing (holding) not implemented")
-
-    def keyup(self, key):
-        raise NotImplementedError(
-            "X11Control: pressing (holding) not implemented")
 
 
 def file_control_recorder(filename):
