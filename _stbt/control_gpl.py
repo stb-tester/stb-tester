@@ -217,16 +217,23 @@ class HdmiCecControl(object):
         debug("Released %s" % key)
 
     def send_keydowns(self, key):
+        # CEC spec section 13.13.3 says that the receiver should assume a keyup
+        # if it hasn't seen one within a receiver-determined timeframe which
+        # can't be less than 550ms. For press-and-hold the initiator should
+        # send repeated keydown commands (200 to 450ms apart) followed by the
+        # final keyup.
         end_time = time.time() + 60
+        next_press_deadline = time.time() + 0.3
         with self.lock:
             while True:
-                self.lock.wait(0.450)
+                self.lock.wait(max(0, next_press_deadline - time.time()))
                 if not self.press_and_holding:
                     return
                 if time.time() > end_time:
                     debug("cec: Warning: Releasing %s as I've been holding it "
                           "longer than 60 seconds" % key)
                     return
+                next_press_deadline = time.time() + 0.3
                 if not self.lib.Transmit(self.keydown_command(key)):
                     debug("cec: Warning: Failed to send repeated keydown for %s"
                           % key)
@@ -295,7 +302,7 @@ def test_hdmi_cec_control():
         r.press("0x4A")
         r.press("0x4a")
         r.keydown("KEY_ROOT_MENU")
-        time.sleep(1)
+        time.sleep(0.7)
         r.keyup("KEY_ROOT_MENU")
 
     expected = dedent("""\
