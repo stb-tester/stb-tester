@@ -63,7 +63,7 @@ def uri_to_control(uri, display=None):
         (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_control),
         (r'test', lambda: VideoTestSrcControl(display)),
-        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Control),
+        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', X11Control),
         (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
     ]
     if gpl_controls is not None:
@@ -544,7 +544,7 @@ class RokuHttpControl(object):
         debug("Released " + key)
 
 
-class _SamsungTCPControl(RemoteControl):
+class SamsungTCPControl(RemoteControl):
     """Send a key-press via Samsung remote control protocol.
 
     See http://sc0ty.pl/2012/02/samsung-tv-network-remote-control-protocol/
@@ -556,7 +556,7 @@ class _SamsungTCPControl(RemoteControl):
     @staticmethod
     def _encode_string(string):
         r"""
-        >>> _SamsungTCPControl._encode_string('192.168.0.10')
+        >>> SamsungTCPControl._encode_string('192.168.0.10')
         '\x10\x00MTkyLjE2OC4wLjEw'
         """
         from base64 import b64encode
@@ -589,7 +589,7 @@ class _SamsungTCPControl(RemoteControl):
 
 
 def _new_samsung_tcp_control(hostname, port):
-    return _SamsungTCPControl(_connect_tcp_socket(hostname, int(port or 55000)))
+    return SamsungTCPControl(_connect_tcp_socket(hostname, int(port or 55000)))
 
 
 def _load_key_mapping(filename):
@@ -602,7 +602,7 @@ def _load_key_mapping(filename):
     return out
 
 
-class _X11Control(RemoteControl):
+class X11Control(RemoteControl):
     """Simulate key presses using xdotool.
     """
     def __init__(self, display=None, mapping=None):
@@ -848,7 +848,7 @@ def test_samsung_tcp_control():
         def getsockname(self):
             return ['192.168.0.8', 12345]
 
-    r = _SamsungTCPControl(TestSocket())
+    r = SamsungTCPControl(TestSocket())
     assert len(sent_data) == 1
     assert sent_data[0] == (
         b'\x00\x13\x00iphone.iapp.samsung0\x00d\x00\x10\x00MTkyLjE2OC4wLjg=' +
