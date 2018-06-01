@@ -770,7 +770,7 @@ def new_device_under_test_from_config(
     """
     `parsed_args` if present should come from calling argparser().parse_args().
     """
-    from _stbt.control import uri_to_remote
+    from _stbt.control import uri_to_control
 
     if parsed_args is None:
         args = argparser().parse_args([])
@@ -825,7 +825,7 @@ def new_device_under_test_from_config(
         args.source_pipeline, sink_pipeline, args.restart_source,
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
-        display=display[0], control=uri_to_remote(args.control, display[0]),
+        display=display[0], control=uri_to_control(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop,
         use_old_threading_behaviour=use_old_threading_behaviour)
 

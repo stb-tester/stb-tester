@@ -35,7 +35,7 @@ import socket
 import sys
 
 import _stbt.logging
-from _stbt.control import uri_to_remote
+from _stbt.control import uri_to_control
 
 
 def main(argv):
@@ -59,7 +59,7 @@ def main(argv):
         s.bind(args.socket)
         s.listen(5)
 
-    control = uri_to_remote(args.output)
+    control = uri_to_control(args.output)
 
     while True:
         conn, _ = s.accept()

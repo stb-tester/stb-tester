@@ -284,9 +284,9 @@ class HdmiCecControl(object):
 
 
 def test_hdmi_cec_control():
-    from .control import uri_to_remote
+    from .control import uri_to_control
     with _fake_cec() as io:
-        r = uri_to_remote('hdmi-cec:test-device:7:a')
+        r = uri_to_control('hdmi-cec:test-device:7:a')
         r.press("KEY_UP")
         r.press("KEY_UP")
         r.press("KEY_POWER")
@@ -323,9 +323,9 @@ def test_hdmi_cec_control():
 
 
 def test_hdmi_cec_control_defaults():
-    from .control import uri_to_remote
+    from .control import uri_to_control
     with _fake_cec() as io:
-        r = uri_to_remote('hdmi-cec:test-device')
+        r = uri_to_control('hdmi-cec:test-device')
         r.press("KEY_OK")
 
     assert io.getvalue() == dedent("""\

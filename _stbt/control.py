@@ -14,7 +14,7 @@ from . import irnetbox, utils
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
 
-__all__ = ['uri_to_remote', 'uri_to_remote_recorder']
+__all__ = ['uri_to_control', 'uri_to_control_recorder']
 
 try:
     from .control_gpl import controls as gpl_controls
@@ -26,8 +26,8 @@ class UnknownKeyError(Exception):
     pass
 
 
-def uri_to_remote(uri, display=None):
-    remotes = [
+def uri_to_control(uri, display=None):
+    controls = [
         (r'adb(:(?P<address>.*))?', new_adb_device),
         (r'error(:(?P<message>.*))?', ErrorControl),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
@@ -35,40 +35,40 @@ def uri_to_remote(uri, display=None):
              (?P<hostname>[^:]+)
              (:(?P<port>\d+))?
              :(?P<output>\d+)
-             :(?P<config>[^:]+)''', IRNetBoxRemote),
+             :(?P<config>[^:]+)''', IRNetBoxControl),
         (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
-         new_tcp_lirc_remote),
+         new_tcp_lirc_control),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
-         new_local_lirc_remote),
-        (r'none', NullRemote),
+         new_local_lirc_control),
+        (r'none', NullControl),
         (r'roku:(?P<hostname>[^:]+)', RokuHttpControl),
         (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
-         _new_samsung_tcp_remote),
+         _new_samsung_tcp_control),
         (r'test', lambda: VideoTestSrcControl(display)),
-        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Remote),
+        (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', _X11Control),
         (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
     ]
     if gpl_controls is not None:
-        remotes += gpl_controls
+        controls += gpl_controls
 
-    for regex, factory in remotes:
+    for regex, factory in controls:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
             return factory(**m.groupdict())
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
 
 
-def uri_to_remote_recorder(uri):
-    remotes = [
-        ('file://(?P<filename>.+)', file_remote_recorder),
+def uri_to_control_recorder(uri):
+    controls = [
+        ('file://(?P<filename>.+)', file_control_recorder),
         (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
-         lirc_remote_listen_tcp),
+         lirc_control_listen_tcp),
         (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
-         lirc_remote_listen),
+         lirc_control_listen),
         (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
     ]
 
-    for regex, factory in remotes:
+    for regex, factory in controls:
         m = re.match(regex, uri)
         if m:
             return factory(**m.groupdict())
@@ -81,18 +81,18 @@ def new_adb_device(address):
     return AdbDevice(adb_device=address, tcpip=tcpip)
 
 
-class NullRemote(object):
+class NullControl(object):
     @staticmethod
     def press(key):
-        debug('NullRemote: Ignoring request to press "%s"' % key)
+        debug('NullControl: Ignoring request to press "%s"' % key)
 
     @staticmethod
     def keydown(key):
-        debug('NullRemote: Ignoring request to hold "%s"' % key)
+        debug('NullControl: Ignoring request to hold "%s"' % key)
 
     @staticmethod
     def keyup(key):
-        debug('NullRemote: Ignoring request to release "%s"' % key)
+        debug('NullControl: Ignoring request to release "%s"' % key)
 
 
 class ErrorControl(object):
@@ -193,7 +193,7 @@ def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
 
 
-class LircRemote(object):
+class LircControl(object):
     """Send a key-press via a LIRC-enabled infrared blaster.
 
     See http://www.lirc.org/html/technical.html#applications
@@ -270,7 +270,7 @@ def _read_lircd_reply(stream, command):
 DEFAULT_LIRCD_SOCKET = '/var/run/lirc/lircd'
 
 
-def new_local_lirc_remote(lircd_socket, control_name):
+def new_local_lirc_control(lircd_socket, control_name):
     if lircd_socket is None:
         lircd_socket = DEFAULT_LIRCD_SOCKET
 
@@ -288,17 +288,17 @@ def new_local_lirc_remote(lircd_socket, control_name):
 
     # Connect once so that the test fails immediately if Lirc isn't running
     # (instead of failing at the first `press` in the script).
-    debug("LircRemote: Connecting to %s" % lircd_socket)
+    debug("LircControl: Connecting to %s" % lircd_socket)
     _connect()
-    debug("LircRemote: Connected to %s" % lircd_socket)
+    debug("LircControl: Connected to %s" % lircd_socket)
 
-    return LircRemote(control_name, _connect)
+    return LircControl(control_name, _connect)
 
 
-def new_tcp_lirc_remote(control_name, hostname=None, port=None):
+def new_tcp_lirc_control(control_name, hostname=None, port=None):
     """Send a key-press via a LIRC-enabled device through a LIRC TCP listener.
 
-        control = new_tcp_lirc_remote("localhost", "8765", "humax")
+        control = new_tcp_lirc_control("localhost", "8765", "humax")
         control.press("MENU")
     """
     if hostname is None:
@@ -313,11 +313,11 @@ def new_tcp_lirc_remote(control_name, hostname=None, port=None):
 
     # Connect once so that the test fails immediately if Lirc isn't running
     # (instead of failing at the first `press` in the script).
-    debug("TCPLircRemote: Connecting to %s:%d" % (hostname, port))
+    debug("TCPLircControl: Connecting to %s:%d" % (hostname, port))
     _connect()
-    debug("TCPLircRemote: Connected to %s:%d" % (hostname, port))
+    debug("TCPLircControl: Connected to %s:%d" % (hostname, port))
 
-    return LircRemote(control_name, _connect)
+    return LircControl(control_name, _connect)
 
 
 class RemoteFrameBuffer(object):
@@ -445,7 +445,7 @@ class RemoteFrameBuffer(object):
         return key_code
 
 
-class IRNetBoxRemote(object):
+class IRNetBoxControl(object):
     """Send a key-press via the network-controlled RedRat IRNetBox IR emitter.
 
     See http://www.redrat.co.uk/products/irnetbox.html
@@ -459,11 +459,11 @@ class IRNetBoxRemote(object):
         self.config = irnetbox.RemoteControlConfig(config)
         # Connect once so that the test fails immediately if irNetBox not found
         # (instead of failing at the first `press` in the script).
-        debug("IRNetBoxRemote: Connecting to %s" % hostname)
+        debug("IRNetBoxControl: Connecting to %s" % hostname)
         with self._connect() as irnb:
             irnb.power_on()
         time.sleep(0.5)
-        debug("IRNetBoxRemote: Connected to %s" % hostname)
+        debug("IRNetBoxControl: Connected to %s" % hostname)
 
     def press(self, key):
         with self._connect() as irnb:
@@ -473,11 +473,11 @@ class IRNetBoxRemote(object):
 
     def keydown(self, key):
         raise NotImplementedError(
-            "IRNetBoxRemote: pressing (holding) not implemented")
+            "IRNetBoxControl: pressing (holding) not implemented")
 
     def keyup(self, key):
         raise NotImplementedError(
-            "IRNetBoxRemote: pressing (holding) not implemented")
+            "IRNetBoxControl: pressing (holding) not implemented")
 
     def _connect(self):
         try:
@@ -553,7 +553,7 @@ class RokuHttpControl(object):
         debug("Released " + key)
 
 
-class _SamsungTCPRemote(object):
+class _SamsungTCPControl(object):
     """Send a key-press via Samsung remote control protocol.
 
     See http://sc0ty.pl/2012/02/samsung-tv-network-remote-control-protocol/
@@ -565,7 +565,7 @@ class _SamsungTCPRemote(object):
     @staticmethod
     def _encode_string(string):
         r"""
-        >>> _SamsungTCPRemote._encode_string('192.168.0.10')
+        >>> _SamsungTCPControl._encode_string('192.168.0.10')
         '\x10\x00MTkyLjE2OC4wLjEw'
         """
         from base64 import b64encode
@@ -586,7 +586,7 @@ class _SamsungTCPRemote(object):
         payload += self._encode_string("stb-tester")
         self._send_payload(payload)
         reply = self.socket.recv(4096)
-        debug("SamsungTCPRemote reply: %s\n" % reply)
+        debug("SamsungTCPControl reply: %s\n" % reply)
 
     def press(self, key):
         payload_start = bytearray([0x00, 0x00, 0x00])
@@ -594,19 +594,19 @@ class _SamsungTCPRemote(object):
         self._send_payload(payload_start + key_enc)
         debug("Pressed " + key)
         reply = self.socket.recv(4096)
-        debug("SamsungTCPRemote reply: %s\n" % reply)
+        debug("SamsungTCPControl reply: %s\n" % reply)
 
     def keydown(self, key):
         raise NotImplementedError(
-            "SamsungTCPRemote: pressing (holding) not implemented")
+            "SamsungTCPControl: pressing (holding) not implemented")
 
     def keyup(self, key):
         raise NotImplementedError(
-            "SamsungTCPRemote: pressing (holding) not implemented")
+            "SamsungTCPControl: pressing (holding) not implemented")
 
 
-def _new_samsung_tcp_remote(hostname, port):
-    return _SamsungTCPRemote(_connect_tcp_socket(hostname, int(port or 55000)))
+def _new_samsung_tcp_control(hostname, port):
+    return _SamsungTCPControl(_connect_tcp_socket(hostname, int(port or 55000)))
 
 
 def _load_key_mapping(filename):
@@ -619,7 +619,7 @@ def _load_key_mapping(filename):
     return out
 
 
-class _X11Remote(object):
+class _X11Control(object):
     """Simulate key presses using xdotool.
     """
     def __init__(self, display=None, mapping=None):
@@ -640,14 +640,14 @@ class _X11Remote(object):
 
     def keydown(self, key):
         raise NotImplementedError(
-            "X11Remote: pressing (holding) not implemented")
+            "X11Control: pressing (holding) not implemented")
 
     def keyup(self, key):
         raise NotImplementedError(
-            "X11Remote: pressing (holding) not implemented")
+            "X11Control: pressing (holding) not implemented")
 
 
-def file_remote_recorder(filename):
+def file_control_recorder(filename):
     """ A generator that returns lines from the file given by filename.
 
     Unfortunately treating a file as a iterator doesn't work in the case of
@@ -684,7 +684,7 @@ def read_records(stream, sep):
             yield i
 
 
-def lirc_remote_listen(lircd_socket, control_name):
+def lirc_control_listen(lircd_socket, control_name):
     """Returns an iterator yielding keypresses received from a lircd file
     socket -- that is, the keypresses that lircd received from a hardware
     infrared receiver and is now sending on to us.
@@ -701,7 +701,7 @@ def lirc_remote_listen(lircd_socket, control_name):
     return lirc_key_reader(lircd.makefile(), control_name)
 
 
-def lirc_remote_listen_tcp(address, port, control_name):
+def lirc_control_listen_tcp(address, port, control_name):
     """Returns an iterator yielding keypresses received from a lircd TCP
     socket."""
     address = address or 'localhost'
@@ -784,9 +784,9 @@ class FileToSocket(object):
 @contextmanager
 def _fake_lircd():
     import multiprocessing
-    # This needs to accept 2 connections (from LircRemote and
-    # lirc_remote_listen) and, on receiving input from the LircRemote
-    # connection, write to the lirc_remote_listen connection.
+    # This needs to accept 2 connections (from LircControl and
+    # lirc_control_listen) and, on receiving input from the LircControl
+    # connection, write to the lirc_control_listen connection.
     with utils.named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
         address = tmp + '/lircd'
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -817,10 +817,10 @@ def _fake_lircd():
             t.terminate()
 
 
-def test_that_lirc_remote_is_symmetric_with_lirc_remote_listen():
+def test_that_lirc_control_is_symmetric_with_lirc_control_listen():
     with _fake_lircd() as lircd_socket:
-        listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
-        control = uri_to_remote('lirc:%s:test' % (lircd_socket))
+        listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
+        control = uri_to_control('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
             assert listener.next() == key
@@ -832,8 +832,8 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
     try:
         with _fake_lircd() as lircd_socket:
             DEFAULT_LIRCD_SOCKET = lircd_socket
-            listener = uri_to_remote_recorder('lirc:%s:test' % lircd_socket)
-            uri_to_remote('lirc::test').press('KEY')
+            listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
+            uri_to_control('lirc::test').press('KEY')
             assert listener.next() == 'KEY'
     finally:
         DEFAULT_LIRCD_SOCKET = old_default
@@ -844,7 +844,7 @@ def test_roku_http_control():
     from nose.tools import assert_raises  # pylint:disable=no-name-in-module
     from requests.exceptions import HTTPError
 
-    control = uri_to_remote('roku:192.168.1.3')
+    control = uri_to_control('roku:192.168.1.3')
     with responses.RequestsMock() as mock:
         # This raises if the URL was not accessed.
         mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
@@ -859,7 +859,7 @@ def test_roku_http_control():
             control.press("Homeopathy")
 
 
-def test_samsung_tcp_remote():
+def test_samsung_tcp_control():
     # This is more of a regression test than anything.
     sent_data = []
 
@@ -873,7 +873,7 @@ def test_samsung_tcp_remote():
         def getsockname(self):
             return ['192.168.0.8', 12345]
 
-    r = _SamsungTCPRemote(TestSocket())
+    r = _SamsungTCPControl(TestSocket())
     assert len(sent_data) == 1
     assert sent_data[0] == (
         b'\x00\x13\x00iphone.iapp.samsung0\x00d\x00\x10\x00MTkyLjE2OC4wLjg=' +
@@ -884,15 +884,15 @@ def test_samsung_tcp_remote():
         b'\x00\x13\x00iphone.iapp.samsung\r\x00\x00\x00\x00\x08\x00S0VZXzA=')
 
 
-def test_x11_remote():
+def test_x11_control():
     from unittest import SkipTest
     from .x11 import x_server
     if not find_executable('Xorg') or not find_executable('xterm'):
-        raise SkipTest("Testing X11Remote requires X11 and xterm")
+        raise SkipTest("Testing X11Control requires X11 and xterm")
 
     with utils.named_temporary_directory() as tmp, \
             x_server(320, 240) as display:
-        r = uri_to_remote('x11:%s' % display)
+        r = uri_to_control('x11:%s' % display)
 
         subprocess.Popen(
             ['xterm', '-l', '-lf', 'xterm.log'],
@@ -915,23 +915,23 @@ def test_x11_remote():
         assert os.path.exists(tmp + '/good')
 
 
-def test_uri_to_remote():
-    global IRNetBoxRemote  # pylint: disable=W0601
-    orig_IRNetBoxRemote = IRNetBoxRemote
+def test_uri_to_control():
+    global IRNetBoxControl  # pylint: disable=W0601
+    orig_IRNetBoxControl = IRNetBoxControl
     try:
         # pylint: disable=W0621
-        def IRNetBoxRemote(hostname, port, output, config):
+        def IRNetBoxControl(hostname, port, output, config):
             return ":".join([hostname, str(port or '10001'), output, config])
-        out = uri_to_remote("irnetbox:localhost:1234:1:conf")
+        out = uri_to_control("irnetbox:localhost:1234:1:conf")
         assert out == "localhost:1234:1:conf", (
             "Failed to parse uri with irnetbox port. Output was '%s'" % out)
-        out = uri_to_remote("irnetbox:localhost:1:conf")
+        out = uri_to_control("irnetbox:localhost:1:conf")
         assert out == "localhost:10001:1:conf", (
             "Failed to parse uri without irnetbox port. Output was '%s'" % out)
         try:
-            uri_to_remote("irnetbox:localhost::1:conf")
+            uri_to_control("irnetbox:localhost::1:conf")
             assert False, "Uri with empty field should have raised"
         except ConfigurationError:
             pass
     finally:
-        IRNetBoxRemote = orig_IRNetBoxRemote
+        IRNetBoxControl = orig_IRNetBoxControl

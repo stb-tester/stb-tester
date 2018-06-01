@@ -7,7 +7,7 @@ from textwrap import dedent
 
 import pytest
 
-from _stbt.control import uri_to_remote
+from _stbt.control import uri_to_control
 from _stbt.core import wait_until
 from _stbt.utils import named_temporary_directory
 
@@ -76,12 +76,12 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
         with scoped_process(proc):
             wait_until(lambda: (
                 os.path.exists(t("lircd.sock")) or proc.poll() is not None))
-            testremote = uri_to_remote("lirc:%s:stbt-test" % t("lircd.sock"))
+            testcontrol = uri_to_control("lirc:%s:stbt-test" % t("lircd.sock"))
 
-            testremote.press("KEY_LEFT")
-            testremote.press("KEY_RIGHT")
-            testremote.keydown("KEY_MENU")
-            testremote.keyup("KEY_MENU")
+            testcontrol.press("KEY_LEFT")
+            testcontrol.press("KEY_RIGHT")
+            testcontrol.keydown("KEY_MENU")
+            testcontrol.keyup("KEY_MENU")
             expected = dedent("""\
                 KEY_LEFT
                 KEY_RIGHT
@@ -114,10 +114,10 @@ def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # 
             ["stbt-control-relay", "-vv", "file:" + tmpfile.name],
             preexec_fn=socket_passing_setup(s))
         with scoped_process(proc):
-            testremote = uri_to_remote("lirc:%s:%i:stbt" % s.getsockname())
+            testcontrol = uri_to_control("lirc:%s:%i:stbt" % s.getsockname())
 
-            testremote.press("KEY_UP")
-            testremote.press("KEY_DOWN")
+            testcontrol.press("KEY_UP")
+            testcontrol.press("KEY_DOWN")
             expected = "KEY_UP\nKEY_DOWN\n"
 
             assert tmpfile.read() == expected
