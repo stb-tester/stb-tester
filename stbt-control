@@ -42,13 +42,13 @@ def main(argv):
     if args.help_keymap:
         sys.exit(show_help_keymap())
 
-    remote = _stbt.control.uri_to_remote(args.control, None)
+    control = _stbt.control.uri_to_control(args.control, None)
 
     if args.remote_control_key:  # Send a single key and exit
-        remote.press(args.remote_control_key)
+        control.press(args.remote_control_key)
     else:  # Interactive
         for key in main_loop(args.control, args.keymap):
-            remote.press(key)
+            control.press(key)
 
 
 def test_main():
@@ -79,11 +79,11 @@ def argparser():
     parser.add_argument(
         "--control", default=get_config("global", "control"),
         help="Equivalent to the --control parameter of `stbt run`. "
-             "See `man stbt` for available remote types and configuration.")
+             "See `man stbt` for available control types and configuration.")
     parser.add_argument(
         "remote_control_key", default=None, nargs='?',
         help=(
-            "The name of a remote control key as in the remote config file "
+            "The name of a remote control key as in the control's config file "
             "(that is /etc/lirc/lircd.conf in case of a LIRC control device). "
             "Specifying this argument sends remote_control_key and exits. "
             "Omitting this argument brings up the printed keymap."))
@@ -165,13 +165,13 @@ def main_loop(control_uri, keymap_file):
             if keycode == ord('q'):  # 'q' for 'Quit' is pre-defined
                 return
 
-            remote_key, _ = keymap.get(decoded(keycode), (None, None))
+            control_key, _ = keymap.get(decoded(keycode), (None, None))
             if timer:
                 timer.cancel()
                 clear_last_command(term)
-            if remote_key:
-                yield remote_key
-            term.addstr(str(remote_key))
+            if control_key:
+                yield control_key
+            term.addstr(str(control_key))
             timer = threading.Timer(1, clear_last_command, [term])
             timer.start()
             time.sleep(.2)

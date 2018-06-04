@@ -19,6 +19,7 @@ import itertools
 import os
 import re
 import subprocess
+import sys
 import threading
 import traceback
 import warnings
@@ -769,7 +770,7 @@ def new_device_under_test_from_config(
     """
     `parsed_args` if present should come from calling argparser().parse_args().
     """
-    from _stbt.control import uri_to_remote
+    from _stbt.control import uri_to_control
 
     if parsed_args is None:
         args = argparser().parse_args([])
@@ -824,7 +825,7 @@ def new_device_under_test_from_config(
         args.source_pipeline, sink_pipeline, args.restart_source,
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
-        display=display[0], control=uri_to_remote(args.control, display[0]),
+        display=display[0], control=uri_to_control(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop,
         use_old_threading_behaviour=use_old_threading_behaviour)
 
@@ -901,7 +902,48 @@ class DeviceUnderTest(object):
             self._mainloop.__exit__(exc_type, exc_value, tb)
         self._control = None
 
-    def press(self, key, interpress_delay_secs=None):
+    def press(self, key, interpress_delay_secs=None, hold_secs=None):
+        if hold_secs is not None and hold_secs > 60:
+            # You must ensure that lircd's --repeat-max is set high enough.
+            raise ValueError("press: hold_secs must be less than 60 seconds")
+
+        if hold_secs is None:
+            with self._interpress_delay(interpress_delay_secs):
+                self._control.press(key)
+            self.draw_text(key, duration_secs=3)
+
+        else:
+            try:
+                self._control.keydown(key)
+                self.draw_text("Holding %s" % key,
+                               duration_secs=min(3, hold_secs))
+                self._time.sleep(hold_secs)
+            finally:
+                self._control.keyup(key)
+                self.draw_text("Released %s" % key, duration_secs=3)
+
+    @contextmanager
+    def pressing(self, key, interpress_delay_secs=None):
+        with self._interpress_delay(interpress_delay_secs):
+            try:
+                self._control.keydown(key)
+                self.draw_text("Holding %s" % key, duration_secs=3)
+                yield
+            finally:
+                original_exc_type, exc_value, exc_traceback = sys.exc_info()
+                try:
+                    self._control.keyup(key)
+                    self.draw_text("Released %s" % key, duration_secs=3)
+                except Exception:  # pylint:disable=broad-except
+                    # Raise an exception if we fail to release the key, but
+                    # not if it would mask an exception from the test script.
+                    if original_exc_type is None:
+                        raise
+                if original_exc_type is not None:
+                    raise original_exc_type, exc_value, exc_traceback  # pylint:disable=raising-bad-type
+
+    @contextmanager
+    def _interpress_delay(self, interpress_delay_secs):
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
@@ -918,9 +960,10 @@ class DeviceUnderTest(object):
                 else:
                     break
 
-        self._control.press(key)
-        self._time_of_last_press = datetime.datetime.now()
-        self.draw_text(key, duration_secs=3)
+        try:
+            yield
+        finally:
+            self._time_of_last_press = datetime.datetime.now()
 
     def draw_text(self, text, duration_secs=3):
         self._sink_pipeline.draw(text, duration_secs)

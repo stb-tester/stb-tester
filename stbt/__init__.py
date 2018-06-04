@@ -87,7 +87,7 @@ _dut = _stbt.core.DeviceUnderTest()
 # ===========================================================================
 
 
-def press(key, interpress_delay_secs=None):
+def press(key, interpress_delay_secs=None, hold_secs=None):
     """Send the specified key-press to the device under test.
 
     :param str key:
@@ -109,8 +109,35 @@ def press(key, interpress_delay_secs=None):
         This defaults to 0.3. You can override the global default value by
         setting ``interpress_delay_secs`` in the ``[press]`` section of
         :ref:`.stbt.conf`.
+
+    :type hold_secs: int or float
+    :param hold_secs:
+        Hold the key down for the specified duration (in seconds). Currently
+        this only works for infrared controls; and if your infrared protocol
+        requires a special "repeat" signal, then your device-under-test might
+        see the same button pressed repeatedly instead of a single
+        press-and-hold. There is a maximum limit of 60 seconds.
+
+    Added in v29: The ``hold_secs`` parameter.
     """
-    return _dut.press(key, interpress_delay_secs)
+    return _dut.press(key, interpress_delay_secs, hold_secs)
+
+
+def pressing(key, interpress_delay_secs=None):
+    """Context manager that will press and hold the specified key for the
+    duration of the ``with`` code block.
+
+    For example, this will hold KEY_RIGHT until ``wait_for_match`` finds a
+    match or times out::
+
+        with stbt.pressing("KEY_RIGHT"):
+            stbt.wait_for_match("last-page.png")
+
+    The same limitations apply as `stbt.press`'s ``hold_secs`` parameter.
+
+    This function was added in v29.
+    """
+    return _dut.pressing(key, interpress_delay_secs)
 
 
 def draw_text(text, duration_secs=3):

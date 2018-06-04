@@ -35,7 +35,7 @@ import socket
 import sys
 
 import _stbt.logging
-from _stbt.control import uri_to_remote
+from _stbt.control import uri_to_control
 
 
 def main(argv):
@@ -59,7 +59,7 @@ def main(argv):
         s.bind(args.socket)
         s.listen(5)
 
-    control = uri_to_remote(args.output)
+    control = uri_to_control(args.output)
 
     while True:
         conn, _ = s.accept()
@@ -69,16 +69,23 @@ def main(argv):
             if not cmd:
                 break
             cmd = cmd.rstrip("\n")
-            m = re.match(r"SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)", cmd)
+            m = re.match(r"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
+                         r"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
             if not m:
                 debug("Invalid command: %s" % cmd)
                 send_response(conn, cmd, success=False,
                               data="Invalid command: %s" % cmd)
                 continue
+            action = m.groupdict()["action"]
             key = m.groupdict()["key"]
-            debug("Received %s" % key)
+            debug("Received %s %s" % (action, key))
             try:
-                control.press(key)
+                if action == "SEND_ONCE":
+                    control.press(key)
+                elif action == "SEND_START":
+                    control.keydown(key)
+                elif action == "SEND_STOP":
+                    control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
                 debug("Error pressing key %r: %r" % (key, e))
                 send_response(conn, cmd, success=False, data=str(e))
