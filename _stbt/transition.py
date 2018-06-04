@@ -11,7 +11,6 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-import sys
 import time
 
 import cv2
@@ -58,7 +57,7 @@ def press_and_wait(
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.press_and_wait(key)
-    sys.stderr.write("%s\n" % result)
+    stbt.debug(str(result))
     return result
 
 
@@ -93,7 +92,7 @@ def wait_for_transition_to_end(
     """
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
-    sys.stderr.write("%s\n" % result)
+    stbt.debug(str(result))
     return result
 
 
@@ -184,7 +183,7 @@ class _Transition(object):
 
 
 def _debug(s, f, *args):
-    sys.stderr.write(("transition: %.3f: " + s + "\n") % ((f.time,) + args))
+    stbt.debug(("transition: %.3f: " + s) % ((f.time,) + args))
 
 
 def strict_diff(f1, f2, region, mask_image):
