@@ -302,7 +302,8 @@ def write_bare_doctest(module, output_filename):
     screenshots_rel = os.path.relpath(
         SCREENSHOTS_ROOT, os.path.dirname(output_filename))
     module_rel = os.path.relpath(
-        os.path.dirname(module.filename), os.path.dirname(output_filename))
+        os.path.dirname(module.filename) or ".",
+        os.path.dirname(output_filename))
     outfile.write(dedent(r'''        #!/usr/bin/env python
         # coding=utf-8
         """
