@@ -64,7 +64,7 @@ from collections import namedtuple
 from textwrap import dedent, wrap
 
 from _stbt.imgproc_cache import cache
-from _stbt.utils import mkdir_p
+from _stbt.utils import mkdir_p, rm_f
 
 SCREENSHOTS_ROOT = "selftest/screenshots"
 
@@ -105,17 +105,18 @@ def main(argv):
 
 def generate(source_files):
     tmpdir, modules = generate_into_tmpdir(source_files)
+    target_dir = os.path.join(os.curdir, "selftest/auto_selftest")
     try:
         if source_files:
             # Only replace the selftests for the specified files.
             for f in modules:
                 newfile = os.path.join(tmpdir, selftest_filename(f.filename))
-                target = os.path.join(os.curdir, "selftest/auto_selftest",
-                                      selftest_filename(f.filename))
+                target = os.path.join(target_dir, selftest_filename(f.filename))
                 if os.path.exists(newfile):
                     mkdir_p(os.path.dirname(target))
                     os.rename(newfile, target)
                 else:
+                    rm_f(target)
                     if f.error:
                         sys.stderr.write(
                             "error: '%s' isn't a valid source file.\n"
@@ -124,14 +125,13 @@ def generate(source_files):
                     sys.stderr.write(
                         "warning: '%s' doesn't define any selftests.\n"
                         % f.filename)
-
+            prune_empty_directories(target_dir)
         else:
             # Replace all selftests, deleting selftests for source files that
             # no longer exist.
-            target = "%s/selftest/auto_selftest" % os.curdir
-            if os.path.exists(target):
-                shutil.rmtree(target)
-            os.rename(tmpdir, target)
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            os.rename(tmpdir, target_dir)
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

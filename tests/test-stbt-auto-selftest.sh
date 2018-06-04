@@ -152,6 +152,16 @@ test_auto_selftest_generate_with_single_empty_source_file() {
         || fail "Didn't find expected warning in 'stbt auto-selftest' output"
 }
 
+test_auto_selftest_generate_with_single_empty_source_file_deletes_selftest() {
+    cd_example_testpack &&
+    echo "" > tests/example.py &&
+    stbt auto-selftest generate tests/example.py ||
+        fail "stbt auto-selftest failed"
+
+    ! [[ -e selftest/auto_selftest/tests/example_selftest.py ]] ||
+        fail "example_selftest.py wasn't deleted"
+}
+
 test_auto_selftest_generate_with_two_source_files() {
     cd_example_testpack &&
     rm selftest/auto_selftest/tests/example_selftest.py \
