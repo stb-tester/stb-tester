@@ -4,6 +4,13 @@ cd_example_testpack()
     cd test-pack || fail "Test setup failed"
 }
 
+check_generated_files()
+{
+    diff -ur --exclude="*.pyc" --exclude=__pycache__ \
+        "$testdir"/auto-selftest-example-test-pack/selftest/auto_selftest \
+        ./selftest/auto_selftest || fail "Unexpected changes to selftest files"
+}
+
 test_auto_selftest_generate()
 {
     cd_example_testpack &&
@@ -70,8 +77,10 @@ test_that_no_screenshots_passes_stbt_auto_selftest_validate()
 test_that_no_selftests_expressions_passes_stbt_auto_selftest_validate()
 {
     cd_example_testpack &&
-    rm -r tests/example.py tests/unicode_example.py selftest/auto_selftest \
-          tests/subdir/subsubdir/subdir_example.py &&
+    rm -r tests_in_root.py \
+          tests/example.py tests/unicode_example.py \
+          tests/subdir/subsubdir/subdir_example.py \
+          selftest/auto_selftest &&
     stbt auto-selftest validate
 }
 
@@ -134,5 +143,38 @@ test_auto_selftest_generate_with_single_invalid_source_file() {
 
 test_auto_selftest_generate_with_single_empty_source_file() {
     cd_example_testpack &&
-    ! stbt auto-selftest generate tests/example_with_no_tests.py
+    stbt auto-selftest generate tests/example_with_no_tests.py &> stbt.log \
+        || { cat stbt.log; return 1; }
+
+    check_generated_files
+
+    grep -q "warning: 'tests/example_with_no_tests.py' doesn't define any selftests" stbt.log \
+        || fail "Didn't find expected warning in 'stbt auto-selftest' output"
+}
+
+test_auto_selftest_generate_with_single_empty_source_file_deletes_selftest() {
+    cd_example_testpack &&
+    echo "" > tests/example.py &&
+    stbt auto-selftest generate tests/example.py ||
+        fail "stbt auto-selftest failed"
+
+    ! [[ -e selftest/auto_selftest/tests/example_selftest.py ]] ||
+        fail "example_selftest.py wasn't deleted"
+}
+
+test_auto_selftest_generate_with_two_source_files() {
+    cd_example_testpack &&
+    rm selftest/auto_selftest/tests/example_selftest.py \
+       selftest/auto_selftest/tests/unicode_example_selftest.py &&
+    stbt auto-selftest generate tests/example.py \
+                                tests/unicode_example.py &&
+    check_generated_files
+}
+
+test_auto_selftest_generate_with_two_source_files_one_of_which_is_empty() {
+    cd_example_testpack &&
+    rm selftest/auto_selftest/tests/example_selftest.py &&
+    stbt auto-selftest generate tests/example_with_no_tests.py \
+                                tests/example.py &&
+    check_generated_files
 }

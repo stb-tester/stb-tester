@@ -19,6 +19,15 @@ def mkdir_p(d):
             raise
 
 
+def rm_f(filename):
+    """Like ``rm -f``, it ignores errors if the file doesn't exist."""
+    try:
+        os.remove(filename)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+
+
 @contextmanager
 def named_temporary_directory(
         suffix='', prefix='tmp', dir=None):  # pylint: disable=W0622

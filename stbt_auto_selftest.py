@@ -64,7 +64,7 @@ from collections import namedtuple
 from textwrap import dedent, wrap
 
 from _stbt.imgproc_cache import cache
-from _stbt.utils import mkdir_p
+from _stbt.utils import mkdir_p, rm_f
 
 SCREENSHOTS_ROOT = "selftest/screenshots"
 
@@ -104,29 +104,34 @@ def main(argv):
 
 
 def generate(source_files):
-    tmpdir = generate_into_tmpdir(source_files)
+    tmpdir, modules = generate_into_tmpdir(source_files)
+    target_dir = os.path.join(os.curdir, "selftest/auto_selftest")
     try:
         if source_files:
             # Only replace the selftests for the specified files.
-            for f in source_files:
-                newfile = os.path.join(tmpdir, selftest_filename(f))
-                target = os.path.join(os.curdir, "selftest/auto_selftest",
-                                      selftest_filename(f))
+            for f in modules:
+                newfile = os.path.join(tmpdir, selftest_filename(f.filename))
+                target = os.path.join(target_dir, selftest_filename(f.filename))
                 if os.path.exists(newfile):
                     mkdir_p(os.path.dirname(target))
                     os.rename(newfile, target)
                 else:
+                    rm_f(target)
+                    if f.error:
+                        sys.stderr.write(
+                            "error: '%s' isn't a valid source file.\n"
+                            % f.filename)
+                        return 1
                     sys.stderr.write(
-                        "error: '%s' isn't a valid source file.\n" % f)
-                    return 1
-
+                        "warning: '%s' doesn't define any selftests.\n"
+                        % f.filename)
+            prune_empty_directories(target_dir)
         else:
             # Replace all selftests, deleting selftests for source files that
             # no longer exist.
-            target = "%s/selftest/auto_selftest" % os.curdir
-            if os.path.exists(target):
-                shutil.rmtree(target)
-            os.rename(tmpdir, target)
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            os.rename(tmpdir, target_dir)
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -134,7 +139,7 @@ def generate(source_files):
 
 def validate():
     import filecmp
-    tmpdir = generate_into_tmpdir()
+    tmpdir, _ = generate_into_tmpdir()
     try:
         orig_files = _recursive_glob(
             '*.py', "%s/selftest/auto_selftest" % os.curdir)
@@ -195,6 +200,7 @@ def generate_into_tmpdir(source_files=None):
     pool = multiprocessing.Pool(
         processes=1, maxtasksperchild=1, initializer=init_worker)
     tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
+    modules = []
     try:
         if not source_files:
             source_files = valid_source_files(_recursive_glob('*.py'))
@@ -206,6 +212,7 @@ def generate_into_tmpdir(source_files=None):
             mkdir_p(os.path.dirname(outname))
 
             module = pool.apply(inspect_module, (module_filename,))
+            modules.append(module)
             test_line_count = write_bare_doctest(module, barename)
             if test_line_count:
                 test_file_count += 1
@@ -227,7 +234,7 @@ def generate_into_tmpdir(source_files=None):
 
         print_perf_summary(perf_log, time.time() - start_time)
 
-        return tmpdir
+        return tmpdir, modules
     except:
         pool.terminate()
         pool.join()
@@ -253,7 +260,7 @@ def selftest_filename(module_filename):
     return re.sub('.py$', '_selftest.py', module_filename)
 
 
-class Module(namedtuple('Module', "filename items")):
+class Module(namedtuple('Module', "filename items error")):
     pass
 
 
@@ -285,14 +292,15 @@ def inspect_module(module_filename):
                     getattr(item, 'AUTO_SELFTEST_SCREENSHOTS', [])),
                 try_screenshots=list(
                     getattr(item, 'AUTO_SELFTEST_TRY_SCREENSHOTS', ['*.png']))))
-        return Module(module_filename, out)
+        return Module(module_filename, out, None)
     except (KeyboardInterrupt, SystemExit):
         raise
     except:  # pylint: disable=bare-except
+        error_message = sys.exc_info()[1]
         sys.stderr.write(
             "Received \"%s\" exception while inspecting %s; skipping.\n"
-            % (sys.exc_info()[1], module_filename))
-        return Module(module_filename, [])
+            % (error_message, module_filename))
+        return Module(module_filename, [], error_message)
 
 
 def write_bare_doctest(module, output_filename):
@@ -302,7 +310,8 @@ def write_bare_doctest(module, output_filename):
     screenshots_rel = os.path.relpath(
         SCREENSHOTS_ROOT, os.path.dirname(output_filename))
     module_rel = os.path.relpath(
-        os.path.dirname(module.filename), os.path.dirname(output_filename))
+        os.path.dirname(module.filename) or ".",
+        os.path.dirname(output_filename))
     outfile.write(dedent(r'''        #!/usr/bin/env python
         # coding=utf-8
         """
