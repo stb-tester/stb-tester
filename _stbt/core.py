@@ -486,9 +486,9 @@ class MatchResult(object):
 
     def __repr__(self):
         return (
-            "MatchResult(time=%r, match=%r, region=%r, first_pass_result=%r, "
+            "MatchResult(time=%s, match=%r, region=%r, first_pass_result=%r, "
             "frame=%s, image=%s)" % (
-                self.time,
+                "None" if self.time is None else "%.3f" % self.time,
                 self.match,
                 self.region,
                 self.first_pass_result,
@@ -645,9 +645,9 @@ class MotionResult(object):
 
     def __repr__(self):
         return (
-            "MotionResult(time=%r, motion=%r, region=%r, frame=%s)" % (
-                self.time, self.motion, self.region,
-                _frame_repr(self.frame)))
+            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
+                "None" if self.time is None else "%.3f" % self.time,
+                self.motion, self.region, _frame_repr(self.frame)))
 
     @property
     def timestamp(self):
@@ -655,17 +655,6 @@ class MotionResult(object):
             return None
         else:
             return int(self.time * 1e9)
-
-
-def test_motionresult_repr():
-    assert repr(MotionResult(
-        time=1466002032.335607, motion=True,
-        region=Region(x=321, y=32, right=334, bottom=42),
-        frame=numpy.zeros((720, 1280, 3)))) \
-        == ("MotionResult("
-            "time=1466002032.335607, motion=True, "
-            "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<1280x720x3>)")
 
 
 class IsScreenBlackResult(object):
@@ -749,9 +738,9 @@ class TextMatchResult(object):
 
     def __repr__(self):
         return (
-            "TextMatchResult(time=%r, match=%r, region=%r, frame=%s, "
+            "TextMatchResult(time=%s, match=%r, region=%r, frame=%s, "
             "text=%r)" % (
-                self.time,
+                "None" if self.time is None else "%.3f" % self.time,
                 self.match,
                 self.region,
                 _frame_repr(self.frame),
