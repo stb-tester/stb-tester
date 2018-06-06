@@ -302,7 +302,7 @@ test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
     u="u" assert_correct_unicode_error
 }
 
@@ -319,7 +319,7 @@ test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
     assert_correct_unicode_error
 }
 
