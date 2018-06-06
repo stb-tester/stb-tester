@@ -127,6 +127,7 @@ class _Transition(object):
         original_frame, _ = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
+        stbt.debug("transition: %.3f: Pressed %s" % (press_time, key))
         self.expiry_time = press_time + self.timeout_secs
 
         # Wait for animation to start
