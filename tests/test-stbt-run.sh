@@ -269,24 +269,20 @@ test_that_stbt_run_tracing_is_written_to_socket() {
     diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
 }
 
-assert_correct_unicode_error() {
+check_unicode_error() {
     cat >expected.log <<-EOF
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: ü
 		Traceback (most recent call last):
-		  File ".../_stbt/stbt_run.py", line ..., in sane_unicode_and_exception_handling
 		    yield
-		  File ".../stbt-run", line ..., in main
 		    test_function.call()
-		  File ".../_stbt/stbt_run.py", line ..., in fn
 		    execfile(filename, test_globals)
-		  File "...", line 2, in <module>
 		    assert False, $u"ü"
 		AssertionError: ü
 		EOF
-    diff -u <(grep -v -e File expected.log) \
-            <(grep -v -e 'libdc1394 error: Failed to initialize libdc1394' \
-                      -e File mylog) || fail
+    cat expected.log | while read line; do
+        grep -q -F -e "$line" mylog || fail "Didn't find line: $line"
+    done
 }
 
 test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
@@ -298,12 +294,12 @@ test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
 	EOF
 
     stbt run test.py &> mylog
-    u="u" assert_correct_unicode_error
+    u="u" assert check_unicode_error
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
-    u="u" assert_correct_unicode_error
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
+    u="u" assert check_unicode_error
 }
 
 test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
@@ -315,12 +311,12 @@ test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
 	EOF
 
     stbt run test.py &> mylog
-    assert_correct_unicode_error
+    assert check_unicode_error
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py'
-    assert_correct_unicode_error
+    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
+    assert check_unicode_error
 }
 
 test_that_error_control_raises_exception() {

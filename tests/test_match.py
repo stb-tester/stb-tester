@@ -1,8 +1,6 @@
 import itertools
 import os
 import subprocess
-import sys
-from contextlib import contextmanager
 from textwrap import dedent
 
 import cv2
@@ -10,7 +8,7 @@ import numpy
 from nose.tools import raises
 
 import stbt
-from _stbt.logging import ImageLogger
+from _stbt.logging import ImageLogger, scoped_debug_level
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
 
@@ -454,20 +452,6 @@ def test_match_debug():
         # import shutil
         # shutil.rmtree(expected)
         # shutil.move("stbt-debug", expected)
-
-
-@contextmanager
-def scoped_debug_level(n):
-    """Don't send debug output to stderr as it messes up "make check" output."""
-    import _stbt.logging
-
-    original_stderr = sys.stderr
-    sys.stderr = sys.stdout
-    try:
-        with _stbt.logging.scoped_debug_level(n):
-            yield
-    finally:
-        sys.stderr = original_stderr
 
 
 def _imread(filename):

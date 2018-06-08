@@ -8,6 +8,7 @@ from unittest import SkipTest
 
 import cv2
 import pytest
+from numpy import isclose
 
 from stbt import match, Region, wait_until
 from stbt.android import (_centre_point, _Dimensions,
@@ -92,8 +93,8 @@ def test_to_native_coordinates(
         screenshot_x, screenshot_y, coordinate_system,
         _Dimensions(*device_resolution))
     print(native_x, native_y)
-    assert isclose(native_x, expected_coordinates[0], absolute_tolerance=1)
-    assert isclose(native_y, expected_coordinates[1], absolute_tolerance=1)
+    assert isclose(native_x, expected_coordinates[0], atol=1)
+    assert isclose(native_y, expected_coordinates[1], atol=1)
 
 
 def test_parse_display_dimensions():
@@ -213,10 +214,6 @@ def real_adb_device():
             "CI Android device not connected. You can set ADB_SERVER, "
             "ANDROID_SERIAL, and ADB_BINARY environment variables.")
     return _adb
-
-
-def isclose(a, b, absolute_tolerance=0):
-    return abs(a - b) <= absolute_tolerance
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):

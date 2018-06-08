@@ -77,6 +77,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/stbt.conf \
+    _stbt/transition.py \
     _stbt/utils.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
@@ -215,6 +216,7 @@ check-pytest: all tests/buttons.png tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD \
+	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -v -rs --doctest-modules \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
