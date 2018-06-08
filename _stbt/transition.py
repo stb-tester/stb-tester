@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """Detection & frame-accurate measurement of animations and transitions.
 
 For example a selection that moves from one menu item to another or loading a
@@ -43,16 +45,36 @@ def press_and_wait(
         ``region`` and ``mask`` at the same time.
 
     :param timeout_secs: A timeout in seconds. This function will return a
-        falsey `TransitionResult` if the transition didn't complete within
-        this number of seconds from the key-press.
+        falsey value if the transition didn't complete within this number of
+        seconds from the key-press.
     :type timeout_secs: int or float
 
     :param stable_secs: A duration in seconds. The screen must stay unchanged
         (within the specified region or mask) for this long, for the transition
         to be considered "complete".
 
-    :returns: A `TransitionResult`, which will evaluate to true if the
-        transition completed, false otherwise.
+    :returns:
+        An object that will evaluate to true if the transition completed, false
+        otherwise. It has the following attributes:
+
+        * **frame** (`stbt.Frame`) – If successful, the first video frame when
+          the transition completed; if timed out, the last frame seen.
+        * **status** (`TransitionResultStatus`) – Either ``START_TIMEOUT``,
+          ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
+          object will evaluate as true.
+        * **press_time** (*float*) – When the key-press completed.
+        * **animation_start_time** (*float*) – When animation started after the
+          key-press (or ``None`` if timed out).
+        * **end_time** (*float*): When animation completed (or ``None`` if
+            timed out).
+        * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
+          ``None`` if timed out).
+        * **animation_duration** (*float*) – Time from ``animation_start_time``
+          to ``end_time`` (or ``None`` if timed out).
+
+        All times are measured in seconds since 1970-01-01T00:00Z; the
+        timestamps can be compared with system time (the output of
+        ``time.time()``).
     """
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
@@ -87,8 +109,7 @@ def wait_for_transition_to_end(
     :param timeout_secs: See `press_and_wait`.
     :param stable_secs: See `press_and_wait`.
 
-    :returns: A `TransitionResult`, which will evaluate to true if the
-        transition completed, false otherwise.
+    :returns: See `press_and_wait`.
     """
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
@@ -202,25 +223,6 @@ def strict_diff(f1, f2, region, mask_image):
 
 
 class TransitionResult(object):
-    """The result from `press_and_wait`.
-
-    * ``frame`` (`stbt.Frame`): If successful, the first video frame when the
-      transition completed; if timed out, the last frame seen.
-    * ``status`` (`TransitionResultStatus` enum): Either ``START_TIMEOUT``,
-      ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
-      ``TransitionResult`` object will evaluate as true.
-    * ``press_time`` (float): When the key-press completed.
-    * ``animation_start_time`` (float): When animation started after the
-      key-press (or `None` if timed out).
-    * ``end_time`` (float): When animation completed (or `None` if timed out).
-    * ``duration`` (float): Time from ``press_time`` to ``end_time`` (or `None`
-      if timed out).
-    * ``animation_duration`` (float): Time from ``animation_start_time`` to
-      ``end_time`` (or `None` if timed out).
-
-    All times are measured in seconds since 1970-01-01T00:00Z; the timestamps
-    can be compared with system time (the output of ``time.time()``).
-    """
     def __init__(
             self, frame, status, press_time, animation_start_time, end_time):
         self.frame = frame
