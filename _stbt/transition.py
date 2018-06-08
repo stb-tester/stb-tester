@@ -57,7 +57,7 @@ def press_and_wait(
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.press_and_wait(key)
-    stbt.debug(str(result))
+    stbt.debug("press_and_wait(%r) -> %s" % (key, result))
     return result
 
 
@@ -92,7 +92,7 @@ def wait_for_transition_to_end(
     """
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
-    stbt.debug(str(result))
+    stbt.debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
