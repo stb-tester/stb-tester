@@ -657,14 +657,7 @@ class MotionResult(object):
             return int(self.time * 1e9)
 
 
-class IsScreenBlackResult(object):
-    """The result from `is_screen_black`.
-
-    :ivar bool black: True if the screen was black. This is the same as
-        evaluating the ``IsScreenBlackResult`` as a bool.
-
-    :ivar Frame frame: The video frame that was analyzed.
-    """
+class _IsScreenBlackResult(object):
     def __init__(self, black, frame):
         self.black = black
         self.frame = frame
@@ -673,7 +666,7 @@ class IsScreenBlackResult(object):
         return self.black
 
     def __repr__(self):
-        return ("IsScreenBlackResult(black=%r, frame=%s)" % (
+        return ("_IsScreenBlackResult(black=%r, frame=%s)" % (
             self.black,
             _frame_repr(self.frame)))
 
@@ -1358,7 +1351,7 @@ class DeviceUnderTest(object):
                                            cv2.THRESH_BINARY)
             imglog.imwrite('non-black-regions-after-masking', thresholded)
 
-        result = IsScreenBlackResult(bool(maxVal <= threshold), frame)
+        result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
         debug("is_screen_black: {found} black screen using mask={mask}, "
               "threshold={threshold}, region={region}: "
               "{result}, maximum_intensity={maxVal}".format(

@@ -22,7 +22,6 @@ from _stbt.core import \
     debug, \
     Frame, \
     get_config, \
-    IsScreenBlackResult, \
     load_image, \
     MatchParameters, \
     MatchResult, \
@@ -58,7 +57,6 @@ __all__ = [
     "get_config",
     "get_frame",
     "is_screen_black",
-    "IsScreenBlackResult",
     "load_image",
     "match",
     "match_all",
@@ -579,11 +577,15 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         If you specify both ``region`` and ``mask``, the mask must be the same
         size as the region.
 
-    :returns: An `IsScreenBlackResult`, which will evaluate to True if the
-        frame was black.
+    :returns:
+        An object that will evaluate to true if the frame was black, or false
+        if not black. The object has the following attributes:
 
-    Added in v28: The ``region`` parameter.
-    Added in v29: Return `IsScreenBlackResult` instead of bool.
+        * **black** (*bool*) – True if the frame was black.
+        * **frame** (`stbt.Frame`) – The video frame that was analysed.
+
+    | Added in v28: The ``region`` parameter.
+    | Added in v29: Return an object with a frame attribute, instead of bool.
     """
     return _dut.is_screen_black(frame, mask, threshold, region)
 
