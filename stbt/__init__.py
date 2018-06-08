@@ -41,7 +41,7 @@ from _stbt.core import \
     wait_until
 from _stbt.transition import \
     press_and_wait, \
-    TransitionResult, \
+    TransitionStatus, \
     wait_for_transition_to_end
 
 __all__ = [
@@ -79,7 +79,7 @@ __all__ = [
     "Region",
     "save_frame",
     "TextMatchResult",
-    "TransitionResult",
+    "TransitionStatus",
     "UITestError",
     "UITestFailure",
     "wait_for_match",
