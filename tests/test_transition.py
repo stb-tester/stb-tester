@@ -57,7 +57,7 @@ def test_press_and_wait():
     transition = stbt.press_and_wait("white", stable_secs=0.1, _dut=_stbt)
     print transition
     assert transition
-    assert transition.status == stbt.TransitionResultStatus.COMPLETE
+    assert transition.status == stbt.TransitionResult.COMPLETE
     assert transition.press_time < transition.animation_start_time
     assert transition.animation_start_time == transition.end_time
     assert transition.duration < 0.01  # excludes stable period
@@ -67,7 +67,7 @@ def test_press_and_wait():
                                      _dut=_stbt)
     print transition
     assert transition
-    assert transition.status == stbt.TransitionResultStatus.COMPLETE
+    assert transition.status == stbt.TransitionResult.COMPLETE
     assert transition.animation_start_time < transition.end_time
     assert transition.frame.max() == 0
 
@@ -77,7 +77,7 @@ def test_press_and_wait_start_timeout():
                                      _dut=FakeDeviceUnderTest())
     print transition
     assert not transition
-    assert transition.status == stbt.TransitionResultStatus.START_TIMEOUT
+    assert transition.status == stbt.TransitionResult.START_TIMEOUT
 
 
 def test_press_and_wait_stable_timeout():
@@ -85,23 +85,23 @@ def test_press_and_wait_stable_timeout():
                                      _dut=FakeDeviceUnderTest())
     print transition
     assert not transition
-    assert transition.status == stbt.TransitionResultStatus.STABLE_TIMEOUT
+    assert transition.status == stbt.TransitionResult.STABLE_TIMEOUT
 
     transition = stbt.press_and_wait("ball", stable_secs=0,
                                      _dut=FakeDeviceUnderTest())
     print transition
     assert transition
-    assert transition.status == stbt.TransitionResultStatus.COMPLETE
+    assert transition.status == stbt.TransitionResult.COMPLETE
 
 
 @pytest.mark.parametrize("mask,region,expected", [
-    (None, stbt.Region.ALL, stbt.TransitionResultStatus.STABLE_TIMEOUT),
+    (None, stbt.Region.ALL, stbt.TransitionResult.STABLE_TIMEOUT),
     ("mask-out-left-half-720p.png", stbt.Region.ALL,
-     stbt.TransitionResultStatus.START_TIMEOUT),
+     stbt.TransitionResult.START_TIMEOUT),
     (None, stbt.Region(x=640, y=0, right=1280, bottom=720),
-     stbt.TransitionResultStatus.START_TIMEOUT),
+     stbt.TransitionResult.START_TIMEOUT),
     (None, stbt.Region(x=0, y=0, right=1280, bottom=360),
-     stbt.TransitionResultStatus.STABLE_TIMEOUT),
+     stbt.TransitionResult.STABLE_TIMEOUT),
 ])
 def test_press_and_wait_with_mask_or_region(mask, region, expected):
     transition = stbt.press_and_wait(
@@ -122,7 +122,7 @@ def test_wait_for_transition_to_end():
         timeout_secs=0.2, stable_secs=0.1, _dut=_stbt)
     print transition
     assert not transition
-    assert transition.status == stbt.TransitionResultStatus.STABLE_TIMEOUT
+    assert transition.status == stbt.TransitionResult.STABLE_TIMEOUT
 
 
 def test_press_and_wait_timestamps():
