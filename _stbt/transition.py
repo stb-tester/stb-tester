@@ -65,8 +65,8 @@ def press_and_wait(
         * **press_time** (*float*) – When the key-press completed.
         * **animation_start_time** (*float*) – When animation started after the
           key-press (or ``None`` if timed out).
-        * **end_time** (*float*): When animation completed (or ``None`` if
-            timed out).
+        * **end_time** (*float*) – When animation completed (or ``None`` if
+          timed out).
         * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
           ``None`` if timed out).
         * **animation_duration** (*float*) – Time from ``animation_start_time``
