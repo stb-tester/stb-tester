@@ -530,7 +530,7 @@ has stbt installed.
 [Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
 [standard key names]: https://stb-tester.com/manual/getting-started#remote-control-key-names
 [Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
-[stbt(1) man page]: http://stb-tester.com/stbt.html
+[stbt(1) man page]: https://github.com/stb-tester/stb-tester/blob/master/docs/stbt.1.rst
 
 
 #### 24
