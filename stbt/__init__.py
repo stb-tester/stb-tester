@@ -118,10 +118,8 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
     :type hold_secs: int or float
     :param hold_secs:
         Hold the key down for the specified duration (in seconds). Currently
-        this only works for infrared controls; and if your infrared protocol
-        requires a special "repeat" signal, then your device-under-test might
-        see the same button pressed repeatedly instead of a single
-        press-and-hold. There is a maximum limit of 60 seconds.
+        this is implemented for the infrared, HDMI CEC, and Roku controls.
+        There is a maximum limit of 60 seconds.
 
     Added in v29: The ``hold_secs`` parameter.
     """
