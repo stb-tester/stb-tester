@@ -313,3 +313,12 @@ def test_ocr_text_color(image, color, expected, region):
 
     assert not stbt.match_text(expected, frame, region, mode)
     assert stbt.match_text(expected, frame, region, mode, text_color=color)
+
+
+def test_ocr_text_color_threshold():
+    f = load_image("ocr/blue-search-white-guide.png")
+    c = (220, 220, 220)
+    assert stbt.ocr(f) != "Guide"
+    assert stbt.ocr(f, text_color=c) != "Guide"
+    assert stbt.ocr(f, text_color=c) != "Guide"
+    assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"

@@ -1220,7 +1220,8 @@ class DeviceUnderTest(object):
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             lang=None, tesseract_config=None, tesseract_user_words=None,
-            tesseract_user_patterns=None, upsample=True, text_color=None):
+            tesseract_user_patterns=None, upsample=True, text_color=None,
+            text_color_threshold=25):
 
         if frame is None:
             frame = self.get_frame()
@@ -1243,7 +1244,8 @@ class DeviceUnderTest(object):
 
         text, region = _tesseract(
             frame, region, mode, lang, tesseract_config,
-            tesseract_user_patterns, tesseract_user_words, upsample, text_color)
+            tesseract_user_patterns, tesseract_user_words, upsample, text_color,
+            text_color_threshold)
         text = text.strip().translate(_ocr_transtab)
         debug(u"OCR in region %s read '%s'." % (region, text))
         return text
@@ -1251,7 +1253,7 @@ class DeviceUnderTest(object):
     def match_text(self, text, frame=None, region=Region.ALL,
                    mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                    tesseract_config=None, case_sensitive=False,
-                   upsample=True, text_color=None):
+                   upsample=True, text_color=None, text_color_threshold=25):
 
         import lxml.etree
         if frame is None:
@@ -1267,7 +1269,8 @@ class DeviceUnderTest(object):
         rts = getattr(frame, "time", None)
 
         xml, region = _tesseract(frame, region, mode, lang, _config,
-                                 None, text.split(), upsample, text_color)
+                                 None, text.split(), upsample, text_color,
+                                 text_color_threshold)
         if xml == '':
             result = TextMatchResult(rts, False, None, frame, text)
         else:
@@ -2959,7 +2962,7 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
-               upsample, text_color):
+               upsample, text_color, text_color_threshold):
 
     if _config is None:
         _config = {}
@@ -2975,15 +2978,15 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
-                                  text_color),
+                                  text_color, text_color_threshold),
             region)
 
 
 @imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
-                        "version": "28"})
+                        "version": "29"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color):
+        text_color, text_color_threshold):
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
@@ -2995,14 +2998,14 @@ def _tesseract_subprocess(
 
     if text_color is not None:
         # Calculate distance of each pixel from `text_color`, then discard
-        # everything further than `threshold` distance away.
+        # everything further than `text_color_threshold` distance away.
         diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
         frame = numpy.sqrt((diff[:, :, 0] ** 2 +
                             diff[:, :, 1] ** 2 +
                             diff[:, :, 2] ** 2) / 3) \
                      .astype(numpy.uint8)
-        threshold = 25
-        _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+        _, frame = cv2.threshold(frame, text_color_threshold, 255,
+                                 cv2.THRESH_BINARY)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
