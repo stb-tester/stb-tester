@@ -59,14 +59,14 @@ def press_and_wait(
 
         * **frame** (`stbt.Frame`) – If successful, the first video frame when
           the transition completed; if timed out, the last frame seen.
-        * **status** (`TransitionResult`) – Either ``START_TIMEOUT``,
+        * **status** (`TransitionStatus`) – Either ``START_TIMEOUT``,
           ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
           object will evaluate as true.
         * **press_time** (*float*) – When the key-press completed.
         * **animation_start_time** (*float*) – When animation started after the
           key-press (or ``None`` if timed out).
-        * **end_time** (*float*): When animation completed (or ``None`` if
-            timed out).
+        * **end_time** (*float*) – When animation completed (or ``None`` if
+          timed out).
         * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
           ``None`` if timed out).
         * **animation_duration** (*float*) – Time from ``animation_start_time``
@@ -166,7 +166,7 @@ class _Transition(object):
                     "Transition didn't start within %s seconds of pressing %s",
                     f, self.timeout_secs, key)
                 return _TransitionResult(
-                    f, TransitionResult.START_TIMEOUT,
+                    f, TransitionStatus.START_TIMEOUT,
                     press_time, None, None)
 
         end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
@@ -194,13 +194,13 @@ class _Transition(object):
                        first_stable_frame, self.stable_secs,
                        first_stable_frame.time)
                 return _TransitionResult(
-                    first_stable_frame, TransitionResult.COMPLETE,
+                    first_stable_frame, TransitionStatus.COMPLETE,
                     None, initial_frame.time, first_stable_frame.time)
             if f.time >= self.expiry_time:
                 _debug("Transition didn't end within %s seconds",
                        f, self.timeout_secs)
                 return _TransitionResult(
-                    f, TransitionResult.STABLE_TIMEOUT,
+                    f, TransitionStatus.STABLE_TIMEOUT,
                     None, initial_frame.time, None)
 
 
@@ -254,7 +254,7 @@ class _TransitionResult(object):
                 self.animation_duration))
 
     def __nonzero__(self):
-        return self.status == TransitionResult.COMPLETE
+        return self.status == TransitionStatus.COMPLETE
 
     @property
     def duration(self):
@@ -269,7 +269,7 @@ class _TransitionResult(object):
         return self.end_time - self.animation_start_time
 
 
-class TransitionResult(enum.Enum):
+class TransitionStatus(enum.Enum):
     START_TIMEOUT = 0
     STABLE_TIMEOUT = 1
     COMPLETE = 2

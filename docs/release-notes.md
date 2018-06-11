@@ -49,11 +49,12 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * Added `stbt.pressing`: A context manager that will hold a key down for as
   long as the code in the `with` block is executing.
 
-* `stbt.is_screen_black` returns an `IsScreenBlackResult` instead of bool.
-  This evaluates to True or False so this change is backwards compatible,
-  unless you were explicitly comparing the result with `== True` or `is True`.
-  This change was made so that you can get the exact frame that was analysed,
-  for more precise performance measurements.
+* `stbt.is_screen_black` returns an object with `black` and `frame` attributes,
+  instead of a bool. This evaluates to True or False so this change is
+  backwards compatible, unless you were explicitly comparing the result with
+  `== True` or `is True`. This change was made so that you can get the exact
+  frame that changed to (or from) black, for more precise performance
+  measurements.
 
 * `stbt.is_screen_black` logs the result of its analysis, similar to
   `stbt.match`, `stbt.ocr`, etc.

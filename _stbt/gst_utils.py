@@ -90,12 +90,10 @@ class Frame(numpy.ndarray):
     In addition to the members inherited from `numpy.ndarray`, ``Frame``
     defines the following attributes:
 
-    * ``time`` (float) - the wall-clock time that this video-frame was captured
-      as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This is
-      the same format used by the Python standard library function `time.time`.
-
-    ``Frame`` was added in stb-tester v26.
-
+    :ivar float time: The wall-clock time when this video-frame was captured,
+        as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This
+        is the same format used by the Python standard library function
+        `time.time`.
     """
     def __new__(cls, array, dtype=None, order=None, time=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)

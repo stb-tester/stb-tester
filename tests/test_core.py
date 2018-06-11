@@ -104,7 +104,7 @@ def test_is_screen_black(frame, mask, threshold, region, expected):
         stbt.is_screen_black(frame, mask, threshold, region))
 
 
-def test_IsScreenBlackResult():
+def test_is_screen_black_result():
     frame = stbt.load_image("almost-black.png")
     result = stbt.is_screen_black(frame)
     assert result
