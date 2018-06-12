@@ -72,6 +72,9 @@ def main(argv):
         prog="stbt auto-selftest",
         epilog=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        "-C", "--directory", metavar="DIR",
+        help="Change to directory dir before doing anything else")
     parser.add_argument("--selftest-root")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -84,6 +87,9 @@ def main(argv):
     subparsers.add_parser('validate', help='Run (and check) the auto-selftests')
 
     cmdline_args = parser.parse_args(argv[1:])
+
+    if cmdline_args.directory:
+        os.chdir(cmdline_args.directory)
 
     if cmdline_args.selftest_root:
         selftest_root = cmdline_args.selftest_root
