@@ -66,14 +66,13 @@ from textwrap import dedent, wrap
 from _stbt.imgproc_cache import cache
 from _stbt.utils import mkdir_p, rm_f
 
-SCREENSHOTS_ROOT = "selftest/screenshots"
-
 
 def main(argv):
     parser = argparse.ArgumentParser(
         prog="stbt auto-selftest",
         epilog=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--selftest-root")
     subparsers = parser.add_subparsers(dest="command")
 
     subparser_generate = subparsers.add_parser(
@@ -86,27 +85,27 @@ def main(argv):
 
     cmdline_args = parser.parse_args(argv[1:])
 
-    root = _find_test_pack_root()
-    if root is None:
-        sys.stderr.write(
-            "error: This command must be run within a test pack. Couldn't find "
-            "a .stbt.conf in this or any parent directory.\n")
-        return 1
-
-    source_files = [os.path.relpath(x, root) for x in cmdline_args.source_files]
-    os.chdir(root)
+    if cmdline_args.selftest_root:
+        selftest_root = cmdline_args.selftest_root
+    else:
+        selftest_root = _find_test_pack_root() + "/selftest"
+        if selftest_root is None:
+            sys.stderr.write(
+                "error: This command must be run within a test pack. Couldn't "
+                "find a .stbt.conf in this or any parent directory.\n")
+            return 1
 
     if cmdline_args.command == 'generate':
-        return generate(source_files)
+        return generate(cmdline_args.source_files, selftest_root=selftest_root)
     elif cmdline_args.command == 'validate':
-        return validate()
+        return validate(selftest_root=selftest_root)
     else:
         assert False
 
 
-def generate(source_files):
-    tmpdir, modules = generate_into_tmpdir(source_files)
-    target_dir = os.path.join(os.curdir, "selftest/auto_selftest")
+def generate(source_files, selftest_root):
+    tmpdir, modules = generate_into_tmpdir(selftest_root, source_files)
+    target_dir = os.path.join(selftest_root, "auto_selftest")
     try:
         if source_files:
             # Only replace the selftests for the specified files.
@@ -138,17 +137,17 @@ def generate(source_files):
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def validate():
+def validate(selftest_root):
     import filecmp
-    tmpdir, _ = generate_into_tmpdir()
+    tmpdir, _ = generate_into_tmpdir(selftest_root)
     try:
         orig_files = _recursive_glob(
-            '*.py', "%s/selftest/auto_selftest" % os.curdir)
+            '*.py', "%s/auto_selftest" % selftest_root)
         new_files = _recursive_glob('*.py', tmpdir)
         if orig_files != new_files:
             return 1
         _, mismatch, errors = filecmp.cmpfiles(
-            tmpdir, "%s/selftest/auto_selftest" % os.curdir, orig_files)
+            tmpdir, "%s/auto_selftest" % selftest_root, orig_files)
         if mismatch or errors:
             return 1
         else:
@@ -192,19 +191,19 @@ def _progress_line(width, n, total):
         '#' * progress + ' ' * (width - progress), n, total)
 
 
-def generate_into_tmpdir(source_files=None):
+def generate_into_tmpdir(selftest_root, source_files=None):
     start_time = time.time()
 
-    selftest_dir = "%s/selftest" % os.curdir
-    mkdir_p(selftest_dir)
+    mkdir_p(selftest_root)
     # We use this process pool for sandboxing rather than concurrency:
     pool = multiprocessing.Pool(
         processes=1, maxtasksperchild=1, initializer=init_worker)
-    tmpdir = tempfile.mkdtemp(dir=selftest_dir, prefix="auto_selftest")
+    tmpdir = tempfile.mkdtemp(dir=selftest_root, prefix="auto_selftest")
     modules = []
     try:
         if not source_files:
-            source_files = valid_source_files(_recursive_glob('*.py'))
+            source_files = valid_source_files(_recursive_glob('*.py'),
+                                              selftest_root)
         perf_log = []
         test_file_count = 0
         for module_filename in iterate_with_progress(source_files):
@@ -214,7 +213,8 @@ def generate_into_tmpdir(source_files=None):
 
             module = pool.apply(inspect_module, (module_filename,))
             modules.append(module)
-            test_line_count = write_bare_doctest(module, barename)
+            test_line_count = write_bare_doctest(
+                module, barename, selftest_root)
             if test_line_count:
                 test_file_count += 1
                 perf_log.extend(pool.apply_async(
@@ -243,10 +243,10 @@ def generate_into_tmpdir(source_files=None):
         raise
 
 
-def valid_source_files(source_files):
+def valid_source_files(source_files, selftest_root):
     filenames = []
     for module_filename in source_files:
-        if module_filename.startswith('selftest'):
+        if not os.path.relpath(selftest_root, module_filename).startswith('..'):
             continue
         if not is_valid_python_identifier(
                 os.path.basename(module_filename)[:-3]):
@@ -304,12 +304,13 @@ def inspect_module(module_filename):
         return Module(module_filename, [], error_message)
 
 
-def write_bare_doctest(module, output_filename):
+def write_bare_doctest(module, output_filename, selftest_root):
     total_tests_written = 0
 
     outfile = cStringIO.StringIO()
     screenshots_rel = os.path.relpath(
-        SCREENSHOTS_ROOT, os.path.dirname(output_filename))
+        os.path.join(selftest_root, "screenshots"),
+        os.path.dirname(output_filename))
 
     import_path, import_name = _import_name(module.filename)
     module_rel = os.path.relpath(
@@ -358,15 +359,16 @@ def write_bare_doctest(module, output_filename):
                    module_rel=repr(module_rel))))
 
     for x in module.items:
-        total_tests_written += write_test_for_class(x, outfile)
+        total_tests_written += write_test_for_class(x, outfile, selftest_root)
     if total_tests_written > 0:
         with open(output_filename, 'w') as f:
             f.write(outfile.getvalue())
     return total_tests_written
 
 
-def write_test_for_class(item, out):
-    all_screenshots = _recursive_glob('*.png', SCREENSHOTS_ROOT)
+def write_test_for_class(item, out, selftest_root):
+    all_screenshots = _recursive_glob(
+        '*.png', os.path.join(selftest_root, 'screenshots'))
 
     always_screenshots = []
     try_screenshots = []
