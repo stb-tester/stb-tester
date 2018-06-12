@@ -5,6 +5,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import stbt
+from _stbt.utils import find_import_name
 
 
 def _save_screenshot(dut, result_dir, exception, save_jpg, save_png):
@@ -53,17 +54,7 @@ def video(args, dut):
 
 def _import_by_filename(filename_):
     from importlib import import_module
-    module_dir, module_file = os.path.split(os.path.abspath(filename_))
-    module_name, module_ext = os.path.splitext(module_file)
-    if module_ext != '.py':
-        raise ImportError("Invalid module filename '%s'" % filename_)
-
-    import_dir = module_dir
-    import_name = module_name
-    while os.path.exists(os.path.join(import_dir, "__init__.py")):
-        import_dir, s = os.path.split(import_dir)
-        import_name = "%s.%s" % (s, import_name)
-
+    import_dir, import_name = find_import_name(filename_)
     sys.path.insert(0, import_dir)
     try:
         module = import_module(import_name)
@@ -72,7 +63,7 @@ def _import_by_filename(filename_):
         # PYTHONPATH modified here so one python file in the test-pack can
         # import other files from the same directory.  We also have to be
         # careful of modules that mess with sys.path:
-        if import_dir != module_dir and sys.path[0] == import_dir:
+        if '.' in import_name and sys.path[0] == import_dir:
             sys.path.pop(0)
     return module
 

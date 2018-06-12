@@ -77,10 +77,11 @@ test_that_no_screenshots_passes_stbt_auto_selftest_validate()
 test_that_no_selftests_expressions_passes_stbt_auto_selftest_validate()
 {
     cd_example_testpack &&
-    rm -r tests_in_root.py \
-          tests/example.py tests/unicode_example.py \
-          tests/subdir/subsubdir/subdir_example.py \
-          selftest/auto_selftest &&
+    rm -rf tests_in_root.py \
+           tests/example.py tests/unicode_example.py \
+           tests/subdir/subsubdir/subdir_example.py \
+           tests/package \
+           selftest/auto_selftest &&
     stbt auto-selftest validate
 }
 
