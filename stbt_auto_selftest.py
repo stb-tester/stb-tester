@@ -93,10 +93,11 @@ def main(argv):
             "a .stbt.conf in this or any parent directory.\n")
         return 1
 
+    source_files = [os.path.relpath(x, root) for x in cmdline_args.source_files]
     os.chdir(root)
 
     if cmdline_args.command == 'generate':
-        return generate(cmdline_args.source_files)
+        return generate(source_files)
     elif cmdline_args.command == 'validate':
         return validate()
     else:
