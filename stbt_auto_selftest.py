@@ -277,7 +277,7 @@ def inspect_module(module_filename):
     """
     try:
         out = []
-        module = import_by_filename(module_filename)
+        module = _import_by_filename(module_filename)
         for x in dir(module):
             item = getattr(module, x)
             if getattr(item, '__module__', None) != module.__name__:
@@ -310,9 +310,11 @@ def write_bare_doctest(module, output_filename):
     outfile = cStringIO.StringIO()
     screenshots_rel = os.path.relpath(
         SCREENSHOTS_ROOT, os.path.dirname(output_filename))
+
+    import_path, import_name = _import_name(module.filename)
     module_rel = os.path.relpath(
-        os.path.dirname(module.filename) or ".",
-        os.path.dirname(output_filename))
+        import_path, os.path.dirname(output_filename))
+
     outfile.write(dedent(r'''        #!/usr/bin/env python
         # coding=utf-8
         """
@@ -351,7 +353,7 @@ def write_bare_doctest(module, output_filename):
                 img.flags.writeable = False
                 _FRAME_CACHE[name] = img
             return img
-        '''.format(name=os.path.basename(module.filename[:-3]),
+        '''.format(name=import_name,
                    screenshots_rel=repr(screenshots_rel),
                    module_rel=repr(module_rel))))
 
@@ -418,7 +420,7 @@ def update_doctests(infilename, outfile):
     """
     Updates a file with doctests in it but no results to have "correct" results.
     """
-    module = import_by_filename(infilename)
+    module = _import_by_filename(infilename)
     if isinstance(outfile, str):
         outfile = open(outfile, 'w')
 
@@ -548,13 +550,25 @@ def _find_test_pack_root():
         root = os.path.split(root)[0]
 
 
-def import_by_filename(filename_):
-    module_dir, module_file = os.path.split(filename_)
+def _import_name(filename):
+    module_dir, module_file = os.path.split(os.path.abspath(filename))
     module_name, module_ext = os.path.splitext(module_file)
     if module_ext != '.py':
-        raise ImportError("Invalid module filename '%s'" % filename_)
-    sys.path = [os.path.abspath(module_dir)] + sys.path
-    return __import__(module_name)
+        raise ImportError("Invalid module filename '%s'" % filename)
+
+    import_dir = module_dir
+    import_name = module_name
+    while os.path.exists(os.path.join(import_dir, "__init__.py")):
+        import_dir, s = os.path.split(import_dir)
+        import_name = "%s.%s" % (s, import_name)
+    return import_dir, import_name
+
+
+def _import_by_filename(filename):
+    from importlib import import_module
+    import_dir, import_name = _import_name(filename)
+    sys.path.insert(0, import_dir)
+    return import_module(import_name)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
