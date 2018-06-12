@@ -40,7 +40,6 @@ install:
         python-jinja2
         python-kitchen
         python-lxml
-        python-lzma
         python-matplotlib
         python-mock
         python-nose

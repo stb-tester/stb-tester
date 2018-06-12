@@ -20,7 +20,6 @@ from collections import namedtuple
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
-from _stbt.state_watch import new_state_sender
 from _stbt.utils import mkdir_p
 
 
@@ -107,7 +106,6 @@ def main(argv):
         test_generator = loop_tests(test_cases, repeat=not args.run_once)
 
     mkdir_p(args.output)
-    state_sender = new_state_sender()
 
     # We assume that all test-cases are in the same git repo:
     git_info = read_git_info(os.path.dirname(test_cases[0][0]))
@@ -118,7 +116,7 @@ def main(argv):
         run_count += 1
 
         last_exit_status = run_test(
-            args, tag_suffix, state_sender, test_name, test_args, git_info)
+            args, tag_suffix, test_name, test_args, git_info)
 
         if last_exit_status != 0:
             failure_count += 1
@@ -185,9 +183,9 @@ def record_duration(rundir):
             f.write(str(time.time() - start_time))
 
 
-def run_test(batch_args, tag_suffix, state_sender, test_name, test_args,
+def run_test(batch_args, tag_suffix, test_name, test_args,
              git_info):
-    with setup_dirs(batch_args.output, tag_suffix, state_sender) as rundir:
+    with setup_dirs(batch_args.output, tag_suffix) as rundir:
         fill_in_data_files(rundir, test_name, test_args, git_info,
                            batch_args.tag)
         with html_report(batch_args, rundir):
@@ -286,22 +284,18 @@ def fill_in_data_files(rundir, test_name, test_args, git_info, tag):
 
 
 @contextmanager
-def setup_dirs(outputdir, tag, state_sender):
+def setup_dirs(outputdir, tag):
     mkdir_p(outputdir)
 
     rundir = make_rundir(outputdir, tag)
 
     symlink_f(rundir, os.path.join(outputdir, "current" + tag))
 
-    state_sender.set({
-        "active_results_directory":
-        os.path.abspath(os.path.join(outputdir, rundir))})
     try:
         yield os.path.join(outputdir, rundir)
     finally:
         # Now test has finished...
         symlink_f(rundir, os.path.join(outputdir, "latest" + tag))
-        state_sender.set({"active_results_directory": None})
 
 
 def symlink_f(source, link_name):
@@ -429,9 +423,6 @@ def get_failure_reason(test_name, exit_status, cwd):
 
 def user_command(name, args, cwd):
     from _stbt.config import get_config
-    subenv = os.environ.copy()
-    if 'STBT_TRACING_SOCKET' in subenv:
-        del subenv['STBT_TRACING_SOCKET']
     script = get_config("batch", name)
     if script:
         return subprocess.call([script] + args, stdin=DEVNULL_R, cwd=cwd)

@@ -73,7 +73,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/logging.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
-    _stbt/state_watch.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/stbt.conf \

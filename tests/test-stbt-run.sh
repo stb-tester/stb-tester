@@ -218,57 +218,6 @@ test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
          || fail "Relative imports in package should work"
 }
 
-state_printer() {
-    cat > state_printer.py <<-EOF
-		import json
-		import sys
-		from _stbt import state_watch
-		data = {}
-		sr = state_watch.StateReceiver(data)
-		for line in sys.stdin:
-		    sr.write(line)
-		    print json.dumps(data, sort_keys=True)
-		EOF
-    PYTHONPATH=$srcdir python state_printer.py
-}
-
-run_state_test() {
-    cat > test.py <<-EOF &&
-	stbt.wait_for_match("$testdir/videotestsrc-redblue.png")
-	EOF
-
-    cat > expected_states <<-EOF
-		{"test_run": {"current_line": {}, "test_case": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
-		{"test_run": {"current_line": {"file": "$PWD/test.py", "line": 1}, "test_case": {"file": "test.py", "function": "", "line": 1, "name": "test.py"}}}
-		{"test_run": {}}
-		EOF
-
-    stbt run "$@" test.py || fail "Test failed"
-}
-
-test_that_stbt_run_tracing_is_written_to_file() {
-    which xzcat &>/dev/null || skip "xzcat is not installed"
-
-    run_state_test --save-trace=trace.jsonl.xz || fail "Test failed"
-    [ -e "trace.jsonl.xz" ] || fail "Trace not written"
-    xzcat "trace.jsonl.xz" | grep -q "state_change" || fail "state_change not written"
-    diff expected_states <(xzcat "trace.jsonl.xz" | state_printer)
-}
-
-test_that_stbt_run_tracing_is_written_to_socket() {
-    which socat &>/dev/null || skip "socat is not installed"
-
-    export STBT_TRACING_SOCKET=$PWD/trace-socket
-    socat UNIX-LISTEN:$STBT_TRACING_SOCKET,fork OPEN:trace.jsonl,creat,append &
-    SOCAT_PID=$!
-    sleep 1
-
-    run_state_test || fail "Test failed"
-    kill "$SOCAT_PID"
-    grep -q "state_change" "trace.jsonl" || fail "state_change not written"
-    diff expected_states <(state_printer <"trace.jsonl") || fail "Wrong states"
-}
-
 check_unicode_error() {
     cat >expected.log <<-EOF
 		Saved screenshot to 'screenshot.png'.

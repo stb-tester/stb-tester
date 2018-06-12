@@ -5,7 +5,6 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import stbt
-from _stbt.state_watch import new_state_sender
 
 
 def _save_screenshot(dut, result_dir, exception, save_jpg, save_png):
@@ -155,25 +154,3 @@ def sane_unicode_and_exception_handling(script):
             sys.exit(1)  # Failure
         else:
             sys.exit(2)  # Error
-
-
-@contextmanager
-def tracing(save_trace_arg, test_function):
-    _tracer = new_state_sender(save_trace_arg)  # pylint: disable=W0212
-
-    absfilename = os.path.abspath(test_function.filename)
-
-    def tracefunc(frame_, event, _):
-        if event == "line" and frame_.f_code.co_filename == absfilename:
-            _tracer.log_current_line(frame_.f_code.co_filename, frame_.f_lineno)
-        return tracefunc
-
-    _tracer.log_test_starting(test_function)
-    sys.settrace(tracefunc)
-
-    try:
-        yield
-    finally:
-        sys.settrace(None)
-        _tracer.log_test_ended()
-        _tracer.close()

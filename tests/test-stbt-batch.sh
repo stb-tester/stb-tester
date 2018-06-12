@@ -472,28 +472,6 @@ test_that_stbt_batch_propagates_exit_status_if_running_a_single_test() {
     [ "$?" = 2 ] || fail "Test should error"
 }
 
-test_that_stbt_batch_reports_results_directory() {
-    which socat &>/dev/null || skip "socat is not installed"
-
-    create_test_repo
-    export STBT_TRACING_SOCKET=$PWD/stbt_tracing_socket
-    socat -d -d -d -D -t10 UNIX-LISTEN:$STBT_TRACING_SOCKET,fork GOPEN:trace.log &
-    SOCAT_PID=$!
-
-    while ! [ -e "$PWD/stbt_tracing_socket" ]; do
-      sleep 0.1
-    done
-
-    stbt batch run -1vv tests/test.py tests/test2.py \
-        || fail "Tests should succeed"
-
-    [ "$(grep active_results_directory trace.log | wc -l)" = 4 ] \
-        || fail "active_results_directory not written"
-    kill $SOCAT_PID
-
-    cat trace.log
-}
-
 test_stbt_batch_output_dir() {
     create_test_repo
     stbt batch run -1 -o "my results" tests/test.py tests/test2.py \

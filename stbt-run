@@ -13,18 +13,13 @@ import sys
 import _stbt.core
 import stbt
 from _stbt.stbt_run import (load_test_function,
-                            sane_unicode_and_exception_handling, tracing,
-                            video)
+                            sane_unicode_and_exception_handling, video)
 
 
 def main(argv):
     parser = _stbt.core.argparser()
     parser.prog = 'stbt run'
     parser.description = 'Run an stb-tester test script'
-    parser.add_argument(
-        '--save-trace', metavar='FILE', default=None,
-        help='Write state to this file, as xz compressed newline-seperated '
-        'JSON')
     parser.add_argument(
         '--save-screenshot', default='on-failure',
         choices=['always', 'on-failure', 'never'],
@@ -49,8 +44,7 @@ def main(argv):
     dut = _stbt.core.new_device_under_test_from_config(args)
     with sane_unicode_and_exception_handling(args.script), video(args, dut):
         test_function = load_test_function(args.script, args.args)
-        with tracing(args.save_trace, test_function):
-            test_function.call()
+        test_function.call()
 
 
 if __name__ == '__main__':
