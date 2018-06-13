@@ -34,6 +34,11 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   this by setting `global.sink_pipeline = xvimagesink sync=false` in your
   `$HOME/.config/stbt/stbt.conf`
 
+* Remove tracing infrastructure (which would report the current test & line
+  number to a file specified via the `--save-trace` argument or to a socket
+  specified via the `STBT_TRACING_SOCKET` environment variable). This was a
+  proof of concept at best, and as far as we know it isn't used by anyone.
+
 ##### New features
 
 * `stbt.press` can be configured to use the ADB keypress mechanism from
