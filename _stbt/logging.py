@@ -142,3 +142,13 @@ def test_that_debug_can_write_unicode_strings():
             ddebug(u'Prüfungs Debug-Unicode')
     for level in [0, 1, 2]:
         yield (test, level)
+
+
+def draw_on(frame, *args, **kwargs):
+    draw_sink_ref = getattr(frame, '_draw_sink', None)
+    if not draw_sink_ref:
+        return
+    draw_sink = draw_sink_ref()
+    if not draw_sink:
+        return
+    draw_sink.draw(*args, **kwargs)

@@ -95,15 +95,17 @@ class Frame(numpy.ndarray):
         is the same format used by the Python standard library function
         `time.time`.
     """
-    def __new__(cls, array, dtype=None, order=None, time=None):
+    def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         obj.time = time
+        obj._draw_sink = _draw_sink
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return
         self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
+        self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
     def __repr__(self):
         if len(self.shape) == 3:

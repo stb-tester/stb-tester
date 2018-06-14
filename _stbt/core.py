@@ -23,6 +23,7 @@ import sys
 import threading
 import traceback
 import warnings
+import weakref
 from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
@@ -40,7 +41,7 @@ from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
 from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
                              gst_sample_make_writable, sample_shape)
-from _stbt.logging import ddebug, debug, warn
+from _stbt.logging import ddebug, debug, draw_on, warn
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
@@ -982,8 +983,7 @@ class DeviceUnderTest(object):
 
         template = _load_image(image)
 
-        grabbed_from_live = (frame is None)
-        if grabbed_from_live:
+        if frame is None:
             frame = self.get_frame()
 
         imglog = logging.ImageLogger(
@@ -1007,9 +1007,7 @@ class DeviceUnderTest(object):
                     (template.relative_filename or template.image),
                     first_pass_matched)
                 imglog.append(matches=result)
-                if grabbed_from_live:
-                    self._sink_pipeline.draw(
-                        result, label="match(%r)" %
+                draw_on(frame, result, label="match(%r)" %
                         os.path.basename(template.friendly_name))
                 yield result
 
@@ -1029,9 +1027,8 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._sink_pipeline.draw(
-                result, label="match(%r)" %
-                os.path.basename(template.friendly_name))
+            draw_on(sample, result, label="match(%r)" %
+                    os.path.basename(template.friendly_name))
             yield result
 
     def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None,
@@ -1099,7 +1096,7 @@ class DeviceUnderTest(object):
 
             result = MotionResult(getattr(frame, "time", None), motion,
                                   out_region, frame)
-            self._sink_pipeline.draw(result, label="detect_motion()")
+            draw_on(frame, result, label="detect_motion()")
             debug("%s found: %s" % (
                 "Motion" if motion else "No motion", str(result)))
             yield result
@@ -1362,6 +1359,7 @@ class DeviceUnderTest(object):
                   result=result,
                   maxVal=maxVal))
         return result
+
 
 # Utility functions
 # ===========================================================================
@@ -2175,6 +2173,9 @@ class Display(object):
 
         frame = array_from_sample(sample)
         frame.flags.writeable = False
+
+        # See also: logging.draw_on
+        frame._draw_sink = weakref.ref(self._sink_pipeline)  # pylint: disable=protected-access
         self.tell_user_thread(frame)
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
