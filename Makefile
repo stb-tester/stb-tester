@@ -71,6 +71,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/lmdb/__init__.py \
     _stbt/lmdb/cpython.so \
     _stbt/lmdb/LICENSE \
+    _stbt/motion.py \
     _stbt/logging.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
