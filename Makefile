@@ -65,6 +65,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
     _stbt/imgproc_cache.py \
+    _stbt/imgutils.py \
     _stbt/irnetbox.py \
     _stbt/libxxhash.so \
     _stbt/lmdb/__init__.py \

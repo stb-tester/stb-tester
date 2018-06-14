@@ -2,9 +2,9 @@ import ctypes
 import sys
 
 import gi
-import numpy
 
 from .gst_hacks import map_gst_sample, sample_get_size
+from .imgutils import Frame
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst  # isort:skip pylint: disable=E0611
@@ -27,17 +27,11 @@ def gst_sample_make_writable(sample):
 
 
 def sample_shape(sample):
-    if isinstance(sample, numpy.ndarray):
-        return sample.shape
-    elif isinstance(sample, Gst.Sample):
-        caps = sample.get_caps().get_structure(0)
-        if caps.get_value('format') in ['BGR', 'RGB']:
-            return (caps.get_value('height'), caps.get_value('width'), 3)
-        else:
-            return (sample_get_size(sample),)
+    caps = sample.get_caps().get_structure(0)
+    if caps.get_value('format') in ['BGR', 'RGB']:
+        return (caps.get_value('height'), caps.get_value('width'), 3)
     else:
-        raise TypeError("sample_shape must take a Gst.Sample or a "
-                        "numpy.ndarray.  Received a %s" % str(type(sample)))
+        return (sample_get_size(sample),)
 
 
 class _MappedSample(object):
@@ -78,44 +72,6 @@ class _MappedSample(object):
         self.__array_interface__ = None
         if self._ctx:
             self._ctx.__exit__(None, None, None)
-
-
-class Frame(numpy.ndarray):
-    """A frame of video.
-
-    A ``Frame`` is what you get from `stbt.get_frame` and `stbt.frames`. It is
-    a subclass of `numpy.ndarray`, which is the type that OpenCV uses to
-    represent images. Data is stored in 8-bit, 3 channel BGR format.
-
-    In addition to the members inherited from `numpy.ndarray`, ``Frame``
-    defines the following attributes:
-
-    :ivar float time: The wall-clock time when this video-frame was captured,
-        as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This
-        is the same format used by the Python standard library function
-        `time.time`.
-    """
-    def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
-        obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
-        obj.time = time
-        obj._draw_sink = _draw_sink
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-        self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
-        self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
-
-    def __repr__(self):
-        if len(self.shape) == 3:
-            dimensions = "%dx%dx%d" % (
-                self.shape[1], self.shape[0], self.shape[2])
-        else:
-            dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<stbt.Frame(time=%s, dimensions=%s)>" % (
-            "None" if self.time is None else "%.3f" % self.time,
-            dimensions)
 
 
 def array_from_sample(sample, readwrite=False):
