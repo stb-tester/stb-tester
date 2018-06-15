@@ -56,8 +56,8 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     :param frames: An iterable of video-frames to analyse. Defaults to
         ``stbt.frames()``.
 
-    Added in v28: The ``region`` parameter.
-    Added in v29: The ``frames`` parameter.
+    | Added in v28: The ``region`` parameter.
+    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
