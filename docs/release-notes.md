@@ -29,10 +29,24 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 ##### Breaking changes since v28
 
+* `stbt.is_screen_black` returns an object with `black` and `frame` attributes,
+  instead of a bool. This evaluates to truthy or falsey so this change is
+  backwards compatible, unless you were explicitly comparing the result with
+  `== True` or `is True`. This change was made so that you can get the exact
+  frame that changed to (or from) black, for more precise performance
+  measurements.
+
+* The `stbt.NoVideo` exception inherits from `Exception` instead of
+  `stbt.UITestFailure`. This means that it will be considered a test *error*,
+  not a *failure*. `NoVideo` is usually a fault with your video-capture
+  pipeline or hardware, not the device-under-test; most video-capture hardware
+  continues to deliver video frames (typically black) even without a video
+  source.
+
 * `stbt run` will no longer show an output video window by default. This is a
   better default for headless environments like stbt-docker.  You can re-enable
   this by setting `global.sink_pipeline = xvimagesink sync=false` in your
-  `$HOME/.config/stbt/stbt.conf`
+  `$HOME/.config/stbt/stbt.conf`.
 
 * Remove tracing infrastructure (which would report the current test & line
   number to a file specified via the `--save-trace` argument or to a socket
@@ -41,12 +55,8 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 ##### New features
 
-* `stbt.press` can be configured to use the ADB keypress mechanism from
-  `stbt.android.AdbDevice.press`. See the documentation for `--control` in the
-  [stbt(1) man page].
-
-* `stbt.android.AdbDevice.press` will convert standard Stb-tester key names
-  like "KEY_OK" to the equivalent Android KeyEvent keycodes.
+* Added `stbt.press_and_wait`: Detection and frame-accurate measurement of
+  animations and transitions.
 
 * `stbt.press` accepts a new `hold_secs` parameter to hold a key down for the
   specified duration. This is implemented for the LIRC, CEC, and Roku controls.
@@ -54,23 +64,45 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * Added `stbt.pressing`: A context manager that will hold a key down for as
   long as the code in the `with` block is executing.
 
-* `stbt.is_screen_black` returns an object with `black` and `frame` attributes,
-  instead of a bool. This evaluates to True or False so this change is
-  backwards compatible, unless you were explicitly comparing the result with
-  `== True` or `is True`. This change was made so that you can get the exact
-  frame that changed to (or from) black, for more precise performance
-  measurements.
+* `stbt.press` can be configured to use the ADB keypress mechanism from
+  `stbt.android.AdbDevice.press`. See the documentation for `--control` in the
+  [stbt(1) man page].
 
-* `stbt.is_screen_black` logs the result of its analysis, similar to
-  `stbt.match`, `stbt.ocr`, etc.
+* `stbt.android.AdbDevice.press` will convert some standard Stb-tester key
+  names like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
 * If your test-pack is a Python module (that is, it contains an `__init__.py`
-  in each directory under `tests/`) then relative imports from test scripts
-  will now work. This allows you to organise your tests into multiple
-  directories easily.
+  in each directory under `tests/`) then `stbt run` will automatically add the
+  parent directory of the top-level module to the Python import path. This
+  fixes relative imports from your test scripts if you didn't configure
+  `PYTHONPATH` explicitly.
 
 ##### Minor fixes and packaging fixes
 
+* Fix `AttributeError` when using a `stbt.FrameObject` instance from multiple
+  threads.
+
+* `stbt.press`: Fix timing of the key-press visualisation in the recorded
+  video. The key-press was appearing earlier than it was actually sent.
+
+* `stbt.Frame`: Show timestamp & dimensions in repr output, instead of the
+  verbose numpy repr.
+
+* Internal improvements & simplifications to the GStreamer pipeline.
+
+* Debug logging: `stbt.is_screen_black` logs the result of its analysis,
+  similar to `stbt.match`, `stbt.ocr`, etc.
+
+* Debug logging: Only log 3 decimal places for frame timestamps. 60fps is 16ms
+  per frame, so higher precision is misleading.
+
+* `stbt auto-selftest` bug-fixes: Don't fail if there are Python files in the
+  root of the test-pack; don't abort if one of the files specified explicitly
+  doesn't have any selftests; when specifying files explicitly, remove the
+  generated file if the source file no longer has any selftests.
+
+* `stbt batch run` will write the final screenshot to the results directory
+  even if the test-script changed the current working directory with `os.chdir`.
 
 #### v28
 
@@ -535,7 +567,7 @@ has stbt installed.
 [Roku HTTP control protocol]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide
 [standard key names]: https://stb-tester.com/manual/getting-started#remote-control-key-names
 [Roku key names]: https://sdkdocs.roku.com/display/sdkdoc/External+Control+Guide#ExternalControlGuide-3.4ValidKeys
-[stbt(1) man page]: http://stb-tester.com/stbt.html
+[stbt(1) man page]: https://github.com/stb-tester/stb-tester/blob/master/docs/stbt.1.rst
 
 
 #### 24
