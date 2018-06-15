@@ -23,6 +23,7 @@ import sys
 import threading
 import traceback
 import warnings
+import weakref
 from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
@@ -33,14 +34,16 @@ import gi
 import numpy
 from enum import IntEnum
 from kitchen.text.converters import to_bytes
-from numpy import inf
 
 import _stbt.cv2_compat as cv2_compat
 from _stbt import imgproc_cache, logging, utils
 from _stbt.config import ConfigurationError, get_config
-from _stbt.gst_utils import (array_from_sample, Frame, gst_iterate,
-                             gst_sample_make_writable, sample_shape)
-from _stbt.logging import ddebug, debug, warn
+from _stbt.gst_utils import (array_from_sample, gst_iterate,
+                             gst_sample_make_writable)
+from _stbt.imgutils import (_frame_repr, _image_region, _ImageFromUser,
+                            _load_image, crop, find_user_file, Frame)
+from _stbt.logging import ddebug, debug, draw_on, warn
+from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
@@ -177,277 +180,6 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class Region(namedtuple('Region', 'x y right bottom')):
-    u"""
-    ``Region(x, y, width=width, height=height)`` or
-    ``Region(x, y, right=right, bottom=bottom)``
-
-    Rectangular region within the video frame.
-
-    For example, given the following regions a, b, and c::
-
-        - 01234567890123
-        0 ░░░░░░░░
-        1 ░a░░░░░░
-        2 ░░░░░░░░
-        3 ░░░░░░░░
-        4 ░░░░▓▓▓▓░░▓c▓
-        5 ░░░░▓▓▓▓░░▓▓▓
-        6 ░░░░▓▓▓▓░░░░░
-        7 ░░░░▓▓▓▓░░░░░
-        8     ░░░░░░b░░
-        9     ░░░░░░░░░
-
-    >>> a = Region(0, 0, width=8, height=8)
-    >>> b = Region(4, 4, right=13, bottom=10)
-    >>> c = Region(10, 4, width=3, height=2)
-    >>> a.right
-    8
-    >>> b.bottom
-    10
-    >>> b.contains(c), a.contains(b), c.contains(b)
-    (True, False, False)
-    >>> b.extend(x=6, bottom=-4) == c
-    True
-    >>> a.extend(right=5).contains(c)
-    True
-    >>> a.width, a.extend(x=3).width, a.extend(right=-3).width
-    (8, 5, 5)
-    >>> c.replace(bottom=10)
-    Region(x=10, y=4, right=13, bottom=10)
-    >>> Region.intersect(a, b)
-    Region(x=4, y=4, right=8, bottom=8)
-    >>> Region.intersect(a, b) == Region.intersect(b, a)
-    True
-    >>> Region.intersect(c, b) == c
-    True
-    >>> print Region.intersect(a, c)
-    None
-    >>> print Region.intersect(None, a)
-    None
-    >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
-    >>> quadrant.translate(2, 2)
-    Region(x=-inf, y=-inf, right=2, bottom=2)
-    >>> c.translate(x=-9, y=-3)
-    Region(x=1, y=1, right=4, bottom=3)
-    >>> Region.intersect(Region.ALL, c) == c
-    True
-    >>> Region.ALL
-    Region.ALL
-    >>> print Region.ALL
-    Region.ALL
-    >>> c.above()
-    Region(x=10, y=-inf, right=13, bottom=4)
-    >>> c.below()
-    Region(x=10, y=6, right=13, bottom=inf)
-    >>> a.right_of()
-    Region(x=8, y=0, right=inf, bottom=8)
-    >>> a.right_of(width=2)
-    Region(x=8, y=0, right=10, bottom=8)
-    >>> c.left_of()
-    Region(x=-inf, y=4, right=10, bottom=6)
-
-    .. py:attribute:: x
-
-        The x coordinate of the left edge of the region, measured in pixels
-        from the left of the video frame (inclusive).
-
-    .. py:attribute:: y
-
-        The y coordinate of the top edge of the region, measured in pixels from
-        the top of the video frame (inclusive).
-
-    .. py:attribute:: right
-
-        The x coordinate of the right edge of the region, measured in pixels
-        from the left of the video frame (exclusive).
-
-    .. py:attribute:: bottom
-
-        The y coordinate of the bottom edge of the region, measured in pixels
-        from the top of the video frame (exclusive).
-
-    ``x``, ``y``, ``right``, and ``bottom`` can be infinite -- that is,
-    ``float("inf")`` or ``-float("inf")``.
-    """
-    def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
-        if (width is None) == (right is None):
-            raise ValueError("You must specify either 'width' or 'right'")
-        if (height is None) == (bottom is None):
-            raise ValueError("You must specify either 'height' or 'bottom'")
-        if right is None:
-            right = x + width
-        if bottom is None:
-            bottom = y + height
-        if right <= x:
-            raise ValueError("'right' must be greater than 'x'")
-        if bottom <= y:
-            raise ValueError("'bottom' must be greater than 'y'")
-        return super(Region, cls).__new__(cls, x, y, right, bottom)
-
-    def __repr__(self):
-        if self == Region.ALL:
-            return 'Region.ALL'
-        else:
-            return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
-                % (self.x, self.y, self.right, self.bottom)
-
-    @property
-    def width(self):
-        """The width of the region, measured in pixels."""
-        return self.right - self.x
-
-    @property
-    def height(self):
-        """The height of the region, measured in pixels."""
-        return self.bottom - self.y
-
-    @staticmethod
-    def from_extents(x, y, right, bottom):
-        """Create a Region using right and bottom extents rather than width and
-        height.
-
-        Typically you'd use the ``right`` and ``bottom`` parameters of the
-        ``Region`` constructor instead, but this factory function is useful
-        if you need to create a ``Region`` from a tuple.
-
-        >>> extents = (4, 4, 13, 10)
-        >>> Region.from_extents(*extents)
-        Region(x=4, y=4, right=13, bottom=10)
-        """
-        return Region(x, y, right=right, bottom=bottom)
-
-    @staticmethod
-    def intersect(a, b):
-        """
-        :returns: The intersection of regions ``a`` and ``b``, or ``None`` if
-            the regions don't intersect.
-
-        Either ``a`` or ``b`` can be ``None`` so intersect is commutative and
-        associative.
-        """
-        if a is None or b is None:
-            return None
-        else:
-            extents = (max(a.x, b.x), max(a.y, b.y),
-                       min(a.right, b.right), min(a.bottom, b.bottom))
-            if extents[0] < extents[2] and extents[1] < extents[3]:
-                return Region.from_extents(*extents)
-            else:
-                return None
-
-    def contains(self, other):
-        """:returns: True if ``other`` is entirely contained within self."""
-        return (other and self.x <= other.x and self.y <= other.y and
-                self.right >= other.right and self.bottom >= other.bottom)
-
-    def extend(self, x=0, y=0, right=0, bottom=0):
-        """
-        :returns: A new region with the edges of the region adjusted by the
-            given amounts.
-        """
-        return Region.from_extents(
-            self.x + x, self.y + y, self.right + right, self.bottom + bottom)
-
-    def replace(self, x=None, y=None, width=None, height=None, right=None,
-                bottom=None):
-        """
-        :returns: A new region with the edges of the region set to the given
-            coordinates.
-
-        This is similar to `extend`, but it takes absolute coordinates within
-        the image instead of adjusting by a relative number of pixels.
-        """
-        def norm_coords(name_x, name_width, name_right,
-                        x, width, right,  # or y, height, bottom
-                        default_x, _default_width, default_right):
-            if all(z is not None for z in (x, width, right)):
-                raise ValueError(
-                    "Region.replace: Argument conflict: you may only specify "
-                    "two of %s, %s and %s.  You specified %s=%s, %s=%s and "
-                    "%s=%s" % (name_x, name_width, name_right,
-                               name_x, x, name_width, width, name_right, right))
-            if x is None:
-                if width is not None and right is not None:
-                    x = right - width
-                else:
-                    x = default_x
-            if right is None:
-                right = x + width if width is not None else default_right
-            return x, right
-
-        x, right = norm_coords('x', 'width', 'right', x, width, right,
-                               self.x, self.width, self.right)
-        y, bottom = norm_coords('y', 'height', 'bottom', y, height, bottom,
-                                self.y, self.height, self.bottom)
-
-        return Region(x=x, y=y, right=right, bottom=bottom)
-
-    def translate(self, x=0, y=0):
-        """
-        :returns: A new region with the position of the region adjusted by the
-            given amounts.
-        """
-        return Region.from_extents(self.x + x, self.y + y,
-                                   self.right + x, self.bottom + y)
-
-    def above(self, height=inf):
-        """
-        :returns: A new region above the current region, extending to the top
-            of the frame (or to the specified height).
-        """
-        return self.replace(y=self.y - height, bottom=self.y)
-
-    def below(self, height=inf):
-        """
-        :returns: A new region below the current region, extending to the bottom
-            of the frame (or to the specified height).
-        """
-        return self.replace(y=self.bottom, bottom=self.bottom + height)
-
-    def right_of(self, width=inf):
-        """
-        :returns: A new region to the right of the current region, extending to
-            the right edge of the frame (or to the specified width).
-        """
-        return self.replace(x=self.right, right=self.right + width)
-
-    def left_of(self, width=inf):
-        """
-        :returns: A new region to the left of the current region, extending to
-            the left edge of the frame (or to the specified width).
-        """
-        return self.replace(x=self.x - width, right=self.x)
-
-
-Region.ALL = Region(x=-inf, y=-inf, right=inf, bottom=inf)
-
-
-def _bounding_box(a, b):
-    """Find the bounding box of two regions.  Returns the smallest region which
-    contains both regions a and b.
-
-    >>> print _bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
-    Region(x=20, y=20, right=60, bottom=50)
-    >>> print _bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
-    Region(x=20, y=30, right=30, bottom=50)
-    >>> print _bounding_box(None, Region(20, 30, 10, 20))
-    Region(x=20, y=30, right=30, bottom=50)
-    >>> print _bounding_box(Region(20, 30, 10, 20), None)
-    Region(x=20, y=30, right=30, bottom=50)
-    >>> print _bounding_box(Region(20, 30, 10, 20), Region.ALL)
-    Region.ALL
-    >>> print _bounding_box(None, None)
-    None
-    """
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return Region.from_extents(min(a.x, b.x), min(a.y, b.y),
-                               max(a.right, b.right), max(a.bottom, b.bottom))
-
-
 class MatchResult(object):
     """The result from `match`.
 
@@ -511,45 +243,6 @@ class MatchResult(object):
             return int(self.time * 1e9)
 
 
-def _frame_repr(frame):
-    if frame is None:
-        return "None"
-    if isinstance(frame, Frame):
-        return repr(frame)
-    if len(frame.shape) == 3:
-        return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])
-    else:
-        return "<%dx%d>" % (frame.shape[1], frame.shape[0])
-
-
-class _ImageFromUser(namedtuple(
-        '_ImageFromUser',
-        'image relative_filename absolute_filename')):
-
-    @property
-    def friendly_name(self):
-        if self.image is None:
-            return None
-        return self.relative_filename or '<Custom Image>'
-
-
-def _load_image(image, flags=cv2.IMREAD_COLOR):
-    if isinstance(image, _ImageFromUser):
-        return image
-    if isinstance(image, numpy.ndarray):
-        return _ImageFromUser(image, None, None)
-    else:
-        relative_filename = image
-        absolute_filename = _find_user_file(relative_filename)
-        if not absolute_filename:
-            raise IOError("No such file: %s" % relative_filename)
-        numpy_image = cv2.imread(absolute_filename, flags)
-        if numpy_image is None:
-            raise IOError("Failed to load image: %s" %
-                          absolute_filename)
-        return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
-
-
 def load_image(filename, flags=cv2.IMREAD_COLOR):
     """Find & read an image from disk.
 
@@ -579,82 +272,13 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
     Added in v28.
     """
 
-    absolute_filename = _find_user_file(filename)
+    absolute_filename = find_user_file(filename)
     if not absolute_filename:
         raise IOError("No such file: %s" % filename)
     image = cv2.imread(absolute_filename, flags)
     if image is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
     return image
-
-
-def crop(frame, region):
-    """Returns an image containing the specified region of ``frame``.
-
-    :type frame: `stbt.Frame` or `numpy.ndarray`
-    :param frame: An image in OpenCV format (for example as returned by
-      `frames`, `get_frame` and `load_image`, or the ``frame`` parameter of
-      `MatchResult`).
-
-    :type Region region: The region to crop.
-
-    :returns: An OpenCV image (`numpy.ndarray`) containing the specified region
-      of the source frame. This is a view onto the original data, so if you
-      want to modify the cropped image call its ``copy()`` method first.
-    """
-    if not _image_region(frame).contains(region):
-        raise ValueError("frame with dimensions %r doesn't contain %r"
-                         % (frame.shape, region))
-    return frame[region.y:region.bottom, region.x:region.right]
-
-
-def _image_region(image):
-    s = sample_shape(image)
-    return Region(0, 0, s[1], s[0])
-
-
-class MotionResult(object):
-    """The result from `detect_motion` and `wait_for_motion`.
-
-    :ivar float time: The time at which the video-frame was captured, in
-        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
-        system time (``time.time()``).
-
-    :ivar bool motion: True if motion was found. This is the same as evaluating
-        ``MotionResult`` as a bool. That is, ``if result:`` will behave the
-        same as ``if result.motion:``.
-
-    :ivar Region region: Bounding box where the motion was found, or ``None``
-        if no motion was found.
-
-    :ivar Frame frame: The video frame in which motion was (or wasn't) found.
-
-    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
-        instead.
-
-    Added in v28: The ``frame`` attribute.
-    """
-    def __init__(self, time, motion, region, frame):
-        self.time = time
-        self.motion = motion
-        self.region = region
-        self.frame = frame
-
-    def __nonzero__(self):
-        return self.motion
-
-    def __repr__(self):
-        return (
-            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
-                "None" if self.time is None else "%.3f" % self.time,
-                self.motion, self.region, _frame_repr(self.frame)))
-
-    @property
-    def timestamp(self):
-        if self.time is None:
-            return None
-        else:
-            return int(self.time * 1e9)
 
 
 class _IsScreenBlackResult(object):
@@ -812,47 +436,6 @@ def new_device_under_test_from_config(
         use_old_threading_behaviour=use_old_threading_behaviour)
 
 
-def _pixel_bounding_box(img):
-    """
-    Find the smallest region that contains all the non-zero pixels in an image.
-
-    >>> _pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
-    >>> _pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
-    Region(x=0, y=0, right=1, bottom=1)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0],
-    ...     [0, 1, 1, 1],
-    ...     [0, 1, 1, 1],
-    ...     [0, 0, 0, 0],
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=4, bottom=3)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0, 0, 0],
-    ...     [0, 0, 0, 1, 0, 0],
-    ...     [0, 1, 0, 0, 0, 0],
-    ...     [0, 0, 0, 0, 1, 0],
-    ...     [0, 0, 1, 0, 0, 0],
-    ...     [0, 0, 0, 0, 0, 0]
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=5, bottom=5)
-    """
-    if len(img.shape) != 2:
-        raise ValueError("Single-channel image required.  Provided image has "
-                         "shape %r" % (img.shape,))
-
-    out = [None, None, None, None]
-
-    for axis in (0, 1):
-        flat = numpy.any(img, axis=axis)
-        indices = numpy.where(flat)[0]
-        if len(indices) == 0:
-            return None
-        out[axis] = indices[0]
-        out[axis + 2] = indices[-1] + 1
-
-    return Region.from_extents(*out)
-
-
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None, sink_pipeline=None,
                  mainloop=None, use_old_threading_behaviour=False, _time=None):
@@ -982,8 +565,7 @@ class DeviceUnderTest(object):
 
         template = _load_image(image)
 
-        grabbed_from_live = (frame is None)
-        if grabbed_from_live:
+        if frame is None:
             frame = self.get_frame()
 
         imglog = logging.ImageLogger(
@@ -1007,9 +589,7 @@ class DeviceUnderTest(object):
                     (template.relative_filename or template.image),
                     first_pass_matched)
                 imglog.append(matches=result)
-                if grabbed_from_live:
-                    self._sink_pipeline.draw(
-                        result, label="match(%r)" %
+                draw_on(frame, result, label="match(%r)" %
                         os.path.basename(template.friendly_name))
                 yield result
 
@@ -1029,79 +609,8 @@ class DeviceUnderTest(object):
             result = self.match(
                 template, frame=sample, match_parameters=match_parameters,
                 region=region)
-            self._sink_pipeline.draw(
-                result, label="match(%r)" %
-                os.path.basename(template.friendly_name))
-            yield result
-
-    def detect_motion(self, timeout_secs=10, noise_threshold=None, mask=None,
-                      region=Region.ALL):
-
-        if noise_threshold is None:
-            noise_threshold = get_config(
-                'motion', 'noise_threshold', type_=float)
-
-        debug("Searching for motion")
-
-        if mask is None:
-            mask = _ImageFromUser(None, None, None)
-        else:
-            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
-            debug("Using mask %s" % mask.friendly_name)
-
-        frames = self.frames(timeout_secs)
-        frame, _ = next(frames)
-
-        region = Region.intersect(_image_region(frame), region)
-
-        previous_frame_gray = cv2.cvtColor(crop(frame, region),
-                                           cv2.COLOR_BGR2GRAY)
-        if (mask.image is not None and
-                mask.image.shape[:2] != previous_frame_gray.shape[:2]):
-            raise ValueError(
-                "The dimensions of the mask '%s' %s don't match the "
-                "video frame %s" % (
-                    mask.friendly_name, mask.image.shape,
-                    previous_frame_gray.shape))
-
-        for frame, _ in frames:
-            frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-
-            imglog = logging.ImageLogger("detect_motion")
-            imglog.imwrite("source", frame_gray)
-
-            absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
-            previous_frame_gray = frame_gray
-            imglog.imwrite("absdiff", absdiff)
-
-            if mask.image is not None:
-                absdiff = cv2.bitwise_and(absdiff, mask.image)
-                imglog.imwrite("mask", mask.image)
-                imglog.imwrite("absdiff_masked", absdiff)
-
-            _, thresholded = cv2.threshold(
-                absdiff, int((1 - noise_threshold) * 255), 255,
-                cv2.THRESH_BINARY)
-            eroded = cv2.erode(
-                thresholded,
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            imglog.imwrite("absdiff_threshold", thresholded)
-            imglog.imwrite("absdiff_threshold_erode", eroded)
-
-            out_region = _pixel_bounding_box(eroded)
-            if out_region:
-                # Undo cv2.erode above:
-                out_region = out_region.extend(x=-1, y=-1)
-                # Undo crop:
-                out_region = out_region.translate(region.x, region.y)
-
-            motion = bool(out_region)
-
-            result = MotionResult(getattr(frame, "time", None), motion,
-                                  out_region, frame)
-            self._sink_pipeline.draw(result, label="detect_motion()")
-            debug("%s found: %s" % (
-                "Motion" if motion else "No motion", str(result)))
+            draw_on(sample, result, label="match(%r)" %
+                    os.path.basename(template.friendly_name))
             yield result
 
     def wait_for_match(self, image, timeout_secs=10, consecutive_matches=1,
@@ -1160,55 +669,6 @@ class DeviceUnderTest(object):
                     i += 1
                 else:
                     raise
-
-    def wait_for_motion(
-            self, timeout_secs=10, consecutive_frames=None,
-            noise_threshold=None, mask=None, region=Region.ALL):
-
-        if consecutive_frames is None:
-            consecutive_frames = get_config('motion', 'consecutive_frames')
-
-        consecutive_frames = str(consecutive_frames)
-        if '/' in consecutive_frames:
-            motion_frames = int(consecutive_frames.split('/')[0])
-            considered_frames = int(consecutive_frames.split('/')[1])
-        else:
-            motion_frames = int(consecutive_frames)
-            considered_frames = int(consecutive_frames)
-
-        if motion_frames > considered_frames:
-            raise ConfigurationError(
-                "`motion_frames` exceeds `considered_frames`")
-
-        debug("Waiting for %d out of %d frames with motion" % (
-            motion_frames, considered_frames))
-
-        if mask is None:
-            mask = _ImageFromUser(None, None, None)
-        else:
-            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
-            debug("Using mask %s" % mask.friendly_name)
-
-        matches = deque(maxlen=considered_frames)
-        motion_count = 0
-        for res in self.detect_motion(timeout_secs, noise_threshold, mask,
-                                      region):
-            motion_count += bool(res)
-            if len(matches) == matches.maxlen:
-                motion_count -= bool(matches.popleft())
-            matches.append(res)
-            if motion_count >= motion_frames:
-                debug("Motion detected.")
-                # We want to return the first True motion result as this is when
-                # the motion actually started.
-                for result in matches:
-                    if result:
-                        return result
-                assert False, ("Logic error in wait_for_motion: This code "
-                               "should never be reached")
-
-        screenshot = self.get_frame()
-        raise MotionTimeout(screenshot, mask.friendly_name, timeout_secs)
 
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -1270,7 +730,7 @@ class DeviceUnderTest(object):
                 # Find bounding box
                 box = None
                 for _, elem in p:
-                    box = _bounding_box(box, _hocr_elem_region(elem))
+                    box = Region.bounding_box(box, _hocr_elem_region(elem))
                 # _tesseract crops to region and scales up by a factor of 3 so
                 # we must undo this transformation here.
                 n = 3 if upsample else 1
@@ -1362,6 +822,7 @@ class DeviceUnderTest(object):
                   result=result,
                   maxVal=maxVal))
         return result
+
 
 # Utility functions
 # ===========================================================================
@@ -1586,19 +1047,6 @@ def as_precondition(message):
         raise exc
 
 
-class UITestError(Exception):
-    """The test script had an unrecoverable error."""
-    pass
-
-
-class UITestFailure(Exception):
-    """The test failed because the device under test didn't behave as expected.
-
-    Inherit from this if you need to define your own test-failure exceptions.
-    """
-    pass
-
-
 class NoVideo(Exception):
     """No video available from the source pipeline."""
     pass
@@ -1624,30 +1072,6 @@ class MatchTimeout(UITestFailure):
     def __str__(self):
         return "Didn't find match for '%s' within %g seconds." % (
             self.expected, self.timeout_secs)
-
-
-class MotionTimeout(UITestFailure):
-    """Exception raised by `wait_for_motion`.
-
-    :ivar Frame screenshot: The last video frame that `wait_for_motion` checked
-        before timing out.
-
-    :vartype mask: str or None
-    :ivar mask: Filename of the mask that was used, if any.
-
-    :vartype timeout_secs: int or float
-    :ivar timeout_secs: Number of seconds that motion was searched for.
-    """
-    def __init__(self, screenshot, mask, timeout_secs):
-        super(MotionTimeout, self).__init__()
-        self.screenshot = screenshot
-        self.mask = mask
-        self.timeout_secs = timeout_secs
-
-    def __str__(self):
-        return "Didn't find motion%s within %g seconds." % (
-            " (with mask '%s')" % self.mask if self.mask else "",
-            self.timeout_secs)
 
 
 class PreconditionError(UITestError):
@@ -2175,6 +1599,9 @@ class Display(object):
 
         frame = array_from_sample(sample)
         frame.flags.writeable = False
+
+        # See also: logging.draw_on
+        frame._draw_sink = weakref.ref(self._sink_pipeline)  # pylint: disable=protected-access
         self.tell_user_thread(frame)
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
@@ -2801,60 +2228,6 @@ def _log_match_image_debug(imglog):
                 x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
             template_name=imglog.data["template_name"],
         ))
-
-
-def _iter_frames(depth=1):
-    frame = inspect.currentframe(depth + 1)
-    while frame:
-        yield frame
-        frame = frame.f_back
-
-
-def _find_user_file(filename):
-    """Searches for the given filename and returns the full path.
-
-    Searches in the directory of the script that called `load_image` (or
-    `match`, etc), then in the directory of that script's caller, etc.
-    Falls back to searching the current working directory.
-
-    :returns: Absolute filename, or None if it can't find the file.
-    """
-
-    if isinstance(filename, unicode):
-        filename = filename.encode("utf-8")
-
-    if os.path.isabs(filename) and os.path.isfile(filename):
-        return filename
-
-    # Start searching from the first parent stack-frame that is outside of
-    # the _stbt installation directory (this file's directory). We can ignore
-    # the first 2 stack-frames:
-    #
-    # * stack()[0] is _find_user_file;
-    # * stack()[1] is _find_user_file's caller: load_image or _load_image;
-    # * stack()[2] is load_image's caller (the user script). It could also be
-    #   _load_image's caller (e.g. `match`) so we still need to check until
-    #   we're outside of the _stbt directory.
-
-    _stbt_dir = os.path.abspath(os.path.dirname(__file__))
-    for caller in _iter_frames(depth=2):
-        caller_dir = os.path.abspath(
-            os.path.dirname(inspect.getframeinfo(caller).filename))
-        if caller_dir.startswith(_stbt_dir):
-            continue
-        caller_path = os.path.join(caller_dir, filename)
-        if os.path.isfile(caller_path):
-            ddebug("Resolved relative path %r to %r" % (filename, caller_path))
-            return caller_path
-
-    # Fall back to image from cwd, to allow loading an image saved previously
-    # during the same test-run.
-    if os.path.isfile(filename):
-        abspath = os.path.abspath(filename)
-        ddebug("Resolved relative path %r to %r" % (filename, abspath))
-        return abspath
-
-    return None
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as

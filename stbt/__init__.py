@@ -26,8 +26,6 @@ from _stbt.core import \
     MatchParameters, \
     MatchResult, \
     MatchTimeout, \
-    MotionResult, \
-    MotionTimeout, \
     NoVideo, \
     OcrMode, \
     Position, \
@@ -38,6 +36,11 @@ from _stbt.core import \
     UITestError, \
     UITestFailure, \
     wait_until
+from _stbt.motion import (
+    detect_motion,
+    MotionResult,
+    MotionTimeout,
+    wait_for_motion)
 from _stbt.transition import \
     press_and_wait, \
     TransitionStatus, \
@@ -237,53 +240,6 @@ def detect_match(image, timeout_secs=10, match_parameters=None,
     return _dut.detect_match(image, timeout_secs, match_parameters, region)
 
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
-                  region=Region.ALL):
-    """Generator that yields a sequence of one `MotionResult` for each frame
-    processed from the device-under-test's video stream.
-
-    The `MotionResult` indicates whether any motion was detected -- that is,
-    any difference between two consecutive frames.
-
-    :type timeout_secs: int or float or None
-    :param timeout_secs:
-        A timeout in seconds. After this timeout the iterator will be exhausted.
-        Thas is, a ``for`` loop like ``for m in detect_motion(timeout_secs=10)``
-        will terminate after 10 seconds. If ``timeout_secs`` is ``None`` then
-        the iterator will yield frames forever. Note that you can stop
-        iterating (for example with ``break``) at any time.
-
-    :param float noise_threshold:
-        The amount of noise to ignore. This is only useful with noisy analogue
-        video sources. Valid values range from 0 (all differences are
-        considered noise; a value of 0 will never report motion) to 1.0 (any
-        difference is considered motion).
-
-        This defaults to 0.84. You can override the global default value by
-        setting ``noise_threshold`` in the ``[motion]`` section of
-        :ref:`.stbt.conf`.
-
-    :type mask: str or `numpy.ndarray`
-    :param mask:
-        A black & white image that specifies which part of the image to search
-        for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore. The mask must be the same size as the video frame.
-
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
-
-    :type region: `Region`
-    :param region:
-        Only analyze the specified region of the video frame.
-
-        If you specify both ``region`` and ``mask``, the mask must be the same
-        size as the region.
-
-    Added in v28: The ``region`` parameter.
-    """
-    return _dut.detect_motion(timeout_secs, noise_threshold, mask, region)
-
-
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    match_parameters=None, region=Region.ALL):
     """Search for an image in the device-under-test's video stream.
@@ -349,49 +305,6 @@ def press_until_match(
     """
     return _dut.press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
-
-
-def wait_for_motion(
-        timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=None, region=Region.ALL):
-    """Search for motion in the device-under-test's video stream.
-
-    "Motion" is difference in pixel values between two consecutive frames.
-
-    :type timeout_secs: int or float or None
-    :param timeout_secs:
-        A timeout in seconds. This function will raise `MotionTimeout` if no
-        motion is detected within this time.
-
-    :type consecutive_frames: int or str
-    :param consecutive_frames:
-        Considers the video stream to have motion if there were differences
-        between the specified number of consecutive frames. This can be:
-
-        * a positive integer value, or
-        * a string in the form "x/y", where "x" is the number of frames with
-          motion detected out of a sliding window of "y" frames.
-
-        This defaults to "10/20". You can override the global default value by
-        setting ``consecutive_frames`` in the ``[motion]`` section of
-        :ref:`.stbt.conf`.
-
-    :param float noise_threshold: See `detect_motion`.
-
-    :param mask: See `detect_motion`.
-
-    :param region: See `detect_motion`.
-
-    :returns: `MotionResult` when motion is detected. The MotionResult's
-        ``time`` and ``frame`` attributes correspond to the first frame in
-        which motion was detected.
-    :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
-        seconds.
-
-    Added in v28: The ``region`` parameter.
-    """
-    return _dut.wait_for_motion(
-        timeout_secs, consecutive_frames, noise_threshold, mask, region)
 
 
 def ocr(frame=None, region=Region.ALL,
