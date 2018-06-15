@@ -201,9 +201,6 @@ class MatchResult(object):
     :ivar Frame frame: The video frame that was searched, as given to `match`.
 
     :ivar image: The reference image that was searched for, as given to `match`.
-
-    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
-        instead.
     """
     def __init__(
             self, time, match, region, first_pass_result, frame, image,
@@ -234,13 +231,6 @@ class MatchResult(object):
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
-
-    @property
-    def timestamp(self):
-        if self.time is None:
-            return None
-        else:
-            return int(self.time * 1e9)
 
 
 def load_image(filename, flags=cv2.IMREAD_COLOR):
@@ -338,9 +328,6 @@ class TextMatchResult(object):
 
     :ivar unicode text: The text that was searched for, as given to
         `match_text`.
-
-    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
-        instead.
     """
     def __init__(self, time, match, region, frame, text):
         self.time = time
@@ -362,13 +349,6 @@ class TextMatchResult(object):
                 self.region,
                 _frame_repr(self.frame),
                 self.text))
-
-    @property
-    def timestamp(self):
-        if self.time is None:
-            return None
-        else:
-            return int(self.time * 1e9)
 
 
 def new_device_under_test_from_config(

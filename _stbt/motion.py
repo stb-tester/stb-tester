@@ -296,9 +296,6 @@ class MotionResult(object):
 
     :ivar Frame frame: The video frame in which motion was (or wasn't) found.
 
-    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
-        instead.
-
     Added in v28: The ``frame`` attribute.
     """
     def __init__(self, time, motion, region, frame):
@@ -315,13 +312,6 @@ class MotionResult(object):
             "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
                 "None" if self.time is None else "%.3f" % self.time,
                 self.motion, self.region, _frame_repr(self.frame)))
-
-    @property
-    def timestamp(self):
-        if self.time is None:
-            return None
-        else:
-            return int(self.time * 1e9)
 
 
 class MotionTimeout(UITestFailure):

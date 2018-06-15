@@ -40,6 +40,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
         for frame in stbt.frames():
 
+* Similarly, removed the deprecated `timestamp` attribute (nanoseconds) from
+  `stbt.MatchResult`, `stbt.TextMatchResult`, and `stbt.MotionResult`. Use the
+  `time` attribute instead (seconds).
+
 * `stbt.is_screen_black` returns an object with `black` and `frame` attributes,
   instead of a bool. This evaluates to truthy or falsey so this change is
   backwards compatible, unless you were explicitly comparing the result with
