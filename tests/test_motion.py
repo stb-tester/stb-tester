@@ -73,7 +73,7 @@ def fake_frames():
     for n, x in enumerate(data):
         t = start_time + n
         time.sleep(t - time.time())
-        yield stbt.Frame(x, time=t), t * 1e9
+        yield stbt.Frame(x, time=t)
 
 
 class MockTime(object):

@@ -113,15 +113,15 @@ test_using_frames_to_measure_black_screen() {
 	threading.Thread(target=presser).start()
 	
 	frames = stbt.frames(timeout_secs=10)
-	for frame, timestamp in frames:
+	for frame in frames:
 	    black = stbt.is_screen_black(frame)
-	    print "%s: %s" % (timestamp, black)
+	    print "%s: %s" % (frame.time, black)
 	    if black:
 	        break
 	assert black, "Failed to find black screen"
-	for frame, timestamp in frames:
+	for frame in frames:
 	    black = stbt.is_screen_black(frame)
-	    print "%s: %s" % (timestamp, black)
+	    print "%s: %s" % (frame.time, black)
 	    if not black:
 	        break
 	assert not black, "Failed to find non-black screen"
@@ -132,11 +132,11 @@ test_using_frames_to_measure_black_screen() {
 test_that_frames_doesnt_deadlock() {
     cat > test.py <<-EOF &&
 	import stbt
-	for frame, timestamp in stbt.frames():
-	    print timestamp
+	for frame in stbt.frames():
+	    print frame.time
 	    break
-	for frame, timestamp in stbt.frames():
-	    print timestamp
+	for frame in stbt.frames():
+	    print frame.time
 	    break
 	frames = stbt.frames()
 	frame1 = frames.next()
@@ -400,7 +400,7 @@ test_that_frames_are_read_only() {
 	    # Different versions of numpy raise different exceptions
 	    pass
 	
-	for f, _ in stbt.frames():
+	for f in stbt.frames():
 	    try:
 	        f[0,0,0] = 0
 	        assert False, "frame from stbt.frames is writeable"
@@ -655,7 +655,7 @@ test_global_use_old_threading_behaviour_frames() {
 	import itertools
 	sa = set()
 	sb = set()
-	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	for a, b in itertools.izip(stbt.frames(), stbt.frames()):
 	    if len(sa) >= 10:
 	        break
 	    sa.add(a.time)
@@ -676,7 +676,7 @@ test_global_use_old_threading_behaviour_frames() {
 	import itertools
 	sa = set()
 	sb = set()
-	for (a, _), (b, _) in itertools.izip(stbt.frames(), stbt.frames()):
+	for a, b in itertools.izip(stbt.frames(), stbt.frames()):
 	    if len(sa) >= 10:
 	        break
 	    sa.add(a.time)

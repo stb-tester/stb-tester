@@ -23,12 +23,12 @@ test_long_running_stbt_run_process_for_memory_leaks() {
 	print "Testing short stbt.frames"
 	end_time = time.time() + 600  # 10 minutes
 	while time.time() < end_time:
-	    for frame, _ in stbt.frames(timeout_secs=10):
+	    for frame in stbt.frames(timeout_secs=10):
 	        stbt.match("$testdir/videotestsrc-redblue-flipped.png", frame)
 	    assert get_rss() < initial_rss * 1.1
 	
 	print "Testing long stbt.frames"
-	for frame, _ in stbt.frames(timeout_secs=600):  # 10 minutes
+	for frame in stbt.frames(timeout_secs=600):  # 10 minutes
 	    stbt.match("$testdir/videotestsrc-redblue-flipped.png", frame)
 	    if int(frame.time) % 10 == 0:
 	        assert get_rss() < initial_rss * 1.1

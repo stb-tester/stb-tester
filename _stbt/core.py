@@ -605,11 +605,11 @@ class DeviceUnderTest(object):
 
         debug("Searching for " + template.friendly_name)
 
-        for sample, _ in self.frames(timeout_secs):
+        for frame in self.frames(timeout_secs):
             result = self.match(
-                template, frame=sample, match_parameters=match_parameters,
+                template, frame=frame, match_parameters=match_parameters,
                 region=region)
-            draw_on(sample, result, label="match(%r)" %
+            draw_on(frame, result, label="match(%r)" %
                     os.path.basename(template.friendly_name))
             yield result
 
@@ -771,7 +771,7 @@ class DeviceUnderTest(object):
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
                 return
 
-            yield frame, int(frame.time * 1e9)
+            yield frame
             first = False
 
     def get_frame(self):
