@@ -4,7 +4,7 @@
 See `man stbt` and http://stb-tester.com for documentation.
 
 Copyright 2012-2013 YouView TV Ltd and contributors.
-Copyright 2013-2015 stb-tester.com Ltd.
+Copyright 2013-2018 stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
@@ -17,19 +17,19 @@ from contextlib import contextmanager
 import _stbt.core
 from _stbt.core import \
     as_precondition, \
-    ConfigurationError, \
-    crop, \
-    debug, \
-    Frame, \
-    get_config, \
     load_image, \
     NoVideo, \
     PreconditionError, \
-    Region, \
     save_frame, \
-    UITestError, \
-    UITestFailure, \
     wait_until
+from _stbt.config import (
+    ConfigurationError,
+    get_config)
+from _stbt.imgutils import (
+    crop,
+    Frame)
+from _stbt.logging import (
+    debug)
 from _stbt.match import (
     detect_match,
     match,
@@ -53,6 +53,10 @@ from _stbt.transition import \
     press_and_wait, \
     TransitionStatus, \
     wait_for_transition_to_end
+from _stbt.types import (
+    Region,
+    UITestError,
+    UITestFailure)
 
 __all__ = [
     "as_precondition",
