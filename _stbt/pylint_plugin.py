@@ -117,7 +117,7 @@ def _is_callable(node):
 def _in_frameobject(node):
     while node is not None:
         if isinstance(node, ClassDef):
-            if "stbt.FrameObject" in [
+            if "_stbt.frameobject.FrameObject" in [
                     base.qname() for base in node.ancestors()]:
                 return True
         node = node.parent
