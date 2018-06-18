@@ -189,14 +189,14 @@ class NotCachable(Exception):
 
 class _ArgsEncoder(json.JSONEncoder):
     def default(self, value):  # pylint: disable=method-hidden
-        import _stbt.core as core
+        from _stbt.match import MatchParameters
         if isinstance(value, ImageLogger):
             if value.enabled:
                 raise NotCachable()
             return None
         elif isinstance(value, set):
             return sorted(value)
-        elif isinstance(value, core.MatchParameters):
+        elif isinstance(value, MatchParameters):
             return {
                 "match_method": value.match_method,
                 "match_threshold": value.match_threshold,

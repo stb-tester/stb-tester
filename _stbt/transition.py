@@ -19,11 +19,12 @@ import cv2
 import enum
 import numpy
 
+from .types import Region
 import stbt
 
 
 def press_and_wait(
-        key, region=stbt.Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
+        key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
         _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -84,7 +85,7 @@ def press_and_wait(
 
 
 def wait_for_transition_to_end(
-        initial_frame=None, region=stbt.Region.ALL, mask=None, timeout_secs=10,
+        initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
         stable_secs=1, _dut=None):
 
     """Wait for the screen to stop changing.
@@ -118,7 +119,7 @@ def wait_for_transition_to_end(
 
 
 class _Transition(object):
-    def __init__(self, region=stbt.Region.ALL, mask=None, timeout_secs=10,
+    def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
                  stable_secs=1, dut=None):
 
         if dut is None:
@@ -126,7 +127,7 @@ class _Transition(object):
         else:
             self.dut = dut
 
-        if region is not stbt.Region.ALL and mask is not None:
+        if region is not Region.ALL and mask is not None:
             raise ValueError(
                 "You can't specify region and mask at the same time")
 
@@ -210,8 +211,8 @@ def _debug(s, f, *args):
 
 def strict_diff(f1, f2, region, mask_image):
     if region is not None:
-        full_frame = stbt.Region(0, 0, f1.shape[1], f1.shape[0])
-        region = stbt.Region.intersect(full_frame, region)
+        full_frame = Region(0, 0, f1.shape[1], f1.shape[0])
+        region = Region.intersect(full_frame, region)
         f1 = f1[region.y:region.bottom, region.x:region.right]
         f2 = f2[region.y:region.bottom, region.x:region.right]
 

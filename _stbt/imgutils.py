@@ -5,7 +5,7 @@ from collections import namedtuple
 import cv2
 import numpy
 
-from .logging import ddebug
+from .logging import ddebug, debug
 from .types import Region
 
 
@@ -162,3 +162,18 @@ def _iter_frames(depth=1):
     while frame:
         yield frame
         frame = frame.f_back
+
+
+def limit_time(frames, duration_secs):
+    """
+    Adapts a frame iterator such that it will return EOS after `duration_secs`
+    worth of video has been read.
+    """
+    import time
+    end_time = time.time() + duration_secs
+    for frame in frames:
+        if frame.time > end_time:
+            debug("timed out: %.3f > %.3f" % (frame.time, end_time))
+            break
+        else:
+            yield frame

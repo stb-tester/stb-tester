@@ -23,17 +23,22 @@ from _stbt.core import \
     Frame, \
     get_config, \
     load_image, \
-    MatchParameters, \
-    MatchResult, \
-    MatchTimeout, \
     NoVideo, \
-    Position, \
     PreconditionError, \
     Region, \
     save_frame, \
     UITestError, \
     UITestFailure, \
     wait_until
+from _stbt.match import (
+    detect_match,
+    match,
+    match_all,
+    MatchParameters,
+    MatchResult,
+    MatchTimeout,
+    Position,
+    wait_for_match)
 from _stbt.motion import (
     detect_motion,
     MotionResult,
@@ -158,114 +163,6 @@ def draw_text(text, duration_secs=3):
     :type duration_secs: int or float
     """
     return _dut.draw_text(text, duration_secs)
-
-
-def match(image, frame=None, match_parameters=None, region=Region.ALL):
-    """
-    Search for an image in a single video frame.
-
-    :type image: string or `numpy.ndarray`
-    :param image:
-      The image to search for. It can be the filename of a png file on disk, or
-      a numpy array containing the pixel data in 8-bit BGR format.
-
-      Filenames should be relative paths. See `stbt.load_image` for the path
-      lookup algorithm.
-
-      8-bit BGR numpy arrays are the same format that OpenCV uses for images.
-      This allows generating templates on the fly (possibly using OpenCV) or
-      searching for images captured from the device-under-test earlier in the
-      test script.
-
-    :type frame: `stbt.Frame` or `numpy.ndarray`
-    :param frame:
-      If this is specified it is used as the video frame to search in;
-      otherwise a new frame is grabbed from the device-under-test. This is an
-      image in OpenCV format (for example as returned by `frames` and
-      `get_frame`).
-
-    :type match_parameters: `MatchParameters`
-    :param match_parameters:
-      Customise the image matching algorithm. See `MatchParameters` for details.
-
-    :type region: `Region`
-    :param region:
-      Only search within the specified region of the video frame.
-
-    :returns:
-      A `MatchResult`, which will evaluate to true if a match was found,
-      false otherwise.
-    """
-    return _dut.match(image, frame, match_parameters, region)
-
-
-def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
-    """
-    Search for all instances of an image in a single video frame.
-
-    Arguments are the same as `match`.
-
-    :returns:
-      An iterator of zero or more `MatchResult` objects (one for each position
-      in the frame where ``image`` matches).
-
-    Examples:
-
-    .. code-block:: python
-
-        all_buttons = list(stbt.match_all("button.png"))
-
-    .. code-block:: python
-
-        for match_result in stbt.match_all("button.png"):
-            # do something with match_result here
-            ...
-    """
-    return _dut.match_all(image, frame, match_parameters, region)
-
-
-def detect_match(image, timeout_secs=10, match_parameters=None,
-                 region=Region.ALL):
-    """Generator that yields a sequence of one `MatchResult` for each frame
-    processed from the device-under-test's video stream.
-
-    `image` is the image used as the template during matching.  See `stbt.match`
-    for more information.
-
-    Returns after `timeout_secs` seconds. (Note that the caller can also choose
-    to stop iterating over this function's results at any time.)
-
-    Specify `match_parameters` to customise the image matching algorithm. See
-    the documentation for `MatchParameters` for details.
-    """
-    return _dut.detect_match(image, timeout_secs, match_parameters, region)
-
-
-def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   match_parameters=None, region=Region.ALL):
-    """Search for an image in the device-under-test's video stream.
-
-    :param image: The image to search for. See `match`.
-
-    :type timeout_secs: int or float or None
-    :param timeout_secs:
-        A timeout in seconds. This function will raise `MatchTimeout` if no
-        match is found within this time.
-
-    :param int consecutive_matches:
-        Forces this function to wait for several consecutive frames with a
-        match found at the same x,y position. Increase ``consecutive_matches``
-        to avoid false positives due to noise, or to wait for a moving
-        selection to stop moving.
-
-    :param match_parameters: See `match`.
-    :param region: See `match`.
-
-    :returns: `MatchResult` when the image is found.
-    :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
-    """
-    return _dut.wait_for_match(
-        image, timeout_secs, consecutive_matches, match_parameters, region)
 
 
 def press_until_match(
