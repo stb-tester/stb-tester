@@ -440,6 +440,10 @@ def frames(timeout_secs=None):
     :rtype: Iterator[stbt.Frame]
     :returns:
       An iterator of frames in OpenCV format (`stbt.Frame`).
+
+    Changed in v29: Returns ``Iterator[stbt.Frame]`` instead of
+    ``Iterator[(stbt.Frame, int)]``. Use the Frame's ``time`` attribute
+    instead.
     """
     return _dut.frames(timeout_secs)
 
