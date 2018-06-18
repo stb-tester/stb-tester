@@ -12,8 +12,8 @@ import pytest
 from nose.tools import raises
 
 import _stbt.config
-import _stbt.core
 import stbt
+from _stbt.ocr import _tesseract_version
 from _stbt.utils import named_temporary_directory
 from stbt import load_image
 
@@ -113,7 +113,6 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
-    from _stbt.core import _tesseract_version
     if _tesseract_version() >= distutils.version.LooseVersion('3.04'):
         hocr_mode_config = {
             "tessedit_create_txt": 0,
@@ -134,7 +133,7 @@ def test_that_setting_config_options_has_an_effect():
 ])
 def test_tesseract_user_patterns(patterns):
     # pylint: disable=W0212
-    if _stbt.core._tesseract_version() < distutils.version.LooseVersion('3.03'):
+    if _tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
@@ -147,8 +146,7 @@ def test_tesseract_user_patterns(patterns):
 @raises(RuntimeError)
 def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
     # pylint: disable=W0212
-    if (_stbt.core._tesseract_version() >=
-            distutils.version.LooseVersion('3.03')):
+    if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too new')
 
     stbt.ocr(

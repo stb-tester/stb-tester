@@ -27,12 +27,10 @@ from _stbt.core import \
     MatchResult, \
     MatchTimeout, \
     NoVideo, \
-    OcrMode, \
     Position, \
     PreconditionError, \
     Region, \
     save_frame, \
-    TextMatchResult, \
     UITestError, \
     UITestFailure, \
     wait_until
@@ -41,6 +39,11 @@ from _stbt.motion import (
     MotionResult,
     MotionTimeout,
     wait_for_motion)
+from _stbt.ocr import \
+    match_text, \
+    ocr, \
+    OcrMode, \
+    TextMatchResult
 from _stbt.transition import \
     press_and_wait, \
     TransitionStatus, \
@@ -303,134 +306,6 @@ def press_until_match(
     """
     return _dut.press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
-
-
-def ocr(frame=None, region=Region.ALL,
-        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None, tesseract_config=None, tesseract_user_words=None,
-        tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None):
-    r"""Return the text present in the video frame as a Unicode string.
-
-    Perform OCR (Optical Character Recognition) using the "Tesseract"
-    open-source OCR engine.
-
-    :param frame:
-      If this is specified it is used as the video frame to process; otherwise
-      a new frame is grabbed from the device-under-test. This is an image in
-      OpenCV format (for example as returned by `frames` and `get_frame`).
-
-    :param region: Only search within the specified region of the video frame.
-    :type region: `Region`
-
-    :param mode: Tesseract's layout analysis mode.
-    :type mode: `OcrMode`
-
-    :param str lang:
-        The three-letter
-        `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`__
-        language code of the language you are attempting to read; for example
-        "eng" for English or "deu" for German. More than one language can be
-        specified by joining with '+'; for example "eng+deu" means that the
-        text to be read may be in a mixture of English and German. This defaults
-        to "eng" (English). You can override the global default value by setting
-        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
-        install the tesseract language pack; see installation instructions
-        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`__.
-
-    :param dict tesseract_config:
-        Allows passing configuration down to the underlying OCR engine.
-        See the `tesseract documentation
-        <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`__
-        for details.
-
-    :type tesseract_user_words: unicode string, or list of unicode strings
-    :param tesseract_user_words:
-        List of words to be added to the tesseract dictionary. To replace the
-        tesseract system dictionary altogether, also set
-        ``tesseract_config={'load_system_dawg': False, 'load_freq_dawg':
-        False}``.
-
-    :type tesseract_user_patterns: unicode string, or list of unicode strings
-    :param tesseract_user_patterns:
-        List of patterns to add to the tesseract dictionary. The tesseract
-        pattern language corresponds roughly to the following regular
-        expressions::
-
-            tesseract  regex
-            =========  ===========
-            \c         [a-zA-Z]
-            \d         [0-9]
-            \n         [a-zA-Z0-9]
-            \p         [:punct:]
-            \a         [a-z]
-            \A         [A-Z]
-            \*         *
-
-    :param bool upsample:
-        Upsample the image 3x before passing it to tesseract. This helps to
-        preserve information in the text's anti-aliasing that would otherwise
-        be lost when tesseract binarises the image. This defaults to ``True``;
-        you should only disable it if you are doing your own pre-processing on
-        the image.
-
-    :type text_color: 3-element tuple of integers between 0 and 255, BGR order
-    :param text_color:
-        Color of the text. Specifying this can improve OCR results when
-        tesseract's default thresholding algorithm doesn't detect the text,
-        for example white text on a light-colored background or text on a
-        translucent overlay.
-
-    :param int text_color_threshold:
-        The threshold to use with ``text_color``, between 0 and 255. Defaults
-        to 25. You can override the global default value by setting
-        ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
-
-    Added in v28: Parameters ``upsample`` (to disable stb-tester's
-    pre-processing of the image) and ``text_color``.
-    """
-    return _dut.ocr(frame, region, mode, lang, tesseract_config,
-                    tesseract_user_words, tesseract_user_patterns, upsample,
-                    text_color, text_color_threshold)
-
-
-def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
-               tesseract_config=None, case_sensitive=False, upsample=True,
-               text_color=None, text_color_threshold=None):
-    """Search for the specified text in a single video frame.
-
-    This can be used as an alternative to `match`, searching for text instead
-    of an image.
-
-    :param unicode text: The text to search for.
-    :param frame: See `ocr`.
-    :param region: See `ocr`.
-    :param mode: See `ocr`.
-    :param lang: See `ocr`.
-    :param tesseract_config: See `ocr`.
-    :param upsample: See `ocr`.
-    :param text_color: See `ocr`.
-    :param text_color_threshold: See `ocr`.
-    :param bool case_sensitive: Ignore case if False (the default).
-
-    :returns:
-      A `TextMatchResult`, which will evaluate to True if the text was found,
-      false otherwise.
-
-    For example, to select a button in a vertical menu by name (in this case
-    "TV Guide")::
-
-        m = stbt.match_text("TV Guide")
-        assert m.match
-        while not stbt.match('selected-button.png').region.contains(m.region):
-            stbt.press('KEY_DOWN')
-
-    Added in v28: The ``upsample`` and ``text_color`` parameters.
-    """
-    return _dut.match_text(
-        text, frame, region, mode, lang, tesseract_config, case_sensitive,
-        upsample, text_color, text_color_threshold)
 
 
 def frames(timeout_secs=None):
