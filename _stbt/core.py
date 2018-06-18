@@ -1148,6 +1148,3 @@ class GObjectTimeout(object):
         if self.timeout_id:
             GObject.source_remove(self.timeout_id)
         self.timeout_id = None
-
-
-_BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
