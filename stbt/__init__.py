@@ -400,7 +400,7 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=25):
+        text_color_threshold=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -474,7 +474,8 @@ def ocr(frame=None, region=Region.ALL,
 
     :param int text_color_threshold:
         The threshold to use with ``text_color``, between 0 and 255. Defaults
-        to 25.
+        to 25. You can override the global default value by setting
+        ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
     Added in v28: Parameters ``upsample`` (to disable stb-tester's
     pre-processing of the image) and ``text_color``.
@@ -487,7 +488,7 @@ def ocr(frame=None, region=Region.ALL,
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, upsample=True,
-               text_color=None, text_color_threshold=25):
+               text_color=None, text_color_threshold=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead

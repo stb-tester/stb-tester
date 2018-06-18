@@ -322,3 +322,5 @@ def test_ocr_text_color_threshold():
     assert stbt.ocr(f, text_color=c) != "Guide"
     assert stbt.ocr(f, text_color=c) != "Guide"
     assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
+    with temporary_config({'ocr.text_color_threshold': '50'}):
+        assert stbt.ocr(f, text_color=c) == "Guide"

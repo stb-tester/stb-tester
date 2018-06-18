@@ -1221,7 +1221,7 @@ class DeviceUnderTest(object):
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
             lang=None, tesseract_config=None, tesseract_user_words=None,
             tesseract_user_patterns=None, upsample=True, text_color=None,
-            text_color_threshold=25):
+            text_color_threshold=None):
 
         if frame is None:
             frame = self.get_frame()
@@ -1253,7 +1253,7 @@ class DeviceUnderTest(object):
     def match_text(self, text, frame=None, region=Region.ALL,
                    mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                    tesseract_config=None, case_sensitive=False,
-                   upsample=True, text_color=None, text_color_threshold=25):
+                   upsample=True, text_color=None, text_color_threshold=None):
 
         import lxml.etree
         if frame is None:
@@ -2966,6 +2966,10 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     if _config is None:
         _config = {}
+
+    if text_color_threshold is None:
+        text_color_threshold = get_config(
+            "ocr", "text_color_threshold", type_=int)
 
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)
