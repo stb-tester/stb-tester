@@ -15,6 +15,7 @@ import _stbt.config
 import _stbt.core
 import stbt
 from _stbt.utils import named_temporary_directory
+from stbt import load_image
 
 
 @pytest.mark.parametrize("image, expected_text, region, mode", [
@@ -30,24 +31,24 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
     kwargs = {"region": region}
     if mode is not None:
         kwargs["mode"] = mode
-    text = stbt.ocr(cv2.imread("tests/ocr/" + image), **kwargs)
+    text = stbt.ocr(load_image("ocr/" + image), **kwargs)
     assert text == expected_text
 
 
 # Remove when region=None doesn't raise -- see #433
 @raises(TypeError)
 def test_that_ocr_region_none_isnt_allowed():
-    stbt.ocr(frame=cv2.imread("tests/ocr/small.png"), region=None)
+    stbt.ocr(frame=load_image("ocr/small.png"), region=None)
 
 
 def test_that_ocr_reads_unicode():
-    text = stbt.ocr(frame=cv2.imread('tests/ocr/unicode.png'), lang='eng+deu')
+    text = stbt.ocr(frame=load_image('ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, unicode)
     assert u'£500\nDavid Röthlisberger' == text
 
 
 def test_that_ocr_can_read_small_text():
-    text = stbt.ocr(frame=cv2.imread('tests/ocr/small.png'))
+    text = stbt.ocr(frame=load_image('ocr/small.png'))
     assert u'Small anti-aliased text is hard to read\nunless you magnify' == \
         text
 
@@ -66,7 +67,7 @@ ligature_text = dedent(u"""\
 
 
 def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
-    frame = cv2.imread('tests/ocr/ambig.png')
+    frame = load_image('ocr/ambig.png')
     text = stbt.ocr(frame)
     text = text.replace("horizonta|", "horizontal")  # for tesseract < 3.03
     assert ligature_text == text
@@ -75,14 +76,14 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
 
 
 def test_that_match_text_accepts_unicode():
-    f = cv2.imread("tests/ocr/unicode.png")
+    f = load_image("ocr/unicode.png")
     assert stbt.match_text("David", f, lang='eng+deu')  # ascii
     assert stbt.match_text(u"Röthlisberger", f, lang='eng+deu')  # unicode
     assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # utf-8 bytes
 
 
 def test_that_default_language_is_configurable():
-    f = cv2.imread("tests/ocr/unicode.png")
+    f = load_image("ocr/unicode.png")
     assert not stbt.match_text(u"Röthlisberger", f)  # reads Réthlisberger
     with temporary_config({"ocr.lang": "deu"}):
         assert stbt.match_text(u"Röthlisberger", f)
@@ -121,9 +122,9 @@ def test_that_setting_config_options_has_an_effect():
         hocr_mode_config = {
             "tessedit_create_hocr": 1}
 
-    assert (stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png'),
+    assert (stbt.ocr(frame=load_image('ocr/ambig.png'),
                      tesseract_config=hocr_mode_config) !=
-            stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png')))
+            stbt.ocr(frame=load_image('ocr/ambig.png')))
 
 
 @pytest.mark.parametrize("patterns", [
@@ -138,7 +139,7 @@ def test_tesseract_user_patterns(patterns):
 
     # Now the real test:
     assert u'192.168.10.1' == stbt.ocr(
-        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
+        frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=patterns)
 
@@ -151,7 +152,7 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
         raise SkipTest('tesseract is too new')
 
     stbt.ocr(
-        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
+        frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
 
@@ -163,7 +164,7 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
 ])
 def test_user_dictionary_with_non_english_language(words):
     assert u'192.168.10.1' == stbt.ocr(
-        frame=cv2.imread('tests/ocr/192.168.10.1.png'),
+        frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
         tesseract_user_words=words)
@@ -195,7 +196,7 @@ def iterate_menu():
 
 
 def test_that_text_location_is_recognised():
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
 
     def test(text, region, upsample):
         result = stbt.match_text(text, frame=frame, upsample=upsample)
@@ -212,7 +213,7 @@ def test_that_text_location_is_recognised():
 
 
 def test_match_text_stringify_result():
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
     result = stbt.match_text(u"Onion Bhaji", frame=frame)
 
     assert re.match(
@@ -222,7 +223,7 @@ def test_match_text_stringify_result():
 
 
 def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
     text, region, _ = list(iterate_menu())[6]
     result = stbt.match_text(
         text, frame=frame, region=region.extend(right=+12800))
@@ -236,7 +237,7 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
 ])
 def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
         region):
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
     result = stbt.match_text("Onion Bhaji", frame=frame, region=region)
     assert result.match is False
     assert result.region is None
@@ -248,18 +249,18 @@ def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
     # None,  # uncomment when region=None doesn't raise -- see #433
 ])
 def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame(region):
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
     result = stbt.ocr(frame=frame, region=region)
     assert result == u''
 
 
 def test_that_match_text_returns_no_match_for_non_matching_text():
-    frame = cv2.imread("tests/ocr/menu.png")
+    frame = load_image("ocr/menu.png")
     assert not stbt.match_text(u"Noodle Soup", frame=frame)
 
 
 def test_that_match_text_gives_tesseract_a_hint():
-    frame = cv2.imread("tests/ocr/itv-player.png")
+    frame = load_image("ocr/itv-player.png")
     if "ITV Player" in stbt.ocr(frame=frame):
         raise SkipTest("Tesseract doesn't need a hint")
     if "ITV Player" not in stbt.ocr(frame=frame, tesseract_user_words=["ITV"]):
@@ -268,20 +269,20 @@ def test_that_match_text_gives_tesseract_a_hint():
 
 
 def test_match_text_on_single_channel_image():
-    frame = cv2.imread("tests/ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
     assert stbt.match_text("Onion Bhaji", frame)
 
 
 def test_match_text_case_sensitivity():
-    frame = cv2.imread("tests/ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
     assert stbt.match_text("ONION BHAJI", frame)
     assert stbt.match_text("ONION BHAJI", frame, case_sensitive=False)
     assert not stbt.match_text("ONION BHAJI", frame, case_sensitive=True)
 
 
 def test_ocr_on_text_next_to_image_match():
-    frame = cv2.imread("tests/action-panel.png")
-    m = stbt.match("tests/action-panel-blue-button.png", frame)
+    frame = load_image("action-panel.png")
+    m = stbt.match("action-panel-blue-button.png", frame)
     assert "YOUVIEW MENU" == stbt.ocr(frame,
                                       region=m.region.right_of(width=150))
 
@@ -292,7 +293,7 @@ def test_ocr_on_text_next_to_image_match():
     # Without specifying text_color, OCR only sees the latter two.
     # Testing without specifying a region would also work, but with a small
     # region the test runs much faster (0.1s instead of 3s per ocr call).
-    ("tests/action-panel.png", (235, 235, 235), "Summary",
+    ("action-panel.png", (235, 235, 235), "Summary",
      stbt.Region(0, 370, right=1280, bottom=410)),
 
     # This is a light "8" on a dark background. Without the context of any
@@ -301,10 +302,10 @@ def test_ocr_on_text_next_to_image_match():
     # it's assuming that it's seeing printed matter (a scanned book with black
     # text on white background). Expanding the region to include other text
     # would solve the problem, but so does specifying the text color.
-    ("tests/ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
+    ("ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
 ])
 def test_ocr_text_color(image, color, expected, region):
-    frame = cv2.imread(image)
+    frame = load_image(image)
     mode = stbt.OcrMode.SINGLE_LINE
 
     assert expected not in stbt.ocr(frame, region, mode)
@@ -312,3 +313,14 @@ def test_ocr_text_color(image, color, expected, region):
 
     assert not stbt.match_text(expected, frame, region, mode)
     assert stbt.match_text(expected, frame, region, mode, text_color=color)
+
+
+def test_ocr_text_color_threshold():
+    f = load_image("ocr/blue-search-white-guide.png")
+    c = (220, 220, 220)
+    assert stbt.ocr(f) != "Guide"
+    assert stbt.ocr(f, text_color=c) != "Guide"
+    assert stbt.ocr(f, text_color=c) != "Guide"
+    assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
+    with temporary_config({'ocr.text_color_threshold': '50'}):
+        assert stbt.ocr(f, text_color=c) == "Guide"

@@ -69,13 +69,13 @@ def memoize(additional_fields=None):
 
     **Constraints**
 
-    * The decorated function arguments must be simple JSON serialisable values
-      or an image in the form of a numpy.ndarray.
+    * The decorated function's arguments must be simple JSON serialisable
+      values or an image in the form of a numpy.ndarray.
     * The return value from the function must be JSON serialisable and should
       be round-trippable via JSON. This means that unicode objects should be
       returned rather than string objects.
     * For the sake of speed we use a non-cryptographic hash function.  This
-      means someone could deliberatly cause a hash-collision by carefully
+      means someone could deliberately cause a hash-collision by carefully
       constructing arguments to your function.  Don't use memoize on functions
       where this could be a problem.
     * The input arguments are not stored on disk, just the hash is.  This means
