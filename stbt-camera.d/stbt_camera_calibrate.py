@@ -197,7 +197,7 @@ def analyse_colours_video(dut, number=None):
     errors_in_a_row = 0
     n = 0
     qrscanner = QRScanner()
-    for frame, _ in dut.frames():
+    for frame in dut.frames():
         if number is not None and n >= number:
             return
         n = n + 1
@@ -446,14 +446,14 @@ def _create_reference_png(dut, filename):
     average = None
     for frame in pop_with_progress(dut.frames(), FRAME_AVERAGE_COUNT):
         if average is None:
-            average = numpy.zeros(shape=frame[0].shape, dtype=numpy.uint16)
-        average += frame[0]
+            average = numpy.zeros(shape=frame.shape, dtype=numpy.uint16)
+        average += frame
     average /= FRAME_AVERAGE_COUNT
     cv2.imwrite(filename, numpy.array(average, dtype=numpy.uint8))
 
 
 def await_blank(dut, brightness):
-    for frame, _ in dut.frames(10):
+    for frame in dut.frames(10):
         grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         min_, max_, _, _ = cv2.minMaxLoc(grayscale)
         contrast = max_ - min_

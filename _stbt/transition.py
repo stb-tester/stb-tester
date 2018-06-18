@@ -145,14 +145,14 @@ class _Transition(object):
         self.expiry_time = None
 
     def press_and_wait(self, key):
-        original_frame, _ = next(self.frames)
+        original_frame = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
         stbt.debug("transition: %.3f: Pressed %s" % (press_time, key))
         self.expiry_time = press_time + self.timeout_secs
 
         # Wait for animation to start
-        for f, _ in self.frames:
+        for f in self.frames:
             if f.time < press_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
@@ -176,14 +176,14 @@ class _Transition(object):
 
     def wait_for_transition_to_end(self, initial_frame):
         if initial_frame is None:
-            initial_frame, _ = next(self.frames)
+            initial_frame = next(self.frames)
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
         f = first_stable_frame = initial_frame
         while True:
             prev = f
-            f, _ = next(self.frames)
+            f = next(self.frames)
             if self.diff(prev, f, self.region, self.mask_image):
                 _debug("Animation in progress", f)
                 first_stable_frame = f

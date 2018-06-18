@@ -22,7 +22,7 @@ class FakeDeviceUnderTest(object):
             t = time.time()
             for state in self._frames:
                 array = F(state, t)
-                yield stbt.Frame(array, time=t), int(t * 1e9)
+                yield stbt.Frame(array, time=t)
                 t += 0.04  # 25fps
 
         else:
@@ -33,7 +33,7 @@ class FakeDeviceUnderTest(object):
                     self.state = "black"
                 elif self.state == "fade-to-white":
                     self.state = "white"
-                yield stbt.Frame(array, time=t), int(t * 1e9)
+                yield stbt.Frame(array, time=t)
 
 
 def F(state, t):

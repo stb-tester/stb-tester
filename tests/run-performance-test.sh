@@ -14,7 +14,7 @@ cat > script.$$ <<-EOF
 	start = datetime.datetime.now()
 	for m in stbt.detect_match("videotestsrc-redblue.png", timeout_secs=10):
 	    frames += 1
-	    print "%s %s %s" % (m.timestamp, bool(m), m.position)
+	    print "%.3f %s %s" % (m.time, bool(m), m.position)
 	    # if not m:
 	    #     break
 	duration = (datetime.datetime.now() - start).total_seconds()

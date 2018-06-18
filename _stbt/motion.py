@@ -52,12 +52,12 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         If you specify both ``region`` and ``mask``, the mask must be the same
         size as the region.
 
-    :type frames: Iterator[(stbt.Frame, int)]
-    :param frames: An iterable of Frames to analyse.  Defaults to
-        `stbt.frames()`
+    :type frames: Iterator[stbt.Frame]
+    :param frames: An iterable of video-frames to analyse. Defaults to
+        ``stbt.frames()``.
 
-    Added in v28: The ``region`` parameter.
-    Added in v29: The ``frames`` parameter.
+    | Added in v28: The ``region`` parameter.
+    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
@@ -77,7 +77,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
         debug("Using mask %s" % mask.friendly_name)
 
-    frame, _ = next(frames)
+    frame = next(frames)
 
     region = Region.intersect(_image_region(frame), region)
 
@@ -91,7 +91,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
                 mask.friendly_name, mask.image.shape,
                 previous_frame_gray.shape))
 
-    for frame, _ in frames:
+    for frame in frames:
         frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
 
         imglog = ImageLogger("detect_motion")
@@ -180,12 +180,12 @@ def limit_time(frames, duration_secs):
     """
     import time
     end_time = time.time() + duration_secs
-    for frame, ts in frames:
+    for frame in frames:
         if frame.time > end_time:
             debug("timed out: %.3f > %.3f" % (frame.time, end_time))
             break
         else:
-            yield frame, ts
+            yield frame
 
 
 def wait_for_motion(
@@ -296,9 +296,6 @@ class MotionResult(object):
 
     :ivar Frame frame: The video frame in which motion was (or wasn't) found.
 
-    :ivar int timestamp: DEPRECATED. Timestamp in nanoseconds. Use ``time``
-        instead.
-
     Added in v28: The ``frame`` attribute.
     """
     def __init__(self, time, motion, region, frame):
@@ -315,13 +312,6 @@ class MotionResult(object):
             "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
                 "None" if self.time is None else "%.3f" % self.time,
                 self.motion, self.region, _frame_repr(self.frame)))
-
-    @property
-    def timestamp(self):
-        if self.time is None:
-            return None
-        else:
-            return int(self.time * 1e9)
 
 
 class MotionTimeout(UITestFailure):

@@ -432,17 +432,14 @@ def frames(timeout_secs=None):
     :type timeout_secs: int or float or None
     :param timeout_secs:
       A timeout in seconds. After this timeout the iterator will be exhausted.
-      That is, a ``for`` loop like ``for f, t in frames(timeout_secs=10)`` will
+      That is, a ``for`` loop like ``for f in frames(timeout_secs=10)`` will
       terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the default)
       then the iterator will yield frames forever. Note that you can stop
       iterating (for example with ``break``) at any time.
 
+    :rtype: Iterator[stbt.Frame]
     :returns:
-      A ``(frame, timestamp)`` tuple for each video frame:
-
-      * ``frame`` is a `stbt.Frame` (that is, an OpenCV image).
-      * ``timestamp`` (int): DEPRECATED. Timestamp in nanoseconds. Use
-        ``frame.time`` instead.
+      An iterator of frames in OpenCV format (`stbt.Frame`).
     """
     return _dut.frames(timeout_secs)
 

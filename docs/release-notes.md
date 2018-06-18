@@ -29,6 +29,21 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 ##### Breaking changes since v28
 
+* `stbt.frames()` returns an iterator of `stbt.Frame` objects, instead of an
+  iterator of tuples `(stbt.Frame, int)`. The second field of the tuple was a
+  timestamp in nanoseconds; this has been deprecated since we added
+  `stbt.Frame.time` in v26, 2 years ago. If you were calling it like this:
+
+        for frame, _ in stbt.frames():
+
+  then you should change it to this:
+
+        for frame in stbt.frames():
+
+* Similarly, removed the deprecated `timestamp` attribute (nanoseconds) from
+  `stbt.MatchResult`, `stbt.TextMatchResult`, and `stbt.MotionResult`. Use the
+  `time` attribute instead (seconds).
+
 * `stbt.is_screen_black` returns an object with `black` and `frame` attributes,
   instead of a bool. This evaluates to truthy or falsey so this change is
   backwards compatible, unless you were explicitly comparing the result with
@@ -46,7 +61,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt run` will no longer show an output video window by default. This is a
   better default for headless environments like stbt-docker.  You can re-enable
   this by setting `global.sink_pipeline = xvimagesink sync=false` in your
-  `$HOME/.config/stbt/stbt.conf`.
+  stbt.conf file.
 
 * Remove tracing infrastructure (which would report the current test & line
   number to a file specified via the `--save-trace` argument or to a socket
@@ -70,6 +85,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 * `stbt.android.AdbDevice.press` will convert some standard Stb-tester key
   names like "KEY_OK" to the equivalent Android KeyEvent keycodes.
+
+* `stbt.wait_for_motion` and `stbt.detect_motion` take a new optional `frames`
+  parameter. This defaults to `stbt.frames()` which preserves the existing
+  behaviour.
 
 * If your test-pack is a Python module (that is, it contains an `__init__.py`
   in each directory under `tests/`) then `stbt run` will automatically add the
