@@ -19,8 +19,9 @@ import cv2
 import enum
 import numpy
 
+from .core import load_image
+from .logging import debug
 from .types import Region
-import stbt
 
 
 def press_and_wait(
@@ -80,7 +81,7 @@ def press_and_wait(
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.press_and_wait(key)
-    stbt.debug("press_and_wait(%r) -> %s" % (key, result))
+    debug("press_and_wait(%r) -> %s" % (key, result))
     return result
 
 
@@ -114,7 +115,7 @@ def wait_for_transition_to_end(
     """
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
-    stbt.debug("wait_for_transition_to_end() -> %s" % (result,))
+    debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
@@ -123,6 +124,7 @@ class _Transition(object):
                  stable_secs=1, dut=None):
 
         if dut is None:
+            import stbt
             self.dut = stbt
         else:
             self.dut = dut
@@ -136,7 +138,7 @@ class _Transition(object):
         if isinstance(mask, numpy.ndarray):
             self.mask_image = mask
         elif mask:
-            self.mask_image = stbt.load_image(mask)
+            self.mask_image = load_image(mask)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -149,7 +151,7 @@ class _Transition(object):
         original_frame = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
-        stbt.debug("transition: %.3f: Pressed %s" % (press_time, key))
+        debug("transition: %.3f: Pressed %s" % (press_time, key))
         self.expiry_time = press_time + self.timeout_secs
 
         # Wait for animation to start
@@ -206,7 +208,7 @@ class _Transition(object):
 
 
 def _debug(s, f, *args):
-    stbt.debug(("transition: %.3f: " + s) % ((f.time,) + args))
+    debug(("transition: %.3f: " + s) % ((f.time,) + args))
 
 
 def strict_diff(f1, f2, region, mask_image):
