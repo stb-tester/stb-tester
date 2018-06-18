@@ -1,0 +1,2 @@
+def greeting():
+    return "hi!"

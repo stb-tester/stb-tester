@@ -47,3 +47,27 @@ def scoped_curdir():
             yield olddir
         finally:
             os.chdir(olddir)
+
+
+def find_import_name(filename):
+    """
+    To import an arbitrary filename we need to set PYTHONPATH and we need to
+    know the name of the module we're importing.  This is complicated by Python
+    packages: for a directory structure like this:
+
+        tests/package/a.py
+        tests/package/__init__.py
+
+    we want to add `tests` to `PYTHONPATH` (`sys.path`) and `import package.a`.
+    This function traverses the directories to work out what `PYTHONPATH` and
+    the module name should be returning them as a tuple.
+    """
+    import_dir, module_file = os.path.split(os.path.abspath(filename))
+    import_name, module_ext = os.path.splitext(module_file)
+    if module_ext != '.py':
+        raise ImportError("Invalid module filename '%s'" % filename)
+
+    while os.path.exists(os.path.join(import_dir, "__init__.py")):
+        import_dir, s = os.path.split(import_dir)
+        import_name = "%s.%s" % (s, import_name)
+    return import_dir, import_name
