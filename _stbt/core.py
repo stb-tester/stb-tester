@@ -1818,7 +1818,7 @@ class SinkPipeline(object):
             debug("Saving video to '%s'" % save_video)
             if os.path.exists("/dev/nvhost-msenc"):
                 video_pipeline = (
-                    "t. ! queue leaky=downstream ! videoconvert ! "
+                    "t. ! queue leaky=downstream ! neonbgrtoi420 ! "
                     "omxh264enc control-rate=constant bitrate=1000000 "
                     "    low-latency=true quality-level=2 iframeinterval=200 ! "
                     "mp4mux ! filesink location=video.mp4")
