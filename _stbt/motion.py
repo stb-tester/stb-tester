@@ -5,7 +5,7 @@ import numpy
 
 from .config import ConfigurationError, get_config
 from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
-                       crop)
+                       crop, limit_time)
 from .logging import debug, draw_on, ImageLogger
 from .types import Region, UITestFailure
 
@@ -171,21 +171,6 @@ def _pixel_bounding_box(img):
         out[axis + 2] = indices[-1] + 1
 
     return Region.from_extents(*out)
-
-
-def limit_time(frames, duration_secs):
-    """
-    Adapts a frame iterator such that it will return EOS after `duration_secs`
-    worth of video has been read.
-    """
-    import time
-    end_time = time.time() + duration_secs
-    for frame in frames:
-        if frame.time > end_time:
-            debug("timed out: %.3f > %.3f" % (frame.time, end_time))
-            break
-        else:
-            yield frame
 
 
 def wait_for_motion(

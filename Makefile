@@ -62,6 +62,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/control.py \
     _stbt/core.py \
     _stbt/cv2_compat.py \
+    _stbt/frameobject.py \
     _stbt/gst_hacks.py \
     _stbt/gst_utils.py \
     _stbt/imgproc_cache.py \
@@ -72,6 +73,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/lmdb/cpython.so \
     _stbt/lmdb/LICENSE \
     _stbt/logging.py \
+    _stbt/match.py \
     _stbt/motion.py \
     _stbt/ocr.py \
     _stbt/power.py \

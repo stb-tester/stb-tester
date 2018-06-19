@@ -19,11 +19,13 @@ import cv2
 import enum
 import numpy
 
-import stbt
+from .core import load_image
+from .logging import debug
+from .types import Region
 
 
 def press_and_wait(
-        key, region=stbt.Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
+        key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
         _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -79,12 +81,12 @@ def press_and_wait(
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.press_and_wait(key)
-    stbt.debug("press_and_wait(%r) -> %s" % (key, result))
+    debug("press_and_wait(%r) -> %s" % (key, result))
     return result
 
 
 def wait_for_transition_to_end(
-        initial_frame=None, region=stbt.Region.ALL, mask=None, timeout_secs=10,
+        initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
         stable_secs=1, _dut=None):
 
     """Wait for the screen to stop changing.
@@ -113,20 +115,21 @@ def wait_for_transition_to_end(
     """
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
-    stbt.debug("wait_for_transition_to_end() -> %s" % (result,))
+    debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
 class _Transition(object):
-    def __init__(self, region=stbt.Region.ALL, mask=None, timeout_secs=10,
+    def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
                  stable_secs=1, dut=None):
 
         if dut is None:
+            import stbt
             self.dut = stbt
         else:
             self.dut = dut
 
-        if region is not stbt.Region.ALL and mask is not None:
+        if region is not Region.ALL and mask is not None:
             raise ValueError(
                 "You can't specify region and mask at the same time")
 
@@ -135,7 +138,7 @@ class _Transition(object):
         if isinstance(mask, numpy.ndarray):
             self.mask_image = mask
         elif mask:
-            self.mask_image = stbt.load_image(mask)
+            self.mask_image = load_image(mask)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -148,7 +151,7 @@ class _Transition(object):
         original_frame = next(self.frames)
         self.dut.press(key)
         press_time = time.time()
-        stbt.debug("transition: %.3f: Pressed %s" % (press_time, key))
+        debug("transition: %.3f: Pressed %s" % (press_time, key))
         self.expiry_time = press_time + self.timeout_secs
 
         # Wait for animation to start
@@ -205,13 +208,13 @@ class _Transition(object):
 
 
 def _debug(s, f, *args):
-    stbt.debug(("transition: %.3f: " + s) % ((f.time,) + args))
+    debug(("transition: %.3f: " + s) % ((f.time,) + args))
 
 
 def strict_diff(f1, f2, region, mask_image):
     if region is not None:
-        full_frame = stbt.Region(0, 0, f1.shape[1], f1.shape[0])
-        region = stbt.Region.intersect(full_frame, region)
+        full_frame = Region(0, 0, f1.shape[1], f1.shape[0])
+        region = Region.intersect(full_frame, region)
         f1 = f1[region.y:region.bottom, region.x:region.right]
         f2 = f2[region.y:region.bottom, region.x:region.right]
 

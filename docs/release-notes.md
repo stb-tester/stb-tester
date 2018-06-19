@@ -86,9 +86,9 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * `stbt.android.AdbDevice.press` will convert some standard Stb-tester key
   names like "KEY_OK" to the equivalent Android KeyEvent keycodes.
 
-* `stbt.wait_for_motion` and `stbt.detect_motion` take a new optional `frames`
-  parameter. This defaults to `stbt.frames()` which preserves the existing
-  behaviour.
+* `stbt.wait_for_motion`, `stbt.wait_for_match`, `stbt.detect_motion` and
+  `stbt.detect_match` all now take a new optional `frames` parameter. This
+  defaults to `stbt.frames()` which preserves the existing behaviour.
 
 * If your test-pack is a Python module (that is, it contains an `__init__.py`
   in each directory under `tests/`) then `stbt run` will automatically add the

@@ -73,7 +73,7 @@ class StbtChecker(BaseChecker):
             if isinstance(node.parent, Expr):
                 for inferred in _infer(node.func):
                     if inferred.root().name in ('stbt', '_stbt.core',
-                                                '_stbt.ocr'):
+                                                '_stbt.match', '_stbt.ocr'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
 
@@ -117,7 +117,7 @@ def _is_callable(node):
 def _in_frameobject(node):
     while node is not None:
         if isinstance(node, ClassDef):
-            if "stbt.FrameObject" in [
+            if "_stbt.frameobject.FrameObject" in [
                     base.qname() for base in node.ancestors()]:
                 return True
         node = node.parent
