@@ -1576,11 +1576,15 @@ class Display(object):
                 save_video += ".webm"
             debug("Saving video to '%s'" % save_video)
             if os.path.exists("/dev/nvhost-msenc"):
-                vp8enc = "omxvp8enc bitrate=300000 quality-level=2"
+                vp8enc = (
+                    "neonbgrtoi420 "
+                    "! omxvp8enc bitrate=300000 quality-level=2")
             else:
-                vp8enc = "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32"
+                vp8enc = (
+                    "videoconvert "
+                    "! vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32")
             video_pipeline = (
-                "t. ! queue leaky=downstream ! videoconvert ! "
+                "t. ! queue leaky=downstream ! "
                 "{vp8enc} ! webmmux ! filesink location={location}"
                 .format(vp8enc=vp8enc, location=save_video))
         else:
