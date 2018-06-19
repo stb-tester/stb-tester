@@ -194,8 +194,8 @@ def ocr(frame=None, region=Region.ALL,
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
-    Added in v28: Parameters ``upsample`` (to disable stb-tester's
-    pre-processing of the image) and ``text_color``.
+    | Added in v28: The ``upsample`` and ``text_color`` parameters.
+    | Added in v29: The ``text_color_threshold`` parameter.
     """
     if frame is None:
         import stbt
@@ -258,7 +258,8 @@ def match_text(text, frame=None, region=Region.ALL,
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
 
-    Added in v28: The ``upsample`` and ``text_color`` parameters.
+    | Added in v28: The ``upsample`` and ``text_color`` parameters.
+    | Added in v29: The ``text_color_threshold`` parameter.
     """
     import lxml.etree
     if frame is None:

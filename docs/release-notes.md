@@ -23,9 +23,11 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 #### v29
 
-<SUMMARY>
+New APIs for measuring animations and transitions, and for sending infrared
+repeat signals (pressing and holding a button). Plus a bunch of usability
+improvements and bug fixes.
 
-<DATE>.
+19 June 2018.
 
 ##### Breaking changes since v28
 
@@ -90,19 +92,22 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   `stbt.detect_match` all now take a new optional `frames` parameter. This
   defaults to `stbt.frames()` which preserves the existing behaviour.
 
-* If your test-pack is a Python module (that is, it contains an `__init__.py`
-  in each directory under `tests/`) then `stbt run` will automatically add the
-  parent directory of the top-level module to the Python import path. This
-  fixes relative imports from your test scripts if you didn't configure
-  `PYTHONPATH` explicitly.
+* `stbt.ocr` and `stbt.match_text`: Added `text_color_threshold` parameter, to
+  configure the threshold used with the `text_color` parameter.
 
-##### Minor fixes and packaging fixes
+##### Bug fixes & improvements
+
+* If your test-pack is a Python package (that is, it contains an `__init__.py`
+  file in each directory under `tests/`) then relative imports from your test
+  scripts will now work. This allows you to organise your tests into multiple
+  directories easily.
 
 * Fix `AttributeError` when using a `stbt.FrameObject` instance from multiple
   threads.
 
 * `stbt.press`: Fix timing of the key-press visualisation in the recorded
-  video. The key-press was appearing earlier than it was actually sent.
+  video. The key-press was appearing a few frames earlier than it was actually
+  sent.
 
 * `stbt.Frame`: Show timestamp & dimensions in repr output, instead of the
   verbose numpy repr.
