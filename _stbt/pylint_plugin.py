@@ -86,7 +86,6 @@ class StbtChecker(BaseChecker):
         if _in_frameobject(node) and _in_property(node):
             for funcdef in _infer(node.func):
                 if (isinstance(funcdef, FunctionDef) and
-                        funcdef != YES and
                         "frame" in funcdef.argnames()):
                     index = funcdef.argnames().index("frame")
                     args = [a for a in node.args if not isinstance(a, Keyword)]
