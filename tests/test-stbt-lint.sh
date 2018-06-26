@@ -80,7 +80,8 @@ test_pylint_plugin_on_itself() {
 test_that_stbt_lint_checks_uses_of_stbt_return_values() {
     cat > test.py <<-EOF &&
 	import re, stbt
-	from stbt import is_screen_black, match, match_text, ocr, press, wait_until
+	from stbt import (is_screen_black, match, match_text, ocr, press,
+	                  press_and_wait, wait_until)
 	
 	def test_something():
 	    assert wait_until(lambda: True)
@@ -88,7 +89,7 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	    if wait_until(lambda: True): pass
 	    wait_until(lambda: True)
 	    stbt.wait_until(lambda: True)
-	    something_else_that_ends_in_wait_until()  # pylint:disable=E0602
+	    something_else_that_ends_in_wait_until()  # pylint:disable=undefined-variable
 	    assert match('$testdir/videotestsrc-redblue.png')
 	    match('$testdir/videotestsrc-redblue.png')
 	    re.match('foo', 'bah')
@@ -96,17 +97,23 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	    is_screen_black()
 	    match_text('hello')
 	    ocr()
+	    press_and_wait("KEY_DOWN")
+	    stbt.press_and_wait("KEY_DOWN")
+	    assert press_and_wait("KEY_DOWN")
+	    assert stbt.press_and_wait("KEY_DOWN")
 	EOF
     stbt lint --errors-only test.py > lint.log
 
     cat > lint.expected <<-'EOF'
 	************* Module test
-	E:  8, 4: "wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
-	E:  9, 4: "stbt.wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
-	E: 12, 4: "match" return value not used (missing "assert"?) (stbt-unused-return-value)
-	E: 15, 4: "is_screen_black" return value not used (missing "assert"?) (stbt-unused-return-value)
-	E: 16, 4: "match_text" return value not used (missing "assert"?) (stbt-unused-return-value)
-	E: 17, 4: "ocr" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E:  9, 4: "wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 10, 4: "stbt.wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 13, 4: "match" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 16, 4: "is_screen_black" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 17, 4: "match_text" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 18, 4: "ocr" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 19, 4: "press_and_wait" return value not used (missing "assert"?) (stbt-unused-return-value)
+	E: 20, 4: "stbt.press_and_wait" return value not used (missing "assert"?) (stbt-unused-return-value)
 	EOF
     diff -u lint.expected lint.log
 }
