@@ -1,10 +1,6 @@
 """pylint plugin to do static analysis on stbt scripts
 
-* Identifies broken image links in parameters to `stbt.wait_for_match` etc.
-* Identifies calls to `wait_until` whose return value isn't used (probably
-  missing an `assert`).
-
-Intended to be used by "stbt lint".
+Used by "stbt lint".
 
 Documentation on Abstract Syntax Tree traversal with python/pylint:
 
