@@ -81,9 +81,9 @@ class StbtChecker(BaseChecker):
 
         if _in_frameobject(node) and _in_property(node):
             for funcdef in _infer(node.func):
-                if (isinstance(funcdef, FunctionDef) and
-                        "frame" in funcdef.argnames()):
-                    index = funcdef.argnames().index("frame")
+                argnames = _get_argnames(funcdef)
+                if "frame" in argnames:
+                    index = argnames.index("frame")
                     args = [a for a in node.args if not isinstance(a, Keyword)]
                     if hasattr(node, "keywords"):  # astroid >= 1.4
                         keywords = node.keywords or []
@@ -126,6 +126,16 @@ def _in_property(node):
                 return True
         node = node.parent
     return False
+
+
+def _get_argnames(node):
+    if isinstance(node, FunctionDef):
+        return node.argnames()
+    if isinstance(node, ClassDef) and node.newstyle:
+        for method in node.methods():
+            if method.name == "__init__":
+                return method.argnames()[1:]
+    return []
 
 
 def _is_uri(filename):
