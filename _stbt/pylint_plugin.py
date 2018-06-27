@@ -16,6 +16,7 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 
 import os
 import re
+import subprocess
 
 from astroid import YES
 from astroid.node_classes import BinOp
@@ -53,6 +54,11 @@ class StbtChecker(BaseChecker):
                   'stbt-frame-object-missing-frame',
                   'FrameObject properties must always provide "self._frame" as '
                   'the "frame" parameter to functions such as "stbt.match".'),
+        'E7005': ('Image "%s" not committed to git',
+                  'stbt-uncommitted-image',
+                  'The image path given to "stbt.match" '
+                  '(and similar functions) exists on disk, '
+                  "but isn't committed to git."),
     }
 
     def visit_const(self, node):
@@ -63,9 +69,13 @@ class StbtChecker(BaseChecker):
                 not _is_calculated_value(node) and
                 not _is_pattern_value(node) and
                 not _is_whitelisted_name(node.value) and
-                not _in_whitelisted_functions(node) and
-                not _file_exists(node.value, node)):
-            self.add_message('E7001', node=node, args=node.value)
+                not _in_whitelisted_functions(node)):
+            path = _find_file(node.value, node)
+            if path:
+                if _is_file_uncommitted(path):
+                    self.add_message('E7005', node=node, args=node.value)
+            else:
+                self.add_message('E7001', node=node, args=node.value)
 
     def visit_callfunc(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
@@ -174,16 +184,44 @@ def _is_function_named(func, name):
     return False
 
 
-def _file_exists(filename, node):
-    """True if `filename` is found on stbt's image search path
+def _find_file(filename, node):
+    """Resolves `filename` on stbt's image search path
 
     (See commit 4e5cd23c.)
     """
-    if os.path.isfile(os.path.join(
-            os.path.dirname(node.root().file),
-            filename)):
+    path = os.path.join(
+        os.path.dirname(node.root().file),
+        filename)
+    if os.path.isfile(path):
+        return path
+    return None
+
+
+def _is_file_uncommitted(filename):
+    if not _in_git_repo():
+        return False
+    try:
+        subprocess.check_output(
+            ["git", "ls-files", "--error-unmatch", filename],
+            stderr=subprocess.STDOUT)
+        return False
+    except subprocess.CalledProcessError:
         return True
-    return False
+
+
+__in_git_repo = None
+
+
+def _in_git_repo():
+    global __in_git_repo
+    if __in_git_repo is None:
+        try:
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
+                                    stderr=subprocess.STDOUT)
+            __in_git_repo = True
+        except (OSError, subprocess.CalledProcessError):
+            __in_git_repo = False
+    return __in_git_repo
 
 
 def _infer(node):
