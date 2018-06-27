@@ -74,9 +74,9 @@ class _FrameObjectMeta(type):
             p for p in dir(cls)
             if isinstance(getattr(cls, p), property)])
         assert 'is_visible' in property_names
-        cls._FrameObject__attrs = ["is_visible"] + sorted(
+        cls._fields = tuple(["is_visible"] + sorted(
             x for x in property_names
-            if x != "is_visible" and not x.startswith('_'))
+            if x != "is_visible" and not x.startswith('_')))
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
@@ -360,6 +360,14 @@ class FrameObject(object):
     set([Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')])
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
+
+    Much like ``namedtuple``, ``FrameObject`` classes have a ``_fields``
+    attribute.
+
+    >>> Dialog._fields
+    ('is_visible', 'message', 'title')
+
+    Added in v30: The ``_fields`` attribute.
     '''
     __metaclass__ = _FrameObjectMeta
 
@@ -372,13 +380,12 @@ class FrameObject(object):
         self._frame = frame
 
     def __repr__(self):
-        args = ", ".join(("%s=%r" % x) for x in self._iter_attrs())
+        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
         return "%s(%s)" % (self.__class__.__name__, args)
 
-    def _iter_attrs(self):
+    def _iter_fields(self):
         if self:
-            # pylint: disable=protected-access,no-member
-            for x in self.__class__.__attrs:
+            for x in self._fields:  # pylint:disable=no-member
                 yield x, getattr(self, x)
         else:
             yield "is_visible", False
@@ -390,7 +397,7 @@ class FrameObject(object):
         # pylint: disable=protected-access
         from itertools import izip_longest
         if isinstance(other, self.__class__):
-            for s, o in izip_longest(self._iter_attrs(), other._iter_attrs()):
+            for s, o in izip_longest(self._iter_fields(), other._iter_fields()):
                 v = cmp(s[1], o[1])
                 if v != 0:
                     return v
@@ -399,7 +406,7 @@ class FrameObject(object):
             return NotImplemented
 
     def __hash__(self):
-        return hash(tuple(v for _, v in self._iter_attrs()))
+        return hash(tuple(v for _, v in self._iter_fields()))
 
     @property
     def is_visible(self):

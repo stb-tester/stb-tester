@@ -166,6 +166,8 @@ class MatchResult(object):
 
     :ivar image: The reference image that was searched for, as given to `match`.
     """
+    _fields = ("time", "match", "region", "first_pass_result", "frame", "image")
+
     def __init__(
             self, time, match, region,  # pylint: disable=redefined-outer-name
             first_pass_result, frame, image, _first_pass_matched=None):

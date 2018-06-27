@@ -283,6 +283,8 @@ class MotionResult(object):
 
     Added in v28: The ``frame`` attribute.
     """
+    _fields = ("time", "motion", "region", "frame")
+
     def __init__(self, time, motion, region, frame):
         self.time = time
         self.motion = motion
