@@ -86,11 +86,15 @@ test_that_stbt_lint_reports_uncommitted_images() {
     stbt lint --errors-only tests/test.py &> lint.log
     cat > lint.expected <<-EOF
 	************* Module test
-	E:  2,18: Image "images/reference.png" not committed to git (stbt-uncommitted-image)
+	E:  2,18: Image "tests/images/reference.png" not committed to git (stbt-uncommitted-image)
 	EOF
     diff -u lint.expected lint.log || fail "(see diff above)"
 
     (cd tests && stbt lint --errors-only test.py) &> lint.log
+    cat > lint.expected <<-EOF
+	************* Module test
+	E:  2,18: Image "images/reference.png" not committed to git (stbt-uncommitted-image)
+	EOF
     diff -u lint.expected lint.log || fail "(see diff above)"
 
     git add tests/images/reference.png

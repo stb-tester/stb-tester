@@ -73,9 +73,10 @@ class StbtChecker(BaseChecker):
             path = _find_file(node.value, node)
             if path:
                 if _is_file_uncommitted(path):
-                    self.add_message('E7005', node=node, args=node.value)
+                    self.add_message('E7005', node=node,
+                                     args=os.path.relpath(path))
             else:
-                self.add_message('E7001', node=node, args=node.value)
+                self.add_message('E7001', node=node, args=os.path.relpath(path))
 
     def visit_callfunc(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
