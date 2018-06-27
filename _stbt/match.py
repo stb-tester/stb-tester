@@ -448,8 +448,13 @@ def _find_matches(image, template, match_parameters, imglog):
         raise ValueError("Source image must be larger than reference image")
     if any(template.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image must contain some data")
-    if len(template.shape) != 3 or template.shape[2] != 3:
-        raise ValueError("Reference image must be 3 channel BGR")
+    if not (len(template.shape) == 2 or
+            len(template.shape) == 3 and template.shape[2] == 3):
+        raise ValueError("Reference image must be grayscale or 3 channel BGR")
+    if (len(image.shape) != len(template.shape) or
+            len(image.shape) == 3 and image.shape[2] != template.shape[2]):
+        raise ValueError(
+            "Source and reference images must have the same number of channels")
     if template.dtype != numpy.uint8:
         raise ValueError("Reference image must be 8-bits per channel")
 
@@ -694,20 +699,21 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
         return True
 
     # Set Region Of Interest to the "best match" location
-    roi = image[region.y:region.bottom, region.x:region.right]
-    image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imwrite("confirm-source_roi", roi)
-    imwrite("confirm-source_roi_gray", image_gray)
-    imwrite("confirm-template_gray", template_gray)
+    image = image[region.y:region.bottom, region.x:region.right]
+    imwrite("confirm-source_roi", image)
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    imwrite("confirm-source_roi_gray", image)
+    imwrite("confirm-template_gray", template)
 
     if match_parameters.confirm_method == "normed-absdiff":
-        cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
-        cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imwrite("confirm-source_roi_gray_normalized", image_gray)
-        imwrite("confirm-template_gray_normalized", template_gray)
+        cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX)
+        cv2.normalize(template, template, 0, 255, cv2.NORM_MINMAX)
+        imwrite("confirm-source_roi_gray_normalized", image)
+        imwrite("confirm-template_gray_normalized", template)
 
-    absdiff = cv2.absdiff(image_gray, template_gray)
+    absdiff = cv2.absdiff(image, template)
     _, thresholded = cv2.threshold(
         absdiff, int(match_parameters.confirm_threshold * 255),
         255, cv2.THRESH_BINARY)
