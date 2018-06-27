@@ -33,7 +33,7 @@ parser.add_argument(
     "source_file", help="""The screenshot to compare against (you can capture it
         using 'stbt screenshot')""")
 parser.add_argument(
-    "template_file", help="The image to search for")
+    "reference_file", help="The image to search for")
 parser.add_argument(
     "match_parameters", nargs="*",
     help="""Parameters for the image processing algorithm. See
@@ -73,7 +73,7 @@ with (_stbt.logging.scoped_debug_level(2) if args.verbose
       else noop_contextmanager()):
     try:
         result = stbt.match(
-            os.path.abspath(args.template_file), frame=source_image,
+            os.path.abspath(args.reference_file), frame=source_image,
             match_parameters=mp)
         print "%s: %s" % (
             "Match found" if result else "No match found. Closest match",

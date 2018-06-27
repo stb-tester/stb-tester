@@ -204,8 +204,8 @@ test_match_invalid_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Invalid template should cause test to fail"
-    cat log | grep -q "FAIL: test.py: ValueError: Template image must be 3 channel BGR" \
-        || fail "Didn't see 'ValueError: Template image must be 3 channel BGR'"
+    cat log | grep -q "FAIL: test.py: ValueError: Reference image must be 3 channel BGR" \
+        || fail "Didn't see 'ValueError: Reference image must be 3 channel BGR'"
 }
 
 test_press_until_match_presses_once() {
