@@ -486,7 +486,7 @@ def update_doctests(infilename, outfile):
             except Exception:  # pylint: disable=broad-except
                 did_print[0] = (io.tell() != 0)
                 result[0] = "exception"
-                traceback.print_exc(0, io)
+                traceback.print_exc(file=io)
             finally:
                 perf_log.append((cmd, time.time() - start_time))
 
