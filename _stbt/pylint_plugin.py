@@ -68,12 +68,14 @@ class StbtChecker(BaseChecker):
             self.add_message('E7001', node=node, args=node.value)
 
     def visit_callfunc(self, node):
-        if re.search(r"\b(is_screen_black|match|match_text|ocr|wait_until)$",
+        if re.search(r"\b(is_screen_black|match|match_text|ocr|press_and_wait|"
+                     r"wait_until)$",
                      node.func.as_string()):
             if isinstance(node.parent, Expr):
                 for inferred in _infer(node.func):
-                    if inferred.root().name in ('stbt', '_stbt.core',
-                                                '_stbt.match', '_stbt.ocr'):
+                    if inferred.root().name in (
+                            'stbt', '_stbt.core', '_stbt.match', '_stbt.ocr',
+                            '_stbt.transition'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
 

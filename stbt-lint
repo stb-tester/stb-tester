@@ -12,7 +12,8 @@
 * E7001: The image path given to "stbt.match" (and similar functions)
   does not exist on disk.
 * E7002: The return value from is_screen_black, match, match_text, ocr,
-  or wait_until isn't used (perhaps you've forgotten to use "assert").
+  press_and_wait, or wait_until isn't used (perhaps you've forgotten to
+  use "assert").
 * E7003: The argument given to "wait_until" must be a callable (such as
   a function or lambda expression).
 * E7004: FrameObject properties must always provide "self._frame" as the
