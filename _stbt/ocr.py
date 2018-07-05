@@ -91,6 +91,8 @@ class TextMatchResult(object):
     :ivar unicode text: The text that was searched for, as given to
         `match_text`.
     """
+    _fields = ("time", "match", "region", "frame", "text")
+
     def __init__(self, time, match, region, frame, text):
         self.time = time
         self.match = match
