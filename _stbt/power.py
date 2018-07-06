@@ -11,6 +11,8 @@ def uri_to_power_outlet(uri):
         (r'none', _NoOutlet),
         (r'file:(?P<filename>[^:]+)', _FileOutlet),
         (r'aten:(?P<address>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
+        (r'rittal:(?P<address>[^: ]+):(?P<outlet_no>[^: ]+)'
+         ':(?P<community>[^: ]+)', _RittalSnmpPower),
         (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
          ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
@@ -191,6 +193,28 @@ class _FakeAviosys8800ProSerial(object):
             self.respond('z>')
 
         return len(data)
+
+
+class _RittalSnmpPower(object):
+    """
+    Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
+    """
+    def __init__(self, address, outlet_no, community):
+        outlet_no = int(outlet_no)
+        index = outlet_no - 1
+        if index < 0:
+            raise ValueError("Invalid outlet_no %i.  Min outlet no is 1" %
+                             outlet_no)
+        self._snmp = _SnmpInteger(
+            address, "1.3.6.1.4.1.2606.7.4.2.2.1.11.1.%i" % (52 + index * 7),
+            community)
+
+    def get(self):
+        return bool(self._snmp.get())
+
+    def set(self, power):
+        if self._snmp.set(int(bool(power))) != int(bool(power)):
+            raise RuntimeError("Setting power failed with unknown error")
 
 
 class _ATEN_PE6108G(object):

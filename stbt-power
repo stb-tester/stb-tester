@@ -20,6 +20,7 @@ def main(argv):
                aten:<hostname>:<outlet> - For ATEN network controlled PDU
                ipp:<hostname>:<outlet> - For IP Power 9258 network controlled PDU
                pdu:<hostname>:<outlet> - For PDUeX KWX network controlled PDU
+               rittal:<hostname>:<outlet>:<community> - For Rittal 7955.310 network controlled PDU
                aviosys-8800-pro[:<serial device>] - For Aviosys 8800 Pro USB
                    controlled outlets
              where
