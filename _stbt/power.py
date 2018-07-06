@@ -10,7 +10,7 @@ def uri_to_power_outlet(uri):
     remotes = [
         (r'none', _NoOutlet),
         (r'file:(?P<filename>[^:]+)', _FileOutlet),
-        (r'aten:(?P<hostname>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
+        (r'aten:(?P<address>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
         (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
          ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
@@ -196,11 +196,11 @@ class _FakeAviosys8800ProSerial(object):
 class _ATEN_PE6108G(object):
     """Class to control the ATEN PDU using pysnmp module. """
 
-    def __init__(self, hostname, outlet):
+    def __init__(self, address, outlet):
         outlet = int(outlet)
         outlet_offset = 1 if outlet <= 8 else 2
         self._snmp = _SnmpInteger(
-            hostname, "1.3.6.1.4.1.21317.1.3.2.2.2.2.%i.0" % (
+            address, "1.3.6.1.4.1.21317.1.3.2.2.2.2.%i.0" % (
                 outlet + outlet_offset),
             community='administrator')
 
@@ -223,11 +223,15 @@ class _ATEN_PE6108G(object):
 
 
 class _SnmpInteger(object):
-    def __init__(self, hostname, oid, community):
+    def __init__(self, address, oid, community):
         from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
         self.oid = oid
         self._community = community
-        self._transport = UdpTransportTarget((hostname, 161))
+        if ':' in address:
+            address, port = address.split(address, 2)
+        else:
+            port = "161"
+        self._transport = UdpTransportTarget((address, int(port)))
 
     def set(self, value):
         return self._cmd(value)
