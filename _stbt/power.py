@@ -10,7 +10,9 @@ def uri_to_power_outlet(uri):
     remotes = [
         (r'none', _NoOutlet),
         (r'file:(?P<filename>[^:]+)', _FileOutlet),
-        (r'aten:(?P<hostname>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
+        (r'aten:(?P<address>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
+        (r'rittal:(?P<address>[^: ]+):(?P<outlet_no>[^: ]+)'
+         ':(?P<community>[^: ]+)', _RittalSnmpPower),
         (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
          ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
@@ -193,62 +195,101 @@ class _FakeAviosys8800ProSerial(object):
         return len(data)
 
 
+class _RittalSnmpPower(object):
+    """
+    Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
+    """
+    def __init__(self, address, outlet_no, community):
+        outlet_no = int(outlet_no)
+        index = outlet_no - 1
+        if index < 0:
+            raise ValueError("Invalid outlet_no %i.  Min outlet no is 1" %
+                             outlet_no)
+        self._snmp = _SnmpInteger(
+            address, "1.3.6.1.4.1.2606.7.4.2.2.1.11.1.%i" % (52 + index * 7),
+            community)
+
+    def get(self):
+        return bool(self._snmp.get())
+
+    def set(self, power):
+        if self._snmp.set(int(bool(power))) != int(bool(power)):
+            raise RuntimeError("Setting power failed with unknown error")
+
+
 class _ATEN_PE6108G(object):
     """Class to control the ATEN PDU using pysnmp module. """
 
-    def __init__(self, hostname, outlet):
-        self.hostname = hostname
-        self.outlet = int(outlet)
-        oid_string = "1.3.6.1.4.1.21317.1.3.2.2.2.2.{0}.0"
-        outlet_offset = 1 if self.outlet <= 8 else 2
-        self.outlet_oid = oid_string.format(self.outlet + outlet_offset)
+    def __init__(self, address, outlet):
+        outlet = int(outlet)
+        outlet_offset = 1 if outlet <= 8 else 2
+        self._snmp = _SnmpInteger(
+            address, "1.3.6.1.4.1.21317.1.3.2.2.2.2.%i.0" % (
+                outlet + outlet_offset),
+            community='administrator')
 
     def set(self, power):
-        new_state = self.aten_cmd(power=power)
+        new_state = self._snmp.set(2 if power else 1)
 
         # ATEN PE6108G outlets take between 4-8 seconds to power on
         for _ in range(12):
             time.sleep(1)
-            if self.aten_cmd() == new_state:
+            if self._snmp.get() == new_state:
                 return
         raise RuntimeError(
             "Timeout waiting for outlet to power {}".format(
                 "ON" if power else "OFF"))
 
     def get(self):
-        result = self.aten_cmd()
+        result = self._snmp.get()
         # 3 represents moving between states
-        return {3: False, 2: True, 1: False}[int(result)]
+        return {3: False, 2: True, 1: False}[result]
 
-    def aten_cmd(self, power=None):
+
+class _SnmpInteger(object):
+    def __init__(self, address, oid, community):
+        from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
+        self.oid = oid
+        self._community = community
+        if ':' in address:
+            address, port = address.split(address, 2)
+        else:
+            port = "161"
+        self._transport = UdpTransportTarget((address, int(port)))
+
+    def set(self, value):
+        return self._cmd(value)
+
+    def get(self):
+        return self._cmd(None)
+
+    def _cmd(self, value):
         from pysnmp.entity.rfc3413.oneliner import cmdgen
         from pysnmp.proto.rfc1905 import NoSuchObject
         from pysnmp.proto.rfc1902 import Integer
 
         command_generator = cmdgen.CommandGenerator()
 
-        if power is None:  # `status` command
+        if value is None:  # `status` command
             error_ind, _, _, var_binds = command_generator.getCmd(
-                cmdgen.CommunityData('administrator'),
-                cmdgen.UdpTransportTarget((self.hostname, 161)),
-                self.outlet_oid)
+                cmdgen.CommunityData(self._community),
+                self._transport,
+                self.oid)
         else:
             error_ind, _, _, var_binds = command_generator.setCmd(
-                cmdgen.CommunityData('administrator'),
-                cmdgen.UdpTransportTarget((self.hostname, 161)),
-                (self.outlet_oid, Integer(2 if power else 1)))
+                cmdgen.CommunityData(self._community),
+                self._transport,
+                (self.oid, Integer(value)))
 
         if error_ind is not None:
             raise RuntimeError("SNMP Error ({})".format(error_ind))
 
-        name, result = var_binds[0]
-
-        assert str(name) == self.outlet_oid
+        _, result = var_binds[0]
 
         if isinstance(result, NoSuchObject):
-            raise RuntimeError("Invalid outlet {}".format(self.outlet))
+            raise RuntimeError("No such outlet")
 
         if not isinstance(result, Integer):
             raise RuntimeError("Unexpected result ({})".format(result))
 
-        return result
+        return int(result)
