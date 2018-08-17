@@ -71,6 +71,8 @@ def crop(frame, region):
     :returns: An OpenCV image (`numpy.ndarray`) containing the specified region
       of the source frame. This is a view onto the original data, so if you
       want to modify the cropped image call its ``copy()`` method first.
+
+    Added in v28.
     """
     if not _image_region(frame).contains(region):
         raise ValueError("frame with dimensions %r doesn't contain %r"
