@@ -130,9 +130,10 @@ def test_that_setting_config_options_has_an_effect():
     pytest.param(None, marks=pytest.mark.xfail),
     [r'\d\*.\d\*.\d\*.\d\*'],
     r'\d\*.\d\*.\d\*.\d\*',
+    stbt.OcrPatterns.IP_ADDRESS,
 ])
 def test_tesseract_user_patterns(patterns):
-    # pylint: disable=W0212
+    # pylint: disable=protected-access
     if _tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
@@ -145,7 +146,7 @@ def test_tesseract_user_patterns(patterns):
 
 @raises(RuntimeError)
 def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
-    # pylint: disable=W0212
+    # pylint: disable=protected-access
     if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too new')
 
@@ -153,6 +154,21 @@ def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
+
+
+def test_ocr_patterns_ip_address():
+    # pylint: disable=protected-access
+    if _tesseract_version() < distutils.version.LooseVersion('3.03'):
+        raise SkipTest('tesseract is too old')
+
+    f = load_image("ocr/192.168.1.231.png")
+
+    # Pattern with "\*" repetition operator doesn't work:
+    assert stbt.ocr(f, tesseract_user_patterns=[r"\d\*.\d\*.\d\*.\d\*"]) \
+        != "192.168.1.231"
+
+    assert stbt.ocr(f, tesseract_user_patterns=stbt.OcrPatterns.IP_ADDRESS) \
+        == "192.168.1.231"
 
 
 @pytest.mark.parametrize("words", [
