@@ -50,6 +50,7 @@ from _stbt.ocr import \
     match_text, \
     ocr, \
     OcrMode, \
+    OcrPatterns, \
     TextMatchResult
 from _stbt.transition import \
     press_and_wait, \
@@ -86,6 +87,7 @@ __all__ = [
     "NoVideo",
     "ocr",
     "OcrMode",
+    "OcrPatterns",
     "Position",
     "PreconditionError",
     "press",

@@ -71,6 +71,30 @@ class OcrMode(IntEnum):
         return str(self)
 
 
+_octet = [r"\d", r"\d\d", r"\d\d\d"]
+
+
+class OcrPatterns(object):
+    """
+    Common patterns for the ``tesseract_user_patterns`` parameter of `stbt.ocr`.
+
+    Stb-tester's OCR engine (Tesseract) is designed for long-form text, so it
+    struggles to read things that aren't real words -- such as IP addresses.
+    The ``tesseract_user_patterns`` tells Tesseract what to expect.
+
+    Example::
+
+        stbt.ocr(tesseract_user_patterns=stbt.OcrPatterns.IP_ADDRESS)
+
+    | Added in v30: ``OcrPatterns.IP_ADDRESS``.
+    """
+    IP_ADDRESS = tuple([a + "." + b + "." + c + "." + d
+                        for a in _octet
+                        for b in _octet
+                        for c in _octet
+                        for d in _octet])
+
+
 class TextMatchResult(object):
     """The result from `match_text`.
 
@@ -176,6 +200,9 @@ def ocr(frame=None, region=Region.ALL,
             \a         [a-z]
             \A         [A-Z]
             \*         *
+
+        Some useful patterns are pre-defined in `OcrPatterns`, for example
+        ``OcrPatterns.IP_ADDRESS``.
 
     :param bool upsample:
         Upsample the image 3x before passing it to tesseract. This helps to
