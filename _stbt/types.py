@@ -52,6 +52,10 @@ class Region(namedtuple('Region', 'x y right bottom')):
     None
     >>> print Region.intersect(None, a)
     None
+    >>> Region.intersect(a)
+    Region(x=0, y=0, right=8, bottom=8)
+    >>> Region.intersect()
+    Region.ALL
     >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
     >>> quadrant.translate(2, 2)
     Region(x=-inf, y=-inf, right=2, bottom=2)
@@ -149,23 +153,34 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region(x, y, right=right, bottom=bottom)
 
     @staticmethod
-    def intersect(a, b):
+    def intersect(*args):
         """
-        :returns: The intersection of regions ``a`` and ``b``, or ``None`` if
-            the regions don't intersect.
+        :returns: The intersection of the passed regions, or ``None`` if the
+            regions don't intersect.
 
-        Either ``a`` or ``b`` can be ``None`` so intersect is commutative and
-        associative.
+        Any parameter can ``None`` so intersect is commutative and associative.
+
+        New in v30: intersect can now take an arbitrary number of region
+        arguments rather than exactly two.
         """
-        if a is None or b is None:
+        out = Region.ALL
+        args = iter(args)
+        try:
+            out = next(args)
+        except StopIteration:
+            # No arguments passed:
+            return Region.ALL
+        if out is None:
             return None
-        else:
-            extents = (max(a.x, b.x), max(a.y, b.y),
-                       min(a.right, b.right), min(a.bottom, b.bottom))
-            if extents[0] < extents[2] and extents[1] < extents[3]:
-                return Region.from_extents(*extents)
-            else:
+
+        for r in args:
+            if not r:
                 return None
+            out = (max(out[0], r[0]), max(out[1], r[1]),
+                   min(out[2], r[2]), min(out[3], r[3]))
+            if out[0] >= out[2] or out[1] >= out[3]:
+                return None
+        return Region.from_extents(*out)
 
     def contains(self, other):
         """:returns: True if ``other`` is entirely contained within self."""
