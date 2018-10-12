@@ -304,6 +304,27 @@ class Region(namedtuple('Region', 'x y right bottom')):
             max(r.right for r in args),
             max(r.bottom for r in args))
 
+    def dilate(self, n):
+        """Expand the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).dilate(3)
+        Region(x=17, y=27, right=33, bottom=53)
+        """
+        return self.extend(x=-n, y=-n, right=n, bottom=n)
+
+    def erode(self, n):
+        """Shrink the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).erode(3)
+        Region(x=23, y=33, right=27, bottom=47)
+        >>> print Region(20, 30, 10, 20).erode(5)
+        None
+        """
+        if self.width > n * 2 and self.height > n * 2:
+            return self.dilate(-n)
+        else:
+            return None
+
 
 Region.ALL = Region(x=-float('inf'), y=-float('inf'),
                     right=float('inf'), bottom=float('inf'))
