@@ -403,8 +403,6 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         img = _convert_color(obj, color_channels, absolute_filename)
     elif isinstance(filename, str):
         absolute_filename = find_user_file(filename)
-        if not absolute_filename:
-            raise IOError("No such file: %s" % filename)
         img = _imread(absolute_filename, color_channels)
     else:
         raise TypeError("load_image requires a filename or Image")
@@ -570,7 +568,8 @@ def find_user_file(filename):
     `match`, etc), then in the directory of that script's caller, etc.
     Falls back to searching the current working directory.
 
-    :returns: Absolute filename, or None if it can't find the file.
+    :returns: Absolute filename.
+    :raises: `IOError` if the file can't be found.
     """
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
@@ -615,7 +614,7 @@ def find_user_file(filename):
         ddebug("Resolved relative path %r to %r" % (filename, abspath))
         return abspath
 
-    return None
+    raise IOError("No such file: %s" % filename)
 
 
 def limit_time(frames, duration_secs):
