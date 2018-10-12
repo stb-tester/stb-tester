@@ -251,30 +251,43 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return self.replace(x=self.x - width, right=self.x)
 
     @staticmethod
-    def bounding_box(a, b):
-        """Find the bounding box of two regions.  Returns the smallest region
-        which contains both regions a and b.
+    def bounding_box(*args):
+        r"""Find the bounding box of the given regions.  Returns the smallest
+        region which contains all passed regions.
 
-        >>> Region.bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+        >>> a = Region(50, 20, right=60, bottom=40)
+        >>> b = Region(20, 30, right=30, bottom=50)
+        >>> c = Region(55, 25, right=70, bottom=35)
+        >>> Region.bounding_box(a, b)
         Region(x=20, y=20, right=60, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+        >>> Region.bounding_box(b, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, Region(20, 30, 10, 20))
+        >>> Region.bounding_box(None, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), None)
+        >>> Region.bounding_box(b, None)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), Region.ALL)
+        >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
         >>> print Region.bounding_box(None, None)
         None
+        >>> print Region.bounding_box()
+        None
+        >>> Region.bounding_box(b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(a, b, c) == \
+        ...     Region.bounding_box(a, Region.bounding_box(b, c))
+        True
+
+        New in v30: No longer limited to just taking 2 regions.
         """
-        if a is None:
-            return b
-        if b is None:
-            return a
-        return Region.from_extents(min(a.x, b.x), min(a.y, b.y),
-                                   max(a.right, b.right),
-                                   max(a.bottom, b.bottom))
+        args = filter(None, args)
+        if not args:
+            return None
+        return Region.from_extents(
+            min(r.x for r in args),
+            min(r.y for r in args),
+            max(r.right for r in args),
+            max(r.bottom for r in args))
 
 
 Region.ALL = Region(x=-float('inf'), y=-float('inf'),
