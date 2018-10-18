@@ -454,7 +454,7 @@ def _find_matches(image, template, match_parameters, imglog):
 
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, match_parameters,
+            _find_candidate_matches([image], [template], [1], match_parameters,
                                     imglog):
         confirmed = (
             first_pass_matched and
@@ -468,7 +468,8 @@ def _find_matches(image, template, match_parameters, imglog):
             break
 
 
-def _find_candidate_matches(image, template, match_parameters, imglog):
+def _find_candidate_matches(
+        images, templates, weights, match_parameters, imglog):
     """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -479,9 +480,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.imwrite("source", image)
-    imglog.imwrite("template", template)
-    ddebug("Original image %s, template %s" % (image.shape, template.shape))
+    for n, (image, template) in enumerate(zip(images, templates)):
+        imglog.imwrite("source-%i" % n, image)
+        imglog.imwrite("template-%i" % n, template)
+        ddebug("%i. Original image %s, template %s" % (
+            n, image.shape, template.shape))
 
     method = {
         'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
@@ -492,11 +495,12 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
-    template_pyramid = _build_pyramid(template, levels)
-    image_pyramid = _build_pyramid(image, len(template_pyramid))
+    template_pyramids = [_build_pyramid(t, levels) for t in templates]
+    levels = len(template_pyramids[0])
+    image_pyramids = [_build_pyramid(im, levels) for im in images]
     roi_mask = None  # Initial region of interest: The whole image.
 
-    for level in reversed(range(len(template_pyramid))):
+    for level in reversed(range(levels)):
         if roi_mask is not None:
             if any(x < 3 for x in roi_mask.shape):
                 roi_mask = None
@@ -507,8 +511,15 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             imglog.imwrite("level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
 
         heatmap = _match_template(
-            image_pyramid[level], template_pyramid[level], method,
+            image_pyramids[0][level], template_pyramids[0][level], method,
             roi_mask, level, imwrite)
+        if len(image_pyramids) > 1:
+            numpy.pow(heatmap, weights[0], out=heatmap)
+            for im, tm, w in zip(
+                    image_pyramids[1:], template_pyramids[1:], weights[1:]):
+                h = _match_template(im[level], tm[level], method, roi_mask,
+                                    level, imwrite)
+                heatmap *= numpy.pow(h, w)
 
         # Relax the threshold slightly for scaled-down pyramid levels to
         # compensate for scaling artifacts.
