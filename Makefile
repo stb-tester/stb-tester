@@ -242,10 +242,6 @@ check-integrationtests: install-for-test
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
 	    $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
 	$(parallel) tests/run-tests.sh -i
-check-hardware: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
-	tests/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
@@ -500,7 +496,7 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean deb dist doc install install-core uninstall
-.PHONY: check check-hardware check-integrationtests
+.PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
 .PHONY: ppa-publish rpm srpm
 .PHONY: check-cameratests install-stbt-camera

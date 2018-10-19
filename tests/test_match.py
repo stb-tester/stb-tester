@@ -44,6 +44,14 @@ def test_that_match_rejects_greyscale_template():
     stbt.match(grey, frame=black())
 
 
+def test_matching_greyscale_template():
+    assert stbt.match(
+        cv2.cvtColor(stbt.load_image("videotestsrc-redblue.png"),
+                     cv2.COLOR_BGR2GRAY),
+        frame=cv2.cvtColor(stbt.load_image("videotestsrc-full-frame.png"),
+                           cv2.COLOR_BGR2GRAY))
+
+
 def test_that_if_image_doesnt_match_match_all_returns_empty_array():
     assert [] == list(stbt.match_all(
         'button.png', frame=_imread('black-full-frame.png')))

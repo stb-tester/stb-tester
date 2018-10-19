@@ -32,14 +32,14 @@ class MatchParameters(object):
     you don't change the default values from what is documented here.
 
     You should only need to change these parameters when you're trying to match
-    a template image that isn't actually a perfect match -- for example if
+    a reference image that isn't actually a perfect match -- for example if
     there's a translucent background with live TV visible behind it; or if you
-    have a template image of a button's background and you want it to match even
-    if the text on the button doesn't match.
+    have a reference image of a button's background and you want it to match
+    even if the text on the button doesn't match.
 
     :param str match_method:
       The method to be used by the first pass of stb-tester's image matching
-      algorithm, to find the most likely location of the "template" image
+      algorithm, to find the most likely location of the reference image
       within the larger source image.
 
       Allowed values are "sqdiff-normed", "ccorr-normed", and "ccoeff-normed".
@@ -69,12 +69,12 @@ class MatchParameters(object):
         correct.
 
       :"absdiff":
-        Compare the absolute difference of each pixel from the template image
+        Compare the absolute difference of each pixel from the reference image
         against its counterpart from the candidate region in the source video
         frame.
 
       :"normed-absdiff":
-        Normalise the pixel values from both the template image and the
+        Normalise the pixel values from both the reference image and the
         candidate region in the source video frame, then compare the absolute
         difference as with "absdiff".
 
@@ -83,7 +83,7 @@ class MatchParameters(object):
         `confirm_threshold` of 0.30.
 
     :param float confirm_threshold:
-      The maximum allowed difference between any given pixel from the template
+      The maximum allowed difference between any given pixel from the reference
       image and its counterpart from the candidate region in the source video
       frame, as a fraction of the pixel's total luminance range.
 
@@ -212,9 +212,9 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       lookup algorithm.
 
       8-bit BGR numpy arrays are the same format that OpenCV uses for images.
-      This allows generating templates on the fly (possibly using OpenCV) or
-      searching for images captured from the device-under-test earlier in the
-      test script.
+      This allows generating reference images on the fly (possibly using
+      OpenCV) or searching for images captured from the device-under-test
+      earlier in the test script.
 
     :type frame: `stbt.Frame` or `numpy.ndarray`
     :param frame:
@@ -328,14 +328,17 @@ def detect_match(image, timeout_secs=10, match_parameters=None,
     """Generator that yields a sequence of one `MatchResult` for each frame
     processed from the device-under-test's video stream.
 
-    `image` is the image used as the template during matching.  See `stbt.match`
-    for more information.
+    :param image: See `match`.
 
-    Returns after `timeout_secs` seconds. (Note that the caller can also choose
-    to stop iterating over this function's results at any time.)
+    :type timeout_secs: int or float or None
+    :param timeout_secs:
+        A timeout in seconds. After this timeout the iterator will be exhausted.
+        If ``timeout_secs`` is ``None`` then the iterator will yield frames
+        forever. Note that you can stop iterating (for example with ``break``)
+        at any time.
 
-    Specify `match_parameters` to customise the image matching algorithm. See
-    the documentation for `MatchParameters` for details.
+    :param match_parameters: See `match`.
+    :param region: See `match`.
 
     :type frames: Iterator[stbt.Frame]
     :param frames: An iterable of video-frames to analyse. Defaults to
@@ -444,13 +447,18 @@ def _find_matches(image, template, match_parameters, imglog):
     """
 
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
-        raise ValueError("Source image must be larger than template image")
+        raise ValueError("Source image must be larger than reference image")
     if any(template.shape[x] < 1 for x in (0, 1)):
-        raise ValueError("Template image must contain some data")
-    if len(template.shape) != 3 or template.shape[2] != 3:
-        raise ValueError("Template image must be 3 channel BGR")
+        raise ValueError("Reference image must contain some data")
+    if not (len(template.shape) == 2 or
+            len(template.shape) == 3 and template.shape[2] == 3):
+        raise ValueError("Reference image must be grayscale or 3 channel BGR")
+    if (len(image.shape) != len(template.shape) or
+            len(image.shape) == 3 and image.shape[2] != template.shape[2]):
+        raise ValueError(
+            "Source and reference images must have the same number of channels")
     if template.dtype != numpy.uint8:
-        raise ValueError("Template image must be 8-bits per channel")
+        raise ValueError("Reference image must be 8-bits per channel")
 
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
@@ -693,20 +701,21 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
         return True
 
     # Set Region Of Interest to the "best match" location
-    roi = image[region.y:region.bottom, region.x:region.right]
-    image_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    imwrite("confirm-source_roi", roi)
-    imwrite("confirm-source_roi_gray", image_gray)
-    imwrite("confirm-template_gray", template_gray)
+    image = image[region.y:region.bottom, region.x:region.right]
+    imwrite("confirm-source_roi", image)
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    imwrite("confirm-source_roi_gray", image)
+    imwrite("confirm-template_gray", template)
 
     if match_parameters.confirm_method == "normed-absdiff":
-        cv2.normalize(image_gray, image_gray, 0, 255, cv2.NORM_MINMAX)
-        cv2.normalize(template_gray, template_gray, 0, 255, cv2.NORM_MINMAX)
-        imwrite("confirm-source_roi_gray_normalized", image_gray)
-        imwrite("confirm-template_gray_normalized", template_gray)
+        cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX)
+        cv2.normalize(template, template, 0, 255, cv2.NORM_MINMAX)
+        imwrite("confirm-source_roi_gray_normalized", image)
+        imwrite("confirm-template_gray_normalized", template)
 
-    absdiff = cv2.absdiff(image_gray, template_gray)
+    absdiff = cv2.absdiff(image, template)
     _, thresholded = cv2.threshold(
         absdiff, int(match_parameters.confirm_threshold * 255),
         255, cv2.THRESH_BINARY)
