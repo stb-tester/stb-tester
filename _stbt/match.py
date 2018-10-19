@@ -101,7 +101,7 @@ class MatchParameters(object):
 
     def __init__(self, match_method=None, match_threshold=None,
                  confirm_method=None, confirm_threshold=None,
-                 erode_passes=None):
+                 erode_passes=None, structure_weighting=None):
         if match_method is None:
             match_method = get_config('match', 'match_method')
         if match_threshold is None:
@@ -114,6 +114,9 @@ class MatchParameters(object):
                 'match', 'confirm_threshold', type_=float)
         if erode_passes is None:
             erode_passes = get_config('match', 'erode_passes', type_=int)
+        if structure_weighting is None:
+            structure_weighting = get_config(
+                'match', 'structure_weighting', type_=float)
 
         if match_method not in (
                 "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
@@ -126,13 +129,16 @@ class MatchParameters(object):
         self.confirm_method = confirm_method
         self.confirm_threshold = confirm_threshold
         self.erode_passes = erode_passes
+        self.structure_weighting = structure_weighting
 
     def __repr__(self):
         return (
             "MatchParameters(match_method=%r, match_threshold=%r, "
-            "confirm_method=%r, confirm_threshold=%r, erode_passes=%r)"
+            "confirm_method=%r, confirm_threshold=%r, erode_passes=%r, "
+            "structure_weighting=%r)"
             % (self.match_method, self.match_threshold,
-               self.confirm_method, self.confirm_threshold, self.erode_passes))
+               self.confirm_method, self.confirm_threshold, self.erode_passes,
+               self.structure_weighting))
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -460,10 +466,34 @@ def _find_matches(image, template, match_parameters, imglog):
     if template.dtype != numpy.uint8:
         raise ValueError("Reference image must be 8-bits per channel")
 
+    structure_weighting = numpy.clip(match_parameters.structure_weighting, 0, 1)
+    image_weighting = 1 - structure_weighting
+
+    images = []
+    templates = []
+    weights = []
+
+    if structure_weighting > 0.05:
+        images.append(cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=3))
+        templates.append(cv2.Sobel(template, cv2.CV_32F, 1, 0, ksize=3))
+        weights.append(structure_weighting * 0.5)
+
+        images.append(cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=3))
+        templates.append(cv2.Sobel(template, cv2.CV_32F, 0, 1, ksize=3))
+        weights.append(structure_weighting * 0.5)
+
+    if image_weighting > 0.05:
+        images.append(image)
+        templates.append(template)
+        weights.append(image_weighting)
+
+    for im, tm, w in zip(images, templates, weights):
+        print im.shape, tm.shape, w
+
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, match_parameters,
-                                    imglog):
+            _find_candidate_matches(images, templates, weights,
+                                    match_parameters, imglog):
         confirmed = (
             first_pass_matched and
             _confirm_match(image, region, template, match_parameters,
@@ -476,7 +506,8 @@ def _find_matches(image, template, match_parameters, imglog):
             break
 
 
-def _find_candidate_matches(image, template, match_parameters, imglog):
+def _find_candidate_matches(
+        images, templates, weights, match_parameters, imglog):
     """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -487,9 +518,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.imwrite("source", image)
-    imglog.imwrite("template", template)
-    ddebug("Original image %s, template %s" % (image.shape, template.shape))
+    for n, (image, template) in enumerate(zip(images, templates)):
+        imglog.imwrite("source-%i" % n, image)
+        imglog.imwrite("template-%i" % n, template)
+        ddebug("%i. Original image %s, template %s" % (
+            n, image.shape, template.shape))
 
     method = {
         'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
@@ -500,11 +533,12 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
-    template_pyramid = _build_pyramid(template, levels)
-    image_pyramid = _build_pyramid(image, len(template_pyramid))
+    template_pyramids = [_build_pyramid(t, levels) for t in templates]
+    levels = len(template_pyramids[0])
+    image_pyramids = [_build_pyramid(im, levels) for im in images]
     roi_mask = None  # Initial region of interest: The whole image.
 
-    for level in reversed(range(len(template_pyramid))):
+    for level in reversed(range(levels)):
         if roi_mask is not None:
             if any(x < 3 for x in roi_mask.shape):
                 roi_mask = None
@@ -512,11 +546,21 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                 roi_mask = cv2.pyrUp(roi_mask)
 
         def imwrite(name, img):
-            imglog.imwrite("level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
+            imglog.imwrite("level-%d-%s-%i" % (level, name, n), img)  # pylint:disable=cell-var-from-loop
 
+        n = 0
         heatmap = _match_template(
-            image_pyramid[level], template_pyramid[level], method,
+            image_pyramids[0][level], template_pyramids[0][level], method,
             roi_mask, level, imwrite)
+        if len(image_pyramids) > 1:
+            numpy.power(heatmap, weights[0], out=heatmap)
+            for n, im, tm, w in zip(
+                    range(1, 99), image_pyramids[1:], template_pyramids[1:],
+                    weights[1:]):
+                print len(im), len(tm), level
+                h = _match_template(im[level], tm[level], method, roi_mask,
+                                    level, imwrite)
+                heatmap *= numpy.power(h, w)
 
         # Relax the threshold slightly for scaled-down pyramid levels to
         # compensate for scaling artifacts.

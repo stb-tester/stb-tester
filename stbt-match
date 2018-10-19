@@ -55,6 +55,8 @@ try:
             mp.confirm_threshold = float(value)
         elif name == "erode_passes":
             mp.erode_passes = int(value)
+        elif name == "structure_weighting":
+            mp.structure_weighting = float(value)
         else:
             raise Exception("Unknown match_parameter argument '%s'" % p)
 except Exception:  # pylint: disable=W0703
