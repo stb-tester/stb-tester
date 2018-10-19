@@ -71,6 +71,39 @@ test_that_stbt_lint_ignores_image_urls() {
     stbt lint --errors-only test.py
 }
 
+test_that_stbt_lint_reports_uncommitted_images() {
+    mkdir -p repo/tests/images
+    touch repo/tests/images/reference.png
+    cat > repo/tests/test.py <<-EOF
+	import stbt
+	assert stbt.match("images/reference.png")
+	EOF
+    cd repo
+    stbt lint --errors-only tests/test.py ||
+        fail "checker should be disabled because we're not in a git repo"
+
+    git init .
+    stbt lint --errors-only tests/test.py &> lint.log
+    cat > lint.expected <<-EOF
+	************* Module test
+	E:  2,18: Image "tests/images/reference.png" not committed to git (stbt-uncommitted-image)
+	EOF
+    diff -u lint.expected lint.log || fail "(see diff above)"
+
+    (cd tests && stbt lint --errors-only test.py) &> lint.log
+    cat > lint.expected <<-EOF
+	************* Module test
+	E:  2,18: Image "images/reference.png" not committed to git (stbt-uncommitted-image)
+	EOF
+    diff -u lint.expected lint.log || fail "(see diff above)"
+
+    git add tests/images/reference.png
+    stbt lint --errors-only tests/test.py || fail "stbt-lint should succeed"
+
+    (cd tests && stbt lint --errors-only test.py) ||
+        fail "stbt-lint should succeed from subdirectory too"
+}
+
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
