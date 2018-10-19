@@ -193,10 +193,13 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	def find_boxes(frame=None):
 	    pass
 	
+	class Button(FrameObject):
+	    pass
+	
 	class ModalDialog(FrameObject):
 	    @property
 	    def is_visible(self):
-	        return bool(find_boxes())
+	        return find_boxes() and Button()
 	
 	class ErrorDialog(ModalDialog):
 	    @property
@@ -213,7 +216,7 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	class Good(FrameObject):
 	    @property
 	    def is_visible(self):
-	        return bool(find_boxes(self._frame))
+	        return find_boxes(self._frame) and Button(self._frame)
 	
 	    @property
 	    def property1(self):
@@ -234,11 +237,12 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 
     cat > lint.expected <<-'EOF'
 	************* Module test
-	E:  9,20: "find_boxes()" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 15,12: "match('videotestsrc-redblue.png')" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 16,12: "match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 17,16: "is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 21,15: "ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 12,15: "find_boxes()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 12,32: "Button()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 18,12: "match('videotestsrc-redblue.png')" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 19,12: "match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 20,16: "is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 24,15: "ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
 	EOF
     diff -u lint.expected lint.log
 }
