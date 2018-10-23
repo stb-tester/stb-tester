@@ -214,3 +214,56 @@ class FrameObject(object):
         raise NotImplementedError(
             "Objects deriving from FrameObject must define an is_visible "
             "property")
+
+    def refresh(self, frame=None, **kwargs):
+        """Returns a new FrameObject, typically of the same type as `self`, but
+        with un updated frame. `self` is not modified.
+
+        If you want to override this behaviour implement `_refresh` on your
+        derived class instead.
+
+        .. testsetup::
+
+            >>> import stbt
+            >>> from tests.test_frame_object import _load_frame
+            >>> class Dialog(stbt.FrameObject):
+            ...     @property
+            ...     def is_visible(self):
+            ...         return bool(self._info)
+            ...
+            ...     @property
+            ...     def title(self):
+            ...         return stbt.ocr(region=stbt.Region(396, 249, 500, 50),
+            ...                         frame=self._frame)
+            ...
+            ...     @property
+            ...     def message(self):
+            ...         right_of_info = stbt.Region(
+            ...             x=self._info.region.right, y=self._info.region.y,
+            ...             width=390, height=self._info.region.height)
+            ...         return stbt.ocr(region=right_of_info, frame=self._frame) \
+            ...                .replace('\n', ' ')
+            ...
+            ...     @property
+            ...     def _info(self):
+            ...         return stbt.match('tests/info.png', frame=self._frame)
+
+        >>> page = Dialog(frame=_load_frame('with-dialog'))
+        >>> print page.message
+        This set-top box is great
+        >>> page = page.refresh(_load_frame('with-dialog2'))
+        >>> print page.message
+        This set-top box is fabulous
+
+        Added in v30"""
+        if frame is None:
+            import stbt
+            frame = stbt.get_frame()
+        return self._refresh(frame=frame, **kwargs)
+
+    @classmethod
+    def _refresh(cls, frame):
+        """Override this method on derived classes to customise refresh
+        behaviour.  Unlike with `refresh` the `frame` parameter is guaranteed
+        to be a `numpy.ndarray` and not be `None`."""
+        return cls(frame=frame)
