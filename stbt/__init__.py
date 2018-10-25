@@ -46,6 +46,8 @@ from _stbt.motion import (
     MotionResult,
     MotionTimeout,
     wait_for_motion)
+from _stbt.navigation import (
+    navigate_fixed_layout)
 from _stbt.ocr import \
     match_text, \
     ocr, \
@@ -83,6 +85,7 @@ __all__ = [
     "MatchTimeout",
     "MotionResult",
     "MotionTimeout",
+    "navigate_fixed_layout",
     "NoVideo",
     "ocr",
     "OcrMode",
