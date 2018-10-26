@@ -865,9 +865,12 @@ def test_samsung_tcp_control():
 
 def test_x11_control():
     from unittest import SkipTest
-    from .x11 import x_server
+    if os.environ.get('enable_virtual_stb') != 'yes':
+        raise SkipTest('Set $enable_virtual_stb=yes to run this test')
     if not find_executable('Xorg') or not find_executable('xterm'):
         raise SkipTest("Testing X11Control requires X11 and xterm")
+
+    from .x11 import x_server
 
     with utils.named_temporary_directory() as tmp, \
             x_server(320, 240) as display:
