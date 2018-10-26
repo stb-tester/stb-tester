@@ -107,7 +107,9 @@ class FrameObject(object):
       that returns True or False.
     * Define any other properties for information that you want to extract
       from the frame.
-    * Pass ``self._frame`` into any image processing function you call.
+    * Inside each property, when you call an image-processing function (like
+      `stbt.match` or `stbt.ocr`) you must specify the parameter
+      ``frame=self._frame``.
 
     FrameObject behaviours:
 
