@@ -342,8 +342,8 @@ def fit_fn(ideals, measureds):
     """
     >>> f = fit_fn([120, 240, 150, 18, 200],
     ...            [120, 240, 150, 18, 200])
-    >>> print f(0), f(56)
-    0.0 56.0
+    >>> print "%.2f %.2f" % (f(0), f(56))
+    0.00 56.00
     """
     from scipy.optimize import curve_fit  # pylint: disable=E0611
     from scipy.interpolate import interp1d  # pylint: disable=E0611
