@@ -146,7 +146,7 @@ class FrameObject(object):
     .. _tutorial: https://stb-tester.com/tutorials/using-frame-objects-to-extract-information-from-the-screen
     .. _Object Repository: https://stb-tester.com/manual/object-repository
 
-    Added in v30: The ``_fields`` attribute.
+    Added in v30: ``_fields`` and ``refresh``.
     '''
     __metaclass__ = _FrameObjectMeta
 
@@ -218,46 +218,22 @@ class FrameObject(object):
             "property")
 
     def refresh(self, frame=None, **kwargs):
-        """Returns a new FrameObject, typically of the same type as `self`, but
-        with un updated frame. `self` is not modified.
+        """
+        Returns a new FrameObject instance with a new frame. ``self`` is not
+        modified.
 
-        If you want to override this behaviour implement `_refresh` on your
-        derived class instead.
+        ``refresh`` is used by navigation functions that modify the state of
+        the device-under-test.
 
-        .. testsetup::
+        By default ``refresh`` returns a new object of the same class as
+        ``self``, but you can override the return type by implementing
+        ``_refresh`` (note the leading underscore) on your derived class.
 
-            >>> import stbt
-            >>> from tests.test_frame_object import _load_frame
-            >>> class Dialog(stbt.FrameObject):
-            ...     @property
-            ...     def is_visible(self):
-            ...         return bool(self._info)
-            ...
-            ...     @property
-            ...     def title(self):
-            ...         return stbt.ocr(region=stbt.Region(396, 249, 500, 50),
-            ...                         frame=self._frame)
-            ...
-            ...     @property
-            ...     def message(self):
-            ...         right_of_info = stbt.Region(
-            ...             x=self._info.region.right, y=self._info.region.y,
-            ...             width=390, height=self._info.region.height)
-            ...         return stbt.ocr(region=right_of_info, frame=self._frame) \
-            ...                .replace('\n', ' ')
-            ...
-            ...     @property
-            ...     def _info(self):
-            ...         return stbt.match('tests/info.png', frame=self._frame)
+        Any additional keyword arguments are passed on to ``_refresh`` (this
+        only makes sense if you have overridden ``_refresh`` yourself).
 
-        >>> page = Dialog(frame=_load_frame('with-dialog'))
-        >>> print page.message
-        This set-top box is great
-        >>> page = page.refresh(_load_frame('with-dialog2'))
-        >>> print page.message
-        This set-top box is fabulous
-
-        Added in v30"""
+        Added in v30.
+        """
         if frame is None:
             import stbt
             frame = stbt.get_frame()
@@ -265,7 +241,11 @@ class FrameObject(object):
 
     @classmethod
     def _refresh(cls, frame):
-        """Override this method on derived classes to customise refresh
-        behaviour.  Unlike with `refresh` the `frame` parameter is guaranteed
-        to be a `numpy.ndarray` and not be `None`."""
+        """
+        Override this method on derived classes to customise refresh
+        behaviour.
+
+        Unlike ``refresh``, the ``frame`` parameter is guaranteed
+        to be a `numpy.ndarray` and not be ``None``.
+        """
         return cls(frame=frame)
