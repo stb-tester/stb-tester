@@ -104,8 +104,8 @@ install:
      rm -Rf parallel-20140522/ &&
      mkdir $HOME/.parallel &&
      touch $HOME/.parallel/will-cite  # Silence citation warning
- - make enable_stbt_camera=yes
+ - make enable_stbt_camera=yes enable_virtual_stb=yes
 
 script:
  - tesseract --version
- - make enable_stbt_camera=no check
+ - make enable_stbt_camera=no enable_virtual_stb=yes check

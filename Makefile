@@ -24,6 +24,9 @@ ifeq ($(enable_docs), no)
  $(info Not building/installing documentation because 'rst2man' was not found)
 endif
 
+# Enable building/installing stbt virtual-stb
+enable_virtual_stb?=no
+
 # Enable building/installing stbt camera (smart TV support).
 enable_stbt_camera?=no
 
@@ -119,7 +122,7 @@ all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES) etc/stbt.conf
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
 
-install: install-core install-virtual-stb
+install: install-core
 install-core: all
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
@@ -240,13 +243,26 @@ check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
-	    $$(ls tests/test-*.sh | grep -v tests/test-camera.sh) |\
+	    $$(ls tests/test-*.sh | \
+	       grep -v -e tests/test-camera.sh \
+	               -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
 	printf "%s\n" $(PYTHON_FILES) \
 	| grep -v -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	          -e tests/auto-selftest-example-test-pack/selftest \
 	| PYTHONPATH=$$PWD xargs extra/pylint.sh
+
+ifeq ($(enable_virtual_stb), yes)
+install: install-virtual-stb
+check: check-virtual-stb
+check-virtual-stb: install-for-test
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
+	tests/run-tests.sh -i tests/test-virtual-stb.sh
+else
+$(info virtual-stb support disabled)
+endif
 
 ifeq ($(enable_stbt_camera), yes)
 check: check-cameratests
