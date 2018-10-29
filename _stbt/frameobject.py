@@ -227,25 +227,10 @@ class FrameObject(object):
 
         By default ``refresh`` returns a new object of the same class as
         ``self``, but you can override the return type by implementing
-        ``_refresh`` (note the leading underscore) on your derived class.
+        ``refresh`` in your derived class.
 
-        Any additional keyword arguments are passed on to ``_refresh`` (this
-        only makes sense if you have overridden ``_refresh`` yourself).
+        Any additional keyword arguments are passed on to ``__init__``.
 
         Added in v30.
         """
-        if frame is None:
-            import stbt
-            frame = stbt.get_frame()
-        return self._refresh(frame=frame, **kwargs)
-
-    @classmethod
-    def _refresh(cls, frame):
-        """
-        Override this method on derived classes to customise refresh
-        behaviour.
-
-        Unlike ``refresh``, the ``frame`` parameter is guaranteed
-        to be a `numpy.ndarray` and not be ``None``.
-        """
-        return cls(frame=frame)
+        return type(self)(frame=frame, **kwargs)
