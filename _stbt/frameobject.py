@@ -107,7 +107,9 @@ class FrameObject(object):
       that returns True or False.
     * Define any other properties for information that you want to extract
       from the frame.
-    * Pass ``self._frame`` into any image processing function you call.
+    * Inside each property, when you call an image-processing function (like
+      `stbt.match` or `stbt.ocr`) you must specify the parameter
+      ``frame=self._frame``.
 
     FrameObject behaviours:
 
@@ -126,19 +128,8 @@ class FrameObject(object):
       allows writing testcases in a natural way, while expensive operations
       like ``ocr`` will only be done once per frame.
 
-    The FrameObject base class defines the following methods and attributes:
-
-    * ``__init__`` -- The default constructor takes an optional frame; if the
-      frame is not provided, it will grab a frame from the device-under-test.
-    * ``__nonzero__`` -- Delegates to ``is_visible``. The object will only be
-      considered True if it is visible.
-    * ``__repr__`` -- The object's string representation includes all the
-      user-defined public properties.
-    * ``__hash__`` and ``__cmp__`` -- Two instances of the same ``FrameObject``
-      type are considered equal if the values of all the public properties
-      match, even if the underlying frame is different. All falsey FrameObjects
-      of the same type are equal.
-    * ``_fields`` -- A tuple containing the names of the public properties.
+    The FrameObject base class defines several convenient methods and
+    attributes (see below).
 
     Further reading:
 
@@ -155,11 +146,18 @@ class FrameObject(object):
     .. _tutorial: https://stb-tester.com/tutorials/using-frame-objects-to-extract-information-from-the-screen
     .. _Object Repository: https://stb-tester.com/manual/object-repository
 
-    | Added in v30: The ``_fields`` attribute.
+    Added in v30: ``_fields`` and ``refresh``.
     '''
     __metaclass__ = _FrameObjectMeta
 
     def __init__(self, frame=None):
+        """The default constructor takes an optional frame of video; if the
+        frame is not provided, it will grab a frame from the device-under-test.
+
+        If you override the constructor in your derived class (for example to
+        accept additional parameters), make sure to accept an optional
+        ``frame`` parameter and supply it to the super-class's constructor.
+        """
         if frame is None:
             import stbt
             frame = stbt.get_frame()
@@ -168,6 +166,9 @@ class FrameObject(object):
         self._frame = frame
 
     def __repr__(self):
+        """
+        The object's string representation includes all its public properties.
+        """
         args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
         return "%s(%s)" % (self.__class__.__name__, args)
 
@@ -179,9 +180,18 @@ class FrameObject(object):
             yield "is_visible", False
 
     def __nonzero__(self):
+        """
+        Delegates to ``is_visible``. The object will only be considered True if
+        it is visible.
+        """
         return bool(self.is_visible)
 
     def __cmp__(self, other):
+        """
+        Two instances of the same ``FrameObject`` type are considered equal if
+        the values of all the public properties match, even if the underlying
+        frame is different. All falsey FrameObjects of the same type are equal.
+        """
         # pylint: disable=protected-access
         from itertools import izip_longest
         if isinstance(other, self.__class__):
@@ -194,6 +204,11 @@ class FrameObject(object):
             return NotImplemented
 
     def __hash__(self):
+        """
+        Two instances of the same ``FrameObject`` type are considered equal if
+        the values of all the public properties match, even if the underlying
+        frame is different. All falsey FrameObjects of the same type are equal.
+        """
         return hash(tuple(v for _, v in self._iter_fields()))
 
     @property
@@ -201,3 +216,21 @@ class FrameObject(object):
         raise NotImplementedError(
             "Objects deriving from FrameObject must define an is_visible "
             "property")
+
+    def refresh(self, frame=None, **kwargs):
+        """
+        Returns a new FrameObject instance with a new frame. ``self`` is not
+        modified.
+
+        ``refresh`` is used by navigation functions that modify the state of
+        the device-under-test.
+
+        By default ``refresh`` returns a new object of the same class as
+        ``self``, but you can override the return type by implementing
+        ``refresh`` in your derived class.
+
+        Any additional keyword arguments are passed on to ``__init__``.
+
+        Added in v30.
+        """
+        return type(self)(frame=frame, **kwargs)

@@ -322,6 +322,16 @@ class Dialog(stbt.FrameObject):
 
     >>> Dialog._fields
     ('is_visible', 'message', 'title')
+
+    ``refresh`` returns a new FrameObject of the same type:
+
+    >>> page = Dialog(frame=_load_frame('with-dialog'))
+    >>> print page.message
+    This set-top box is great
+    >>> page = page.refresh(_load_frame('with-dialog2'))
+    >>> print page.message
+    This set-top box is fabulous
+
     """
 
     @property
