@@ -193,7 +193,7 @@ class IRNetBoxProxy(object):
                 response = ""
             else:
                 self.irnet_sock.sendall(header + message)
-                _, response_header, response = self.get_message_from_irnet(True)  # pylint:disable=unpacking-non-sequence,line-too-long
+                _, response_header, response = self.get_message_from_irnet(True)  # pylint:disable=unpacking-non-sequence
             sock.sendall(response_header + response)
         except Exception, e:  # pylint:disable=broad-except
             del self.read_sockets[sock.fileno()]

@@ -408,7 +408,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + image.friendly_name)
             return res
 
-    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint:disable=undefined-loop-variable,line-too-long
+    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint:disable=undefined-loop-variable
 
 
 class MatchTimeout(UITestFailure):
