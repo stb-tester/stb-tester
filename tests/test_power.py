@@ -1,8 +1,8 @@
 """Tests for the _ATEN_PE6108G PDU class"""
 from contextlib import contextmanager
 
+import pytest
 from mock import patch
-from nose.tools import raises
 from pysnmp.proto.rfc1902 import Integer
 
 from _stbt.power import uri_to_power_outlet
@@ -69,11 +69,11 @@ def test_aten_set_off():
         assert mock_command.getCmd.call_count == 3
 
 
-@raises(RuntimeError)
 def test_aten_set_timeout():
     with mock_command_gen() as mock_command:
         mock_command.setCmd.return_value = mock_data(1)
         mock_command.getCmd.return_value = mock_data(2)
         aten = uri_to_power_outlet('aten:mock.host.name:1')
 
-        aten.set(False)
+        with pytest.raises(RuntimeError):
+            aten.set(False)

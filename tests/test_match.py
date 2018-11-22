@@ -5,7 +5,7 @@ from textwrap import dedent
 
 import cv2
 import numpy
-from nose.tools import raises
+import pytest
 
 import stbt
 from _stbt.logging import ImageLogger, scoped_debug_level
@@ -38,10 +38,10 @@ def test_matchresult_region_when_first_pyramid_level_fails_to_match():
         "videotestsrc-redblue-flipped.png", frame=f).region
 
 
-@raises(ValueError)
 def test_that_match_rejects_greyscale_template():
     grey = cv2.cvtColor(stbt.load_image("black.png"), cv2.COLOR_BGR2GRAY)
-    stbt.match(grey, frame=black())
+    with pytest.raises(ValueError):
+        stbt.match(grey, frame=black())
 
 
 def test_matching_greyscale_template():

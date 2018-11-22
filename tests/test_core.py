@@ -57,16 +57,14 @@ def test_crop():
 
 
 def test_region_replace():
-    from nose.tools import raises
-
     r = stbt.Region(x=10, y=20, width=20, height=30)
 
     def t(kwargs, expected):
         assert r.replace(**kwargs) == expected
 
-    @raises(ValueError)
     def e(kwargs):
-        r.replace(**kwargs)
+        with pytest.raises(ValueError):
+            r.replace(**kwargs)
 
     # No change
     yield t, dict(x=10), r

@@ -9,7 +9,6 @@ from unittest import SkipTest
 
 import cv2
 import pytest
-from nose.tools import raises
 
 import _stbt.config
 import stbt
@@ -36,9 +35,9 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
 
 
 # Remove when region=None doesn't raise -- see #433
-@raises(TypeError)
 def test_that_ocr_region_none_isnt_allowed():
-    stbt.ocr(frame=load_image("ocr/small.png"), region=None)
+    with pytest.raises(TypeError):
+        stbt.ocr(frame=load_image("ocr/small.png"), region=None)
 
 
 def test_that_ocr_reads_unicode():
@@ -143,16 +142,16 @@ def test_tesseract_user_patterns(patterns):
         tesseract_user_patterns=patterns)
 
 
-@raises(RuntimeError)
 def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
     # pylint: disable=W0212
     if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too new')
 
-    stbt.ocr(
-        frame=load_image('ocr/192.168.10.1.png'),
-        mode=stbt.OcrMode.SINGLE_WORD,
-        tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
+    with pytest.raises(RuntimeError):
+        stbt.ocr(
+            frame=load_image('ocr/192.168.10.1.png'),
+            mode=stbt.OcrMode.SINGLE_WORD,
+            tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
 
 
 @pytest.mark.parametrize("words", [

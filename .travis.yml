@@ -42,7 +42,6 @@ install:
         python-lxml
         python-matplotlib
         python-mock
-        python-nose
         python-numpy
         python-opencv
         python-pysnmp4

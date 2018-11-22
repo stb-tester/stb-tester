@@ -43,7 +43,7 @@ Here are a few guidelines to keep in mind when submitting a pull request:
 
     * If your change is a bug-fix, write a regression test if feasible.
 
-    * We write Python unit tests using [nose]: Just add a function named
+    * We write Python unit tests using [pytest]: Just add a function named
       `test_*` in the appropriate Python file under `tests/`, and use `assert`
       to indicate test failure.
 
@@ -71,7 +71,7 @@ really do appreciate your contribution.
 
 
 [TODO lists]: https://github.com/blog/1375%0A-task-lists-in-gfm-issues-pulls-comments
-[nose]: https://nose.readthedocs.org/
+[pytest]: https://pytest.org/
 [Travis CI]: https://travis-ci.org/
 [Travis set-up instructions]: http://docs.travis-ci.com/user/getting-started/
 [GitHub branches view]: https://github.com/stb-tester/stb-tester/branches
