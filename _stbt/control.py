@@ -819,8 +819,8 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
 
 
 def test_roku_http_control():
+    import pytest
     import responses
-    from nose.tools import assert_raises  # pylint:disable=no-name-in-module
     from requests.exceptions import HTTPError
 
     control = uri_to_control('roku:192.168.1.3')
@@ -831,7 +831,7 @@ def test_roku_http_control():
     with responses.RequestsMock() as mock:
         mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
         control.press("Home")
-    with assert_raises(HTTPError):
+    with pytest.raises(HTTPError):
         with responses.RequestsMock() as mock:
             mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Homeopathy',
                      status=400)
