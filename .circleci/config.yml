@@ -35,6 +35,7 @@ commands:
           name: make check
           environment:
             LANG: en_GB.UTF-8
+            SHELL: /bin/bash
           command: |
             tesseract --version
             pylint --version
