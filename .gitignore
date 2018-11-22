@@ -4,6 +4,7 @@
 *_orc.c
 *_orc.h
 .cache
+.circleci/.*.built
 .DS_Store
 .stbt-cflags
 .stbt-ldflags
