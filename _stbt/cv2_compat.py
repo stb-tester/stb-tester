@@ -33,5 +33,5 @@ if _version >= LooseVersion('3.0.0'):
     FILLED = cv2.FILLED  # pylint: disable=no-member
     LINE_AA = cv2.LINE_AA  # pylint: disable=no-member
 else:
-    FILLED = cv2.cv.CV_FILLED
-    LINE_AA = cv2.CV_AA
+    FILLED = cv2.cv.CV_FILLED  # pylint: disable=no-member
+    LINE_AA = cv2.CV_AA  # pylint: disable=no-member
