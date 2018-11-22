@@ -46,3 +46,4 @@ workflows:
   test_all:
     jobs:
       - ubuntu1604-python2
+      - ubuntu1804-python2
