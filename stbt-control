@@ -51,19 +51,6 @@ def main(argv):
             control.press(key)
 
 
-def test_main():
-    def main_loop_stub(control_uri, keymap_file):
-        assert control_uri == "none"
-        assert keymap_file == "mykeymap"
-        yield
-
-    sys.modules[__name__].main_loop = main_loop_stub
-    try:
-        main(["", "--keymap", "mykeymap", "--control", "none"])
-    finally:
-        sys.modules[__name__] = reload(sys.modules[__name__])
-
-
 def argparser():
     parser = argparse.ArgumentParser()
     parser.prog = "stbt control"

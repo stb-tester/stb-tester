@@ -221,8 +221,6 @@ PYTHON_FILES := \
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
-	# Workaround for https://github.com/nose-devs/nose/issues/49:
-	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	PYTHONPATH=$$PWD \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -v -rs --doctest-modules \
@@ -236,9 +234,7 @@ check-pytest: all tests/buttons.png tests/ocr/menu.png
 	              -e tests/auto-selftest-example-test-pack/tests/empty_dir/subdir/example_with_no_tests.py \
 	              -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
-	              -e vendor/) \
-	    nosetest-issue-49-workaround-stbt-control.py && \
-	rm nosetest-issue-49-workaround-stbt-control.py
+	              -e vendor/)
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
