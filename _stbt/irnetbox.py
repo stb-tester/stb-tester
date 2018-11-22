@@ -326,7 +326,7 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 def test_that_parse_config_understands_redrat_format():
     import StringIO
 
-    # pylint: disable=C0301
+    # pylint:disable=line-too-long
     f = StringIO.StringIO(
         re.sub(
             "^ +", "", flags=re.MULTILINE, string=""
@@ -363,5 +363,5 @@ class _FileToSocket(object):
     def __init__(self, f):
         self.file = f
 
-    def recv(self, bufsize, flags=0):  # pylint: disable=W0613
+    def recv(self, bufsize, flags=0):  # pylint:disable=unused-argument
         return self.file.read(bufsize)

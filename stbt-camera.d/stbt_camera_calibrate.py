@@ -1,6 +1,6 @@
 #!/usr/bin/python -u
 # Encoding: utf-8
-# pylint: disable=W0212
+# pylint:disable=protected-access
 
 import math
 import re
@@ -22,7 +22,7 @@ from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint: disable=E0611
+from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
 
 COLOUR_SAMPLES = 50
 videos = {}
@@ -345,15 +345,15 @@ def fit_fn(ideals, measureds):
     >>> print "%.2f %.2f" % (f(0), f(56))
     0.00 56.00
     """
-    from scipy.optimize import curve_fit  # pylint: disable=E0611
-    from scipy.interpolate import interp1d  # pylint: disable=E0611
+    from scipy.optimize import curve_fit  # pylint:disable=no-name-in-module
+    from scipy.interpolate import interp1d  # pylint:disable=no-name-in-module
     POINTS = 5
     xs = [n * 255.0 / (POINTS + 1) for n in range(0, POINTS + 2)]
 
     def fn(x, ys):
         return interp1d(xs, numpy.array([0] + ys + [255]))(x)
 
-    ys, _ = curve_fit(  # pylint:disable=W0632
+    ys, _ = curve_fit(  # pylint:disable=unbalanced-tuple-unpacking
         lambda x, *args: fn(x, list(args)), ideals, measureds, [0.0] * POINTS)
     return interp1d(xs, numpy.array([0] + ys.tolist() + [255]))
 
@@ -406,10 +406,10 @@ def colour_graph(dut):
 
 def _can_show_graphs():
     try:
-        # pylint: disable=W0612
+        # pylint:disable=unused-variable
         from matplotlib import pyplot
-        from scipy.optimize import curve_fit  # pylint: disable=E0611
-        from scipy.interpolate import interp1d  # pylint: disable=E0611
+        from scipy.optimize import curve_fit  # pylint:disable=no-name-in-module
+        from scipy.interpolate import interp1d  # pylint:disable=no-name-in-module
         return True
     except ImportError:
         sys.stderr.write("Install matplotlib and scipy for graphical "
@@ -502,7 +502,7 @@ v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
 
 def list_cameras():
     gi.require_version('GUdev', '1.0')
-    from gi.repository import GUdev  # pylint: disable=E0611
+    from gi.repository import GUdev  # pylint:disable=no-name-in-module
     client = GUdev.Client.new(['video4linux/usb_device'])
     devices = client.query_by_subsystem('video4linux')
     for d in devices:

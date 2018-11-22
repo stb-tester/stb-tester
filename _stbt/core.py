@@ -37,7 +37,7 @@ from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GLib, GObject, Gst  # isort:skip pylint: disable=E0611
+from gi.repository import GLib, GObject, Gst  # isort:skip pylint:disable=no-name-in-module
 
 Gst.init(None)
 

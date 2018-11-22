@@ -131,7 +131,7 @@ def test_that_setting_config_options_has_an_effect():
     r'\d\*.\d\*.\d\*.\d\*',
 ])
 def test_tesseract_user_patterns(patterns):
-    # pylint: disable=W0212
+    # pylint:disable=protected-access
     if _tesseract_version() < distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
@@ -143,7 +143,7 @@ def test_tesseract_user_patterns(patterns):
 
 
 def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
-    # pylint: disable=W0212
+    # pylint:disable=protected-access
     if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
         raise SkipTest('tesseract is too new')
 
@@ -198,7 +198,7 @@ def test_that_text_location_is_recognised():
     def test(text, region, upsample):
         result = stbt.match_text(text, frame=frame, upsample=upsample)
         assert result
-        assert region.contains(result.region)  # pylint: disable=E1101
+        assert region.contains(result.region)  # pylint:disable=no-member
 
     for text, region, multiline in iterate_menu():
         # Don't currently support multi-line comments

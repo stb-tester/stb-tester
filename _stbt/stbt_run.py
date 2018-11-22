@@ -124,7 +124,7 @@ def sane_unicode_and_exception_handling(script):
 
     try:
         yield
-    except Exception as e:  # pylint: disable=W0703
+    except Exception as e:  # pylint:disable=broad-except
         error_message = exception_to_bytes(e)
         if not error_message and isinstance(e, AssertionError):
             error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]

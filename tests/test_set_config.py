@@ -70,7 +70,7 @@ def test_that_set_config_creates_new_sections_if_required():
 
 
 def test_that_set_config_preserves_file_comments_and_formatting():
-    # pylint:disable=W0511,W0101
+    # pylint:disable=fixme,unreachable
     # FIXME: Preserve comments and formatting.  This is fairly tricky as
     # comments and whitespace are not currently stored in Python's internal
     # ConfigParser representation and multiline values makes just using regex

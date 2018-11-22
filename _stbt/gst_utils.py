@@ -7,7 +7,7 @@ from .gst_hacks import map_gst_sample, sample_get_size
 from .imgutils import Frame
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst  # isort:skip pylint: disable=E0611
+from gi.repository import GObject, Gst  # isort:skip pylint:disable=no-name-in-module
 
 Gst.init([])
 
@@ -176,7 +176,7 @@ def frames_to_video(outfilename, frames, caps="image/svg",
 
     if t == 0:
         raise ValueError("Sequence argument frames must not be empty")
-    _appsrc_push_data(vsrc, data, t, 0)  # pylint: disable=W0631
+    _appsrc_push_data(vsrc, data, t, 0)  # pylint:disable=undefined-loop-variable
 
     vsrc.emit("end-of-stream")
     asrc.emit('end-of-stream')
