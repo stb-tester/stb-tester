@@ -44,8 +44,10 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-opencv \
         python-pip \
         python-pysnmp4 \
+        python-pytest \
         python-qrcode \
         python-requests \
+        python-responses \
         python-scipy \
         python-serial \
         python-yaml \
@@ -69,9 +71,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 RUN pip install \
         astroid==1.4.8 \
         isort==3.9.0 \
-        pylint==1.6.4 \
-        pytest==3.3.1 \
-        responses==0.5.1
+        pylint==1.6.4
 
 RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
