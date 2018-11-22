@@ -33,6 +33,8 @@ commands:
     steps:
       - run:
           name: make check
+          environment:
+            LANG: en_GB.UTF-8
           command: |
             tesseract --version
             pylint --version

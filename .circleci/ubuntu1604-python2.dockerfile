@@ -18,6 +18,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-tools \
         gstreamer1.0-x \
         gzip \
+        language-pack-en \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-dev \
         libopencv-dev \
