@@ -27,6 +27,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         librsvg2-bin \
         lighttpd \
         moreutils \
+        parallel \
         pep8 \
         python-dev \
         python-docutils \
@@ -72,19 +73,5 @@ RUN pip install \
         pytest==3.3.1 \
         responses==0.5.1
 
-# Ubuntu parallel package conflicts with moreutils, so we have to build it
-# ourselves.
-RUN mkdir -p /src && \
-    cd /src && \
-    { wget http://ftpmirror.gnu.org/parallel/parallel-20140522.tar.bz2 || \
-      wget http://ftp.gnu.org/gnu/parallel/parallel-20140522.tar.bz2 || \
-      exit 0; } && \
-    tar -xvf parallel-20140522.tar.bz2 && \
-    cd parallel-20140522/ && \
-    ./configure --prefix=/usr/local && \
-    make && \
-    make install && \
-    cd && \
-    rm -rf /src && \
-    mkdir -p $HOME/.parallel && \
+RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
