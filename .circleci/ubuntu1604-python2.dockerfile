@@ -4,7 +4,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
         chromium-browser \
-        cmake \
         expect \
         expect-dev \
         gdb \
@@ -18,12 +17,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-x \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-dev \
-        liblockdev1-dev \
         libopencv-dev \
         liborc-0.4-dev \
         librsvg2-bin \
-        libudev-dev \
-        libxrandr-dev \
         lighttpd \
         moreutils \
         pep8 \
@@ -33,6 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-gi \
         python-jinja2 \
         python-kitchen \
+        python-libcec \
         python-lxml \
         python-matplotlib \
         python-mock \
@@ -49,7 +46,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-zbar \
         ratpoison \
         socat \
-        swig \
         tesseract-ocr \
         tesseract-ocr-deu \
         tesseract-ocr-eng \
@@ -66,26 +62,6 @@ RUN pip install \
         pylint==1.6.4 \
         pytest==3.3.1 \
         responses==0.5.1
-
-RUN mkdir -p /src && \
-    cd /src && \
-    git clone -b libcec-3.1.0 https://github.com/Pulse-Eight/libcec.git && \
-    git clone -b p8-platform-2.0.1 https://github.com/Pulse-Eight/platform.git && \
-    mkdir platform/build && \
-    cd platform/build && \
-    cmake .. && \
-    make && \
-    sudo make install && \
-    cd ../.. && \
-    mkdir libcec/build && \
-    cd libcec/build && \
-    cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-        -DPYTHON_INCLUDE_DIR:PATH=/usr/include/python2.7 \
-        -DPYTHON_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libpython2.7.so \
-        -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python2.7 \
-        .. && \
-    make && \
-    sudo make install
 
 # Ubuntu parallel package conflicts with moreutils, so we have to build it
 # ourselves.
