@@ -5,6 +5,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y \
         ca-certificates \
         chromium-browser \
+        curl \
         expect \
         expect-dev \
         gdb \
@@ -51,10 +52,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         ratpoison \
         socat \
         ssh \
+        sudo \
         tar \
         tesseract-ocr \
         tesseract-ocr-deu \
         tesseract-ocr-eng \
+        time \
         v4l-utils \
         wget \
         xdotool \
