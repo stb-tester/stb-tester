@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   ubuntu1604-python2:
     docker:
-      - image: stbtester/circleci:ubuntu1604-python2
+      - image: stbtester/circleci:ubuntu1604
     environment:
       PYTHON: /usr/bin/python2.7
     steps:
