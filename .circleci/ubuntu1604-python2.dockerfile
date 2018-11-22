@@ -3,18 +3,21 @@ FROM ubuntu:16.04
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
+        ca-certificates \
         chromium-browser \
         expect \
         expect-dev \
         gdb \
         gir1.2-gstreamer-1.0 \
         gir1.2-gudev-1.0 \
+        git \
         gstreamer1.0-libav \
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
         gstreamer1.0-tools \
         gstreamer1.0-x \
+        gzip \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-dev \
         libopencv-dev \
@@ -46,6 +49,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-zbar \
         ratpoison \
         socat \
+        ssh \
+        tar \
         tesseract-ocr \
         tesseract-ocr-deu \
         tesseract-ocr-eng \
