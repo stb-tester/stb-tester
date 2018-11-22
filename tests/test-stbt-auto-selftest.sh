@@ -111,6 +111,8 @@ test_auto_selftest_caching()
         stbt auto-selftest validate \
         || fail "auto-selftest failed"
 
+    tail without_cache.time cold_cache.time hot_cache.time
+
     python -c "assert ($(<hot_cache.time) * 2) < $(<without_cache.time)" \
         || fail "caching isn't fast"
 }
