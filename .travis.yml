@@ -107,4 +107,6 @@ install:
 
 script:
  - tesseract --version
+ - pylint --version
+ - env
  - make enable_stbt_camera=no enable_virtual_stb=yes check

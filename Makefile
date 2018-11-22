@@ -378,6 +378,22 @@ install-docs: docs/stbt.1
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 docs/stbt.1 $(DESTDIR)$(man1dir)
 
+### Docker images for CI #####################################################
+
+CI_DOCKER_IMAGES = ubuntu1604-python2 ubuntu1804-python2
+
+$(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
+	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \
+	    .circleci/ && \
+	touch $@
+
+ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
+publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
+	set -x && \
+	for x in $(CI_DOCKER_IMAGES); do \
+	    docker push stbtester/circleci:$$x; \
+	done
+
 ### Debian Packaging #########################################################
 
 ubuntu_releases ?= trusty xenial artful

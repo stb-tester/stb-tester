@@ -1,0 +1,46 @@
+version: 2.1
+
+jobs:
+  ubuntu1604-python2:
+    docker:
+      - image: stbtester/circleci:ubuntu1604-python2
+    environment:
+      PYTHON: /usr/bin/python2.7
+    steps:
+      - checkout
+      - test
+
+  ubuntu1804-python2:
+    docker:
+      - image: stbtester/circleci:ubuntu1804
+    environment:
+      PYTHON: /usr/bin/python2.7
+    steps:
+      - checkout
+      - test
+
+  ubuntu1804-python3:
+    docker:
+      - image: stbtester/circleci:ubuntu1804
+    environment:
+      PYTHON: /usr/bin/python3.6
+    steps:
+      - checkout
+      - test
+
+commands:
+  test:
+    steps:
+      - run:
+          name: make check
+          environment:
+            LANG: en_GB.UTF-8
+          command: |
+            tesseract --version
+            pylint --version
+            make enable_stbt_camera=no enable_virtual_stb=yes check
+
+workflows:
+  test_all:
+    jobs:
+      - ubuntu1604-python2

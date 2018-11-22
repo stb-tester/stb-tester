@@ -100,7 +100,7 @@ class TextMatchResult(object):
         self.frame = frame
         self.text = text
 
-    # pylint: disable=E1101
+    # pylint:disable=no-member
     def __nonzero__(self):
         return self.match
 

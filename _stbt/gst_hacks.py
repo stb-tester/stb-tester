@@ -6,7 +6,7 @@ from os.path import dirname
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint: disable=E0611
+from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
 
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see
@@ -125,7 +125,7 @@ def test_map_sample_without_buffer():
 
     sample = Gst.Sample.new(None, None, None, None)
     try:
-        # pylint: disable=E1120
+        # pylint:disable=no-value-for-parameter
         with map_gst_sample(sample, Gst.MapFlags.READ):
             assert False
     except ValueError:

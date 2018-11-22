@@ -451,7 +451,7 @@ class IRNetBoxControl(RemoteControl):
 
     """
 
-    def __init__(self, hostname, port, output, config):  # pylint: disable=W0621
+    def __init__(self, hostname, port, output, config):  # pylint:disable=redefined-outer-name
         self.hostname = hostname
         self.port = int(port or 10001)
         self.output = int(output)
@@ -756,7 +756,7 @@ class FileToSocket(object):
     def __init__(self, f):
         self.file = f
 
-    def recv(self, bufsize, flags=0):  # pylint: disable=W0613
+    def recv(self, bufsize, flags=0):  # pylint:disable=unused-argument
         return self.file.read(bufsize)
 
 
@@ -898,10 +898,10 @@ def test_x11_control():
 
 
 def test_uri_to_control():
-    global IRNetBoxControl  # pylint: disable=W0601
+    global IRNetBoxControl  # pylint:disable=global-variable-undefined
     orig_IRNetBoxControl = IRNetBoxControl
     try:
-        # pylint: disable=W0621
+        # pylint:disable=redefined-outer-name
         def IRNetBoxControl(hostname, port, output, config):
             return ":".join([hostname, str(port or '10001'), output, config])
         out = uri_to_control("irnetbox:localhost:1234:1:conf")
