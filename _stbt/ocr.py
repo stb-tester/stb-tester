@@ -213,9 +213,11 @@ def ocr(frame=None, region=Region.ALL,
         translucent overlay.
 
     :param int text_color_threshold:
-        The threshold to use with ``text_color``, between 0 and 255. Defaults
-        to 25. You can override the global default value by setting
-        ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        The threshold to use with ``text_color``, between 0 and 255. If 0, no
+        binarization is done (tesseract will choose its own binarization
+        threshold). If None, the default value will be read from
+        ``ocr.text_color_threshold`` in :ref:`.stbt.conf`, and if that's not
+        specified the default value is 25.
 
     :param engine:
         The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
@@ -223,9 +225,11 @@ def ocr(frame=None, region=Region.ALL,
         section of :ref:`.stbt.conf`.
     :type engine: `OcrEngine`
 
-    | Added in v28: The ``upsample`` and ``text_color`` parameters.
-    | Added in v29: The ``text_color_threshold`` parameter.
-    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
+    * Added in v28: The ``upsample`` and ``text_color`` parameters.
+    * Added in v29: The ``text_color_threshold`` parameter.
+    * Added in v30:
+        * The ``engine`` parameter and support for Tesseract v4.
+        * ``text_color_threshold`` of 0 means no binarization.
     """
     if frame is None:
         import stbt
@@ -287,9 +291,11 @@ def match_text(text, frame=None, region=Region.ALL,
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
 
-    | Added in v28: The ``upsample`` and ``text_color`` parameters.
-    | Added in v29: The ``text_color_threshold`` parameter.
-    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
+    * Added in v28: The ``upsample`` and ``text_color`` parameters.
+    * Added in v29: The ``text_color_threshold`` parameter.
+    * Added in v30:
+        * The ``engine`` parameter and support for Tesseract v4.
+        * ``text_color_threshold`` of 0 means no binarization.
     """
     import lxml.etree
     if frame is None:
@@ -447,8 +453,9 @@ def _tesseract_subprocess(
                             diff[:, :, 1] ** 2 +
                             diff[:, :, 2] ** 2) / 3) \
                      .astype(numpy.uint8)
-        _, frame = cv2.threshold(frame, text_color_threshold, 255,
-                                 cv2.THRESH_BINARY)
+        if text_color_threshold:
+            _, frame = cv2.threshold(frame, text_color_threshold, 255,
+                                     cv2.THRESH_BINARY)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
