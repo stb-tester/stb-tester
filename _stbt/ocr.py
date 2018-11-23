@@ -318,6 +318,16 @@ def _tesseract_version(output=None):
     >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
     ...  _tesseract_version('tesseract 3.02\n'))
     True
+
+    Note that LooseVersion.__cmp__ simply sorts lexicographically according
+    to the "." or "-" separated components in the version string:
+
+    >>> _tesseract_version("tesseract 4.0.0-beta.1").version
+    [4, 0, 0, '-', 'beta', 1]
+    >>> (_tesseract_version('tesseract 4.0.0-beta.1') >
+    ...  _tesseract_version('tesseract 4.0.0'))
+    True
+
     """
     global _memoise_tesseract_version
     if output is None:
@@ -416,6 +426,8 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
+            if _tesseract_version() >= LooseVersion("4.0.0"):
+                tessenv['TESSDATA_PREFIX'] += "tessdata"
 
         if user_words:
             if 'user_words_suffix' in _config:
@@ -526,7 +538,8 @@ def _find_tessdata_dir():
     tess_prefix_share = os.path.normpath(
         find_executable('tesseract') + '/../../share/')
     for suffix in [
-            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
+            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
+            '/tesseract-ocr/4.00/tessdata']:
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
