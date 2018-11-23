@@ -399,8 +399,10 @@ def _tesseract_subprocess(
         outdir = tmp + '/output'
         os.mkdir(outdir)
 
-        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
-               outdir + '/output', "-psm", str(int(mode))]
+        cmd = ["tesseract", '-l', lang,
+               tmp + '/input.png',
+               outdir + '/output',
+               "-psm", str(int(mode))]
 
         tessenv = os.environ.copy()
 
