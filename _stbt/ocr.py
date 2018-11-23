@@ -399,10 +399,15 @@ def _tesseract_subprocess(
         outdir = tmp + '/output'
         os.mkdir(outdir)
 
+        if _tesseract_version() >= LooseVersion("3.05"):
+            psm_flag = "--psm"
+        else:
+            psm_flag = "-psm"
+
         cmd = ["tesseract", '-l', lang,
                tmp + '/input.png',
                outdir + '/output',
-               "-psm", str(int(mode))]
+               psm_flag, str(int(mode))]
 
         tessenv = os.environ.copy()
 
