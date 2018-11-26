@@ -68,7 +68,14 @@ ligature_text = dedent(u"""\
 def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     frame = load_image('ocr/ambig.png')
     text = stbt.ocr(frame)
-    text = text.replace("horizonta|", "horizontal")  # for tesseract < 3.03
+    for bad, good in [
+            # tesseract 3.02
+            ("horizonta|", "horizontal"),
+            # tesseract 4.00 with tessdata 590567f
+            ("siIIyness", "sillyness"),
+            ("Iigatures", "ligatures"),
+    ]:
+        text = text.replace(bad, good)
     assert ligature_text == text
     assert stbt.match_text("em-dash,", frame)
     assert stbt.match_text(u"em\u2014dash,", frame)
