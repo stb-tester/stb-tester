@@ -71,6 +71,24 @@ class OcrMode(IntEnum):
         return str(self)
 
 
+class OcrEngine(IntEnum):
+
+    #: Tesseract's "legacy" OCR engine (v3).
+    TESSERACT = 0
+
+    #: Tesseract v4's "Long Short-Term Memory" neural network.
+    LSTM = 1
+
+    #: Combine results from Tesseract legacy & LSTM engines.
+    TESSERACT_AND_LSTM = 2
+
+    #: Default engine, based on what is installed.
+    DEFAULT = 3
+
+    def __repr__(self):
+        return str(self)
+
+
 class TextMatchResult(object):
     """The result from `match_text`.
 
@@ -119,7 +137,7 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None):
+        text_color_threshold=None, engine=OcrEngine.TESSERACT):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -196,8 +214,12 @@ def ocr(frame=None, region=Region.ALL,
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
+    :param engine: The OCR engine to use.
+    :type engine: `OcrEngine`
+
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     """
     if frame is None:
         import stbt
@@ -222,7 +244,7 @@ def ocr(frame=None, region=Region.ALL,
     text, region = _tesseract(
         frame, region, mode, lang, tesseract_config,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
-        text_color_threshold)
+        text_color_threshold, engine)
     text = text.strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
@@ -231,7 +253,8 @@ def ocr(frame=None, region=Region.ALL,
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, upsample=True,
-               text_color=None, text_color_threshold=None):
+               text_color=None, text_color_threshold=None,
+               engine=OcrEngine.TESSERACT):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -246,6 +269,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param upsample: See `ocr`.
     :param text_color: See `ocr`.
     :param text_color_threshold: See `ocr`.
+    :param engine: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
 
     :returns:
@@ -262,6 +286,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     """
     import lxml.etree
     if frame is None:
@@ -279,7 +304,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
     xml, region = _tesseract(frame, region, mode, lang, _config,
                              None, text.split(), upsample, text_color,
-                             text_color_threshold)
+                             text_color_threshold, engine)
     if xml == '':
         result = TextMatchResult(rts, False, None, frame, text)
     else:
@@ -347,7 +372,7 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
-               upsample, text_color, text_color_threshold):
+               upsample, text_color, text_color_threshold, engine):
 
     if _config is None:
         _config = {}
@@ -367,7 +392,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
-                                  text_color, text_color_threshold),
+                                  text_color, text_color_threshold, engine),
             region)
 
 
@@ -375,7 +400,18 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                         "version": "29"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold):
+        text_color, text_color_threshold, engine):
+
+    if _tesseract_version() >= LooseVersion("4.0"):
+        engine_flags = ["--oem", str(int(engine))]
+    else:
+        if engine == OcrEngine.DEFAULT:
+            engine = OcrEngine.TESSERACT
+        if engine != OcrEngine.TESSERACT:
+            # NB `str(engine)` looks like "OcrEngine.LSTM"
+            raise RuntimeError("%s isn't available in tesseract %s"
+                               % (engine, _tesseract_version()))
+        engine_flags = []
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
@@ -417,7 +453,7 @@ def _tesseract_subprocess(
         cmd = ["tesseract", '-l', lang,
                tmp + '/input.png',
                outdir + '/output',
-               psm_flag, str(int(mode))]
+               psm_flag, str(int(mode))] + engine_flags
 
         tessenv = os.environ.copy()
 

@@ -1,9 +1,9 @@
 # coding: utf-8
 
-import distutils
 import os
 import re
 from contextlib import contextmanager
+from distutils.version import LooseVersion
 from textwrap import dedent
 from unittest import SkipTest
 
@@ -119,7 +119,7 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
-    if _tesseract_version() >= distutils.version.LooseVersion('3.04'):
+    if _tesseract_version() >= LooseVersion('3.04'):
         hocr_mode_config = {
             "tessedit_create_txt": 0,
             "tessedit_create_hocr": 1}
@@ -139,7 +139,7 @@ def test_that_setting_config_options_has_an_effect():
 ])
 def test_tesseract_user_patterns(patterns):
     # pylint:disable=protected-access
-    if _tesseract_version() < distutils.version.LooseVersion('3.03'):
+    if _tesseract_version() < LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
@@ -318,3 +318,14 @@ def test_ocr_text_color_threshold():
     assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
     with temporary_config({'ocr.text_color_threshold': '50'}):
         assert stbt.ocr(f, text_color=c) == "Guide"
+
+
+def test_that_ocr_engine_has_an_effect():
+    if _tesseract_version() < LooseVersion("4.0"):
+        raise SkipTest('tesseract is too old')
+
+    f = load_image("ocr/ambig.png")
+    # This is a regression in tesseract 4.0's legacy engine, compared to 3.04:
+    assert "sillyness" not in stbt.ocr(f, engine=stbt.OcrEngine.TESSERACT)
+    # ...but the new LSTM engine does read it correctly:
+    assert "sillyness" in stbt.ocr(f, engine=stbt.OcrEngine.LSTM)

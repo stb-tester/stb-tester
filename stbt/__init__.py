@@ -49,6 +49,7 @@ from _stbt.motion import (
 from _stbt.ocr import \
     match_text, \
     ocr, \
+    OcrEngine, \
     OcrMode, \
     TextMatchResult
 from _stbt.transition import \
@@ -85,6 +86,7 @@ __all__ = [
     "MotionTimeout",
     "NoVideo",
     "ocr",
+    "OcrEngine",
     "OcrMode",
     "Position",
     "PreconditionError",
