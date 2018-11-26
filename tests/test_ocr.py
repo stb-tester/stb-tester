@@ -142,18 +142,6 @@ def test_tesseract_user_patterns(patterns):
         tesseract_user_patterns=patterns)
 
 
-def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
-    # pylint:disable=protected-access
-    if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
-        raise SkipTest('tesseract is too new')
-
-    with pytest.raises(RuntimeError):
-        stbt.ocr(
-            frame=load_image('ocr/192.168.10.1.png'),
-            mode=stbt.OcrMode.SINGLE_WORD,
-            tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
-
-
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],

@@ -443,10 +443,6 @@ def _tesseract_subprocess(
                 raise ValueError(
                     "You cannot specify 'user_patterns' and " +
                     "'_config[\"user_patterns_suffix\"]' at the same time")
-            if _tesseract_version() < LooseVersion('3.03'):
-                raise RuntimeError(
-                    'tesseract version >=3.03 is required for user_patterns.  '
-                    'version %s is currently installed' % _tesseract_version())
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_bytes(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
