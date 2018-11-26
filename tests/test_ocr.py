@@ -304,8 +304,10 @@ def test_ocr_text_color_threshold():
     f = load_image("ocr/blue-search-white-guide.png")
     c = (220, 220, 220)
     assert stbt.ocr(f) != "Guide"
-    assert stbt.ocr(f, text_color=c) != "Guide"
-    assert stbt.ocr(f, text_color=c) != "Guide"
+    # pylint:disable=fixme
+    # TODO: Find an example where text_color_threshold is necessary. Since
+    # tesseract 4.0.0 the default text_color_threshold actually works.
+    # assert stbt.ocr(f, text_color=c) != "Guide"
     assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
     with temporary_config({'ocr.text_color_threshold': '50'}):
         assert stbt.ocr(f, text_color=c) == "Guide"
