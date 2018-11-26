@@ -58,8 +58,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         sudo \
         tar \
         tesseract-ocr \
-        tesseract-ocr-deu \
-        tesseract-ocr-eng \
         time \
         v4l-utils \
         wget \
@@ -75,3 +73,9 @@ RUN pip install \
 
 RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
+
+# Tesseract data files for Legacy *and* LSTM engines.
+ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
+    https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
+    https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
+    /usr/share/tesseract-ocr/4.00/tessdata/
