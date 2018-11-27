@@ -1,4 +1,5 @@
 import re
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -120,7 +121,14 @@ class HdmiCecControl(object):
     }
 
     def __init__(self, device, source, destination):
-        import cec
+        # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
+        # find it.
+        sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
+        try:
+            import cec
+        finally:
+            sys.path.pop(0)
+
         if source is None:
             source = 1
         if isinstance(source, (str, unicode)):
