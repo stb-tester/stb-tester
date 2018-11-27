@@ -67,7 +67,7 @@ class StbtChecker(BaseChecker):
                 not _is_whitelisted_name(node.value) and
                 not _in_whitelisted_functions(node)):
             path = _find_file(node.value, node)
-            if path:
+            if os.path.isfile(path):
                 if _is_file_uncommitted(path):
                     self.add_message('E7005', node=node,
                                      args=os.path.relpath(path))
@@ -196,14 +196,11 @@ def _is_function_named(func, name):
 def _find_file(filename, node):
     """Resolves `filename` on stbt's image search path
 
-    (See commit 4e5cd23c.)
+    See `stbt.load_image` for stbt's image lookup algorithm.
     """
-    path = os.path.join(
+    return os.path.join(
         os.path.dirname(node.root().file),
         filename)
-    if os.path.isfile(path):
-        return path
-    return None
 
 
 def _is_file_uncommitted(filename):
