@@ -221,7 +221,7 @@ PYTHON_FILES := \
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
-	PYTHONPATH=$$PWD \
+	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -v -rs --doctest-modules \
 	    $(shell git ls-files '*.py' |\
