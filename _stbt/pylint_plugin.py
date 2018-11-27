@@ -175,6 +175,7 @@ def _in_whitelisted_functions(node):
         isinstance(node.parent, Call) and
         any(_is_function_named(node.parent.func, x) for x in (
             "cv2.imwrite",
+            "imwrite",  # handles "from cv2 import imwrite" with OpenCV 3.x
             "re.match",
             "re.search",
             "stbt.save_frame",
