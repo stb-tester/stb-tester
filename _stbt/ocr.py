@@ -238,9 +238,6 @@ def ocr(frame=None, region=Region.ALL,
             "instead. To OCR an entire video frame, use "
             "`region=Region.ALL`.")
 
-    if lang is None:
-        lang = get_config("ocr", "lang", "eng")
-
     if isinstance(tesseract_user_words, (str, unicode)):
         tesseract_user_words = [tesseract_user_words]
 
@@ -298,8 +295,6 @@ def match_text(text, frame=None, region=Region.ALL,
     if frame is None:
         import stbt
         frame = stbt.get_frame()
-    if lang is None:
-        lang = get_config("ocr", "lang", "eng")
 
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
@@ -382,6 +377,9 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     if _config is None:
         _config = {}
+
+    if lang is None:
+        lang = get_config("ocr", "lang", "eng")
 
     if text_color_threshold is None:
         text_color_threshold = get_config(
