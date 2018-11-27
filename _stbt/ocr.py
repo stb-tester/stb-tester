@@ -65,6 +65,9 @@ class OcrMode(IntEnum):
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
     SINGLE_CHARACTER = 10
+    SPARSE_TEXT = 11
+    SPARSE_TEXT_WITH_OSD = 12
+    RAW_LINE = 13
 
     # For nicer formatting of `ocr` signature in generated API documentation:
     def __repr__(self):
@@ -412,6 +415,11 @@ def _tesseract_subprocess(
             raise RuntimeError("%s isn't available in tesseract %s"
                                % (engine, _tesseract_version()))
         engine_flags = []
+
+    if mode >= OcrMode.RAW_LINE and _tesseract_version() < LooseVersion("3.04"):
+        # NB `str(mode)` looks like "OcrMode.RAW_LINE"
+        raise RuntimeError("%s isn't available in tesseract %s"
+                           % (mode, _tesseract_version()))
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
