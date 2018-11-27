@@ -12,7 +12,7 @@ from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
-from .config import get_config
+from .config import ConfigurationError, get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, warn
 from .types import Region
@@ -140,7 +140,7 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None, engine=OcrEngine.TESSERACT):
+        text_color_threshold=None, engine=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -217,7 +217,10 @@ def ocr(frame=None, region=Region.ALL,
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
-    :param engine: The OCR engine to use.
+    :param engine:
+        The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
+        override the global default value by setting ``engine`` in the ``[ocr]``
+        section of :ref:`.stbt.conf`.
     :type engine: `OcrEngine`
 
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
@@ -257,7 +260,7 @@ def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, upsample=True,
                text_color=None, text_color_threshold=None,
-               engine=OcrEngine.TESSERACT):
+               engine=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -383,6 +386,15 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     if text_color_threshold is None:
         text_color_threshold = get_config(
             "ocr", "text_color_threshold", type_=int)
+
+    if engine is None:
+        engine_name = get_config("ocr", "engine", "TESSERACT")
+        try:
+            engine = OcrEngine[engine_name.upper()]  # pylint:disable=unsubscriptable-object
+        except KeyError:
+            raise ConfigurationError(
+                "Invalid config value ocr.engine='%s'. Valid values are %s."
+                % (engine_name, ", ".join(x.name for x in OcrEngine)))  # pylint:disable=not-an-iterable
 
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)

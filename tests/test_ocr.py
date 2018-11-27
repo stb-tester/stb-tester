@@ -325,7 +325,12 @@ def test_that_ocr_engine_has_an_effect():
         raise SkipTest('tesseract is too old')
 
     f = load_image("ocr/ambig.png")
+
     # This is a regression in tesseract 4.0's legacy engine, compared to 3.04:
     assert "sillyness" not in stbt.ocr(f, engine=stbt.OcrEngine.TESSERACT)
+    assert "sillyness" not in stbt.ocr(f)
+
     # ...but the new LSTM engine does read it correctly:
     assert "sillyness" in stbt.ocr(f, engine=stbt.OcrEngine.LSTM)
+    with temporary_config({'ocr.engine': 'LSTM'}):
+        assert "sillyness" in stbt.ocr(f)
