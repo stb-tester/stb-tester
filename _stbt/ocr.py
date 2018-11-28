@@ -12,7 +12,7 @@ from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
-from .config import get_config
+from .config import ConfigurationError, get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, warn
 from .types import Region
@@ -65,8 +65,29 @@ class OcrMode(IntEnum):
     SINGLE_WORD = 8
     SINGLE_WORD_IN_A_CIRCLE = 9
     SINGLE_CHARACTER = 10
+    SPARSE_TEXT = 11
+    SPARSE_TEXT_WITH_OSD = 12
+    RAW_LINE = 13
 
     # For nicer formatting of `ocr` signature in generated API documentation:
+    def __repr__(self):
+        return str(self)
+
+
+class OcrEngine(IntEnum):
+
+    #: Tesseract's "legacy" OCR engine (v3).
+    TESSERACT = 0
+
+    #: Tesseract v4's "Long Short-Term Memory" neural network.
+    LSTM = 1
+
+    #: Combine results from Tesseract legacy & LSTM engines.
+    TESSERACT_AND_LSTM = 2
+
+    #: Default engine, based on what is installed.
+    DEFAULT = 3
+
     def __repr__(self):
         return str(self)
 
@@ -119,7 +140,7 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None):
+        text_color_threshold=None, engine=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -196,8 +217,15 @@ def ocr(frame=None, region=Region.ALL,
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
+    :param engine:
+        The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
+        override the global default value by setting ``engine`` in the ``[ocr]``
+        section of :ref:`.stbt.conf`.
+    :type engine: `OcrEngine`
+
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     """
     if frame is None:
         import stbt
@@ -210,9 +238,6 @@ def ocr(frame=None, region=Region.ALL,
             "instead. To OCR an entire video frame, use "
             "`region=Region.ALL`.")
 
-    if lang is None:
-        lang = get_config("ocr", "lang", "eng")
-
     if isinstance(tesseract_user_words, (str, unicode)):
         tesseract_user_words = [tesseract_user_words]
 
@@ -222,7 +247,7 @@ def ocr(frame=None, region=Region.ALL,
     text, region = _tesseract(
         frame, region, mode, lang, tesseract_config,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
-        text_color_threshold)
+        text_color_threshold, engine)
     text = text.strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
@@ -231,7 +256,8 @@ def ocr(frame=None, region=Region.ALL,
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, upsample=True,
-               text_color=None, text_color_threshold=None):
+               text_color=None, text_color_threshold=None,
+               engine=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -246,6 +272,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param upsample: See `ocr`.
     :param text_color: See `ocr`.
     :param text_color_threshold: See `ocr`.
+    :param engine: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
 
     :returns:
@@ -262,13 +289,12 @@ def match_text(text, frame=None, region=Region.ALL,
 
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     """
     import lxml.etree
     if frame is None:
         import stbt
         frame = stbt.get_frame()
-    if lang is None:
-        lang = get_config("ocr", "lang", "eng")
 
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
@@ -279,7 +305,7 @@ def match_text(text, frame=None, region=Region.ALL,
 
     xml, region = _tesseract(frame, region, mode, lang, _config,
                              None, text.split(), upsample, text_color,
-                             text_color_threshold)
+                             text_color_threshold, engine)
     if xml == '':
         result = TextMatchResult(rts, False, None, frame, text)
     else:
@@ -318,6 +344,16 @@ def _tesseract_version(output=None):
     >>> (_tesseract_version('tesseract 3.03\n leptonica-1.70\n') >
     ...  _tesseract_version('tesseract 3.02\n'))
     True
+
+    Note that LooseVersion.__cmp__ simply sorts lexicographically according
+    to the "." or "-" separated components in the version string:
+
+    >>> _tesseract_version("tesseract 4.0.0-beta.1").version
+    [4, 0, 0, '-', 'beta', 1]
+    >>> (_tesseract_version('tesseract 4.0.0-beta.1') >
+    ...  _tesseract_version('tesseract 4.0.0'))
+    True
+
     """
     global _memoise_tesseract_version
     if output is None:
@@ -337,14 +373,26 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
-               upsample, text_color, text_color_threshold):
+               upsample, text_color, text_color_threshold, engine):
 
     if _config is None:
         _config = {}
 
+    if lang is None:
+        lang = get_config("ocr", "lang", "eng")
+
     if text_color_threshold is None:
         text_color_threshold = get_config(
             "ocr", "text_color_threshold", type_=int)
+
+    if engine is None:
+        engine_name = get_config("ocr", "engine", "TESSERACT")
+        try:
+            engine = OcrEngine[engine_name.upper()]  # pylint:disable=unsubscriptable-object
+        except KeyError:
+            raise ConfigurationError(
+                "Invalid config value ocr.engine='%s'. Valid values are %s."
+                % (engine_name, ", ".join(x.name for x in OcrEngine)))  # pylint:disable=not-an-iterable
 
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)
@@ -357,7 +405,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
-                                  text_color, text_color_threshold),
+                                  text_color, text_color_threshold, engine),
             region)
 
 
@@ -365,7 +413,23 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                         "version": "29"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold):
+        text_color, text_color_threshold, engine):
+
+    if _tesseract_version() >= LooseVersion("4.0"):
+        engine_flags = ["--oem", str(int(engine))]
+    else:
+        if engine == OcrEngine.DEFAULT:
+            engine = OcrEngine.TESSERACT
+        if engine != OcrEngine.TESSERACT:
+            # NB `str(engine)` looks like "OcrEngine.LSTM"
+            raise RuntimeError("%s isn't available in tesseract %s"
+                               % (engine, _tesseract_version()))
+        engine_flags = []
+
+    if mode >= OcrMode.RAW_LINE and _tesseract_version() < LooseVersion("3.04"):
+        # NB `str(mode)` looks like "OcrMode.RAW_LINE"
+        raise RuntimeError("%s isn't available in tesseract %s"
+                           % (mode, _tesseract_version()))
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
@@ -399,8 +463,15 @@ def _tesseract_subprocess(
         outdir = tmp + '/output'
         os.mkdir(outdir)
 
-        cmd = ["tesseract", '-l', lang, tmp + '/input.png',
-               outdir + '/output', "-psm", str(int(mode))]
+        if _tesseract_version() >= LooseVersion("3.05"):
+            psm_flag = "--psm"
+        else:
+            psm_flag = "-psm"
+
+        cmd = ["tesseract", '-l', lang,
+               tmp + '/input.png',
+               outdir + '/output',
+               psm_flag, str(int(mode))] + engine_flags
 
         tessenv = os.environ.copy()
 
@@ -409,6 +480,8 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
+            if _tesseract_version() >= LooseVersion("4.0.0"):
+                tessenv['TESSDATA_PREFIX'] += "tessdata"
 
         if user_words:
             if 'user_words_suffix' in _config:
@@ -424,10 +497,6 @@ def _tesseract_subprocess(
                 raise ValueError(
                     "You cannot specify 'user_patterns' and " +
                     "'_config[\"user_patterns_suffix\"]' at the same time")
-            if _tesseract_version() < LooseVersion('3.03'):
-                raise RuntimeError(
-                    'tesseract version >=3.03 is required for user_patterns.  '
-                    'version %s is currently installed' % _tesseract_version())
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_bytes(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
@@ -519,7 +588,8 @@ def _find_tessdata_dir():
     tess_prefix_share = os.path.normpath(
         find_executable('tesseract') + '/../../share/')
     for suffix in [
-            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata']:
+            '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
+            '/tesseract-ocr/4.00/tessdata']:
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')

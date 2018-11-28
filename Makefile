@@ -221,7 +221,7 @@ PYTHON_FILES := \
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
-	PYTHONPATH=$$PWD \
+	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -v -rs --doctest-modules \
 	    $(shell git ls-files '*.py' |\
@@ -380,7 +380,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu1604-python2 ubuntu1804-python2
+CI_DOCKER_IMAGES = ubuntu1604 ubuntu1804
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

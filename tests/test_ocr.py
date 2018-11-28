@@ -1,9 +1,9 @@
 # coding: utf-8
 
-import distutils
 import os
 import re
 from contextlib import contextmanager
+from distutils.version import LooseVersion
 from textwrap import dedent
 from unittest import SkipTest
 
@@ -68,7 +68,14 @@ ligature_text = dedent(u"""\
 def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     frame = load_image('ocr/ambig.png')
     text = stbt.ocr(frame)
-    text = text.replace("horizonta|", "horizontal")  # for tesseract < 3.03
+    for bad, good in [
+            # tesseract 3.02
+            ("horizonta|", "horizontal"),
+            # tesseract 4.00 with tessdata 590567f
+            ("siIIyness", "sillyness"),
+            ("Iigatures", "ligatures"),
+    ]:
+        text = text.replace(bad, good)
     assert ligature_text == text
     assert stbt.match_text("em-dash,", frame)
     assert stbt.match_text(u"em\u2014dash,", frame)
@@ -112,7 +119,7 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
-    if _tesseract_version() >= distutils.version.LooseVersion('3.04'):
+    if _tesseract_version() >= LooseVersion('3.04'):
         hocr_mode_config = {
             "tessedit_create_txt": 0,
             "tessedit_create_hocr": 1}
@@ -132,7 +139,7 @@ def test_that_setting_config_options_has_an_effect():
 ])
 def test_tesseract_user_patterns(patterns):
     # pylint:disable=protected-access
-    if _tesseract_version() < distutils.version.LooseVersion('3.03'):
+    if _tesseract_version() < LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
@@ -140,18 +147,6 @@ def test_tesseract_user_patterns(patterns):
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=patterns)
-
-
-def test_that_with_old_tesseract_ocr_raises_an_exception_with_patterns():
-    # pylint:disable=protected-access
-    if _tesseract_version() >= distutils.version.LooseVersion('3.03'):
-        raise SkipTest('tesseract is too new')
-
-    with pytest.raises(RuntimeError):
-        stbt.ocr(
-            frame=load_image('ocr/192.168.10.1.png'),
-            mode=stbt.OcrMode.SINGLE_WORD,
-            tesseract_user_patterns=[r'\d\*.\d\*.\d\*.\d\*'])
 
 
 @pytest.mark.parametrize("words", [
@@ -316,8 +311,26 @@ def test_ocr_text_color_threshold():
     f = load_image("ocr/blue-search-white-guide.png")
     c = (220, 220, 220)
     assert stbt.ocr(f) != "Guide"
-    assert stbt.ocr(f, text_color=c) != "Guide"
-    assert stbt.ocr(f, text_color=c) != "Guide"
+    # pylint:disable=fixme
+    # TODO: Find an example where text_color_threshold is necessary. Since
+    # tesseract 4.0.0 the default text_color_threshold actually works.
+    # assert stbt.ocr(f, text_color=c) != "Guide"
     assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
     with temporary_config({'ocr.text_color_threshold': '50'}):
         assert stbt.ocr(f, text_color=c) == "Guide"
+
+
+def test_that_ocr_engine_has_an_effect():
+    if _tesseract_version() < LooseVersion("4.0"):
+        raise SkipTest('tesseract is too old')
+
+    f = load_image("ocr/ambig.png")
+
+    # This is a regression in tesseract 4.0's legacy engine, compared to 3.04:
+    assert "sillyness" not in stbt.ocr(f, engine=stbt.OcrEngine.TESSERACT)
+    assert "sillyness" not in stbt.ocr(f)
+
+    # ...but the new LSTM engine does read it correctly:
+    assert "sillyness" in stbt.ocr(f, engine=stbt.OcrEngine.LSTM)
+    with temporary_config({'ocr.engine': 'LSTM'}):
+        assert "sillyness" in stbt.ocr(f)

@@ -13,7 +13,12 @@ test_that_stbt_lint_fails_nonexistent_image() {
 	import stbt
 	stbt.wait_for_match('idontexist.png')
 	EOF
-    ! stbt lint --errors-only test.py
+    stbt lint --errors-only test.py &> lint.log
+    cat > lint.expected <<-EOF
+	************* Module test
+	E:  2,20: Image "idontexist.png" not found on disk (stbt-missing-image)
+	EOF
+    diff -u lint.expected lint.log || fail "(see diff above)"
 }
 
 test_that_stbt_lint_ignores_generated_image_names() {

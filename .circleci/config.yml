@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   ubuntu1604-python2:
     docker:
-      - image: stbtester/circleci:ubuntu1604-python2
+      - image: stbtester/circleci:ubuntu1604
     environment:
       PYTHON: /usr/bin/python2.7
     steps:
@@ -40,9 +40,10 @@ commands:
           command: |
             tesseract --version
             pylint --version
-            make enable_stbt_camera=no enable_virtual_stb=yes check
+            make enable_stbt_camera=no enable_virtual_stb=yes parallel=xargs check
 
 workflows:
   test_all:
     jobs:
       - ubuntu1604-python2
+      - ubuntu1804-python2
