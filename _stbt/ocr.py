@@ -445,6 +445,8 @@ def _tesseract_subprocess(
         outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
         frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
 
+    cv2.imwrite("source-image.png", frame)
+
     if text_color is not None:
         # Calculate distance of each pixel from `text_color`, then discard
         # everything further than `text_color_threshold` distance away.
@@ -453,9 +455,13 @@ def _tesseract_subprocess(
                             diff[:, :, 1] ** 2 +
                             diff[:, :, 2] ** 2) / 3) \
                      .astype(numpy.uint8)
+        if "STBT_TESSERACT_DEBUG" in os.environ:
+            cv2.imwrite("color-diff.png", frame)
         if text_color_threshold:
             _, frame = cv2.threshold(frame, text_color_threshold, 255,
                                      cv2.THRESH_BINARY)
+            if "STBT_TESSERACT_DEBUG" in os.environ:
+                cv2.imwrite("color-diff-thresholded.png", frame)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -481,6 +487,10 @@ def _tesseract_subprocess(
                psm_flag, str(int(mode))] + engine_flags
 
         tessenv = os.environ.copy()
+
+        if "STBT_TESSERACT_DEBUG" in os.environ:
+            # Causes tesseract to write its thresholded image to tessinput.tif
+            _config["tessedit_write_images"] = True
 
         if _config or user_words or user_patterns:
             tessdata_dir = tmp + '/tessdata'
