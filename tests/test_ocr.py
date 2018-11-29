@@ -289,11 +289,7 @@ def test_ocr_on_text_next_to_image_match():
      stbt.Region(0, 370, right=1280, bottom=410)),
 
     # This is a light "8" on a dark background. Without the context of any
-    # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
-    # is reading the *holes* in the "8" instead of the letter itself, because
-    # it's assuming that it's seeing printed matter (a scanned book with black
-    # text on white background). Expanding the region to include other text
-    # would solve the problem, but so does specifying the text color.
+    # other surrounding text, OCR reads it as ":" or ";"!
     ("ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
 ])
 def test_ocr_text_color(image, color, expected, region):
