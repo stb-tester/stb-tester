@@ -7,7 +7,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import argparse
-import os
 import sys
 from contextlib import contextmanager
 
@@ -73,7 +72,7 @@ with (_stbt.logging.scoped_debug_level(2) if args.verbose
       else noop_contextmanager()):
     try:
         result = stbt.match(
-            os.path.abspath(args.reference_file), frame=source_image,
+            args.reference_file, frame=source_image,
             match_parameters=mp)
         print "%s: %s" % (
             "Match found" if result else "No match found. Closest match",
