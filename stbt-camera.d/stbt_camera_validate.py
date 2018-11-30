@@ -15,7 +15,7 @@ import numpy
 from _stbt import tv_driver
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
+from gi.repository import Gst  # pylint:disable=wrong-import-order
 
 DATA_DIR = dirname(abspath(__file__))
 

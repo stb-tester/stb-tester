@@ -12,7 +12,7 @@ ret=0
 
 # E124: closing bracket does not match visual indentation
 # E305: expected 2 blank lines after class or function definition (pylint)
-# E402: module level import not at top of file (because isort does it)
+# E402: module level import not at top of file (because pylint does it)
 # E501: line too long > 80 chars (because pylint does it)
 # E721: do not compare types, use 'isinstance()' (because pylint does it)
 # E722: do not use bare except (because pylint does it)
@@ -31,16 +31,5 @@ printf "%s" "$out" |
         -e "gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type" \
         -e "astroid.* Use gi.require_version" \
         -e "^  __import__(m)$"
-
-for f in "$@"; do
-    # PEP8-compliant order of 'import' statements
-    if which isort &>/dev/null; then
-        if ! isort --check-only $f >/dev/null; then
-            isort --version
-            isort --diff $f
-            ret=1
-        fi
-    fi
-done
 
 exit $ret

@@ -13,10 +13,10 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+import enum
 import time
 
 import cv2
-import enum
 import numpy
 
 from .core import load_image

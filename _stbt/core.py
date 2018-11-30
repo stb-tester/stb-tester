@@ -37,7 +37,7 @@ from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GLib, GObject, Gst  # isort:skip pylint:disable=no-name-in-module
+from gi.repository import GLib, GObject, Gst  # pylint:disable=wrong-import-order
 
 Gst.init(None)
 
@@ -847,7 +847,7 @@ class SinkPipeline(object):
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
-            if isinstance(obj, str) or isinstance(obj, unicode):
+            if isinstance(obj, (str, unicode)):
                 start_time = self._time.time()
                 text = (
                     datetime.datetime.fromtimestamp(start_time).strftime(

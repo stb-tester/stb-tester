@@ -15,16 +15,10 @@ import re
 import subprocess
 
 from astroid import YES
-from astroid.node_classes import BinOp
+from astroid.node_classes import BinOp, Call, Expr, Keyword
+from astroid.scoped_nodes import ClassDef, FunctionDef
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
-
-try:
-    from astroid.node_classes import Call, Expr, Keyword
-    from astroid.scoped_nodes import ClassDef, FunctionDef
-except ImportError:
-    from astroid.node_classes import CallFunc as Call, Discard as Expr, Keyword
-    from astroid.scoped_nodes import Class as ClassDef, Function as FunctionDef
 
 
 class StbtChecker(BaseChecker):
@@ -74,7 +68,7 @@ class StbtChecker(BaseChecker):
             else:
                 self.add_message('E7001', node=node, args=os.path.relpath(path))
 
-    def visit_callfunc(self, node):
+    def visit_call(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|press_and_wait|"
                      r"wait_until)$",
                      node.func.as_string()):

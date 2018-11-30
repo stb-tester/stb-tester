@@ -124,7 +124,7 @@ def main(argv):
                     write_end.close()
                 child.wait()
             finally:
-                for k in config.keys():
+                for k in config:
                     set_config('global', k, None)
     elif args.subcommand == 'stop':
         try:

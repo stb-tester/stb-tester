@@ -30,8 +30,8 @@ else:
 
 # We prefer the v3 names here rather than the v2.4 names:
 if _version >= LooseVersion('3.0.0'):
-    FILLED = cv2.FILLED  # pylint: disable=no-member
-    LINE_AA = cv2.LINE_AA  # pylint: disable=no-member
+    FILLED = cv2.FILLED  # pylint: disable=c-extension-no-member
+    LINE_AA = cv2.LINE_AA  # pylint: disable=c-extension-no-member
 else:
-    FILLED = cv2.cv.CV_FILLED  # pylint: disable=no-member
-    LINE_AA = cv2.CV_AA  # pylint: disable=no-member
+    FILLED = cv2.cv.CV_FILLED  # pylint: disable=c-extension-no-member,no-member
+    LINE_AA = cv2.CV_AA  # pylint: disable=c-extension-no-member

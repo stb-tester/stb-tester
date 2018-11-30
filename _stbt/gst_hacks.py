@@ -6,7 +6,7 @@ from os.path import dirname
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
+from gi.repository import Gst  # pylint:disable=wrong-import-order
 
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see

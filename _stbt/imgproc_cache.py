@@ -25,7 +25,7 @@ from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
 # Our embedded version of lmdb does `import lmdb` itself.  Work around this with
 # sys.path:
 sys.path.append(os.path.dirname(__file__))
-import _stbt.lmdb as lmdb  # isort:skip
+import _stbt.lmdb as lmdb  # pylint:disable=wrong-import-order
 del sys.path[-1]
 
 
@@ -188,28 +188,28 @@ class NotCachable(Exception):
 
 
 class _ArgsEncoder(json.JSONEncoder):
-    def default(self, value):  # pylint: disable=method-hidden
+    def default(self, o):  # pylint:disable=method-hidden
         from _stbt.match import MatchParameters
-        if isinstance(value, ImageLogger):
-            if value.enabled:
+        if isinstance(o, ImageLogger):
+            if o.enabled:
                 raise NotCachable()
             return None
-        elif isinstance(value, set):
-            return sorted(value)
-        elif isinstance(value, MatchParameters):
+        elif isinstance(o, set):
+            return sorted(o)
+        elif isinstance(o, MatchParameters):
             return {
-                "match_method": value.match_method,
-                "match_threshold": value.match_threshold,
-                "confirm_method": value.confirm_method,
-                "confirm_threshold": value.confirm_threshold,
-                "erode_passes": value.erode_passes}
-        elif isinstance(value, numpy.ndarray):
+                "match_method": o.match_method,
+                "match_threshold": o.match_threshold,
+                "confirm_method": o.confirm_method,
+                "confirm_threshold": o.confirm_threshold,
+                "erode_passes": o.erode_passes}
+        elif isinstance(o, numpy.ndarray):
             from _stbt.xxhash import Xxhash64
             h = Xxhash64()
-            h.update(numpy.ascontiguousarray(value).data)
-            return (value.shape, h.hexdigest())
+            h.update(numpy.ascontiguousarray(o).data)
+            return (o.shape, h.hexdigest())
         else:
-            json.JSONEncoder.default(self, value)
+            json.JSONEncoder.default(self, o)
 
 
 def _cache_hash(value):

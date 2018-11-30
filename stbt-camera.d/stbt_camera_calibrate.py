@@ -22,7 +22,7 @@ from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
+from gi.repository import Gst  # pylint:disable=wrong-import-order
 
 COLOUR_SAMPLES = 50
 videos = {}
@@ -345,8 +345,8 @@ def fit_fn(ideals, measureds):
     >>> print "%.2f %.2f" % (f(0), f(56))
     0.00 56.00
     """
-    from scipy.optimize import curve_fit  # pylint:disable=no-name-in-module
-    from scipy.interpolate import interp1d  # pylint:disable=no-name-in-module
+    from scipy.optimize import curve_fit
+    from scipy.interpolate import interp1d
     POINTS = 5
     xs = [n * 255.0 / (POINTS + 1) for n in range(0, POINTS + 2)]
 
@@ -408,8 +408,8 @@ def _can_show_graphs():
     try:
         # pylint:disable=unused-variable
         from matplotlib import pyplot
-        from scipy.optimize import curve_fit  # pylint:disable=no-name-in-module
-        from scipy.interpolate import interp1d  # pylint:disable=no-name-in-module
+        from scipy.optimize import curve_fit
+        from scipy.interpolate import interp1d
         return True
     except ImportError:
         sys.stderr.write("Install matplotlib and scipy for graphical "
@@ -502,7 +502,7 @@ v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
 
 def list_cameras():
     gi.require_version('GUdev', '1.0')
-    from gi.repository import GUdev  # pylint:disable=no-name-in-module
+    from gi.repository import GUdev
     client = GUdev.Client.new(['video4linux/usb_device'])
     devices = client.query_by_subsystem('video4linux')
     for d in devices:
@@ -538,13 +538,13 @@ def setup(source_pipeline):
             sys.stderr.write("No Cameras Detected\n\n")
         else:
             sys.stderr.write("Detected cameras:\n\n")
-        for n, (name, dev_file, source_pipeline) in enumerate(cameras):
+        for n, (name, dev_file, pipeline) in enumerate(cameras):
             sys.stderr.write(
                 "    %i. %s\n"
                 "\n"
                 "        v4l2_device = %s\n"
                 "        source_pipeline = %s\n\n"
-                % (n, name, dev_file, source_pipeline))
+                % (n, name, dev_file, pipeline))
         return None
     return stbt.get_config('global', 'v4l2_device')
 

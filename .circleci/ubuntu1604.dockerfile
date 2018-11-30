@@ -28,6 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         lighttpd \
         moreutils \
         pep8 \
+        pylint \
         python-dev \
         python-docutils \
         python-flask \
@@ -66,9 +67,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get clean
 
 RUN pip install \
-        astroid==1.4.8 \
-        isort==3.9.0 \
-        pylint==1.6.4 \
+        astroid==1.6.0 \
+        isort==4.3.4 \
+        pylint==1.8.3 \
         pytest==3.3.1 \
         responses==0.5.1
 
