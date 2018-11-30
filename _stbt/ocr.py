@@ -5,10 +5,10 @@ import os
 import re
 import subprocess
 from distutils.version import LooseVersion
+from enum import IntEnum
 
 import cv2
 import numpy
-from enum import IntEnum
 from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
