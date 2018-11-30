@@ -20,7 +20,7 @@ import _stbt.cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
-from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger, warn
+from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .types import Region, UITestFailure
 
 
@@ -759,40 +759,7 @@ def _log_match_image_debug(imglog):
         [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
          for x in imglog.data["matches"]])
 
-    try:
-        import jinja2
-    except ImportError:
-        warn(
-            "Not generating html view of the image-processing debug images,"
-            " because python 'jinja2' module is not installed.")
-        return
-
-    template = jinja2.Template(u"""
-        <!DOCTYPE html>
-        <html lang='en'>
-        <head>
-        <meta charset="utf-8"/>
-        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
-        <style>
-            a.nav { margin: 10px; }
-            a.nav[href*="/00000/"] { visibility: hidden; }
-            a.nav.pull-left { margin-left: 0; }
-            a.nav.pull-right { margin-right: 0; }
-            h5 { margin-top: 40px; }
-            .table th { font-weight: normal; background-color: #eee; }
-            img.thumb {
-                vertical-align: middle; max-width: 150px; max-height: 36px;
-                padding: 1px; border: 1px solid #ccc; }
-            p { line-height: 40px; }
-            .table td { vertical-align: middle; }
-        </style>
-        </head>
-        <body>
-        <div class="container">
-        <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
-           class="nav pull-left">«prev</a>
-        <a href="../{{ "%05d" % (frame_number + 1) }}/index.html"
-           class="nav pull-right">next»</a>
+    template = u"""\
         <h4>
             {{"Matched" if matched else "Didn't match"}}
             <i>{{template_name}}</i>
@@ -917,11 +884,7 @@ def _log_match_image_debug(imglog):
         <p>For further help please read
             <a href="http://stb-tester.com/match-parameters.html">stb-tester
             image matching parameters</a>.
-
-        </div>
-        </body>
-        </html>
-    """)
+    """
 
     def link(name, level=None, match=None):  # pylint: disable=redefined-outer-name
         return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'"
@@ -930,15 +893,14 @@ def _log_match_image_debug(imglog):
                         "" if match is None else "match%d-" % match,
                         name))
 
-    with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
-        f.write(template.render(
-            frame_number=imglog.frame_number,
-            link=link,
-            match_parameters=imglog.data["match_parameters"],
-            matched=any(imglog.data["matches"]),
-            matches=imglog.data["matches"],
-            pyramid_levels=imglog.data["pyramid_levels"],
-            show_second_pass=any(
-                x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
-            template_name=imglog.data["template_name"],
-        ).encode("utf-8"))
+    imglog.html(
+        template,
+        link=link,
+        match_parameters=imglog.data["match_parameters"],
+        matched=any(imglog.data["matches"]),
+        matches=imglog.data["matches"],
+        pyramid_levels=imglog.data["pyramid_levels"],
+        show_second_pass=any(
+            x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
+        template_name=imglog.data["template_name"],
+    )

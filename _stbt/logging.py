@@ -6,6 +6,7 @@ import os
 import sys
 from collections import OrderedDict
 from contextlib import contextmanager
+from textwrap import dedent
 
 from .config import get_config
 from .utils import mkdir_p
@@ -139,6 +140,66 @@ class ImageLogger(object):
                 colour, thickness=1)
 
         cv2.imwrite(os.path.join(self.outdir, name + ".png"), image)
+
+    def html(self, template, **kwargs):
+        if not self.enabled:
+            return
+
+        try:
+            import jinja2
+        except ImportError:
+            warn(
+                "Not generating html view of the image-processing debug images "
+                "because python 'jinja2' module is not installed.")
+            return
+
+        with open(os.path.join(self.outdir, "index.html"), "w") as f:
+            f.write(jinja2.Template(_INDEX_HTML_HEADER)
+                    .render(frame_number=self.frame_number)
+                    .encode("utf-8"))
+            f.write(jinja2.Template(dedent(template.lstrip("\n")))
+                    .render(**kwargs)
+                    .encode("utf-8"))
+            f.write(jinja2.Template(_INDEX_HTML_FOOTER)
+                    .render()
+                    .encode("utf-8"))
+
+
+_INDEX_HTML_HEADER = dedent(u"""\
+    <!DOCTYPE html>
+    <html lang='en'>
+    <head>
+    <meta charset="utf-8"/>
+    <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <style>
+        a.nav { margin: 10px; }
+        a.nav[href*="/00000/"] { visibility: hidden; }
+        a.nav.pull-left { margin-left: 0; }
+        a.nav.pull-right { margin-right: 0; }
+        h5 { margin-top: 40px; }
+        .table th { font-weight: normal; background-color: #eee; }
+        img.thumb {
+            vertical-align: middle; max-width: 150px; max-height: 36px;
+            padding: 1px; border: 1px solid #ccc; }
+        p { line-height: 40px; }
+        .table td { vertical-align: middle; }
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
+       class="nav pull-left">«prev</a>
+    <a href="../{{ "%05d" % (frame_number + 1) }}/index.html"
+       class="nav pull-right">next»</a>
+
+    """)
+
+_INDEX_HTML_FOOTER = dedent(u"""\
+
+    </div>
+    </body>
+    </html>
+""")
 
 
 def test_that_debug_can_write_unicode_strings():
