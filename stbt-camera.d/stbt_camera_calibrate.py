@@ -22,7 +22,7 @@ from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # isort:skip pylint:disable=no-name-in-module
+from gi.repository import Gst  # pylint:disable=no-name-in-module,wrong-import-order
 
 COLOUR_SAMPLES = 50
 videos = {}

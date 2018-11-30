@@ -25,7 +25,7 @@ from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
 # Our embedded version of lmdb does `import lmdb` itself.  Work around this with
 # sys.path:
 sys.path.append(os.path.dirname(__file__))
-import _stbt.lmdb as lmdb  # isort:skip
+import _stbt.lmdb as lmdb  # pylint:disable=wrong-import-order
 del sys.path[-1]
 
 
