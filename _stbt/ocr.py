@@ -511,7 +511,11 @@ def _tesseract_subprocess(
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', frame)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        except subprocess.CalledProcessError as e:
+            warn("Tesseract failed: %s" % e.output)
+            raise
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return outfile.read().decode('utf-8')
 
