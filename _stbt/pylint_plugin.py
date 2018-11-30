@@ -74,7 +74,7 @@ class StbtChecker(BaseChecker):
             else:
                 self.add_message('E7001', node=node, args=os.path.relpath(path))
 
-    def visit_callfunc(self, node):
+    def visit_call(self, node):
         if re.search(r"\b(is_screen_black|match|match_text|ocr|press_and_wait|"
                      r"wait_until)$",
                      node.func.as_string()):
