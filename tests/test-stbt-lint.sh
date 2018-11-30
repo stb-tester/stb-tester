@@ -1,5 +1,11 @@
 # Run with ./run-tests.sh
 
+assert_lint_log() {
+    cat > lint.expected
+    diff -u lint.expected <(grep -v "Using config file" lint.log) \
+    || fail "see diff above"
+}
+
 test_that_stbt_lint_passes_existing_images() {
     cat > test.py <<-EOF &&
 	import stbt
@@ -14,11 +20,10 @@ test_that_stbt_lint_fails_nonexistent_image() {
 	stbt.wait_for_match('idontexist.png')
 	EOF
     stbt lint --errors-only test.py &> lint.log
-    cat > lint.expected <<-EOF
+    assert_lint_log <<-EOF
 	************* Module test
 	E:  2,20: Image "idontexist.png" not found on disk (stbt-missing-image)
 	EOF
-    diff -u lint.expected lint.log || fail "(see diff above)"
 }
 
 test_that_stbt_lint_ignores_generated_image_names() {
@@ -89,18 +94,16 @@ test_that_stbt_lint_reports_uncommitted_images() {
 
     git init .
     stbt lint --errors-only tests/test.py &> lint.log
-    cat > lint.expected <<-EOF
+    assert_lint_log <<-EOF
 	************* Module test
 	E:  2,18: Image "tests/images/reference.png" not committed to git (stbt-uncommitted-image)
 	EOF
-    diff -u lint.expected lint.log || fail "(see diff above)"
 
     (cd tests && stbt lint --errors-only test.py) &> lint.log
-    cat > lint.expected <<-EOF
+    assert_lint_log <<-EOF
 	************* Module test
 	E:  2,18: Image "images/reference.png" not committed to git (stbt-uncommitted-image)
 	EOF
-    diff -u lint.expected lint.log || fail "(see diff above)"
 
     git add tests/images/reference.png
     stbt lint --errors-only tests/test.py || fail "stbt-lint should succeed"
@@ -142,7 +145,7 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	EOF
     stbt lint --errors-only test.py > lint.log
 
-    cat > lint.expected <<-'EOF'
+    assert_lint_log <<-'EOF'
 	************* Module test
 	E:  9, 4: "wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
 	E: 10, 4: "stbt.wait_until" return value not used (missing "assert"?) (stbt-unused-return-value)
@@ -153,7 +156,6 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	E: 19, 4: "press_and_wait" return value not used (missing "assert"?) (stbt-unused-return-value)
 	E: 20, 4: "stbt.press_and_wait" return value not used (missing "assert"?) (stbt-unused-return-value)
 	EOF
-    diff -u lint.expected lint.log
 }
 
 test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
@@ -180,7 +182,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	EOF
     stbt lint --errors-only test.py > lint.log
 
-    cat > lint.expected <<-'EOF'
+    assert_lint_log <<-'EOF'
 	************* Module test
 	E: 11,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
 	E: 13,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
@@ -188,7 +190,6 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	E: 17,11: "wait_until" argument "functools.partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	E: 19,11: "wait_until" argument "partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	EOF
-    diff -u lint.expected lint.log
 }
 
 test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
@@ -240,7 +241,7 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
     cp "$testdir/videotestsrc-redblue.png" .
     stbt lint --errors-only test.py > lint.log
 
-    cat > lint.expected <<-'EOF'
+    assert_lint_log <<-'EOF'
 	************* Module test
 	E: 12,15: "find_boxes()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 12,32: "Button()" missing "frame" argument (stbt-frame-object-missing-frame)
@@ -249,7 +250,6 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	E: 20,16: "is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 24,15: "ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
 	EOF
-    diff -u lint.expected lint.log
 }
 
 test_that_stbt_lint_ignores_astroid_inference_exceptions() {
@@ -259,10 +259,9 @@ test_that_stbt_lint_ignores_astroid_inference_exceptions() {
 	EOF
     stbt lint --errors-only test.py > lint.log
 
-    cat > lint.expected <<-'EOF'
+    assert_lint_log <<-'EOF'
 	************* Module test
 	E:  2, 7: "wait_until" argument "InfoPage" isn't callable (stbt-wait-until-callable)
 	E:  2,23: Undefined variable 'InfoPage' (undefined-variable)
 	EOF
-    diff -u lint.expected lint.log
 }
