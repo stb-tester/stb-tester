@@ -107,6 +107,9 @@ TODO: Date
 
 ##### Minor additions, bugfixes & improvements
 
+* `stbt.press` now returns a object containing timing information. This is
+  intended to help making performance measurements.
+
 * `stbt power`: Add support for Rittal 7955.310 PDUs.
 
 * `stbt lint` fixes:

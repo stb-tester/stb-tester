@@ -14,7 +14,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import enum
-import time
 
 import cv2
 import numpy
@@ -80,7 +79,9 @@ def press_and_wait(
     """
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
-    result = t.press_and_wait(key)
+    press_result = _dut.press(key)
+    debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
+    result = t.wait(press_result)
     debug("press_and_wait(%r) -> %s" % (key, result))
     return result
 
@@ -147,19 +148,16 @@ class _Transition(object):
         self.diff = strict_diff
         self.expiry_time = None
 
-    def press_and_wait(self, key):
-        original_frame = next(self.frames)
-        self.dut.press(key)
-        press_time = time.time()
-        debug("transition: %.3f: Pressed %s" % (press_time, key))
-        self.expiry_time = press_time + self.timeout_secs
+    def wait(self, press_result):
+        self.expiry_time = press_result.end_time + self.timeout_secs
 
         # Wait for animation to start
         for f in self.frames:
-            if f.time < press_time:
+            if f.time < press_result.end_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
-            if self.diff(original_frame, f, self.region, self.mask_image):
+            if self.diff(press_result.frame_before, f, self.region,
+                         self.mask_image):
                 _debug("Animation started", f)
                 animation_start_time = f.time
                 break
@@ -167,15 +165,15 @@ class _Transition(object):
             if f.time >= self.expiry_time:
                 _debug(
                     "Transition didn't start within %s seconds of pressing %s",
-                    f, self.timeout_secs, key)
+                    f, self.timeout_secs, press_result.key)
                 return _TransitionResult(
                     f, TransitionStatus.START_TIMEOUT,
-                    press_time, None, None)
+                    press_result.end_time, None, None)
 
         end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
         return _TransitionResult(
             end_result.frame, end_result.status,
-            press_time, animation_start_time, end_result.end_time)
+            press_result.end_time, animation_start_time, end_result.end_time)
 
     def wait_for_transition_to_end(self, initial_frame):
         if initial_frame is None:
