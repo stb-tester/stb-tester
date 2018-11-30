@@ -538,13 +538,13 @@ def setup(source_pipeline):
             sys.stderr.write("No Cameras Detected\n\n")
         else:
             sys.stderr.write("Detected cameras:\n\n")
-        for n, (name, dev_file, source_pipeline) in enumerate(cameras):
+        for n, (name, dev_file, pipeline) in enumerate(cameras):
             sys.stderr.write(
                 "    %i. %s\n"
                 "\n"
                 "        v4l2_device = %s\n"
                 "        source_pipeline = %s\n\n"
-                % (n, name, dev_file, source_pipeline))
+                % (n, name, dev_file, pipeline))
         return None
     return stbt.get_config('global', 'v4l2_device')
 
