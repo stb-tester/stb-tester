@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
 Copyright 2013-2018 stb-tester.com Ltd.
@@ -751,6 +753,12 @@ def _log_match_image_debug(imglog):
             result.region, _Annotation.MATCHED if result._first_pass_matched  # pylint:disable=protected-access
             else _Annotation.NO_MATCH)
 
+    imglog.imwrite(
+        "source_with_matches", imglog.images["source"],
+        [x.region for x in imglog.data["matches"]],
+        [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
+         for x in imglog.data["matches"]])
+
     try:
         import jinja2
     except ImportError:
@@ -759,15 +767,20 @@ def _log_match_image_debug(imglog):
             " because python 'jinja2' module is not installed.")
         return
 
-    template = jinja2.Template("""
+    template = jinja2.Template(u"""
         <!DOCTYPE html>
         <html lang='en'>
         <head>
+        <meta charset="utf-8"/>
         <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
         <style>
+            a.nav { margin: 10px; }
+            a.nav[href*="/00000/"] { visibility: hidden; }
+            a.nav.pull-left { margin-left: 0; }
+            a.nav.pull-right { margin-right: 0; }
             h5 { margin-top: 40px; }
             .table th { font-weight: normal; background-color: #eee; }
-            img {
+            img.thumb {
                 vertical-align: middle; max-width: 150px; max-height: 36px;
                 padding: 1px; border: 1px solid #ccc; }
             p { line-height: 40px; }
@@ -776,10 +789,16 @@ def _log_match_image_debug(imglog):
         </head>
         <body>
         <div class="container">
+        <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
+           class="nav pull-left">«prev</a>
+        <a href="../{{ "%05d" % (frame_number + 1) }}/index.html"
+           class="nav pull-right">next»</a>
         <h4>
+            {{"Matched" if matched else "Didn't match"}}
             <i>{{template_name}}</i>
-            {{"matched" if matched else "didn't match"}}
         </h4>
+
+        <img src="source_with_matches.png" />
 
         <h5>First pass (find candidate matches):</h5>
 
@@ -905,13 +924,15 @@ def _log_match_image_debug(imglog):
     """)
 
     def link(name, level=None, match=None):  # pylint: disable=redefined-outer-name
-        return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'></a>"
+        return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'"
+                " class='thumb'></a>"
                 .format("" if level is None else "level%d-" % level,
                         "" if match is None else "match%d-" % match,
                         name))
 
     with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
         f.write(template.render(
+            frame_number=imglog.frame_number,
             link=link,
             match_parameters=imglog.data["match_parameters"],
             matched=any(imglog.data["matches"]),
@@ -921,4 +942,4 @@ def _log_match_image_debug(imglog):
             show_second_pass=any(
                 x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
             template_name=imglog.data["template_name"],
-        ))
+        ).encode("utf-8"))

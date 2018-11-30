@@ -111,7 +111,7 @@ class ImageLogger(object):
                 self.data[k] = []
             self.data[k].append(v)
 
-    def imwrite(self, name, image, region=None, colour=None):
+    def imwrite(self, name, image, regions=None, colours=None):
         import cv2
         import numpy
         if not self.enabled:
@@ -125,7 +125,15 @@ class ImageLogger(object):
         else:
             image = image.copy()
         self.images[name] = image
-        if region:
+        if regions is None:
+            regions = []
+        elif not isinstance(regions, list):
+            regions = [regions]
+        if colours is None:
+            colours = []
+        elif not isinstance(colours, list):
+            colours = [colours]
+        for region, colour in zip(regions, colours):
             cv2.rectangle(
                 image, (region.x, region.y), (region.right, region.bottom),
                 colour, thickness=1)
