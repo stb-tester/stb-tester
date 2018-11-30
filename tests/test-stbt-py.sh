@@ -185,9 +185,9 @@ test_that_is_screen_black_writes_debugging_information() {
         test.py \
     || fail "Test should have detected black"
 
-    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+    [ -e "stbt-debug/00001/source.png" ] \
         || fail "source debug image not written"
-    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+    [ -e "stbt-debug/00001/non-black-regions-after-masking.png" ] \
         || fail "masked debug image not written"
 }
 
@@ -203,11 +203,11 @@ test_that_is_screen_black_with_mask_writes_debugging_information() {
         test.py \
     || fail "Test should have detected black"
 
-    [ -e "stbt-debug/is_screen_black/00001/source.png" ] \
+    [ -e "stbt-debug/00001/source.png" ] \
         || fail "source debug image not written"
-    [ -e "stbt-debug/is_screen_black/00001/mask.png" ] \
+    [ -e "stbt-debug/00001/mask.png" ] \
         || fail "mask debug image not written"
-    [ -e "stbt-debug/is_screen_black/00001/non-black-regions-after-masking.png" ] \
+    [ -e "stbt-debug/00001/non-black-regions-after-masking.png" ] \
         || fail "masked debug image not written"
 }
 
