@@ -847,7 +847,7 @@ class SinkPipeline(object):
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
-            if isinstance(obj, str) or isinstance(obj, unicode):
+            if isinstance(obj, (str, unicode)):
                 start_time = self._time.time()
                 text = (
                     datetime.datetime.fromtimestamp(start_time).strftime(
