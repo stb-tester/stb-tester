@@ -7,7 +7,7 @@ from .gst_hacks import map_gst_sample, sample_get_size
 from .imgutils import Frame
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst  # pylint:disable=no-name-in-module,wrong-import-order
+from gi.repository import GObject, Gst  # pylint:disable=wrong-import-order
 
 Gst.init([])
 
