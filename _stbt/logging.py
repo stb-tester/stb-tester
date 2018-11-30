@@ -177,12 +177,18 @@ _INDEX_HTML_HEADER = dedent(u"""\
         a.nav.pull-left { margin-left: 0; }
         a.nav.pull-right { margin-right: 0; }
         h5 { margin-top: 40px; }
+
+        /* match */
         .table th { font-weight: normal; background-color: #eee; }
         img.thumb {
             vertical-align: middle; max-width: 150px; max-height: 36px;
             padding: 1px; border: 1px solid #ccc; }
         p { line-height: 40px; }
         .table td { vertical-align: middle; }
+
+        /* ocr */
+        .annotated_image { position: relative; }
+        .ocr_region { position: absolute; outline: 2px solid #8080ff; }
     </style>
     </head>
     <body>

@@ -14,7 +14,7 @@ from kitchen.text.converters import to_bytes
 from . import imgproc_cache
 from .config import ConfigurationError, get_config
 from .imgutils import _frame_repr, _image_region, crop
-from .logging import debug, warn
+from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import named_temporary_directory
 
@@ -244,12 +244,15 @@ def ocr(frame=None, region=Region.ALL,
     if isinstance(tesseract_user_patterns, (str, unicode)):
         tesseract_user_patterns = [tesseract_user_patterns]
 
+    imglog = ImageLogger("ocr")
+
     text, region = _tesseract(
         frame, region, mode, lang, tesseract_config,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
-        text_color_threshold, engine)
+        text_color_threshold, engine, imglog)
     text = text.strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
+    _log_ocr_image_debug(imglog, text)
     return text
 
 
@@ -373,7 +376,7 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
-               upsample, text_color, text_color_threshold, engine):
+               upsample, text_color, text_color_threshold, engine, imglog):
 
     if _config is None:
         _config = {}
@@ -394,18 +397,23 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                 "Invalid config value ocr.engine='%s'. Valid values are %s."
                 % (engine_name, ", ".join(x.name for x in OcrEngine)))  # pylint:disable=not-an-iterable
 
+    imglog.imwrite("source", frame)
+
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)
     if intersection is None:
         warn("Requested OCR in region %s which doesn't overlap with "
              "the frame %s" % (str(region), frame_region))
+        imglog.set(region=None)
         return (u'', None)
     else:
         region = intersection
+        imglog.set(region=region)
 
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
-                                  text_color, text_color_threshold, engine),
+                                  text_color, text_color_threshold, engine,
+                                  imglog),
             region)
 
 
@@ -413,7 +421,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                         "version": "29"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold, engine):
+        text_color, text_color_threshold, engine, imglog):
 
     if _tesseract_version() >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
@@ -425,6 +433,10 @@ def _tesseract_subprocess(
             raise ValueError("%s isn't available in tesseract %s"
                              % (engine, _tesseract_version()))
         engine_flags = []
+    imglog.set(engine=engine, mode=mode, lang=lang,
+               user_patterns=user_patterns, user_words=user_words,
+               upsample=upsample, text_color=text_color,
+               text_color_threshold=text_color_threshold)
 
     if mode >= OcrMode.RAW_LINE and _tesseract_version() < LooseVersion("3.04"):
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
@@ -438,6 +450,7 @@ def _tesseract_subprocess(
         # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
         outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
         frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
+        imglog.imwrite("upsampled", frame)
 
     if text_color is not None:
         # Calculate distance of each pixel from `text_color`, then discard
@@ -447,8 +460,10 @@ def _tesseract_subprocess(
                             diff[:, :, 1] ** 2 +
                             diff[:, :, 2] ** 2) / 3) \
                      .astype(numpy.uint8)
+        imglog.imwrite("text_color_difference", frame)
         _, frame = cv2.threshold(frame, text_color_threshold, 255,
                                  cv2.THRESH_BINARY)
+        imglog.imwrite("text_color_threshold", frame)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -597,6 +612,74 @@ def _find_tessdata_dir():
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
+
+
+def _log_ocr_image_debug(imglog, text):
+    if not imglog.enabled:
+        return
+
+    template = u"""\
+        <h4>OCR</h4>
+
+        <div class="annotated_image">
+          <img src="source.png" />
+          <div class="ocr_region"
+               style="left: {{region.x / image.width * 100}}%;
+                      top: {{region.y / image.height * 100}}%;
+                      width: {{region.width / image.width * 100}}%;
+                      height: {{region.height / image.height * 100}}%"
+               title="{{ text | escape }}"></div>
+        </div>
+
+        <h5>Text:</h5>
+        <pre><code>{{ text | escape }}</code></pre>
+
+        <h5>Parameters:</h5>
+        <ul>
+          <li>engine={{engine}}
+          <li>lang={{lang}}
+          <li>mode={{mode}}
+          <li>tesseract_user_patterns={{user_patterns}}
+          <li>tesseract_user_words={{user_words}}
+          <li>text_color={{text_color}}
+          <li>text_color_threshold={{text_color_threshold}}
+          <li>upsample={{upsample}}
+        </ul>
+
+        {% if "upsampled" in images %}
+        <h5>ROI Scaled:</h5>
+        <img src="upsampled.png" />
+        {% endif %}
+
+        {% if "text_color_difference" in images %}
+        <h5>Color difference {{ text_color }}:</h5>
+        <img src="text_color_difference.png" />
+        {% endif %}
+
+        {% if "text_color_threshold" in images %}
+        <h5>
+          Color difference – binarised
+          (threshold={{ text_color_threshold }}):
+        </h5>
+        <img src="text_color_threshold.png" />
+        {% endif %}
+    """
+
+    imglog.html(
+        template,
+        engine=imglog.data["engine"],
+        image=_image_region(imglog.images["source"]),
+        images=imglog.images,
+        lang=imglog.data["lang"],
+        mode=imglog.data["mode"],
+        region=imglog.data["region"],
+        text=text,
+        text_color=imglog.data["text_color"],
+        text_color_threshold=imglog.data["text_color_threshold"],
+        upsample=imglog.data["upsample"],
+        user_patterns=imglog.data["user_patterns"],
+        user_words=imglog.data["user_words"],
+    )
 
 
 def _symlink_copy_dir(a, b):
