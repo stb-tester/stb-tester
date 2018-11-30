@@ -15,16 +15,10 @@ import re
 import subprocess
 
 from astroid import YES
-from astroid.node_classes import BinOp
+from astroid.node_classes import BinOp, Call, Expr, Keyword
+from astroid.scoped_nodes import ClassDef, FunctionDef
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
-
-try:
-    from astroid.node_classes import Call, Expr, Keyword
-    from astroid.scoped_nodes import ClassDef, FunctionDef
-except ImportError:
-    from astroid.node_classes import CallFunc as Call, Discard as Expr, Keyword
-    from astroid.scoped_nodes import Class as ClassDef, Function as FunctionDef
 
 
 class StbtChecker(BaseChecker):
