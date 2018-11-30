@@ -29,6 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         moreutils \
         parallel \
         pep8 \
+        pylint \
         python-dev \
         python-docutils \
         python-flask \
@@ -65,11 +66,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         xserver-xorg-video-dummy \
         xterm && \
     apt-get clean
-
-RUN pip install \
-        astroid==1.4.8 \
-        isort==3.9.0 \
-        pylint==1.6.4
 
 RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
