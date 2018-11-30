@@ -422,14 +422,14 @@ def _tesseract_subprocess(
             engine = OcrEngine.TESSERACT
         if engine != OcrEngine.TESSERACT:
             # NB `str(engine)` looks like "OcrEngine.LSTM"
-            raise RuntimeError("%s isn't available in tesseract %s"
-                               % (engine, _tesseract_version()))
+            raise ValueError("%s isn't available in tesseract %s"
+                             % (engine, _tesseract_version()))
         engine_flags = []
 
     if mode >= OcrMode.RAW_LINE and _tesseract_version() < LooseVersion("3.04"):
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
-        raise RuntimeError("%s isn't available in tesseract %s"
-                           % (mode, _tesseract_version()))
+        raise ValueError("%s isn't available in tesseract %s"
+                         % (mode, _tesseract_version()))
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
