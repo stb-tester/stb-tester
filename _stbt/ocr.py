@@ -434,7 +434,8 @@ def _tesseract_subprocess(
     imglog.set(engine=engine, mode=mode, lang=lang,
                user_patterns=user_patterns, user_words=user_words,
                upsample=upsample, text_color=text_color,
-               text_color_threshold=text_color_threshold)
+               text_color_threshold=text_color_threshold,
+               tesseract_version=tesseract_version)
 
     if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
@@ -648,6 +649,7 @@ def _log_ocr_image_debug(imglog, text):
           <li>mode={{mode}}
           <li>tesseract_user_patterns={{user_patterns}}
           <li>tesseract_user_words={{user_words}}
+          <li>tesseract_version={{tesseract_version}}
           <li>text_color={{text_color}}
           <li>text_color_threshold={{text_color_threshold}}
           <li>upsample={{upsample}}
@@ -685,6 +687,7 @@ def _log_ocr_image_debug(imglog, text):
         lang=imglog.data["lang"],
         mode=imglog.data["mode"],
         region=imglog.data["region"],
+        tesseract_version=imglog.data["tesseract_version"],
         text=text,
         text_color=imglog.data["text_color"],
         text_color_threshold=imglog.data["text_color_threshold"],
