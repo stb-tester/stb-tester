@@ -312,7 +312,7 @@ def match_text(text, frame=None, region=Region.ALL,
         result = TextMatchResult(rts, False, None, frame, text)
     else:
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-        p = _hocr_find_phrase(hocr, text.split(), case_sensitive)
+        p = _hocr_find_phrase(hocr, _to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
             box = None
@@ -574,7 +574,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
 
     words_only = [(lower(w).translate(_ocr_transtab), elem)
                   for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
-    phrase = [lower(_to_unicode(w)).translate(_ocr_transtab) for w in phrase]
+    phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
     if len(phrase) <= len(words_only):
