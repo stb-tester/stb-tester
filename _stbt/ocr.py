@@ -655,7 +655,8 @@ def _log_ocr_image_debug(imglog, output=None):
     template = u"""\
         <h4>{{title}}</h4>
 
-        <div class="annotated_image">
+        <div class="annotated_image"
+             style="max-width: {{image_region.width}}px">
           <img src="source.png" />
           {{ draw(roi, image_region, "roi") }}
           {% if match_text %}
