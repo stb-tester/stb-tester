@@ -10,7 +10,7 @@ from stbt import MatchParameters as mp
 
 
 def test_match_debug():
-    expected = _find_file("stbt-debug-expected-output")
+    expected = _find_file("stbt-debug-expected-output/match")
 
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
