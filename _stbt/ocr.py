@@ -305,10 +305,13 @@ def match_text(text, frame=None, region=Region.ALL,
 
     rts = getattr(frame, "time", None)
 
+    imglog = ImageLogger("match_text")
+
     xml, region = _tesseract(frame, region, mode, lang, _config,
                              None, text.split(), upsample, text_color,
-                             text_color_threshold, engine)
+                             text_color_threshold, engine, imglog)
     if xml == '':
+        hocr = None
         result = TextMatchResult(rts, False, None, frame, text)
     else:
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
@@ -332,6 +335,10 @@ def match_text(text, frame=None, region=Region.ALL,
         debug("match_text: Match found: %s" % str(result))
     else:
         debug("match_text: No match found: %s" % str(result))
+
+    imglog.set(text=text, case_sensitive=case_sensitive,
+               result=result, hocr=hocr)
+    _log_ocr_image_debug(imglog)
 
     return result
 
@@ -622,29 +629,54 @@ def _find_tessdata_dir():
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
 
 
-def _log_ocr_image_debug(imglog, text):
+def _log_ocr_image_debug(imglog, output=None):
     if not imglog.enabled:
         return
 
+    if imglog.name == "ocr":
+        title = "stbt.ocr"
+        match_text = False  # pylint:disable=redefined-outer-name
+    else:
+        match_text = True
+        result = imglog.data["result"]
+        title = "stbt.match_text(%r): %s" % (
+            imglog.data["text"],
+            "Matched" if result else "Didn't match")
+        hocr = imglog.data["hocr"]
+        if hocr is None:
+            output = u""
+        else:
+            output = u"".join(x for x, _ in _hocr_iterate(hocr))
+
     template = u"""\
-        <h4>OCR</h4>
+        <h4>{{title}}</h4>
 
         <div class="annotated_image">
           <img src="source.png" />
-          {{ draw(roi, image_region, "roi", text) }}
+          {{ draw(roi, image_region, "roi") }}
+          {% if match_text %}
+          {{ draw(result.region, image_region, result.match,
+                  title=result.text) }}
+          {% endif %}
         </div>
 
         <h5>Text:</h5>
-        <pre><code>{{ text | escape }}</code></pre>
+        <pre><code>{{ output | escape }}</code></pre>
 
         <h5>Parameters:</h5>
         <ul>
+          {% if match_text %}
+          <li>case_sensitive={{case_sensitive}}
+          {% endif %}
           <li>engine={{engine}}
           <li>lang={{lang}}
           <li>mode={{mode}}
           <li>tesseract_user_patterns={{user_patterns}}
           <li>tesseract_user_words={{user_words}}
           <li>tesseract_version={{tesseract_version}}
+          {% if match_text %}
+          <li>text={{text}}
+          {% endif %}
           <li>text_color={{text_color}}
           <li>text_color_threshold={{text_color_threshold}}
           <li>upsample={{upsample}}
@@ -676,16 +708,21 @@ def _log_ocr_image_debug(imglog, text):
 
     imglog.html(
         template,
+        case_sensitive=imglog.data.get("case_sensitive"),
         engine=imglog.data["engine"],
-        image=_image_region(imglog.images["source"]),
+        image_region=_image_region(imglog.images["source"]),
         images=imglog.images,
         lang=imglog.data["lang"],
+        match_text=match_text,
         mode=imglog.data["mode"],
-        region=imglog.data["region"],
+        output=output,
+        result=imglog.data.get("result"),
+        roi=imglog.data["region"],
         tesseract_version=imglog.data["tesseract_version"],
-        text=text,
+        text=imglog.data.get("text"),
         text_color=imglog.data["text_color"],
         text_color_threshold=imglog.data["text_color_threshold"],
+        title=title,
         upsample=imglog.data["upsample"],
         user_patterns=imglog.data["user_patterns"],
         user_words=imglog.data["user_words"],
