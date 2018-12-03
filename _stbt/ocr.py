@@ -302,8 +302,6 @@ def match_text(text, frame=None, region=Region.ALL,
 
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
-    if _tesseract_version() >= LooseVersion('3.04'):
-        _config['tessedit_create_txt'] = 0
 
     rts = getattr(frame, "time", None)
 
@@ -414,17 +412,16 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
                                   text_color, text_color_threshold, engine,
-                                  imglog),
+                                  imglog, _tesseract_version()),
             region)
 
 
-@imgproc_cache.memoize({"tesseract_version": str(_tesseract_version()),
-                        "version": "29"})
+@imgproc_cache.memoize({"version": "29"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold, engine, imglog):
+        text_color, text_color_threshold, engine, imglog, tesseract_version):
 
-    if _tesseract_version() >= LooseVersion("4.0"):
+    if tesseract_version >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
     else:
         if engine == OcrEngine.DEFAULT:
@@ -432,17 +429,17 @@ def _tesseract_subprocess(
         if engine != OcrEngine.TESSERACT:
             # NB `str(engine)` looks like "OcrEngine.LSTM"
             raise ValueError("%s isn't available in tesseract %s"
-                             % (engine, _tesseract_version()))
+                             % (engine, tesseract_version))
         engine_flags = []
     imglog.set(engine=engine, mode=mode, lang=lang,
                user_patterns=user_patterns, user_words=user_words,
                upsample=upsample, text_color=text_color,
                text_color_threshold=text_color_threshold)
 
-    if mode >= OcrMode.RAW_LINE and _tesseract_version() < LooseVersion("3.04"):
+    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
         raise ValueError("%s isn't available in tesseract %s"
-                         % (mode, _tesseract_version()))
+                         % (mode, tesseract_version))
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
@@ -471,7 +468,7 @@ def _tesseract_subprocess(
 
     with named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
 
-        if _tesseract_version() >= LooseVersion("3.05"):
+        if tesseract_version >= LooseVersion("3.05"):
             psm_flag = "--psm"
         else:
             psm_flag = "-psm"
@@ -488,8 +485,12 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
-            if _tesseract_version() >= LooseVersion("4.0.0"):
+            if tesseract_version >= LooseVersion("4.0.0"):
                 tessenv['TESSDATA_PREFIX'] += "tessdata"
+
+        if ('tessedit_create_hocr' in _config and
+                tesseract_version >= LooseVersion('3.04')):
+            _config['tessedit_create_txt'] = 0
 
         if user_words:
             if 'user_words_suffix' in _config:
