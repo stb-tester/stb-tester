@@ -10,8 +10,6 @@ from stbt import MatchParameters as mp
 
 
 def test_match_debug():
-    expected = _find_file("stbt-debug-expected-output/match")
-
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
     ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
@@ -319,18 +317,96 @@ def test_match_debug():
             stbt-debug/00004/template.png
             """)
 
-        subprocess.check_call([
-            "diff", "-u", "--exclude=*.png",
-            # The exact output of cv2.matchtemplate isn't deterministic across
-            # different versions of OpenCV:
-            r"--ignore-matching-lines=0\.99",
-            "--ignore-matching-lines=Region",
-            expected, "stbt-debug"])
+        assert_expected("stbt-debug-expected-output/match")
 
-        # To update expected results in source checkout:
+
+def test_ocr_debug():
+    # So that the output directory name doesn't depend on how many tests
+    # were run before this one.
+    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+
+    f = stbt.load_image("action-panel.png")
+    r = stbt.Region(0, 370, right=1280, bottom=410)
+    c = (235, 235, 235)
+    nonoverlapping = stbt.Region(2000, 2000, width=10, height=10)
+
+    with scoped_curdir(), scoped_debug_level(2):
+
+        stbt.ocr(f)
+        stbt.ocr(f, region=r)
+        stbt.ocr(f, region=r, text_color=c)
+        stbt.ocr(f, region=nonoverlapping)
+
+        stbt.match_text("Summary", f)  # no match
+        stbt.match_text("Summary", f, region=r)  # no match
+        stbt.match_text("Summary", f, region=r, text_color=c)
+        stbt.match_text("Summary", f, region=nonoverlapping)
+
+        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        assert files == dedent("""\
+            stbt-debug
+            stbt-debug/00001
+            stbt-debug/00001/index.html
+            stbt-debug/00001/source.png
+            stbt-debug/00001/tessinput.png
+            stbt-debug/00001/upsampled.png
+            stbt-debug/00002
+            stbt-debug/00002/index.html
+            stbt-debug/00002/source.png
+            stbt-debug/00002/tessinput.png
+            stbt-debug/00002/upsampled.png
+            stbt-debug/00003
+            stbt-debug/00003/index.html
+            stbt-debug/00003/source.png
+            stbt-debug/00003/tessinput.png
+            stbt-debug/00003/text_color_difference.png
+            stbt-debug/00003/text_color_threshold.png
+            stbt-debug/00003/upsampled.png
+            stbt-debug/00004
+            stbt-debug/00004/index.html
+            stbt-debug/00004/source.png
+            stbt-debug/00005
+            stbt-debug/00005/index.html
+            stbt-debug/00005/source.png
+            stbt-debug/00005/tessinput.png
+            stbt-debug/00005/upsampled.png
+            stbt-debug/00006
+            stbt-debug/00006/index.html
+            stbt-debug/00006/source.png
+            stbt-debug/00006/tessinput.png
+            stbt-debug/00006/upsampled.png
+            stbt-debug/00007
+            stbt-debug/00007/index.html
+            stbt-debug/00007/source.png
+            stbt-debug/00007/tessinput.png
+            stbt-debug/00007/text_color_difference.png
+            stbt-debug/00007/text_color_threshold.png
+            stbt-debug/00007/upsampled.png
+            stbt-debug/00008
+            stbt-debug/00008/index.html
+            stbt-debug/00008/source.png
+            """)
+
+        # To see the generated files in tests/dave-debug/:
         # import shutil
-        # shutil.rmtree(expected)
-        # shutil.move("stbt-debug", expected)
+        # shutil.move("stbt-debug", _find_file("dave-debug"))
+
+
+def assert_expected(expected):
+    expected = _find_file(expected)
+
+    subprocess.check_call([
+        "diff", "-u", "--exclude=*.png",
+        # The exact output of cv2.matchtemplate isn't deterministic across
+        # different versions of OpenCV:
+        r"--ignore-matching-lines=0\.99",
+        "--ignore-matching-lines=Region",
+        expected, "stbt-debug"])
+
+    # To update expected results in source checkout:
+    # import shutil
+    # shutil.rmtree(expected)
+    # shutil.move("stbt-debug", expected)
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
