@@ -12,8 +12,6 @@ from _stbt.logging import ImageLogger, scoped_debug_level
 from _stbt.utils import scoped_curdir
 from stbt import MatchParameters as mp
 
-TESTS_DIR = os.path.dirname(__file__)
-
 
 def black(width=1280, height=720):
     return numpy.zeros((height, width, 3), dtype=numpy.uint8)
@@ -33,7 +31,7 @@ def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
 
 
 def test_matchresult_region_when_first_pyramid_level_fails_to_match():
-    f = _imread("videotestsrc-full-frame.png")
+    f = stbt.load_image("videotestsrc-full-frame.png")
     assert stbt.Region(184, 0, width=92, height=160) == stbt.match(
         "videotestsrc-redblue-flipped.png", frame=f).region
 
@@ -54,7 +52,7 @@ def test_matching_greyscale_template():
 
 def test_that_if_image_doesnt_match_match_all_returns_empty_array():
     assert [] == list(stbt.match_all(
-        'button.png', frame=_imread('black-full-frame.png')))
+        'button.png', frame=stbt.load_image('black-full-frame.png')))
 
 
 def test_that_match_all_finds_all_matches():
@@ -62,7 +60,7 @@ def test_that_match_all_finds_all_matches():
         (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
 
     matches = list(m.region for m in stbt.match_all(
-        'button.png', frame=_imread('buttons.png')))
+        'button.png', frame=stbt.load_image('buttons.png')))
     print matches
     assert plain_buttons == sorted(matches)
 
@@ -74,7 +72,7 @@ def test_that_match_all_can_find_labelled_matches():
         (1, 65), (6, 137), (123, 223)]]
     overlapped_button = stbt.Region(3, 223, width=135, height=44)
 
-    frame = _imread('buttons.png')
+    frame = stbt.load_image('buttons.png')
 
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=frame, match_parameters=mp(confirm_method='none')))
@@ -86,8 +84,8 @@ def test_that_match_all_can_find_labelled_matches():
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
     # on buttons
-    frame = _imread('buttons.png')
-    button = _imread('button.png')
+    frame = stbt.load_image('buttons.png')
+    button = stbt.load_image('button.png')
 
     text = [
         stbt.ocr(frame=cv2.absdiff(stbt.crop(frame, m.region), button))
@@ -101,7 +99,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
 def test_that_results_dont_overlap():
     # This is a regression test for a bug seen in an earlier implementation of
     # `match_all`.
-    frame = _imread("action-panel.png")
+    frame = stbt.load_image("action-panel.png")
     all_matches = set()
     for m in stbt.match_all("action-panel-template.png", frame=frame):
         print m
@@ -121,7 +119,7 @@ def test_that_results_dont_overlap():
 
 def test_that_match_all_obeys_region():
     matches = sorted(m.region for m in stbt.match_all(
-        "button.png", frame=_imread("buttons.png"),
+        "button.png", frame=stbt.load_image("buttons.png"),
         region=stbt.Region(x=160, y=60, right=340, bottom=190)))
     print matches
     assert matches == [stbt.Region(x, y, width=135, height=44) for x, y in [
@@ -131,7 +129,7 @@ def test_that_match_all_obeys_region():
 def test_match_all_with_an_image_that_matches_everywhere():
     matches = sorted(m.region for m in stbt.match_all(
         "repeating-pattern.png",
-        frame=_imread("repeating-pattern-full-frame.png")))
+        frame=stbt.load_image("repeating-pattern-full-frame.png")))
 
     expected_matches = sorted([stbt.Region(x, y, width=16, height=16)
                                for x in range(0, 320, 16)
@@ -152,26 +150,26 @@ def test_match_debug():
         # First pass gives no matches:
         matches = list(stbt.match_all(
             "videotestsrc-redblue-flipped.png",
-            frame=_imread("videotestsrc-full-frame.png")))
+            frame=stbt.load_image("videotestsrc-full-frame.png")))
         print matches
         assert len(matches) == 0
 
         # Multiple matches; first pass stops with a non-match:
         matches = list(stbt.match_all(
-            "button.png", frame=_imread("buttons.png"),
+            "button.png", frame=stbt.load_image("buttons.png"),
             match_parameters=mp(match_threshold=0.99)))
         print matches
         assert len(matches) == 6
 
         # Multiple matches; second pass stops with a non-match:
         matches = list(stbt.match_all(
-            "button.png", frame=_imread("buttons.png")))
+            "button.png", frame=stbt.load_image("buttons.png")))
         print matches
         assert len(matches) == 6
 
         # With absdiff:
         matches = list(stbt.match_all(
-            "button.png", frame=_imread("buttons.png"),
+            "button.png", frame=stbt.load_image("buttons.png"),
             match_parameters=mp(confirm_method="absdiff",
                                 confirm_threshold=0.16)))
         print matches
@@ -463,12 +461,6 @@ def test_match_debug():
         # import shutil
         # shutil.rmtree(expected)
         # shutil.move("stbt-debug", expected)
-
-
-def _imread(filename):
-    img = cv2.imread(os.path.join(TESTS_DIR, filename))
-    assert img is not None
-    return img
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
