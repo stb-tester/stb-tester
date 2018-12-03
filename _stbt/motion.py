@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from collections import deque
 
 import cv2
@@ -92,10 +94,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
                 previous_frame_gray.shape))
 
     for frame in frames:
-        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-
         imglog = ImageLogger("detect_motion")
-        imglog.imwrite("source", frame_gray)
+        imglog.imwrite("source", frame)
+        imglog.set(roi=region, noise_threshold=noise_threshold)
+
+        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
+        imglog.imwrite("gray", frame_gray)
+        imglog.imwrite("previous_frame_gray", previous_frame_gray)
 
         absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
         previous_frame_gray = frame_gray
@@ -129,6 +134,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         draw_on(frame, result, label="detect_motion()")
         debug("%s found: %s" % (
             "Motion" if motion else "No motion", str(result)))
+        _log_motion_image_debug(imglog, result)
         yield result
 
 
@@ -212,7 +218,8 @@ def wait_for_motion(
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
 
-    Added in v28: The ``region`` parameter.
+    | Added in v28: The ``region`` parameter.
+    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
@@ -323,3 +330,55 @@ class MotionTimeout(UITestFailure):
         return "Didn't find motion%s within %g seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
+
+
+def _log_motion_image_debug(imglog, result):
+    if not imglog.enabled:
+        return
+
+    template = u"""\
+        <h4>
+          detect_motion:
+          {{ "Found" if result.motion else "Didn't find" }} motion
+        </h4>
+
+        <div class="annotated_image"
+             style="max-width: {{source_region.width}}px">
+          <img src="source.png">
+          {{ draw(roi, source_region, "roi") }}
+          {% if result.motion %}
+          {{ draw(result.region, source_region, True) }}
+          {% endif %}
+        </div>
+
+        <h5>ROI Gray:</h5>
+        <img src="gray.png" />
+
+        <h5>Previous frame ROI Gray:</h5>
+        <img src="previous_frame_gray.png" />
+
+        <h5>Absolute difference:</h5>
+        <img src="absdiff.png" />
+
+        {% if "mask" in images %}
+        <h5>Mask:</h5>
+        <img src="mask.png" />
+        <h5>Absolute difference – masked:</h5>
+        <img src="absdiff_masked.png" />
+        {% endif %}
+
+        <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
+        <img src="absdiff_threshold.png" />
+
+        <h5>Eroded:</h5>
+        <img src="absdiff_threshold_erode.png" />
+    """
+
+    imglog.html(
+        template,
+        result=result,
+        roi=imglog.data["roi"],
+        images=imglog.images,
+        source_region=_image_region(imglog.images["source"]),
+        noise_threshold=imglog.data["noise_threshold"],
+    )
