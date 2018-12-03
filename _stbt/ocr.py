@@ -631,12 +631,7 @@ def _log_ocr_image_debug(imglog, text):
 
         <div class="annotated_image">
           <img src="source.png" />
-          <div class="ocr_region"
-               style="left: {{region.x / image.width * 100}}%;
-                      top: {{region.y / image.height * 100}}%;
-                      width: {{region.width / image.width * 100}}%;
-                      height: {{region.height / image.height * 100}}%"
-               title="{{ text | escape }}"></div>
+          {{ draw(roi, image_region, "roi", text) }}
         </div>
 
         <h5>Text:</h5>

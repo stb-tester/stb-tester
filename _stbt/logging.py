@@ -158,11 +158,39 @@ class ImageLogger(object):
                     .render(frame_number=self.frame_number)
                     .encode("utf-8"))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
-                    .render(**kwargs)
+                    .render(draw=self._draw, **kwargs)
                     .encode("utf-8"))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
                     .render()
                     .encode("utf-8"))
+
+    def _draw(self, region, source_size, css_class, title=None):
+        import jinja2
+
+        if region is None:
+            return ""
+
+        if isinstance(css_class, bool):
+            if css_class:
+                css_class = "matched"
+            else:
+                css_class = "nomatch"
+
+        return jinja2.Template(dedent("""\
+            <div class="region {{css_class}}"
+                 style="left: {{region.x / image.width * 100}}%;
+                        top: {{region.y / image.height * 100}}%;
+                        width: {{region.width / image.width * 100}}%;
+                        height: {{region.height / image.height * 100}}%"
+                 {% if title %}
+                 title="{{ title | escape }}"
+                 {% endif %}
+                 ></div>
+            """)) \
+            .render(css_class=css_class,
+                    image=source_size,
+                    region=region,
+                    title=title)
 
 
 _INDEX_HTML_HEADER = dedent(u"""\
@@ -177,6 +205,11 @@ _INDEX_HTML_HEADER = dedent(u"""\
         a.nav.pull-left { margin-left: 0; }
         a.nav.pull-right { margin-right: 0; }
         h5 { margin-top: 40px; }
+        .annotated_image { position: relative; }
+        .region { position: absolute; }
+        .roi { outline: 2px solid #8080ff; }
+        .region.matched { outline: 2px solid #ff0020; }
+        .region.nomatch { outline: 2px solid #ffff20; }
 
         /* match */
         .table th { font-weight: normal; background-color: #eee; }
@@ -185,10 +218,6 @@ _INDEX_HTML_HEADER = dedent(u"""\
             padding: 1px; border: 1px solid #ccc; }
         p { line-height: 40px; }
         .table td { vertical-align: middle; }
-
-        /* ocr */
-        .annotated_image { position: relative; }
-        .ocr_region { position: absolute; outline: 2px solid #8080ff; }
     </style>
     </head>
     <body>
