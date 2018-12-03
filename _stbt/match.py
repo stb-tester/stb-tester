@@ -738,6 +738,10 @@ def _log_match_image_debug(imglog):
 
     from _stbt.core import _Annotation
 
+    title = "stbt.match(%r): %s" % (
+        imglog.data["template_name"],
+        "Matched" if any(imglog.data["matches"]) else "Didn't match")
+
     for matched, position, _, level in imglog.data["pyramid_levels"]:
         template = imglog.images["level%d-template" % level]
         imglog.imwrite("level%d-source_with_match" % level,
@@ -760,10 +764,7 @@ def _log_match_image_debug(imglog):
          for x in imglog.data["matches"]])
 
     template = u"""\
-        <h4>
-            {{"Matched" if matched else "Didn't match"}}
-            <i>{{template_name}}</i>
-        </h4>
+        <h4>{{title}}</h4>
 
         <img src="source_with_matches.png" />
 
@@ -897,10 +898,9 @@ def _log_match_image_debug(imglog):
         template,
         link=link,
         match_parameters=imglog.data["match_parameters"],
-        matched=any(imglog.data["matches"]),
         matches=imglog.data["matches"],
         pyramid_levels=imglog.data["pyramid_levels"],
         show_second_pass=any(
             x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
-        template_name=imglog.data["template_name"],
+        title=title,
     )
