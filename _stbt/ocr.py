@@ -483,7 +483,7 @@ def _tesseract_subprocess(
 
         tessenv = os.environ.copy()
 
-        if _config or user_words or user_patterns:
+        if _config or user_words or user_patterns or imglog.enabled:
             tessdata_dir = tmp + '/tessdata'
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(), tmp)
@@ -509,6 +509,9 @@ def _tesseract_subprocess(
                 f.write('\n'.join(to_bytes(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
+        if imglog.enabled:
+            _config['tessedit_write_images'] = True
+
         if _config:
             with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
                 for k, v in _config.iteritems():
@@ -525,6 +528,11 @@ def _tesseract_subprocess(
         except subprocess.CalledProcessError as e:
             warn("Tesseract failed: %s" % e.output)
             raise
+
+        if imglog.enabled:
+            tessinput = os.path.join(tmp, "tessinput.tif")
+            if os.path.exists(tessinput):
+                imglog.imwrite("tessinput", cv2.imread(tessinput))
 
         for filename in glob.glob(tmp + "/output.*"):
             _, ext = os.path.splitext(filename)
@@ -660,6 +668,11 @@ def _log_ocr_image_debug(imglog, text):
           (threshold={{ text_color_threshold }}):
         </h5>
         <img src="text_color_threshold.png" />
+        {% endif %}
+
+        {% if "tessinput" in images %}
+        <h5>Tesseract's binarisation:</h5>
+        <img src="tessinput.png" />
         {% endif %}
     """
 
