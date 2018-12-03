@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import errno
+import glob
 import os
 import re
 import subprocess
@@ -468,15 +469,7 @@ def _tesseract_subprocess(
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
-    # The second argument to tesseract is "output base" which is a filename to
-    # which tesseract will append an extension. Unfortunately this filename
-    # isn't easy to predict in advance across different versions of tesseract.
-    # If you give it "hello" the output will be written to "hello.txt", but in
-    # hOCR mode it will be "hello.html" (tesseract 3.02) or "hello.hocr"
-    # (tesseract 3.03). We work around this with a temporary directory:
     with named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
-        outdir = tmp + '/output'
-        os.mkdir(outdir)
 
         if _tesseract_version() >= LooseVersion("3.05"):
             psm_flag = "--psm"
@@ -485,7 +478,7 @@ def _tesseract_subprocess(
 
         cmd = ["tesseract", '-l', lang,
                tmp + '/input.png',
-               outdir + '/output',
+               tmp + '/output',
                psm_flag, str(int(mode))] + engine_flags
 
         tessenv = os.environ.copy()
@@ -527,12 +520,17 @@ def _tesseract_subprocess(
 
         cv2.imwrite(tmp + '/input.png', frame)
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+            subprocess.check_output(cmd, cwd=tmp, env=tessenv,
+                                    stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             warn("Tesseract failed: %s" % e.output)
             raise
-        with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return outfile.read().decode('utf-8')
+
+        for filename in glob.glob(tmp + "/output.*"):
+            _, ext = os.path.splitext(filename)
+            if ext == ".txt" or ext == ".hocr":
+                with open(filename) as f:
+                    return f.read().decode("utf-8")
 
 
 def _hocr_iterate(hocr):
