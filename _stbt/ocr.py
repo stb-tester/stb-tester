@@ -403,7 +403,27 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                 "Invalid config value ocr.engine='%s'. Valid values are %s."
                 % (engine_name, ", ".join(x.name for x in OcrEngine)))  # pylint:disable=not-an-iterable
 
+    tesseract_version = _tesseract_version()
+
+    if tesseract_version < LooseVersion("4.0"):
+        if engine == OcrEngine.DEFAULT:
+            engine = OcrEngine.TESSERACT
+        if engine != OcrEngine.TESSERACT:
+            # NB `str(engine)` looks like "OcrEngine.LSTM"
+            raise ValueError("%s isn't available in tesseract %s"
+                             % (engine, tesseract_version))
+
+    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
+        # NB `str(mode)` looks like "OcrMode.RAW_LINE"
+        raise ValueError("%s isn't available in tesseract %s"
+                         % (mode, tesseract_version))
+
     imglog.imwrite("source", frame)
+    imglog.set(engine=engine, mode=mode, lang=lang,
+               user_patterns=user_patterns, user_words=user_words,
+               upsample=upsample, text_color=text_color,
+               text_color_threshold=text_color_threshold,
+               tesseract_version=tesseract_version)
 
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)
@@ -419,7 +439,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
                                   text_color, text_color_threshold, engine,
-                                  imglog, _tesseract_version()),
+                                  imglog, tesseract_version),
             region)
 
 
@@ -431,23 +451,7 @@ def _tesseract_subprocess(
     if tesseract_version >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
     else:
-        if engine == OcrEngine.DEFAULT:
-            engine = OcrEngine.TESSERACT
-        if engine != OcrEngine.TESSERACT:
-            # NB `str(engine)` looks like "OcrEngine.LSTM"
-            raise ValueError("%s isn't available in tesseract %s"
-                             % (engine, tesseract_version))
         engine_flags = []
-    imglog.set(engine=engine, mode=mode, lang=lang,
-               user_patterns=user_patterns, user_words=user_words,
-               upsample=upsample, text_color=text_color,
-               text_color_threshold=text_color_threshold,
-               tesseract_version=tesseract_version)
-
-    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
-        # NB `str(mode)` looks like "OcrMode.RAW_LINE"
-        raise ValueError("%s isn't available in tesseract %s"
-                         % (mode, tesseract_version))
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
