@@ -14,13 +14,13 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import _stbt.core
-from _stbt.core import \
-    as_precondition, \
-    load_image, \
-    NoVideo, \
-    PreconditionError, \
-    save_frame, \
-    wait_until
+from _stbt.core import (
+    as_precondition,
+    load_image,
+    NoVideo,
+    PreconditionError,
+    save_frame,
+    wait_until)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -45,16 +45,16 @@ from _stbt.motion import (
     MotionResult,
     MotionTimeout,
     wait_for_motion)
-from _stbt.ocr import \
-    match_text, \
-    ocr, \
-    OcrEngine, \
-    OcrMode, \
-    TextMatchResult
-from _stbt.transition import \
-    press_and_wait, \
-    TransitionStatus, \
-    wait_for_transition_to_end
+from _stbt.ocr import (
+    match_text,
+    ocr,
+    OcrEngine,
+    OcrMode,
+    TextMatchResult)
+from _stbt.transition import (
+    press_and_wait,
+    TransitionStatus,
+    wait_for_transition_to_end)
 from _stbt.types import (
     Region,
     UITestError,
