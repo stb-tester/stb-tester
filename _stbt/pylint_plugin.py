@@ -75,8 +75,8 @@ class StbtChecker(BaseChecker):
             if isinstance(node.parent, Expr):
                 for inferred in _infer(node.func):
                     if inferred.root().name in (
-                            'stbt', '_stbt.core', '_stbt.match', '_stbt.ocr',
-                            '_stbt.transition'):
+                            'stbt', '_stbt.black', '_stbt.core', '_stbt.match',
+                            '_stbt.ocr', '_stbt.transition'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
 

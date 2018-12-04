@@ -14,6 +14,8 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import _stbt.core
+from _stbt.black import (
+    is_screen_black)
 from _stbt.core import (
     as_precondition,
     load_image,
@@ -240,52 +242,6 @@ def get_frame():
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
     """
     return _dut.get_frame()
-
-
-def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
-    """Check for the presence of a black screen in a video frame.
-
-    :type frame: `stbt.Frame` or `numpy.ndarray`
-    :param frame:
-      If this is specified it is used as the video frame to check; otherwise a
-      new frame is grabbed from the device-under-test. This is an image in
-      OpenCV format (for example as returned by `frames` and `get_frame`).
-
-    :type mask: str or `numpy.ndarray`
-    :param mask:
-        A black & white image that specifies which part of the image to
-        analyse. White pixels select the area to analyse; black pixels select
-        the area to ignore. The mask must be the same size as the video frame.
-
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
-
-    :param int threshold:
-      Even when a video frame appears to be black, the intensity of its pixels
-      is not always 0. To differentiate almost-black from non-black pixels, a
-      binary threshold is applied to the frame. The ``threshold`` value is in
-      the range 0 (black) to 255 (white). The global default can be changed by
-      setting ``threshold`` in the ``[is_screen_black]`` section of
-      :ref:`.stbt.conf`.
-
-    :type region: `Region`
-    :param region:
-        Only analyze the specified region of the video frame.
-
-        If you specify both ``region`` and ``mask``, the mask must be the same
-        size as the region.
-
-    :returns:
-        An object that will evaluate to true if the frame was black, or false
-        if not black. The object has the following attributes:
-
-        * **black** (*bool*) – True if the frame was black.
-        * **frame** (`stbt.Frame`) – The video frame that was analysed.
-
-    | Added in v28: The ``region`` parameter.
-    | Added in v29: Return an object with a frame attribute, instead of bool.
-    """
-    return _dut.is_screen_black(frame, mask, threshold, region)
 
 
 @contextmanager

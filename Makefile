@@ -61,6 +61,7 @@ extra/fedora/stb-tester.spec stbt-control-relay: \
 
 INSTALL_PYLIB_FILES = \
     _stbt/__init__.py \
+    _stbt/black.py \
     _stbt/config.py \
     _stbt/control.py \
     _stbt/core.py \

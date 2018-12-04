@@ -31,8 +31,7 @@ from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
-from _stbt.imgutils import (_frame_repr, _image_region, _ImageFromUser,
-                            _load_image, crop, find_user_file, Frame)
+from _stbt.imgutils import find_user_file, Frame
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 
@@ -85,20 +84,6 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
     if image is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
     return image
-
-
-class _IsScreenBlackResult(object):
-    def __init__(self, black, frame):
-        self.black = black
-        self.frame = frame
-
-    def __nonzero__(self):
-        return self.black
-
-    def __repr__(self):
-        return ("_IsScreenBlackResult(black=%r, frame=%s)" % (
-            self.black,
-            _frame_repr(self.frame)))
 
 
 def new_device_under_test_from_config(
@@ -331,46 +316,6 @@ class DeviceUnderTest(object):
             return frame
         else:
             return self._display.get_frame()
-
-    def is_screen_black(self, frame=None, mask=None, threshold=None,
-                        region=Region.ALL):
-        if threshold is None:
-            threshold = get_config('is_screen_black', 'threshold', type_=int)
-
-        if frame is None:
-            frame = self.get_frame()
-
-        if mask is None:
-            mask = _ImageFromUser(None, None, None)
-        else:
-            mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
-
-        _region = Region.intersect(_image_region(frame), region)
-        greyframe = cv2.cvtColor(crop(frame, _region), cv2.COLOR_BGR2GRAY)
-        if mask.image is not None:
-            cv2.bitwise_and(greyframe, mask.image, dst=greyframe)
-        maxVal = greyframe.max()
-
-        if logging.get_debug_level() > 1:
-            imglog = logging.ImageLogger("is_screen_black")
-            imglog.imwrite("source", frame)
-            if mask.image is not None:
-                imglog.imwrite('mask', mask.image)
-            _, thresholded = cv2.threshold(greyframe, threshold, 255,
-                                           cv2.THRESH_BINARY)
-            imglog.imwrite('non-black-regions-after-masking', thresholded)
-
-        result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
-        debug("is_screen_black: {found} black screen using mask={mask}, "
-              "threshold={threshold}, region={region}: "
-              "{result}, maximum_intensity={maxVal}".format(
-                  found="Found" if result.black else "Didn't find",
-                  mask=mask.friendly_name,
-                  threshold=threshold,
-                  region=region,
-                  result=result,
-                  maxVal=maxVal))
-        return result
 
 
 # Utility functions
