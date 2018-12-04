@@ -11,7 +11,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 from __future__ import absolute_import
 
-import sys
 from contextlib import contextmanager
 
 import _stbt.core
