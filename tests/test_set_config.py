@@ -3,30 +3,18 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from _stbt.config import _config_init, _sponge, get_config, set_config
-
-
-@contextmanager
-def _directory_sandbox():
-    from tempfile import mkdtemp
-    from shutil import rmtree
-    from os import chdir
-    d = mkdtemp()
-    try:
-        chdir(d)
-        yield d
-    finally:
-        rmtree(d, ignore_errors=True)
+from _stbt.utils import scoped_curdir
 
 
 def test_sponge_that_new_data_end_up_in_file():
-    with _directory_sandbox():
+    with scoped_curdir():
         with _sponge('hello') as f:
             f.write('hello')
         assert open('hello').read() == 'hello'
 
 
 def test_sponge_that_on_exception_file_isnt_modified():
-    with _directory_sandbox():
+    with scoped_curdir():
         open('foo', 'w').write('bar')
         try:
             with _sponge('foo') as f:
@@ -45,7 +33,7 @@ test_config = dedent("""\
 
 @contextmanager
 def set_config_test():
-    with _directory_sandbox() as d:
+    with scoped_curdir() as d:
         test_cfg = d + '/test.cfg'
         os.environ['STBT_CONFIG_FILE'] = test_cfg
         with open(test_cfg, 'w') as f:
@@ -84,7 +72,7 @@ def test_that_set_config_preserves_file_comments_and_formatting():
 
 
 def test_that_set_config_creates_directories_if_required():
-    with _directory_sandbox() as d:
+    with scoped_curdir() as d:
         os.environ['XDG_CONFIG_HOME'] = d + '/.config'
         if 'STBT_CONFIG_FILE' in os.environ:
             del os.environ['STBT_CONFIG_FILE']
@@ -95,7 +83,7 @@ def test_that_set_config_creates_directories_if_required():
 
 
 def test_that_set_config_writes_to_the_first_stbt_config_file():
-    with _directory_sandbox() as d:
+    with scoped_curdir() as d:
         filled_cfg = d + '/test.cfg'
         empty_cfg = d + '/empty.cfg'
         os.environ['STBT_CONFIG_FILE'] = '%s:%s' % (filled_cfg, empty_cfg)
