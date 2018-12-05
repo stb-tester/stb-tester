@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from .config import get_config
+from .types import Region
 from .utils import mkdir_p
 
 _debug_level = None
@@ -117,6 +118,8 @@ class ImageLogger(object):
         import numpy
         if not self.enabled:
             return
+        if image is None:
+            return
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
         if image.dtype == numpy.float32:
@@ -162,7 +165,9 @@ class ImageLogger(object):
                     .render(frame_number=self.frame_number)
                     .encode("utf-8"))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
-                    .render(draw=self._draw, **template_kwargs)
+                    .render(annotated_image=self._draw_annotated_image,
+                            draw=self._draw,
+                            **template_kwargs)
                     .encode("utf-8"))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
                     .render()
@@ -196,6 +201,44 @@ class ImageLogger(object):
                     region=region,
                     title=title)
 
+    def _draw_annotated_image(self, regions=None, source_name="source"):
+        import jinja2
+
+        s = self.images[source_name].shape
+        source_size = Region(0, 0, s[1], s[0])
+
+        _regions = []
+        if "region" in self.data:
+            _regions.append((Region.intersect(self.data["region"], source_size),
+                             "source_region", None))
+
+        if isinstance(regions, Region):
+            _regions.append((regions, True, None))
+        elif hasattr(regions, "region"):  # e.g. MotionResult
+            _regions.append((regions.region, bool(regions), None))
+        elif regions is not None:
+            for r in regions:
+                if not isinstance(r, tuple) or len(r) != 3:
+                    raise ValueError(
+                        "_draw_annotated_image expected 3-tuple "
+                        "(region, css_class, title); got %r" % r)
+                _regions.append(r)
+
+        return jinja2.Template(dedent("""\
+            <div class="annotated_image"
+                 style="max-width: {{source_size.width}}px">
+              <img src="{{source_name}}.png">
+              {% for region, css_class, title in regions %}
+              {{ draw(region, source_size, css_class, title) }}
+              {% endfor %}
+            </div>
+        """)).render(
+            draw=self._draw,
+            regions=_regions,
+            source_name=source_name,
+            source_size=source_size,
+        )
+
 
 _INDEX_HTML_HEADER = dedent(u"""\
     <!DOCTYPE html>
@@ -211,7 +254,7 @@ _INDEX_HTML_HEADER = dedent(u"""\
         h5 { margin-top: 40px; }
         .annotated_image { position: relative; }
         .region { position: absolute; }
-        .roi { outline: 2px solid #8080ff; }
+        .source_region { outline: 2px solid #8080ff; }
         .region.matched { outline: 2px solid #ff0020; }
         .region.nomatch { outline: 2px solid #ffff20; }
 

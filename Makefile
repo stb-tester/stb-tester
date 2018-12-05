@@ -185,6 +185,7 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/irnetbox.py \
     _stbt/logging.py \
     _stbt/stbt.conf \
+    _stbt/types.py \
     _stbt/utils.py \
     stbt_control_relay.py
 

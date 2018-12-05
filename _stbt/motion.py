@@ -93,7 +93,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
                 previous_frame_gray.shape))
 
     for frame in frames:
-        imglog = ImageLogger("detect_motion")
+        imglog = ImageLogger("detect_motion", region=region)
         imglog.imwrite("source", frame)
         imglog.set(roi=region, noise_threshold=noise_threshold)
 
@@ -300,14 +300,7 @@ def _log_motion_image_debug(imglog, result):
           {{ "Found" if result.motion else "Didn't find" }} motion
         </h4>
 
-        <div class="annotated_image"
-             style="max-width: {{source_region.width}}px">
-          <img src="source.png">
-          {{ draw(roi, source_region, "roi") }}
-          {% if result.motion %}
-          {{ draw(result.region, source_region, True) }}
-          {% endif %}
-        </div>
+        {{ annotated_image(result) }}
 
         <h5>ROI Gray:</h5>
         <img src="gray.png" />
@@ -332,8 +325,4 @@ def _log_motion_image_debug(imglog, result):
         <img src="absdiff_threshold_erode.png" />
     """
 
-    imglog.html(
-        template,
-        result=result,
-        source_region=_image_region(imglog.images["source"]),
-    )
+    imglog.html(template, result=result)

@@ -642,10 +642,9 @@ def _log_ocr_image_debug(imglog, output=None):
         match_text = False  # pylint:disable=redefined-outer-name
     else:
         match_text = True
-        result = imglog.data["result"]
         title = "stbt.match_text(%r): %s" % (
             imglog.data["text"],
-            "Matched" if result else "Didn't match")
+            "Matched" if imglog.data["result"] else "Didn't match")
         hocr = imglog.data["hocr"]
         if hocr is None:
             output = u""
@@ -655,15 +654,7 @@ def _log_ocr_image_debug(imglog, output=None):
     template = u"""\
         <h4>{{title}}</h4>
 
-        <div class="annotated_image"
-             style="max-width: {{image_region.width}}px">
-          <img src="source.png" />
-          {{ draw(roi, image_region, "roi") }}
-          {% if match_text %}
-          {{ draw(result.region, image_region, result.match,
-                  title=result.text) }}
-          {% endif %}
-        </div>
+        {{ annotated_image(result) }}
 
         <h5>Text:</h5>
         <pre><code>{{ output | escape }}</code></pre>
@@ -713,10 +704,8 @@ def _log_ocr_image_debug(imglog, output=None):
 
     imglog.html(
         template,
-        image_region=_image_region(imglog.images["source"]),
         match_text=match_text,
         output=output,
-        roi=imglog.data["region"],
         title=title,
     )
 
