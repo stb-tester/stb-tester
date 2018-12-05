@@ -320,6 +320,87 @@ def test_match_debug():
         assert_expected("stbt-debug-expected-output/match")
 
 
+def test_motion_debug():
+    # So that the output directory name doesn't depend on how many tests
+    # were run before this one.
+    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+
+    def fake_frames():
+        for i, f in enumerate(["box-00001.png",
+                               "box-00002.png",
+                               "box-00003.png"]):
+            yield stbt.Frame(stbt.load_image(f), time=i)
+
+    with scoped_curdir(), scoped_debug_level(2):
+
+        for _ in stbt.detect_motion(frames=fake_frames()):
+            pass
+        for _ in stbt.detect_motion(frames=fake_frames(), mask="box-00000.png"):
+            pass
+        for _ in stbt.detect_motion(frames=fake_frames(),
+                                    region=stbt.Region(0, 0, 320, 400)):
+            pass
+
+        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        assert files == dedent("""\
+            stbt-debug
+            stbt-debug/00001
+            stbt-debug/00001/absdiff.png
+            stbt-debug/00001/absdiff_threshold_erode.png
+            stbt-debug/00001/absdiff_threshold.png
+            stbt-debug/00001/gray.png
+            stbt-debug/00001/index.html
+            stbt-debug/00001/previous_frame_gray.png
+            stbt-debug/00001/source.png
+            stbt-debug/00002
+            stbt-debug/00002/absdiff.png
+            stbt-debug/00002/absdiff_threshold_erode.png
+            stbt-debug/00002/absdiff_threshold.png
+            stbt-debug/00002/gray.png
+            stbt-debug/00002/index.html
+            stbt-debug/00002/previous_frame_gray.png
+            stbt-debug/00002/source.png
+            stbt-debug/00003
+            stbt-debug/00003/absdiff_masked.png
+            stbt-debug/00003/absdiff.png
+            stbt-debug/00003/absdiff_threshold_erode.png
+            stbt-debug/00003/absdiff_threshold.png
+            stbt-debug/00003/gray.png
+            stbt-debug/00003/index.html
+            stbt-debug/00003/mask.png
+            stbt-debug/00003/previous_frame_gray.png
+            stbt-debug/00003/source.png
+            stbt-debug/00004
+            stbt-debug/00004/absdiff_masked.png
+            stbt-debug/00004/absdiff.png
+            stbt-debug/00004/absdiff_threshold_erode.png
+            stbt-debug/00004/absdiff_threshold.png
+            stbt-debug/00004/gray.png
+            stbt-debug/00004/index.html
+            stbt-debug/00004/mask.png
+            stbt-debug/00004/previous_frame_gray.png
+            stbt-debug/00004/source.png
+            stbt-debug/00005
+            stbt-debug/00005/absdiff.png
+            stbt-debug/00005/absdiff_threshold_erode.png
+            stbt-debug/00005/absdiff_threshold.png
+            stbt-debug/00005/gray.png
+            stbt-debug/00005/index.html
+            stbt-debug/00005/previous_frame_gray.png
+            stbt-debug/00005/source.png
+            stbt-debug/00006
+            stbt-debug/00006/absdiff.png
+            stbt-debug/00006/absdiff_threshold_erode.png
+            stbt-debug/00006/absdiff_threshold.png
+            stbt-debug/00006/gray.png
+            stbt-debug/00006/index.html
+            stbt-debug/00006/previous_frame_gray.png
+            stbt-debug/00006/source.png
+        """)
+
+        assert_expected("stbt-debug-expected-output/motion")
+
+
 def test_ocr_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
