@@ -18,6 +18,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     The `MotionResult` indicates whether any motion was detected -- that is,
     any difference between two consecutive frames.
 
+    Use it in a ``for`` loop like this::
+
+        for motionresult in stbt.detect_motion():
+            ...
+
+    In most cases you should use `wait_for_motion` instead.
+
     :type timeout_secs: int or float or None
     :param timeout_secs:
         A timeout in seconds. After this timeout the iterator will be exhausted.
