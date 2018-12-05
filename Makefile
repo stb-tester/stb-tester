@@ -61,6 +61,7 @@ extra/fedora/stb-tester.spec stbt-control-relay: \
 
 INSTALL_PYLIB_FILES = \
     _stbt/__init__.py \
+    _stbt/black.py \
     _stbt/config.py \
     _stbt/control.py \
     _stbt/core.py \
@@ -184,6 +185,7 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/irnetbox.py \
     _stbt/logging.py \
     _stbt/stbt.conf \
+    _stbt/types.py \
     _stbt/utils.py \
     stbt_control_relay.py
 
@@ -223,7 +225,7 @@ check: check-pylint check-pytest check-integrationtests
 check-pytest: all tests/buttons.png tests/ocr/menu.png
 	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
-	py.test -v -rs --doctest-modules \
+	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
 		      -e tests/test.py \

@@ -1,11 +1,12 @@
+# coding: utf-8
+
 from collections import deque
 
 import cv2
-import numpy
 
 from .config import ConfigurationError, get_config
 from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
-                       crop, limit_time)
+                       pixel_bounding_box, crop, limit_time)
 from .logging import debug, draw_on, ImageLogger
 from .types import Region, UITestFailure
 
@@ -99,10 +100,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
                 previous_frame_gray.shape))
 
     for frame in frames:
-        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
+        imglog = ImageLogger("detect_motion", region=region)
+        imglog.imwrite("source", frame)
+        imglog.set(roi=region, noise_threshold=noise_threshold)
 
-        imglog = ImageLogger("detect_motion")
-        imglog.imwrite("source", frame_gray)
+        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
+        imglog.imwrite("gray", frame_gray)
+        imglog.imwrite("previous_frame_gray", previous_frame_gray)
 
         absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
         previous_frame_gray = frame_gray
@@ -122,7 +126,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         imglog.imwrite("absdiff_threshold", thresholded)
         imglog.imwrite("absdiff_threshold_erode", eroded)
 
-        out_region = _pixel_bounding_box(eroded)
+        out_region = pixel_bounding_box(eroded)
         if out_region:
             # Undo cv2.erode above:
             out_region = out_region.extend(x=-1, y=-1)
@@ -136,48 +140,8 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         draw_on(frame, result, label="detect_motion()")
         debug("%s found: %s" % (
             "Motion" if motion else "No motion", str(result)))
+        _log_motion_image_debug(imglog, result)
         yield result
-
-
-def _pixel_bounding_box(img):
-    """
-    Find the smallest region that contains all the non-zero pixels in an image.
-
-    >>> _pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
-    >>> _pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
-    Region(x=0, y=0, right=1, bottom=1)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0],
-    ...     [0, 1, 1, 1],
-    ...     [0, 1, 1, 1],
-    ...     [0, 0, 0, 0],
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=4, bottom=3)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0, 0, 0],
-    ...     [0, 0, 0, 1, 0, 0],
-    ...     [0, 1, 0, 0, 0, 0],
-    ...     [0, 0, 0, 0, 1, 0],
-    ...     [0, 0, 1, 0, 0, 0],
-    ...     [0, 0, 0, 0, 0, 0]
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=5, bottom=5)
-    """
-    if len(img.shape) != 2:
-        raise ValueError("Single-channel image required.  Provided image has "
-                         "shape %r" % (img.shape,))
-
-    out = [None, None, None, None]
-
-    for axis in (0, 1):
-        flat = numpy.any(img, axis=axis)
-        indices = numpy.where(flat)[0]
-        if len(indices) == 0:
-            return None
-        out[axis] = indices[0]
-        out[axis + 2] = indices[-1] + 1
-
-    return Region.from_extents(*out)
 
 
 def wait_for_motion(
@@ -219,7 +183,8 @@ def wait_for_motion(
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
 
-    Added in v28: The ``region`` parameter.
+    | Added in v28: The ``region`` parameter.
+    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
@@ -330,3 +295,41 @@ class MotionTimeout(UITestFailure):
         return "Didn't find motion%s within %g seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
+
+
+def _log_motion_image_debug(imglog, result):
+    if not imglog.enabled:
+        return
+
+    template = u"""\
+        <h4>
+          detect_motion:
+          {{ "Found" if result.motion else "Didn't find" }} motion
+        </h4>
+
+        {{ annotated_image(result) }}
+
+        <h5>ROI Gray:</h5>
+        <img src="gray.png" />
+
+        <h5>Previous frame ROI Gray:</h5>
+        <img src="previous_frame_gray.png" />
+
+        <h5>Absolute difference:</h5>
+        <img src="absdiff.png" />
+
+        {% if "mask" in images %}
+        <h5>Mask:</h5>
+        <img src="mask.png" />
+        <h5>Absolute difference – masked:</h5>
+        <img src="absdiff_masked.png" />
+        {% endif %}
+
+        <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
+        <img src="absdiff_threshold.png" />
+
+        <h5>Eroded:</h5>
+        <img src="absdiff_threshold_erode.png" />
+    """
+
+    imglog.html(template, result=result)

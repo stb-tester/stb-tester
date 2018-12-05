@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
 Copyright 2013-2018 stb-tester.com Ltd.
@@ -18,7 +20,7 @@ import _stbt.cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
-from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger, warn
+from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .types import Region, UITestFailure
 
 
@@ -736,6 +738,10 @@ def _log_match_image_debug(imglog):
 
     from _stbt.core import _Annotation
 
+    title = "stbt.match(%r): %s" % (
+        imglog.data["template_name"],
+        "Matched" if any(imglog.data["matches"]) else "Didn't match")
+
     for matched, position, _, level in imglog.data["pyramid_levels"]:
         template = imglog.images["level%d-template" % level]
         imglog.imwrite("level%d-source_with_match" % level,
@@ -751,35 +757,16 @@ def _log_match_image_debug(imglog):
             result.region, _Annotation.MATCHED if result._first_pass_matched  # pylint:disable=protected-access
             else _Annotation.NO_MATCH)
 
-    try:
-        import jinja2
-    except ImportError:
-        warn(
-            "Not generating html view of the image-processing debug images,"
-            " because python 'jinja2' module is not installed.")
-        return
+    imglog.imwrite(
+        "source_with_matches", imglog.images["source"],
+        [x.region for x in imglog.data["matches"]],
+        [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
+         for x in imglog.data["matches"]])
 
-    template = jinja2.Template("""
-        <!DOCTYPE html>
-        <html lang='en'>
-        <head>
-        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
-        <style>
-            h5 { margin-top: 40px; }
-            .table th { font-weight: normal; background-color: #eee; }
-            img {
-                vertical-align: middle; max-width: 150px; max-height: 36px;
-                padding: 1px; border: 1px solid #ccc; }
-            p { line-height: 40px; }
-            .table td { vertical-align: middle; }
-        </style>
-        </head>
-        <body>
-        <div class="container">
-        <h4>
-            <i>{{template_name}}</i>
-            {{"matched" if matched else "didn't match"}}
-        </h4>
+    template = u"""\
+        <h4>{{title}}</h4>
+
+        <img src="source_with_matches.png" />
 
         <h5>First pass (find candidate matches):</h5>
 
@@ -898,27 +885,19 @@ def _log_match_image_debug(imglog):
         <p>For further help please read
             <a href="http://stb-tester.com/match-parameters.html">stb-tester
             image matching parameters</a>.
-
-        </div>
-        </body>
-        </html>
-    """)
+    """
 
     def link(name, level=None, match=None):  # pylint: disable=redefined-outer-name
-        return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'></a>"
+        return ("<a href='{0}{1}{2}.png'><img src='{0}{1}{2}.png'"
+                " class='thumb'></a>"
                 .format("" if level is None else "level%d-" % level,
                         "" if match is None else "match%d-" % match,
                         name))
 
-    with open(os.path.join(imglog.outdir, "index.html"), "w") as f:
-        f.write(template.render(
-            link=link,
-            match_parameters=imglog.data["match_parameters"],
-            matched=any(imglog.data["matches"]),
-            matches=imglog.data["matches"],
-            min=min,
-            pyramid_levels=imglog.data["pyramid_levels"],
-            show_second_pass=any(
-                x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
-            template_name=imglog.data["template_name"],
-        ))
+    imglog.html(
+        template,
+        link=link,
+        show_second_pass=any(
+            x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
+        title=title,
+    )

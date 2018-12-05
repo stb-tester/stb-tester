@@ -6,8 +6,10 @@ import os
 import sys
 from collections import OrderedDict
 from contextlib import contextmanager
+from textwrap import dedent
 
 from .config import get_config
+from .types import Region
 from .utils import mkdir_p
 
 _debug_level = None
@@ -82,8 +84,7 @@ class ImageLogger(object):
         self.frame_number = ImageLogger._frame_number.next()
 
         try:
-            outdir = os.path.join("stbt-debug", self.name,
-                                  "%05d" % self.frame_number)
+            outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
             mkdir_p(outdir)
             self.outdir = outdir
         except OSError:
@@ -112,10 +113,12 @@ class ImageLogger(object):
                 self.data[k] = []
             self.data[k].append(v)
 
-    def imwrite(self, name, image, region=None, colour=None):
+    def imwrite(self, name, image, regions=None, colours=None):
         import cv2
         import numpy
         if not self.enabled:
+            return
+        if image is None:
             return
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
@@ -126,12 +129,159 @@ class ImageLogger(object):
         else:
             image = image.copy()
         self.images[name] = image
-        if region:
+        if regions is None:
+            regions = []
+        elif not isinstance(regions, list):
+            regions = [regions]
+        if colours is None:
+            colours = []
+        elif not isinstance(colours, list):
+            colours = [colours]
+        for region, colour in zip(regions, colours):
             cv2.rectangle(
                 image, (region.x, region.y), (region.right, region.bottom),
                 colour, thickness=1)
 
         cv2.imwrite(os.path.join(self.outdir, name + ".png"), image)
+
+    def html(self, template, **kwargs):
+        if not self.enabled:
+            return
+
+        try:
+            import jinja2
+        except ImportError:
+            warn(
+                "Not generating html view of the image-processing debug images "
+                "because python 'jinja2' module is not installed.")
+            return
+
+        template_kwargs = self.data.copy()
+        template_kwargs["images"] = self.images
+        template_kwargs.update(kwargs)
+
+        with open(os.path.join(self.outdir, "index.html"), "w") as f:
+            f.write(jinja2.Template(_INDEX_HTML_HEADER)
+                    .render(frame_number=self.frame_number)
+                    .encode("utf-8"))
+            f.write(jinja2.Template(dedent(template.lstrip("\n")))
+                    .render(annotated_image=self._draw_annotated_image,
+                            draw=self._draw,
+                            **template_kwargs)
+                    .encode("utf-8"))
+            f.write(jinja2.Template(_INDEX_HTML_FOOTER)
+                    .render()
+                    .encode("utf-8"))
+
+    def _draw(self, region, source_size, css_class, title=None):
+        import jinja2
+
+        if region is None:
+            return ""
+
+        if isinstance(css_class, bool):
+            if css_class:
+                css_class = "matched"
+            else:
+                css_class = "nomatch"
+
+        return jinja2.Template(dedent("""\
+            <div class="region {{css_class}}"
+                 style="left: {{region.x / image.width * 100}}%;
+                        top: {{region.y / image.height * 100}}%;
+                        width: {{region.width / image.width * 100}}%;
+                        height: {{region.height / image.height * 100}}%"
+                 {% if title %}
+                 title="{{ title | escape }}"
+                 {% endif %}
+                 ></div>
+            """)) \
+            .render(css_class=css_class,
+                    image=source_size,
+                    region=region,
+                    title=title)
+
+    def _draw_annotated_image(self, regions=None, source_name="source"):
+        import jinja2
+
+        s = self.images[source_name].shape
+        source_size = Region(0, 0, s[1], s[0])
+
+        _regions = []
+        if "region" in self.data:
+            _regions.append((Region.intersect(self.data["region"], source_size),
+                             "source_region", None))
+
+        if isinstance(regions, Region):
+            _regions.append((regions, True, None))
+        elif hasattr(regions, "region"):  # e.g. MotionResult
+            _regions.append((regions.region, bool(regions), None))
+        elif regions is not None:
+            for r in regions:
+                if not isinstance(r, tuple) or len(r) != 3:
+                    raise ValueError(
+                        "_draw_annotated_image expected 3-tuple "
+                        "(region, css_class, title); got %r" % r)
+                _regions.append(r)
+
+        return jinja2.Template(dedent("""\
+            <div class="annotated_image"
+                 style="max-width: {{source_size.width}}px">
+              <img src="{{source_name}}.png">
+              {% for region, css_class, title in regions %}
+              {{ draw(region, source_size, css_class, title) }}
+              {% endfor %}
+            </div>
+        """)).render(
+            draw=self._draw,
+            regions=_regions,
+            source_name=source_name,
+            source_size=source_size,
+        )
+
+
+_INDEX_HTML_HEADER = dedent(u"""\
+    <!DOCTYPE html>
+    <html lang='en'>
+    <head>
+    <meta charset="utf-8"/>
+    <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <style>
+        a.nav { margin: 10px; }
+        a.nav[href*="/00000/"] { visibility: hidden; }
+        a.nav.pull-left { margin-left: 0; }
+        a.nav.pull-right { margin-right: 0; }
+        h5 { margin-top: 40px; }
+        .annotated_image { position: relative; }
+        .region { position: absolute; }
+        .source_region { outline: 2px solid #8080ff; }
+        .region.matched { outline: 2px solid #ff0020; }
+        .region.nomatch { outline: 2px solid #ffff20; }
+
+        /* match */
+        .table th { font-weight: normal; background-color: #eee; }
+        img.thumb {
+            vertical-align: middle; max-width: 150px; max-height: 36px;
+            padding: 1px; border: 1px solid #ccc; }
+        p { line-height: 40px; }
+        .table td { vertical-align: middle; }
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
+       class="nav pull-left">«prev</a>
+    <a href="../{{ "%05d" % (frame_number + 1) }}/index.html"
+       class="nav pull-right">next»</a>
+
+    """)
+
+_INDEX_HTML_FOOTER = dedent(u"""\
+
+    </div>
+    </body>
+    </html>
+""")
 
 
 def test_that_debug_can_write_unicode_strings():

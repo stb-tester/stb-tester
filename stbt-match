@@ -7,7 +7,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import argparse
-import os
 import sys
 from contextlib import contextmanager
 
@@ -29,6 +28,9 @@ parser.description = """Run stbt's image-matching algorithm against a single
 parser.add_argument(
     "-v", "--verbose", action="store_true",
     help="Dump image processing debug images to ./stbt-debug directory")
+parser.add_argument(
+    "--all", action="store_true",
+    help='Use "stbt.match_all" instead of "stbt.match"')
 parser.add_argument(
     "source_file", help="""The screenshot to compare against (you can capture it
         using 'stbt screenshot')""")
@@ -69,15 +71,20 @@ if source_image is None:
 def noop_contextmanager():
     yield
 
+
 with (_stbt.logging.scoped_debug_level(2) if args.verbose
       else noop_contextmanager()):
     try:
-        result = stbt.match(
-            os.path.abspath(args.reference_file), frame=source_image,
-            match_parameters=mp)
-        print "%s: %s" % (
-            "Match found" if result else "No match found. Closest match",
-            result)
-        sys.exit(0 if result else 1)
+        match_found = False
+        for result in stbt.match_all(
+                args.reference_file, frame=source_image, match_parameters=mp):
+            print "%s: %s" % (
+                "Match found" if result else "No match found. Closest match",
+                result)
+            if result:
+                match_found = True
+            if not args.all:
+                break
+        sys.exit(0 if match_found else 1)
     except stbt.UITestError as e:
         error(e.message)

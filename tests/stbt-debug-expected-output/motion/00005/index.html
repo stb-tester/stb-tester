@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset="utf-8"/>
+<link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+<style>
+    a.nav { margin: 10px; }
+    a.nav[href*="/00000/"] { visibility: hidden; }
+    a.nav.pull-left { margin-left: 0; }
+    a.nav.pull-right { margin-right: 0; }
+    h5 { margin-top: 40px; }
+    .annotated_image { position: relative; }
+    .region { position: absolute; }
+    .source_region { outline: 2px solid #8080ff; }
+    .region.matched { outline: 2px solid #ff0020; }
+    .region.nomatch { outline: 2px solid #ffff20; }
+
+    /* match */
+    .table th { font-weight: normal; background-color: #eee; }
+    img.thumb {
+        vertical-align: middle; max-width: 150px; max-height: 36px;
+        padding: 1px; border: 1px solid #ccc; }
+    p { line-height: 40px; }
+    .table td { vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="container">
+<a href="../00004/index.html"
+   class="nav pull-left">«prev</a>
+<a href="../00006/index.html"
+   class="nav pull-right">next»</a>
+<h4>
+  detect_motion:
+  Didn't find motion
+</h4>
+
+<div class="annotated_image"
+     style="max-width: 640px">
+  <img src="source.png">
+  
+  <div class="region source_region"
+     style="left: 0.0%;
+            top: 0.0%;
+            width: 50.0%;
+            height: 100.0%"
+     
+     ></div>
+  
+  
+  
+</div>
+
+<h5>ROI Gray:</h5>
+<img src="gray.png" />
+
+<h5>Previous frame ROI Gray:</h5>
+<img src="previous_frame_gray.png" />
+
+<h5>Absolute difference:</h5>
+<img src="absdiff.png" />
+
+
+
+<h5>Threshold (noise_threshold=0.84):</h5>
+<img src="absdiff_threshold.png" />
+
+<h5>Eroded:</h5>
+<img src="absdiff_threshold_erode.png" />
+</div>
+</body>
+</html>
