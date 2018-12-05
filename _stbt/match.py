@@ -16,8 +16,7 @@ from collections import namedtuple
 import cv2
 import numpy
 
-import _stbt.cv2_compat
-
+from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
@@ -550,7 +549,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
             heatmap_scale,
-            _stbt.cv2_compat.FILLED)
+            cv2_compat.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, heatmap_scale, threshold, level)
@@ -578,7 +577,7 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         rois = [  # Initial region of interest: The whole image.
             _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        rois = [_Rect(*x) for x in _stbt.cv2_compat.find_contour_boxes(
+        rois = [_Rect(*x) for x in cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
 
     if get_debug_level() > 1:
