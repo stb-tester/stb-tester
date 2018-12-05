@@ -12,7 +12,7 @@ import cv2
 
 from .config import get_config
 from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
-                       crop)
+                       pixel_bounding_box, crop)
 from .logging import debug, ImageLogger
 from .types import Region
 
@@ -72,20 +72,15 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
     else:
         mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
 
+    imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
+    imglog.imwrite("source", frame)
+
     _region = Region.intersect(_image_region(frame), region)
     greyframe = cv2.cvtColor(crop(frame, _region), cv2.COLOR_BGR2GRAY)
     if mask.image is not None:
+        imglog.imwrite("mask", mask.image)
         cv2.bitwise_and(greyframe, mask.image, dst=greyframe)
     maxVal = greyframe.max()
-
-    imglog = ImageLogger("is_screen_black")
-    if imglog.enabled:
-        imglog.imwrite("source", frame)
-        if mask.image is not None:
-            imglog.imwrite('mask', mask.image)
-        _, thresholded = cv2.threshold(greyframe, threshold, 255,
-                                       cv2.THRESH_BINARY)
-        imglog.imwrite('non-black-regions-after-masking', thresholded)
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
     debug("is_screen_black: {found} black screen using mask={mask}, "
@@ -97,6 +92,16 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
               region=region,
               result=result,
               maxVal=maxVal))
+
+    if imglog.enabled:
+        imglog.imwrite("grey", greyframe)
+        _, thresholded = cv2.threshold(greyframe, threshold, 255,
+                                       cv2.THRESH_BINARY)
+        imglog.imwrite("non_black", thresholded)
+        imglog.set(maxVal=maxVal,
+                   non_black_region=pixel_bounding_box(thresholded))
+    _log_image_debug(imglog, result)
+
     return result
 
 
@@ -112,3 +117,33 @@ class _IsScreenBlackResult(object):
         return ("_IsScreenBlackResult(black=%r, frame=%s)" % (
             self.black,
             _frame_repr(self.frame)))
+
+
+def _log_image_debug(imglog, result):
+    if not imglog.enabled:
+        return
+
+    template = u"""\
+        <h4>is_screen_black: {{result.black}}</h4>
+
+        {{ annotated_image(non_black_region) }}
+
+        {% if "mask" in images %}
+        <h5>Mask:</h5>
+        <img src="mask.png" />
+        {% endif %}
+
+        <h5>Greyscale, masked:</h5>
+        <img src="grey.png">
+        <ul>
+          <li>Maximum pixel intensity: {{maxVal}}
+          <li>threshold={{threshold}}
+        </ul>
+
+        {% if not result.black %}
+        <h5>Non-black pixels in region:</h5>
+        <img src="non_black.png" />
+        {% endif %}
+    """
+
+    imglog.html(template, result=result)

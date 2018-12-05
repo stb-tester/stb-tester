@@ -392,6 +392,50 @@ def test_ocr_debug():
         # shutil.move("stbt-debug", _find_file("dave-debug"))
 
 
+def test_is_screen_black_debug():
+    # So that the output directory name doesn't depend on how many tests
+    # were run before this one.
+    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+
+    f = stbt.load_image("videotestsrc-full-frame.png")
+
+    with scoped_curdir(), scoped_debug_level(2):
+
+        stbt.is_screen_black(f)
+        stbt.is_screen_black(f, mask="videotestsrc-mask-non-black.png")
+        stbt.is_screen_black(f, mask="videotestsrc-mask-no-video.png")
+        stbt.is_screen_black(f, region=stbt.Region(0, 0, 160, 120))
+
+        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        assert files == dedent("""\
+            stbt-debug
+            stbt-debug/00001
+            stbt-debug/00001/grey.png
+            stbt-debug/00001/index.html
+            stbt-debug/00001/non_black.png
+            stbt-debug/00001/source.png
+            stbt-debug/00002
+            stbt-debug/00002/grey.png
+            stbt-debug/00002/index.html
+            stbt-debug/00002/mask.png
+            stbt-debug/00002/non_black.png
+            stbt-debug/00002/source.png
+            stbt-debug/00003
+            stbt-debug/00003/grey.png
+            stbt-debug/00003/index.html
+            stbt-debug/00003/mask.png
+            stbt-debug/00003/non_black.png
+            stbt-debug/00003/source.png
+            stbt-debug/00004
+            stbt-debug/00004/grey.png
+            stbt-debug/00004/index.html
+            stbt-debug/00004/non_black.png
+            stbt-debug/00004/source.png
+            """)
+
+        assert_expected("stbt-debug-expected-output/is_screen_black")
+
+
 def assert_expected(expected):
     expected = _find_file(expected)
 
