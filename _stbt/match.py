@@ -12,6 +12,7 @@ import enum
 import itertools
 import os
 from collections import namedtuple
+from distutils.version import LooseVersion
 
 import cv2
 import numpy
@@ -226,7 +227,8 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     :type image: string or `numpy.ndarray`
     :param image:
       The image to search for. It can be the filename of a png file on disk, or
-      a numpy array containing the pixel data in 8-bit BGR format.
+      a numpy array containing the pixel data in 8-bit BGR format. If the image
+      has an alpha channel, any transparent pixels are ignored.
 
       Filenames should be relative paths. See `stbt.load_image` for the path
       lookup algorithm.
@@ -254,6 +256,9 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     :returns:
       A `MatchResult`, which will evaluate to true if a match was found,
       false otherwise.
+
+    Added in v30: MatchMethod.SQDIFF, and support for transparency in the
+    reference image.
     """
     result = next(_match_all(image, frame, match_parameters, region))
     if result.match:
@@ -305,11 +310,56 @@ def _match_all(image, frame, match_parameters, region):
     if match_parameters is None:
         match_parameters = MatchParameters()
 
-    template = _load_image(image)
-
     if frame is None:
         import stbt
         frame = stbt.get_frame()
+
+    template = _load_image(image, cv2.IMREAD_UNCHANGED)
+    t = template.image
+    mask = None
+    if len(t.shape) == 2 or t.shape[2] == 1 or t.shape[2] == 3:
+        pass
+    elif t.shape[2] == 4:
+        # Create transparency mask from alpha channel
+        mask = t[:, :, 3]
+        transparent = mask < 255
+        if numpy.any(transparent):
+            mask[transparent] = 0
+            # OpenCV wants mask to match template's number of channels
+            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        else:
+            mask = None
+        t = t[:, :, 0:3]
+    else:
+        raise ValueError("Expected 3-channel image, got %d channels: %s"
+                         % (t.shape[2], template.absolute_filename))
+
+    if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
+        raise ValueError("Frame must be larger than reference image")
+    if any(t.shape[x] < 1 for x in (0, 1)):
+        raise ValueError("Reference image must contain some data")
+    if (len(frame.shape) != len(t.shape) or
+            len(frame.shape) == 3 and frame.shape[2] != t.shape[2]):
+        raise ValueError(
+            "Frame and reference image must have the same number of channels")
+    if t.dtype != numpy.uint8:
+        raise ValueError("Reference image must be 8-bits per channel")
+
+    if mask is not None:
+        if cv2_compat.version < LooseVersion('3.0.0'):
+            raise ValueError(
+                "Reference image %s has alpha channel, but transparency "
+                "support requires OpenCV 3.0 or greater (you have %s)."
+                % (template.relative_filename, cv2_compat.version))
+        if match_parameters.match_method not in (MatchMethod.SQDIFF,
+                                                 MatchMethod.CCORR_NORMED):
+            # See `matchTemplateMask`:
+            # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
+            raise ValueError(
+                "Reference image %s has alpha channel, but transparency "
+                "support requires match_method SQDIFF or CCORR_NORMED "
+                "(you specified %s)."
+                % (template.relative_filename, match_parameters.match_method))
 
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
@@ -321,7 +371,7 @@ def _match_all(image, frame, match_parameters, region):
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
-                crop(frame, region), template.image,
+                crop(frame, region), t, mask,
                 match_parameters, imglog):
 
             match_region = Region.from_extents(*match_region) \
@@ -421,7 +471,7 @@ class MatchTimeout(UITestFailure):
 
 
 @memoize_iterator({"version": "25"})
-def _find_matches(image, template, match_parameters, imglog):
+def _find_matches(image, template, mask, match_parameters, imglog):
     """Our image-matching algorithm.
 
     Runs 2 passes: `_find_candidate_matches` to locate potential matches, then
@@ -433,27 +483,13 @@ def _find_matches(image, template, match_parameters, imglog):
     matching locations.
     """
 
-    if any(image.shape[x] < template.shape[x] for x in (0, 1)):
-        raise ValueError("Source image must be larger than reference image")
-    if any(template.shape[x] < 1 for x in (0, 1)):
-        raise ValueError("Reference image must contain some data")
-    if not (len(template.shape) == 2 or
-            len(template.shape) == 3 and template.shape[2] == 3):
-        raise ValueError("Reference image must be grayscale or 3 channel BGR")
-    if (len(image.shape) != len(template.shape) or
-            len(image.shape) == 3 and image.shape[2] != template.shape[2]):
-        raise ValueError(
-            "Source and reference images must have the same number of channels")
-    if template.dtype != numpy.uint8:
-        raise ValueError("Reference image must be 8-bits per channel")
-
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, match_parameters,
+            _find_candidate_matches(image, template, mask, match_parameters,
                                     imglog):
         confirmed = (
             first_pass_matched and
-            _confirm_match(image, region, template, match_parameters,
+            _confirm_match(image, region, template, mask, match_parameters,
                            imwrite=lambda name, img: imglog.imwrite(
                                "match%d-%s" % (i, name), img)))  # pylint:disable=cell-var-from-loop
 
@@ -463,7 +499,7 @@ def _find_matches(image, template, match_parameters, imglog):
             break
 
 
-def _find_candidate_matches(image, template, match_parameters, imglog):
+def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -476,6 +512,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     imglog.imwrite("source", image)
     imglog.imwrite("template", template)
+    imglog.imwrite("mask", mask)
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     method = {
@@ -488,6 +525,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
+    if mask is not None:
+        # We can't interpolate values in the transparency mask, as they need
+        # to be 0 or 255. So we disable the pyramid optimization if transparency
+        # is needed.
+        levels = 1
     template_pyramid = _build_pyramid(template, levels)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
@@ -503,7 +545,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             imglog.imwrite("level%d-%s" % (level, name), img, scale=scale)  # pylint:disable=cell-var-from-loop
 
         heatmap, heatmap_scale = _match_template(
-            image_pyramid[level], template_pyramid[level], method,
+            image_pyramid[level], template_pyramid[level], mask, method,
             roi_mask, level, imwrite)
 
         # Relax the threshold slightly for scaled-down pyramid levels to
@@ -557,7 +599,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                         width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, method, roi_mask, level, imwrite):
+def _match_template(image, template, mask, method, roi_mask, level, imwrite):
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
@@ -595,6 +637,10 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
                 thickness=1)
         imwrite("source_with_rois", source_with_rois)
 
+    if mask is not None:
+        kwargs = {"mask": mask}
+    else:
+        kwargs = {}  # For OpenCV < 3.0.0
     for roi in rois:
         r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
         ddebug("Level %d: Searching in %s" % (level, roi))
@@ -602,7 +648,8 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
             image[r.to_slice()],
             template,
             method,
-            matches_heatmap[roi.to_slice()])
+            matches_heatmap[roi.to_slice()],
+            **kwargs)
 
     if method == cv2.TM_SQDIFF:
         # OpenCV's SQDIFF_NORMED normalises by the pixel intensity across
@@ -611,7 +658,13 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         # differences for dark images. With SQDIFF we do our own
         # normalisation based solely on the number of pixels in the sum.
         # We still get a number between 0 - 1.
-        scale = template.size * (255 ** 2)
+
+        if mask is not None:
+            # matchTemplateMask normalises the source & template image to [0,1].
+            # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
+            scale = numpy.count_nonzero(mask)
+        else:
+            scale = template.size * (255 ** 2)
     else:
         scale = 1
 
@@ -687,7 +740,7 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, region, template, match_parameters, imwrite):
+def _confirm_match(image, region, template, mask, match_parameters, imwrite):
     """Second pass: Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
@@ -707,11 +760,20 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
     imwrite("confirm-source_roi_gray", image)
     imwrite("confirm-template_gray", template)
 
+    if mask is not None:
+        mask = mask[:, :, 0]
+
     if match_parameters.confirm_method == ConfirmMethod.NORMED_ABSDIFF:
-        cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX)
-        cv2.normalize(template, template, 0, 255, cv2.NORM_MINMAX)
+        cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX, mask=mask)
+        cv2.normalize(template, template, 0, 255, cv2.NORM_MINMAX, mask=mask)
         imwrite("confirm-source_roi_gray_normalized", image)
         imwrite("confirm-template_gray_normalized", template)
+
+    if mask is not None:
+        image = cv2.bitwise_and(image, mask)
+        template = cv2.bitwise_and(template, mask)
+        imwrite("confirm-source_roi_masked", image)
+        imwrite("confirm-template_masked", template)
 
     absdiff = cv2.absdiff(image, template)
     _, thresholded = cv2.threshold(
@@ -767,6 +829,9 @@ def _log_match_image_debug(imglog):
         <h5>First pass (find candidate matches):</h5>
 
         <p>Searching for <b>template</b> {{link("template")}}
+            {% if "mask" in images %}
+            with <b>transparency mask</b> {{link("mask")}}
+            {% endif %}
             within <b>source</b> image {{link("source")}}
 
         <table class="table">

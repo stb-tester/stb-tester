@@ -204,8 +204,8 @@ test_match_invalid_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Invalid template should cause test to fail"
-    cat log | grep -q "FAIL: test.py: ValueError: Source and reference images must have the same number of channels" \
-        || fail "Didn't see 'ValueError: Source and reference images must have the same number of channels'"
+    cat log | grep -q "FAIL: test.py: ValueError: Frame and reference image must have the same number of channels" \
+        || fail "Didn't see 'ValueError: Frame and reference image must have the same number of channels'"
 }
 
 test_press_until_match_presses_once() {

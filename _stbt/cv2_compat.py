@@ -6,9 +6,9 @@ from distutils.version import LooseVersion
 
 import cv2
 
-_version = LooseVersion(cv2.__version__)
+version = LooseVersion(cv2.__version__)
 
-if _version >= LooseVersion('3.2.0'):
+if version >= LooseVersion('3.2.0'):
     def find_contour_boxes(image, mode, method):
         contours = cv2.findContours(image=image, mode=mode, method=method)[1]
         return [cv2.boundingRect(x) for x in contours]
@@ -29,7 +29,7 @@ else:
         return [_fix_pre_3_2_rects(cv2.boundingRect(x)) for x in contours]
 
 # We prefer the v3 names here rather than the v2.4 names:
-if _version >= LooseVersion('3.0.0'):
+if version >= LooseVersion('3.0.0'):
     FILLED = cv2.FILLED  # pylint: disable=c-extension-no-member
     LINE_AA = cv2.LINE_AA  # pylint: disable=c-extension-no-member
 else:

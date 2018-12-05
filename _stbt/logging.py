@@ -122,6 +122,8 @@ class ImageLogger(object):
             return
         if name in self.images:
             raise ValueError("Image for name '%s' already logged" % name)
+        if image is None:
+            return
         if image.dtype == numpy.float32:
             # Scale `cv2.matchTemplate` heatmap output in range
             # [0.0, 1.0] to visible grayscale range [0, 255].
