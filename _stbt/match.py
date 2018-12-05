@@ -897,9 +897,6 @@ def _log_match_image_debug(imglog):
     imglog.html(
         template,
         link=link,
-        match_parameters=imglog.data["match_parameters"],
-        matches=imglog.data["matches"],
-        pyramid_levels=imglog.data["pyramid_levels"],
         show_second_pass=any(
             x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
         title=title,

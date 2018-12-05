@@ -713,24 +713,11 @@ def _log_ocr_image_debug(imglog, output=None):
 
     imglog.html(
         template,
-        case_sensitive=imglog.data.get("case_sensitive"),
-        engine=imglog.data["engine"],
         image_region=_image_region(imglog.images["source"]),
-        images=imglog.images,
-        lang=imglog.data["lang"],
         match_text=match_text,
-        mode=imglog.data["mode"],
         output=output,
-        result=imglog.data.get("result"),
         roi=imglog.data["region"],
-        tesseract_version=imglog.data["tesseract_version"],
-        text=imglog.data.get("text"),
-        text_color=imglog.data["text_color"],
-        text_color_threshold=imglog.data["text_color_threshold"],
         title=title,
-        upsample=imglog.data["upsample"],
-        user_patterns=imglog.data["user_patterns"],
-        user_words=imglog.data["user_words"],
     )
 
 

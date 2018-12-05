@@ -335,8 +335,5 @@ def _log_motion_image_debug(imglog, result):
     imglog.html(
         template,
         result=result,
-        roi=imglog.data["roi"],
-        images=imglog.images,
         source_region=_image_region(imglog.images["source"]),
-        noise_threshold=imglog.data["noise_threshold"],
     )

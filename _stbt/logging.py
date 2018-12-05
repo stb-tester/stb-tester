@@ -153,12 +153,16 @@ class ImageLogger(object):
                 "because python 'jinja2' module is not installed.")
             return
 
+        template_kwargs = self.data.copy()
+        template_kwargs["images"] = self.images
+        template_kwargs.update(kwargs)
+
         with open(os.path.join(self.outdir, "index.html"), "w") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
                     .render(frame_number=self.frame_number)
                     .encode("utf-8"))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
-                    .render(draw=self._draw, **kwargs)
+                    .render(draw=self._draw, **template_kwargs)
                     .encode("utf-8"))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
                     .render()
