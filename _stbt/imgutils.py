@@ -113,6 +113,47 @@ def _load_image(image, flags=cv2.IMREAD_COLOR):
         return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
 
 
+def pixel_bounding_box(img):
+    """
+    Find the smallest region that contains all the non-zero pixels in an image.
+
+    >>> pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
+    >>> pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
+    >>> pixel_bounding_box(numpy.array([
+    ...     [0, 0, 0, 0],
+    ...     [0, 1, 1, 1],
+    ...     [0, 1, 1, 1],
+    ...     [0, 0, 0, 0],
+    ... ], dtype=numpy.uint8))
+    Region(x=1, y=1, right=4, bottom=3)
+    >>> pixel_bounding_box(numpy.array([
+    ...     [0, 0, 0, 0, 0, 0],
+    ...     [0, 0, 0, 1, 0, 0],
+    ...     [0, 1, 0, 0, 0, 0],
+    ...     [0, 0, 0, 0, 1, 0],
+    ...     [0, 0, 1, 0, 0, 0],
+    ...     [0, 0, 0, 0, 0, 0]
+    ... ], dtype=numpy.uint8))
+    Region(x=1, y=1, right=5, bottom=5)
+    """
+    if len(img.shape) != 2:
+        raise ValueError("Single-channel image required.  Provided image has "
+                         "shape %r" % (img.shape,))
+
+    out = [None, None, None, None]
+
+    for axis in (0, 1):
+        flat = numpy.any(img, axis=axis)
+        indices = numpy.where(flat)[0]
+        if len(indices) == 0:
+            return None
+        out[axis] = indices[0]
+        out[axis + 2] = indices[-1] + 1
+
+    return Region.from_extents(*out)
+
+
 def find_user_file(filename):
     """Searches for the given filename and returns the full path.
 

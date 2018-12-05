@@ -3,11 +3,10 @@
 from collections import deque
 
 import cv2
-import numpy
 
 from .config import ConfigurationError, get_config
 from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
-                       crop, limit_time)
+                       pixel_bounding_box, crop, limit_time)
 from .logging import debug, draw_on, ImageLogger
 from .types import Region, UITestFailure
 
@@ -120,7 +119,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         imglog.imwrite("absdiff_threshold", thresholded)
         imglog.imwrite("absdiff_threshold_erode", eroded)
 
-        out_region = _pixel_bounding_box(eroded)
+        out_region = pixel_bounding_box(eroded)
         if out_region:
             # Undo cv2.erode above:
             out_region = out_region.extend(x=-1, y=-1)
@@ -136,47 +135,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
             "Motion" if motion else "No motion", str(result)))
         _log_motion_image_debug(imglog, result)
         yield result
-
-
-def _pixel_bounding_box(img):
-    """
-    Find the smallest region that contains all the non-zero pixels in an image.
-
-    >>> _pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
-    >>> _pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
-    Region(x=0, y=0, right=1, bottom=1)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0],
-    ...     [0, 1, 1, 1],
-    ...     [0, 1, 1, 1],
-    ...     [0, 0, 0, 0],
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=4, bottom=3)
-    >>> _pixel_bounding_box(numpy.array([
-    ...     [0, 0, 0, 0, 0, 0],
-    ...     [0, 0, 0, 1, 0, 0],
-    ...     [0, 1, 0, 0, 0, 0],
-    ...     [0, 0, 0, 0, 1, 0],
-    ...     [0, 0, 1, 0, 0, 0],
-    ...     [0, 0, 0, 0, 0, 0]
-    ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=5, bottom=5)
-    """
-    if len(img.shape) != 2:
-        raise ValueError("Single-channel image required.  Provided image has "
-                         "shape %r" % (img.shape,))
-
-    out = [None, None, None, None]
-
-    for axis in (0, 1):
-        flat = numpy.any(img, axis=axis)
-        indices = numpy.where(flat)[0]
-        if len(indices) == 0:
-            return None
-        out[axis] = indices[0]
-        out[axis + 2] = indices[-1] + 1
-
-    return Region.from_extents(*out)
 
 
 def wait_for_motion(
