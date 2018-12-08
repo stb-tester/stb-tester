@@ -395,7 +395,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             "ocr", "text_color_threshold", type_=int)
 
     if engine is None:
-        engine = get_config("ocr", "engine", OcrEngine.TESSERACT, OcrEngine)
+        engine = get_config("ocr", "engine", type_=OcrEngine)
 
     tesseract_version = _tesseract_version()
 
