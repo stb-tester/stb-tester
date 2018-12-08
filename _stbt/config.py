@@ -1,4 +1,5 @@
 import ConfigParser
+import enum
 import os
 from contextlib import contextmanager
 
@@ -25,6 +26,8 @@ def get_config(section, key, default=None, type_=str):
     try:
         if type_ is bool:
             return config.getboolean(section, key)
+        elif issubclass(type_, enum.Enum):
+            return _to_enum(type_, config.get(section, key), section, key)
         else:
             return type_(config.get(section, key))
     except ConfigParser.Error as e:
@@ -107,6 +110,26 @@ def _config_init(force=False):
 
 def xdg_config_dir():
     return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
+
+
+def _to_enum(type_, value, section, key):
+    # Try enum name
+    try:
+        return type_[value.upper()]
+    except KeyError:
+        pass
+
+    # Try enum value
+    try:
+        if issubclass(type_, enum.IntEnum):
+            value = int(value)
+        return type_(value)
+    except ValueError:
+        pass
+
+    raise ConfigurationError(
+        'Invalid config value %s.%s="%s". Valid values are %s.'
+        % (section, key, value, ", ".join(x.name for x in type_)))
 
 
 @contextmanager

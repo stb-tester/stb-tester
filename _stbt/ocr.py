@@ -13,7 +13,7 @@ import numpy
 from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
-from .config import ConfigurationError, get_config
+from .config import get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, ImageLogger, warn
 from .types import Region
@@ -395,13 +395,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             "ocr", "text_color_threshold", type_=int)
 
     if engine is None:
-        engine_name = get_config("ocr", "engine", "TESSERACT")
-        try:
-            engine = OcrEngine[engine_name.upper()]  # pylint:disable=unsubscriptable-object
-        except KeyError:
-            raise ConfigurationError(
-                "Invalid config value ocr.engine='%s'. Valid values are %s."
-                % (engine_name, ", ".join(x.name for x in OcrEngine)))  # pylint:disable=not-an-iterable
+        engine = get_config("ocr", "engine", OcrEngine.TESSERACT, OcrEngine)
 
     tesseract_version = _tesseract_version()
 

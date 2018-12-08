@@ -1,9 +1,13 @@
+import enum
 import os
 from contextlib import contextmanager
 from textwrap import dedent
 
-from _stbt.config import _config_init, _sponge, get_config, set_config
-from _stbt.utils import scoped_curdir
+import pytest
+
+from _stbt.config import (_config_init, _sponge, ConfigurationError,
+                          get_config, set_config)
+from _stbt.utils import named_temporary_directory, scoped_curdir
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -92,3 +96,66 @@ def test_that_set_config_writes_to_the_first_stbt_config_file():
         set_config('global', 'test', 'goodbye')
         assert open(filled_cfg).read().startswith('[global]')
         assert open(empty_cfg).read() == ''
+
+
+class MyEnum(enum.Enum):
+    NAME_1 = "value-1"
+    NAME_2 = "value-2"
+
+
+class MyIntEnum(enum.IntEnum):
+    NAME_5 = 5
+    NAME_6 = 6
+
+
+def test_to_enum():
+    with temporary_config("""\
+            [global]
+            bystrlc = name_1
+            bystruc = NAME_1
+            byvallc = value-1
+            byvaluc = VALUE-1
+            badstr = notakey
+            byint = 5
+            byintname = NAME_5
+            badint = 7
+            """):
+
+        assert get_config("global", "bystrlc", type_=MyEnum) == MyEnum.NAME_1
+        assert get_config("global", "bystruc", type_=MyEnum) == MyEnum.NAME_1
+        assert get_config("global", "byvallc", type_=MyEnum) == MyEnum.NAME_1
+
+        with pytest.raises(ConfigurationError) as excinfo:
+            get_config("global", "byvaluc", type_=MyEnum)
+        assert "Valid values are NAME_1, NAME_2" in str(excinfo.value)
+
+        with pytest.raises(ConfigurationError):
+            get_config("global", "badstr", type_=MyEnum)
+
+        assert get_config("global", "notset", MyEnum.NAME_1, MyEnum) == \
+            MyEnum.NAME_1
+
+        assert get_config("global", "byint", type_=MyIntEnum) == \
+            MyIntEnum.NAME_5
+        assert get_config("global", "byintname", type_=MyIntEnum) == \
+            MyIntEnum.NAME_5
+
+        with pytest.raises(ConfigurationError) as excinfo:
+            get_config("global", "badint", type_=MyIntEnum)
+        assert "Valid values are NAME_5, NAME_6" in str(excinfo.value)
+
+
+@contextmanager
+def temporary_config(contents):
+    with named_temporary_directory(prefix="stbt-test-config") as d:
+        original_env = os.environ.get("STBT_CONFIG_FILE", "")
+        filename = os.path.join(d, "stbt.conf")
+        os.environ["STBT_CONFIG_FILE"] = ":".join([filename, original_env])
+        with open(filename, "w") as f:
+            f.write(dedent(contents))
+        _config_init(force=True)
+        try:
+            yield
+        finally:
+            os.environ["STBT_CONFIG_FILE"] = original_env
+            _config_init(force=True)
