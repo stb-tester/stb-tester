@@ -8,6 +8,7 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+import enum
 import itertools
 import os
 from collections import namedtuple
@@ -22,6 +23,26 @@ from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
 from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .types import Region, UITestFailure
+
+
+class MatchMethod(enum.Enum):
+    SQDIFF_NORMED = "sqdiff-normed"
+    CCORR_NORMED = "ccorr-normed"
+    CCOEFF_NORMED = "ccoeff-normed"
+
+    # For nicer formatting in generated API documentation:
+    def __repr__(self):
+        return str(self)
+
+
+class ConfirmMethod(enum.Enum):
+    NONE = "none"
+    ABSDIFF = "absdiff"
+    NORMED_ABSDIFF = "normed-absdiff"
+
+    # For nicer formatting in generated API documentation:
+    def __repr__(self):
+        return str(self)
 
 
 class MatchParameters(object):
@@ -39,24 +60,21 @@ class MatchParameters(object):
     have a reference image of a button's background and you want it to match
     even if the text on the button doesn't match.
 
-    :param str match_method:
+    :type match_method: `MatchMethod`
+    :param match_method:
       The method to be used by the first pass of stb-tester's image matching
-      algorithm, to find the most likely location of the reference image
-      within the larger source image.
-
-      Allowed values are "sqdiff-normed", "ccorr-normed", and "ccoeff-normed".
-      For the meaning of these parameters, see OpenCV's
-      :ocv:pyfunc:`cv2.matchTemplate`.
-
-      We recommend that you don't change this from its default value of
-      "sqdiff-normed".
+      algorithm, to find the most likely location of the reference image within
+      the larger source image. For details see OpenCV's
+      :ocv:pyfunc:`cv2.matchTemplate`. Defaults to
+      ``MatchMethod.SQDIFF_NORMED``.
 
     :param float match_threshold:
       How strong a result from the first pass must be, to be considered a
       match. Valid values range from 0 (anything is considered to match)
       to 1 (the match has to be pixel perfect). This defaults to 0.8.
 
-    :param str confirm_method:
+    :type confirm_method: `ConfirmMethod`
+    :param confirm_method:
       The method to be used by the second pass of stb-tester's image matching
       algorithm, to confirm that the region identified by the first pass is a
       good match.
@@ -66,16 +84,16 @@ class MatchParameters(object):
       it only checks the position of the image that the first pass identified.
       The allowed values are:
 
-      :"none":
+      :ConfirmMethod.NONE:
         Do not confirm the match. Assume that the potential match found is
         correct.
 
-      :"absdiff":
+      :ConfirmMethod.ABSDIFF:
         Compare the absolute difference of each pixel from the reference image
         against its counterpart from the candidate region in the source video
         frame.
 
-      :"normed-absdiff":
+      :ConfirmMethod.NORMED_ABSDIFF:
         Normalise the pixel values from both the reference image and the
         candidate region in the source video frame, then compare the absolute
         difference as with "absdiff".
@@ -104,24 +122,24 @@ class MatchParameters(object):
     def __init__(self, match_method=None, match_threshold=None,
                  confirm_method=None, confirm_threshold=None,
                  erode_passes=None):
+
         if match_method is None:
-            match_method = get_config('match', 'match_method')
+            match_method = get_config(
+                'match', 'match_method', type_=MatchMethod)
         if match_threshold is None:
             match_threshold = get_config(
                 'match', 'match_threshold', type_=float)
         if confirm_method is None:
-            confirm_method = get_config('match', 'confirm_method')
+            confirm_method = get_config(
+                'match', 'confirm_method', type_=ConfirmMethod)
         if confirm_threshold is None:
             confirm_threshold = get_config(
                 'match', 'confirm_threshold', type_=float)
         if erode_passes is None:
             erode_passes = get_config('match', 'erode_passes', type_=int)
 
-        if match_method not in (
-                "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
-            raise ValueError("Invalid match_method '%s'" % match_method)
-        if confirm_method not in ("none", "absdiff", "normed-absdiff"):
-            raise ValueError("Invalid confirm_method '%s'" % confirm_method)
+        match_method = MatchMethod(match_method)
+        confirm_method = ConfirmMethod(confirm_method)
 
         self.match_method = match_method
         self.match_threshold = match_threshold
@@ -494,9 +512,9 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     method = {
-        'sqdiff-normed': cv2.TM_SQDIFF_NORMED,
-        'ccorr-normed': cv2.TM_CCORR_NORMED,
-        'ccoeff-normed': cv2.TM_CCOEFF_NORMED,
+        MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
+        MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
+        MatchMethod.CCOEFF_NORMED: cv2.TM_CCOEFF_NORMED,
     }[match_parameters.match_method]
 
     levels = get_config("match", "pyramid_levels", type_=int)
@@ -558,8 +576,9 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         # Exclude any positions that would overlap the previous match, then
         # keep iterating until we don't find any more matches.
         exclude = region.extend(x=-(region.width - 1), y=-(region.height - 1))
-        mask_value = (255 if match_parameters.match_method == 'sqdiff-normed'
-                      else 0)
+        mask_value = (
+            255 if match_parameters.match_method == MatchMethod.SQDIFF_NORMED
+            else 0)
         cv2.rectangle(
             heatmap,
             # -1 because cv2.rectangle considers the bottom-right point to be
@@ -699,7 +718,7 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
     `_find_candidate_matches`.
     """
 
-    if match_parameters.confirm_method == "none":
+    if match_parameters.confirm_method == ConfirmMethod.NONE:
         return True
 
     # Set Region Of Interest to the "best match" location
@@ -711,7 +730,7 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
     imwrite("confirm-source_roi_gray", image)
     imwrite("confirm-template_gray", template)
 
-    if match_parameters.confirm_method == "normed-absdiff":
+    if match_parameters.confirm_method == ConfirmMethod.NORMED_ABSDIFF:
         cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX)
         cv2.normalize(template, template, 0, 255, cv2.NORM_MINMAX)
         imwrite("confirm-source_roi_gray_normalized", image)
@@ -783,7 +802,7 @@ def _log_match_image_debug(imglog):
             OpenCV <b>matchTemplate heatmap</b>
             with method {{match_parameters.match_method}}
             ({{"darkest" if match_parameters.match_method ==
-                    "sqdiff-normed" else "lightest"}}
+                    MatchMethod.SQDIFF_NORMED else "lightest"}}
             pixel indicates position of best match).
           </th>
           <th>
@@ -837,13 +856,14 @@ def _log_match_image_debug(imglog):
 
           <p><b>Confirm method:</b> {{match_parameters.confirm_method}}</p>
 
-          {% if match_parameters.confirm_method != "none" %}
+          {% if match_parameters.confirm_method != ConfirmMethod.NONE %}
             <table class="table">
             <tr>
               <th>Match #</th>
               <th>Comparing <b>template</b></th>
               <th>against <b>source image's region of interest</b></th>
-              {% if match_parameters.confirm_method == "normed-absdiff" %}
+              {% if match_parameters.confirm_method ==
+                         ConfirmMethod.NORMED_ABSDIFF %}
                 <th><b>Normalised template</b></th>
                 <th><b>Normalised source</b></th>
               {% endif %}
@@ -867,7 +887,8 @@ def _log_match_image_debug(imglog):
                   <td><b>{{loop.index0}}</b></td>
                   <td>{{link("confirm-template_gray", match=0)}}</td>
                   <td>{{link("confirm-source_roi_gray", match=loop.index0)}}</td>
-                  {% if match_parameters.confirm_method == "normed-absdiff" %}
+                  {% if match_parameters.confirm_method ==
+                             ConfirmMethod.NORMED_ABSDIFF %}
                     <td>{{link("confirm-template_gray_normalized", match=loop.index0)}}</td>
                     <td>{{link("confirm-source_roi_gray_normalized", match=loop.index0)}}</td>
                   {% endif %}
@@ -896,7 +917,9 @@ def _log_match_image_debug(imglog):
 
     imglog.html(
         template,
+        ConfirmMethod=ConfirmMethod,
         link=link,
+        MatchMethod=MatchMethod,
         show_second_pass=any(
             x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
         title=title,

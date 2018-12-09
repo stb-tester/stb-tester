@@ -34,9 +34,11 @@ from _stbt.imgutils import (
 from _stbt.logging import (
     debug)
 from _stbt.match import (
+    ConfirmMethod,
     detect_match,
     match,
     match_all,
+    MatchMethod,
     MatchParameters,
     MatchResult,
     MatchTimeout,
@@ -65,6 +67,7 @@ from _stbt.types import (
 __all__ = [
     "as_precondition",
     "ConfigurationError",
+    "ConfirmMethod",
     "crop",
     "debug",
     "detect_match",
@@ -80,6 +83,7 @@ __all__ = [
     "match",
     "match_all",
     "match_text",
+    "MatchMethod",
     "MatchParameters",
     "MatchResult",
     "MatchTimeout",
