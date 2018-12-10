@@ -26,6 +26,7 @@ from .types import Region, UITestFailure
 
 
 class MatchMethod(enum.Enum):
+    SQDIFF = "sqdiff"
     SQDIFF_NORMED = "sqdiff-normed"
     CCORR_NORMED = "ccorr-normed"
     CCOEFF_NORMED = "ccoeff-normed"
@@ -512,10 +513,13 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     method = {
+        MatchMethod.SQDIFF: cv2.TM_SQDIFF,
         MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
         MatchMethod.CCOEFF_NORMED: cv2.TM_CCOEFF_NORMED,
     }[match_parameters.match_method]
+    is_sqdiff = match_parameters.match_method in (
+        MatchMethod.SQDIFF, MatchMethod.SQDIFF_NORMED)
 
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
@@ -554,10 +558,9 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
         _, roi_mask = cv2.threshold(
             heatmap,
-            ((1 - threshold) if method == cv2.TM_SQDIFF_NORMED else threshold),
+            ((1 - threshold) if is_sqdiff else threshold),
             255,
-            (cv2.THRESH_BINARY_INV if method == cv2.TM_SQDIFF_NORMED
-             else cv2.THRESH_BINARY))
+            (cv2.THRESH_BINARY_INV if is_sqdiff else cv2.THRESH_BINARY))
         roi_mask = roi_mask.astype(numpy.uint8)
         imwrite("source_matchtemplate_threshold", roi_mask)
 
@@ -576,15 +579,13 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         # Exclude any positions that would overlap the previous match, then
         # keep iterating until we don't find any more matches.
         exclude = region.extend(x=-(region.width - 1), y=-(region.height - 1))
-        mask_value = (
-            255 if match_parameters.match_method == MatchMethod.SQDIFF_NORMED
-            else 0)
         cv2.rectangle(
             heatmap,
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
-            mask_value, _stbt.cv2_compat.FILLED)
+            255 if is_sqdiff else 0,
+            _stbt.cv2_compat.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, method, threshold, level)
@@ -598,10 +599,13 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         level, image.shape, template.shape))
 
     matches_heatmap = (
-        (numpy.ones if method == cv2.TM_SQDIFF_NORMED else numpy.zeros)(
+        (numpy.ones if method in (cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED)
+         else numpy.zeros)(
             (image.shape[0] - template.shape[0] + 1,
              image.shape[1] - template.shape[1] + 1),
             dtype=numpy.float32))
+    if method == cv2.TM_SQDIFF:
+        matches_heatmap *= template.size * (255 ** 2)
 
     if roi_mask is None:
         rois = [  # Initial region of interest: The whole image.
@@ -634,6 +638,15 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
             method,
             matches_heatmap[roi.to_slice()])
 
+    if method == cv2.TM_SQDIFF:
+        # OpenCV's SQDIFF_NORMED normalises by the pixel intensity across
+        # the reference image and the source image patch. This doesn't work
+        # at all for completely black images, and it exaggerates
+        # differences for dark images. With SQDIFF we do our own
+        # normalisation based solely on the number of pixels in the sum.
+        # We still get a number between 0 - 1.
+        matches_heatmap /= template.size * (255 ** 2)
+
     imwrite("source", image)
     imwrite("template", template)
     imwrite("source_matchtemplate", matches_heatmap)
@@ -644,7 +657,7 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
 def _find_best_match_position(matches_heatmap, method, threshold, level):
     min_value, max_value, min_location, max_location = cv2.minMaxLoc(
         matches_heatmap)
-    if method == cv2.TM_SQDIFF_NORMED:
+    if method in (cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED):
         certainty = (1 - min_value)
         best_match_position = Position(*min_location)
     elif method in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
@@ -801,8 +814,9 @@ def _log_match_image_debug(imglog):
           <th>
             OpenCV <b>matchTemplate heatmap</b>
             with method {{match_parameters.match_method}}
-            ({{"darkest" if match_parameters.match_method ==
-                    MatchMethod.SQDIFF_NORMED else "lightest"}}
+            ({{ "darkest" if match_parameters.match_method in (
+                    MatchMethod.SQDIFF, MatchMethod.SQDIFF_NORMED)
+                else "lightest" }}
             pixel indicates position of best match).
           </th>
           <th>
