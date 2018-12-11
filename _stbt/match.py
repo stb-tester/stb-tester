@@ -533,10 +533,10 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             else:
                 roi_mask = cv2.pyrUp(roi_mask)
 
-        def imwrite(name, img):
-            imglog.imwrite("level%d-%s" % (level, name), img)  # pylint:disable=cell-var-from-loop
+        def imwrite(name, img, scale=1):
+            imglog.imwrite("level%d-%s" % (level, name), img, scale=scale)  # pylint:disable=cell-var-from-loop
 
-        heatmap = _match_template(
+        heatmap, heatmap_scale = _match_template(
             image_pyramid[level], template_pyramid[level], method,
             roi_mask, level, imwrite)
 
@@ -547,7 +547,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             match_parameters.match_threshold - (0.2 if level > 0 else 0))
 
         matched, best_match_position, certainty = _find_best_match_position(
-            heatmap, threshold, level)
+            heatmap, heatmap_scale, threshold, level)
         imglog.append(pyramid_levels=(
             matched, best_match_position, certainty, level))
 
@@ -556,7 +556,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
         _, roi_mask = cv2.threshold(
             heatmap,
-            (1 - threshold),
+            (1 - threshold) * heatmap_scale,
             255,
             cv2.THRESH_BINARY_INV)
         roi_mask = roi_mask.astype(numpy.uint8)
@@ -568,7 +568,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     for i in itertools.count():
 
-        imglog.imwrite("match%d-heatmap" % i, heatmap)
+        imglog.imwrite("match%d-heatmap" % i, heatmap, scale=heatmap_scale)
         yield (i, matched, region, certainty)
         if not matched:
             return
@@ -582,11 +582,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
-            255,
+            heatmap_scale,
             _stbt.cv2_compat.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
-            heatmap, threshold, level)
+            heatmap, heatmap_scale, threshold, level)
         region = Region(*best_match_position,
                         width=template.shape[1], height=template.shape[0])
 
@@ -643,20 +643,23 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         # differences for dark images. With SQDIFF we do our own
         # normalisation based solely on the number of pixels in the sum.
         # We still get a number between 0 - 1.
-        matches_heatmap /= template.size * (255 ** 2)
+        scale = template.size * (255 ** 2)
+    else:
+        scale = 1
 
     if method in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
         matches_heatmap = 1 - matches_heatmap
 
     imwrite("source", image)
     imwrite("template", template)
-    imwrite("source_matchtemplate", matches_heatmap)
+    imwrite("source_matchtemplate", matches_heatmap, scale=scale)
 
-    return matches_heatmap
+    return matches_heatmap, scale
 
 
 def _find_best_match_position(matches_heatmap, scale, threshold, level):
     min_value, _, min_location, _ = cv2.minMaxLoc(matches_heatmap)
+    min_value /= scale
     certainty = 1 - min_value
     best_match_position = Position(*min_location)
     matched = certainty >= threshold
