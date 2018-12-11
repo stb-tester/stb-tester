@@ -66,6 +66,8 @@ def test_that_if_image_doesnt_match_match_all_returns_empty_array(match_method):
 @pytest.mark.parametrize("match_method", [
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
+    stbt.MatchMethod.CCORR_NORMED,
+    stbt.MatchMethod.CCOEFF_NORMED,
 ])
 def test_that_match_all_finds_all_matches(match_method):
     plain_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
