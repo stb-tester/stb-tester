@@ -85,6 +85,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/stbt.conf \
+    _stbt/timeout.py \
     _stbt/transition.py \
     _stbt/types.py \
     _stbt/utils.py \

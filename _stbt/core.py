@@ -33,6 +33,7 @@ from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
 from _stbt.imgutils import find_user_file, Frame
 from _stbt.logging import ddebug, debug, warn
+from _stbt.timeout import check_timeout, sleep_until
 from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
@@ -113,22 +114,6 @@ def new_device_under_test_from_config(
                                              'transformation_pipeline')
     source_teardown_eos = get_config('global', 'source_teardown_eos',
                                      type_=bool)
-    use_old_threading_behaviour = get_config(
-        'global', 'use_old_threading_behaviour', type_=bool)
-    if use_old_threading_behaviour:
-        warn(dedent("""\
-            global.use_old_threading_behaviour is enabled.  This is intended as
-            a stop-gap measure to allow upgrading to stb-tester v28. We
-            recommend porting functions that depend on stbt.get_frame()
-            returning consecutive frames on each call to use stbt.frames()
-            instead.  This should make your functions usable from multiple
-            threads.
-
-            If porting to stbt.frames is not suitable please let us know on
-            https://github.com/stb-tester/stb-tester/pull/449 otherwise this
-            configuration option will be removed in a future release of
-            stb-tester.
-            """))
 
     display = [None]
 
@@ -147,23 +132,21 @@ def new_device_under_test_from_config(
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_control(args.control, display[0]),
-        sink_pipeline=sink_pipeline, mainloop=mainloop,
-        use_old_threading_behaviour=use_old_threading_behaviour)
+        sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
 class DeviceUnderTest(object):
     def __init__(self, display=None, control=None, sink_pipeline=None,
-                 mainloop=None, use_old_threading_behaviour=False, _time=None):
+                 mainloop=None, _time=None):
         if _time is None:
             import time as _time
-        self._time_of_last_press = None
+        self._time_of_last_press = 0
         self._display = display
         self._control = control
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
         self._time = _time
 
-        self._use_old_threading_behaviour = use_old_threading_behaviour
         self._last_grabbed_frame_time = 0
 
     def __enter__(self):
@@ -227,23 +210,11 @@ class DeviceUnderTest(object):
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
-        if self._time_of_last_press is not None:
-            # `sleep` is inside a `while` loop because the actual suspension
-            # time of `sleep` may be less than that requested.
-            while True:
-                seconds_to_wait = (
-                    self._time_of_last_press - datetime.datetime.now() +
-                    datetime.timedelta(seconds=interpress_delay_secs)
-                ).total_seconds()
-                if seconds_to_wait > 0:
-                    self._time.sleep(seconds_to_wait)
-                else:
-                    break
-
+        sleep_until(self._time_of_last_press + interpress_delay_secs)
         try:
             yield
         finally:
-            self._time_of_last_press = datetime.datetime.now()
+            self._time_of_last_press = time.time()
 
     def draw_text(self, text, duration_secs=3):
         self._sink_pipeline.draw(text, duration_secs)
@@ -289,17 +260,12 @@ class DeviceUnderTest(object):
         first = True
 
         while True:
-            if self._use_old_threading_behaviour:
-                timestamp = self._last_grabbed_frame_time
-
             ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
                 max(10, timeout_secs), since=timestamp)
             ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
-            if self._use_old_threading_behaviour:
-                self._last_grabbed_frame_time = timestamp
 
             if not first and timeout_secs is not None and timestamp > end_time:
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
@@ -309,13 +275,7 @@ class DeviceUnderTest(object):
             first = False
 
     def get_frame(self):
-        if self._use_old_threading_behaviour:
-            frame = self._display.get_frame(
-                since=self._last_grabbed_frame_time).copy()
-            self._last_grabbed_frame_time = frame.time
-            return frame
-        else:
-            return self._display.get_frame()
+        return self._display.get_frame()
 
 
 # Utility functions
@@ -928,7 +888,8 @@ class Display(object):
                 t = time.time()
                 if t > end_time:
                     break
-                self._condition.wait(end_time - t)
+                self._condition.wait(min(check_timeout(), end_time - t))
+                check_timeout()
 
         pipeline = self.source_pipeline
         if pipeline:

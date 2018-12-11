@@ -325,46 +325,6 @@ def _match_all(image, frame, match_parameters, region):
             pass
 
 
-def detect_match(image, timeout_secs=10, match_parameters=None,
-                 region=Region.ALL, frames=None):
-    """Generator that yields a sequence of one `MatchResult` for each frame
-    processed from the device-under-test's video stream.
-
-    :param image: See `match`.
-
-    :type timeout_secs: int or float or None
-    :param timeout_secs:
-        A timeout in seconds. After this timeout the iterator will be exhausted.
-        If ``timeout_secs`` is ``None`` then the iterator will yield frames
-        forever. Note that you can stop iterating (for example with ``break``)
-        at any time.
-
-    :param match_parameters: See `match`.
-    :param region: See `match`.
-
-    :type frames: Iterator[stbt.Frame]
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        ``stbt.frames()``.
-    """
-    if frames is None:
-        import stbt
-        frames = stbt.frames(timeout_secs=timeout_secs)
-    else:
-        frames = limit_time(frames, timeout_secs)
-
-    template = _load_image(image)
-
-    debug("Searching for " + template.friendly_name)
-
-    for frame in frames:
-        result = match(
-            template, frame=frame, match_parameters=match_parameters,
-            region=region)
-        draw_on(frame, result, label="match(%r)" %
-                os.path.basename(template.friendly_name))
-        yield result
-
-
 def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
                    match_parameters=None, region=Region.ALL, frames=None):
     """Search for an image in the device-under-test's video stream.
@@ -395,12 +355,22 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     if match_parameters is None:
         match_parameters = MatchParameters()
 
+    if frames is None:
+        import stbt
+        frames = stbt.frames(timeout_secs=timeout_secs)
+    else:
+        frames = limit_time(frames, timeout_secs)
+
+    template = load_image(image)
+
+    debug("Searching for " + template.friendly_name)
+
     match_count = 0
     last_pos = Position(0, 0)
     image = _load_image(image)
-    for res in detect_match(
-            image, timeout_secs, match_parameters=match_parameters,
-            region=region, frames=frames):
+    for frame in frames:
+        res = stbt.match(template, match_parameters=match_parameters,
+                         region=region, frame=frame)
         if res.match and (match_count == 0 or res.position == last_pos):
             match_count += 1
         else:

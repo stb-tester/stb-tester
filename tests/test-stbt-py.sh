@@ -413,8 +413,7 @@ test_that_get_frame_time_is_wall_time() {
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
 	import stbt
-	for _ in stbt.detect_match("${testdir}/videotestsrc-checkers-8.png"):
-	    pass
+	stbt.wait_for_match("${testdir}/videotestsrc-checkers-8.png"):
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
@@ -440,8 +439,7 @@ test_template_annotation_with_ndarray_template() {
 	template = np.ones(shape=(100, 100, 3), dtype=np.uint8)
 	template *= np.array([0, 255, 0], dtype=np.uint8)  # green
 	stbt.save_frame(template, 'template.png')
-	for _ in stbt.detect_match(template):
-	    pass
+	stbt.wait_for_match(template)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
@@ -584,22 +582,6 @@ test_multithreaded() {
 }
 
 test_global_use_old_threading_behaviour() {
-    set_config global.use_old_threading_behaviour true
-
-    cat > test.py <<-EOF &&
-	ts = set()
-	for _ in range(10):
-	    ts.add(stbt.get_frame().time)
-	print "Saw %i unique frames" % len(ts)
-	assert len(ts) == 10
-	EOF
-    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
-
-    grep -q "stb-tester/stb-tester/pull/449" stderr.log \
-        || fail "use_old_threading_behaviour Warning not printed"
-
-    set_config global.use_old_threading_behaviour false
-
     cat > test.py <<-EOF &&
 	ts = set()
 	for _ in range(10):
@@ -613,29 +595,6 @@ test_global_use_old_threading_behaviour() {
 }
 
 test_global_use_old_threading_behaviour_frames() {
-    set_config global.use_old_threading_behaviour true
-
-    cat > test.py <<-EOF &&
-	import itertools
-	sa = set()
-	sb = set()
-	for a, b in itertools.izip(stbt.frames(), stbt.frames()):
-	    if len(sa) >= 10:
-	        break
-	    sa.add(a.time)
-	    sb.add(b.time)
-	print sorted(sa)
-	print sorted(sb)
-	assert len(sa) == 10
-	assert len(sb) == 10
-	# sa and sb contain unique frames:
-	assert sa.isdisjoint(sb)
-	EOF
-    stbt run -vv test.py ||
-        fail "Incorrect frames() behaviour (use_old_threading_behaviour=true)"
-
-    set_config global.use_old_threading_behaviour false
-
     cat > test.py <<-EOF &&
 	import itertools
 	sa = set()

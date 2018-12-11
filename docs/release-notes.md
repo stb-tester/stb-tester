@@ -21,6 +21,25 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
 
+#### v30
+
+TODO: Date
+
+##### Breaking changes since v29
+
+* Compatibility flag `global.use_old_threading_behaviour` has been removed.
+  This was introduced in v28, but seems to be unused. See release notes for v28
+  below for more information.
+
+* Removed API `stbt.detect_match`. This has been redundant since we introduced
+  `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
+  the wild and it is easily replaced with a combination of `stbt.frames` and
+  `stbt.match`.
+
+##### New features
+
+##### Bug fixes & improvements
+
 #### v29
 
 New APIs for measuring animations and transitions, and for sending infrared
