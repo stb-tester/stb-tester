@@ -514,34 +514,30 @@ class RokuHttpControl(object):
     }
 
     def __init__(self, hostname, timeout_secs=3):
+        import requests
         self.hostname = hostname
+        self.requests = requests.Session()
         self.timeout_secs = timeout_secs
 
     def press(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = requests.post(
+        response = self.requests.post(
             "http://%s:8060/keypress/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
         debug("Pressed " + key)
 
     def keydown(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = requests.post(
+        response = self.requests.post(
             "http://%s:8060/keydown/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
         debug("Holding " + key)
 
     def keyup(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = requests.post(
+        response = self.requests.post(
             "http://%s:8060/keyup/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
