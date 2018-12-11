@@ -6,8 +6,8 @@ import stbt
 from stbt import MatchParameters as mp
 
 
-def black(width=1280, height=720):
-    return numpy.zeros((height, width, 3), dtype=numpy.uint8)
+def black(width=1280, height=720, value=0):
+    return numpy.ones((height, width, 3), dtype=numpy.uint8) * value
 
 
 def test_that_matchresult_image_matches_template_passed_to_match():
@@ -171,3 +171,21 @@ def test_match_all_with_an_image_that_matches_everywhere(match_method):
 
     print matches
     assert matches == expected_matches
+
+
+def test_that_sqdiff_matches_black_images():
+    black_reference = black(10, 10)
+    almost_black_reference = black(10, 10, value=1)
+    black_frame = black(1280, 720)
+    almost_black_frame = black(1280, 720, value=2)
+
+    sqdiff = mp(match_method=stbt.MatchMethod.SQDIFF)
+    sqdiff_normed = mp(match_method=stbt.MatchMethod.SQDIFF_NORMED)
+
+    assert not stbt.match(black_reference, black_frame, sqdiff_normed)
+    assert not stbt.match(almost_black_reference, black_frame, sqdiff_normed)
+    assert not stbt.match(almost_black_reference, almost_black_frame,
+                          sqdiff_normed)
+    assert stbt.match(black_reference, black_frame, sqdiff)
+    assert stbt.match(almost_black_reference, black_frame, sqdiff)
+    assert stbt.match(almost_black_reference, almost_black_frame, sqdiff)
