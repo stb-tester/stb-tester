@@ -26,9 +26,6 @@ stbt-control-relay
 stbt-controlc
 stbt-debug
 TAGS
-tests/buttons.png
-tests/ocr/menu.png
-tests/Röthlisberger.png
 tests/stbt-debug-expected-output/*/*/*.png
 tests/test-install
 vendor/.submodules-checked-out

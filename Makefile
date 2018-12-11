@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 # The default target of this Makefile is:
 all:
 
@@ -222,7 +224,7 @@ PYTHON_FILES := \
              | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-pytest check-integrationtests
-check-pytest: all tests/buttons.png tests/ocr/menu.png
+check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
@@ -282,8 +284,12 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
-tests/buttons.png tests/ocr/menu.png: %.png: %.svg
+tests/ocr/menu.png: %.png: %.svg
 	rsvg-convert $< >$@
+tests/buttons-on-blue-background.png: tests/buttons.svg
+	rsvg-convert $< >$@
+tests/buttons.png: tests/buttons.svg
+	rsvg-convert <(sed 's/#0000ff/#ffffff/' $<) >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
 # list of files) won't be set correctly.

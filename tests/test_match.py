@@ -63,6 +63,13 @@ def test_that_if_image_doesnt_match_match_all_returns_empty_array(match_method):
         match_parameters=mp(match_method=match_method)))
 
 
+plain_buttons = [stbt.Region(_x, _y, width=135, height=44) for _x, _y in [
+    (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
+labelled_buttons = [stbt.Region(_x, _y, width=135, height=44) for _x, _y in [
+    (1, 65), (6, 137), (123, 223)]]
+overlapped_button = stbt.Region(3, 223, width=135, height=44)
+
+
 @pytest.mark.parametrize("match_method", [
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
@@ -70,9 +77,6 @@ def test_that_if_image_doesnt_match_match_all_returns_empty_array(match_method):
     stbt.MatchMethod.CCOEFF_NORMED,
 ])
 def test_that_match_all_finds_all_matches(match_method):
-    plain_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
-
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=stbt.load_image('buttons.png'),
         match_parameters=mp(match_method=match_method)))
@@ -85,18 +89,21 @@ def test_that_match_all_finds_all_matches(match_method):
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
 def test_that_match_all_can_find_labelled_matches(match_method):
-    plain_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
-    labelled_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (1, 65), (6, 137), (123, 223)]]
-    overlapped_button = stbt.Region(3, 223, width=135, height=44)
-
     frame = stbt.load_image('buttons.png')
-
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=frame,
         match_parameters=mp(match_method=match_method,
                             confirm_method=stbt.ConfirmMethod.NONE)))
+    print matches
+    assert overlapped_button not in matches
+    assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
+
+
+def test_match_all_with_transparent_reference_image():
+    frame = stbt.load_image("buttons-on-blue-background.png")
+    matches = list(m.region for m in stbt.match_all(
+        "button-transparent.png", frame=frame,
+        match_parameters=mp(match_method=stbt.MatchMethod.SQDIFF)))
     print matches
     assert overlapped_button not in matches
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
@@ -191,3 +198,9 @@ def test_that_sqdiff_matches_black_images():
     assert stbt.match(black_reference, black_frame, sqdiff)
     assert stbt.match(almost_black_reference, black_frame, sqdiff)
     assert stbt.match(almost_black_reference, almost_black_frame, sqdiff)
+
+
+def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    with pytest.raises(ValueError):
+        stbt.match("button-transparent.png", f)
