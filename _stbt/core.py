@@ -33,6 +33,7 @@ from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
 from _stbt.imgutils import find_user_file, Frame
 from _stbt.logging import ddebug, debug, warn
+from _stbt.timeout import sleep_until
 from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
@@ -139,7 +140,7 @@ class DeviceUnderTest(object):
                  mainloop=None, _time=None):
         if _time is None:
             import time as _time
-        self._time_of_last_press = None
+        self._time_of_last_press = 0
         self._display = display
         self._control = control
         self._sink_pipeline = sink_pipeline
@@ -209,23 +210,11 @@ class DeviceUnderTest(object):
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
-        if self._time_of_last_press is not None:
-            # `sleep` is inside a `while` loop because the actual suspension
-            # time of `sleep` may be less than that requested.
-            while True:
-                seconds_to_wait = (
-                    self._time_of_last_press - datetime.datetime.now() +
-                    datetime.timedelta(seconds=interpress_delay_secs)
-                ).total_seconds()
-                if seconds_to_wait > 0:
-                    self._time.sleep(seconds_to_wait)
-                else:
-                    break
-
+        sleep_until(self._time_of_last_press + interpress_delay_secs)
         try:
             yield
         finally:
-            self._time_of_last_press = datetime.datetime.now()
+            self._time_of_last_press = time.time()
 
     def draw_text(self, text, duration_secs=3):
         self._sink_pipeline.draw(text, duration_secs)

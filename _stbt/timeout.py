@@ -15,6 +15,12 @@ def sleep(duration):
             time.sleep(check_timeout())
 
 
+def sleep_until(end_time):
+    with Timeout(end_time=end_time, raise_=False):
+        while True:
+            time.sleep(check_timeout())
+
+
 def check_timeout(now=None):
     """Raises an exception on timeout, otherwise returns the amount of time left
     until the next timeout."""
@@ -60,13 +66,12 @@ _TL = threading.local()
 
 
 class _Timeout(object):
-    def __init__(self, duration=None, message=None, raise_=True):
+    def __init__(self, duration=None, message=None, end_time=None, raise_=True):
         self.duration = duration
         self.message = message
         self.raise_ = raise_
 
-        # Only valid between __enter__ and __exit__:
-        self.end_time = None
+        self.end_time = end_time
         self._stack_pos = None
 
         # This is set in check_timeout:
@@ -87,10 +92,12 @@ class _Timeout(object):
 
     def __enter__(self):
         if self.duration is None:
+        if self.duration is None and self.end_time is None:
             self.end_time = float('inf')
             return self
 
-        self.end_time = time.time() + duration
+        if self.end_time is None:
+            self.end_time = time.time() + duration
 
         try:
             stack = _TL.stack
