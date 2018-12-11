@@ -65,8 +65,7 @@ class MatchParameters(object):
       The method to be used by the first pass of stb-tester's image matching
       algorithm, to find the most likely location of the reference image within
       the larger source image. For details see OpenCV's
-      :ocv:pyfunc:`cv2.matchTemplate`. Defaults to
-      ``MatchMethod.SQDIFF_NORMED``.
+      :ocv:pyfunc:`cv2.matchTemplate`. Defaults to ``MatchMethod.SQDIFF``.
 
     :param float match_threshold:
       How strong a result from the first pass must be, to be considered a

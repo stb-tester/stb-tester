@@ -12,15 +12,26 @@ test_that_stbt_match_doesnt_find_match() {
         "$testdir"/videotestsrc-gamut.png
 }
 
+test_that_stbt_match_applies_match_method_parameter() {
+    # sqdiff-normed gives incorrect result on all-black images
+    ! stbt match \
+        "$testdir"/black-full-frame.png "$testdir"/black-full-frame.png \
+        match_method=sqdiff-normed || fail "sqdiff-normed should have failed"
+
+    stbt match \
+        "$testdir"/black-full-frame.png "$testdir"/black-full-frame.png \
+        match_method=ccoeff-normed
+}
+
 test_that_stbt_match_applies_confirm_threshold_parameter() {
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
-        confirm_method=absdiff confirm_threshold=0.16 &&
+        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.16 &&
     stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
-        confirm_method=absdiff confirm_threshold=0.9
+        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.9
 }
 
 test_that_stbt_match_rejects_invalid_parameters() {
