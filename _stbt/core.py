@@ -33,7 +33,7 @@ from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
 from _stbt.imgutils import find_user_file, Frame
 from _stbt.logging import ddebug, debug, warn
-from _stbt.timeout import sleep_until
+from _stbt.timeout import check_timeout, sleep_until
 from _stbt.types import Region, UITestError, UITestFailure
 
 gi.require_version("Gst", "1.0")
@@ -888,7 +888,8 @@ class Display(object):
                 t = time.time()
                 if t > end_time:
                     break
-                self._condition.wait(end_time - t)
+                self._condition.wait(min(check_timeout(), end_time - t))
+                check_timeout()
 
         pipeline = self.source_pipeline
         if pipeline:
