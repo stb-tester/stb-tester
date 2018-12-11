@@ -35,7 +35,6 @@ from _stbt.logging import (
     debug)
 from _stbt.match import (
     ConfirmMethod,
-    detect_match,
     match,
     match_all,
     MatchMethod,
@@ -70,7 +69,6 @@ __all__ = [
     "ConfirmMethod",
     "crop",
     "debug",
-    "detect_match",
     "detect_motion",
     "draw_text",
     "Frame",

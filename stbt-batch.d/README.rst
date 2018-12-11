@@ -96,8 +96,7 @@ directory set to the directory containing the test run logs:
   * ``backtrace.log`` (if ``stbt run`` dumped core).
   * ``screenshot-clean.png`` (taken as soon as the test failed).
   * ``template.png`` (if the test failed due to a MatchTimeout; contains the
-    image that the ``wait_for_match`` or ``detect_match`` function failed to
-    find).
+    image that the ``wait_for_match`` function failed to find).
 
   The program can choose to leave the ``failure-reason`` file unchanged, or to
   overwrite the file with a new failure reason. The failure reason is an

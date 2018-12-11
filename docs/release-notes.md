@@ -31,6 +31,11 @@ TODO: Date
   This was introduced in v28, but seems to be unused. See release notes for v28
   below for more information.
 
+* Removed API `stbt.detect_match`. This has been redundant since we introduced
+  `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
+  the wild and it is easily replaced with a combination of `stbt.frames` and
+  `stbt.match`.
+
 ##### New features
 
 ##### Bug fixes & improvements

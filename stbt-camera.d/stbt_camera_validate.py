@@ -147,10 +147,9 @@ def validate(video, driver, validate_match=True):
     for square, char in zip(SQUARES, GLYPHS):
         pos = square_to_pos(square)
         template = pristine[pos.y:pos.y + 80, pos.x:pos.x + 80]
-        result = (stbt.detect_match(
+        result = stbt.match(
             template,
             match_parameters=stbt.MatchParameters(match_method="ccoeff-normed"))
-            .next())
         sys.stdout.write(
             "%s%s" % ([FAIL, WARNING, OKGREEN][rate(square, result)], char))
         if square.x == 15:
