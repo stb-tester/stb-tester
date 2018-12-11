@@ -470,7 +470,7 @@ class MatchTimeout(UITestFailure):
             self.expected, self.timeout_secs)
 
 
-@memoize_iterator({"version": "25"})
+@memoize_iterator({"version": "30"})
 def _find_matches(image, template, mask, match_parameters, imglog):
     """Our image-matching algorithm.
 
