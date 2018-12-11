@@ -12,7 +12,8 @@ cat > script.$$ <<-EOF
 	frames = 0
 	stbt.frames().next()  # Don't count pipeline startup time
 	start = datetime.datetime.now()
-	for m in stbt.detect_match("videotestsrc-redblue.png", timeout_secs=10):
+	for frame in stbt.frames(timeout_secs=10):
+	    m = match("videotestsrc-redblue.png", frame=frame)
 	    frames += 1
 	    print "%.3f %s %s" % (m.time, bool(m), m.position)
 	    # if not m:

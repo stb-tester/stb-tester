@@ -34,7 +34,6 @@ from _stbt.imgutils import (
 from _stbt.logging import (
     debug)
 from _stbt.match import (
-    detect_match,
     match,
     match_all,
     MatchParameters,
@@ -67,7 +66,6 @@ __all__ = [
     "ConfigurationError",
     "crop",
     "debug",
-    "detect_match",
     "detect_motion",
     "draw_text",
     "Frame",

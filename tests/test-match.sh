@@ -398,30 +398,6 @@ test_match_searches_in_provided_region() {
     stbt run -v test.py
 }
 
-test_detect_match_reports_valid_timestamp() {
-    cat > test.py <<-EOF
-	import time
-	
-	last_timestamp = None
-	start_time = stbt.get_frame().time
-	for match_result in detect_match("$testdir/videotestsrc-redblue.png"):
-	    assert match_result.time >= start_time
-	    if last_timestamp != None:
-	        if match_result.time - last_timestamp >= 0:
-	            assert match_result.time <= time.time()
-	            import sys
-	            sys.exit(0)
-	        else:
-	            raise Exception("Invalid timestamps reported: %f - %f." % (
-	                            last_timestamp, match_result.time))
-	    if match_result.time == None:
-	        raise Exception("Empty timestamp reported.")
-	    last_timestamp = match_result.time
-	raise Exception("Timeout occured without any result reported.")
-	EOF
-    stbt run -v test.py
-}
-
 test_match_reports_no_match() {
     cat > test.py <<-EOF
 	import stbt
@@ -429,74 +405,6 @@ test_match_reports_no_match() {
 	match_result = stbt.match("$testdir/videotestsrc-checkers-8.png")
 	assert not match_result
 	assert not match_result.match
-	EOF
-    stbt run -v test.py
-}
-
-test_detect_match_times_out() {
-    cat > test.py <<-EOF
-	for match_result in detect_match("$testdir/videotestsrc-redblue.png",
-	                                 timeout_secs=1):
-	    pass
-	EOF
-    stbt run -v test.py
-}
-
-test_detect_match_times_out_during_yield() {
-    cat > test.py <<-EOF
-	i = 0
-	for match_result in detect_match("$testdir/videotestsrc-redblue.png",
-	                                 timeout_secs=1):
-	    import time
-	    time.sleep(2)
-	    i += 1
-	assert i == 1
-	EOF
-    stbt run -v test.py
-}
-
-test_detect_match_changing_template_is_not_racy() {
-    # This test can seem a bit complicated, but the race occured even with:
-    #   # Supposed to match and matches
-    #   wait_for_match("videotestsrc-bw.png", timeout_secs=1)
-    #   # Not supposed to match but matches intermittently
-    #   wait_for_match("videotestsrc-redblue-flipped.png", timeout_secs=1)
-    cat > test.py <<-EOF
-	for match_result in detect_match("$testdir/videotestsrc-bw.png",
-	                                 timeout_secs=1):
-	    if not match_result:
-	        raise Exception("Match not reported.")
-	    # Leave time for another frame to be processed with this template
-	    import time
-	    time.sleep(1.0) # make sure the test fail (0.1s also works)
-	    break
-	for match_result in detect_match(
-	        "$testdir/videotestsrc-redblue-flipped.png"):
-	    # Not supposed to match
-	    if not match_result:
-	        import sys
-	        sys.exit(0)
-	    else:
-	        raise Exception("Wrongly reported a match: race condition.")
-	raise Exception("Timeout occured without any result reported.")
-	EOF
-    stbt run -v test.py
-}
-
-test_detect_match_example_press_and_wait_for_match() {
-    cat > test.py <<-EOF
-	key_sent = False
-	for match_result in detect_match("$testdir/videotestsrc-checkers-8.png"):
-	    if not key_sent:
-	        if match_result:
-	            raise Exception("Wrong match reported.")
-	        press("checkers-8")
-	        key_sent = True
-	    else:
-	        if match_result:
-	            import sys
-	            sys.exit(0)
-	raise Exception("Timeout occured without any result reported.")
 	EOF
     stbt run -v test.py
 }
