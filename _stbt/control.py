@@ -480,6 +480,16 @@ class IRNetBoxControl(RemoteControl):
             raise
 
 
+def post(requests, *args, **kwargs):
+    try:
+        kwargs['timeout'] = min(timeout.check_timeout(),
+                                kwargs.get('timeout', float('inf')))
+        response = requests.post(*args, **kwargs)
+    except requests.exceptions.Timeout:
+        timeout.check_timeout()
+        raise
+
+
 class RokuHttpControl(object):
     """Send a key-press via Roku remote control protocol.
 
@@ -521,7 +531,8 @@ class RokuHttpControl(object):
 
     def press(self, key):
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = self.requests.post(
+        response = post(
+            requests,
             "http://%s:8060/keypress/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
@@ -529,7 +540,8 @@ class RokuHttpControl(object):
 
     def keydown(self, key):
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = self.requests.post(
+        response = post(
+            requests,
             "http://%s:8060/keydown/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
@@ -537,7 +549,8 @@ class RokuHttpControl(object):
 
     def keyup(self, key):
         roku_keyname = self._KEYNAMES.get(key, key)
-        response = self.requests.post(
+        response = post(
+            requests,
             "http://%s:8060/keyup/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
