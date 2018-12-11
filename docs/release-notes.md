@@ -21,6 +21,16 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
 
+#### v30
+
+TODO: Date
+
+##### Breaking changes since v29
+
+##### New features
+
+##### Bug fixes & improvements
+
 #### v29
 
 New APIs for measuring animations and transitions, and for sending infrared
