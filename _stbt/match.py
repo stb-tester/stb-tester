@@ -518,8 +518,6 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
         MatchMethod.CCOEFF_NORMED: cv2.TM_CCOEFF_NORMED,
     }[match_parameters.match_method]
-    is_sqdiff = match_parameters.match_method in (
-        MatchMethod.SQDIFF, MatchMethod.SQDIFF_NORMED)
 
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
@@ -549,7 +547,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             match_parameters.match_threshold - (0.2 if level > 0 else 0))
 
         matched, best_match_position, certainty = _find_best_match_position(
-            heatmap, method, threshold, level)
+            heatmap, threshold, level)
         imglog.append(pyramid_levels=(
             matched, best_match_position, certainty, level))
 
@@ -558,9 +556,9 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
         _, roi_mask = cv2.threshold(
             heatmap,
-            ((1 - threshold) if is_sqdiff else threshold),
+            (1 - threshold),
             255,
-            (cv2.THRESH_BINARY_INV if is_sqdiff else cv2.THRESH_BINARY))
+            cv2.THRESH_BINARY_INV)
         roi_mask = roi_mask.astype(numpy.uint8)
         imwrite("source_matchtemplate_threshold", roi_mask)
 
@@ -584,11 +582,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),
-            255 if is_sqdiff else 0,
+            255,
             _stbt.cv2_compat.FILLED)
 
         matched, best_match_position, certainty = _find_best_match_position(
-            heatmap, method, threshold, level)
+            heatmap, threshold, level)
         region = Region(*best_match_position,
                         width=template.shape[1], height=template.shape[0])
 
@@ -647,6 +645,9 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
         # We still get a number between 0 - 1.
         matches_heatmap /= template.size * (255 ** 2)
 
+    if method in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
+        matches_heatmap = 1 - matches_heatmap
+
     imwrite("source", image)
     imwrite("template", template)
     imwrite("source_matchtemplate", matches_heatmap)
@@ -654,18 +655,10 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
     return matches_heatmap
 
 
-def _find_best_match_position(matches_heatmap, method, threshold, level):
-    min_value, max_value, min_location, max_location = cv2.minMaxLoc(
-        matches_heatmap)
-    if method in (cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED):
-        certainty = (1 - min_value)
-        best_match_position = Position(*min_location)
-    elif method in (cv2.TM_CCORR_NORMED, cv2.TM_CCOEFF_NORMED):
-        certainty = max_value
-        best_match_position = Position(*max_location)
-    else:
-        raise ValueError("Invalid matchTemplate method '%s'" % method)
-
+def _find_best_match_position(matches_heatmap, scale, threshold, level):
+    min_value, _, min_location, _ = cv2.minMaxLoc(matches_heatmap)
+    certainty = 1 - min_value
+    best_match_position = Position(*min_location)
     matched = certainty >= threshold
     ddebug("Level %d: %s at %s with certainty %s" % (
         level, "Matched" if matched else "Didn't match",
@@ -814,10 +807,7 @@ def _log_match_image_debug(imglog):
           <th>
             OpenCV <b>matchTemplate heatmap</b>
             with method {{match_parameters.match_method}}
-            ({{ "darkest" if match_parameters.match_method in (
-                    MatchMethod.SQDIFF, MatchMethod.SQDIFF_NORMED)
-                else "lightest" }}
-            pixel indicates position of best match).
+            (darkest pixel indicates position of best match).
           </th>
           <th>
             matchTemplate heatmap <b>above match_threshold</b>
