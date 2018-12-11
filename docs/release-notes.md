@@ -27,6 +27,10 @@ TODO: Date
 
 ##### Breaking changes since v29
 
+* Compatibility flag `global.use_old_threading_behaviour` has been removed.
+  This was introduced in v28, but seems to be unused. See release notes for v28
+  below for more information.
+
 ##### New features
 
 ##### Bug fixes & improvements
