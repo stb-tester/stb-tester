@@ -3,6 +3,7 @@ import numpy
 import pytest
 
 import stbt
+from _stbt import cv2_compat
 from stbt import MatchParameters as mp
 
 
@@ -99,6 +100,7 @@ def test_that_match_all_can_find_labelled_matches(match_method):
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
 
 
+@pytest.mark.skipif(cv2_compat.version < [3, 0, 0], reason="Requires OpenCV 3")
 def test_match_all_with_transparent_reference_image():
     frame = stbt.load_image("buttons-on-blue-background.png")
     matches = list(m.region for m in stbt.match_all(
