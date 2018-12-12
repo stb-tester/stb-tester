@@ -27,14 +27,20 @@ TODO: Date
 
 ##### Breaking changes since v29
 
-* Compatibility flag `global.use_old_threading_behaviour` has been removed.
-  This was introduced in v28, but seems to be unused. See release notes for v28
-  below for more information.
+* Removed compatibility flag `global.use_old_threading_behaviour`. This was
+  introduced in v28, but seems to be unused. See release notes for v28 below
+  for more information.
 
 * Removed API `stbt.detect_match`. This has been redundant since we introduced
   `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
-  the wild and it is easily replaced with a combination of `stbt.frames` and
-  `stbt.match`.
+  the wild, it is confusing for users that aren't expecting a generator (a
+  generator is itself a truthy value so they wonder why it always "matches"),
+  and it is redundant given `stbt.frames` and `stbt.match`:
+
+  ```
+  for frame in stbt.frames(timeout_secs=10):
+  m = stbt.match("reference_image.png", frame)
+  ```
 
 ##### New features
 
