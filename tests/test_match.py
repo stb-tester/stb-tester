@@ -206,3 +206,36 @@ def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
     f = stbt.load_image("buttons-on-blue-background.png")
     with pytest.raises(ValueError):
         stbt.match("button-transparent.png", f)
+
+
+def test_that_build_pyramid_relaxes_mask():
+    from _stbt.match import _build_pyramid
+
+    mask = numpy.ones((20, 20, 3), dtype=numpy.uint8) * 255
+    mask[3:9, 3:9] = 0  # first 0 is an even row/col, last 0 is an odd row/col
+    n = mask.size - numpy.count_nonzero(mask)
+    assert n == 6 * 6 * 3
+    cv2.imwrite("/tmp/dave1.png", mask)
+
+    mask_pyramid = _build_pyramid(mask, 2, is_mask=True)
+    assert numpy.all(mask_pyramid[0] == mask)
+
+    downsampled = mask_pyramid[1]
+    cv2.imwrite("/tmp/dave2.png", downsampled)
+    assert downsampled.shape == (10, 10, 3)
+    print downsampled[:, :, 0]  # pylint:disable=unsubscriptable-object
+    n = downsampled.size - numpy.count_nonzero(downsampled)
+    assert 3 * 3 * 3 <= n <= 6 * 6 * 3
+    expected = [
+        # pylint:disable=bad-whitespace
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]
+    assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object

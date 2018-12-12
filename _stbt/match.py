@@ -524,12 +524,8 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
-    if mask is not None:
-        # We can't interpolate values in the transparency mask, as they need
-        # to be 0 or 255. So we disable the pyramid optimization if transparency
-        # is needed.
-        levels = 1
     template_pyramid = _build_pyramid(template, levels)
+    mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
@@ -544,14 +540,18 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
             imglog.imwrite("level%d-%s" % (level, name), img, scale=scale)  # pylint:disable=cell-var-from-loop
 
         heatmap, heatmap_scale = _match_template(
-            image_pyramid[level], template_pyramid[level], mask, method,
-            roi_mask, level, imwrite)
+            image_pyramid[level], template_pyramid[level], mask_pyramid[level],
+            method, roi_mask, level, imwrite)
 
         # Relax the threshold slightly for scaled-down pyramid levels to
         # compensate for scaling artifacts.
-        threshold = max(
-            0,
-            match_parameters.match_threshold - (0.2 if level > 0 else 0))
+        if level == 0:
+            relax = 0
+        elif match_parameters.match_method == MatchMethod.SQDIFF:
+            relax = 0.01
+        else:
+            relax = 0.2
+        threshold = max(0, match_parameters.match_threshold - relax)
 
         matched, best_match_position, certainty = _find_best_match_position(
             heatmap, heatmap_scale, threshold, level)
@@ -672,6 +672,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
 
     imwrite("source", image)
     imwrite("template", template)
+    imwrite("mask", mask)
     imwrite("source_matchtemplate", matches_heatmap, scale=scale)
 
     return matches_heatmap, scale
@@ -689,7 +690,7 @@ def _find_best_match_position(matches_heatmap, scale, threshold, level):
     return (matched, best_match_position, certainty)
 
 
-def _build_pyramid(image, levels):
+def _build_pyramid(image, levels, is_mask=False):
     """A "pyramid" is [an image, the same image at 1/2 the size, at 1/4, ...]
 
     As a performance optimisation, image processing algorithms work on a
@@ -701,11 +702,16 @@ def _build_pyramid(image, levels):
     1", and so on. This numbering corresponds to the array index of the
     "pyramid" array.
     """
+    if image is None:
+        return [None] * levels
     pyramid = [image]
     for _ in range(levels - 1):
         if any(x < 20 for x in pyramid[-1].shape[:2]):
             break
-        pyramid.append(cv2.pyrDown(pyramid[-1]))
+        downsampled = cv2.pyrDown(pyramid[-1])
+        if is_mask:
+            cv2.threshold(downsampled, 254, 255, cv2.THRESH_BINARY, downsampled)
+        pyramid.append(downsampled)
     return pyramid
 
 
@@ -859,7 +865,12 @@ def _log_match_image_debug(imglog):
         <tr>
           <td><b>{{level}}</b></td>
           <td><b>{{"0" if level == 0 else ""}}</b></td>
-          <td>{{link("template", level)}}</td>
+          <td>
+            {{link("template", level)}}
+            {% if "mask" in images %}
+            {{link("mask", level)}}
+            {% endif %}
+          </td>
           <td>{{link("source_with_rois", level)}}</td>
           <td>{{link("source_matchtemplate", level)}}</td>
           <td>
