@@ -12,7 +12,6 @@ import enum
 import itertools
 import os
 from collections import namedtuple
-from distutils.version import LooseVersion
 
 import cv2
 import numpy
@@ -346,7 +345,7 @@ def _match_all(image, frame, match_parameters, region):
         raise ValueError("Reference image must be 8-bits per channel")
 
     if mask is not None:
-        if cv2_compat.version < LooseVersion('3.0.0'):
+        if cv2_compat.version < [3, 0, 0]:
             raise ValueError(
                 "Reference image %s has alpha channel, but transparency "
                 "support requires OpenCV 3.0 or greater (you have %s)."
