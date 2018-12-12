@@ -111,6 +111,14 @@ def test_match_all_with_transparent_reference_image():
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
 
 
+@pytest.mark.skipif(cv2_compat.version < [3, 0, 0], reason="Requires OpenCV 3")
+def test_completely_transparent_reference_image():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    assert len(list(stbt.match_all(
+        "completely-transparent.png", frame=f,
+        match_parameters=mp(match_method=stbt.MatchMethod.SQDIFF)))) == 18
+
+
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
     # on buttons

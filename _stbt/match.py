@@ -661,7 +661,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         if mask is not None:
             # matchTemplateMask normalises the source & template image to [0,1].
             # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
-            scale = numpy.count_nonzero(mask)
+            scale = max(1, numpy.count_nonzero(mask))
         else:
             scale = template.size * (255 ** 2)
     else:
