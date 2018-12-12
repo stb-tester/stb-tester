@@ -21,6 +21,31 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
 
+#### v30
+
+TODO: Date
+
+##### Breaking changes since v29
+
+* Removed compatibility flag `global.use_old_threading_behaviour`. This was
+  introduced in v28, but seems to be unused. See release notes for v28 below
+  for more information.
+
+* Removed API `stbt.detect_match`. This has been redundant since we introduced
+  `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
+  the wild, it is confusing for users that aren't expecting a generator (a
+  generator is itself a truthy value so they wonder why it always "matches"),
+  and it is redundant given `stbt.frames` and `stbt.match`:
+
+  ```
+  for frame in stbt.frames(timeout_secs=10):
+  m = stbt.match("reference_image.png", frame)
+  ```
+
+##### New features
+
+##### Bug fixes & improvements
+
 #### v29
 
 New APIs for measuring animations and transitions, and for sending infrared
