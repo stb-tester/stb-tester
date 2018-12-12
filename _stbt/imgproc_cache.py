@@ -201,9 +201,9 @@ class _ArgsEncoder(json.JSONEncoder):
             return sorted(o)
         elif isinstance(o, MatchParameters):
             return {
-                "match_method": o.match_method,
+                "match_method": o.match_method.value,
                 "match_threshold": o.match_threshold,
-                "confirm_method": o.confirm_method,
+                "confirm_method": o.confirm_method.value,
                 "confirm_threshold": o.confirm_threshold,
                 "erode_passes": o.erode_passes}
         elif isinstance(o, numpy.ndarray):

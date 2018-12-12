@@ -113,7 +113,7 @@ class ImageLogger(object):
                 self.data[k] = []
             self.data[k].append(v)
 
-    def imwrite(self, name, image, regions=None, colours=None):
+    def imwrite(self, name, image, regions=None, colours=None, scale=1):
         import cv2
         import numpy
         if not self.enabled:
@@ -125,7 +125,7 @@ class ImageLogger(object):
         if image.dtype == numpy.float32:
             # Scale `cv2.matchTemplate` heatmap output in range
             # [0.0, 1.0] to visible grayscale range [0, 255].
-            image = cv2.convertScaleAbs(image, alpha=255)
+            image = cv2.convertScaleAbs(image, alpha=255.0 / scale)
         else:
             image = image.copy()
         self.images[name] = image
