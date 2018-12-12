@@ -39,10 +39,33 @@ TODO: Date
 
   ```
   for frame in stbt.frames(timeout_secs=10):
-  m = stbt.match("reference_image.png", frame)
+      m = stbt.match("reference_image.png", frame)
   ```
 
 ##### New features
+
+* `stbt.match` supports transparency in reference images. To use this feature
+  your reference image must be a PNG with an alpha (transparency) channel. We
+  only support fully-opaque or fully-transparent pixels: any pixels that aren't
+  fully opaque are treated as fully transparent. This requires OpenCV 3.0 or
+  newer.
+
+* New `MatchMethod.SQDIFF` for `stbt.match`. This works better and more
+  consistently than `SQDIFF_NORMED`. `SQIFF_NORMED` doesn't work at all for
+  completely black images, and it exaggerates differences for dark images.
+  The result from the new `SQDIFF` method is still a number between 0.0 and 1.0,
+  but stb-tester implements the normalisation itself instead of using OpenCV's
+  normalisation.
+
+* `stbt.MatchParameters`: The `match_method` and `confirm_method` can be
+  specified as enums (`stbt.MatchMethod` and `stbt.ConfirmMethod` respectively).
+  Passing the old string values is still supported for backwards compatibility.
+  For example:
+
+  ```
+  stbt.MatchParameters(match_method=stbt.MatchMethod.SQDIFF,
+                       confirm_method=stbt.ConfirmMethod.NONE)
+  ```
 
 ##### Bug fixes & improvements
 
