@@ -596,14 +596,16 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
 
-    matches_heatmap = (
-        (numpy.ones if method in (cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED)
-         else numpy.zeros)(
-            (image.shape[0] - template.shape[0] + 1,
-             image.shape[1] - template.shape[1] + 1),
-            dtype=numpy.float32))
-    if method == cv2.TM_SQDIFF:
-        matches_heatmap *= template.size * (255 ** 2)
+    heatmap_shape = (image.shape[0] - template.shape[0] + 1,
+                     image.shape[1] - template.shape[1] + 1)
+    NO_MATCH = {
+        cv2.TM_SQDIFF: template.size * (255 ** 2),
+        cv2.TM_SQDIFF_NORMED: 1,
+        cv2.TM_CCORR_NORMED: 0,
+        cv2.TM_CCOEFF_NORMED: 0,
+    }
+    matches_heatmap = numpy.full(heatmap_shape, NO_MATCH[method],
+                                 dtype=numpy.float32)
 
     if roi_mask is None:
         rois = [  # Initial region of interest: The whole image.
