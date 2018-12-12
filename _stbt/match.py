@@ -841,7 +841,7 @@ def _log_match_image_debug(imglog):
           <th>within <b>source regions of interest</b></th>
           <th>
             OpenCV <b>matchTemplate heatmap</b>
-            with method {{match_parameters.match_method}}
+            with {{match_parameters.match_method}}
             (darkest pixel indicates position of best match).
           </th>
           <th>
