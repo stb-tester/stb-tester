@@ -30,7 +30,7 @@ from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
-from _stbt.imgutils import find_user_file, Frame
+from _stbt.imgutils import find_user_file, Frame, imread
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 
@@ -47,7 +47,7 @@ warnings.filterwarnings(
 # ===========================================================================
 
 
-def load_image(filename, flags=cv2.IMREAD_COLOR):
+def load_image(filename, flags=None):
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -68,18 +68,20 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
 
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
 
-    :returns: An image in OpenCV format (a `numpy.ndarray` of 8-bit values, 3
-        channel BGR).
+    :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
+        values. With the default flags this will be 3 channels BGR, or 4
+        channels BGRA if the file has an alpha (transparency) channel.
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    Added in v28.
+    | Added in v28.
+    | Changed in v30: Include alpha (transparency) channel if the file has one.
     """
 
     absolute_filename = find_user_file(filename)
     if not absolute_filename:
         raise IOError("No such file: %s" % filename)
-    image = cv2.imread(absolute_filename, flags)
+    image = imread(absolute_filename, flags)
     if image is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
     return image
