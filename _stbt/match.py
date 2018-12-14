@@ -364,17 +364,20 @@ def _match_all(image, frame, match_parameters, region):
         "match", match_parameters=match_parameters,
         template_name=template.friendly_name)
 
-    region = Region.intersect(_image_region(frame), region)
+    input_region = Region.intersect(_image_region(frame), region)
+    if input_region is None:
+        raise ValueError("frame with dimensions %r doesn't contain %r"
+                         % (frame.shape, region))
 
     # pylint:disable=undefined-loop-variable
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
-                crop(frame, region), t, mask,
+                crop(frame, input_region), t, mask,
                 match_parameters, imglog):
 
             match_region = Region.from_extents(*match_region) \
-                                 .translate(region.x, region.y)
+                                 .translate(input_region.x, input_region.y)
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
                 first_pass_certainty, frame,
