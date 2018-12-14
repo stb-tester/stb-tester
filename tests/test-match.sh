@@ -1,5 +1,11 @@
 # Run with ./run-tests.sh
 
+skip_if_opencv_2() {
+    local version=$(
+        python -c 'from _stbt.cv2_compat import version; print version[0]')
+    [[ "$version" -ge 3 ]] || skip "Skipping because OpenCV version < 3"
+}
+
 test_wait_for_match() {
     cat > test.py <<-EOF
 	wait_for_match(
@@ -179,6 +185,18 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config match.pyramid_levels "1" &&
+    stbt run -v test.py
+}
+
+test_wait_for_match_transparency() {
+    skip_if_opencv_2
+    cat > test.py <<-EOF &&
+	import stbt
+	stbt.wait_for_match(
+	    "$testdir/videotestsrc-blacktransparent-blue.png",
+	    match_parameters=stbt.MatchParameters(stbt.MatchMethod.SQDIFF),
+	    timeout_secs=1)
+	EOF
     stbt run -v test.py
 }
 
