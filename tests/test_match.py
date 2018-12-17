@@ -5,6 +5,7 @@ import pytest
 import stbt
 from _stbt import cv2_compat
 from stbt import MatchParameters as mp
+from tests.test_core import _find_file
 
 
 def black(width=1280, height=720, value=0):
@@ -247,3 +248,12 @@ def test_that_build_pyramid_relaxes_mask():
         [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
         [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]
     assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
+
+
+def test_png_with_16_bits_per_channel():
+    assert cv2.imread(_find_file("uint16.png"), cv2.IMREAD_UNCHANGED).dtype == \
+        numpy.uint16  # Sanity check (that this test is valid)
+
+    assert stbt.match(
+        "tests/uint16.png",
+        frame=cv2.imread(_find_file("uint8.png")))
