@@ -39,7 +39,7 @@ def test_matchresult_region_when_first_pyramid_level_fails_to_match():
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
-def test_that_match_rejects_greyscale_template(match_method):
+def test_that_match_rejects_greyscale_array(match_method):
     grey = cv2.cvtColor(stbt.load_image("black.png"), cv2.COLOR_BGR2GRAY)
     with pytest.raises(ValueError):
         stbt.match(grey, frame=black(),
@@ -50,13 +50,21 @@ def test_that_match_rejects_greyscale_template(match_method):
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
-def test_matching_greyscale_template(match_method):
+def test_matching_greyscale_array_with_greyscale_frame(match_method):
     assert stbt.match(
         cv2.cvtColor(stbt.load_image("videotestsrc-redblue.png"),
                      cv2.COLOR_BGR2GRAY),
         frame=cv2.cvtColor(stbt.load_image("videotestsrc-full-frame.png"),
                            cv2.COLOR_BGR2GRAY),
         match_parameters=mp(match_method=match_method))
+
+
+@pytest.mark.parametrize("filename", [
+    "videotestsrc-greyscale.png",
+    "videotestsrc-greyscale-alpha.png",
+])
+def test_that_match_converts_greyscale_reference_image(filename):
+    stbt.match(filename, frame=black())  # Doesn't raise
 
 
 @pytest.mark.parametrize("match_method", [

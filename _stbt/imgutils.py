@@ -96,7 +96,7 @@ class _ImageFromUser(namedtuple(
         return self.relative_filename or '<Custom Image>'
 
 
-def _load_image(image, flags):
+def _load_image(image, flags=None):
     if isinstance(image, _ImageFromUser):
         return image
     if isinstance(image, numpy.ndarray):
@@ -130,6 +130,21 @@ def imread(filename, flags=None):
     elif img.dtype != numpy.uint8:
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
                          % (filename, img.dtype))
+
+    if flags is None:
+        # We want: 3 colours, 8 bits per channel, alpha channel if present.
+        # This differs from cv2.imread's default mode:
+        #
+        #                                     Alpha channel?   Converts from
+        # Mode                                (if present)     grayscale to BGR?
+        # ----------------------------------------------------------------------
+        # IMREAD_COLOR (cv2.imread default)   No               Yes
+        # IMREAD_UNCHANGED                    Yes              No
+        # Our default                         Yes              Yes
+        # ----------------------------------------------------------------------
+
+        if len(img.shape) == 2 or img.shape[2] == 1:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
     return img
 

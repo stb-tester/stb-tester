@@ -313,7 +313,7 @@ def _match_all(image, frame, match_parameters, region):
         import stbt
         frame = stbt.get_frame()
 
-    template = _load_image(image, cv2.IMREAD_UNCHANGED)
+    template = _load_image(image)
     t = template.image
     mask = None
 
@@ -435,7 +435,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
-    image = _load_image(image, cv2.IMREAD_UNCHANGED)
+    image = _load_image(image)
     debug("Searching for " + image.friendly_name)
     for frame in frames:
         res = match(image, match_parameters=match_parameters,
