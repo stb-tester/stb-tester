@@ -334,15 +334,19 @@ def _match_all(image, frame, match_parameters, region):
                          % (t.shape[2], template.absolute_filename))
 
     if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
-        raise ValueError("Frame must be larger than reference image")
+        raise ValueError("Frame %r must be larger than reference image %r"
+                         % (frame.shape, t.shape))
     if any(t.shape[x] < 1 for x in (0, 1)):
-        raise ValueError("Reference image must contain some data")
+        raise ValueError("Reference image %r must contain some data"
+                         % (t.shape,))
     if (len(frame.shape) != len(t.shape) or
             len(frame.shape) == 3 and frame.shape[2] != t.shape[2]):
         raise ValueError(
-            "Frame and reference image must have the same number of channels")
+            "Frame %r and reference image %r must have the same number of "
+            "channels" % (frame.shape, t.shape))
     if t.dtype != numpy.uint8:
-        raise ValueError("Reference image must be 8-bits per channel")
+        raise ValueError("Reference image (%s) must be 8-bits per channel"
+                         % t.dtype)
 
     if mask is not None:
         if cv2_compat.version < [3, 0, 0]:
