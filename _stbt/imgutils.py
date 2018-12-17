@@ -5,7 +5,7 @@ from collections import namedtuple
 import cv2
 import numpy
 
-from .logging import ddebug, debug
+from .logging import ddebug, debug, warn
 from .types import Region
 
 
@@ -106,11 +106,32 @@ def _load_image(image, flags):
         absolute_filename = find_user_file(relative_filename)
         if not absolute_filename:
             raise IOError("No such file: %s" % relative_filename)
-        numpy_image = cv2.imread(absolute_filename, flags)
+        numpy_image = imread(absolute_filename, flags)
         if numpy_image is None:
             raise IOError("Failed to load image: %s" %
                           absolute_filename)
         return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
+
+
+def imread(filename, flags=None):
+    if flags is None:
+        cv2_flags = cv2.IMREAD_UNCHANGED
+    else:
+        cv2_flags = flags
+
+    img = cv2.imread(filename, cv2_flags)
+    if img is None:
+        return None
+
+    if img.dtype == numpy.uint16:
+        warn("Image %s has 16 bits per channel. Converting to 8 bits."
+             % filename)
+        img = cv2.convertScaleAbs(img, alpha=1.0 / 256)
+    elif img.dtype != numpy.uint8:
+        raise ValueError("Image %s must be 8-bits per channel (got %s)"
+                         % (filename, img.dtype))
+
+    return img
 
 
 def pixel_bounding_box(img):
