@@ -8,6 +8,10 @@ from stbt import MatchParameters as mp
 from tests.test_core import _find_file
 
 
+requires_opencv_3 = pytest.mark.skipif(cv2_compat.version < [3, 0, 0],
+                                       reason="Requires OpenCV 3")
+
+
 def black(width=1280, height=720, value=0):
     return numpy.ones((height, width, 3), dtype=numpy.uint8) * value
 
@@ -101,7 +105,7 @@ def test_that_match_all_can_find_labelled_matches(match_method):
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
 
 
-@pytest.mark.skipif(cv2_compat.version < [3, 0, 0], reason="Requires OpenCV 3")
+@requires_opencv_3
 def test_match_all_with_transparent_reference_image():
     frame = stbt.load_image("buttons-on-blue-background.png")
     matches = list(m.region for m in stbt.match_all(
@@ -112,7 +116,7 @@ def test_match_all_with_transparent_reference_image():
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
 
 
-@pytest.mark.skipif(cv2_compat.version < [3, 0, 0], reason="Requires OpenCV 3")
+@requires_opencv_3
 def test_completely_transparent_reference_image():
     f = stbt.load_image("buttons-on-blue-background.png")
     assert len(list(stbt.match_all(
@@ -250,6 +254,7 @@ def test_that_build_pyramid_relaxes_mask():
     assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
 
 
+@requires_opencv_3
 def test_png_with_16_bits_per_channel():
     assert cv2.imread(_find_file("uint16.png"), cv2.IMREAD_UNCHANGED).dtype == \
         numpy.uint16  # Sanity check (that this test is valid)
