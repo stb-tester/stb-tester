@@ -20,7 +20,7 @@ from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
-from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger, warn
+from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .types import Region, UITestFailure
 
 
@@ -313,17 +313,9 @@ def _match_all(image, frame, match_parameters, region):
         import stbt
         frame = stbt.get_frame()
 
-    template = _load_image(image, cv2.IMREAD_UNCHANGED)
+    template = _load_image(image)
     t = template.image
     mask = None
-
-    if t.dtype == numpy.uint16:
-        warn("Reference image %s has 16 bits per channel. Converting to 8 bits."
-             % (template.friendly_name))
-        t = cv2.convertScaleAbs(t, alpha=1.0 / 256)
-    elif t.dtype != numpy.uint8:
-        raise ValueError("Reference image (%s) must be 8-bits per channel"
-                         % t.dtype)
 
     if len(t.shape) == 2 or t.shape[2] == 1 or t.shape[2] == 3:
         pass
@@ -443,7 +435,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
-    image = _load_image(image, cv2.IMREAD_UNCHANGED)
+    image = _load_image(image)
     debug("Searching for " + image.friendly_name)
     for frame in frames:
         res = match(image, match_parameters=match_parameters,

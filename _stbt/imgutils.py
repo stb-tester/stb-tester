@@ -5,7 +5,7 @@ from collections import namedtuple
 import cv2
 import numpy
 
-from .logging import ddebug, debug
+from .logging import ddebug, debug, warn
 from .types import Region
 
 
@@ -96,7 +96,7 @@ class _ImageFromUser(namedtuple(
         return self.relative_filename or '<Custom Image>'
 
 
-def _load_image(image, flags):
+def _load_image(image, flags=None):
     if isinstance(image, _ImageFromUser):
         return image
     if isinstance(image, numpy.ndarray):
@@ -106,11 +106,47 @@ def _load_image(image, flags):
         absolute_filename = find_user_file(relative_filename)
         if not absolute_filename:
             raise IOError("No such file: %s" % relative_filename)
-        numpy_image = cv2.imread(absolute_filename, flags)
+        numpy_image = imread(absolute_filename, flags)
         if numpy_image is None:
             raise IOError("Failed to load image: %s" %
                           absolute_filename)
         return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
+
+
+def imread(filename, flags=None):
+    if flags is None:
+        cv2_flags = cv2.IMREAD_UNCHANGED
+    else:
+        cv2_flags = flags
+
+    img = cv2.imread(filename, cv2_flags)
+    if img is None:
+        return None
+
+    if img.dtype == numpy.uint16:
+        warn("Image %s has 16 bits per channel. Converting to 8 bits."
+             % filename)
+        img = cv2.convertScaleAbs(img, alpha=1.0 / 256)
+    elif img.dtype != numpy.uint8:
+        raise ValueError("Image %s must be 8-bits per channel (got %s)"
+                         % (filename, img.dtype))
+
+    if flags is None:
+        # We want: 3 colours, 8 bits per channel, alpha channel if present.
+        # This differs from cv2.imread's default mode:
+        #
+        #                                     Alpha channel?   Converts from
+        # Mode                                (if present)     grayscale to BGR?
+        # ----------------------------------------------------------------------
+        # IMREAD_COLOR (cv2.imread default)   No               Yes
+        # IMREAD_UNCHANGED                    Yes              No
+        # Our default                         Yes              Yes
+        # ----------------------------------------------------------------------
+
+        if len(img.shape) == 2 or img.shape[2] == 1:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    return img
 
 
 def pixel_bounding_box(img):
