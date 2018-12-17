@@ -3,7 +3,13 @@ import numpy
 import pytest
 
 import stbt
+from _stbt import cv2_compat
 from stbt import MatchParameters as mp
+from tests.test_core import _find_file
+
+
+requires_opencv_3 = pytest.mark.skipif(cv2_compat.version < [3, 0, 0],
+                                       reason="Requires OpenCV 3")
 
 
 def black(width=1280, height=720, value=0):
@@ -63,6 +69,13 @@ def test_that_if_image_doesnt_match_match_all_returns_empty_array(match_method):
         match_parameters=mp(match_method=match_method)))
 
 
+plain_buttons = [stbt.Region(_x, _y, width=135, height=44) for _x, _y in [
+    (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
+labelled_buttons = [stbt.Region(_x, _y, width=135, height=44) for _x, _y in [
+    (1, 65), (6, 137), (123, 223)]]
+overlapped_button = stbt.Region(3, 223, width=135, height=44)
+
+
 @pytest.mark.parametrize("match_method", [
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
@@ -70,9 +83,6 @@ def test_that_if_image_doesnt_match_match_all_returns_empty_array(match_method):
     stbt.MatchMethod.CCOEFF_NORMED,
 ])
 def test_that_match_all_finds_all_matches(match_method):
-    plain_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
-
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=stbt.load_image('buttons.png'),
         match_parameters=mp(match_method=match_method)))
@@ -85,14 +95,7 @@ def test_that_match_all_finds_all_matches(match_method):
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
 def test_that_match_all_can_find_labelled_matches(match_method):
-    plain_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (28, 1), (163, 1), (177, 75), (177, 119), (177, 163), (298, 1)]]
-    labelled_buttons = [stbt.Region(x, y, width=135, height=44) for x, y in [
-        (1, 65), (6, 137), (123, 223)]]
-    overlapped_button = stbt.Region(3, 223, width=135, height=44)
-
     frame = stbt.load_image('buttons.png')
-
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=frame,
         match_parameters=mp(match_method=match_method,
@@ -100,6 +103,25 @@ def test_that_match_all_can_find_labelled_matches(match_method):
     print matches
     assert overlapped_button not in matches
     assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
+
+
+@requires_opencv_3
+def test_match_all_with_transparent_reference_image():
+    frame = stbt.load_image("buttons-on-blue-background.png")
+    matches = list(m.region for m in stbt.match_all(
+        "button-transparent.png", frame=frame,
+        match_parameters=mp(match_method=stbt.MatchMethod.SQDIFF)))
+    print matches
+    assert overlapped_button not in matches
+    assert sorted(plain_buttons + labelled_buttons) == sorted(matches)
+
+
+@requires_opencv_3
+def test_completely_transparent_reference_image():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    assert len(list(stbt.match_all(
+        "completely-transparent.png", frame=f,
+        match_parameters=mp(match_method=stbt.MatchMethod.SQDIFF)))) == 18
 
 
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
@@ -191,3 +213,52 @@ def test_that_sqdiff_matches_black_images():
     assert stbt.match(black_reference, black_frame, sqdiff)
     assert stbt.match(almost_black_reference, black_frame, sqdiff)
     assert stbt.match(almost_black_reference, almost_black_frame, sqdiff)
+
+
+def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    with pytest.raises(ValueError):
+        stbt.match("button-transparent.png", f)
+
+
+def test_that_build_pyramid_relaxes_mask():
+    from _stbt.match import _build_pyramid
+
+    mask = numpy.ones((20, 20, 3), dtype=numpy.uint8) * 255
+    mask[3:9, 3:9] = 0  # first 0 is an even row/col, last 0 is an odd row/col
+    n = mask.size - numpy.count_nonzero(mask)
+    assert n == 6 * 6 * 3
+    cv2.imwrite("/tmp/dave1.png", mask)
+
+    mask_pyramid = _build_pyramid(mask, 2, is_mask=True)
+    assert numpy.all(mask_pyramid[0] == mask)
+
+    downsampled = mask_pyramid[1]
+    cv2.imwrite("/tmp/dave2.png", downsampled)
+    assert downsampled.shape == (10, 10, 3)
+    print downsampled[:, :, 0]  # pylint:disable=unsubscriptable-object
+    n = downsampled.size - numpy.count_nonzero(downsampled)
+    assert 3 * 3 * 3 <= n <= 6 * 6 * 3
+    expected = [
+        # pylint:disable=bad-whitespace
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]
+    assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
+
+
+@requires_opencv_3
+def test_png_with_16_bits_per_channel():
+    assert cv2.imread(_find_file("uint16.png"), cv2.IMREAD_UNCHANGED).dtype == \
+        numpy.uint16  # Sanity check (that this test is valid)
+
+    assert stbt.match(
+        "tests/uint16.png",
+        frame=cv2.imread(_find_file("uint8.png")))

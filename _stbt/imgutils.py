@@ -96,7 +96,7 @@ class _ImageFromUser(namedtuple(
         return self.relative_filename or '<Custom Image>'
 
 
-def _load_image(image, flags=cv2.IMREAD_COLOR):
+def _load_image(image, flags):
     if isinstance(image, _ImageFromUser):
         return image
     if isinstance(image, numpy.ndarray):

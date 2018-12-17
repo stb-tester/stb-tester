@@ -666,7 +666,7 @@ class SinkPipeline(object):
         Gst.debug_bin_to_dot_file_with_ts(
             self.sink_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
-        warn("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+        warn("%s: %s\n%s\n" % (err, err.message, dbg))
 
     def _on_error(self, _bus, message):
         assert message.type == Gst.MessageType.ERROR
@@ -956,7 +956,7 @@ class Display(object):
         Gst.debug_bin_to_dot_file_with_ts(
             self.source_pipeline, Gst.DebugGraphDetails.ALL, "WARNING")
         err, dbg = message.parse_warning()
-        warn("Warning: %s: %s\n%s\n" % (err, err.message, dbg))
+        warn("%s: %s\n%s\n" % (err, err.message, dbg))
 
     def on_eos_from_source_pipeline(self, _bus, _message):
         if not self.tearing_down:

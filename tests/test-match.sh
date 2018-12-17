@@ -1,5 +1,11 @@
 # Run with ./run-tests.sh
 
+skip_if_opencv_2() {
+    local version=$(
+        python -c 'from _stbt.cv2_compat import version; print version[0]')
+    [[ "$version" -ge 3 ]] || skip "Skipping because OpenCV version < 3"
+}
+
 test_wait_for_match() {
     cat > test.py <<-EOF
 	wait_for_match(
@@ -182,6 +188,18 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
     stbt run -v test.py
 }
 
+test_wait_for_match_transparency() {
+    skip_if_opencv_2
+    cat > test.py <<-EOF &&
+	import stbt
+	stbt.wait_for_match(
+	    "$testdir/videotestsrc-blacktransparent-blue.png",
+	    match_parameters=stbt.MatchParameters(stbt.MatchMethod.SQDIFF),
+	    timeout_secs=1)
+	EOF
+    stbt run -v test.py
+}
+
 test_match_nonexistent_template() {
     cat > test.py <<-EOF
 	import stbt
@@ -204,8 +222,8 @@ test_match_invalid_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Invalid template should cause test to fail"
-    cat log | grep -q "FAIL: test.py: ValueError: Source and reference images must have the same number of channels" \
-        || fail "Didn't see 'ValueError: Source and reference images must have the same number of channels'"
+    cat log | grep -q "FAIL: test.py: ValueError: Frame .* and reference image .* must have the same number of channels" \
+        || fail "Didn't see 'ValueError: Frame and reference image must have the same number of channels'"
 }
 
 test_press_until_match_presses_once() {
