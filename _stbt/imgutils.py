@@ -146,6 +146,10 @@ def imread(filename, flags=None):
         if len(img.shape) == 2 or img.shape[2] == 1:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
+        # Remove alpha channel if it's 100% opaque
+        if img.shape[2] == 4 and numpy.all(img[:, :, 3] == 255):
+            img = img[:, :, :3]
+
     return img
 
 
