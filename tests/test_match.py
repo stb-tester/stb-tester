@@ -65,6 +65,7 @@ def test_matching_greyscale_array_with_greyscale_frame(match_method):
 ])
 def test_that_match_converts_greyscale_reference_image(filename):
     stbt.match(filename, frame=black())  # Doesn't raise
+    stbt.match(stbt.load_image(filename), frame=black())
 
 
 @pytest.mark.parametrize("match_method", [
