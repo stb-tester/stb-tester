@@ -69,13 +69,14 @@ def load_image(filename, flags=None):
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
 
     :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
-        values. With the default flags this will be 3 channels BGR, or 4
-        channels BGRA if the file has an alpha (transparency) channel.
+        values. With the default ``flags`` parameter this will be 3 channels
+        BGR, or 4 channels BGRA if the file has transparent pixels.
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    | Added in v28.
-    | Changed in v30: Include alpha (transparency) channel if the file has one.
+    * Added in v28.
+    * Changed in v30: Include alpha (transparency) channel if the file has
+      transparent pixels.
     """
 
     absolute_filename = find_user_file(filename)
