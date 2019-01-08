@@ -71,5 +71,6 @@ mkdir -p $srcdir/debian-packages
 mv $builddir/stb-tester_$version.orig.tar.gz \
     $builddir/stb-tester_$version-$release.debian.tar.gz \
     $builddir/stb-tester_$version-$release.dsc \
+    $builddir/stb-tester_$version-${release}_source.buildinfo \
     $builddir/stb-tester_$version-${release}_source.changes \
     $srcdir/debian-packages
