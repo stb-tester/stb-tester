@@ -480,7 +480,7 @@ class IRNetBoxControl(RemoteControl):
             raise
 
 
-class RokuHttpControl(object):
+class RokuHttpControl(RemoteControl):
     """Send a key-press via Roku remote control protocol.
 
     See https://sdkdocs.roku.com/display/sdkdoc/External+Control+API
