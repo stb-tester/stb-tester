@@ -167,8 +167,7 @@ INSTALL_GPL_FILES = \
     _stbt/control_gpl.py
 
 install-gpl: $(INSTALL_GPL_FILES)
-	$(INSTALL) -m 0755 -d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_GPL_FILES))))
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(pythondir)/_stbt
 	for filename in $(INSTALL_GPL_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
