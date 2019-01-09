@@ -28,6 +28,7 @@ class HdmiCecControl(object):
         "KEY_LEFT_UP": 7,
         "KEY_LEFT_DOWN": 8,
         "KEY_ROOT_MENU": 9,
+        "KEY_MENU": 9,
         "KEY_SETUP": 10,
         "KEY_CONTENTS_MENU": 11,  # <- not in input-event-codes.h
         "KEY_FAVORITE_MENU": 12,  # <- not in input-event-codes.h
