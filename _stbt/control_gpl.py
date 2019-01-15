@@ -28,11 +28,16 @@ class HdmiCecControl(object):
         "KEY_LEFT_UP": 7,
         "KEY_LEFT_DOWN": 8,
         "KEY_ROOT_MENU": 9,
+        "KEY_MENU": 9,
         "KEY_SETUP": 10,
         "KEY_CONTENTS_MENU": 11,  # <- not in input-event-codes.h
         "KEY_FAVORITE_MENU": 12,  # <- not in input-event-codes.h
         "KEY_BACK": 13,
+
         # 0x0E - 0x1F Reserved
+        "KEY_TV": 16,
+
+        # Back to official CEC names
         "KEY_0": 32,
         "KEY_1": 33,
         "KEY_2": 34,
