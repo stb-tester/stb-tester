@@ -25,6 +25,31 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 TODO: Date
 
+##### Major new features
+
+* Supports Ubuntu 18.04, OpenCV 3, and Tesseract 4.
+
+* `stbt.match` supports transparency in reference images. To use this feature
+  your reference image must be a PNG with an alpha (transparency) channel. We
+  only support fully-opaque or fully-transparent pixels: any pixels that aren't
+  fully opaque are treated as fully transparent. This requires OpenCV 3.0 or
+  newer.
+
+    * `stbt.load_image` will include the image's alpha (transparency) channel
+      if it had any transparent pixels.
+
+* New `MatchMethod.SQDIFF` for `stbt.match`. This works better and more
+  consistently than `SQDIFF_NORMED`. `SQIFF_NORMED` doesn't work at all for
+  completely black images, and it exaggerates differences for dark images.
+  The result from the new `SQDIFF` method is still a number between 0.0 and 1.0,
+  but stb-tester implements the normalisation itself instead of using OpenCV's
+  normalisation.
+
+* `stbt.ocr` takes a new `engine` parameter to select the OCR engine if you're
+  using Tesseract 4. `stbt.OcrEngine.TESSERACT` (the default) means the
+  "legacy" engine from Tesseract 3; `stbt.OcrEngine.LSTM` means Tesseract's new
+  engine based on a "Long Short-Term Memory" neural network.
+
 ##### Breaking changes since v29
 
 * Removed compatibility flag `global.use_old_threading_behaviour`. This was
@@ -35,27 +60,51 @@ TODO: Date
   `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
   the wild, it is confusing for users that aren't expecting a generator (a
   generator is itself a truthy value so they wonder why it always "matches"),
-  and it is redundant given `stbt.frames` and `stbt.match`:
+  and it is redundant given `stbt.frames` and `stbt.match`.
 
-  ```
-  for frame in stbt.frames(timeout_secs=10):
-      m = stbt.match("reference_image.png", frame)
-  ```
+  If you were using `stbt.detect_match` you can replace code like this:
 
-##### New features
+        for m in stbt.detect_match("reference_image.png"):
+            ...
 
-* `stbt.match` supports transparency in reference images. To use this feature
-  your reference image must be a PNG with an alpha (transparency) channel. We
-  only support fully-opaque or fully-transparent pixels: any pixels that aren't
-  fully opaque are treated as fully transparent. This requires OpenCV 3.0 or
-  newer.
+  with this:
 
-* New `MatchMethod.SQDIFF` for `stbt.match`. This works better and more
-  consistently than `SQDIFF_NORMED`. `SQIFF_NORMED` doesn't work at all for
-  completely black images, and it exaggerates differences for dark images.
-  The result from the new `SQDIFF` method is still a number between 0.0 and 1.0,
-  but stb-tester implements the normalisation itself instead of using OpenCV's
-  normalisation.
+        for frame in stbt.frames(timeout_secs=10):
+            m = stbt.match("reference_image.png", frame)
+            ...
+
+##### Minor additions, bugfixes & improvements
+
+* `stbt power`: Add support for Rittal 7955.310 PDUs.
+
+* `stbt lint` fixes:
+  * New checker `stbt-uncommitted-image`: Filename given to `stbt.match` (and
+    similar functions) exists on disk, but isn't committed to git.
+  * `stbt-frame-object-missing-frame`: Also checks for missing `frame`
+    parameter when calling class constructors (not just class methods).
+  * `stbt-unused-return-value`: Also checks that the return value of
+    `stbt.press_and_wait` is used.
+  * `stbt-missing-image`: Reports the full path to the missing image (relative
+    to your git repository root).
+
+* `stbt match` command-line tool: Add `--all` flag to print all matches of the
+  reference image.
+
+* Many improvements to the "stbt-debug" HTML that is generated with `stbt run
+  -vv` for debugging image-processing operations.
+
+* HDMI CEC control: Add "KEY_MENU" alias for "KEY_ROOT_MENU", and add "KEY_TV"
+  for CEC keycode 16 (16 is "reserved" in the CEC spec, but the Apple TV
+  recognises it as the "TV" button).
+
+* Roku HTTP control: Enforce 3 second timeout on all HTTP requests.
+
+* `stbt.FrameObject`: Add `refresh` method, used by navigation functions that
+  modify the state of the device-under-test.
+
+* `stbt.match` allows matching a greyscale reference image against a greyscale
+  frame (for example if you've applied some custom pre-processing, such as edge
+  detection, to both the frame & reference images).
 
 * `stbt.MatchParameters`: The `match_method` and `confirm_method` can be
   specified as enums (`stbt.MatchMethod` and `stbt.ConfirmMethod` respectively).
@@ -67,7 +116,15 @@ TODO: Date
                        confirm_method=stbt.ConfirmMethod.NONE)
   ```
 
-##### Bug fixes & improvements
+* `stbt.OcrMode` has new values:
+  * `SPARSE_TEXT`: Find as much text as possible in no particular order.
+    Requires Tesseract 3.03 or later.
+  * `SPARSE_TEXT_WITH_OSD`: As above, with Orientation and Script Detection.
+    Requires Tesseract 3.03 or later.
+  * `RAW_LINE`: Treat the image as a single text line for direct input to the
+    LSTM model, bypassing Tesseract preprocessing. Requires Tesseract 3.04 or
+    later.
+
 
 #### v29
 
