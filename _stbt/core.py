@@ -185,18 +185,18 @@ class DeviceUnderTest(object):
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 yield
-            finally:
-                original_exc_type, exc_value, exc_traceback = sys.exc_info()
+            except:  # pylint:disable=bare-except
+                exc_info = sys.exc_info()
                 try:
                     self._control.keyup(key)
                     self.draw_text("Released %s" % key, duration_secs=3)
                 except Exception:  # pylint:disable=broad-except
-                    # Raise an exception if we fail to release the key, but
-                    # not if it would mask an exception from the test script.
-                    if original_exc_type is None:
-                        raise
-                if original_exc_type is not None:
-                    raise original_exc_type, exc_value, exc_traceback  # pylint:disable=raising-bad-type
+                    # Don't mask original exception from the test script.
+                    pass
+                raise exc_info[0], exc_info[1], exc_info[2]
+            else:
+                self._control.keyup(key)
+                self.draw_text("Released %s" % key, duration_secs=3)
 
     @contextmanager
     def _interpress_delay(self, interpress_delay_secs):
