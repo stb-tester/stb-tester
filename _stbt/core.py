@@ -175,14 +175,8 @@ class DeviceUnderTest(object):
             self.draw_text(key, duration_secs=3)
 
         else:
-            try:
-                self._control.keydown(key)
-                self.draw_text("Holding %s" % key,
-                               duration_secs=min(3, hold_secs))
+            with self.pressing(key, interpress_delay_secs):
                 self._time.sleep(hold_secs)
-            finally:
-                self._control.keyup(key)
-                self.draw_text("Released %s" % key, duration_secs=3)
 
     @contextmanager
     def pressing(self, key, interpress_delay_secs=None):
