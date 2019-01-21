@@ -2,6 +2,7 @@ cd_example_testpack()
 {
     cp -R "$testdir/auto-selftest-example-test-pack" test-pack &&
     cd test-pack || fail "Test setup failed"
+    export STBT_CONFIG_FILE="$PWD/.stbt.conf"
 }
 
 check_generated_files()
