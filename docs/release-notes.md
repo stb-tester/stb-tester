@@ -38,12 +38,12 @@ TODO: Date
     * `stbt.load_image` will include the image's alpha (transparency) channel
       if it had any transparent pixels.
 
-* New `MatchMethod.SQDIFF` for `stbt.match`. This works better and more
-  consistently than `SQDIFF_NORMED`. `SQIFF_NORMED` doesn't work at all for
-  completely black images, and it exaggerates differences for dark images.
-  The result from the new `SQDIFF` method is still a number between 0.0 and 1.0,
-  but stb-tester implements the normalisation itself instead of using OpenCV's
-  normalisation.
+* Added new `MatchMethod.SQDIFF` for `stbt.match`, and made it the default
+  match method. This works better and more consistently than
+  `MatchMethod.SQDIFF_NORMED` (the previous default). `SQIFF_NORMED` doesn't
+  work at all for completely black images or images with transparency, and it
+  exaggerates differences for dark images. The result from the new `SQDIFF`
+  method is still a number between 0.0 and 1.0.
 
 * `stbt.ocr` takes a new `engine` parameter to select the OCR engine if you're
   using Tesseract 4. `stbt.OcrEngine.TESSERACT` (the default) means the
@@ -52,9 +52,20 @@ TODO: Date
 
 ##### Breaking changes since v29
 
-* Removed compatibility flag `global.use_old_threading_behaviour`. This was
-  introduced in v28, but seems to be unused. See release notes for v28 below
-  for more information.
+* Changed the default `match_method` to `MatchMethod.SQDIFF` and the default
+  `match_threshold` to 0.98. See "New features" above for a description of this
+  new match method. To preserve the old defaults, set this in your stbt.conf
+  file:
+
+  ```
+  [match]
+  match_method=sqdiff-normed
+  match_threshold=0.80
+  ```
+
+* `stbt.load_image` will now return a 4-channel image (BGRA, where the 4th
+  channel is the alpha, or transparency, channel) if the file had any
+  transparent pixels.
 
 * Removed API `stbt.detect_match`. This has been redundant since we introduced
   `stbt.match` in 0.21 (Dec 2014). It is unlikely there are many uses of it in
@@ -72,6 +83,10 @@ TODO: Date
         for frame in stbt.frames(timeout_secs=10):
             m = stbt.match("reference_image.png", frame)
             ...
+
+* Removed compatibility flag `global.use_old_threading_behaviour`. This was
+  introduced in v28, but seems to be unused. See release notes for v28 below
+  for more information.
 
 ##### Minor additions, bugfixes & improvements
 

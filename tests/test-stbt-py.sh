@@ -413,20 +413,23 @@ test_that_get_frame_time_is_wall_time() {
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
 	import stbt
-	stbt.wait_for_match("${testdir}/videotestsrc-checkers-8.png")
+	for frame in stbt.frames(timeout_secs=10):
+	    stbt.match("${testdir}/videotestsrc-ball.png", frame)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
     stbt run -v \
-        --source-pipeline 'videotestsrc is-live=true ! video/x-raw,width=640' \
+        --source-pipeline "videotestsrc is-live=true pattern=ball ! \
+                           video/x-raw,width=640" \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
+        --save-screenshot never \
         test.py &
     test_script=$!
     trap "kill $test_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
 	import stbt
-	stbt.wait_for_match("${testdir}/videotestsrc-checkers-8-label.png")
+	stbt.wait_for_match("${testdir}/videotestsrc-ball-label.png")
 	EOF
     stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \

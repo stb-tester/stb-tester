@@ -25,7 +25,7 @@ def test_match_debug():
         # Multiple matches; first pass stops with a non-match:
         matches = list(stbt.match_all(
             "button.png", frame=stbt.load_image("buttons.png"),
-            match_parameters=mp(match_threshold=0.99)))
+            match_parameters=mp(match_threshold=0.995)))
         print matches
         assert len(matches) == 6
 

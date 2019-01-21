@@ -65,7 +65,8 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
-	        match_method="ccorr-normed", confirm_method="none"),
+	        match_method="ccorr-normed", match_threshold=0.8,
+	        confirm_method="none"),
 	    timeout_secs=1)
 	EOF
     stbt run -v test.py || return
@@ -74,7 +75,8 @@ test_wait_for_match_match_method_param_affects_first_pass() {
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
-	        match_method="sqdiff-normed", confirm_method="none"),
+	        match_method="sqdiff-normed", match_threshold=0.8,
+	        confirm_method="none"),
 	    timeout_secs=1)
 	EOF
     ! stbt run -v test.py
@@ -146,14 +148,16 @@ test_wait_for_match_erode_passes_affects_match() {
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/circle-small.png",
-	               match_parameters=MatchParameters(erode_passes=2))
+	               match_parameters=MatchParameters(match_threshold=0.9,
+	                                                erode_passes=2))
 	EOF
     stbt run -v --source-pipeline="$source_pipeline" --control=none test.py \
         || return
 
     cat > test.py <<-EOF
 	wait_for_match("$testdir/circle-small.png",
-	               match_parameters=MatchParameters(erode_passes=1))
+	               match_parameters=MatchParameters(match_threshold=0.9,
+	                                                erode_passes=1))
 	EOF
     ! stbt run -v --source-pipeline="$source_pipeline" --control=none test.py
 }
@@ -464,7 +468,5 @@ test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     ! stbt run -v --source-pipeline 'videotestsrc pattern=black is-live=true' \
         test.py &&
 
-    # sqdiff-normed & ccorr-normed give incorrect result on all-black images
-    stbt match screenshot.png "$testdir"/black-full-frame.png \
-        match_method=ccoeff-normed
+    stbt match screenshot.png "$testdir"/black-full-frame.png
 }
