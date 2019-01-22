@@ -23,9 +23,9 @@ import enum
 import cv2
 import numpy
 
+from .diff import MotionResult
 from .imgutils import load_image, pixel_bounding_box
 from .logging import ddebug, debug, draw_on
-from .motion import MotionResult
 from .types import Region
 
 

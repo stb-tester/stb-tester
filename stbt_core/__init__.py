@@ -22,6 +22,10 @@ from _stbt.black import (
 from _stbt.config import (
     ConfigurationError,
     get_config)
+from _stbt.diff import (
+    FrameDiffer,
+    MotionDiff,
+    MotionResult)
 from _stbt.frameobject import (
     for_object_repository,
     FrameObject)
@@ -48,7 +52,6 @@ from _stbt.match import (
     wait_for_match)
 from _stbt.motion import (
     detect_motion,
-    MotionResult,
     MotionTimeout,
     wait_for_motion)
 from _stbt.ocr import (
@@ -88,6 +91,7 @@ __all__ = [to_native_str(x) for x in [
     "draw_text",
     "for_object_repository",
     "Frame",
+    "FrameDiffer",
     "FrameObject",
     "frames",
     "get_config",
@@ -105,6 +109,7 @@ __all__ = [to_native_str(x) for x in [
     "MatchParameters",
     "MatchResult",
     "MatchTimeout",
+    "MotionDiff",
     "MotionResult",
     "MotionTimeout",
     "NoVideo",
