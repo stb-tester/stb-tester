@@ -6,6 +6,7 @@ import pytest
 from numpy import isclose
 
 import stbt
+from _stbt.transition import strict_diff
 
 
 class FakeDeviceUnderTest(object):
@@ -138,3 +139,10 @@ def test_press_and_wait_timestamps():
     assert isclose(transition.duration, 0.48, rtol=0, atol=0.01)
     assert isclose(transition.end_time, transition.animation_start_time + 0.08)
     assert isclose(transition.animation_duration, 0.08)
+
+
+def test_that_strict_diff_ignores_a_few_scattered_small_differences():
+    assert not strict_diff(
+        stbt.load_image("2px-different-1.png"),
+        stbt.load_image("2px-different-2.png"),
+        region=stbt.Region.ALL, mask_image=None)

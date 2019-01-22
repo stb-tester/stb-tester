@@ -222,7 +222,7 @@ def strict_diff(f1, f2, region, mask_image):
     if mask_image is not None:
         absdiff = cv2.bitwise_and(absdiff, mask_image, absdiff)
 
-    return absdiff.any()
+    return numpy.count_nonzero(absdiff) > 50 or (absdiff > 20).any()
 
 
 class _TransitionResult(object):
