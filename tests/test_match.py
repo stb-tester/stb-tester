@@ -280,3 +280,52 @@ def test_png_with_16_bits_per_channel():
     assert stbt.match(
         "tests/uint16.png",
         frame=cv2.imread(_find_file("uint8.png")))
+
+
+@requires_opencv_3
+def test_match_fast_path():
+    # This is just an example of typical use
+    assert stbt.match("action-panel-prototype.png",
+                      frame=stbt.load_image("action-panel.png"))
+
+
+@requires_opencv_3
+def test_that_match_fast_path_is_equivalent():
+    from _stbt.match import _load_image
+    black_reference = black(10, 10)
+    almost_black_reference = black(10, 10, value=1)
+    black_frame = black(1280, 720)
+    almost_black_frame = black(1280, 720, value=2)
+
+    images = [
+        ("videotestsrc-redblue.png", "videotestsrc-full-frame.png"),
+        ("action-panel.png", "action-panel.png"),
+        ("videotestsrc-full-frame.png", "videotestsrc-full-frame.png"),
+        ("videotestsrc-redblue-flipped.png", "videotestsrc-full-frame.png"),
+        ("button.png", "black-full-frame.png"),
+        ("completely-transparent.png", "buttons-on-blue-background.png"),
+        ("action-panel-template.png", "action-panel.png"),
+        ("button.png", "buttons.png"),
+        (black_reference, black_frame),
+        (almost_black_reference, black_frame),
+        (almost_black_reference, almost_black_frame),
+        ("repeating-pattern.png", "repeating-pattern-full-frame.png"),
+        ("button-transparent.png", "buttons.png"),
+    ]
+    for reference, frame in images:
+        if isinstance(frame, (str, unicode)):
+            frame = stbt.load_image(frame)
+        reference = _load_image(reference)
+        orig_m = stbt.match(reference, frame=frame)
+        fast_m = stbt.match(reference, frame=frame, region=orig_m.region)
+        assert orig_m.time == fast_m.time
+        assert orig_m.match == fast_m.match
+        assert orig_m.region == fast_m.region
+        assert bool(orig_m) == bool(fast_m)
+        assert orig_m.first_pass_result == pytest.approx(
+            fast_m.first_pass_result, abs=0.0001 if orig_m else 0.05)
+        assert (orig_m.frame == fast_m.frame).all()
+        if isinstance(orig_m.image, numpy.ndarray):
+            assert (orig_m.image == fast_m.image).all()
+        else:
+            assert orig_m.image == fast_m.image
