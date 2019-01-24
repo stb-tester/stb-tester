@@ -139,6 +139,9 @@ TODO: Date
   * `RAW_LINE`: Treat the image as a single text line for direct input to the
     LSTM model, bypassing Tesseract preprocessing. Requires Tesseract 3.04 or
     later.
+    
+* The RedRat X IR blaster is now supported via ethernet (not USB). Configure 
+  your RedRat X as an IRNetBox in your stbt.conf file.
 
 
 #### v29
