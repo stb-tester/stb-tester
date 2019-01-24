@@ -122,14 +122,14 @@ class IRNetBox(object):
     def irsend_raw(self, port, power, data):
         """Output the IR data on the given port at the set power (§6.1.1).
 
-        * `port` is a number between 1 and 16.
+        * `port` is a number between 1 and 16 (or 1 and 4 for if you yse a RedRat X).
         * `power` is a number between 1 and 100.
         * `data` is a byte array as exported by the RedRat Signal DB Utility.
 
         """
         if self.irnetbox_model == NetBoxTypes.MK1:
             raise Exception("IRNetBox MK1 not supported")
-        elif self.irnetbox_model == NetBoxTypes.MK2:
+        elif self.irnetbox_model in (NetBoxTypes.MK2, NetBoxTypes.RRX, NetBoxTypes.MK4):
             self.reset()
             self.indicators_on()
             self._send(MessageTypes.SET_MEMORY)
@@ -226,6 +226,8 @@ class NetBoxTypes(object):
     MK1 = 2
     MK2 = 7
     MK3 = 8
+    MK4 = 12
+    RRX = 13
 
 
 def _message(message_type, message_data):
@@ -365,3 +367,4 @@ class _FileToSocket(object):
 
     def recv(self, bufsize, flags=0):  # pylint:disable=unused-argument
         return self.file.read(bufsize)
+
