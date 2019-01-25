@@ -194,6 +194,11 @@ def _progress_line(width, n, total):
 def generate_into_tmpdir(source_files=None):
     start_time = time.time()
 
+    # Importing stbt + gstreamer bindings + opencv is slow.
+    # multiprocessing.Pool uses `fork` so by importing here, these modules
+    # won't be imported from scratch in each subprocess.
+    import stbt  # pylint:disable=unused-variable
+
     selftest_dir = "%s/selftest" % os.curdir
     mkdir_p(selftest_dir)
     # We use this process pool for sandboxing rather than concurrency:
