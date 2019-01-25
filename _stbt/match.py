@@ -565,13 +565,14 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
         if not matched:
             break
 
-        _, roi_mask = cv2.threshold(
-            heatmap,
-            (1 - threshold) * heatmap_scale,
-            255,
-            cv2.THRESH_BINARY_INV)
-        roi_mask = roi_mask.astype(numpy.uint8)
-        imwrite("source_matchtemplate_threshold", roi_mask)
+        if level > 0 or imglog.enabled:
+            _, roi_mask = cv2.threshold(
+                heatmap,
+                (1 - threshold) * heatmap_scale,
+                255,
+                cv2.THRESH_BINARY_INV)
+            roi_mask = roi_mask.astype(numpy.uint8)
+            imwrite("source_matchtemplate_threshold", roi_mask)
 
     # pylint:disable=undefined-loop-variable
     region = Region(*_upsample(best_match_position, level),
