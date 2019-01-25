@@ -444,8 +444,10 @@ def _tesseract_subprocess(
 
     if tesseract_version >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
+        tessdata_suffix = ''
     else:
         engine_flags = []
+        tessdata_suffix = '/tessdata'
 
     if upsample:
         # We scale image up 3x before feeding it to tesseract as this
@@ -489,7 +491,7 @@ def _tesseract_subprocess(
         if _config or user_words or user_patterns or imglog.enabled:
             tessdata_dir = tmp + '/tessdata'
             os.mkdir(tessdata_dir)
-            _symlink_copy_dir(_find_tessdata_dir(), tmp)
+            _symlink_copy_dir(_find_tessdata_dir(tessdata_suffix), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
             if tesseract_version >= LooseVersion("4.0.0"):
                 tessenv['TESSDATA_PREFIX'] += "tessdata"
@@ -606,12 +608,13 @@ def _hocr_elem_region(elem):
         elem = elem.getparent()
 
 
-def _find_tessdata_dir():
+def _find_tessdata_dir(tessdata_suffix):
     from distutils.spawn import find_executable
 
     tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
     if tessdata_prefix:
-        tessdata = tessdata_prefix + '/tessdata'
+        tessdata = tessdata_prefix + tessdata_suffix
+        tessdata = os.path.normpath(tessdata)
         if os.path.exists(tessdata):
             return tessdata
         else:
