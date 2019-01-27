@@ -605,8 +605,11 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                 255,
                 cv2.THRESH_BINARY_INV)
             roi_mask = roi_mask.astype(numpy.uint8)
-            cv2.morphologyEx(roi_mask, cv2.MORPH_CLOSE, KERNEL_JOIN_ROIS,
-                             roi_mask)
+            if level >= 2:
+                kernel = numpy.ones((5, 5), dtype=numpy.uint8)
+            else:
+                kernel = numpy.ones((11, 11), dtype=numpy.uint8)
+            cv2.morphologyEx(roi_mask, cv2.MORPH_CLOSE, kernel, roi_mask)
             imwrite("source_matchtemplate_threshold", roi_mask)
 
     # pylint:disable=undefined-loop-variable
@@ -636,9 +639,6 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             heatmap, heatmap_scale, threshold, level)
         region = Region(*best_match_position,
                         width=template.shape[1], height=template.shape[0])
-
-
-KERNEL_JOIN_ROIS = numpy.ones((11, 11), dtype=numpy.uint8)
 
 
 def _match_template(image, template, mask, method, roi_mask, level, imwrite):
