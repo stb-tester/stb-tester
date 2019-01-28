@@ -547,13 +547,13 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
             image_pyramid[level], template_pyramid[level], mask_pyramid[level],
             method, roi_mask, level, imwrite)
 
-        # Relax the threshold slightly for scaled-down pyramid levels to
-        # compensate for scaling artifacts.
-        if level == 0:
+        if level == 0 or match_parameters.match_method == MatchMethod.SQDIFF:
             relax = 0
-        elif match_parameters.match_method == MatchMethod.SQDIFF:
-            relax = 0.01
         else:
+            # We used to think that we needed to relax the threshold for
+            # scaled-down pyramid levels to compensate for scaling artifacts.
+            # Keep it for the older match-methods, for (paranoid) backwards
+            # compatibility.
             relax = 0.2
         threshold = max(0, match_parameters.match_threshold - relax)
 
