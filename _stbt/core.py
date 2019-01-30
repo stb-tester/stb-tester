@@ -157,6 +157,7 @@ class DeviceUnderTest(object):
 
     def __exit__(self, exc_type, exc_value, tb):
         if self._display:
+            self._sink_pipeline.exit_prep()
             self._display.__exit__(exc_type, exc_value, tb)
             self._display = None
             self._sink_pipeline.__exit__(exc_type, exc_value, tb)
@@ -619,6 +620,11 @@ class SinkPipeline(object):
         self._time = _time
         self._sample_count = 0
 
+        # The test script can draw on the video, but this happens in a different
+        # thread.  We don't know when they're finished drawing so we just give
+        # them 0.5s instead.
+        self._sink_latency_secs = 0.5
+
         sink_pipeline_description = (
             "appsrc name=appsrc format=time is-live=true "
             "caps=video/x-raw,format=(string)BGR ")
@@ -678,12 +684,32 @@ class SinkPipeline(object):
         self.received_eos.clear()
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
+    def exit_prep(self):
+        # It goes sink.exit_prep, src.__exit__, sink.__exit__, so we can do
+        # teardown things here that require the src to still be running.
+
+        # Dropping the sink latency to 0 will cause all the frames in
+        # self._frames to be pushed next time on_sample is called.  We can't
+        # flush here because on_sample is called from the thread that is running
+        # `Display`.
+        self._sink_latency_secs = 0
+
+        # Wait for up to 1s for the sink pipeline to get into the RUNNING state.
+        # This is to avoid teardown races in the sink pipeline caused by buggy
+        # GStreamer elements
+        self.sink_pipeline.get_state(1 * Gst.SECOND)
+
     def __exit__(self, _1, _2, _3):
         # Drain the frame queue
         while self._frames:
             self._push_sample(self._frames.pop())
 
         if self._sample_count > 0:
+            state = self.sink_pipeline.get_state(0)
+            if (state[0] != Gst.StateChangeReturn.SUCCESS or
+                    state[1] != Gst.State.PLAYING):
+                debug(
+                    "teardown: Sink pipeline not in state PLAYING: %r" % state)
             debug("teardown: Sending eos on sink pipeline")
             if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
                 self.sink_pipeline.send_event(Gst.Event.new_eos())
@@ -704,17 +730,12 @@ class SinkPipeline(object):
         """
         Called from `Display` for each frame.
         """
-        # The test script can draw on the video, but this happens in a different
-        # thread.  We don't know when they're finished drawing so we just give
-        # them 0.5s instead.
-        SINK_LATENCY_SECS = 0.5
-
         now = sample.time
         self._frames.appendleft(sample)
 
         while self._frames:
             oldest = self._frames.pop()
-            if oldest.time > now - SINK_LATENCY_SECS:
+            if oldest.time > now - self._sink_latency_secs:
                 self._frames.append(oldest)
                 break
             self._push_sample(oldest)
@@ -780,6 +801,9 @@ class NoSinkPipeline(object):
     nor video encoding :).
     """
     def __enter__(self):
+        pass
+
+    def exit_prep(self):
         pass
 
     def __exit__(self, _1, _2, _3):
