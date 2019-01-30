@@ -352,7 +352,7 @@ def test_that_cache_speeds_up_match_all():
     cached_time, uncached_time, cached_result, uncached_result = (
         _check_cache_behaviour(match_all))
 
-    assert uncached_time > (cached_time * 4)
+    assert uncached_time > (cached_time * 2)
     assert len(uncached_result) == 6
     for cached, uncached in itertools.izip_longest(cached_result,
                                                    uncached_result):
