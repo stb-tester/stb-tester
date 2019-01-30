@@ -321,13 +321,9 @@ def _match_all(image, frame, match_parameters, region):
     elif t.shape[2] == 4:
         # Create transparency mask from alpha channel
         mask = t[:, :, 3]
-        transparent = mask < 255
-        if numpy.any(transparent):
-            mask[transparent] = 0
-            # OpenCV wants mask to match template's number of channels
-            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        else:
-            mask = None
+        mask[mask < 255] = 0
+        # OpenCV wants mask to match template's number of channels
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         t = t[:, :, 0:3]
     else:
         raise ValueError("Expected 3-channel image, got %d channels: %s"
