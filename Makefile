@@ -74,6 +74,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/imgproc_cache.py \
     _stbt/imgutils.py \
     _stbt/irnetbox.py \
+    _stbt/libstbt.so \
     _stbt/libxxhash.so \
     _stbt/lmdb/__init__.py \
     _stbt/lmdb/cpython.so \
@@ -84,6 +85,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/ocr.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
+    _stbt/sqdiff.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
     _stbt/stbt.conf \
@@ -332,7 +334,10 @@ XXHASH_SOURCES = \
     vendor/xxHash/xxhash.h
 
 _stbt/libxxhash.so : $(XXHASH_SOURCES)
-	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES)
+	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES) $(CFLAGS)
+
+_stbt/libstbt.so : _stbt/sqdiff.c
+	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
 
 LMDB_SOURCES = \
     vendor/py-lmdb/lib/lmdb.h \
