@@ -139,9 +139,53 @@ def test_sqdiff_c_numpy_equivalence():
                     _sqdiff_c(t, frame_cropped))
 
 
+def _make_sqdiff_numba():
+    # numba implementation included for the purposes of comparison.
+    try:
+        import numba
+    except ImportError:
+        return None
+
+    def _sqdiff_numba(template, frame):
+        if template.shape[2] == 3:
+            return _sqdiff_numba_nomask(template, frame)
+        else:
+            return _sqdiff_numba_masked(template, frame)
+
+    @numba.jit(nopython=True, nogil=True)
+    def _sqdiff_numba_nomask(template, frame):
+        cum = 0
+        s = template.shape
+        for i in range(s[0]):
+            for j in range(s[1]):
+                for k in range(s[2]):
+                    cum += (template[i, j, k] - frame[i, j, k]) ** 2
+        return cum, frame.size
+
+    @numba.jit(nopython=True, nogil=True)
+    def _sqdiff_numba_masked(template, frame):
+        # mask is either 0 or 255
+        cum = 0
+        maskcount = 0
+        s = template.shape
+        for i in range(s[0]):
+            for j in range(s[1]):
+                if template[i, j, 3] == 255:
+                    for k in range(s[2]):
+                        cum += (template[i, j, k] - frame[i, j, k]) ** 2
+                    maskcount += 1
+        return cum, maskcount * 3
+
+    return _sqdiff_numba
+
+
 def _measure_performance():
     import timeit
-    print "type\tnumpy (ms)\tC (ms)\tspeedup\tsize\talignment"
+
+    _sqdiff_numba = _make_sqdiff_numba()
+
+    print "All times in ms                         numpy\tnumba"
+    print "type    \tnumpy\tnumba\tC\tspeedup\tspeedup\tsize\talignment"
     for _ in range(100):
         frame_cropped, template, template_transparent = _random_template()
 
@@ -156,7 +200,14 @@ def _measure_performance():
             c_time = min(timeit.repeat(
                 lambda: _sqdiff_c(t, frame_cropped),
                 repeat=3, number=10)) / 10
-            print "%s\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
-                l, np_time * 1000, c_time * 1000, np_time / c_time,
+            if _sqdiff_numba:
+                numba_time = min(timeit.repeat(
+                    lambda: _sqdiff_numba(t, frame_cropped),
+                    repeat=3, number=10)) / 10
+            else:
+                numba_time = float('nan')
+            print "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
+                l, np_time * 1000, numba_time * 1000, c_time * 1000,
+                np_time / c_time, numba_time / c_time,
                 frame_cropped.shape[1], frame_cropped.shape[0],
                 frame_cropped.ctypes.data % 8)
