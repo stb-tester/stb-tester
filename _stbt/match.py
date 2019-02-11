@@ -377,7 +377,7 @@ def _match_all(image, frame, match_parameters, region):
                                  .translate(input_region.x, input_region.y)
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
-                first_pass_certainty, frame,
+                max(0, first_pass_certainty), frame,
                 (template.relative_filename or template.image),
                 first_pass_matched)
             imglog.append(matches=result)
@@ -656,15 +656,28 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         # the reference image and the source image patch. This doesn't work
         # at all for completely black images, and it exaggerates
         # differences for dark images. With SQDIFF we do our own
-        # normalisation based solely on the number of pixels in the sum.
-        # We still get a number between 0 - 1.
+        # normalisation based solely on the template image.
+        #
+        # We still get a number between 0 - 1, but we normalise such that
+        # if the frame is (randomly) decorrelated with the template we will on
+        # average get a certainty of 0.
+
+        if mask is not None:
+            t16 = template[mask == 255].astype(numpy.uint16)
+        else:
+            t16 = template.astype(numpy.uint16)
+
+        # This is the average sqdiff we would get comparing this template
+        # against all possible frames.  So feed in random noise as `frame` and
+        # you'll get a number close to this value.  This allows us to normalise
+        # random noise to certainty=0.
+        scale = float(numpy.sum(t16 ** 2 - 255 * t16 + 255 ** 2 / 3))
 
         if mask is not None:
             # matchTemplateMask normalises the source & template image to [0,1].
             # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
-            scale = max(1, numpy.count_nonzero(mask))
-        else:
-            scale = template.size * (255 ** 2)
+            scale /= (255 ** 2)
+        scale = max(scale, 1)
     else:
         scale = 1
 

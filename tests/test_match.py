@@ -5,6 +5,7 @@ import pytest
 import stbt
 from _stbt import cv2_compat
 from tests.test_core import _find_file
+from tests.test_ocr import temporary_config
 
 
 requires_opencv_3 = pytest.mark.skipif(cv2_compat.version < [3, 0, 0],
@@ -270,6 +271,44 @@ def test_that_build_pyramid_relaxes_mask():
         [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
         [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]
     assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
+
+
+@requires_opencv_3
+def test_sqdiff_normalisation():
+    from pytest import approx
+
+    white = black(value=255)
+    grey = black(value=128)
+
+    half_transparent_white = numpy.ones((720, 1280, 4), dtype=numpy.uint8) * 255
+    half_transparent_white[:, :640, 3] = 0
+    half_transparent_white[:, 640:, 3] = 255
+
+    def noise(low=0, high=256):
+        return numpy.random.randint(
+            low, high, (720, 1280, 3), dtype=numpy.uint8)
+
+    def fpr(template, frame):
+        return stbt.match(template, frame=frame).first_pass_result
+
+    with temporary_config({"match.pyramid_levels": "1"}):
+        assert fpr(black(), black()) == 1
+        assert fpr(half_transparent_white, white) == 1
+
+        assert fpr(black(), white) == 0
+        assert fpr(half_transparent_white, black()) == 0
+
+        assert fpr(black(), noise()) == approx(0, abs=0.01)
+        assert fpr(white, noise()) == approx(0, abs=0.01)
+        assert fpr(grey, noise()) == approx(0, abs=0.01)
+        assert fpr(half_transparent_white, noise()) == approx(0, abs=0.01)
+
+        assert fpr(black(), noise(0, 128)) == approx(0.75, abs=0.01)
+        assert fpr(white, noise(0, 128)) == approx(0, abs=0.01)
+        assert fpr(half_transparent_white, noise(0, 128)) == approx(0, abs=0.01)
+        assert fpr(white, noise(128, 256)) == approx(0.75, abs=0.01)
+        assert fpr(half_transparent_white, noise(128, 256)) == \
+            approx(0.75, abs=0.01)
 
 
 @requires_opencv_3
