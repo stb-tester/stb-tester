@@ -785,9 +785,6 @@ class _Rect(namedtuple("_Rect", "x y w h")):
     def shrink(self, size):
         return _Rect(self.x, self.y, self.w - size.w, self.h - size.h)
 
-    def shift(self, position):
-        return _Rect(self.x + position.x, self.y + position.y, self.w, self.h)
-
     def to_slice(self):
         """Return a 2-dimensional slice suitable for indexing a numpy array."""
         return (slice(self.y, self.y + self.h), slice(self.x, self.x + self.w))
