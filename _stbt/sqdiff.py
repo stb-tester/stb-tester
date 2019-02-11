@@ -12,15 +12,19 @@ def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
 
 _libstbt = ctypes.CDLL(_find_file("libstbt.so"))
 
-# void sqdiff(uint64_t *total, uint32_t *count,
-#             const uint8_t *t, uint16_t t_stride,
-#             const uint8_t *f, uint16_t f_stride,
-#             uint16_t width_px, uint16_t height_px,
-#             int color_depth)
 
-_libstbt.sqdiff.restype = None
+class _SqdiffResult(ctypes.Structure):
+    _fields_ = [("total", ctypes.c_uint64),
+                ("count", ctypes.c_uint32)]
+
+
+# SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
+#                     const uint8_t *f, uint16_t f_stride,
+#                     uint16_t width_px, uint16_t height_px,
+#                     int color_depth)
+
+_libstbt.sqdiff.restype = _SqdiffResult
 _libstbt.sqdiff.argtypes = [
-    ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_uint32),
     ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
     ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
     ctypes.c_uint16, ctypes.c_uint16,
@@ -62,13 +66,10 @@ def _sqdiff_c(template, frame):
     t = template.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
     f = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
 
-    out_total = ctypes.c_uint64()
-    out_count = ctypes.c_uint32()
-    _libstbt.sqdiff(out_total, out_count,
-                    t, template.strides[0],
-                    f, frame.strides[0],
-                    template.shape[1], template.shape[0], color_depth)
-    return out_total.value, out_count.value
+    out = _libstbt.sqdiff(t, template.strides[0],
+                          f, frame.strides[0],
+                          template.shape[1], template.shape[0], color_depth)
+    return out.total, out.count
 
 
 def _sqdiff_numpy(template, frame):

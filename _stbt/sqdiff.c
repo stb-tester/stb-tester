@@ -19,6 +19,11 @@ static uint32_t sqdiff_BGRA(
     const unsigned char* t, const unsigned char* f,
     uint16_t len_px);
 
+typedef struct _SqdiffResult {
+    uint64_t total;
+    uint32_t count;
+} SqdiffResult;
+
 /* Computes the square difference between template t and frame f and counts
  * the number of pixels not masked.
  *
@@ -33,56 +38,52 @@ static uint32_t sqdiff_BGRA(
  * t_stride and f_stride are the strides between lines measured in bytes for
  * t and f respectively.
  *
- * total and count are out arguments.  This is the total square difference and
- * count of non-transparent pixels.
+ * Returns a struct with the total square difference and count of
+ * non-transparent pixels.
  */
-void sqdiff(uint64_t *total, uint32_t *count,
-            const uint8_t *t, uint16_t t_stride,
-            const uint8_t *f, uint16_t f_stride,
-            uint16_t width_px, uint16_t height_px,
-            int color_depth)
+SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
+                    const uint8_t *f, uint16_t f_stride,
+                    uint16_t width_px, uint16_t height_px,
+                    int color_depth)
 {
     assert(width_px > 0 && height_px > 0);
-    assert(total && count);
 
-    uint64_t this_total = 0;
-    uint32_t this_count;
+    SqdiffResult out = {0, 0};
 
     switch (color_depth) {
     case PIXEL_DEPTH_U8:
         assert(f_stride >= width_px && t_stride >= width_px);
-        this_count = width_px * height_px;
+        out.count = width_px * height_px;
         for (uint16_t y = 0; y < height_px; y++)
-            this_total += sqdiff_U8(
+            out.total += sqdiff_U8(
                 t + y * t_stride, f + y * f_stride, width_px);
         break;
     case PIXEL_DEPTH_BGR:
         assert(f_stride >= width_px * 3 && t_stride >= width_px * 3);
-        this_count = width_px * height_px * 3;
+        out.count = width_px * height_px * 3;
         for (uint16_t y = 0; y < height_px; y++)
-            this_total += sqdiff_U8(
+            out.total += sqdiff_U8(
                 t + y * t_stride, f + y * f_stride, width_px * 3);
         break;
     case PIXEL_DEPTH_BGRx:
         assert(f_stride >= width_px * 3 && t_stride >= width_px * 4);
-        this_count = width_px * height_px * 3;
+        out.count = width_px * height_px * 3;
         for (uint16_t y = 0; y < height_px; y++)
-            this_total += sqdiff_BGRx(
+            out.total += sqdiff_BGRx(
                 t + y * t_stride, f + y * f_stride, width_px);
         break;
     case PIXEL_DEPTH_BGRA:
         assert(f_stride >= width_px * 3 && t_stride >= width_px * 4);
-        this_count = 0;
+        out.count = 0;
         for (uint16_t y = 0; y < height_px; y++)
-            this_total += sqdiff_BGRA(
-                &this_count, t + y * t_stride, f + y * f_stride, width_px);
-        this_count *= 3;
+            out.total += sqdiff_BGRA(
+                &out.count, t + y * t_stride, f + y * f_stride, width_px);
+        out.count *= 3;
         break;
     default:
         assert(0);
     }
-    *total = this_total;
-    *count = this_count;
+    return out;
 }
 
 static uint32_t sqdiff_U8(const unsigned char* a, const unsigned char* b,
