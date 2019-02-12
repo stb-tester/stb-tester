@@ -313,10 +313,27 @@ def _match_all(image, frame, match_parameters, region):
         frame = stbt.get_frame()
 
     template = _load_image(image)
-    t = template.image
     mask = None
 
-    if len(t.shape) == 2 or t.shape[2] == 1 or t.shape[2] == 3:
+    # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
+    t = template.image.view()
+    if len(t.shape) == 2:
+        t.shape = t.shape + (1,)
+
+    frame = frame.view()
+    if len(frame.shape) == 2:
+        frame.shape = frame.shape + (1,)
+
+    if len(t.shape) != 3:
+        raise ValueError(
+            "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
+            (template.image.shape,))
+    if len(frame.shape) != 3:
+        raise ValueError(
+            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
+            (frame.shape,))
+
+    if t.shape[2] in [1, 3]:
         pass
     elif t.shape[2] == 4:
         # Create transparency mask from alpha channel
@@ -335,8 +352,7 @@ def _match_all(image, frame, match_parameters, region):
     if any(t.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image %r must contain some data"
                          % (t.shape,))
-    if (len(frame.shape) != len(t.shape) or
-            len(frame.shape) == 3 and frame.shape[2] != t.shape[2]):
+    if frame.shape[2] != t.shape[2]:
         raise ValueError(
             "Frame %r and reference image %r must have the same number of "
             "channels" % (frame.shape, t.shape))
@@ -760,7 +776,7 @@ def _confirm_match(image, region, template, mask, match_parameters, imwrite):
     # Set Region Of Interest to the "best match" location
     image = image[region.y:region.bottom, region.x:region.right]
     imwrite("confirm-source_roi", image)
-    if len(image.shape) == 3:
+    if image.shape[2] == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     imwrite("confirm-source_roi_gray", image)
