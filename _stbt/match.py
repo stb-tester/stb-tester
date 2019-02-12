@@ -494,8 +494,6 @@ def _find_matches(image, template, match_parameters, imglog):
         # Create transparency mask from alpha channel
         mask = template[:, :, 3]
         mask[mask < 255] = 0
-        # OpenCV wants mask to match template's number of channels
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         template = template[:, :, 0:3]
     else:
         mask = None
@@ -542,6 +540,11 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
+
+    if mask is not None:
+        # OpenCV wants mask to match template's number of channels
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
     template_pyramid = _build_pyramid(template, levels)
     mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
@@ -783,9 +786,6 @@ def _confirm_match(image, region, template, mask, match_parameters, imwrite):
         template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     imwrite("confirm-source_roi_gray", image)
     imwrite("confirm-template_gray", template)
-
-    if mask is not None:
-        mask = mask[:, :, 0]
 
     if match_parameters.confirm_method == ConfirmMethod.NORMED_ABSDIFF:
         cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX, mask=mask)
