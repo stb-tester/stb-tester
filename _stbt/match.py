@@ -523,7 +523,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     """
 
     imglog.imwrite("source", image)
-    imglog.imwrite("template", template[:, :, :3])
+    imglog.imwrite("template", template)
     if template.shape[2] == 4:
         imglog.imwrite("mask", template[:, :, 3])
 
