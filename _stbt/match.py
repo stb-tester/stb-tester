@@ -491,20 +491,16 @@ def _find_matches(image, template, match_parameters, imglog):
     """
 
     if template.shape[2] == 4:
-        # Create transparency mask from alpha channel
+        # Normalise transparency channel to either 0 or 255
         mask = template[:, :, 3]
         mask[mask < 255] = 0
-        template = template[:, :, 0:3]
-    else:
-        mask = None
 
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, mask, match_parameters,
-                                    imglog):
+            _find_candidate_matches(image, template, match_parameters, imglog):
         confirmed = (
             first_pass_matched and
-            _confirm_match(image, region, template, mask, match_parameters,
+            _confirm_match(image, region, template, match_parameters,
                            imwrite=lambda name, img: imglog.imwrite(
                                "match%d-%s" % (i, name), img)))  # pylint:disable=cell-var-from-loop
 
@@ -514,7 +510,7 @@ def _find_matches(image, template, match_parameters, imglog):
             break
 
 
-def _find_candidate_matches(image, template, mask, match_parameters, imglog):
+def _find_candidate_matches(image, template, match_parameters, imglog):
     """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -526,8 +522,10 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     """
 
     imglog.imwrite("source", image)
-    imglog.imwrite("template", template)
-    imglog.imwrite("mask", mask)
+    imglog.imwrite("template", template[:, :, :3])
+    if template.shape[2] == 4:
+        imglog.imwrite("mask", template[:, :, 3])
+
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     method = {
@@ -541,9 +539,12 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
 
-    if mask is not None:
+    if template.shape[2] == 4:
         # OpenCV wants mask to match template's number of channels
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        mask = cv2.cvtColor(template[:, :, 3], cv2.COLOR_GRAY2BGR)
+        template = template[:, :, 0:3]
+    else:
+        mask = None
 
     template_pyramid = _build_pyramid(template, levels)
     mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
@@ -767,7 +768,7 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, region, template, mask, match_parameters, imwrite):
+def _confirm_match(image, region, template, match_parameters, imwrite):
     """Second pass: Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
@@ -777,6 +778,13 @@ def _confirm_match(image, region, template, mask, match_parameters, imwrite):
 
     if match_parameters.confirm_method == ConfirmMethod.NONE:
         return True
+
+    if template.shape[2] == 4:
+        # Create transparency mask from alpha channel
+        mask = template[:, :, 3]
+        template = template[:, :, 0:3]
+    else:
+        mask = None
 
     # Set Region Of Interest to the "best match" location
     image = image[region.y:region.bottom, region.x:region.right]
