@@ -313,7 +313,6 @@ def _match_all(image, frame, match_parameters, region):
         frame = stbt.get_frame()
 
     template = _load_image(image)
-    mask = None
 
     # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
     t = template.image.view()
@@ -333,15 +332,8 @@ def _match_all(image, frame, match_parameters, region):
             "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
             (frame.shape,))
 
-    if t.shape[2] in [1, 3]:
+    if t.shape[2] in [1, 3, 4]:
         pass
-    elif t.shape[2] == 4:
-        # Create transparency mask from alpha channel
-        mask = t[:, :, 3]
-        mask[mask < 255] = 0
-        # OpenCV wants mask to match template's number of channels
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        t = t[:, :, 0:3]
     else:
         raise ValueError("Expected 3-channel image, got %d channels: %s"
                          % (t.shape[2], template.absolute_filename))
@@ -352,17 +344,18 @@ def _match_all(image, frame, match_parameters, region):
     if any(t.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image %r must contain some data"
                          % (t.shape,))
-    if frame.shape[2] != t.shape[2]:
+    if (frame.shape[2], t.shape[2]) not in [(1, 1), (3, 3), (3, 4)]:
         raise ValueError(
             "Frame %r and reference image %r must have the same number of "
             "channels" % (frame.shape, t.shape))
 
-    if mask is not None:
+    if t.shape[2] == 4:
         if cv2_compat.version < [3, 0, 0]:
             raise ValueError(
                 "Reference image %s has alpha channel, but transparency "
                 "support requires OpenCV 3.0 or greater (you have %s)."
                 % (template.relative_filename, cv2_compat.version))
+
         if match_parameters.match_method not in (MatchMethod.SQDIFF,
                                                  MatchMethod.CCORR_NORMED):
             # See `matchTemplateMask`:
@@ -386,8 +379,7 @@ def _match_all(image, frame, match_parameters, region):
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
-                crop(frame, input_region), t, mask,
-                match_parameters, imglog):
+                crop(frame, input_region), t, match_parameters, imglog):
 
             match_region = Region.from_extents(*match_region) \
                                  .translate(input_region.x, input_region.y)
@@ -486,7 +478,7 @@ class MatchTimeout(UITestFailure):
 
 
 @memoize_iterator({"version": "30"})
-def _find_matches(image, template, mask, match_parameters, imglog):
+def _find_matches(image, template, match_parameters, imglog):
     """Our image-matching algorithm.
 
     Runs 2 passes: `_find_candidate_matches` to locate potential matches, then
@@ -497,6 +489,16 @@ def _find_matches(image, template, mask, match_parameters, imglog):
     by a single `(False, position, certainty)` tuple when there are no further
     matching locations.
     """
+
+    if template.shape[2] == 4:
+        # Create transparency mask from alpha channel
+        mask = template[:, :, 3]
+        mask[mask < 255] = 0
+        # OpenCV wants mask to match template's number of channels
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        template = template[:, :, 0:3]
+    else:
+        mask = None
 
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
