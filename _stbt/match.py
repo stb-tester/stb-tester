@@ -68,9 +68,10 @@ class MatchParameters(object):
       :ocv:pyfunc:`cv2.matchTemplate`. Defaults to ``MatchMethod.SQDIFF``.
 
     :param float match_threshold:
-      How strong a result from the first pass must be, to be considered a
-      match. Valid values range from 0 (anything is considered to match)
-      to 1 (the match has to be pixel perfect). This defaults to 0.8.
+      Overall similarity threshold for the image to be considered a match. This
+      threshold applies to the *average* similarity across all pixels in the
+      image. Valid values range from 0 (anything is considered to match) to 1
+      (the match has to be pixel perfect). Defaults to 0.8.
 
     :type confirm_method: `ConfirmMethod`
     :param confirm_method:
@@ -78,14 +79,16 @@ class MatchParameters(object):
       algorithm, to confirm that the region identified by the first pass is a
       good match.
 
-      The first pass often gives false positives (it reports a "match" for an
-      image that shouldn't match). The second pass is more CPU-intensive, but
-      it only checks the position of the image that the first pass identified.
-      The allowed values are:
+      The first pass often gives false positives: It can report a "match" for
+      an image with obvious differences, if the differences are local to a
+      small part of the image. The second pass is more CPU-intensive, but it
+      only checks the position of the image that the first pass identified. The
+      allowed values are:
 
       :ConfirmMethod.NONE:
-        Do not confirm the match. Assume that the potential match found is
-        correct.
+        Do not confirm the match. This is useful if you know that the reference
+        image is different in some of the pixels. For example to find a button,
+        even if the text inside the button is different.
 
       :ConfirmMethod.ABSDIFF:
         Compare the absolute difference of each pixel from the reference image
@@ -95,26 +98,34 @@ class MatchParameters(object):
       :ConfirmMethod.NORMED_ABSDIFF:
         Normalise the pixel values from both the reference image and the
         candidate region in the source video frame, then compare the absolute
-        difference as with "absdiff".
+        difference as with ``ABSDIFF``.
 
-        This gives better results with low-contrast images. We recommend setting
-        this as the default `confirm_method` in stbt.conf, with a
-        `confirm_threshold` of 0.30.
+        This method is better at noticing differences in low-contrast images
+        (compared to the ``ABSDIFF`` method), but it isn't suitable for
+        reference images that don't have any structure (that is, images that
+        are a single solid color without any lines or variation).
+
+        This is the default method, with a default ``confirm_threshold`` of
+        0.30.
 
     :param float confirm_threshold:
       The maximum allowed difference between any given pixel from the reference
       image and its counterpart from the candidate region in the source video
       frame, as a fraction of the pixel's total luminance range.
 
-      Valid values range from 0 (more strict) to 1.0 (less strict).
-      Useful values tend to be around 0.16 for the "absdiff" method, and 0.30
-      for the "normed-absdiff" method.
+      Unlike ``match_threshold``, this threshold applies to each pixel
+      individually: Any pixel that exceeds this threshold will cause the match
+      to fail (but see ``erode_passes`` below).
+
+      Valid values range from 0 (more strict) to 1.0 (less strict). Useful
+      values tend to be around 0.16 for ``ABSDIFF``, and 0.30 for
+      ``NORMED_ABSDIFF``. Defaults to 0.30.
 
     :param int erode_passes:
-      After the "absdiff" or "normed-absdiff" absolute difference is taken,
+      After the ``ABSDIFF`` or ``NORMED_ABSDIFF`` absolute difference is taken,
       stb-tester runs an erosion algorithm that removes single-pixel differences
-      to account for noise. Useful values are 1 (the default) and 0 (to disable
-      this step).
+      to account for noise and slight rendering differences. Useful values are
+      1 (the default) and 0 (to disable this step).
 
     """
 
