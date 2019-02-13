@@ -964,10 +964,6 @@ def _log_match_image_debug(imglog):
             </table>
           {% endif %}
         {% endif %}
-
-        <p>For further help please read
-            <a href="http://stb-tester.com/match-parameters.html">stb-tester
-            image matching parameters</a>.
     """
 
     def link(name, level=None, match=None):  # pylint: disable=redefined-outer-name
