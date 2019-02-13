@@ -32,7 +32,7 @@ test_get_frame_and_save_frame() {
 	press("gamut")
 	# confirm_threshold accounts for match rectangle in the screenshot.
 	wait_for_match("gamut.png",
-	               match_parameters=MatchParameters(confirm_threshold=0.7))
+	               match_parameters=MatchParameters(confirm_threshold=0.3))
 	EOF
     stbt run -v match-screenshot.py
 }

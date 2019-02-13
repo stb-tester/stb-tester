@@ -77,7 +77,7 @@ test_that_stbtgeometriccorrection_flattens_pictures_of_TVs() {
 
     create_stb_tester_logo_template &&
     echo 'wait_for_match("stb-tester-350px.png",
-                         match_parameters=MatchParameters(confirm_threshold=0.3))' >test.py &&
+                         match_parameters=MatchParameters(confirm_threshold=0.7))' >test.py &&
     stbt run -v test.py
 }
 

@@ -40,7 +40,7 @@ parser.add_argument(
     "match_parameters", nargs="*",
     help="""Parameters for the image processing algorithm. See
         'MatchParameters' in the stbt API documentation. For example:
-        'confirm_threshold=0.20')""")
+        'confirm_threshold=0.70')""")
 args = parser.parse_args(sys.argv[1:])
 
 mp = {}

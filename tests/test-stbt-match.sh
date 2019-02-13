@@ -27,11 +27,11 @@ test_that_stbt_match_applies_confirm_threshold_parameter() {
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
-        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.16 &&
+        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.84 &&
     stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
-        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.9
+        match_threshold=0.9 confirm_method=absdiff confirm_threshold=0.1
 }
 
 test_that_stbt_match_rejects_invalid_parameters() {
@@ -46,7 +46,7 @@ test_that_stbt_match_rejects_invalid_parameters() {
     ! stbt match \
         "$testdir"/videotestsrc-full-frame.png \
         "$testdir"/videotestsrc-redblue-with-dots.png \
-        confirm_threshold=0.9 \
+        confirm_threshold=0.1 \
         lahdee=dah &&
     cat log | grep -q "Invalid argument 'lahdee=dah'" &&
     ! stbt match \

@@ -106,20 +106,20 @@ class MatchParameters(object):
         are a single solid color without any lines or variation).
 
         This is the default method, with a default ``confirm_threshold`` of
-        0.30.
+        0.70.
 
     :param float confirm_threshold:
-      The maximum allowed difference between any given pixel from the reference
-      image and its counterpart from the candidate region in the source video
-      frame, as a fraction of the pixel's total luminance range.
+      The minimum allowed similarity between any given pixel in the reference
+      image and the corresponding pixel in the source video frame, as a
+      fraction of the pixel's total luminance range.
 
       Unlike ``match_threshold``, this threshold applies to each pixel
       individually: Any pixel that exceeds this threshold will cause the match
       to fail (but see ``erode_passes`` below).
 
-      Valid values range from 0 (more strict) to 1.0 (less strict). Useful
-      values tend to be around 0.16 for ``ABSDIFF``, and 0.30 for
-      ``NORMED_ABSDIFF``. Defaults to 0.30.
+      Valid values range from 0 (less strict) to 1.0 (more strict). Useful
+      values tend to be around 0.84 for ``ABSDIFF``, and 0.70 for
+      ``NORMED_ABSDIFF``. Defaults to 0.70.
 
     :param int erode_passes:
       After the ``ABSDIFF`` or ``NORMED_ABSDIFF`` absolute difference is taken,
@@ -794,7 +794,7 @@ def _confirm_match(image, region, template, mask, match_parameters, imwrite):
 
     absdiff = cv2.absdiff(image, template)
     _, thresholded = cv2.threshold(
-        absdiff, int(match_parameters.confirm_threshold * 255),
+        absdiff, int((1 - match_parameters.confirm_threshold) * 255),
         255, cv2.THRESH_BINARY)
     eroded = cv2.erode(
         thresholded,

@@ -39,7 +39,7 @@ def test_match_debug():
         matches = list(stbt.match_all(
             "button.png", frame=stbt.load_image("buttons.png"),
             match_parameters=mp(confirm_method="absdiff",
-                                confirm_threshold=0.16)))
+                                confirm_threshold=0.84)))
         print matches
         assert len(matches) == 6
 
