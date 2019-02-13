@@ -314,7 +314,7 @@ def test_that_match_fast_path_is_equivalent():
     ]
     for reference, frame in images:
         if isinstance(frame, (str, unicode)):
-            frame = stbt.load_image(frame)
+            frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
         reference = _load_image(reference)
         orig_m = stbt.match(reference, frame=frame)
         fast_m = stbt.match(reference, frame=frame, region=orig_m.region)
