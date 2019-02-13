@@ -42,13 +42,22 @@ TODO: Date
   match method. This works better and more consistently than
   `MatchMethod.SQDIFF_NORMED` (the previous default). `SQIFF_NORMED` doesn't
   work at all for completely black images or images with transparency, and it
-  exaggerates differences for dark images. The result from the new `SQDIFF`
-  method is still a number between 0.0 and 1.0.
+  exaggerates differences for dark images. The "certainty" number for the new
+  `SQDIFF` method is still normalised so that it is a number between 0.0 and
+  1.0, but the normalisation no longer depends on how bright the images were,
+  so the result is more consistent. The new default `match_threshold` is 0.98.
 
 * `stbt.ocr` takes a new `engine` parameter to select the OCR engine if you're
-  using Tesseract 4. `stbt.OcrEngine.TESSERACT` (the default) means the
-  "legacy" engine from Tesseract 3; `stbt.OcrEngine.LSTM` means Tesseract's new
-  engine based on a "Long Short-Term Memory" neural network.
+  using Tesseract 4:
+
+    * `stbt.OcrEngine.TESSERACT` (the default) means the "legacy" engine from
+      Tesseract 3. Works with either Tesseract 4 (provided that the necessary
+      data files are installed) or Tesseract 3. Note that Ubuntu 18.04 doesn't
+      ship the data files for the legacy engine; see
+      <https://github.com/tesseract-ocr/tesseract/wiki/Data-Files>.
+
+    * `stbt.OcrEngine.LSTM` means Tesseract's new engine based on a "Long
+      Short-Term Memory" neural network. Requires Tesseract 4.
 
 ##### Breaking changes since v29
 
