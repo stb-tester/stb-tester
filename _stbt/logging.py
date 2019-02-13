@@ -265,7 +265,6 @@ _INDEX_HTML_HEADER = dedent(u"""\
         img.thumb {
             vertical-align: middle; max-width: 150px; max-height: 36px;
             padding: 1px; border: 1px solid #ccc; }
-        p { line-height: 40px; }
         .table td { vertical-align: middle; }
     </style>
     </head>

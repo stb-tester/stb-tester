@@ -367,14 +367,15 @@ def _match_all(image, frame, match_parameters, region):
                 "(you specified %s)."
                 % (template.relative_filename, match_parameters.match_method))
 
-    imglog = ImageLogger(
-        "match", match_parameters=match_parameters,
-        template_name=template.friendly_name)
-
     input_region = Region.intersect(_image_region(frame), region)
     if input_region is None:
         raise ValueError("frame with dimensions %r doesn't contain %r"
                          % (frame.shape, region))
+
+    imglog = ImageLogger(
+        "match", match_parameters=match_parameters,
+        template_name=template.friendly_name,
+        input_region=input_region)
 
     # pylint:disable=undefined-loop-variable
     try:
@@ -524,6 +525,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     imglog.imwrite("source", image)
     imglog.imwrite("template", template)
+    imglog.set(template_shape=template.shape)
     if template.shape[2] == 4:
         imglog.imwrite("mask", template[:, :, 3])
 
@@ -545,7 +547,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         # Fast-path: image and template are the same size, skip pyramid, FFT,
         # etc.  This is particularly useful for full-image matching.
         ddebug("stbt-match: frame and template sizes match: Using fast-path")
-
+        imglog.set(fast_path=True)
         s, n = sqdiff(template, image)
         if n == 0:
             certainty = 1
@@ -881,8 +883,28 @@ def _log_match_image_debug(imglog):
             {% if "mask" in images %}
             with <b>transparency mask</b> {{link("mask")}}
             {% endif %}
-            within <b>source</b> image {{link("source")}}
+            within <b>source</b> image {{link("source")}}</p>
 
+        {% if fast_path %}
+        <p>Taking fast path - template shape <code>{{ template_shape }}</code>
+        matches size of target region <code>{{ input_region }}</code></p>
+
+        <table class="table">
+        <tr>
+          <th>Match #</th>
+          <th><b>Matched?<b></th>
+          <th><b>certainty</b></th>
+        </tr>
+        {% for m in matches %}
+        {# note that loop.index is 1-based #}
+        <tr>
+          <td><b>{{loop.index}}</b></td>
+          <td>{{"Matched" if m._first_pass_matched else "Didn't match"}}</td>
+          <td>{{"%.4f"|format(m.first_pass_result)}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+        {% else %}
         <table class="table">
         <tr>
           <th>Pyramid level</th>
@@ -944,6 +966,7 @@ def _log_match_image_debug(imglog):
         {% endfor %}
 
         </table>
+        {% endif %}
 
         {% if show_second_pass %}
           <h5>Second pass (confirmation):</h5>
@@ -1012,6 +1035,7 @@ def _log_match_image_debug(imglog):
     imglog.html(
         template,
         ConfirmMethod=ConfirmMethod,
+        fast_path=imglog.data.get("fast_path"),
         link=link,
         MatchMethod=MatchMethod,
         show_second_pass=any(
