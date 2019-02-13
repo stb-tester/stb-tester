@@ -71,7 +71,7 @@ class MatchParameters(object):
       Overall similarity threshold for the image to be considered a match. This
       threshold applies to the *average* similarity across all pixels in the
       image. Valid values range from 0 (anything is considered to match) to 1
-      (the match has to be pixel perfect). Defaults to 0.8.
+      (the match has to be pixel perfect). Defaults to 0.98.
 
     :type confirm_method: `ConfirmMethod`
     :param confirm_method:
