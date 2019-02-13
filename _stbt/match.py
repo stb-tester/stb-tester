@@ -21,6 +21,7 @@ from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
 from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
+from .sqdiff import sqdiff
 from .types import Region, UITestFailure
 
 
@@ -324,18 +325,27 @@ def _match_all(image, frame, match_parameters, region):
         frame = stbt.get_frame()
 
     template = _load_image(image)
-    t = template.image
-    mask = None
 
-    if len(t.shape) == 2 or t.shape[2] == 1 or t.shape[2] == 3:
+    # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
+    t = template.image.view()
+    if len(t.shape) == 2:
+        t.shape = t.shape + (1,)
+
+    frame = frame.view()
+    if len(frame.shape) == 2:
+        frame.shape = frame.shape + (1,)
+
+    if len(t.shape) != 3:
+        raise ValueError(
+            "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
+            (template.image.shape,))
+    if len(frame.shape) != 3:
+        raise ValueError(
+            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
+            (frame.shape,))
+
+    if t.shape[2] in [1, 3, 4]:
         pass
-    elif t.shape[2] == 4:
-        # Create transparency mask from alpha channel
-        mask = t[:, :, 3]
-        mask[mask < 255] = 0
-        # OpenCV wants mask to match template's number of channels
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        t = t[:, :, 0:3]
     else:
         raise ValueError("Expected 3-channel image, got %d channels: %s"
                          % (t.shape[2], template.absolute_filename))
@@ -346,18 +356,18 @@ def _match_all(image, frame, match_parameters, region):
     if any(t.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image %r must contain some data"
                          % (t.shape,))
-    if (len(frame.shape) != len(t.shape) or
-            len(frame.shape) == 3 and frame.shape[2] != t.shape[2]):
+    if (frame.shape[2], t.shape[2]) not in [(1, 1), (3, 3), (3, 4)]:
         raise ValueError(
             "Frame %r and reference image %r must have the same number of "
             "channels" % (frame.shape, t.shape))
 
-    if mask is not None:
+    if t.shape[2] == 4:
         if cv2_compat.version < [3, 0, 0]:
             raise ValueError(
                 "Reference image %s has alpha channel, but transparency "
                 "support requires OpenCV 3.0 or greater (you have %s)."
                 % (template.relative_filename, cv2_compat.version))
+
         if match_parameters.match_method not in (MatchMethod.SQDIFF,
                                                  MatchMethod.CCORR_NORMED):
             # See `matchTemplateMask`:
@@ -368,21 +378,21 @@ def _match_all(image, frame, match_parameters, region):
                 "(you specified %s)."
                 % (template.relative_filename, match_parameters.match_method))
 
-    imglog = ImageLogger(
-        "match", match_parameters=match_parameters,
-        template_name=template.friendly_name)
-
     input_region = Region.intersect(_image_region(frame), region)
     if input_region is None:
         raise ValueError("frame with dimensions %r doesn't contain %r"
                          % (frame.shape, region))
 
+    imglog = ImageLogger(
+        "match", match_parameters=match_parameters,
+        template_name=template.friendly_name,
+        input_region=input_region)
+
     # pylint:disable=undefined-loop-variable
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
-                crop(frame, input_region), t, mask,
-                match_parameters, imglog):
+                crop(frame, input_region), t, match_parameters, imglog):
 
             match_region = Region.from_extents(*match_region) \
                                  .translate(input_region.x, input_region.y)
@@ -481,7 +491,7 @@ class MatchTimeout(UITestFailure):
 
 
 @memoize_iterator({"version": "30"})
-def _find_matches(image, template, mask, match_parameters, imglog):
+def _find_matches(image, template, match_parameters, imglog):
     """Our image-matching algorithm.
 
     Runs 2 passes: `_find_candidate_matches` to locate potential matches, then
@@ -493,13 +503,17 @@ def _find_matches(image, template, mask, match_parameters, imglog):
     matching locations.
     """
 
+    if template.shape[2] == 4:
+        # Normalise transparency channel to either 0 or 255
+        mask = template[:, :, 3]
+        mask[mask < 255] = 0
+
     # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
-            _find_candidate_matches(image, template, mask, match_parameters,
-                                    imglog):
+            _find_candidate_matches(image, template, match_parameters, imglog):
         confirmed = (
             first_pass_matched and
-            _confirm_match(image, region, template, mask, match_parameters,
+            _confirm_match(image, region, template, match_parameters,
                            imwrite=lambda name, img: imglog.imwrite(
                                "match%d-%s" % (i, name), img)))  # pylint:disable=cell-var-from-loop
 
@@ -509,7 +523,7 @@ def _find_matches(image, template, mask, match_parameters, imglog):
             break
 
 
-def _find_candidate_matches(image, template, mask, match_parameters, imglog):
+def _find_candidate_matches(image, template, match_parameters, imglog):
     """First pass: Search for `template` in the entire `image`.
 
     This searches the entire image, so speed is more important than accuracy.
@@ -522,7 +536,10 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
 
     imglog.imwrite("source", image)
     imglog.imwrite("template", template)
-    imglog.imwrite("mask", mask)
+    imglog.set(template_shape=template.shape)
+    if template.shape[2] == 4:
+        imglog.imwrite("mask", template[:, :, 3])
+
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
     method = {
@@ -535,6 +552,30 @@ def _find_candidate_matches(image, template, mask, match_parameters, imglog):
     levels = get_config("match", "pyramid_levels", type_=int)
     if levels <= 0:
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
+
+    if (match_parameters.match_method == MatchMethod.SQDIFF and
+            template.shape[:2] == image.shape[:2]):
+        # Fast-path: image and template are the same size, skip pyramid, FFT,
+        # etc.  This is particularly useful for full-image matching.
+        ddebug("stbt-match: frame and template sizes match: Using fast-path")
+        imglog.set(fast_path=True)
+        s, n = sqdiff(template, image)
+        if n == 0:
+            certainty = 1
+        else:
+            certainty = 1 - float(s) / (n * 255 * 255)
+        yield (0, certainty >= match_parameters.match_threshold,
+               _image_region(image), certainty)
+        yield (0, False, _image_region(image), 0.)
+        return
+
+    if template.shape[2] == 4:
+        # OpenCV wants mask to match template's number of channels
+        mask = cv2.cvtColor(template[:, :, 3], cv2.COLOR_GRAY2BGR)
+        template = template[:, :, 0:3]
+    else:
+        mask = None
+
     template_pyramid = _build_pyramid(template, levels)
     mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
@@ -757,7 +798,7 @@ class _Size(namedtuple("_Size", "h w")):
     pass
 
 
-def _confirm_match(image, region, template, mask, match_parameters, imwrite):
+def _confirm_match(image, region, template, match_parameters, imwrite):
     """Second pass: Confirm that `template` matches `image` at `region`.
 
     This only checks `template` at a single position within `image`, so we can
@@ -768,17 +809,21 @@ def _confirm_match(image, region, template, mask, match_parameters, imwrite):
     if match_parameters.confirm_method == ConfirmMethod.NONE:
         return True
 
+    if template.shape[2] == 4:
+        # Create transparency mask from alpha channel
+        mask = template[:, :, 3]
+        template = template[:, :, 0:3]
+    else:
+        mask = None
+
     # Set Region Of Interest to the "best match" location
     image = image[region.y:region.bottom, region.x:region.right]
     imwrite("confirm-source_roi", image)
-    if len(image.shape) == 3:
+    if image.shape[2] == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     imwrite("confirm-source_roi_gray", image)
     imwrite("confirm-template_gray", template)
-
-    if mask is not None:
-        mask = mask[:, :, 0]
 
     if match_parameters.confirm_method == ConfirmMethod.NORMED_ABSDIFF:
         cv2.normalize(image, image, 0, 255, cv2.NORM_MINMAX, mask=mask)
@@ -817,7 +862,7 @@ def _log_match_image_debug(imglog):
         imglog.data["template_name"],
         "Matched" if any(imglog.data["matches"]) else "Didn't match")
 
-    for matched, position, _, level in imglog.data["pyramid_levels"]:
+    for matched, position, _, level in imglog.data.get("pyramid_levels", []):
         template = imglog.images["level%d-template" % level]
         imglog.imwrite("level%d-source_with_match" % level,
                        imglog.images["level%d-source" % level],
@@ -849,8 +894,28 @@ def _log_match_image_debug(imglog):
             {% if "mask" in images %}
             with <b>transparency mask</b> {{link("mask")}}
             {% endif %}
-            within <b>source</b> image {{link("source")}}
+            within <b>source</b> image {{link("source")}}</p>
 
+        {% if fast_path %}
+        <p>Taking fast path - template shape <code>{{ template_shape }}</code>
+        matches size of target region <code>{{ input_region }}</code></p>
+
+        <table class="table">
+        <tr>
+          <th>Match #</th>
+          <th><b>Matched?<b></th>
+          <th><b>certainty</b></th>
+        </tr>
+        {% for m in matches %}
+        {# note that loop.index is 1-based #}
+        <tr>
+          <td><b>{{loop.index}}</b></td>
+          <td>{{"Matched" if m._first_pass_matched else "Didn't match"}}</td>
+          <td>{{"%.4f"|format(m.first_pass_result)}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+        {% else %}
         <table class="table">
         <tr>
           <th>Pyramid level</th>
@@ -912,6 +977,7 @@ def _log_match_image_debug(imglog):
         {% endfor %}
 
         </table>
+        {% endif %}
 
         {% if show_second_pass %}
           <h5>Second pass (confirmation):</h5>
@@ -976,6 +1042,7 @@ def _log_match_image_debug(imglog):
     imglog.html(
         template,
         ConfirmMethod=ConfirmMethod,
+        fast_path=imglog.data.get("fast_path"),
         link=link,
         MatchMethod=MatchMethod,
         show_second_pass=any(
