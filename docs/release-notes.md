@@ -72,6 +72,14 @@ TODO: Date
   match_threshold=0.80
   ```
 
+* `stbt.match`: Inverted the meaning of `confirm_threshold`. Now numbers closer
+  to 0 mean "less strict" and numbers closer to 1 mean "more strict". This is
+  for consistency with `match_threshold`. The default value has changed
+  accordingly, from 0.3 to 0.7.
+
+  If you were overriding the default value, you need to set the new value to
+  (1 - previous_value), for example change 0.16 to 0.84.
+
 * `stbt.load_image` will now return a 4-channel image (BGRA, where the 4th
   channel is the alpha, or transparency, channel) if the file had any
   transparent pixels.

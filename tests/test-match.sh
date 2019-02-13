@@ -179,7 +179,7 @@ test_wait_for_match_confirm_threshold_affects_match() {
     cat > test.py <<-EOF
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
 	               match_parameters=MatchParameters(
-	                   confirm_method="absdiff", confirm_threshold=0.4))
+	                   confirm_method="absdiff", confirm_threshold=0.6))
 	EOF
     ! stbt run -v --source-pipeline="$source_pipeline" --control=none test.py
 }
