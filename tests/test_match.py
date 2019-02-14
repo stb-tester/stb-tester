@@ -343,9 +343,9 @@ def test_merge_regions():
         (0, 60, 17, 10), (111, 54, 2, 2), (138, 47, 5, 2), (132, 47, 3, 1),
         (130, 46, 1, 2), (55, 32, 11, 1), (52, 32, 1, 1), (0, 29, 50, 28),
         (0, 20, 57, 4), (33, 0, 233, 139)]]
-    merged_regions = _merge_regions(regions)
-    assert len(merged_regions) == 9
-    assert sorted(merged_regions) == (
+    _merge_regions(regions)
+    assert len(regions) == 9
+    assert sorted(regions) == (
         [stbt.Region(*x) for x in [
             (0, 20, 57, 4), (0, 29, 50, 28), (0, 60, 17, 10), (0, 71, 12, 75),
             (14, 117, 131, 32), (22, 62, 9, 4), (33, 0, 233, 139),
@@ -364,7 +364,8 @@ def test_merge_regions_performance(n):
         y, h = min(y, bottom), max(y, bottom) - min(y, bottom) + 1
         regions.append(stbt.Region(x, y, w, h))
 
-    times = timeit.repeat(lambda: _merge_regions(regions), number=1, repeat=10)
+    times = timeit.repeat(lambda: _merge_regions(regions[:]),
+                          number=1, repeat=10)
     print times
     print min(times)
     assert min(times) < (0.001 * n / 20)

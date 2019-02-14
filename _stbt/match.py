@@ -671,9 +671,9 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         rois = [  # Initial region of interest: The whole image.
             Region(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        rois = _merge_regions([
-            Region(*x) for x in cv2_compat.find_contour_boxes(
-                roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)])
+        rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
+            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
+        _merge_regions(rois)
 
     if get_debug_level() > 1:
         source_with_rois = image.copy()
@@ -840,21 +840,15 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
 
 def _merge_regions(regions):
     """Discard regions that are entirely contained within another region."""
-    regions = regions[:]
-    out = []
-    while len(regions):
-        a = regions.pop()
-        is_contained = False
-        for i in range(len(regions) - 1, -1, -1):
-            b = regions[i]
-            if a.contains(b):
-                del regions[i]
-            elif b.contains(a):
-                is_contained = True
-                break
-        if not is_contained:
-            out.append(a)
-    return out
+    regions.sort(key=lambda r: r.width * r.height)
+    i = len(regions) - 1
+    while i > 0:
+        r = regions[i]
+        for j in range(i - 1, -1, -1):
+            if r.contains(regions[j]):
+                del regions[j]
+                i -= 1
+        i -= 1
 
 
 def _log_match_image_debug(imglog):
