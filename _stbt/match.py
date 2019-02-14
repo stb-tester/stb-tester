@@ -669,9 +669,9 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
 
     if roi_mask is None:
         rois = [  # Initial region of interest: The whole image.
-            _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+            Region(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
     else:
-        rois = [_Rect(*x) for x in cv2_compat.find_contour_boxes(
+        rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
 
     if get_debug_level() > 1:
@@ -683,8 +683,8 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
             cv2.rectangle(
                 source_with_rois,
                 (max(0, r.x), max(0, r.y)),
-                (min(s.w - 1, r.x + r.w + t.w - 1),
-                 min(s.h - 1, r.y + r.h + t.h - 1)),
+                (min(s.w - 1, r.right + t.w - 1),
+                 min(s.h - 1, r.bottom + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
         imwrite("source_with_rois", source_with_rois)
@@ -694,13 +694,14 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
     else:
         kwargs = {}  # For OpenCV < 3.0.0
     for roi in rois:
-        r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
+        r = roi.extend(right=template.shape[1] - 1,
+                       bottom=template.shape[0] - 1)
         ddebug("Level %d: Searching in %s" % (level, roi))
         cv2.matchTemplate(
-            image[r.to_slice()],
+            image[r.slice],
             template,
             method,
-            matches_heatmap[roi.to_slice()],
+            matches_heatmap[roi.slice],
             **kwargs)
 
     if method == cv2.TM_SQDIFF:
@@ -775,19 +776,6 @@ def _upsample(position, levels):
     function is a no-op).
     """
     return Position(position.x * 2 ** levels, position.y * 2 ** levels)
-
-
-# Order of parameters consistent with ``cv2.boundingRect``.
-class _Rect(namedtuple("_Rect", "x y w h")):
-    def expand(self, size):
-        return _Rect(self.x, self.y, self.w + size.w, self.h + size.h)
-
-    def shrink(self, size):
-        return _Rect(self.x, self.y, self.w - size.w, self.h - size.h)
-
-    def to_slice(self):
-        """Return a 2-dimensional slice suitable for indexing a numpy array."""
-        return (slice(self.y, self.y + self.h), slice(self.x, self.x + self.w))
 
 
 # Order of parameters consistent with OpenCV's ``numpy.ndarray.shape``.
