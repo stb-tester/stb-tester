@@ -147,6 +147,7 @@ class DeviceUnderTest(object):
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
         self._time = _time
+        self._last_keypress = None
 
     def __enter__(self):
         if self._display:
@@ -176,6 +177,7 @@ class DeviceUnderTest(object):
                 self._control.press(key)
                 out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
+            self._last_keypress = out
             return out
         else:
             with self.pressing(key, interpress_delay_secs) as out:
@@ -189,6 +191,7 @@ class DeviceUnderTest(object):
             try:
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
+                self._last_keypress = out
                 yield out
             except:  # pylint:disable=bare-except
                 exc_info = sys.exc_info()
