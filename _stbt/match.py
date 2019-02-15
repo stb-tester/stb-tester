@@ -673,7 +673,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
     else:
         rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
-        _merge_regions(rois)
+        rois = _merge_regions(rois)
 
     if get_debug_level() > 1:
         source_with_rois = image.copy()
@@ -839,16 +839,31 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
 
 
 def _merge_regions(regions):
-    """Discard regions that are entirely contained within another region."""
-    regions.sort(key=lambda r: r.width * r.height)
-    i = len(regions) - 1
-    while i > 0:
-        r = regions[i]
-        for j in range(i - 1, -1, -1):
-            if r.contains(regions[j]):
-                del regions[j]
-                i -= 1
-        i -= 1
+    """Discard regions that are entirely contained within another region.
+
+    Uses a line-sweep algorithm -- see "Rectangle intersection search" in
+    https://www.cs.princeton.edu/~rs/AlgsDS07/17GeometricSearch.pdf
+    """
+    Edge = namedtuple("Edge", "x region left")
+    edges = sorted([Edge(r.x, r, True) for r in regions] +
+                   [Edge(r.right, r, False) for r in regions],
+                   key=lambda e: (e.x, e.region.y,
+                                  -e.region.width, -e.region.height))
+    active = set()  # current regions being considered (under the sweep line)
+    out = []
+    for edge in edges:
+        r = edge.region
+        if edge.left:
+            for outer in active:
+                if outer.contains(r):
+                    break  # discard this region
+            else:  # no break
+                active.add(r)
+        else:  # right
+            if r in active:
+                active.remove(r)
+                out.append(r)
+    return out
 
 
 def _log_match_image_debug(imglog):
