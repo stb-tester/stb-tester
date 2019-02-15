@@ -365,7 +365,9 @@ def test_merge_regions_performance(n):
         y, h = min(y, bottom), max(y, bottom) - min(y, bottom) + 1
         regions.append(stbt.Region(x, y, w, h))
 
-    times = timeit.repeat(lambda: _merge_regions(regions), number=1, repeat=10)
+    times = timeit.repeat(lambda: _merge_regions(regions), number=1, repeat=100)
     print times
-    print min(times)
+    print "max: %f" % max(times)
+    print "avg: %f" % (sum(times) / len(times))
+    print "min: %f" % min(times)
     assert min(times) < (0.001 * n / 20)
