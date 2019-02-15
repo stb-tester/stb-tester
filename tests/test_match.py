@@ -1,9 +1,13 @@
+import random
+import timeit
+
 import cv2
 import numpy
 import pytest
 
 import stbt
 from _stbt import cv2_compat
+from _stbt.match import _merge_regions
 from tests.test_core import _find_file
 
 
@@ -329,3 +333,40 @@ def test_that_match_fast_path_is_equivalent():
             assert (orig_m.image == fast_m.image).all()
         else:
             assert orig_m.image == fast_m.image
+
+
+def test_merge_regions():
+    regions = [stbt.Region(*x) for x in [
+        (153, 156, 16, 4), (121, 155, 25, 5), (14, 117, 131, 32),
+        (128, 100, 19, 5), (122, 81, 22, 14), (123, 73, 5, 4),
+        (0, 71, 12, 75), (146, 64, 1, 1), (111, 64, 10, 2), (22, 62, 9, 4),
+        (0, 60, 17, 10), (111, 54, 2, 2), (138, 47, 5, 2), (132, 47, 3, 1),
+        (130, 46, 1, 2), (55, 32, 11, 1), (52, 32, 1, 1), (0, 29, 50, 28),
+        (0, 20, 57, 4), (33, 0, 233, 139)]]
+    _merge_regions(regions)
+    assert len(regions) == 9
+    assert sorted(regions) == (
+        [stbt.Region(*x) for x in [
+            (0, 20, 57, 4), (0, 29, 50, 28), (0, 60, 17, 10), (0, 71, 12, 75),
+            (14, 117, 131, 32), (22, 62, 9, 4), (33, 0, 233, 139),
+            (121, 155, 25, 5), (153, 156, 16, 4)]])
+
+
+@pytest.mark.parametrize("n", [20, 200, 2000])
+def test_merge_regions_performance(n):
+    random.seed(1)
+    regions = []
+    for _ in range(n):
+        x = random.randint(0, 1280)
+        y = random.randint(0, 720)
+        right = random.randint(0, 1280)
+        bottom = random.randint(0, 720)
+        x, w = min(x, right), max(x, right) - min(x, right) + 1
+        y, h = min(y, bottom), max(y, bottom) - min(y, bottom) + 1
+        regions.append(stbt.Region(x, y, w, h))
+
+    times = timeit.repeat(lambda: _merge_regions(regions[:]),
+                          number=1, repeat=10)
+    print times
+    print min(times)
+    assert min(times) < (0.001 * n / 20)
