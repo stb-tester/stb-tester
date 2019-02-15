@@ -354,6 +354,7 @@ def test_merge_regions():
 
 @pytest.mark.parametrize("n", [20, 200, 2000])
 def test_merge_regions_performance(n):
+    random.seed(1)
     regions = []
     for _ in range(n):
         x = random.randint(0, 1280)
