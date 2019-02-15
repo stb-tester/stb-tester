@@ -96,7 +96,7 @@ def _random_template(size=(1280, 720)):
     tt = numpy.random.randint(0, 256, (tsize[1], tsize[0], 4),
                               dtype=numpy.uint8)
     mask = tt[:, :, 3]
-    mask[mask & 1] = 255
+    mask[mask & 1 == 1] = 255
     mask[mask < 255] = 0
 
     f_cropped = f[toff[1]:toff[1] + tsize[1], toff[0]:toff[0] + tsize[0], :]
