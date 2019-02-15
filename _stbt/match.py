@@ -761,7 +761,7 @@ def _build_pyramid(image, levels, is_mask=False):
         return [None] * levels
     pyramid = [image]
     for _ in range(levels - 1):
-        if any(x < 20 for x in pyramid[-1].shape[:2]):
+        if any(x < 47 for x in pyramid[-1].shape[:2]):
             break
         downsampled = cv2.pyrDown(pyramid[-1])
         if is_mask:
