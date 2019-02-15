@@ -405,13 +405,18 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
                 stable_value = value
                 stable_predicate_value = predicate_value
             if predicate_value and t - stable_since >= stable_secs:
+                debug("wait_until succeeded: %s"
+                      % _callable_description(callable_))
                 return stable_value
         else:
             if predicate_value:
+                debug("wait_until succeeded: %s"
+                      % _callable_description(callable_))
                 return value
 
         if t >= expiry_time:
-            debug("wait_until timed out: %s" % _callable_description(callable_))
+            debug("wait_until timed out after %s seconds: %s"
+                  % (timeout_secs, _callable_description(callable_)))
             if not value:
                 return value  # it's falsey
             else:
