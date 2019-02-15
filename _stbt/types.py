@@ -129,8 +129,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
         """The height of the region, measured in pixels."""
         return self.bottom - self.y
 
-    @property
-    def slice(self):
+    def to_slice(self):
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
         return (slice(self.y, self.bottom), slice(self.x, self.right))
 

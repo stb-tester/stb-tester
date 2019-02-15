@@ -699,10 +699,10 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
                        bottom=template.shape[0] - 1)
         ddebug("Level %d: Searching in %s" % (level, roi))
         cv2.matchTemplate(
-            image[r.slice],
+            image[r.to_slice()],
             template,
             method,
-            matches_heatmap[roi.slice],
+            matches_heatmap[roi.to_slice()],
             **kwargs)
 
     if method == cv2.TM_SQDIFF:
