@@ -52,6 +52,10 @@ class Region(namedtuple('Region', 'x y right bottom')):
     None
     >>> print Region.intersect(None, a)
     None
+    >>> Region.intersect(a)
+    Region(x=0, y=0, right=8, bottom=8)
+    >>> Region.intersect()
+    Region.ALL
     >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
     >>> quadrant.translate(2, 2)
     Region(x=-inf, y=-inf, right=2, bottom=2)
@@ -149,23 +153,34 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return Region(x, y, right=right, bottom=bottom)
 
     @staticmethod
-    def intersect(a, b):
+    def intersect(*args):
         """
-        :returns: The intersection of regions ``a`` and ``b``, or ``None`` if
-            the regions don't intersect.
+        :returns: The intersection of the passed regions, or ``None`` if the
+            regions don't intersect.
 
-        Either ``a`` or ``b`` can be ``None`` so intersect is commutative and
-        associative.
+        Any parameter can ``None`` so intersect is commutative and associative.
+
+        New in v30: intersect can now take an arbitrary number of region
+        arguments rather than exactly two.
         """
-        if a is None or b is None:
+        out = Region.ALL
+        args = iter(args)
+        try:
+            out = next(args)
+        except StopIteration:
+            # No arguments passed:
+            return Region.ALL
+        if out is None:
             return None
-        else:
-            extents = (max(a.x, b.x), max(a.y, b.y),
-                       min(a.right, b.right), min(a.bottom, b.bottom))
-            if extents[0] < extents[2] and extents[1] < extents[3]:
-                return Region.from_extents(*extents)
-            else:
+
+        for r in args:
+            if not r:
                 return None
+            out = (max(out[0], r[0]), max(out[1], r[1]),
+                   min(out[2], r[2]), min(out[3], r[3]))
+            if out[0] >= out[2] or out[1] >= out[3]:
+                return None
+        return Region.from_extents(*out)
 
     def contains(self, other):
         """:returns: True if ``other`` is entirely contained within self."""
@@ -251,30 +266,64 @@ class Region(namedtuple('Region', 'x y right bottom')):
         return self.replace(x=self.x - width, right=self.x)
 
     @staticmethod
-    def bounding_box(a, b):
-        """Find the bounding box of two regions.  Returns the smallest region
-        which contains both regions a and b.
+    def bounding_box(*args):
+        r"""Find the bounding box of the given regions.  Returns the smallest
+        region which contains all passed regions.
 
-        >>> Region.bounding_box(Region(50, 20, 10, 20), Region(20, 30, 10, 20))
+        >>> a = Region(50, 20, right=60, bottom=40)
+        >>> b = Region(20, 30, right=30, bottom=50)
+        >>> c = Region(55, 25, right=70, bottom=35)
+        >>> Region.bounding_box(a, b)
         Region(x=20, y=20, right=60, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), Region(20, 30, 10, 20))
+        >>> Region.bounding_box(b, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, Region(20, 30, 10, 20))
+        >>> Region.bounding_box(None, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), None)
+        >>> Region.bounding_box(b, None)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(Region(20, 30, 10, 20), Region.ALL)
+        >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
         >>> print Region.bounding_box(None, None)
         None
+        >>> print Region.bounding_box()
+        None
+        >>> Region.bounding_box(b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(a, b, c) == \
+        ...     Region.bounding_box(a, Region.bounding_box(b, c))
+        True
+
+        New in v30: No longer limited to just taking 2 regions.
         """
-        if a is None:
-            return b
-        if b is None:
-            return a
-        return Region.from_extents(min(a.x, b.x), min(a.y, b.y),
-                                   max(a.right, b.right),
-                                   max(a.bottom, b.bottom))
+        args = filter(None, args)
+        if not args:
+            return None
+        return Region.from_extents(
+            min(r.x for r in args),
+            min(r.y for r in args),
+            max(r.right for r in args),
+            max(r.bottom for r in args))
+
+    def dilate(self, n):
+        """Expand the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).dilate(3)
+        Region(x=17, y=27, right=33, bottom=53)
+        """
+        return self.extend(x=-n, y=-n, right=n, bottom=n)
+
+    def erode(self, n):
+        """Shrink the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).erode(3)
+        Region(x=23, y=33, right=27, bottom=47)
+        >>> print Region(20, 30, 10, 20).erode(5)
+        None
+        """
+        if self.width > n * 2 and self.height > n * 2:
+            return self.dilate(-n)
+        else:
+            return None
 
 
 Region.ALL = Region(x=-float('inf'), y=-float('inf'),
