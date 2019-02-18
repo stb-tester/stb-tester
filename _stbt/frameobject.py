@@ -230,7 +230,5 @@ class FrameObject(object):
         ``refresh`` in your derived class.
 
         Any additional keyword arguments are passed on to ``__init__``.
-
-        Added in v30.
         """
         return type(self)(frame=frame, **kwargs)
