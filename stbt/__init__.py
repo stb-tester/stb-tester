@@ -143,14 +143,23 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
         this is implemented for the infrared, HDMI CEC, and Roku controls.
         There is a maximum limit of 60 seconds.
 
-    :rtype: `_KeyPress`
     :returns:
-        A result object with the properties `key`, `start_time`, `end_time` and
-        `frame_before`.
+        An object with the following attributes:
 
-    Added in v29: The ``hold_secs`` parameter.
+        * **key** (*str*) – the name of the key that was pressed.
+        * **start_time** (*float*) – the time just before the keypress started
+          (in seconds since the unix epoch, like ``time.time()`` and
+          ``stbt.Frame.time``).
+        * **end_time** (*float*) – the time when transmission of the keypress
+          signal completed.
+        * **frame_before** (`stbt.Frame`) – the most recent video-frame just
+          before the keypress started. Typically this is used by functions like
+          `stbt.press_and_wait` to detect when the device-under-test reacted to
+          the keypress.
 
-    Added in v30: Returns a ``_Keypress``
+    * Added in v29: The ``hold_secs`` parameter.
+    * Added in v30: Returns an object with keypress timings, instead of
+      ``None``.
     """
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
