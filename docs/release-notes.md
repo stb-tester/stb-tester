@@ -27,7 +27,7 @@ TODO: Date
 
 ##### Major new features
 
-* Supports Ubuntu 18.04, OpenCV 3, and Tesseract 4.
+* Supports Ubuntu 18.04, OpenCV 3, Tesseract 3.05 and Tesseract 4.
 
 * `stbt.match` supports transparency in reference images. To use this feature
   your reference image must be a PNG with an alpha (transparency) channel. We
@@ -58,6 +58,8 @@ TODO: Date
 
     * `stbt.OcrEngine.LSTM` means Tesseract's new engine based on a "Long
       Short-Term Memory" neural network. Requires Tesseract 4.
+
+* Support for Rittal 7955.310 network-controlled power supplies.
 
 ##### Breaking changes since v29
 
@@ -107,33 +109,6 @@ TODO: Date
 
 ##### Minor additions, bugfixes & improvements
 
-* `stbt.press` now returns a object containing timing information. This is
-  intended to help making performance measurements.
-
-* `stbt power`: Add support for Rittal 7955.310 PDUs.
-
-* `stbt lint` fixes:
-  * New checker `stbt-uncommitted-image`: Filename given to `stbt.match` (and
-    similar functions) exists on disk, but isn't committed to git.
-  * `stbt-frame-object-missing-frame`: Also checks for missing `frame`
-    parameter when calling class constructors (not just class methods).
-  * `stbt-unused-return-value`: Also checks that the return value of
-    `stbt.press_and_wait` is used.
-  * `stbt-missing-image`: Reports the full path to the missing image (relative
-    to your git repository root).
-
-* `stbt match` command-line tool: Add `--all` flag to print all matches of the
-  reference image.
-
-* Many improvements to the "stbt-debug" HTML that is generated with `stbt run
-  -vv` for debugging image-processing operations.
-
-* HDMI CEC control: Add "KEY_MENU" alias for "KEY_ROOT_MENU", and add "KEY_TV"
-  for CEC keycode 16 (16 is "reserved" in the CEC spec, but the Apple TV
-  recognises it as the "TV" button).
-
-* Roku HTTP control: Enforce 3 second timeout on all HTTP requests.
-
 * `stbt.FrameObject`: Add `refresh` method, used by navigation functions that
   modify the state of the device-under-test.
 
@@ -151,6 +126,8 @@ TODO: Date
                        confirm_method=stbt.ConfirmMethod.NONE)
   ```
 
+* `stbt.ocr` shows error messages from Tesseract if it fails.
+
 * `stbt.OcrMode` has new values:
   * `SPARSE_TEXT`: Find as much text as possible in no particular order.
     Requires Tesseract 3.03 or later.
@@ -159,6 +136,43 @@ TODO: Date
   * `RAW_LINE`: Treat the image as a single text line for direct input to the
     LSTM model, bypassing Tesseract preprocessing. Requires Tesseract 3.04 or
     later.
+
+* `stbt.press` now returns a object containing information about the keypress,
+  including the start time & end time of the keypress signal. This is intended
+  to help making performance measurements.
+
+* `stbt.press` respects `interpress_delay_secs` if `hold_secs` is specified.
+
+* `stbt.Region`: New methods `dilate` and `erode` to grow or shrink the region
+  in all directions.
+
+* `stbt.Region.bounding_box` and `stbt.Region.intersect` can take more than 2
+  regions.
+
+* HDMI CEC control: Add "KEY_MENU" alias for "KEY_ROOT_MENU", and add "KEY_TV"
+  for CEC keycode 16 (16 is "reserved" in the CEC spec, but the Apple TV
+  recognises it as the "TV" button).
+
+* Roku HTTP control: Enforce 3 second timeout on all HTTP requests.
+
+* `stbt lint` fixes:
+  * Compatibility with pylint 1.8 (Ubuntu 18.04).
+  * Removed compatibility for pylint < 1.5.
+  * New checker `stbt-uncommitted-image`: Filename given to `stbt.match` (and
+    similar functions) exists on disk, but isn't committed to git.
+  * `stbt-frame-object-missing-frame`: Also checks for missing `frame`
+    parameter when calling class constructors (not just class methods).
+  * `stbt-unused-return-value`: Also checks that the return value of
+    `stbt.press_and_wait` is used.
+  * `stbt-missing-image`: Reports the full path to the missing image (relative
+    to your git repository root).
+  * `stbt-missing-image`: Ignores filenames inside `str.replace` and `re.sub`.
+
+* `stbt match` command-line tool: Add `--all` flag to print all matches of the
+  reference image.
+
+* Many improvements to the "stbt-debug" HTML that is generated with `stbt run
+  -vv` for debugging image-processing operations.
 
 
 #### v29
