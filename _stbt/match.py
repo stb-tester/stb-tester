@@ -267,8 +267,8 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
       A `MatchResult`, which will evaluate to true if a match was found,
       false otherwise.
 
-    Added in v30: MatchMethod.SQDIFF, and support for transparency in the
-    reference image.
+    Added in v30: Support transparency in the reference image, and new match
+    method ``MatchMethod.SQDIFF``.
     """
     result = next(_match_all(image, frame, match_parameters, region))
     if result.match:
