@@ -437,7 +437,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             region)
 
 
-@imgproc_cache.memoize({"version": "29"})
+@imgproc_cache.memoize({"version": "30"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
         text_color, text_color_threshold, engine, imglog, tesseract_version):
