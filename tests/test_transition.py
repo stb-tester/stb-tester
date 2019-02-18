@@ -15,7 +15,10 @@ class FakeDeviceUnderTest(object):
         self._frames = frames
 
     def press(self, key):
+        from _stbt.core import _Keypress
+        frame_before = self.frames().next()
         self.state = key
+        return _Keypress(key, time.time(), time.time(), frame_before)
 
     def frames(self):
         if self._frames is not None:

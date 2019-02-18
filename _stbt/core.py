@@ -30,7 +30,7 @@ from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import (array_from_sample, gst_iterate,
                              gst_sample_make_writable)
-from _stbt.imgutils import find_user_file, Frame, imread
+from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 
@@ -147,6 +147,7 @@ class DeviceUnderTest(object):
         self._sink_pipeline = sink_pipeline
         self._mainloop = mainloop
         self._time = _time
+        self._last_keypress = None
 
     def __enter__(self):
         if self._display:
@@ -172,20 +173,26 @@ class DeviceUnderTest(object):
 
         if hold_secs is None:
             with self._interpress_delay(interpress_delay_secs):
+                out = _Keypress(key, self._time.time(), None, self.get_frame())
                 self._control.press(key)
+                out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
-
+            self._last_keypress = out
+            return out
         else:
-            with self.pressing(key, interpress_delay_secs):
+            with self.pressing(key, interpress_delay_secs) as out:
                 self._time.sleep(hold_secs)
+            return out
 
     @contextmanager
     def pressing(self, key, interpress_delay_secs=None):
         with self._interpress_delay(interpress_delay_secs):
+            out = _Keypress(key, self._time.time(), None, self.get_frame())
             try:
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
-                yield
+                self._last_keypress = out
+                yield out
             except:  # pylint:disable=bare-except
                 exc_info = sys.exc_info()
                 try:
@@ -197,6 +204,7 @@ class DeviceUnderTest(object):
                 raise exc_info[0], exc_info[1], exc_info[2]
             else:
                 self._control.keyup(key)
+                out.end_time = self._time.time()
                 self.draw_text("Released %s" % key, duration_secs=3)
 
     @contextmanager
@@ -281,6 +289,20 @@ class DeviceUnderTest(object):
 
     def get_frame(self):
         return self._display.get_frame()
+
+
+class _Keypress(object):
+    def __init__(self, key, start_time, end_time, frame_before):
+        self.key = key
+        self.start_time = start_time
+        self.end_time = end_time
+        self.frame_before = frame_before
+
+    def __repr__(self):
+        return (
+            "_Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
+                self.key, self.start_time, self.end_time,
+                _frame_repr(self.frame_before)))
 
 
 # Utility functions

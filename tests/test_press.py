@@ -5,6 +5,7 @@ from _stbt.core import DeviceUnderTest, NoSinkPipeline
 
 def test_that_pressing_context_manager_raises_keyup_exceptions():
     dut = DeviceUnderTest(control=FakeControl(raises_on_keyup=True),
+                          display=_FakeDisplay(),
                           sink_pipeline=NoSinkPipeline())
     with pytest.raises(RuntimeError) as excinfo:
         with dut.pressing("KEY_MENU"):
@@ -15,7 +16,8 @@ def test_that_pressing_context_manager_raises_keyup_exceptions():
 def test_that_pressing_context_manager_suppresses_keyup_exceptions():
     # ...if doing so would hide an exception raised by the test script.
     control = FakeControl(raises_on_keyup=True)
-    dut = DeviceUnderTest(control=control, sink_pipeline=NoSinkPipeline())
+    dut = DeviceUnderTest(control=control, display=_FakeDisplay(),
+                          sink_pipeline=NoSinkPipeline())
     with pytest.raises(AssertionError):
         with dut.pressing("KEY_MENU"):
             assert False
@@ -40,3 +42,8 @@ class FakeControl(object):
         self.keyup_called += 1
         if self.raises_on_keyup:
             raise RuntimeError("keyup %s failed" % key)
+
+
+class _FakeDisplay(object):
+    def get_frame(self):
+        return None
