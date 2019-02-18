@@ -29,6 +29,7 @@ test_that_stbt_lint_fails_nonexistent_image() {
 test_that_stbt_lint_ignores_generated_image_names() {
     cat > test.py <<-EOF &&
 	import os
+	import re
 	import stbt
 	from os.path import join
 	var = 'idontexist'
@@ -36,6 +37,8 @@ test_that_stbt_lint_ignores_generated_image_names() {
 	stbt.wait_for_match('%s.png' % var)
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
 	stbt.wait_for_match(join('directory', 'idontexist.png'))
+	var.replace('idontexist', 'idontexist.png')
+	re.sub(r'idontexist$', 'idontexist.png', var)
 	EOF
     stbt lint --errors-only test.py
 }

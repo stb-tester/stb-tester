@@ -153,7 +153,7 @@ def _is_calculated_value(node):
     return (
         isinstance(node.parent, BinOp) or
         (isinstance(node.parent, Call) and
-         node.parent.func.as_string().split(".")[-1] == "join"))
+         node.parent.func.as_string().split(".")[-1] in ("join", "replace")))
 
 
 def _is_pattern_value(node):
@@ -172,6 +172,7 @@ def _in_whitelisted_functions(node):
             "imwrite",  # handles "from cv2 import imwrite" with OpenCV 3.x
             "re.match",
             "re.search",
+            "re.sub",
             "stbt.save_frame",
             "_stbt.core.save_frame",  # handles "from stbt import save_frame"
         )))
