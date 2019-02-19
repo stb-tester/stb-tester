@@ -7,18 +7,18 @@ test_long_running_stbt_run_process_for_memory_leaks() {
     cat > test.py <<-EOF
 	import os, time, stbt
 	
-	initial_rss = None
-	
 	def get_rss():
 	    # See http://man7.org/linux/man-pages/man5/proc.5.html
 	    with open("/proc/%s/stat" % os.getpid()) as f:
 	        stat = f.read()
 	    rss = int(stat.split()[23]) * 4
 	    print "VmRSS: %s kB" % rss
-	    global initial_rss
-	    if initial_rss is None:
-	        initial_rss = rss
 	    return rss
+	
+	# Let it reach steady state
+	for frame in stbt.frames(timeout_secs=10):
+	    pass
+	initial_rss = get_rss()
 	
 	print "Testing short stbt.frames"
 	end_time = time.time() + 600  # 10 minutes
