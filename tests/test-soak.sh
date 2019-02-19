@@ -46,5 +46,6 @@ test_long_running_stbt_run_process_for_memory_leaks() {
     stbt run -v \
         --source-pipeline="videotestsrc is-live=true ! \
             video/x-raw,format=BGR,width=1280,height=720,framerate=25/1" \
+        --save-video=video.webm \
         test.py
 }
