@@ -51,7 +51,7 @@ test_long_running_stbt_run_process_for_memory_leaks() {
 	                                                          initial_rss)
 	        time.sleep(1)
 	EOF
-    stbt run -v \
+    stbt run \
         --source-pipeline="videotestsrc is-live=true ! \
             video/x-raw,format=BGR,width=1280,height=720,framerate=25/1" \
         --save-video=video.webm \
