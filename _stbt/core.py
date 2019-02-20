@@ -123,7 +123,7 @@ def new_device_under_test_from_config(
     mainloop = _mainloop()
 
     if not args.sink_pipeline and not args.save_video:
-        sink_pipeline = NoSinkPipeline()
+        sink_pipeline = None
     else:
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
             args.sink_pipeline, raise_in_user_thread, args.save_video)
@@ -141,6 +141,13 @@ class DeviceUnderTest(object):
                  mainloop=None, _time=None):
         if _time is None:
             import time as _time
+        if mainloop is None:
+            mainloop = _mainloop()
+        if sink_pipeline is None:
+            sink_pipeline = NoSinkPipeline()
+        if control is None:
+            from .control import ErrorControl
+            control = ErrorControl(None)
         self._time_of_last_press = None
         self._display = display
         self._control = control
@@ -817,11 +824,14 @@ class NoSinkPipeline(object):
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, sink_pipeline,
+    def __init__(self, user_source_pipeline, sink_pipeline=None,
                  restart_source=False, transformation_pipeline='identity',
                  source_teardown_eos=False):
 
         import time
+
+        if sink_pipeline is None:
+            sink_pipeline = NoSinkPipeline()
 
         self._condition = threading.Condition()  # Protects last_frame
         self.last_frame = None
