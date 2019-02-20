@@ -408,7 +408,7 @@ publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
 
 ### Debian Packaging #########################################################
 
-ubuntu_releases ?= trusty xenial artful
+ubuntu_releases ?= bionic
 DPKG_OPTS?=
 debian_base_release=1
 debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)

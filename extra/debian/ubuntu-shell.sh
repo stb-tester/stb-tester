@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Gives you a bash shell in an Ubuntu 14.04 container, with your stb-tester
+# Gives you a bash shell in an Ubuntu 18.04 container, with your stb-tester
 # working copy available at (and $PWD set to) /home/stb-tester.
 
 build_docker_image() {

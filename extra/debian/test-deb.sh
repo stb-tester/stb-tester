@@ -13,9 +13,10 @@ docker run -t \
         echo "-v $PWD/$pkg:/tmp/$pkg:ro"
       done | tr '\n' ' ') \
     -v $stbt_dir:/usr/src/stb-tester:ro \
-    ubuntu:14.04 \
+    ubuntu:18.04 \
     /bin/bash -c "
         set -x &&
+        export DEBIAN_FRONTEND=noninteractive &&
         apt-get update &&
         { dpkg -i ${*/#//tmp/}; true; } &&
         apt-get --fix-broken -y install &&
