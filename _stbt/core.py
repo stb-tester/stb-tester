@@ -128,8 +128,28 @@ def new_device_under_test_from_config(
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
             args.sink_pipeline, raise_in_user_thread, args.save_video)
 
+    source_pipeline_description = " ! ".join([
+        # Notes on the source pipeline:
+        # * _stbt_raw_frames_queue is kept small to reduce the amount of slack
+        #   (and thus the latency) of the pipeline.
+        # * _stbt_user_data_queue before the decodebin is large.  We don't want
+        #   to drop encoded packets as this will cause significant image
+        #   artifacts in the decoded buffers.  We make the assumption that we
+        #   have enough horse-power to decode the incoming stream and any delays
+        #   will be transient otherwise it could start filling up causing
+        #   increased latency.
+        args.source_pipeline,
+        'queue name=_stbt_user_data_queue max-size-buffers=0 '
+        '    max-size-bytes=0 max-size-time=10000000000',
+        "decodebin",
+        'queue name=_stbt_raw_frames_queue max-size-buffers=2',
+        'videoconvert',
+        'video/x-raw,format=BGR',
+        transformation_pipeline,
+        "appsink name=appsink max-buffers=1 caps=video/x-raw,format=BGR"])
+
     display[0] = Display(
-        args.source_pipeline, sink_pipeline, args.restart_source,
+        source_pipeline_description, sink_pipeline, args.restart_source,
         transformation_pipeline, source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_control(args.control, display[0]),
@@ -824,9 +844,8 @@ class NoSinkPipeline(object):
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, sink_pipeline=None,
-                 restart_source=False, transformation_pipeline='identity',
-                 source_teardown_eos=False):
+    def __init__(self, source_pipeline_description, sink_pipeline=None,
+                 restart_source=False, source_teardown_eos=False):
 
         import time
 
@@ -843,29 +862,7 @@ class Display(object):
         self.restart_source_enabled = restart_source
         self.source_teardown_eos = source_teardown_eos
 
-        appsink = (
-            "appsink name=appsink max-buffers=1 drop=false sync=true "
-            "emit-signals=true "
-            "caps=video/x-raw,format=BGR")
-        # Notes on the source pipeline:
-        # * _stbt_raw_frames_queue is kept small to reduce the amount of slack
-        #   (and thus the latency) of the pipeline.
-        # * _stbt_user_data_queue before the decodebin is large.  We don't want
-        #   to drop encoded packets as this will cause significant image
-        #   artifacts in the decoded buffers.  We make the assumption that we
-        #   have enough horse-power to decode the incoming stream and any delays
-        #   will be transient otherwise it could start filling up causing
-        #   increased latency.
-        self.source_pipeline_description = " ! ".join([
-            user_source_pipeline,
-            'queue name=_stbt_user_data_queue max-size-buffers=0 '
-            '    max-size-bytes=0 max-size-time=10000000000',
-            "decodebin",
-            'queue name=_stbt_raw_frames_queue max-size-buffers=2',
-            'videoconvert',
-            'video/x-raw,format=BGR',
-            transformation_pipeline,
-            appsink])
+        self.source_pipeline_description = source_pipeline_description
         self.create_source_pipeline()
 
         self._sink_pipeline = sink_pipeline
@@ -881,6 +878,7 @@ class Display(object):
         source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
         appsink = self.source_pipeline.get_by_name("appsink")
+        appsink.set_property("emit-signals", True)
         appsink.connect("new-sample", self.on_new_sample)
 
         # A realtime clock gives timestamps compatible with time.time()
@@ -899,10 +897,14 @@ class Display(object):
         if (self.source_pipeline.set_state(Gst.State.PAUSED) ==
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
-            self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', 'downstream')
-            self.source_pipeline.get_by_name('appsink') \
-                .set_property('sync', False)
+            raw_frames_queue = self.source_pipeline.get_by_name(
+                '_stbt_raw_frames_queue')
+            appsink = self.source_pipeline.get_by_name('appsink')
+            if raw_frames_queue:
+                raw_frames_queue.set_property('leaky', 'downstream')
+            else:
+                appsink.set_property('drop', True)
+            appsink.set_property('sync', False)
 
         self.source_pipeline.set_state(Gst.State.PLAYING)
 
