@@ -86,21 +86,6 @@ Description: Automated User Interface testing for set-top boxes.
  analysing what is on screen (typically using an HDMI video-capture card).
  Test scripts are written in Python.
 
-Package: stb-tester-camera
-Architecture: any
-Depends: stb-tester (>> ${source:Upstream-Version}),
-         gir1.2-gudev-1.0,
-         gstreamer1.0-libav,
-         lighttpd,
-         python-qrcode,
-         python-zbar,
-         v4l-utils
-Recommends: python-matplotlib,
-            python-scipy
-Description: stb-tester support for using a camera pointed at a TV as input.
- This is useful for testing apps running on Smart TVs that don't have an HDMI
- output. Installs the "stbt camera" command.
-
 Package: stb-tester-virtual-stb
 Architecture: any
 Depends: stb-tester (>> ${source:Upstream-Version}),
