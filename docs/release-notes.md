@@ -23,17 +23,18 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 #### v30
 
-TODO: Date
+22 February 2019.
 
 ##### Major new features
 
 * Supports Ubuntu 18.04, OpenCV 3, Tesseract 3.05 and Tesseract 4.
 
-* `stbt.match` supports transparency in reference images. To use this feature
-  your reference image must be a PNG with an alpha (transparency) channel. We
-  only support fully-opaque or fully-transparent pixels: any pixels that aren't
-  fully opaque are treated as fully transparent. This requires OpenCV 3.0 or
-  newer.
+* `stbt.match` transparency support: Transparent pixels in the reference image
+  will be ignored when looking for a match within the video-frame. To use this
+  feature your reference image must be a PNG with an alpha (transparency)
+  channel. We only support fully-opaque or fully-transparent pixels: any pixels
+  that aren't fully opaque are treated as fully transparent. This requires
+  OpenCV 3.0 or newer.
 
     * `stbt.load_image` will include the image's alpha (transparency) channel
       if it had any transparent pixels.
