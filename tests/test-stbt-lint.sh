@@ -311,3 +311,27 @@ test_that_stbt_lint_warns_on_assert_true() {
 	E:  2, 0: "assert True" has no effect (stbt-assert-true)
 	EOF
 }
+
+test_that_stbt_lint_understands_assert_false() {
+    cat > test.py <<-EOF
+	def moo():
+	    assert False
+	    print "Hi there"
+	
+	
+	def cow(a):
+	    if a:
+	        return 5
+	    # This checks that we've fixed pylint's false positive warning
+	    # about inconsistent-return-statements ("Either all return
+	    # statements in a function should return an expression, or none of
+	    # them should").
+	    assert False, "My Message"
+	EOF
+    stbt lint --disable=missing-docstring,invalid-name --score=no test.py > lint.log
+
+    assert_lint_log <<-'EOF'
+	************* Module test
+	W:  3, 4: Unreachable code (unreachable)
+	EOF
+}

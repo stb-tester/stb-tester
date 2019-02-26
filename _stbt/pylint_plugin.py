@@ -14,8 +14,9 @@ import os
 import re
 import subprocess
 
-from astroid import YES
-from astroid.node_classes import BinOp, Call, Const, Expr, Keyword
+from astroid import MANAGER, YES
+from astroid.node_classes import (
+    Assert, BinOp, Call, Const, Expr, Keyword, Name, Raise)
 from astroid.scoped_nodes import ClassDef, FunctionDef
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
@@ -130,6 +131,25 @@ class StbtChecker(BaseChecker):
                 self.add_message("E7008", node=assertion)
             else:
                 self.add_message("E7008", node=assertion)
+
+
+def _transform_assert_false_into_raise(assertion):
+    if isinstance(assertion.test, Const) and assertion.test.value is False:
+        out = Raise(lineno=assertion.lineno,
+                    col_offset=assertion.col_offset,
+                    parent=assertion.parent)
+        exc = Call(parent=out)
+        if assertion.fail:
+            args = [assertion.fail]
+            args[0].parent = exc
+        else:
+            args = []
+        exc.postinit(Name("AssertionError", parent=exc), args)
+        out.postinit(exc, None)
+        return out
+
+
+MANAGER.register_transform(Assert, _transform_assert_false_into_raise)
 
 
 def _is_callable(node):
