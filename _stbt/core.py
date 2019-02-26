@@ -735,8 +735,8 @@ class SinkPipeline(object):
             state = self.sink_pipeline.get_state(0)
             if (state[0] != Gst.StateChangeReturn.SUCCESS or
                     state[1] != Gst.State.PLAYING):
-                debug(
-                    "teardown: Sink pipeline not in state PLAYING: %r" % state)
+                debug("teardown: Sink pipeline not in state PLAYING: %r"
+                      % (state,))
             debug("teardown: Sending eos on sink pipeline")
             if self.appsrc.emit("end-of-stream") == Gst.FlowReturn.OK:
                 self.sink_pipeline.send_event(Gst.Event.new_eos())
