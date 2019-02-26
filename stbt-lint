@@ -25,6 +25,7 @@
 * E7007: FrameObject properties must not have side-effects that change
   the state of the device-under-test by calling "stbt.press()" or
   "stbt.press_and_wait()".
+* E7008: "assert True" has no effect.
 
 """
 

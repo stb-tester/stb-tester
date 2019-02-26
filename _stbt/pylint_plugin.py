@@ -15,7 +15,7 @@ import re
 import subprocess
 
 from astroid import YES
-from astroid.node_classes import BinOp, Call, Expr, Keyword
+from astroid.node_classes import BinOp, Call, Const, Expr, Keyword
 from astroid.scoped_nodes import ClassDef, FunctionDef
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
@@ -59,6 +59,10 @@ class StbtChecker(BaseChecker):
                   'FrameObject properties must not have side-effects that '
                   'change the state of the device-under-test by calling '
                   '"stbt.press()" or "stbt.press_and_wait()".'),
+        'E7008': ('"assert True" has no effect',
+                  'stbt-assert-true',
+                  '"assert True" has no effect; consider replacing it with a '
+                  'comment or a call to "logging.info()".'),
     }
 
     def visit_const(self, node):
@@ -119,6 +123,13 @@ class StbtChecker(BaseChecker):
                     if len(args) <= index and "frame" not in kwargs:
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
+
+    def visit_assert(self, assertion):
+        if isinstance(assertion.test, Const) and assertion.test.value is True:
+            if assertion.fail:
+                self.add_message("E7008", node=assertion)
+            else:
+                self.add_message("E7008", node=assertion)
 
 
 def _is_callable(node):

@@ -297,3 +297,17 @@ test_that_stbt_lint_ignores_astroid_inference_exceptions() {
 	E:  2,23: Undefined variable 'InfoPage' (undefined-variable)
 	EOF
 }
+
+test_that_stbt_lint_warns_on_assert_true() {
+    cat > test.py <<-EOF
+	assert True
+	assert True, "My message"
+	EOF
+    stbt lint --errors-only test.py > lint.log
+
+    assert_lint_log <<-'EOF'
+	************* Module test
+	E:  1, 0: "assert True" has no effect (stbt-assert-true)
+	E:  2, 0: "assert True" has no effect (stbt-assert-true)
+	EOF
+}
