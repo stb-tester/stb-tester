@@ -1,16 +1,6 @@
 version: 2.1
 
 jobs:
-  ubuntu1604-python2:
-    docker:
-      - image: stbtester/circleci:ubuntu1604
-    environment:
-      PYTHON: /usr/bin/python2.7
-    steps:
-      - checkout
-      - test
-      - test_stbt_lint_with_system_pylint
-
   ubuntu1804-python2:
     docker:
       - image: stbtester/circleci:ubuntu1804
@@ -43,23 +33,7 @@ commands:
             pylint --version
             make enable_stbt_camera=no enable_virtual_stb=no parallel=xargs check
 
-  test_stbt_lint_with_system_pylint:
-    steps:
-      - run:
-          name: test stbt-lint with system pylint
-          environment:
-            LANG: en_GB.UTF-8
-            SHELL: /bin/bash
-            TERM: xterm
-          command: |
-            pip uninstall -y pylint astroid
-            pylint --version
-            PATH="$PWD/tests/test-install/bin:$PATH" \
-            PYTHONPATH="$PWD/tests/test-install/lib/python2.7/site-packages:$PYTHONPATH" \
-            tests/run-tests.sh -i tests/test-stbt-lint.sh
-
 workflows:
   test_all:
     jobs:
-      - ubuntu1604-python2
       - ubuntu1804-python2
