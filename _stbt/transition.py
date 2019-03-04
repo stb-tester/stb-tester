@@ -77,6 +77,9 @@ def press_and_wait(
         timestamps can be compared with system time (the output of
         ``time.time()``).
     """
+    if _dut is None:
+        import stbt
+        _dut = stbt
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     press_result = _dut.press(key)
@@ -114,6 +117,10 @@ def wait_for_transition_to_end(
 
     :returns: See `press_and_wait`.
     """
+    if _dut is None:
+        import stbt
+        _dut = stbt
+
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
@@ -123,12 +130,9 @@ def wait_for_transition_to_end(
 class _Transition(object):
     def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
                  stable_secs=1, dut=None):
-
         if dut is None:
             import stbt
-            self.dut = stbt
-        else:
-            self.dut = dut
+            dut = stbt
 
         if region is not Region.ALL and mask is not None:
             raise ValueError(
@@ -143,6 +147,7 @@ class _Transition(object):
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
+        self.dut = dut
 
         self.frames = self.dut.frames()
         self.diff = strict_diff
