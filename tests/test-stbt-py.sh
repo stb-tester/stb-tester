@@ -646,3 +646,25 @@ test_that_press_returns_a_pressresult() {
 	EOF
     stbt run -vv --control=none test.py || fail "Incorrect press() behaviour"
 }
+
+test_press_and_wait() {
+    # This is a regression test - dut was incorrectly injected into
+    # press_and_wait causing failures that our pytest tests didn't find.
+    cat > test.py <<-EOF &&
+	import stbt
+	import threading
+
+	stbt.press("black")
+	stbt.wait_until(stbt.is_screen_black)
+	
+	assert stbt.press_and_wait("white")
+	assert not stbt.press_and_wait("white", timeout_secs=1)
+	
+	stbt.press("ball")
+	stbt.wait_for_motion()
+	threading.Timer(0.1, lambda: stbt.press("black")).start()
+	assert stbt.wait_for_transition_to_end()
+	EOF
+
+    stbt run -vv test.py || fail "Incorrect press_and_wait() behaviour"
+}
