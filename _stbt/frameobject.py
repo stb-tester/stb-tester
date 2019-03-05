@@ -111,7 +111,8 @@ class FrameObject(object):
       `stbt.match` or `stbt.ocr`) you must specify the parameter
       ``frame=self._frame``.
 
-    FrameObject behaviours:
+    The following behaviours are provided automatically by the FrameObject
+    base class:
 
     * **Truthiness:** A FrameObject instance is considered "truthy" if it is
       visible. Any other properties (apart from ``is_visible``) will return
