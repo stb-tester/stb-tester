@@ -227,8 +227,7 @@ class ImageLogger(object):
                 _regions.append(r)
 
         return jinja2.Template(dedent("""\
-            <div class="annotated_image"
-                 style="max-width: {{source_size.width}}px">
+            <div class="annotated_image">
               <img src="{{source_name}}.png">
               {% for region, css_class, title in regions %}
               {{ draw(region, source_size, css_class, title) }}
@@ -254,7 +253,8 @@ _INDEX_HTML_HEADER = dedent(u"""\
         a.nav.pull-left { margin-left: 0; }
         a.nav.pull-right { margin-right: 0; }
         h5 { margin-top: 40px; }
-        .annotated_image { position: relative; }
+        .annotated_image { position: relative; display: inline-block; }
+        .annotated_image img { max-width: 100%; }
         .region { position: absolute; }
         .source_region { outline: 2px solid #8080ff; }
         .region.matched { outline: 2px solid #ff0020; }
