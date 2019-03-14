@@ -197,15 +197,15 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 
 test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
     cat > test.py <<-EOF
-	from stbt import FrameObject, match, match_text, ocr, is_screen_black
+	import stbt
 	
 	def find_boxes(frame=None):
 	    pass
 	
-	class Button(FrameObject):
+	class Button(stbt.FrameObject):
 	    pass
 	
-	class ModalDialog(FrameObject):
+	class ModalDialog(stbt.FrameObject):
 	    @property
 	    def is_visible(self):
 	        return find_boxes() and Button()
@@ -214,45 +214,54 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	    @property
 	    def is_visible(self):
 	        return bool(
-	            match("videotestsrc-redblue.png") and
-	            match_text("Error") and
-	            not is_screen_black())
+	            stbt.match("videotestsrc-redblue.png") and
+	            stbt.match_text("Error") and
+	            not stbt.is_screen_black())
 	
 	    @property
 	    def text(self):
-	        return ocr()
+	        return stbt.ocr()
 	
-	class Good(FrameObject):
+	class Good(stbt.FrameObject):
 	    @property
 	    def is_visible(self):
 	        return find_boxes(self._frame) and Button(self._frame)
 	
 	    @property
 	    def property1(self):
-	        return bool(match("videotestsrc-redblue.png", self._frame))
+	        return bool(stbt.match("videotestsrc-redblue.png", self._frame))
 	
 	    @property
 	    def property2(self):
-	        return bool(match("videotestsrc-redblue.png", frame=self._frame))
+	        return bool(stbt.match("videotestsrc-redblue.png",
+	                               frame=self._frame))
 	
 	    def not_a_property(self):
-	        return bool(match("videotestsrc-redblue.png"))
+	        return bool(stbt.match("videotestsrc-redblue.png"))
 	
 	def normal_test():
-	    assert match("videotestsrc-redblue.png")
+	    assert stbt.match("videotestsrc-redblue.png")
 	EOF
     cp "$testdir/videotestsrc-redblue.png" .
     stbt lint --errors-only test.py > lint.log
 
-    assert_lint_log <<-'EOF'
+    cat > expected.log <<-'EOF'
 	************* Module test
 	E: 12,15: "find_boxes()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 12,32: "Button()" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 18,12: "match('videotestsrc-redblue.png')" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 19,12: "match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 20,16: "is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 24,15: "ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 18,12: "stbt.match('videotestsrc-redblue.png')" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 19,12: "stbt.match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 20,16: "stbt.is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 24,15: "stbt.ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
 	EOF
+    assert_lint_log < expected.log
+
+    # Also test `match` instead of `stbt.match` (etc).
+    sed -e 's/^import stbt$/from stbt import FrameObject, match, match_text, ocr, is_screen_black/' \
+        -e 's/stbt\.//g' \
+        -i test.py expected.log
+    stbt lint --errors-only test.py > lint.log
+    assert_lint_log < expected.log
 }
 
 test_that_stbt_lint_ignores_astroid_inference_exceptions() {
