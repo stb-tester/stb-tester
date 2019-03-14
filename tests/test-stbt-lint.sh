@@ -195,7 +195,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	EOF
 }
 
-test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
+test_that_stbt_lint_checks_frameobjects() {
     cat > test.py <<-EOF
 	import stbt
 	
@@ -221,6 +221,16 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	    @property
 	    def text(self):
 	        return stbt.ocr()
+	
+	    @property
+	    def another(self):
+	        f = stbt.get_frame()
+	        m = stbt.match("videotestsrc-redblue.png", frame=f)
+	        return (m and
+	                stbt.match_text("Error",
+	                                frame=stbt.get_frame()) and
+	                stbt.match_text("Error",
+	                                stbt.get_frame()))
 	
 	class Good(stbt.FrameObject):
 	    @property
@@ -253,11 +263,14 @@ test_that_stbt_lint_checks_frame_parameter_in_frameobject_methods() {
 	E: 19,12: "stbt.match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 20,16: "stbt.is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 24,15: "stbt.ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
+	E: 28,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 32,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 34,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	EOF
     assert_lint_log < expected.log
 
     # Also test `match` instead of `stbt.match` (etc).
-    sed -e 's/^import stbt$/from stbt import FrameObject, match, match_text, ocr, is_screen_black/' \
+    sed -e 's/^import stbt$/from stbt import FrameObject, get_frame, match, match_text, ocr, is_screen_black/' \
         -e 's/stbt\.//g' \
         -i test.py expected.log
     stbt lint --errors-only test.py > lint.log
