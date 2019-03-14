@@ -224,6 +224,8 @@ test_that_stbt_lint_checks_frameobjects() {
 	
 	    @property
 	    def another(self):
+	        assert stbt.press_and_wait("KEY_RIGHT")
+	        stbt.press("KEY_OK")
 	        f = stbt.get_frame()
 	        m = stbt.match("videotestsrc-redblue.png", frame=f)
 	        return (m and
@@ -247,7 +249,10 @@ test_that_stbt_lint_checks_frameobjects() {
 	                               frame=self._frame))
 	
 	    def not_a_property(self):
-	        return bool(stbt.match("videotestsrc-redblue.png"))
+	        if not bool(stbt.match("videotestsrc-redblue.png")):
+	            stbt.press("KEY_OK")
+	            return stbt.wait_until(
+	                lambda: stbt.match("videotestsrc-redblue.png"))
 	
 	def normal_test():
 	    assert stbt.match("videotestsrc-redblue.png")
@@ -263,14 +268,16 @@ test_that_stbt_lint_checks_frameobjects() {
 	E: 19,12: "stbt.match_text('Error')" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 20,16: "stbt.is_screen_black()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 24,15: "stbt.ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
-	E: 28,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
-	E: 32,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
-	E: 34,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 28,15: FrameObject properties must not use "stbt.press_and_wait" (stbt-frame-object-property-press)
+	E: 29, 8: FrameObject properties must not use "stbt.press" (stbt-frame-object-property-press)
+	E: 30,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 34,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 36,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	EOF
     assert_lint_log < expected.log
 
     # Also test `match` instead of `stbt.match` (etc).
-    sed -e 's/^import stbt$/from stbt import FrameObject, get_frame, match, match_text, ocr, is_screen_black/' \
+    sed -e 's/^import stbt$/from stbt import FrameObject, get_frame, is_screen_black, match, match_text, ocr, press, press_and_wait, wait_until/' \
         -e 's/stbt\.//g' \
         -i test.py expected.log
     stbt lint --errors-only test.py > lint.log
