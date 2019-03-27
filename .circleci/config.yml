@@ -41,7 +41,7 @@ commands:
           command: |
             tesseract --version
             pylint --version
-            make enable_stbt_camera=no enable_virtual_stb=yes parallel=xargs check
+            make enable_stbt_camera=no enable_virtual_stb=no parallel=xargs check
 
   test_stbt_lint_with_system_pylint:
     steps:

@@ -20,6 +20,11 @@
   "frame" parameter to functions such as "stbt.match".
 * E7005: The image path given to "stbt.match" (and similar functions)
   exists on disk, but isn't committed to git.
+* E7006: FrameObject properties must use "self._frame", not
+  "stbt.get_frame()".
+* E7007: FrameObject properties must not have side-effects that change
+  the state of the device-under-test by calling "stbt.press()" or
+  "stbt.press_and_wait()".
 
 """
 

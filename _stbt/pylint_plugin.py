@@ -49,6 +49,16 @@ class StbtChecker(BaseChecker):
                   'The image path given to "stbt.match" '
                   '(and similar functions) exists on disk, '
                   "but isn't committed to git."),
+        'E7006': ('FrameObject properties must use "self._frame", not '
+                  '"get_frame()"',
+                  'stbt-frame-object-get-frame',
+                  'FrameObject properties must use "self._frame", not '
+                  '"stbt.get_frame()".'),
+        'E7007': ('FrameObject properties must not use "%s"',
+                  'stbt-frame-object-property-press',
+                  'FrameObject properties must not have side-effects that '
+                  'change the state of the device-under-test by calling '
+                  '"stbt.press()" or "stbt.press_and_wait()".'),
     }
 
     def visit_const(self, node):
@@ -87,6 +97,14 @@ class StbtChecker(BaseChecker):
                     self.add_message('E7003', node=node, args=arg.as_string())
 
         if _in_frameobject(node) and _in_property(node):
+            if re.search(r"\bget_frame$", node.func.as_string()):
+                self.add_message('E7006', node=node)
+
+            if re.search(
+                    r"\b(press|press_and_wait|pressing|press_until_match)$",
+                    node.func.as_string()):
+                self.add_message('E7007', node=node, args=node.func.as_string())
+
             for funcdef in _infer(node.func):
                 argnames = _get_argnames(funcdef)
                 if "frame" in argnames:
