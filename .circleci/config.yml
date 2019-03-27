@@ -3,18 +3,20 @@ version: 2.1
 jobs:
   ubuntu1804-python2:
     docker:
-      - image: stbtester/circleci:ubuntu1804
+      - image: stbtester/circleci:ubuntu1804-python2
     environment:
       PYTHON: /usr/bin/python2.7
+      PYTHON_VERSION: 2.7
     steps:
       - checkout
       - test
 
   ubuntu1804-python3:
     docker:
-      - image: stbtester/circleci:ubuntu1804
+      - image: stbtester/circleci:ubuntu1804-python3
     environment:
       PYTHON: /usr/bin/python3.6
+      PYTHON_VERSION: 3.6
     steps:
       - checkout
       - test
@@ -37,3 +39,4 @@ workflows:
   test_all:
     jobs:
       - ubuntu1804-python2
+      - ubuntu1804-python3
