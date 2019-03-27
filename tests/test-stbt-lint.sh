@@ -237,6 +237,10 @@ test_that_stbt_lint_checks_frameobjects() {
 	                stbt.match_text("Error",
 	                                stbt.get_frame()))
 	
+	    @property
+	    def another2(self):
+	        return stbt.wait_for_match("videotestsrc-redblue.png")
+	
 	class Good(stbt.FrameObject):
 	    @property
 	    def is_visible(self):
@@ -278,7 +282,8 @@ test_that_stbt_lint_checks_frameobjects() {
 	E: 30,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	E: 34,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	E: 36,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
-	E: 60, 4: FrameObject "refresh()" doesn't modify "page" instance (stbt-frame-object-refresh)
+	E: 40,15: FrameObject properties must not use "stbt.wait_for_match" (stbt-frame-object-property-single-frame)
+	E: 64, 4: FrameObject "refresh()" doesn't modify "page" instance (stbt-frame-object-refresh)
 	EOF
     assert_lint_log < expected.log
 
