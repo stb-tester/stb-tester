@@ -4,7 +4,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
         ca-certificates \
-        chromium-browser \
         curl \
         expect \
         expect-dev \
@@ -17,7 +16,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
         gstreamer1.0-tools \
-        gstreamer1.0-x \
         gzip \
         language-pack-en \
         libgstreamer1.0-dev \
@@ -50,7 +48,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-serial \
         python-yaml \
         python-zbar \
-        ratpoison \
         socat \
         ssh \
         sudo \
@@ -61,8 +58,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         time \
         v4l-utils \
         wget \
-        xdotool \
-        xserver-xorg-video-dummy \
         xterm && \
     apt-get clean
 
