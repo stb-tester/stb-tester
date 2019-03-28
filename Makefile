@@ -221,6 +221,7 @@ clean:
 PYTHON_FILES := \
     $(shell (git ls-files '*.py' && \
              git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+             | grep -v '^stbt-camera.d/' \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
@@ -266,6 +267,9 @@ $(info virtual-stb support disabled)
 endif
 
 ifeq ($(enable_stbt_camera), yes)
+check-pylint: check-pylint-camera
+check-pylint-camera:
+	PYTHONPATH=$$PWD extra/pylint.sh stbt-camera.d/*.py
 check: check-cameratests
 check-cameratests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
@@ -539,5 +543,5 @@ install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
 .PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
 .PHONY: ppa-publish rpm srpm
-.PHONY: check-cameratests install-stbt-camera
+.PHONY: check-cameratests check-pylint-camera install-stbt-camera
 .PHONY: FORCE TAGS
