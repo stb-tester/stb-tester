@@ -12,7 +12,6 @@
 __pycache__
 _stbt/libxxhash.so
 _stbt/libstbt.so
-_stbt/lmdb/
 debian-packages
 docs/stbt.1
 etc/stbt.conf

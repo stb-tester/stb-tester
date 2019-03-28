@@ -76,9 +76,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/irnetbox.py \
     _stbt/libstbt.so \
     _stbt/libxxhash.so \
-    _stbt/lmdb/__init__.py \
-    _stbt/lmdb/cpython.so \
-    _stbt/lmdb/LICENSE \
     _stbt/logging.py \
     _stbt/match.py \
     _stbt/motion.py \
@@ -132,7 +129,7 @@ install-core: all
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(pythondir)/stbt \
-	    $(DESTDIR)$(pythondir)/_stbt/lmdb \
+	    $(DESTDIR)$(pythondir)/_stbt \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
 	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
@@ -343,29 +340,7 @@ _stbt/libxxhash.so : $(XXHASH_SOURCES)
 _stbt/libstbt.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
 
-LMDB_SOURCES = \
-    vendor/py-lmdb/lib/lmdb.h \
-    vendor/py-lmdb/lib/mdb.c \
-    vendor/py-lmdb/lib/midl.c \
-    vendor/py-lmdb/lib/midl.h \
-    vendor/py-lmdb/lib/py-lmdb/preload.h \
-    vendor/py-lmdb/lmdb/cpython.c
-
-_stbt/lmdb/__init__.py : vendor/py-lmdb/lmdb/__init__.py
-	mkdir -p $(dir $@) && cp $< $@
-
-_stbt/lmdb/LICENSE : vendor/py-lmdb/LICENSE
-	mkdir -p $(dir $@) && cp $< $@
-
-_stbt/lmdb/cpython.so : $(LMDB_SOURCES)
-	mkdir -p $(dir $@) && \
-	$(CC) -o _stbt/lmdb/cpython.so -O2 --shared -fPIC \
-	    $(shell pkg-config --cflags --libs python) \
-	    -Ivendor/py-lmdb/lib/ \
-	    -Ivendor/py-lmdb/lib/py-lmdb/ \
-	    $(filter %.c,$(LMDB_SOURCES))
-
-SUBMODULE_FILES = $(LMDB_SOURCES) vendor/py-lmdb/LICENSE $(XXHASH_SOURCES)
+SUBMODULE_FILES = $(XXHASH_SOURCES)
 
 $(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
 
