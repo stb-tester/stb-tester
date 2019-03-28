@@ -33,7 +33,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-gi \
         python3-jinja2 \
         python3-kitchen \
-        python3-libcec \
         python3-lmdb \
         python3-lxml \
         python3-mock \
@@ -66,7 +65,3 @@ ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     /usr/share/tesseract-ocr/4.00/tessdata/
-
-# Work around python-libcec packaging bug
-# https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1822066
-RUN mv /usr/lib/python2.7.15rc1/dist-packages/cec /usr/lib/python2.7/dist-packages/
