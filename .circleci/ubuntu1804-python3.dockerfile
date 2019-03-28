@@ -65,3 +65,5 @@ ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     /usr/share/tesseract-ocr/4.00/tessdata/
+
+RUN ln -s python3.6 /usr/bin/python

@@ -5,7 +5,6 @@ jobs:
     docker:
       - image: stbtester/circleci:ubuntu1804-python2
     environment:
-      PYTHON: /usr/bin/python2.7
       PYTHON_VERSION: 2.7
     steps:
       - checkout
@@ -15,7 +14,6 @@ jobs:
     docker:
       - image: stbtester/circleci:ubuntu1804-python3
     environment:
-      PYTHON: /usr/bin/python3.6
       PYTHON_VERSION: 3.6
     steps:
       - checkout
