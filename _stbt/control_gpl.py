@@ -128,6 +128,7 @@ class HdmiCecControl(object):
     def __init__(self, device, source, destination):
         # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
         # find it.
+        # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
         sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
         try:
             import cec
