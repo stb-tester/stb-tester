@@ -197,7 +197,7 @@ clean:
 
 PYTHON_FILES := \
     $(shell (git ls-files '*.py' && \
-             git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+             git grep --name-only -E '^\#!/usr/bin/python') \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 

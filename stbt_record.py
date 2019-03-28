@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 """
 Copyright 2012-2013 YouView TV Ltd.

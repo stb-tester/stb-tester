@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # Copyright 2014-2017 Stb-tester.com Ltd.
 # Copyright 2013 YouView TV Ltd.

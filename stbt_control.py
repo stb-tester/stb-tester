@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """Send remote control signals using the PC keyboard or from the command line.
 """
 

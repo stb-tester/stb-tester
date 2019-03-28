@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 ##
 ##  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
 ##

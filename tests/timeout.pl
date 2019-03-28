@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 # Portable timeout command. Usage: timeout <secs> <command> [<args>...]
 

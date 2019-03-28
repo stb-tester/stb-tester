@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """
 stbt virtual-stb enables stb-tester to test set-top box software without
 hardware.  This can be useful as a first stage in a continuous integration
