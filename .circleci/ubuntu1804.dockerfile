@@ -11,7 +11,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         expect-dev \
         gdb \
         gir1.2-gstreamer-1.0 \
-        gir1.2-gudev-1.0 \
         git \
         gstreamer1.0-libav \
         gstreamer1.0-plugins-bad \
@@ -25,7 +24,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libopencv-dev \
         liborc-0.4-dev \
         librsvg2-bin \
-        lighttpd \
         moreutils \
         parallel \
         pep8 \
@@ -38,7 +36,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-libcec \
         python-lmdb \
         python-lxml \
-        python-matplotlib \
         python-mock \
         python-nose \
         python-numpy \
@@ -46,20 +43,17 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-pip \
         python-pysnmp4 \
         python-pytest \
-        python-qrcode \
         python-requests \
         python-responses \
         python-scipy \
         python-serial \
         python-yaml \
-        python-zbar \
         socat \
         ssh \
         sudo \
         tar \
         tesseract-ocr \
         time \
-        v4l-utils \
         wget \
         xterm && \
     apt-get clean
