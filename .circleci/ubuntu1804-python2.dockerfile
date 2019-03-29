@@ -30,6 +30,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pylint \
         python-docutils \
         python-flask \
+        python-future \
         python-gi \
         python-jinja2 \
         python-kitchen \
