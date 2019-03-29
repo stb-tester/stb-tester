@@ -1,3 +1,15 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import *
+from past.utils import old_div
+from builtins import object
 # coding: utf-8
 
 import errno
@@ -45,7 +57,7 @@ _ocr_replacements = {
     u'—': u'-',
     u'―': u'-',
 }
-_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
+_ocr_transtab = dict((ord(amb), to) for amb, to in list(_ocr_replacements.items()))
 
 
 class OcrMode(IntEnum):
@@ -123,7 +135,7 @@ class TextMatchResult(object):
         self.text = text
 
     # pylint:disable=no-member
-    def __nonzero__(self):
+    def __bool__(self):
         return self.match
 
     def __repr__(self):
@@ -239,10 +251,10 @@ def ocr(frame=None, region=Region.ALL,
             "instead. To OCR an entire video frame, use "
             "`region=Region.ALL`.")
 
-    if isinstance(tesseract_user_words, (str, unicode)):
+    if isinstance(tesseract_user_words, str):
         tesseract_user_words = [tesseract_user_words]
 
-    if isinstance(tesseract_user_patterns, (str, unicode)):
+    if isinstance(tesseract_user_patterns, str):
         tesseract_user_patterns = [tesseract_user_patterns]
 
     imglog = ImageLogger("ocr")
@@ -462,9 +474,9 @@ def _tesseract_subprocess(
         # Calculate distance of each pixel from `text_color`, then discard
         # everything further than `text_color_threshold` distance away.
         diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
-        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
+        frame = numpy.sqrt(old_div((diff[:, :, 0] ** 2 +
                             diff[:, :, 1] ** 2 +
-                            diff[:, :, 2] ** 2) / 3) \
+                            diff[:, :, 2] ** 2), 3)) \
                      .astype(numpy.uint8)
         imglog.imwrite("text_color_difference", frame)
         _, frame = cv2.threshold(frame, text_color_threshold, 255,
@@ -523,7 +535,7 @@ def _tesseract_subprocess(
 
         if _config:
             with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
-                for k, v in _config.iteritems():
+                for k, v in _config.items():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
@@ -567,7 +579,7 @@ def _hocr_iterate(hocr):
                     if need_space and started:
                         yield (u' ', None)
                     need_space = False
-                    yield (unicode(t).strip(), e)
+                    yield (str(t).strip(), e)
                     started = True
                 else:
                     need_space = True
@@ -596,7 +608,7 @@ def _to_unicode(text):
     if isinstance(text, str):
         return text.decode("utf-8")
     else:
-        return unicode(text)
+        return str(text)
 
 
 def _hocr_elem_region(elem):

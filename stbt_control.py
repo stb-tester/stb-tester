@@ -1,6 +1,17 @@
 #!/usr/bin/python
 """Send remote control signals using the PC keyboard or from the command line.
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import chr
+from builtins import str
+from builtins import range
+from builtins import *
+from past.utils import old_div
 
 import argparse
 import collections
@@ -117,7 +128,7 @@ def show_help_keymap():
     3. Copying it into $XDG_CONFIG_PATH/stbt/control.conf (defaults to
        $HOME/.config/stbt/control.conf).
     """
-    print globals()["show_help_keymap"].__doc__
+    print(globals()["show_help_keymap"].__doc__)
 
 
 def main_loop(control_uri, keymap_file):
@@ -199,9 +210,9 @@ def keymap_string(keymap):
     q - <Quit>                        m - Main Menu
     """
     keylist = ["%15s - %-15s" % (kb_key, mapping[1])
-               for kb_key, mapping in keymap.items()]
+               for kb_key, mapping in list(keymap.items())]
     keylist.insert(0, "%15s - %-15s" % ("q", "<Quit>"))
-    middle = int(math.ceil(float(len(keylist)) / 2))
+    middle = int(math.ceil(old_div(float(len(keylist)), 2)))
     rows = [
         "%s %s" % (
             keylist[i],
@@ -218,7 +229,7 @@ def decoded(keycode):
     'x'
     >>> decoded(curses.KEY_F12)
     """
-    if keycode in SPECIAL_CHARS.keys():
+    if keycode in list(SPECIAL_CHARS.keys()):
         return SPECIAL_CHARS[keycode]
     try:
         return chr(keycode)
@@ -261,7 +272,7 @@ def test_load_keymap_with_duplicated_key():
 
 
 def validate(keyname):
-    if keyname in SPECIAL_CHARS.values():
+    if keyname in list(SPECIAL_CHARS.values()):
         return
     try:
         ord(keyname)

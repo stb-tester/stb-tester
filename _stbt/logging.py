@@ -1,5 +1,15 @@
 # coding: utf-8
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import *
+from builtins import object
+from past.utils import old_div
 import argparse
 import itertools
 import os
@@ -81,7 +91,7 @@ class ImageLogger(object):
             return
 
         self.name = name
-        self.frame_number = ImageLogger._frame_number.next()
+        self.frame_number = next(ImageLogger._frame_number)
 
         try:
             outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
@@ -96,19 +106,19 @@ class ImageLogger(object):
         self.images = OrderedDict()
         self.pyramid_levels = set()
         self.data = {}
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             self.data[k] = v
 
     def set(self, **kwargs):
         if not self.enabled:
             return
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             self.data[k] = v
 
     def append(self, **kwargs):
         if not self.enabled:
             return
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k not in self.data:
                 self.data[k] = []
             self.data[k].append(v)
@@ -127,7 +137,7 @@ class ImageLogger(object):
         if image.dtype == numpy.float32:
             # Scale `cv2.matchTemplate` heatmap output in range
             # [0.0, 1.0] to visible grayscale range [0, 255].
-            image = cv2.convertScaleAbs(image, alpha=255.0 / scale)
+            image = cv2.convertScaleAbs(image, alpha=old_div(255.0, scale))
         else:
             image = image.copy()
         self.images[name] = image

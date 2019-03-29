@@ -7,6 +7,18 @@ Copyright 2013-2018 stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import range
+from builtins import *
+from past.utils import old_div
+from builtins import object
 
 import enum
 import itertools
@@ -222,7 +234,7 @@ class MatchResult(object):
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.match
 
     @property
@@ -566,7 +578,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         if n == 0:
             certainty = 1
         else:
-            certainty = 1 - float(s) / (n * 255 * 255)
+            certainty = 1 - old_div(float(s), (n * 255 * 255))
         yield (0, certainty >= match_parameters.match_threshold,
                _image_region(image), certainty)
         yield (0, False, _image_region(image), 0.)
@@ -584,7 +596,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     image_pyramid = _build_pyramid(image, len(mask_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
-    for level in reversed(range(len(image_pyramid))):
+    for level in reversed(list(range(len(image_pyramid)))):
         if roi_mask is not None:
             if any(x < 3 for x in roi_mask.shape):
                 roi_mask = None

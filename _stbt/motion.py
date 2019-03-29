@@ -1,3 +1,13 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import *
+from builtins import object
 # coding: utf-8
 
 from collections import deque
@@ -263,7 +273,7 @@ class MotionResult(object):
         self.region = region
         self.frame = frame
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.motion
 
     def __repr__(self):

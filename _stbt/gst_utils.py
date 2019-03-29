@@ -1,3 +1,13 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+from functools import reduce
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
+from builtins import object
 import ctypes
 import sys
 
@@ -118,7 +128,7 @@ def gst_iterate(gst_iterator):
     available."""
     result = Gst.IteratorResult.OK
     while result == Gst.IteratorResult.OK:
-        result, value = gst_iterator.next()
+        result, value = next(gst_iterator)
         if result == Gst.IteratorResult.OK:
             yield value
         elif result == Gst.IteratorResult.ERROR:

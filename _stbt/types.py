@@ -1,6 +1,14 @@
 # coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import *
 from collections import namedtuple
 
 
@@ -298,7 +306,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         New in v30: No longer limited to just taking 2 regions.
         """
-        args = filter(None, args)
+        args = [_f for _f in args if _f]
         if not args:
             return None
         return Region.from_extents(

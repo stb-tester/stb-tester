@@ -4,9 +4,16 @@
 
 Just ACKs all requests. See ../stbt/irnetbox.py for information on the irNetBox.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 
 import socket
-import SocketServer
+import socketserver
 import struct
 import sys
 import time
@@ -14,7 +21,7 @@ import time
 from _stbt.irnetbox import MessageTypes
 
 
-class FakeIRNetBox(SocketServer.BaseRequestHandler):
+class FakeIRNetBox(socketserver.BaseRequestHandler):
     def handle(self):
         x = None
         while x != "#":
@@ -22,13 +29,13 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                 x = self.recv(1)
             except socket.error as e:
                 if e.errno == socket.errno.ECONNRESET:
-                    print "fake-irnetbox: Client closed connection"
+                    print("fake-irnetbox: Client closed connection")
                     return
                 raise
         _ = struct.unpack(">H", self.recv(2))
         message_type = ord(self.recv(1))
-        print "fake-irnetbox: Received message %s (0x%02x)" % (
-            name(message_type), message_type)
+        print("fake-irnetbox: Received message %s (0x%02x)" % (
+            name(message_type), message_type))
 
         if message_type in [
             MessageTypes.POWER_ON,
@@ -45,7 +52,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
 
         if message_type == MessageTypes.OUTPUT_IR_ASYNC:
             sequence_number, = struct.unpack(">H", self.recv(2))
-            print "fake-irnetbox: ...with sequence number %d" % sequence_number
+            print("fake-irnetbox: ...with sequence number %d" % sequence_number)
             if self.server.response == "error":
                 self.send(
                     MessageTypes.ERROR,
@@ -64,7 +71,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
                         "<HBB", sequence_number,
                         0 if ack else 49,  # error code = busy
                         1 if ack else 0))
-                print "fake-irnetbox: ...(%s)" % ("ack" if ack else "nack")
+                print("fake-irnetbox: ...(%s)" % ("ack" if ack else "nack"))
                 if ack:
                     time.sleep(2 if self.server.response == "wait" else 0.2)
                     self.send(
@@ -76,7 +83,7 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
     def recv(self, bufsize):
         data = self.request.recv(bufsize)
         if data:
-            print "fake-irnetbox: recv %s" % hexstring(data)
+            print("fake-irnetbox: recv %s" % hexstring(data))
         else:  # Apparently SocketServer gives me a non-blocking socket
             time.sleep(0.1)
         return data
@@ -88,8 +95,8 @@ class FakeIRNetBox(SocketServer.BaseRequestHandler):
             message_type,
             data)
         self.request.sendall(m)
-        print "fake-irnetbox: Sent response %s: %s" % (
-            name(message_type), hexstring(m))
+        print("fake-irnetbox: Sent response %s: %s" % (
+            name(message_type), hexstring(m)))
 
 
 def hexstring(s):
@@ -111,11 +118,11 @@ def name(message_type):
     }.get(message_type, message_type)
 
 
-class Server(SocketServer.ThreadingTCPServer):
+class Server(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
     def __init__(self, address, handler, response):
-        SocketServer.ThreadingTCPServer.__init__(self, address, handler)
+        socketserver.ThreadingTCPServer.__init__(self, address, handler)
         self.response = response
 
 
@@ -124,5 +131,5 @@ if __name__ == "__main__":
         ("localhost", 0),
         FakeIRNetBox,
         sys.argv[1] if len(sys.argv) > 1 else "ack")
-    print "PORT=%s" % server.socket.getsockname()[1]
+    print("PORT=%s" % server.socket.getsockname()[1])
     server.serve_forever()

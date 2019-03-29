@@ -1,4 +1,10 @@
 from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 
 import os
 import re
@@ -92,7 +98,7 @@ def test_to_native_coordinates(
     native_x, native_y = _to_native_coordinates(
         screenshot_x, screenshot_y, coordinate_system,
         _Dimensions(*device_resolution))
-    print(native_x, native_y)
+    print((native_x, native_y))
     assert isclose(native_x, expected_coordinates[0], atol=1)
     assert isclose(native_y, expected_coordinates[1], atol=1)
 

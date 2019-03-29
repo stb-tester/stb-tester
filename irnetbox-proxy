@@ -48,9 +48,17 @@ Features
  command when it connects, and issues an OFF command when it is stopped.
 
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 
 import argparse
-import cStringIO as StringIO
+import io as StringIO
 import itertools
 import select
 import socket
@@ -111,7 +119,7 @@ class IRNetBoxProxy(object):
     def make_id(self):
         command_id = None
         while command_id is None or command_id in self.async_commands:
-            command_id = self.counter.next()
+            command_id = next(self.counter)
         if command_id > self.USIZE_MAX:
             self.counter = itertools.count()
             return self.make_id()
@@ -153,7 +161,7 @@ class IRNetBoxProxy(object):
             sock, old_id = self.async_commands[new_id]
             data = self.replace_sequence_id(data, old_id)
             sock.sendall(header + data)
-        except Exception, e:  # pylint:disable=broad-except
+        except Exception as e:  # pylint:disable=broad-except
             self.error(e, "Error sending async complete command", fatal=False)
         if new_id in self.async_commands:
             del self.async_commands[new_id]
@@ -195,7 +203,7 @@ class IRNetBoxProxy(object):
                 self.irnet_sock.sendall(header + message)
                 _, response_header, response = self.get_message_from_irnet(True)  # pylint:disable=unpacking-non-sequence
             sock.sendall(response_header + response)
-        except Exception, e:  # pylint:disable=broad-except
+        except Exception as e:  # pylint:disable=broad-except
             del self.read_sockets[sock.fileno()]
             sock.close()
             if isinstance(e, SocketClosed) and e.socket is sock:  # pylint:disable=no-member
@@ -206,7 +214,7 @@ class IRNetBoxProxy(object):
 
     def info(self, data):
         if self.verbosity > 1:
-            print data
+            print(data)
 
     def warn(self, data):
         if self.verbosity > 0:
@@ -226,13 +234,13 @@ class IRNetBoxProxy(object):
                                         socket.SO_REUSEADDR, 1)
             self.listen_sock.bind(self.listen_addr)
             self.listen_sock.listen(5)
-        except Exception, e:  # pylint:disable=broad-except
+        except Exception as e:  # pylint:disable=broad-except
             self.error(e, "Could not bind to local address")
 
         try:
             self.irnet_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.irnet_sock.connect(self.irnet_addr)
-        except Exception, e:  # pylint:disable=broad-except
+        except Exception as e:  # pylint:disable=broad-except
             self.error(e, "Could not connect to irNetBox.")
         self.read_sockets = {
             self.listen_sock.fileno(): self.listen_sock,
@@ -243,14 +251,14 @@ class IRNetBoxProxy(object):
         self.connect()
         try:
             self.send_management_command(self.POWER_ON)
-        except Exception, e:  # pylint:disable=broad-except
+        except Exception as e:  # pylint:disable=broad-except
             self.error(
                 e, "Connected to irNetBox, but could not send power on command")
 
         self.info("Listening for connections on %s:%s" % self.listen_addr)
         try:
             while True:
-                to_read = self.read_sockets.keys()
+                to_read = list(self.read_sockets.keys())
                 ready_to_read, _, _ = select.select(to_read, [], [])
                 for socket_fd in ready_to_read:
                     sock = self.read_sockets[socket_fd]
@@ -263,9 +271,9 @@ class IRNetBoxProxy(object):
         finally:
             try:
                 self.send_management_command(self.POWER_OFF)
-            except Exception, e:  # pylint:disable=broad-except
+            except Exception as e:  # pylint:disable=broad-except
                 self.error(e, "Could not turn irNetBox off", fatal=False)
-            for sock in self.read_sockets.viewvalues():
+            for sock in self.read_sockets.values():
                 try:
                     sock.close()
                 except:  # pylint:disable=bare-except
@@ -307,9 +315,9 @@ def main():
                           verbosity=options.verbose)
     try:
         proxy.run()
-    except (KeyboardInterrupt, StopRunning), e:
+    except (KeyboardInterrupt, StopRunning) as e:
         proxy.error(e, "Stopped")
-    except Exception, e:  # pylint:disable=broad-except
+    except Exception as e:  # pylint:disable=broad-except
         proxy.error(e, "irNetProxy encountered an error")
 
 if __name__ == "__main__":

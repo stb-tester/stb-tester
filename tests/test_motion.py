@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import time
 from contextlib import contextmanager
 
@@ -23,7 +31,7 @@ def test_wait_for_motion_half_motion_str_2of4():
     with MockTime().patch():
         res = stbt.wait_for_motion(
             consecutive_frames='2/4', frames=fake_frames())
-    print res
+    print(res)
     assert res.time == 1466084606.
 
 
@@ -31,7 +39,7 @@ def test_wait_for_motion_half_motion_str_2of3():
     with MockTime().patch():
         res = stbt.wait_for_motion(
             consecutive_frames='2/3', frames=fake_frames())
-    print res
+    print(res)
     assert res.time == 1466084606.
 
 

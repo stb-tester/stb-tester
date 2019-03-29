@@ -29,6 +29,13 @@ This tool is designed such that it can be run on corpuses outside the
 stb-tester git tree to allow corpuses containing screen captures from many
 set-top boxes without bloating the main stb-tester repo or risking upsetting
 the owners of the various set-top box UIs. """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 
 import argparse
 import os

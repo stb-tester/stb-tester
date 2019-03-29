@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from past.builtins import execfile
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import os
 import sys
 import traceback
@@ -79,7 +87,7 @@ def load_test_function(script, args):
         module = _import_by_filename(filename)
         function = getattr(module, funcname)
         return _TestFunction(
-            script, filename, funcname, function.func_code.co_firstlineno,
+            script, filename, funcname, function.__code__.co_firstlineno,
             function)
     else:
         filename = os.path.abspath(script)

@@ -1,3 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
 import random
 import timeit
 
@@ -144,7 +153,7 @@ def test_that_match_all_finds_all_matches(match_method):
     matches = list(m.region for m in stbt.match_all(
         'button.png', frame=stbt.load_image('buttons.png'),
         match_parameters=mp(match_method=match_method)))
-    print matches
+    print(matches)
     assert plain_buttons == sorted(matches)
 
 
@@ -158,7 +167,7 @@ def test_that_match_all_can_find_labelled_matches(match_method):
         'button.png', frame=frame,
         match_parameters=mp(match_method=match_method,
                             confirm_method=stbt.ConfirmMethod.NONE)))
-    print matches
+    print(matches)
     assert overlapped_button not in matches
     assert sorted(plain_buttons + labelled_buttons + [overlapping_button]) == \
         sorted(matches)
@@ -169,7 +178,7 @@ def test_match_all_with_transparent_reference_image():
     frame = stbt.load_image("buttons-on-blue-background.png")
     matches = list(m.region for m in stbt.match_all(
         "button-transparent.png", frame=frame))
-    print matches
+    print(matches)
     assert overlapped_button not in matches
     assert (sorted(plain_buttons + labelled_buttons + [overlapping_button]) ==
             sorted(matches))
@@ -233,7 +242,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
             m.region.extend(x=30, y=10, right=-30, bottom=-10)))
         for m in stbt.match_all('button-transparent.png', frame=frame)]
     text = sorted([t for t in text if t not in ['', '\\s']])
-    print text
+    print(text)
     assert text == [u'Button 1', u'Button 2', u'Buttons']
 
 
@@ -248,7 +257,7 @@ def test_that_results_dont_overlap(match_method):
     all_matches = set()
     for m in stbt.match_all("action-panel-template.png", frame=frame,
                             match_parameters=mp(match_method=match_method)):
-        print m
+        print(m)
         assert m.region not in all_matches, "Match %s already seen:\n    %s" % (
             m, "\n    ".join(str(x) for x in all_matches))
         assert all(stbt.Region.intersect(m.region, x) is None
@@ -272,7 +281,7 @@ def test_that_match_all_obeys_region(match_method):
         "button.png", frame=stbt.load_image("buttons.png"),
         match_parameters=mp(match_method=match_method),
         region=stbt.Region(x=160, y=60, right=340, bottom=190)))
-    print matches
+    print(matches)
     assert matches == [stbt.Region(x, y, width=135, height=44) for x, y in [
         (177, 75), (177, 119)]]
 
@@ -291,7 +300,7 @@ def test_match_all_with_an_image_that_matches_everywhere(match_method):
                                for x in range(0, 320, 16)
                                for y in range(0, 240, 16)])
 
-    print matches
+    print(matches)
     assert matches == expected_matches
 
 
@@ -335,7 +344,7 @@ def test_that_build_pyramid_relaxes_mask():
     downsampled = mask_pyramid[1]
     cv2.imwrite("/tmp/dave2.png", downsampled)
     assert downsampled.shape == (8, 8, 3)
-    print downsampled[:, :, 0]  # pylint:disable=unsubscriptable-object
+    print(downsampled[:, :, 0])  # pylint:disable=unsubscriptable-object
     expected = [
         # pylint:disable=bad-whitespace
         [255, 255, 255, 255, 255, 255, 255, 255],
@@ -390,7 +399,7 @@ def test_that_match_fast_path_is_equivalent():
         ("button-transparent.png", "buttons.png"),
     ]
     for reference, frame in images:
-        if isinstance(frame, (str, unicode)):
+        if isinstance(frame, str):
             frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
         reference = _load_image(reference)
         orig_m = stbt.match(reference, frame=frame)
@@ -440,6 +449,6 @@ def test_merge_regions_performance(n):
 
     times = timeit.repeat(lambda: _merge_regions(regions[:]),
                           number=1, repeat=10)
-    print times
-    print min(times)
+    print(times)
+    print(min(times))
     assert min(times) < (0.001 * n / 20)

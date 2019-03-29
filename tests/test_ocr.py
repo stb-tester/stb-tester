@@ -1,5 +1,14 @@
 # coding: utf-8
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
 import os
 import re
 from contextlib import contextmanager
@@ -42,7 +51,7 @@ def test_that_ocr_region_none_isnt_allowed():
 
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=load_image('ocr/unicode.png'), lang='eng+deu')
-    assert isinstance(text, unicode)
+    assert isinstance(text, str)
     assert u'£500\nDavid Röthlisberger' == text
 
 
@@ -101,7 +110,7 @@ def temporary_config(config):
     with named_temporary_directory(prefix="stbt-test-ocr") as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         os.environ["STBT_CONFIG_FILE"] = "%s/stbt.conf:%s" % (d, original_env)
-        for key, value in config.items():
+        for key, value in list(config.items()):
             section, option = key.split(".")
             _stbt.config.set_config(section, option, value)
         try:

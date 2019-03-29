@@ -1,4 +1,13 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 
 import os
 import re
@@ -802,7 +811,7 @@ def test_that_lirc_control_is_symmetric_with_lirc_control_listen():
         control = uri_to_control('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
-            assert listener.next() == key
+            assert next(listener) == key
 
 
 def test_that_local_lirc_socket_is_correctly_defaulted():
@@ -813,7 +822,7 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
             DEFAULT_LIRCD_SOCKET = lircd_socket
             listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
             uri_to_control('lirc::test').press('KEY')
-            assert listener.next() == 'KEY'
+            assert next(listener) == 'KEY'
     finally:
         DEFAULT_LIRCD_SOCKET = old_default
 
@@ -893,7 +902,7 @@ def test_x11_control():
             time.sleep(0.5)
         with open(tmp + '/xterm.log', 'r') as log:
             for line in log:
-                print "xterm.log: " + line,
+                print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')
 
 

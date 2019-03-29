@@ -3,8 +3,18 @@ Copyright 2016-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from past.builtins import cmp
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
+from builtins import object
 import functools
 import threading
+from future.utils import with_metaclass
 
 
 def _memoize_property_fn(fn):
@@ -46,7 +56,7 @@ def _noneify_property_fn(fn):
 
 class _FrameObjectMeta(type):
     def __new__(mcs, name, parents, dct):
-        for k, v in dct.iteritems():
+        for k, v in dct.items():
             if isinstance(v, property):
                 # Properties must not have setters
                 if v.fset is not None:
@@ -80,7 +90,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
-class FrameObject(object):
+class FrameObject(with_metaclass(_FrameObjectMeta, object)):
     # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.
 
@@ -147,7 +157,6 @@ class FrameObject(object):
 
     Added in v30: ``_fields`` and ``refresh``.
     '''
-    __metaclass__ = _FrameObjectMeta
 
     def __init__(self, frame=None):
         """The default constructor takes an optional frame of video; if the
@@ -178,7 +187,7 @@ class FrameObject(object):
         else:
             yield "is_visible", False
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Delegates to ``is_visible``. The object will only be considered True if
         it is visible.
@@ -192,9 +201,9 @@ class FrameObject(object):
         frame is different. All falsey FrameObjects of the same type are equal.
         """
         # pylint: disable=protected-access
-        from itertools import izip_longest
+        from itertools import zip_longest
         if isinstance(other, self.__class__):
-            for s, o in izip_longest(self._iter_fields(), other._iter_fields()):
+            for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
                 v = cmp(s[1], o[1])
                 if v != 0:
                     return v

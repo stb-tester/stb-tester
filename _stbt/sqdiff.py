@@ -1,3 +1,12 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
+from past.utils import old_div
 import ctypes
 import os
 
@@ -104,7 +113,7 @@ def _random_template(size=(1280, 720)):
 
 
 def test_sqdiff():
-    f = numpy.array(range(1280 * 720 * 3), dtype=numpy.uint8)
+    f = numpy.array(list(range(1280 * 720 * 3)), dtype=numpy.uint8)
     f.shape = (720, 1280, 3)
     t = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     tt = numpy.zeros((720, 1280, 4), dtype=numpy.uint8)
@@ -185,8 +194,8 @@ def _measure_performance():
 
     _sqdiff_numba = _make_sqdiff_numba()
 
-    print "All times in ms                         numpy\tnumba"
-    print "type    \tnumpy\tnumba\tC\tspeedup\tspeedup\tsize\talignment"
+    print("All times in ms                         numpy\tnumba")
+    print("type    \tnumpy\tnumba\tC\tspeedup\tspeedup\tsize\talignment")
     for _ in range(100):
         frame_cropped, template, template_transparent = _random_template()
 
@@ -195,20 +204,20 @@ def _measure_performance():
                      ("unmasked ", template_transparent[:, :, :3])]:
             # pylint: disable=cell-var-from-loop
 
-            np_time = min(timeit.repeat(
+            np_time = old_div(min(timeit.repeat(
                 lambda: _sqdiff_numpy(t, frame_cropped),
-                repeat=3, number=10)) / 10
-            c_time = min(timeit.repeat(
+                repeat=3, number=10)), 10)
+            c_time = old_div(min(timeit.repeat(
                 lambda: _sqdiff_c(t, frame_cropped),
-                repeat=3, number=10)) / 10
+                repeat=3, number=10)), 10)
             if _sqdiff_numba:
-                numba_time = min(timeit.repeat(
+                numba_time = old_div(min(timeit.repeat(
                     lambda: _sqdiff_numba(t, frame_cropped),
-                    repeat=3, number=10)) / 10
+                    repeat=3, number=10)), 10)
             else:
                 numba_time = float('nan')
-            print "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
+            print("%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
                 l, np_time * 1000, numba_time * 1000, c_time * 1000,
-                np_time / c_time, numba_time / c_time,
+                old_div(np_time, c_time), old_div(numba_time, c_time),
                 frame_cropped.shape[1], frame_cropped.shape[0],
-                frame_cropped.ctypes.data % 8)
+                frame_cropped.ctypes.data % 8))

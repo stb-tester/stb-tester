@@ -1,3 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import *
+from builtins import object
 # coding: utf-8
 
 import itertools
@@ -31,7 +40,7 @@ def test_that_load_image_looks_in_callers_directory():
 
 
 def test_load_image_with_unicode_filename():
-    print sys.getfilesystemencoding()
+    print(sys.getfilesystemencoding())
     shutil.copyfile(_find_file("Rothlisberger.png"),
                     _find_file("Röthlisberger.png"))
     assert stbt.load_image("Röthlisberger.png") is not None
@@ -189,7 +198,7 @@ def mock_time():
 
 
 class Zero(object):
-    def __nonzero__(self):
+    def __bool__(self):
         return False
 
     def __eq__(self, other):

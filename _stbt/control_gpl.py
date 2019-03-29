@@ -1,3 +1,13 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 import re
 import sys
 import threading
@@ -137,9 +147,9 @@ class HdmiCecControl(object):
 
         if source is None:
             source = 1
-        if isinstance(source, (str, unicode)):
+        if isinstance(source, str):
             source = int(source, 16)
-        if isinstance(destination, (str, unicode)):
+        if isinstance(destination, str):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
@@ -361,13 +371,13 @@ def test_hdmi_cec_control_defaults():
 
 @contextmanager
 def _fake_cec():
-    import StringIO
+    import io
     import pytest
     from mock import patch
 
     pytest.importorskip("cec")
 
-    io = StringIO.StringIO()
+    io = io.StringIO()
 
     def Open(_, device):
         io.write('Open(%r)\n' % device)

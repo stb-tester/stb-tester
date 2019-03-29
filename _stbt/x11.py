@@ -1,5 +1,13 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import *
 import os
-import Queue
+import queue
 import random
 import signal
 import subprocess
@@ -22,7 +30,7 @@ def _start_x(*args, **kwargs):
     > SIGUSR1 to its parent process after it has set up the various connection
     > schemes.
     """
-    q = Queue.Queue()
+    q = queue.Queue()
 
     def on_signal(signo, _stack_frame):
         q.put(signo)
@@ -44,7 +52,7 @@ def _start_x(*args, **kwargs):
         xorg.kill()
         raise
     finally:
-        for signo, handler in orig_handler.items():
+        for signo, handler in list(orig_handler.items()):
             signal.signal(signo, handler)
 
 
@@ -56,7 +64,7 @@ def x_server(width, height, verbose=False):
     # This is a racy way of finding a free X display but is a lot simpler than
     # the alternatives:
     display_no = None
-    for display_no in sorted(range(10, 100), key=lambda k: random.random()):
+    for display_no in sorted(list(range(10, 100)), key=lambda k: random.random()):
         if not os.path.exists('/tmp/.X11-unix/X%i' % display_no):
             break
     else:

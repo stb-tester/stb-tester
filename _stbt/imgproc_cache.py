@@ -8,6 +8,17 @@ context manager. For now this is a private API but we intend to make it public
 at some point so that users can add caching to any custom image-processing
 functions in their test-packs.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 
 import functools
 import inspect
@@ -260,8 +271,8 @@ def _check_cache_behaviour(func):
         cached_time = min(timer.repeat(10, number=1))
         cached_result = func()
 
-    print "%s with cache: %s" % (func.__name__, cached_time)
-    print "%s without cache: %s" % (func.__name__, uncached_time)
+    print("%s with cache: %s" % (func.__name__, cached_time))
+    print("%s without cache: %s" % (func.__name__, uncached_time))
 
     return cached_time, uncached_time, cached_result, uncached_result
 
@@ -277,27 +288,27 @@ def test_memoize_iterator():
 
     with named_temporary_directory() as tmpdir, cache(tmpdir):
         uncached = list(itertools.islice(cached_function(1), 5))
-        assert uncached == range(5)
+        assert uncached == list(range(5))
         assert counter[0] == 5
 
         cached = list(itertools.islice(cached_function(1), 5))
-        assert cached == range(5)
+        assert cached == list(range(5))
         assert counter[0] == 5
 
         partially_cached = list(itertools.islice(cached_function(1), 10))
-        assert partially_cached == range(10)
+        assert partially_cached == list(range(10))
         assert counter[0] == 15
 
         partially_cached = list(cached_function(1))
-        assert partially_cached == range(10)
+        assert partially_cached == list(range(10))
         assert counter[0] == 25
 
         cached = list(cached_function(1))
-        assert cached == range(10)
+        assert cached == list(range(10))
         assert counter[0] == 25
 
         uncached = list(cached_function(2))
-        assert uncached == range(10)
+        assert uncached == list(range(10))
         assert counter[0] == 35
 
 
@@ -349,7 +360,7 @@ def test_that_cache_speeds_up_match_all():
 
     assert uncached_time > (cached_time * 2)
     assert len(uncached_result) == 6
-    for cached, uncached in itertools.izip_longest(cached_result,
+    for cached, uncached in itertools.zip_longest(cached_result,
                                                    uncached_result):
         _fields_eq(cached, uncached,
                    ['match', 'region', 'first_pass_result', 'frame', 'image'])
@@ -387,7 +398,7 @@ def test_that_cache_speeds_up_match_text():
 
     assert uncached_time > (cached_time * 10)
 
-    print cached_result
+    print(cached_result)
 
     _fields_eq(cached_result, uncached_result,
                ['match', 'region', 'frame', 'text'])

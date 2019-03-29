@@ -34,8 +34,17 @@ in your existing Selenium/WebDriver/Appium tests. See
 """
 
 from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
 
-import ConfigParser
+import configparser
 import logging
 import re
 import subprocess
@@ -162,7 +171,7 @@ class AdbDevice(object):
         if tcpip is None:
             try:
                 tcpip = _config.getboolean("android", "tcpip")
-            except ConfigParser.Error:
+            except configparser.Error:
                 tcpip = False
         self.tcpip = tcpip
 
@@ -832,5 +841,5 @@ def _get_config(configparser, section, key, default):
     """Convenience function because ConfigParser.get doesn't take a default."""
     try:
         return configparser.get(section, key)
-    except ConfigParser.Error:
+    except configparser.Error:
         return default

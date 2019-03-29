@@ -9,6 +9,13 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 * http://docs.python.org/2/library/ast.html
 
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 
 import os
 import re

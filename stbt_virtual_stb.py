@@ -24,6 +24,14 @@ Run some tests against youtube HTML5 TV edition:
     # Tear down the chromium virtual-stb and remove the configuration:
     stbt virtual-stb stop
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import *
 
 import argparse
 import errno
@@ -115,7 +123,7 @@ def main(argv):
 
         with virtual_stb(args.command + args.args, verbose=args.verbose,
                          x_keymap=args.x_keymap) as (child, config):
-            for k, v in config.items():
+            for k, v in list(config.items()):
                 set_config('global', k, v)
 
             try:

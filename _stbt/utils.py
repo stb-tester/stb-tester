@@ -1,3 +1,10 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import *
 import errno
 import os
 import tempfile
@@ -11,7 +18,7 @@ def mkdir_p(d):
     exceptions"""
     try:
         os.makedirs(d)
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.EEXIST and os.path.isdir(d) \
                 and os.access(d, os.R_OK | os.W_OK):
             return
