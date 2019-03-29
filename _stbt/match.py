@@ -16,8 +16,8 @@ standard_library.install_aliases()
 from builtins import next
 from builtins import str
 from builtins import range
-from builtins import *
-from builtins import object
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from builtins import object  # pylint:disable=wrong-import-order
 
 import enum
 import itertools

@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from past.builtins import cmp
 from future import standard_library
 standard_library.install_aliases()
-from builtins import *
-from builtins import object
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from builtins import object  # pylint:disable=wrong-import-order
 import functools
 import threading
 from future.utils import with_metaclass
