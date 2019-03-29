@@ -206,7 +206,7 @@ def keymap_string(keymap):
     q - <Quit>                        m - Main Menu
     """
     keylist = ["%15s - %-15s" % (kb_key, mapping[1])
-               for kb_key, mapping in list(keymap.items())]
+               for kb_key, mapping in keymap.items()]
     keylist.insert(0, "%15s - %-15s" % ("q", "<Quit>"))
     middle = int(math.ceil(float(len(keylist)) / 2))
     rows = [
@@ -225,7 +225,7 @@ def decoded(keycode):
     'x'
     >>> decoded(curses.KEY_F12)
     """
-    if keycode in list(SPECIAL_CHARS.keys()):
+    if keycode in SPECIAL_CHARS:
         return SPECIAL_CHARS[keycode]
     try:
         return chr(keycode)
@@ -268,7 +268,7 @@ def test_load_keymap_with_duplicated_key():
 
 
 def validate(keyname):
-    if keyname in list(SPECIAL_CHARS.values()):
+    if keyname in SPECIAL_CHARS.values():
         return
     try:
         ord(keyname)

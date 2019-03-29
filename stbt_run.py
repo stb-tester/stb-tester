@@ -46,7 +46,7 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
     stbt.debug("Arguments:\n" + "\n".join([
-        "%s: %s" % (k, v) for k, v in list(args.__dict__.items())]))
+        "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     dut = _stbt.core.new_device_under_test_from_config(args)
     with sane_unicode_and_exception_handling(args.script), video(args, dut):

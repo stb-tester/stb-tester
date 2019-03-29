@@ -122,7 +122,7 @@ def main(argv):
 
         with virtual_stb(args.command + args.args, verbose=args.verbose,
                          x_keymap=args.x_keymap) as (child, config):
-            for k, v in list(config.items()):
+            for k, v in config.items():
                 set_config('global', k, v)
 
             try:

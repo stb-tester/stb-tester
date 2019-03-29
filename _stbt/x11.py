@@ -51,7 +51,7 @@ def _start_x(*args, **kwargs):
         xorg.kill()
         raise
     finally:
-        for signo, handler in list(orig_handler.items()):
+        for signo, handler in orig_handler.items():
             signal.signal(signo, handler)
 
 
@@ -63,7 +63,7 @@ def x_server(width, height, verbose=False):
     # This is a racy way of finding a free X display but is a lot simpler than
     # the alternatives:
     display_no = None
-    for display_no in sorted(list(range(10, 100)), key=lambda k: random.random()):
+    for display_no in sorted(range(10, 100), key=lambda k: random.random()):
         if not os.path.exists('/tmp/.X11-unix/X%i' % display_no):
             break
     else:

@@ -591,7 +591,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     image_pyramid = _build_pyramid(image, len(mask_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
-    for level in reversed(list(range(len(image_pyramid)))):
+    for level in reversed(range(len(image_pyramid))):
         if roi_mask is not None:
             if any(x < 3 for x in roi_mask.shape):
                 roi_mask = None

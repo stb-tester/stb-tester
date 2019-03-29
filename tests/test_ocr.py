@@ -108,7 +108,7 @@ def temporary_config(config):
     with named_temporary_directory(prefix="stbt-test-ocr") as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         os.environ["STBT_CONFIG_FILE"] = "%s/stbt.conf:%s" % (d, original_env)
-        for key, value in list(config.items()):
+        for key, value in config.items():
             section, option = key.split(".")
             _stbt.config.set_config(section, option, value)
         try:

@@ -35,7 +35,7 @@ def main(argv):
         help='The filename of the generated script (default: %(default)s)')
     args = parser.parse_args(argv[1:])
     stbt.debug("Arguments:\n" + "\n".join([
-        "%s: %s" % (k, v) for k, v in list(args.__dict__.items())]))
+        "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     try:
         script = open(args.output_file, 'w')

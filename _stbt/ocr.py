@@ -53,7 +53,7 @@ _ocr_replacements = {
     u'—': u'-',
     u'―': u'-',
 }
-_ocr_transtab = dict((ord(amb), to) for amb, to in list(_ocr_replacements.items()))
+_ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
 
 class OcrMode(IntEnum):
