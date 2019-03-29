@@ -4,11 +4,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
-from builtins import zip
-from builtins import str
-from builtins import range
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from builtins import object  # pylint:disable=wrong-import-order
 # coding: utf-8
 
 import errno

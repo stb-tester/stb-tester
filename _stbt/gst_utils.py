@@ -5,9 +5,7 @@ from __future__ import absolute_import
 from future import standard_library
 from functools import reduce
 standard_library.install_aliases()
-from builtins import str
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from builtins import object  # pylint:disable=wrong-import-order
 import ctypes
 import sys
 
