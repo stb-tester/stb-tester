@@ -159,12 +159,12 @@ class AdbDevice(object):
             import _stbt.config
             _config = _stbt.config._config_init()  # pylint:disable=protected-access
 
-        self.adb_server = adb_server or _get_config(_config, "android",
-                                                    "adb_server", None)
-        self._adb_device = adb_device or _get_config(_config, "android",
-                                                     "adb_device", None)
-        self.adb_binary = adb_binary or _get_config(_config, "android",
-                                                    "adb_binary", "adb")
+        self.adb_server = adb_server or _config.get("android", "adb_server",
+                                                    fallback=None)
+        self._adb_device = adb_device or _config.get("android", "adb_device",
+                                                     fallback=None)
+        self.adb_binary = adb_binary or _config.get("android", "adb_binary",
+                                                    fallback="adb")
         if tcpip is None:
             try:
                 tcpip = _config.getboolean("android", "tcpip")
@@ -173,8 +173,8 @@ class AdbDevice(object):
         self.tcpip = tcpip
 
         if coordinate_system is None:
-            name = _get_config(_config, "android", "coordinate_system",
-                               "ADB_NATIVE")
+            name = _config.get("android", "coordinate_system",
+                               fallback="ADB_NATIVE")
             if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "
@@ -832,11 +832,3 @@ def _parse_display_dimensions(dumpsys_output):
         if m:
             return _Dimensions(width=int(m.group(1)), height=int(m.group(2)))
     raise RuntimeError("AdbDevice: Didn't find display size in dumpsys output")
-
-
-def _get_config(configparser, section, key, default):
-    """Convenience function because ConfigParser.get doesn't take a default."""
-    try:
-        return configparser.get(section, key)
-    except configparser.Error:
-        return default
