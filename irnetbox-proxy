@@ -57,7 +57,7 @@ standard_library.install_aliases()
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
-import io as StringIO
+import io
 import itertools
 import select
 import socket
@@ -67,7 +67,7 @@ import traceback
 
 
 def safe_recv(sock, num):
-    in_buffer = StringIO.StringIO()
+    in_buffer = io.StringIO()
     while num:
         packet = sock.recv(num)
         if packet == '':
