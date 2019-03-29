@@ -16,7 +16,6 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from builtins import *
-from past.utils import old_div
 from builtins import object
 
 import argparse
@@ -795,7 +794,7 @@ class SinkPipeline(object):
             (10, 30), (255, 255, 255))
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
-            age = old_div(float(now - x.time), 3)
+            age = float(now - x.time) / 3
             color = (int(255 * max([1 - age, 0.5])),) * 3
             _draw_text(img, x.text, origin, color)
 
@@ -959,8 +958,7 @@ class Display(object):
 
         running_time = sample.get_segment().to_running_time(
             Gst.Format.TIME, sample.get_buffer().pts)
-        sample.time = (
-            old_div(float(appsink.base_time + running_time), 1e9))
+        sample.time = float(appsink.base_time + running_time) / 1e9
 
         if (sample.time > self.init_time + 31536000 or
                 sample.time < self.init_time - 31536000):  # 1 year

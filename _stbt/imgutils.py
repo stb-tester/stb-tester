@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 from builtins import *
-from past.utils import old_div
 import inspect
 import os
 from collections import namedtuple
@@ -134,7 +133,7 @@ def imread(filename, flags=None):
     if img.dtype == numpy.uint16:
         warn("Image %s has 16 bits per channel. Converting to 8 bits."
              % filename)
-        img = cv2.convertScaleAbs(img, alpha=old_div(1.0, 256))
+        img = cv2.convertScaleAbs(img, alpha=1.0 / 256)
     elif img.dtype != numpy.uint8:
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
                          % (filename, img.dtype))

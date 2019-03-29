@@ -11,7 +11,6 @@ from builtins import chr
 from builtins import str
 from builtins import range
 from builtins import *
-from past.utils import old_div
 
 import argparse
 import collections
@@ -212,7 +211,7 @@ def keymap_string(keymap):
     keylist = ["%15s - %-15s" % (kb_key, mapping[1])
                for kb_key, mapping in list(keymap.items())]
     keylist.insert(0, "%15s - %-15s" % ("q", "<Quit>"))
-    middle = int(math.ceil(old_div(float(len(keylist)), 2)))
+    middle = int(math.ceil(float(len(keylist)) / 2))
     rows = [
         "%s %s" % (
             keylist[i],

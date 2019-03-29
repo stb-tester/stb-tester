@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 from builtins import *
-from past.utils import old_div
 import glob
 import os
 import subprocess
@@ -46,7 +45,7 @@ def main():
                                   os.path.basename(tname),
                                   min(times),
                                   max(times),
-                                  old_div(sum(times), len(times))))
+                                  sum(times) / len(times)))
 
 
 if __name__ == "__main__":

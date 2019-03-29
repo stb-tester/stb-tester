@@ -9,7 +9,6 @@ standard_library.install_aliases()
 from builtins import zip
 from builtins import *
 from builtins import object
-from past.utils import old_div
 import argparse
 import itertools
 import os
@@ -137,7 +136,7 @@ class ImageLogger(object):
         if image.dtype == numpy.float32:
             # Scale `cv2.matchTemplate` heatmap output in range
             # [0.0, 1.0] to visible grayscale range [0, 255].
-            image = cv2.convertScaleAbs(image, alpha=old_div(255.0, scale))
+            image = cv2.convertScaleAbs(image, alpha=255.0 / scale)
         else:
             image = image.copy()
         self.images[name] = image

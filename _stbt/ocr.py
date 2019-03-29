@@ -8,7 +8,6 @@ from builtins import zip
 from builtins import str
 from builtins import range
 from builtins import *
-from past.utils import old_div
 from builtins import object
 # coding: utf-8
 
@@ -474,9 +473,9 @@ def _tesseract_subprocess(
         # Calculate distance of each pixel from `text_color`, then discard
         # everything further than `text_color_threshold` distance away.
         diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
-        frame = numpy.sqrt(old_div((diff[:, :, 0] ** 2 +
+        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
                             diff[:, :, 1] ** 2 +
-                            diff[:, :, 2] ** 2), 3)) \
+                            diff[:, :, 2] ** 2) // 3) \
                      .astype(numpy.uint8)
         imglog.imwrite("text_color_difference", frame)
         _, frame = cv2.threshold(frame, text_color_threshold, 255,

@@ -17,7 +17,6 @@ from builtins import next
 from builtins import str
 from builtins import range
 from builtins import *
-from past.utils import old_div
 from builtins import object
 
 import enum
@@ -578,7 +577,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         if n == 0:
             certainty = 1
         else:
-            certainty = 1 - old_div(float(s), (n * 255 * 255))
+            certainty = 1 - float(s) / (n * 255 * 255)
         yield (0, certainty >= match_parameters.match_threshold,
                _image_region(image), certainty)
         yield (0, False, _image_region(image), 0.)
