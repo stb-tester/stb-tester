@@ -10,7 +10,8 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-pythondir?=$(prefix)/lib/python2.7/site-packages
+python_version?=2.7
+pythondir?=$(prefix)/lib/python$(python_version)/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Enable building/installing man page
@@ -203,7 +204,7 @@ PYTHON_FILES := \
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all
-	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
+	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
@@ -212,7 +213,7 @@ check-pytest: all
 	              -e vendor/)
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
 	    $$(ls tests/test-*.sh | \
 	       grep -v -e tests/test-virtual-stb.sh) |\
@@ -225,7 +226,7 @@ install: install-virtual-stb
 check: check-virtual-stb
 check-virtual-stb: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
 	tests/run-tests.sh -i tests/test-virtual-stb.sh
 else
 $(info virtual-stb support disabled)
