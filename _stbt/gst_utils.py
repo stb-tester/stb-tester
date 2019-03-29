@@ -3,11 +3,11 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
-from functools import reduce
 standard_library.install_aliases()
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import ctypes
 import sys
+from functools import reduce  # pylint:disable=redefined-builtin
 
 import gi
 
