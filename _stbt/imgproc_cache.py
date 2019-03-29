@@ -357,7 +357,7 @@ def test_that_cache_speeds_up_match_all():
     assert uncached_time > (cached_time * 2)
     assert len(uncached_result) == 6
     for cached, uncached in itertools.zip_longest(cached_result,
-                                                   uncached_result):
+                                                  uncached_result):
         _fields_eq(cached, uncached,
                    ['match', 'region', 'first_pass_result', 'frame', 'image'])
 
