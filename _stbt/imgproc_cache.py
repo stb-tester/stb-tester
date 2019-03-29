@@ -12,8 +12,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import functools
@@ -24,6 +22,7 @@ import os
 import sys
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+from future.moves.itertools import zip_longest
 
 import lmdb
 import numpy
@@ -356,8 +355,7 @@ def test_that_cache_speeds_up_match_all():
 
     assert uncached_time > (cached_time * 2)
     assert len(uncached_result) == 6
-    for cached, uncached in itertools.zip_longest(cached_result,
-                                                  uncached_result):
+    for cached, uncached in zip_longest(cached_result, uncached_result):
         _fields_eq(cached, uncached,
                    ['match', 'region', 'first_pass_result', 'frame', 'image'])
 

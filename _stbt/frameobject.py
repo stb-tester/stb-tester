@@ -8,11 +8,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from past.builtins import cmp
-from future import standard_library
-standard_library.install_aliases()
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import functools
 import threading
+from future.moves.itertools import zip_longest
 from future.utils import with_metaclass
 
 
@@ -200,7 +199,6 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         frame is different. All falsey FrameObjects of the same type are equal.
         """
         # pylint: disable=protected-access
-        from itertools import zip_longest
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
                 v = cmp(s[1], o[1])
