@@ -74,6 +74,7 @@ class IRNetBox(object):
                     raise
         self._responses = _read_responses(self._socket)
         self.irnetbox_model = 0
+        self.ports = 16
         self._get_version()
 
     def __enter__(self):
@@ -129,8 +130,7 @@ class IRNetBox(object):
         """
         if self.irnetbox_model == NetBoxTypes.MK1:
             raise Exception("IRNetBox MK1 not supported")
-        elif self.irnetbox_model in (
-                NetBoxTypes.MK2, NetBoxTypes.RRX, NetBoxTypes.MK4):
+        elif self.irnetbox_model == NetBoxTypes.MK2:
             self.reset()
             self.indicators_on()
             self._send(MessageTypes.SET_MEMORY)
@@ -154,17 +154,17 @@ class IRNetBox(object):
             self._send(MessageTypes.OUTPUT_IR_SIGNAL)
             self.reset()
         else:
-            ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ports = [0] * self.ports
             ports[port - 1] = power
             sequence_number = random.randint(0, (2 ** 16) - 1)
             delay = 0  # use the default delay of 100ms
             self._send(
                 MessageTypes.OUTPUT_IR_ASYNC,
                 struct.pack(
-                    ">HH16s%ds" % len(data),
+                    ">HH{0}s{1}s".format(self.ports, len(data)),
                     sequence_number,
                     delay,
-                    struct.pack("16B", *ports),
+                    struct.pack("{}B".format(self.ports), *ports),
                     data))
 
     def _send(self, message_type, message_data=""):
@@ -202,6 +202,7 @@ class IRNetBox(object):
 
     def _get_version(self):
         self._send(MessageTypes.DEVICE_VERSION)
+        self.ports = 4 if self.irnetbox_model == NetBoxTypes.RRX else 16
 
 
 def RemoteControlConfig(filename):
