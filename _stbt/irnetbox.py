@@ -74,6 +74,7 @@ class IRNetBox(object):
                     raise
         self._responses = _read_responses(self._socket)
         self.irnetbox_model = 0
+        self.ports = 16
         self._get_version()
 
     def __enter__(self):
@@ -122,7 +123,7 @@ class IRNetBox(object):
     def irsend_raw(self, port, power, data):
         """Output the IR data on the given port at the set power (§6.1.1).
 
-        * `port` is a number between 1 and 16.
+        * `port` is a number between 1 and 16 (or 1 and 4 for RedRat X).
         * `power` is a number between 1 and 100.
         * `data` is a byte array as exported by the RedRat Signal DB Utility.
 
@@ -153,17 +154,17 @@ class IRNetBox(object):
             self._send(MessageTypes.OUTPUT_IR_SIGNAL)
             self.reset()
         else:
-            ports = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ports = [0] * self.ports
             ports[port - 1] = power
             sequence_number = random.randint(0, (2 ** 16) - 1)
             delay = 0  # use the default delay of 100ms
             self._send(
                 MessageTypes.OUTPUT_IR_ASYNC,
                 struct.pack(
-                    ">HH16s%ds" % len(data),
+                    ">HH{0}s{1}s".format(self.ports, len(data)),
                     sequence_number,
                     delay,
-                    struct.pack("16B", *ports),
+                    struct.pack("{}B".format(self.ports), *ports),
                     data))
 
     def _send(self, message_type, message_data=""):
@@ -201,6 +202,7 @@ class IRNetBox(object):
 
     def _get_version(self):
         self._send(MessageTypes.DEVICE_VERSION)
+        self.ports = 4 if self.irnetbox_model == NetBoxTypes.RRX else 16
 
 
 def RemoteControlConfig(filename):
@@ -226,6 +228,8 @@ class NetBoxTypes(object):
     MK1 = 2
     MK2 = 7
     MK3 = 8
+    MK4 = 12
+    RRX = 13
 
 
 def _message(message_type, message_data):
