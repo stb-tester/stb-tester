@@ -21,6 +21,22 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
 
+
+#### v31
+
+UNRELEASED.
+
+##### Major new features
+
+##### Breaking changes since v30
+
+##### Minor additions, bugfixes & improvements
+
+* The [RedRat-X](https://www.redrat.co.uk/products/redrat-x/) IR blaster is now
+  supported via ethernet (USB is still not supported). Configure your RedRat X
+  as an IRNetBox in your stbt.conf file.
+
+
 #### v30
 
 22 February 2019.
@@ -137,9 +153,6 @@ open-source project, or update [test_pack.stbt_version] if you're using the
   * `RAW_LINE`: Treat the image as a single text line for direct input to the
     LSTM model, bypassing Tesseract preprocessing. Requires Tesseract 3.04 or
     later.
-    
-* The RedRat X IR blaster is now supported via ethernet (not USB). Configure 
-  your RedRat X as an IRNetBox in your stbt.conf file.
 
 * `stbt.press` now returns a object containing information about the keypress,
   including the start time & end time of the keypress signal. This is intended
