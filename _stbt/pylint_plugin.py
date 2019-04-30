@@ -14,8 +14,9 @@ import os
 import re
 import subprocess
 
-from astroid import YES
-from astroid.node_classes import BinOp, Call, Expr, Keyword
+from astroid import MANAGER, YES
+from astroid.node_classes import (
+    Assert, BinOp, Call, Const, Expr, Keyword, Name, Raise)
 from astroid.scoped_nodes import ClassDef, FunctionDef
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
@@ -59,6 +60,10 @@ class StbtChecker(BaseChecker):
                   'FrameObject properties must not have side-effects that '
                   'change the state of the device-under-test by calling '
                   '"stbt.press()" or "stbt.press_and_wait()".'),
+        'E7008': ('"assert True" has no effect',
+                  'stbt-assert-true',
+                  '"assert True" has no effect; consider replacing it with a '
+                  'comment or a call to "logging.info()".'),
     }
 
     def visit_const(self, node):
@@ -119,6 +124,32 @@ class StbtChecker(BaseChecker):
                     if len(args) <= index and "frame" not in kwargs:
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
+
+    def visit_assert(self, assertion):
+        if isinstance(assertion.test, Const) and assertion.test.value is True:
+            if assertion.fail:
+                self.add_message("E7008", node=assertion)
+            else:
+                self.add_message("E7008", node=assertion)
+
+
+def _transform_assert_false_into_raise(assertion):
+    if isinstance(assertion.test, Const) and assertion.test.value is False:
+        out = Raise(lineno=assertion.lineno,
+                    col_offset=assertion.col_offset,
+                    parent=assertion.parent)
+        exc = Call(parent=out)
+        if assertion.fail:
+            args = [assertion.fail]
+            args[0].parent = exc
+        else:
+            args = []
+        exc.postinit(Name("AssertionError", parent=exc), args)
+        out.postinit(exc, None)
+        return out
+
+
+MANAGER.register_transform(Assert, _transform_assert_false_into_raise)
 
 
 def _is_callable(node):
