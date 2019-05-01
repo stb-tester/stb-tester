@@ -38,6 +38,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import raise_
 
 import configparser
 import logging
@@ -212,8 +213,8 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise AdbError(e.returncode, e.cmd, e.output, self), \
-                None, sys.exc_info()[2]
+            raise_(AdbError(e.returncode, e.cmd, e.output, self),
+                   None, sys.exc_info()[2])
         if capture_output:
             return output
         else:
