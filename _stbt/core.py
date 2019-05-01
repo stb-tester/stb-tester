@@ -455,11 +455,13 @@ def _callable_description(callable_):
     >>> _callable_description(
     ...     lambda: stbt.press("OK"))
     '    lambda: stbt.press("OK"))\\n'
-    >>> _callable_description(functools.partial(int, base=2))
-    'int'
-    >>> _callable_description(functools.partial(functools.partial(int, base=2),
-    ...                                         x='10'))
-    'int'
+    >>> _callable_description(functools.partial(eval, globals={}))
+    'eval'
+    >>> _callable_description(
+    ...     functools.partial(
+    ...         functools.partial(eval, globals={}),
+    ...         locals={}))
+    'eval'
     >>> class T(object):
     ...     def __call__(self): return True;
     >>> _callable_description(T())
