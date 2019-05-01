@@ -96,25 +96,25 @@ def memoize(additional_fields=None):
     warning in future releases.  We hope to stabilise it in the future so users
     can use it with their custom image-processing functions.
     """
-    def decorator(function):
-        func_key = json.dumps([function.__name__, additional_fields],
+    def decorator(f):
+        func_key = json.dumps([f.__name__, additional_fields],
                               sort_keys=True)
 
-        @functools.wraps(function)
+        @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(function, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
-                return function(*args, **kwargs)
+                return f(*args, **kwargs)
 
             with _cache.begin() as txn:
                 out = txn.get(key)
             if out is not None:
                 return json.loads(out)
-            output = function(**full_kwargs)
+            output = f(**full_kwargs)
             _cache_put(key, output)
             return output
 
@@ -128,19 +128,19 @@ def memoize_iterator(additional_fields=None):
     iterator.
     """
 
-    def decorator(function):
-        func_key = json.dumps([function.__name__, additional_fields],
+    def decorator(f):
+        func_key = json.dumps([f.__name__, additional_fields],
                               sort_keys=True)
 
-        @functools.wraps(function)
+        @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(function, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
-                for x in function(*args, **kwargs):
+                for x in f(*args, **kwargs):
                     yield x
                 return
 
@@ -155,7 +155,7 @@ def memoize_iterator(additional_fields=None):
                 yield out_
 
             skip = i  # pylint:disable=undefined-loop-variable
-            it = function(**full_kwargs)
+            it = f(**full_kwargs)
             for i in itertools.count():
                 try:
                     output = next(it)

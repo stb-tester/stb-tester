@@ -85,7 +85,7 @@ class IRNetBox(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):
+    def __exit__(self, ex_type, ex_value, ex_traceback):
         self._socket.close()
 
     def power_on(self):

@@ -63,7 +63,7 @@ def _import_by_filename(filename_):
     import_dir, import_name = find_import_name(filename_)
     sys.path.insert(0, import_dir)
     try:
-        module = import_module(import_name)
+        mod = import_module(import_name)
     finally:
         # If the test function is not in a module we will need to leave
         # PYTHONPATH modified here so one python file in the test-pack can
@@ -71,7 +71,7 @@ def _import_by_filename(filename_):
         # careful of modules that mess with sys.path:
         if '.' in import_name and sys.path[0] == import_dir:
             sys.path.pop(0)
-    return module
+    return mod
 
 
 _TestFunction = namedtuple(
@@ -82,11 +82,11 @@ def load_test_function(script, args):
     sys.argv = [script] + args
     if '::' in script:
         filename, funcname = script.split('::', 1)
-        module = _import_by_filename(filename)
-        function = getattr(module, funcname)
+        mod = _import_by_filename(filename)
+        func = getattr(mod, funcname)
         return _TestFunction(
-            script, filename, funcname, function.__code__.co_firstlineno,
-            function)
+            script, filename, funcname, func.__code__.co_firstlineno,
+            func)
     else:
         filename = os.path.abspath(script)
 

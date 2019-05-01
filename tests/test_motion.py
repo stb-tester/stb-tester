@@ -102,8 +102,8 @@ class MockTime(object):
             raise exception
         self.at(0, raise_exception)
 
-    def at(self, offset, function):
-        self._functions.append((self._time + offset, function))
+    def at(self, offset, func):
+        self._functions.append((self._time + offset, func))
         self._functions.sort()
 
     @contextmanager
