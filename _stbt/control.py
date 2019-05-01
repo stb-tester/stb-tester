@@ -574,7 +574,7 @@ class SamsungTCPControl(RemoteControl):
 
     def _send_payload(self, payload):
         from struct import pack
-        sender = "iphone.iapp.samsung"
+        sender = b"iphone.iapp.samsung"
         packet_start = pack('<BH', 0, len(sender)) + sender
         self.socket.send(packet_start + pack('<H', len(payload)) + payload)
 
