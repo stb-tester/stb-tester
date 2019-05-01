@@ -169,16 +169,13 @@ class ImageLogger(object):
 
         with open(os.path.join(self.outdir, "index.html"), "w") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
-                    .render(frame_number=self.frame_number)
-                    .encode("utf-8"))
+                    .render(frame_number=self.frame_number))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
                     .render(annotated_image=self._draw_annotated_image,
                             draw=self._draw,
-                            **template_kwargs)
-                    .encode("utf-8"))
+                            **template_kwargs))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
-                    .render()
-                    .encode("utf-8"))
+                    .render())
 
     def _draw(self, region, source_size, css_class, title=None):
         import jinja2

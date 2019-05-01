@@ -16,7 +16,6 @@ from enum import IntEnum
 
 import cv2
 import numpy
-from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
 from .config import get_config
@@ -512,7 +511,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'_config[\"user_words_suffix\"]' at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(to_bytes(x) for x in user_words))
+                f.write('\n'.join(_to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
@@ -521,7 +520,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'_config[\"user_patterns_suffix\"]' at the same time")
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(to_bytes(x) for x in user_patterns))
+                f.write('\n'.join(_to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
         if imglog.enabled:
@@ -533,7 +532,7 @@ def _tesseract_subprocess(
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
-                        cfg.write("%s %s\n" % (k, to_bytes(v)))
+                        cfg.write("%s %s\n" % (k, _to_unicode(v)))
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', frame)
@@ -553,7 +552,7 @@ def _tesseract_subprocess(
             _, ext = os.path.splitext(filename)
             if ext == ".txt" or ext == ".hocr":
                 with open(filename) as f:
-                    return f.read().decode("utf-8")
+                    return f.read()
 
 
 def _hocr_iterate(hocr):
@@ -599,7 +598,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
 
 
 def _to_unicode(text):
-    if isinstance(text, str):
+    if isinstance(text, bytes):
         return text.decode("utf-8")
     else:
         return str(text)
