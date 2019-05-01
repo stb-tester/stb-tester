@@ -23,6 +23,6 @@ filename=${1:-screenshot.png}
 	if stbt._dut._display.source_pipeline_description.startswith("decklink"):
 	    time.sleep(2)  # First second of Blackmagic video has purple tint
 	save_frame(get_frame(), "$filename")
-	print "Screenshot saved to '$filename'"
+	print("Screenshot saved to '$filename'")
 	EOF
     )

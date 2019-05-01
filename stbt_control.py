@@ -200,7 +200,7 @@ def terminal():
 
 def keymap_string(keymap):
     """
-    >>> print keymap_string({"m": ("MENU", "Main Menu")}).strip()
+    >>> print(keymap_string({"m": ("MENU", "Main Menu")}).strip())
     q - <Quit>                        m - Main Menu
     """
     keylist = ["%15s - %-15s" % (kb_key, mapping[1])

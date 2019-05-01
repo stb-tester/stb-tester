@@ -53,9 +53,9 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> Region.intersect(c, b) == c
     True
-    >>> print Region.intersect(a, c)
+    >>> print(Region.intersect(a, c))
     None
-    >>> print Region.intersect(None, a)
+    >>> print(Region.intersect(None, a))
     None
     >>> Region.intersect(a)
     Region(x=0, y=0, right=8, bottom=8)
@@ -70,7 +70,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> Region.ALL
     Region.ALL
-    >>> print Region.ALL
+    >>> print(Region.ALL)
     Region.ALL
     >>> c.above()
     Region(x=10, y=-inf, right=13, bottom=4)
@@ -291,9 +291,9 @@ class Region(namedtuple('Region', 'x y right bottom')):
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
-        >>> print Region.bounding_box(None, None)
+        >>> print(Region.bounding_box(None, None))
         None
-        >>> print Region.bounding_box()
+        >>> print(Region.bounding_box())
         None
         >>> Region.bounding_box(b)
         Region(x=20, y=30, right=30, bottom=50)
@@ -325,7 +325,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         >>> Region(20, 30, right=30, bottom=50).erode(3)
         Region(x=23, y=33, right=27, bottom=47)
-        >>> print Region(20, 30, 10, 20).erode(5)
+        >>> print(Region(20, 30, 10, 20).erode(5))
         None
         """
         if self.width > n * 2 and self.height > n * 2:

@@ -32,7 +32,7 @@ class FalseyFrameObject(stbt.FrameObject):
     False
     >>> fo
     FalseyFrameObject(is_visible=False)
-    >>> print fo.public
+    >>> print(fo.public)
     None
     >>> fo._private
     6
@@ -101,7 +101,7 @@ class OrderedFrameObject(stbt.FrameObject):
     >>> bigred = OrderedFrameObject(numpy.array([[[0, 0, 255], [0, 0, 255]]]))
     >>> green = OrderedFrameObject(numpy.array([[[0, 255, 0]]]))
     >>> blue = OrderedFrameObject(numpy.array([[[255, 0, 0]]]))
-    >>> print sorted([red, green, blue, bigred])
+    >>> print(sorted([red, green, blue, bigred]))
     [...'blue'..., ...'green'..., ...'red', size=1..., ...'red', size=2)]
     """
 
@@ -175,9 +175,9 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     False
     >>> m.is_visible
     False
-    >>> print m.public
+    >>> print(m.public)
     None
-    >>> print m.another
+    >>> print(m.another)
     None
     >>> m._private
     7
@@ -252,9 +252,9 @@ class Dialog(stbt.FrameObject):
 
     Some basic operations:
 
-    >>> print dialog.message
+    >>> print(dialog.message)
     This set-top box is great
-    >>> print dialog_fab.message
+    >>> print(dialog_fab.message)
     This set-top box is fabulous
 
     ``FrameObject`` defines truthiness of your objects based on the mandatory
@@ -268,7 +268,7 @@ class Dialog(stbt.FrameObject):
     If ``is_visible`` is falsey, all the rest of the properties will be
     ``None``:
 
-    >>> print no_dialog.message
+    >>> print(no_dialog.message)
     None
 
     This enables usage like::
@@ -322,10 +322,10 @@ class Dialog(stbt.FrameObject):
     ``refresh`` returns a new FrameObject of the same type:
 
     >>> page = Dialog(frame=_load_frame('with-dialog'))
-    >>> print page.message
+    >>> print(page.message)
     This set-top box is great
     >>> page = page.refresh(_load_frame('with-dialog2'))
-    >>> print page.message
+    >>> print(page.message)
     This set-top box is fabulous
 
     """

@@ -121,7 +121,7 @@ test_irnetbox_proxy() {
 	with irnetbox.IRNetBox("localhost", $proxy_port) as ir:
 	    for _ in range(10):
 	        ir.indicators_on()
-	        print "test1.py: Sent CPLD_INSTRUCTION"
+	        print("test1.py: Sent CPLD_INSTRUCTION")
 	        time.sleep(0.1)
 	EOF
 
@@ -132,7 +132,7 @@ test_irnetbox_proxy() {
 	with irnetbox.IRNetBox("localhost", $proxy_port) as ir:
 	    for _ in range(10):
 	        ir.irsend_raw(port=1, power=100, data=rcu["MENU"])
-	        print "test2.py: Sent OUTPUT_IR_ASYNC"
+	        print("test2.py: Sent OUTPUT_IR_ASYNC")
 	        time.sleep(0.1)
 	EOF
 

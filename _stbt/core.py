@@ -404,7 +404,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
                                   stable_secs=2)
         assert match_result
         end_time = match_result.time  # this is the first stable frame
-        print "Transition took %s seconds" % (end_time - start_time)
+        print("Transition took %s seconds" % (end_time - start_time))
 
     Added in v28: The ``predicate`` and ``stable_secs`` parameters.
     """
