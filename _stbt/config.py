@@ -65,7 +65,7 @@ def set_config(section, option, value):
 
     config = _config_init()
 
-    parser = configparser.SafeConfigParser()
+    parser = configparser.ConfigParser()
     parser.read([custom_config])
     if value is not None:
         if not parser.has_section(section):
@@ -107,7 +107,7 @@ def _config_init(force=False):
         # with the one at the beginning taking precedence:
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.read(config_files)
         _config = config
     return _config
