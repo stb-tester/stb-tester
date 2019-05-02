@@ -151,7 +151,7 @@ def memoize_iterator(additional_fields=None):
                     break
                 out_, stop_ = json.loads(out)
                 if stop_:
-                    raise StopIteration()
+                    return
                 yield out_
 
             skip = i  # pylint:disable=undefined-loop-variable

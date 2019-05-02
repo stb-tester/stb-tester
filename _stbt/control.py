@@ -643,7 +643,7 @@ def file_control_recorder(filename):
         line = f.readline()
         if line == '':
             f.close()
-            raise StopIteration
+            return
         yield line.rstrip()
 
 
