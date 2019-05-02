@@ -213,7 +213,8 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise_(AdbError(e.returncode, e.cmd, e.output, self),
+            raise_(AdbError(e.returncode, e.cmd, e.output.decode("utf-8"),
+                            self),
                    None, sys.exc_info()[2])
         if capture_output:
             return output
@@ -225,7 +226,7 @@ class AdbDevice(object):
         try:
             return self._adb(["devices", "-l"], timeout_secs=5)
         except subprocess.CalledProcessError as e:
-            return e.output
+            return e.output.decode("utf-8")
 
     def get_frame(self):
         """Take a screenshot using ADB.
@@ -339,7 +340,7 @@ class AdbDevice(object):
         _command += command
         debug("AdbDevice.adb: About to run command: %r\n" % _command)
         output = subprocess.check_output(
-            _command, stderr=subprocess.STDOUT, **kwargs)
+            _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
         return output
 
     def _connect(self, timeout_secs):

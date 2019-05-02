@@ -78,7 +78,7 @@ class _ShellOutlet(object):
     def get(self):
         import subprocess
         power = subprocess.check_output(self.cmd + ["status"]).strip()
-        return {'ON': True, 'OFF': False}[power]
+        return {b'ON': True, b'OFF': False}[power]
 
 
 class _Aviosys8800Pro(object):

@@ -48,7 +48,8 @@ def test_match_debug():
         print(matches)
         assert len(matches) == 6
 
-        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        files = subprocess.check_output("find stbt-debug | sort", shell=True) \
+                          .decode("utf-8")
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
@@ -346,7 +347,8 @@ def test_motion_debug():
                                     region=stbt.Region(0, 0, 320, 400)):
             pass
 
-        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        files = subprocess.check_output("find stbt-debug | sort", shell=True) \
+                          .decode("utf-8")
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
@@ -428,7 +430,8 @@ def test_ocr_debug():
         stbt.match_text("Summary", f, region=r, text_color=c)
         stbt.match_text("Summary", f, region=nonoverlapping)
 
-        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        files = subprocess.check_output("find stbt-debug | sort", shell=True) \
+                          .decode("utf-8")
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
@@ -492,7 +495,8 @@ def test_is_screen_black_debug():
         stbt.is_screen_black(f, mask="videotestsrc-mask-no-video.png")
         stbt.is_screen_black(f, region=stbt.Region(0, 0, 160, 120))
 
-        files = subprocess.check_output("find stbt-debug | sort", shell=True)
+        files = subprocess.check_output("find stbt-debug | sort", shell=True) \
+                          .decode("utf-8")
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001

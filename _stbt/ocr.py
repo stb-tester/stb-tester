@@ -374,7 +374,8 @@ def _tesseract_version(output=None):
         if _memoise_tesseract_version is None:
             try:
                 _memoise_tesseract_version = subprocess.check_output(
-                    ['tesseract', '--version'], stderr=subprocess.STDOUT)
+                    ['tesseract', '--version'],
+                    stderr=subprocess.STDOUT).decode("utf-8")
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     return None
@@ -540,7 +541,7 @@ def _tesseract_subprocess(
             subprocess.check_output(cmd, cwd=tmp, env=tessenv,
                                     stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
-            warn("Tesseract failed: %s" % e.output)
+            warn("Tesseract failed: %s" % e.output.decode("utf-8", "replace"))
             raise
 
         if imglog.enabled:
