@@ -136,7 +136,7 @@ class HdmiCecControl(object):
         # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
         sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
         try:
-            import cec
+            import cec  # pylint:disable=import-error
         finally:
             sys.path.pop(0)
 
