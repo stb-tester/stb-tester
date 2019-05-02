@@ -74,18 +74,15 @@ def noop_contextmanager():
 
 with (_stbt.logging.scoped_debug_level(2) if args.verbose
       else noop_contextmanager()):
-    try:
-        match_found = False
-        for result in stbt.match_all(
-                args.reference_file, frame=source_image,
-                match_parameters=stbt.MatchParameters(**mp)):
-            print "%s: %s" % (
-                "Match found" if result else "No match found. Closest match",
-                result)
-            if result:
-                match_found = True
-            if not args.all:
-                break
-        sys.exit(0 if match_found else 1)
-    except stbt.UITestError as e:
-        error(e.message)
+    match_found = False
+    for result in stbt.match_all(
+            args.reference_file, frame=source_image,
+            match_parameters=stbt.MatchParameters(**mp)):
+        print "%s: %s" % (
+            "Match found" if result else "No match found. Closest match",
+            result)
+        if result:
+            match_found = True
+        if not args.all:
+            break
+    sys.exit(0 if match_found else 1)
