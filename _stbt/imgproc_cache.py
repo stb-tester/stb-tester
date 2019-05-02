@@ -105,7 +105,7 @@ def memoize(additional_fields=None):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(f, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
                 return f(*args, **kwargs)
@@ -137,7 +137,7 @@ def memoize_iterator(additional_fields=None):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(f, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
                 for x in f(*args, **kwargs):
