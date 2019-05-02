@@ -76,10 +76,9 @@ def safe_recv(sock, num):
 
 
 class SocketClosed(Exception):
-
-    @property
-    def socket(self):
-        return self.message
+    def __init__(self, sock):
+        super(SocketClosed, self).__init__()
+        self.socket = sock
 
 
 class StopRunning(BaseException):

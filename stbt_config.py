@@ -52,7 +52,7 @@ def main():
     try:
         print(get_config(section, key))
     except ConfigurationError as e:
-        error(e.message)
+        error(e)
 
 
 if __name__ == "__main__":
