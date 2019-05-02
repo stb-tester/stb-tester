@@ -13,6 +13,7 @@ import binascii
 import ctypes
 import os
 import struct
+import sys
 
 _libxxhash = ctypes.CDLL(
     os.path.dirname(os.path.abspath(__file__)) + "/libxxhash.so")
@@ -65,7 +66,10 @@ class Xxhash64(object):
     def update(self, data):
         # Passing a buffer/memoryview object via ctypes is inconvenient.  See
         # http://thread.gmane.org/gmane.comp.python.devel/134936/focus=134941
-        buf = buffer(data)
+        if sys.version_info.major == 2:  # Python 2
+            buf = buffer(data)  # pylint:disable=undefined-variable
+        else:  # Python 3
+            buf = memoryview(data)
         address = ctypes.c_void_p()
         length = ctypes.c_ssize_t()
         ctypes.pythonapi.PyObject_AsReadBuffer(
