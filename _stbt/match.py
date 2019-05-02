@@ -550,7 +550,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    method = {
+    method = {  # pylint:disable=redefined-outer-name
         MatchMethod.SQDIFF: cv2.TM_SQDIFF,
         MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
@@ -659,7 +659,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                         width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, mask, method, roi_mask, level, imwrite):
+def _match_template(image, template, mask, method, roi_mask, level, imwrite):  # pylint:disable=redefined-outer-name
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
