@@ -76,3 +76,12 @@ def find_import_name(filename):
         import_dir, s = os.path.split(import_dir)
         import_name = "%s.%s" % (s, import_name)
     return import_dir, import_name
+
+
+def to_bytes(text):
+    if isinstance(text, str):
+        return text.encode("utf-8")
+    elif isinstance(text, bytes):
+        return text
+    else:
+        raise TypeError("Unexpected type %s" % type(text))

@@ -12,6 +12,7 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
+from .utils import to_bytes
 
 
 class Frame(numpy.ndarray):
@@ -124,7 +125,7 @@ def imread(filename, flags=None):
     else:
         cv2_flags = flags
 
-    img = cv2.imread(filename, cv2_flags)
+    img = cv2.imread(to_bytes(filename), cv2_flags)
     if img is None:
         return None
 
@@ -208,9 +209,6 @@ def find_user_file(filename):
 
     :returns: Absolute filename, or None if it can't find the file.
     """
-    if isinstance(filename, str):
-        filename = filename.encode("utf-8")
-
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
 
