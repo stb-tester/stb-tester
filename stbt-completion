@@ -6,8 +6,8 @@
 # https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 complete -o nospace -F _stbt stbt
-complete -o nospace -F _stbt_run stbt-run
-complete -o nospace -F _stbt_record stbt-record
+complete -o nospace -F _stbt_run stbt_run.py
+complete -o nospace -F _stbt_record stbt_record.py
 
 _stbt() {
     local cur="${COMP_WORDS[COMP_CWORD]}"

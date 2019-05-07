@@ -17,7 +17,7 @@
 
 filename=${1:-screenshot.png}
 
-"$(dirname "$0")/stbt-run" -v --control=none --save-video= <(cat <<-EOF
+"$(dirname "$0")/stbt_run.py" -v --control=none --save-video= <(cat <<-EOF
 	import time
 	get_frame()
 	if stbt._dut._display.source_pipeline_description.startswith("decklink"):

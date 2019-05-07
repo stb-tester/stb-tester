@@ -28,7 +28,8 @@ case "$cmd" in
     calibrate)
         exec "$this_dir"/stbt-camera.d/stbt_camera_calibrate.py "$@";;
     validate)
-        exec "$this_dir"/stbt-run "$this_dir"/stbt-camera.d/stbt_camera_validate.py "$@";;
+        exec "$this_dir"/stbt_run.py \
+            "$this_dir"/stbt-camera.d/stbt_camera_validate.py "$@";;
     *)
         usage >&2; exit 1;;
 esac

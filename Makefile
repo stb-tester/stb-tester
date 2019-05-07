@@ -109,13 +109,13 @@ INSTALL_CORE_FILES = \
     stbt-batch.d/templates/directory-index.html \
     stbt-batch.d/templates/index.html \
     stbt-batch.d/templates/testrun.html \
-    stbt-config \
-    stbt-control \
-    stbt-lint \
-    stbt-match \
-    stbt-power \
-    stbt-record \
-    stbt-run \
+    stbt_config.py \
+    stbt_control.py \
+    stbt_lint.py \
+    stbt_match.py \
+    stbt_power.py \
+    stbt_record.py \
+    stbt_run.py \
     stbt-screenshot \
     stbt-tv
 

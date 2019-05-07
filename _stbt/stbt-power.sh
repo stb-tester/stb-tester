@@ -48,7 +48,7 @@ main() {
     [[ "$command" =~ ^(on|off|status)$ ]] || die "invalid command '$command'"
 
     [[ -z "$uri" ]] && {
-        uri=$("$(dirname "$0")"/stbt-config "global.power_outlet" 2>/dev/null) ||
+        uri=$("$(dirname "$0")"/stbt_config.py "global.power_outlet" 2>/dev/null) ||
             die "no power-outlet specified on command line or in config file"
     }
     model=$(uri model "$uri") || die "invalid power-outlet uri '$uri'"

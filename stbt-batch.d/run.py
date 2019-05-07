@@ -334,7 +334,7 @@ def run_stbt_run(test_name, test_args, batch_args, cwd):
     Invoke stbt run with the appropriate arguments, redirecting output to log
     files.
     """
-    cmd = [_find_file('../stbt-run'), '--save-thumbnail=always']
+    cmd = [_find_file('../stbt_run.py'), '--save-thumbnail=always']
     if batch_args.do_save_video:
         cmd += ['--save-video=video.webm']
     if batch_args.debug:

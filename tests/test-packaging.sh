@@ -44,6 +44,6 @@ test_that_stbt_imports_the_source_version() {
     PYTHONPATH="$srcdir" python test.py ||
         fail 'Python with PYTHONPATH=$srcdir imported the wrong _stbt'
 
-    "$srcdir"/stbt-run "$scratchdir"/test.py ||
+    "$srcdir"/stbt_run.py "$scratchdir"/test.py ||
         fail "stbt run imported the wrong _stbt"
 }

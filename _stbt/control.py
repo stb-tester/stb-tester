@@ -698,9 +698,9 @@ def stbt_control_listen(keymap_file):
     import imp
     try:
         from .vars import libexecdir
-        sc = "%s/stbt/stbt-control" % libexecdir
+        sc = "%s/stbt/stbt_control.py" % libexecdir
     except ImportError:
-        sc = _find_file('../stbt-control')
+        sc = _find_file('../stbt_control.py')
     stbt_control = imp.load_source('stbt_control', sc)
 
     with scoped_debug_level(0):
