@@ -110,19 +110,19 @@ def sample_get_size(sample):
 def test_map_sample_reading_data():
     Gst.init([])
 
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"), None, None, None)
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(b"hello"), None, None, None)
     with map_gst_sample(s, Gst.MapFlags.READ) as a:
-        assert 'hello' == ''.join(chr(x) for x in a)
+        assert b'hello' == b''.join(chr(x) for x in a)
 
 
 def test_map_sample_modifying_data():
     Gst.init([])
 
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"), None, None, None)
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(b"hello"), None, None, None)
     with map_gst_sample(s, Gst.MapFlags.WRITE | Gst.MapFlags.READ) as a:
         a[2] = 1
 
-    assert s.get_buffer().extract_dup(0, 5) == "he\x01lo"
+    assert s.get_buffer().extract_dup(0, 5) == b"he\x01lo"
 
 
 def test_map_sample_without_buffer():
