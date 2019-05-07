@@ -4,6 +4,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import random
+import re
 import timeit
 
 import cv2
@@ -35,7 +36,8 @@ def test_that_matchresult_image_matches_template_passed_to_match():
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
-    assert "image=\'black.png\'" in str(stbt.match("black.png", frame=black()))
+    assert re.search(r"image=u?'black.png'",
+                     str(stbt.match("black.png", frame=black())))
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
