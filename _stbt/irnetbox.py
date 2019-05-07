@@ -322,10 +322,10 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
         0x01,
         data)
 
-    assert next(_read_responses(_FileToSocket(io.StringIO(m)))) == \
+    assert next(_read_responses(_FileToSocket(io.BytesIO(m)))) == \
         (0x01, data)
     try:
-        next(_read_responses(_FileToSocket(io.StringIO(m[:5]))))
+        next(_read_responses(_FileToSocket(io.BytesIO(m[:5]))))
     except StopIteration:
         pass
     else:
@@ -336,10 +336,10 @@ def test_that_parse_config_understands_redrat_format():
     import io
 
     # pylint:disable=line-too-long
-    f = io.StringIO(
+    f = io.BytesIO(
         re.sub(
-            "^ +", "", flags=re.MULTILINE, string=""
-            """Device TestRCU
+            b"^ +", b"", flags=re.MULTILINE,
+            string=b"""Device TestRCU
 
             Note: The data is of the form <signal name> MOD_SIG <max_num_lengths> <byte_array_in_ascii_hex>.
 
@@ -359,8 +359,8 @@ def test_that_parse_config_understands_redrat_format():
 class _FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes.
 
-    >>> import StringIO
-    >>> s = _FileToSocket(StringIO.StringIO('Hello'))
+    >>> import io
+    >>> s = _FileToSocket(io.BytesIO(b'Hello'))
     >>> s.recv(3)
     'Hel'
     >>> s.recv(3)
