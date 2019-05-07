@@ -221,7 +221,6 @@ def decoded(keycode):
     'Backspace'
     >>> decoded(120)
     'x'
-    >>> decoded(curses.KEY_F12)
     """
     if keycode in SPECIAL_CHARS:
         return SPECIAL_CHARS[keycode]
