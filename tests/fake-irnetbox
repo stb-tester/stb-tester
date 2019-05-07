@@ -30,7 +30,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
                     print("fake-irnetbox: Client closed connection")
                     return
                 raise
-        _ = struct.unpack(">H", self.recv(2))
+        _ = struct.unpack(b">H", self.recv(2))
         message_type = ord(self.recv(1))
         print("fake-irnetbox: Received message %s (0x%02x)" % (
             name(message_type), message_type))
@@ -46,15 +46,15 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
             self.send(
                 message_type,
                 # Product ID 8 == irNetBox mk-III
-                struct.pack("<BB8H", 18, 1, 0, 0, 0, 0, 8, 0, 0, 0))
+                struct.pack(b"<BB8H", 18, 1, 0, 0, 0, 0, 8, 0, 0, 0))
 
         if message_type == MessageTypes.OUTPUT_IR_ASYNC:
-            sequence_number, = struct.unpack(">H", self.recv(2))
+            sequence_number, = struct.unpack(b">H", self.recv(2))
             print("fake-irnetbox: ...with sequence number %d" % sequence_number)
             if self.server.response == "error":
                 self.send(
                     MessageTypes.ERROR,
-                    struct.pack("B", 40))  # error code = not enough memory
+                    struct.pack(b"B", 40))  # error code = not enough memory
             elif self.server.response == "noreply":
                 pass
             else:
@@ -66,7 +66,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
                     # http://www.redrat.co.uk/products/IRNetBox_Comms-V3.0.pdf
                     # but due to a known bug it is little-endian.
                     struct.pack(
-                        "<HBB", sequence_number,
+                        b"<HBB", sequence_number,
                         0 if ack else 49,  # error code = busy
                         1 if ack else 0))
                 print("fake-irnetbox: ...(%s)" % ("ack" if ack else "nack"))
@@ -74,7 +74,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
                     time.sleep(2 if self.server.response == "wait" else 0.2)
                     self.send(
                         MessageTypes.IR_ASYNC_COMPLETE,
-                        struct.pack(">HBB", sequence_number, 0, 0))
+                        struct.pack(b">HBB", sequence_number, 0, 0))
 
         self.handle()
 
@@ -88,7 +88,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
 
     def send(self, message_type, data=""):
         m = struct.pack(
-            ">HB%ds" % len(data),
+            b">HB%ds" % len(data),
             len(data),
             message_type,
             data)

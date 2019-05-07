@@ -428,14 +428,14 @@ class RemoteFrameBuffer(RemoteControl):
 
     def _press_down(self, key):
         key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
+        self.socket.send(struct.pack(b'!BBxxI', 4, 1, key_code))
         debug(
             "RemoteFrameBuffer: pressed down (0x%04x)"
             % key_code)
 
     def _release(self, key):
         key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+        self.socket.send(struct.pack(b'!BBxxI', 4, 0, key_code))
         debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
 
     def _close(self):
@@ -568,15 +568,15 @@ class SamsungTCPControl(RemoteControl):
         '\x10\x00MTkyLjE2OC4wLjEw'
         """
         from base64 import b64encode
-        from struct import pack
         b64 = b64encode(string)
-        return pack('<H', len(b64)) + b64
+        return struct.pack(b'<H', len(b64)) + b64
 
     def _send_payload(self, payload):
-        from struct import pack
         sender = b"iphone.iapp.samsung"
-        packet_start = pack('<BH', 0, len(sender)) + sender
-        self.socket.send(packet_start + pack('<H', len(payload)) + payload)
+        packet_start = struct.pack(b'<BH', 0, len(sender)) + sender
+        self.socket.send(packet_start +
+                         struct.pack('<H', len(payload)) +
+                         payload)
 
     def _hello(self):
         payload = bytearray([0x64, 0x00])

@@ -111,19 +111,19 @@ class IRNetBox(object):
         """Reset the CPLD"""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack("B", 0x00))
+            struct.pack(b"B", 0x00))
 
     def indicators_on(self):
         """Enable LED indicators on the front panel (§5.2.4)."""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack("B", 0x17))
+            struct.pack(b"B", 0x17))
 
     def indicators_off(self):
         """Disable LED indicators on the front panel (§5.2.4)."""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack("B", 0x18))
+            struct.pack(b"B", 0x18))
 
     def irsend_raw(self, port, power, data):
         """Output the IR data on the given port at the set power (§6.1.1).
@@ -139,22 +139,22 @@ class IRNetBox(object):
             self.reset()
             self.indicators_on()
             self._send(MessageTypes.SET_MEMORY)
-            self._send(MessageTypes.CPLD_INSTRUCTION, struct.pack("B", 0x00))
+            self._send(MessageTypes.CPLD_INSTRUCTION, struct.pack(b"B", 0x00))
             if power < 33:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack("B", port + 1))
+                    struct.pack(b"B", port + 1))
             elif power < 66:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack("B", port + 31))
+                    struct.pack(b"B", port + 31))
             else:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack("B", port + 1))
+                    struct.pack(b"B", port + 1))
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack("B", port + 31))
+                    struct.pack(b"B", port + 31))
             self._send(MessageTypes.DOWNLOAD_SIGNAL, data)
             self._send(MessageTypes.OUTPUT_IR_SIGNAL)
             self.reset()
@@ -166,13 +166,13 @@ class IRNetBox(object):
             self._send(
                 MessageTypes.OUTPUT_IR_ASYNC,
                 struct.pack(
-                    ">HH{0}s{1}s".format(self.ports, len(data)),
+                    b">HH{0}s{1}s".format(self.ports, len(data)),
                     sequence_number,
                     delay,
-                    struct.pack("{}B".format(self.ports), *ports),
+                    struct.pack(b"{}B".format(self.ports), *ports),
                     data))
 
-    def _send(self, message_type, message_data=""):
+    def _send(self, message_type, message_data=b""):
         self._socket.sendall(_message(message_type, message_data))
         response_type, response_data = next(self._responses)
         if response_type == MessageTypes.ERROR:
@@ -186,13 +186,13 @@ class IRNetBox(object):
                 # Sequence number in the ACK message is defined as big-endian
                 # in §5.1 and §6.1.2, but due to a known bug it is
                 # little-endian.
-                '<HBB', response_data)
+                b'<HBB', response_data)
             if ack == 1:
                 async_type, async_data = next(self._responses)
                 if async_type != MessageTypes.IR_ASYNC_COMPLETE:
                     raise Exception(
                         "IRNetBox returned unexpected message %d" % async_type)
-                (async_sequence_number,) = struct.unpack(">H", async_data[:2])
+                (async_sequence_number,) = struct.unpack(b">H", async_data[:2])
                 if async_sequence_number != sequence_number:
                     raise Exception(
                         "IRNetBox returned message IR_ASYNC_COMPLETE "
@@ -203,7 +203,7 @@ class IRNetBox(object):
                     "IRNetBox returned NACK (error code: %d)" % error_code)
         if response_type == MessageTypes.DEVICE_VERSION:
             self.irnetbox_model, = struct.unpack(
-                '<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
+                b'<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
 
     def _get_version(self):
         self._send(MessageTypes.DEVICE_VERSION)
@@ -249,8 +249,8 @@ def _message(message_type, message_data):
     # A ushort value is a 16-bit unsigned integer in big-endian format.
     #
     return struct.pack(
-        ">cHB%ds" % len(message_data),
-        "#",
+        b">cHB%ds" % len(message_data),
+        b"#",
         len(message_data),
         message_type,
         message_data)
@@ -268,18 +268,18 @@ def _read_responses(stream):
     #                           b) A value (0x01) indicating "Error".
     # Data             byte[]   Any data associated with this type of message.
     #
-    buf = ""
+    buf = b""
     while True:
         s = stream.recv(4096)
         if len(s) == 0:
             break
         buf += s
         while len(buf) >= 3:
-            data_len, = struct.unpack(">H", buf[0:2])
+            data_len, = struct.unpack(b">H", buf[0:2])
             if len(buf) < 3 + data_len:
                 break
             response_type, response_data = struct.unpack(
-                ">B%ds" % data_len,
+                b">B%ds" % data_len,
                 buf[2:(3 + data_len)])
             yield response_type, response_data
             buf = buf[(3 + data_len):]
@@ -315,9 +315,9 @@ def _parse_config(config_file):
 def test_that_read_responses_doesnt_hang_on_incomplete_data():
     import io
 
-    data = "abcdefghij"
+    data = b"abcdefghij"
     m = struct.pack(
-        ">HB%ds" % len(data),
+        b">HB%ds" % len(data),
         len(data),
         0x01,
         data)
@@ -351,9 +351,9 @@ def test_that_parse_config_understands_redrat_format():
             RED	DMOD_SIG	signal2	16 0002BCE3FF5A0000000300000020010E2C0DB006EC00000000000000000000000000000000000000000000000000000001000100010001000100010202027F0001000100010001000100010202027F
             """))
     config = _parse_config(f)
-    assert config["DOWN"].startswith("\x00\x01\x74\xF5")
-    assert config["UP"].startswith("\x00\x01\x74\xFA")
-    assert config["RED"].startswith("\x00\x02\xBC\xAF")
+    assert config["DOWN"].startswith(b"\x00\x01\x74\xF5")
+    assert config["UP"].startswith(b"\x00\x01\x74\xFA")
+    assert config["RED"].startswith(b"\x00\x02\xBC\xAF")
 
 
 class _FileToSocket(object):

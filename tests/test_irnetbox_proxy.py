@@ -31,9 +31,9 @@ class ProxyTest(unittest.TestCase):
 
     def test_replace_sequence(self):
         proxy = IRNetBoxProxy("no_address")
-        data = "YYYY"
-        self.assertEqual(proxy.replace_sequence_id(data, 1), "\x00\x01YY")
-        self.assertEqual(proxy.replace_sequence_id(data, 65535), "\xff\xffYY")
+        data = b"YYYY"
+        self.assertEqual(proxy.replace_sequence_id(data, 1), b"\x00\x01YY")
+        self.assertEqual(proxy.replace_sequence_id(data, 65535), b"\xff\xffYY")
 
 
 if __name__ == "__main__":

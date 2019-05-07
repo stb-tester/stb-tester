@@ -87,9 +87,9 @@ class StopRunning(BaseException):
 
 class IRNetBoxProxy(object):
 
-    MESSAGE_HEADER = struct.Struct(">cHB")
-    RESPONSE_HEADER = struct.Struct(">HB")
-    SEQUENCE_ID = struct.Struct(">H")
+    MESSAGE_HEADER = struct.Struct(b">cHB")
+    RESPONSE_HEADER = struct.Struct(b">HB")
+    SEQUENCE_ID = struct.Struct(b">H")
     MESSAGE_MARKER = "#"
     ASYNC_COMMAND = 0x30
     ASYNC_COMPLETE = 0x31
@@ -123,7 +123,7 @@ class IRNetBoxProxy(object):
 
     def replace_sequence_id(self, data, new_id, little_endian=False):
         sequence_id_format = struct.Struct(
-            ("<" if little_endian else ">") + "H")
+            (b"<" if little_endian else b">") + b"H")
         return sequence_id_format.pack(new_id) + data[sequence_id_format.size:]
 
     def get_message_from_irnet(self, expect_sync_response=True):
@@ -140,7 +140,7 @@ class IRNetBoxProxy(object):
             # Sequence number in the response message is defined as big-endian
             # in sections 5.1 and 6.1.2 of the protocol specification v3.0,
             # but due to a known bug it is little-endian.
-            new_id, = struct.unpack_from("<H", data)
+            new_id, = struct.unpack_from(b"<H", data)
             _, old_id = self.async_commands[new_id]
             data = self.replace_sequence_id(data, old_id, little_endian=True)
             if not data[self.ACK_NACK_INDEX]:
