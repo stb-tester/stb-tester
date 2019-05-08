@@ -102,7 +102,7 @@ signalname() {
 }
 
 user_command() {
-  local c=$("$runner"/../stbt-config batch.$1 2>/dev/null)
+  local c=$("$runner"/../stbt_config.py batch.$1 2>/dev/null)
   [[ -z "$c" ]] && return
   "$c"
 }

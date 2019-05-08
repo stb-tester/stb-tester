@@ -27,7 +27,7 @@ class StbtChecker(BaseChecker):
     name = 'stb-tester'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
-        # When you add a new checker update the docstring in ../stbt-lint
+        # When you add a new checker update the docstring in ../stbt_lint.py
         'E7001': ('Image "%s" not found on disk',
                   'stbt-missing-image',
                   'The image path given to "stbt.match" '

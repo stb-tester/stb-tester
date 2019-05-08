@@ -241,7 +241,9 @@ def find_user_file(filename):
 
 
 def _iter_frames(depth=1):
-    frame = inspect.currentframe(depth + 1)
+    frame = inspect.currentframe()
+    for _ in range(depth + 1):
+        frame = frame.f_back
     while frame:
         yield frame
         frame = frame.f_back

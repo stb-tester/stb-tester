@@ -30,7 +30,6 @@
 """
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -60,14 +59,9 @@ def main(argv):
                 "stbt lint: error: Couldn't find 'pylint' executable\n")
             return 1
 
-    env = os.environ
-    env["PYTHONPATH"] = os.pathsep.join([
-        os.path.dirname(__file__),
-        env.get("PYTHONPATH", "")])
-
     pylint = subprocess.Popen(
         ["pylint", "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
-        env=env, stderr=subprocess.PIPE)
+        stderr=subprocess.PIPE)
 
     t = threading.Thread(target=filter_warnings,
                          args=(pylint.stderr, sys.stderr))

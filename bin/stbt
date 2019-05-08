@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright 2012-2013 YouView TV Ltd.
 # License: LGPL v2.1 or (at your option) any later version (see
@@ -69,12 +69,12 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    auto-selftest)
-        exec_stbt stbt_auto_selftest.py "$@";;
-    run|record|batch|config|control|lint|power|screenshot|match|tv)
+    auto-selftest|config|control|lint|match|power|record|run)
+        exec_stbt stbt_${cmd/-/_}.py "$@";;
+    batch|screenshot|tv)
         exec_stbt stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility
-        exec_stbt stbt-match "$@";;
+        exec_stbt stbt_match.py "$@";;
     virtual-stb)
         exec_stbt stbt_virtual_stb.py "$@"
         echo "stbt virtual-stb is not installed." >&2

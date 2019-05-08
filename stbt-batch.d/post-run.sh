@@ -29,7 +29,7 @@ template() {
 }
 
 check_capture_hardware() {
-  case "$("$stbt_root"/stbt-config global.source_pipeline | awk '{print $1}')" in
+  case "$("$stbt_root"/stbt_config.py global.source_pipeline | awk '{print $1}')" in
     v4l2src)
       if grep -q "Cannot identify device '/dev/v" failure-reason; then
         echo "v4l2 device not found; exiting."
@@ -40,13 +40,13 @@ check_capture_hardware() {
     decklinksrc)
       ( echo "$(basename "$0"): Checking Blackmagic video-capture device"
         GST_DEBUG=decklinksrc:5 GST_DEBUG_NO_COLOR=1 \
-        "$stbt_root"/stbt-run --sink-pipeline='' \
+        "$stbt_root"/stbt_run.py --sink-pipeline='' \
           <(echo "import time; time.sleep(1)") 2>&1
       ) | ts '[%Y-%m-%d %H:%M:%.S %z] ' > decklinksrc.log
 
       if grep -q "enable video input failed" decklinksrc.log; then
         local subdevice=$(
-          "$stbt_root"/stbt-config global.source_pipeline |
+          "$stbt_root"/stbt_config.py global.source_pipeline |
           grep -o device-number=. | awk -F= '{print $2}')
         local users=$(
           lsof -F Lnc \
