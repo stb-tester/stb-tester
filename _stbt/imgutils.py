@@ -220,15 +220,27 @@ def find_user_file(filename):
     #   we're outside of the _stbt directory.
 
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
-    for caller in _iter_frames(depth=2):
-        caller_dir = os.path.abspath(
-            os.path.dirname(inspect.getframeinfo(caller).filename))
-        if caller_dir.startswith(_stbt_dir):
-            continue
-        caller_path = os.path.join(caller_dir, filename)
-        if os.path.isfile(caller_path):
-            ddebug("Resolved relative path %r to %r" % (filename, caller_path))
-            return caller_path
+    caller = inspect.currentframe()
+    try:
+        # Skip this frame and the parent:
+        caller = caller.f_back
+        caller = caller.f_back
+        while caller:
+            caller_dir = os.path.abspath(
+                os.path.dirname(inspect.getframeinfo(caller).filename))
+            if not caller_dir.startswith(_stbt_dir):
+                caller_path = os.path.join(caller_dir, filename)
+                if os.path.isfile(caller_path):
+                    ddebug("Resolved relative path %r to %r" % (
+                        filename, caller_path))
+                    return caller_path
+            caller = caller.f_back
+    finally:
+        # Avoid circular references between stack frame objects and themselves
+        # for more deterministic GC.  See
+        # https://docs.python.org/3.7/library/inspect.html#the-interpreter-stack
+        # for more information.
+        del caller
 
     # Fall back to image from cwd, to allow loading an image saved previously
     # during the same test-run.
@@ -238,15 +250,6 @@ def find_user_file(filename):
         return abspath
 
     return None
-
-
-def _iter_frames(depth=1):
-    frame = inspect.currentframe()
-    for _ in range(depth + 1):
-        frame = frame.f_back
-    while frame:
-        yield frame
-        frame = frame.f_back
 
 
 def limit_time(frames, duration_secs):
