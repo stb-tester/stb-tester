@@ -382,6 +382,9 @@ def _match_all(image, frame, match_parameters, region):
     if input_region is None:
         raise ValueError("frame with dimensions %r doesn't contain %r"
                          % (frame.shape, region))
+    if input_region.height < t.shape[0] or input_region.width < t.shape[1]:
+        raise ValueError("%r must be larger than reference image %r"
+                         % (input_region, t.shape))
 
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
