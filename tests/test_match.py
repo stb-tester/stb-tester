@@ -56,6 +56,44 @@ def test_that_match_rejects_greyscale_array(match_method):
                    match_parameters=mp(match_method=match_method))
 
 
+def test_match_error_message_for_too_small_frame_and_region():
+    stbt.match("videotestsrc-redblue.png", frame=black(width=92, height=160))
+    stbt.match("videotestsrc-redblue.png", frame=black(),
+               region=stbt.Region(x=1188, y=560, width=92, height=160))
+
+    with pytest.raises(ValueError) as excinfo:
+        stbt.match("videotestsrc-redblue.png",
+                   frame=black(width=91, height=160))
+    assert (
+        "Frame (160, 91, 3) must be larger than reference image (160, 92, 3)"
+        in str(excinfo.value))
+
+    with pytest.raises(ValueError) as excinfo:
+        stbt.match("videotestsrc-redblue.png",
+                   frame=black(width=92, height=159))
+    assert (
+        "Frame (159, 92, 3) must be larger than reference image (160, 92, 3)"
+        in str(excinfo.value))
+
+    with pytest.raises(ValueError) as excinfo:
+        # Region seems large enough but actually it extends beyond the frame
+        stbt.match("videotestsrc-redblue.png", frame=black(),
+                   region=stbt.Region(x=1189, y=560, width=92, height=160))
+    assert (
+        "Region(x=1189, y=560, right=1280, bottom=720) must be larger than "
+        "reference image (160, 92, 3)"
+        in str(excinfo.value))
+
+    with pytest.raises(ValueError) as excinfo:
+        # Region seems large enough but actually it extends beyond the frame
+        stbt.match("videotestsrc-redblue.png", frame=black(),
+                   region=stbt.Region(x=1188, y=561, width=92, height=160))
+    assert (
+        "Region(x=1188, y=561, right=1280, bottom=720) must be larger than "
+        "reference image (160, 92, 3)"
+        in str(excinfo.value))
+
+
 @pytest.mark.parametrize("match_method", [
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
