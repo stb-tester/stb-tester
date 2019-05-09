@@ -146,7 +146,7 @@ def memoize_iterator(additional_fields=None):
 
             for i in itertools.count():
                 with _cache.begin() as txn:
-                    out = txn.get(key + str(i))
+                    out = txn.get(key + str(i).encode())
                 if out is None:
                     break
                 out_, stop_ = json.loads(out)
@@ -160,10 +160,10 @@ def memoize_iterator(additional_fields=None):
                 try:
                     output = next(it)
                     if i >= skip:
-                        _cache_put(key + str(i), [output, None])
+                        _cache_put(key + str(i).encode(), [output, None])
                         yield output
                 except StopIteration:
-                    _cache_put(key + str(i), [None, "StopIteration"])
+                    _cache_put(key + str(i).encode(), [None, "StopIteration"])
                     raise
 
         return inner
@@ -217,6 +217,7 @@ class _ArgsEncoder(json.JSONEncoder):
 
 
 def _cache_hash(value):
+    # type: (...) -> bytes
     from _stbt.xxhash import Xxhash64
     h = Xxhash64()
 
