@@ -98,17 +98,6 @@ INSTALL_PYLIB_FILES = \
 
 INSTALL_CORE_FILES = \
     stbt_auto_selftest.py \
-    stbt-batch \
-    stbt-batch.d/instaweb \
-    stbt-batch.d/post-run.sh \
-    stbt-batch.d/print_backtrace.gdb \
-    stbt-batch.d/report \
-    stbt-batch.d/report.py \
-    stbt-batch.d/run.py \
-    stbt-batch.d/static/edit-testrun.js \
-    stbt-batch.d/templates/directory-index.html \
-    stbt-batch.d/templates/index.html \
-    stbt-batch.d/templates/testrun.html \
     stbt_config.py \
     stbt_control.py \
     stbt_lint.py \
@@ -229,9 +218,6 @@ check-pytest: all
 	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/auto_selftest_bare.py \
-		      -e tests/test.py \
-	              -e tests/test2.py \
-	              -e tests/test_functions.py \
 	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
 	              -e tests/auto-selftest-example-test-pack/tests/example_with_no_tests.py \
 	              -e tests/auto-selftest-example-test-pack/tests/empty_dir/subdir/example_with_no_tests.py \

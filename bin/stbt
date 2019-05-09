@@ -8,7 +8,6 @@
 #/
 #/ Available commands are:
 #/     run            Run a testcase
-#/     batch          Run testcases repeatedly, create html report
 #/     auto-selftest  Test your test-cases against saved screenshots
 #/     config         Print configuration value
 #/     control        Send remote control signals
@@ -71,7 +70,7 @@ case "$cmd" in
         echo "stb-tester $STBT_VERSION"; exit 0;;
     auto-selftest|config|control|lint|match|power|record|run)
         exec_stbt stbt_${cmd/-/_}.py "$@";;
-    batch|screenshot|tv)
+    screenshot|tv)
         exec_stbt stbt-"$cmd" "$@";;
     templatematch)  # for backwards compatibility
         exec_stbt stbt_match.py "$@";;
