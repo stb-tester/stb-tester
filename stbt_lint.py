@@ -40,6 +40,8 @@ import subprocess
 import sys
 import threading
 
+from _stbt.utils import to_unicode
+
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -54,18 +56,24 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
+    if sys.version_info.major == 2:
+        executable_name = "pylint"
+    else:
+        executable_name = "pylint3"
+
     try:
         with open("/dev/null", "w") as devnull:
-            subprocess.check_call(["pylint", "--help"],
+            subprocess.check_call([executable_name, "--help"],
                                   stdout=devnull, stderr=devnull)
     except OSError as e:
         if e.errno == 2:
             sys.stderr.write(
-                "stbt lint: error: Couldn't find 'pylint' executable\n")
+                "stbt lint: error: Couldn't find '%s' executable\n"
+                % executable_name)
             return 1
 
     pylint = subprocess.Popen(
-        ["pylint", "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
+        [executable_name, "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
         stderr=subprocess.PIPE)
 
     t = threading.Thread(target=filter_warnings,
@@ -82,6 +90,7 @@ def filter_warnings(input_, output):
         line = input_.readline()
         if not line:
             break
+        line = to_unicode(line)
         if any(re.search(pattern, line) for pattern in WARNINGS):
             continue
         output.write(line)
