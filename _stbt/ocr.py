@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import string_types
 
 import errno
 import glob
@@ -244,10 +245,10 @@ def ocr(frame=None, region=Region.ALL,
             "instead. To OCR an entire video frame, use "
             "`region=Region.ALL`.")
 
-    if isinstance(tesseract_user_words, str):
+    if isinstance(tesseract_user_words, string_types):
         tesseract_user_words = [tesseract_user_words]
 
-    if isinstance(tesseract_user_patterns, str):
+    if isinstance(tesseract_user_patterns, string_types):
         tesseract_user_patterns = [tesseract_user_patterns]
 
     imglog = ImageLogger("ocr")

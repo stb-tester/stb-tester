@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from past.builtins import basestring
+from future.utils import string_types
 import re
 import sys
 import threading
@@ -143,9 +143,9 @@ class HdmiCecControl(object):
 
         if source is None:
             source = 1
-        if isinstance(source, basestring):
+        if isinstance(source, string_types):
             source = int(source, 16)
-        if isinstance(destination, basestring):
+        if isinstance(destination, string_types):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()

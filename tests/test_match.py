@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import string_types
 import random
 import re
 import timeit
@@ -397,7 +398,7 @@ def test_that_match_fast_path_is_equivalent():
         ("button-transparent.png", "buttons.png"),
     ]
     for reference, frame in images:
-        if isinstance(frame, str):
+        if isinstance(frame, string_types):
             frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
         reference = _load_image(reference)
         orig_m = stbt.match(reference, frame=frame)

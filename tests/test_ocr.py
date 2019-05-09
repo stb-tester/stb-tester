@@ -157,7 +157,8 @@ def test_tesseract_user_patterns(patterns):
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],
-    '192.168.10.1',
+    b'192.168.10.1',
+    u'192.168.10.1',
 ])
 def test_user_dictionary_with_non_english_language(words):
     assert u'192.168.10.1' == stbt.ocr(
