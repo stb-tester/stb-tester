@@ -238,7 +238,7 @@ install-for-test:
 	      mandir man1dir pythondir sysconfdir && \
 	make install prefix=$$PWD/tests/test-install
 
-parallel := $(shell \
+parallel ?= $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
