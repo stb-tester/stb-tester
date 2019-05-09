@@ -85,3 +85,10 @@ def to_bytes(text):
         return text
     else:
         raise TypeError("Unexpected type %s" % type(text))
+
+
+def to_unicode(text):
+    if isinstance(text, bytes):
+        return text.decode("utf-8")
+    else:
+        return str(text)

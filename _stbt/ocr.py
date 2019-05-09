@@ -23,7 +23,7 @@ from .config import get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import named_temporary_directory
+from .utils import named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -321,7 +321,7 @@ def match_text(text, frame=None, region=Region.ALL,
         result = TextMatchResult(rts, False, None, frame, text)
     else:
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-        p = _hocr_find_phrase(hocr, _to_unicode(text).split(), case_sensitive)
+        p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
             box = None
@@ -513,7 +513,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'_config[\"user_words_suffix\"]' at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(_to_unicode(x) for x in user_words))
+                f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
@@ -522,7 +522,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'_config[\"user_patterns_suffix\"]' at the same time")
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(_to_unicode(x) for x in user_patterns))
+                f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
         if imglog.enabled:
@@ -534,7 +534,7 @@ def _tesseract_subprocess(
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
-                        cfg.write("%s %s\n" % (k, _to_unicode(v)))
+                        cfg.write("%s %s\n" % (k, to_unicode(v)))
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', frame)
@@ -597,13 +597,6 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
             if all(w[0] == p for w, p in zip(sublist, phrase)):
                 return sublist
     return None
-
-
-def _to_unicode(text):
-    if isinstance(text, bytes):
-        return text.decode("utf-8")
-    else:
-        return str(text)
 
 
 def _hocr_elem_region(elem):

@@ -38,6 +38,7 @@ from _stbt.gst_utils import (array_from_sample, gst_iterate,
 from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
+from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # pylint:disable=wrong-import-order
@@ -810,9 +811,11 @@ class SinkPipeline(object):
             if isinstance(obj, string_types):
                 start_time = self._time.time()
                 text = (
-                    datetime.datetime.fromtimestamp(start_time).strftime(
-                        "%H:%M:%S.%f")[:-4] +
-                    ' ' + obj)
+                    to_unicode(
+                        datetime.datetime.fromtimestamp(start_time).strftime(
+                            "%H:%M:%S.%f")[:-4]) +
+                    ' ' +
+                    to_unicode(obj))
                 self.text_annotations.append(
                     _TextAnnotation(start_time, text, duration_secs))
             elif hasattr(obj, "region") and hasattr(obj, "time"):
