@@ -11,8 +11,13 @@ from past.builtins import cmp
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import functools
 import threading
-from future.moves.itertools import zip_longest
 from future.utils import with_metaclass
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    # Python 2:
+    from itertools import izip_longest as zip_longest
 
 
 def _memoize_property_fn(fn):
