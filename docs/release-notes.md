@@ -7,11 +7,6 @@ Occasionally we might break some rare edge cases, but we don't expect them to
 affect most users, and we mention such changes under "Breaking changes" in the
 release notes.
 
-Similarly, the command-line interfaces of *stbt run*, *stbt auto-selftest*,
-*stbt batch*, *stbt config*, *stbt control*, *stbt match*, *stbt power*, *stbt
-record*, *stbt screenshot*, *stbt tv*, and *stbt virtual-stb* are stable. Other
-command-line utilities are considered experimental.
-
 For installation instructions see [Getting Started] if you're using the
 open-source project, or update [test_pack.stbt_version] if you're using the
 [Stb-tester hardware].

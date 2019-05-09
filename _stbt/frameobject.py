@@ -136,9 +136,7 @@ class FrameObject(object):
 
     * The `PageObject <fowler_>`_ pattern by Martin Fowler.
     * Tutorial: `Using FrameObjects to extract information from the screen
-      <tutorial_>`_. Includes a worked example, and how to run automatic
-      regression tests for your FrameObjects with the tool ``stbt
-      auto-selftest``.
+      <tutorial_>`_.
     * Stb-tester's `Object Repository`_ GUI for creating, debugging, and
       viewing FrameObjects.
 

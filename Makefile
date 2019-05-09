@@ -97,18 +97,6 @@ INSTALL_PYLIB_FILES = \
     stbt/android.py
 
 INSTALL_CORE_FILES = \
-    stbt_auto_selftest.py \
-    stbt-batch \
-    stbt-batch.d/instaweb \
-    stbt-batch.d/post-run.sh \
-    stbt-batch.d/print_backtrace.gdb \
-    stbt-batch.d/report \
-    stbt-batch.d/report.py \
-    stbt-batch.d/run.py \
-    stbt-batch.d/static/edit-testrun.js \
-    stbt-batch.d/templates/directory-index.html \
-    stbt-batch.d/templates/index.html \
-    stbt-batch.d/templates/testrun.html \
     stbt_config.py \
     stbt_control.py \
     stbt_lint.py \
@@ -228,14 +216,7 @@ check-pytest: all
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
-	      grep -v -e tests/auto_selftest_bare.py \
-		      -e tests/test.py \
-	              -e tests/test2.py \
-	              -e tests/test_functions.py \
-	              -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
-	              -e tests/auto-selftest-example-test-pack/tests/example_with_no_tests.py \
-	              -e tests/auto-selftest-example-test-pack/tests/empty_dir/subdir/example_with_no_tests.py \
-	              -e tests/vstb-example-html5/ \
+	      grep -v -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/)
 check-integrationtests: install-for-test
@@ -247,10 +228,7 @@ check-integrationtests: install-for-test
 	               -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
-	printf "%s\n" $(PYTHON_FILES) \
-	| grep -v -e tests/auto-selftest-example-test-pack/tests/syntax_error.py \
-	          -e tests/auto-selftest-example-test-pack/selftest \
-	| PYTHONPATH=$$PWD xargs extra/pylint.sh
+	PYTHONPATH=$$PWD extra/pylint.sh $(PYTHON_FILES)
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb
