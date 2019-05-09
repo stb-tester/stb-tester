@@ -15,7 +15,6 @@ _stbt() {
     if [ $COMP_CWORD = 1 ]; then
         COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space --help --version \
-                    auto-selftest \
                     config \
                     control \
                     lint \
@@ -28,7 +27,6 @@ _stbt() {
             -- "$cur"))
     else
         case "${COMP_WORDS[1]}" in
-            auto-selftest) _stbt_auto_selftest;;
             config)   _stbt_config;;
             control)  _stbt_control;;
             lint)     _stbt_lint;;
@@ -75,23 +73,6 @@ _stbt_record() {
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder --output-file)" \
             -- "$cur"));;
-    esac
-}
-
-_stbt_auto_selftest() {
-    local cur="${COMP_WORDS[COMP_CWORD]}"
-    local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local subcommand="${COMP_WORDS[2]}"
-    case "$prev" in
-        auto-selftest)
-            COMPREPLY=($(compgen \
-                -W "$(_stbt_trailing_space --help generate validate)" \
-                -- "$cur"));
-            return;;
-    esac
-    case "$subcommand" in
-        --help|validate) COMPREPLY=();;
-        generate) COMPREPLY=($(_stbt_filenames "$cur"));;
     esac
 }
 
