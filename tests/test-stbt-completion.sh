@@ -146,10 +146,12 @@ EOF
 }
 
 test_completion_filenames() {
-    cd "$srcdir" && . stbt-completion
-    diff -u - <(_stbt_filenames "stbt-ca") <<-EOF ||
-	stbt-camera 
-	stbt-camera.d/
+    . "$srcdir/stbt-completion"
+    mkdir a-dir
+    touch a-file a-dir/one a-dir/two
+    diff -u - <(_stbt_filenames "a-") <<-EOF ||
+	a-file 
+	a-dir/
 	EOF
     fail "unexpected completions for files + directories"
 }

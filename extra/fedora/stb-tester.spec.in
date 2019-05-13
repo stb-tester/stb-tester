@@ -45,25 +45,6 @@ and checking that it has done the right thing by analysing what is on screen.
 Test scripts are written in Python and can be generated with the `stbt record`
 command.
 
-%package camera
-Summary: stb-tester camera support
-
-BuildRequires: gstreamer1-devel
-BuildRequires: gstreamer1-plugins-base-devel
-BuildRequires: opencv-devel
-BuildRequires: orc-compiler
-BuildRequires: orc-devel
-
-Requires: gstreamer1-libav
-Requires: lighttpd
-Requires: python-qrcode
-Requires: stb-tester
-Requires: zbar-pygtk
-
-%description camera
-Support for using a camera pointed at a TV as input for stb-tester.  This is
-useful for testing apps running on Smart TVs.
-
 %package virtual-stb
 Summary: stb-tester virtual-stb support
 
@@ -89,26 +70,20 @@ rather than the LGPL that the rest of stb-tester uses.
 %setup -n stb-tester-@VERSION@
 
 %build
-make prefix=/usr sysconfdir=/etc enable_stbt_camera=yes
+make prefix=/usr sysconfdir=/etc
 
 %install
-make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir=%{_libdir}/gstreamer-1.0 DESTDIR=${RPM_BUILD_ROOT} enable_stbt_camera=yes
+make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,-)
 /usr/bin/stbt
 /usr/bin/irnetbox-proxy
 %{_libexecdir}/stbt
-%exclude %{_libexecdir}/stbt/stbt-camera*
 %exclude %{_libexecdir}/stbt/stbt_virtual_stb.py*
 /usr/share/man/man1
 /etc/bash_completion.d/stbt
 %config(noreplace) /etc/stbt
-
-%files camera
-%{_libexecdir}/stbt/stbt-camera
-%{_libexecdir}/stbt/stbt-camera.d
-%{_libdir}/gstreamer-1.0/stbt-gst-plugins.so
 
 %files virtual-stb
 %{_libexecdir}/stbt/stbt_virtual_stb.py
