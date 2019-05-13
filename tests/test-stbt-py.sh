@@ -413,7 +413,7 @@ test_that_get_frame_time_is_wall_time() {
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
 	import stbt
-	for frame in stbt.frames(timeout_secs=10):
+	for frame in stbt.frames(timeout_secs=20):
 	    stbt.match("${testdir}/videotestsrc-ball.png", frame)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
@@ -442,7 +442,7 @@ test_template_annotation_with_ndarray_template() {
 	template = np.ones(shape=(100, 100, 3), dtype=np.uint8)
 	template *= np.array([0, 255, 0], dtype=np.uint8)  # green
 	stbt.save_frame(template, 'template.png')
-	stbt.wait_for_match(template)
+	stbt.wait_for_match(template, timeout_secs=20)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
