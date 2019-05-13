@@ -15,7 +15,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import enum
 import itertools
-import os
 from collections import namedtuple
 
 import cv2
@@ -410,8 +409,7 @@ def _match_all(image, frame, match_parameters, region):
                 (template.relative_filename or template.image),
                 first_pass_matched)
             imglog.append(matches=result)
-            draw_on(frame, result, label="match(%r)" %
-                    os.path.basename(template.friendly_name))
+            draw_on(frame, result, label="match(%s)" % template.short_repr())
             yield result
 
     finally:

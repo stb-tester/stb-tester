@@ -101,6 +101,13 @@ class _ImageFromUser(namedtuple(
             return None
         return self.relative_filename or '<Custom Image>'
 
+    def short_repr(self):
+        if self.image is None:
+            return "None"
+        if self.relative_filename:
+            return repr(os.path.basename(self.relative_filename))
+        return "<Custom Image>"
+
 
 def _load_image(image, flags=None):
     if isinstance(image, _ImageFromUser):

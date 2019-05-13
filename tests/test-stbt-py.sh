@@ -461,6 +461,7 @@ test_template_annotation_with_ndarray_template() {
 	EOF
     stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        --save-video video.webm \
         verify.py
 }
 
