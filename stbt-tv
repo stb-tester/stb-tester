@@ -56,7 +56,6 @@ done
 get_config () { "$script_dir/stbt_config.py" "$1" ; }
 
 source_pipeline="${*:-$(get_config global.source_pipeline)}"
-transformation_pipeline="$(get_config global.transformation_pipeline)"
 
 : ${sink:=$(
         case "$(uname)" in
@@ -76,6 +75,5 @@ eval gst-launch-1.0 ${v:-} \
     ! queue name=_stbt_raw_frames_queue max-size-buffers=2 leaky=upstream \
     ! videoconvert \
     ! video/x-raw,format=BGR \
-    ! $transformation_pipeline \
     ! videoconvert \
     ! $sink sync=false

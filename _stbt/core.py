@@ -88,8 +88,7 @@ def load_image(filename, flags=None):
     return image
 
 
-def new_device_under_test_from_config(
-        parsed_args=None, transformation_pipeline=None):
+def new_device_under_test_from_config(parsed_args=None):
     """
     `parsed_args` if present should come from calling argparser().parse_args().
     """
@@ -110,9 +109,6 @@ def new_device_under_test_from_config(
         args.save_video = False
     if args.restart_source is None:
         args.restart_source = get_config('global', 'restart_source', type_=bool)
-    if transformation_pipeline is None:
-        transformation_pipeline = get_config('global',
-                                             'transformation_pipeline')
     source_teardown_eos = get_config('global', 'source_teardown_eos',
                                      type_=bool)
 
@@ -130,7 +126,7 @@ def new_device_under_test_from_config(
 
     display[0] = Display(
         args.source_pipeline, sink_pipeline, args.restart_source,
-        transformation_pipeline, source_teardown_eos)
+        source_teardown_eos)
     return DeviceUnderTest(
         display=display[0], control=uri_to_control(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop)
@@ -845,8 +841,7 @@ class NoSinkPipeline(object):
 
 class Display(object):
     def __init__(self, user_source_pipeline, sink_pipeline,
-                 restart_source=False, transformation_pipeline='identity',
-                 source_teardown_eos=False):
+                 restart_source=False, source_teardown_eos=False):
 
         import time
 
@@ -881,7 +876,6 @@ class Display(object):
             'queue name=_stbt_raw_frames_queue max-size-buffers=2',
             'videoconvert',
             'video/x-raw,format=BGR',
-            transformation_pipeline,
             appsink])
         self.create_source_pipeline()
 
