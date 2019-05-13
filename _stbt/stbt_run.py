@@ -138,7 +138,7 @@ def sane_unicode_and_exception_handling(script):
         error_message = exception_to_bytes(e)
         if not error_message and isinstance(e, AssertionError):
             error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-        sys.stdout.write("FAIL: %s: %s: %s\n" % (
+        sys.stdout.write(b"FAIL: %s: %s: %s\n" % (
             script, type(e).__name__, error_message))
 
         # This is a hack to allow printing exceptions that have unicode messages
