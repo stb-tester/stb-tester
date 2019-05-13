@@ -118,7 +118,6 @@ install-core: all
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
 	chmod 0755 $(DESTDIR)$(bindir)/stbt
-	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
@@ -183,7 +182,6 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
-	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
 	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -rf $(DESTDIR)$(pythondir)/stbt
