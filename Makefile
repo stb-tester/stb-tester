@@ -3,8 +3,6 @@ SHELL := /bin/bash
 # The default target of this Makefile is:
 all:
 
-PKG_DEPS=gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 opencv orc-0.4
-
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
@@ -15,11 +13,6 @@ man1dir?=$(mandir)/man1
 pythondir?=$(prefix)/lib/python2.7/site-packages
 sysconfdir?=$(prefix)/etc
 
-# Support installing GStreamer elements under $HOME
-gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/gstreamer-1.0/plugins
-gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
-gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
-
 # Enable building/installing man page
 enable_docs:=$(shell which rst2man >/dev/null 2>&1 && echo yes || echo no)
 ifeq ($(enable_docs), no)
@@ -29,14 +22,13 @@ endif
 # Enable building/installing stbt virtual-stb
 enable_virtual_stb?=no
 
-# Enable building/installing stbt camera (smart TV support).
-enable_stbt_camera?=no
-
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
+
+CFLAGS?=-O2
 
 
 # Generate version from 'git describe' when in git repository, and from
@@ -206,7 +198,6 @@ clean:
 PYTHON_FILES := \
     $(shell (git ls-files '*.py' && \
              git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
-             | grep -v '^stbt-camera.d/' \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
@@ -224,8 +215,7 @@ check-integrationtests: install-for-test
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
 	    $$(ls tests/test-*.sh | \
-	       grep -v -e tests/test-camera.sh \
-	               -e tests/test-virtual-stb.sh) |\
+	       grep -v -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
 	PYTHONPATH=$$PWD extra/pylint.sh $(PYTHON_FILES)
@@ -241,24 +231,11 @@ else
 $(info virtual-stb support disabled)
 endif
 
-ifeq ($(enable_stbt_camera), yes)
-check-pylint: check-pylint-camera
-check-pylint-camera:
-	PYTHONPATH=$$PWD extra/pylint.sh stbt-camera.d/*.py
-check: check-cameratests
-check-cameratests: install-for-test
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" \
-	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
-	tests/run-tests.sh -i tests/test-camera.sh
-endif
-
 install-for-test:
 	rm -rf tests/test-install && \
 	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir \
-	      gstpluginsdir mandir man1dir pythondir sysconfdir && \
-	make install prefix=$$PWD/tests/test-install \
-	     gstpluginsdir=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins
+	      mandir man1dir pythondir sysconfdir && \
+	make install prefix=$$PWD/tests/test-install
 
 parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
@@ -426,75 +403,8 @@ rpm: $(src_rpm)
 	rpmbuild --define "_topdir $(rpm_topdir)" --rebuild $<
 	mv $(rpm_topdir)/RPMS/*/stb-tester-* .
 
-### stbt camera - Optional Smart TV support ##################################
-
-ifeq ($(enable_stbt_camera), yes)
-all: stbt-camera.d/gst/stbt-gst-plugins.so
-install: install-stbt-camera
-else
-$(info Smart TV support disabled)
-endif
-
-stbt_camera_files=\
-	_stbt/camera/__init__.py \
-	_stbt/camera/chessboard-720p-40px-border-white.png \
-	_stbt/camera/chessboard.py \
-	_stbt/tv_driver.py \
-	stbt-camera \
-	stbt-camera.d/colours.svg \
-	stbt-camera.d/glyphs.svg.jinja2 \
-	stbt-camera.d/stbt_camera_calibrate.py \
-	stbt-camera.d/stbt_camera_validate.py
-
-installed_camera_files=\
-	$(stbt_camera_files:%=$(DESTDIR)$(libexecdir)/stbt/%) \
-	$(DESTDIR)$(gstpluginsdir)/stbt-gst-plugins.so
-
-CFLAGS?=-O2
-
-%_orc.h: %.orc
-	orcc --header --internal -o "$@" "$<"
-%_orc.c: %.orc
-	orcc --implementation --internal -o "$@" "$<"
-
-stbt-camera.d/gst/stbt-gst-plugins.so: stbt-camera.d/gst/stbtgeometriccorrection.c \
-                                       stbt-camera.d/gst/stbtgeometriccorrection.h \
-                                       stbt-camera.d/gst/plugin.c \
-                                       stbt-camera.d/gst/stbtcontraststretch.c \
-                                       stbt-camera.d/gst/stbtcontraststretch.h \
-                                       stbt-camera.d/gst/stbtcontraststretch_orc.c \
-                                       stbt-camera.d/gst/stbtcontraststretch_orc.h \
-                                       VERSION
-	@if ! pkg-config --exists $(PKG_DEPS); then \
-		printf "Please install packages $(PKG_DEPS)\n"; \
-		if which apt-file >/dev/null 2>&1; then \
-			PACKAGES=$$(printf "/%s.pc\n" $(PKG_DEPS) | apt-file search -fl) ; \
-			echo Try apt install $$PACKAGES; \
-		fi; \
-		exit 1; \
-	fi
-	gcc -shared -o $@ $(filter %.c %.o,$^) -fPIC  -Wall -Werror $(CFLAGS) \
-		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
-		-DVERSION=\"$(VERSION)\"
-
-install-stbt-camera: $(stbt_camera_files) stbt-camera.d/gst/stbt-gst-plugins.so
-	$(INSTALL) -m 0755 -d $(sort $(dir $(installed_camera_files)))
-	@for file in $(stbt_camera_files); \
-	do \
-		if [ -x "$$file" ]; then \
-			perms=0755; \
-		else \
-			perms=0644; \
-		fi; \
-		echo INSTALL "$$file"; \
-		$(INSTALL) -m $$perms "$$file" "$(DESTDIR)$(libexecdir)/stbt/$$file"; \
-	done
-	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
-		$(DESTDIR)$(gstpluginsdir)
-
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
 .PHONY: ppa-publish rpm srpm
-.PHONY: check-cameratests check-pylint-camera install-stbt-camera
 .PHONY: FORCE TAGS

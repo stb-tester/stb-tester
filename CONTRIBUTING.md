@@ -28,9 +28,6 @@ Here are a few guidelines to keep in mind when submitting a pull request:
 
 * Ensure that `make check` passes.
 
-    * If you're submitting a change to `stbt camera`, then use
-      `make check enable_stbt_camera=yes`.
-
     * We use the [Travis CI] service to automatically run `make check` on all
       pull requests.
 
