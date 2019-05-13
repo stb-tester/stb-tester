@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import raise_, string_types
+from future.utils import native, raise_, string_types
 
 import argparse
 import datetime
@@ -795,7 +795,7 @@ class SinkPipeline(object):
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
             age = float(now - x.time) / 3
-            color = (int(255 * max([1 - age, 0.5])),) * 3
+            color = (native(int(255 * max([1 - age, 0.5]))).__int__(),) * 3
             _draw_text(img, x.text, origin, color)
 
         # Regions:
