@@ -195,8 +195,7 @@ clean:
 	git clean -Xfd || true
 
 PYTHON_FILES := \
-    $(shell (git ls-files '*.py' && \
-             git grep --name-only -E '^\#!/usr/bin/python') \
+    $(shell git ls-files '*.py' \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
