@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from past.builtins import execfile
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
 import sys
@@ -109,7 +108,13 @@ def load_test_function(script, args):
 
         def fn():
             sys.path.insert(0, os.path.dirname(filename))
-            execfile(filename, test_globals)
+            code = compile(open(filename, "rb").read(),
+                           filename,
+                           mode="exec",
+                           # Don't apply the __future__ imports in force in
+                           # this file.
+                           dont_inherit=1)
+            exec(code, test_globals)  # pylint:disable=exec-used
 
         return _TestFunction(script, script, "", 1, fn)
 

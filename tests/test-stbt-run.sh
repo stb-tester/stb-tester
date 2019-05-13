@@ -225,7 +225,6 @@ check_unicode_error() {
 		Traceback (most recent call last):
 		    yield
 		    test_function.call()
-		    execfile(filename, test_globals)
 		    assert False, $u"ü"
 		AssertionError: ü
 		EOF
