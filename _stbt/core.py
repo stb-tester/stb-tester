@@ -921,7 +921,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', 'downstream')
+                .set_property('leaky', b'downstream')
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 

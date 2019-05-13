@@ -14,9 +14,10 @@ import time
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
-from . import irnetbox, utils
+from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
+from .utils import named_temporary_directory, to_bytes
 
 __all__ = ['uri_to_control', 'uri_to_control_recorder']
 
@@ -172,6 +173,7 @@ class VideoTestSrcControl(RemoteControl):
         return videosrc
 
     def press(self, key):
+        key = to_bytes(key)
         if key not in [
                 0, "smpte",
                 1, "snow",
@@ -770,7 +772,7 @@ def _fake_lircd():
     # This needs to accept 2 connections (from LircControl and
     # lirc_control_listen) and, on receiving input from the LircControl
     # connection, write to the lirc_control_listen connection.
-    with utils.named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
+    with named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
         address = tmp + '/lircd'
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
@@ -876,8 +878,7 @@ def test_x11_control():
 
     from .x11 import x_server
 
-    with utils.named_temporary_directory() as tmp, \
-            x_server(320, 240) as display:
+    with named_temporary_directory() as tmp, x_server(320, 240) as display:
         r = uri_to_control('x11:%s' % display)
 
         subprocess.Popen(
