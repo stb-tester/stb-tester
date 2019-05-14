@@ -30,6 +30,7 @@ jobs:
     steps:
       - checkout
       - pylint
+      - pytest
 
 commands:
   pylint:
