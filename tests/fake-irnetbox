@@ -86,7 +86,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
             time.sleep(0.1)
         return data
 
-    def send(self, message_type, data=""):
+    def send(self, message_type, data=b""):
         m = struct.pack(
             b">HB%ds" % len(data),
             len(data),
