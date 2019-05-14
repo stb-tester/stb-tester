@@ -102,6 +102,7 @@ WARNINGS = [
     br"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
     br"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
     br"return isinstance\(object, \(type, types.ClassType\)\)",
+    br"return isinstance\(object, type\)",
     br"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
     br"astroid.* Use gi.require_version",
     br"^  __import__\(m\)$",

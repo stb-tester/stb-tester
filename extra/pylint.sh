@@ -29,6 +29,7 @@ printf "%s" "$out" |
         -e "assertion .G_TYPE_IS_BOXED (boxed_type). failed" \
         -e "assertion .G_IS_PARAM_SPEC (pspec). failed" \
         -e "return isinstance(object, (type, types.ClassType))" \
+        -e "return isinstance(object, type)" \
         -e "gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type" \
         -e "astroid.* Use gi.require_version" \
         -e "^  __import__(m)$"
