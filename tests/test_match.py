@@ -183,6 +183,22 @@ def test_completely_transparent_reference_image():
 
 
 @requires_opencv_3
+def test_transparent_reference_image_with_hard_edge():
+    # This is a regression test for a bug in the pyramid optimisation when
+    # the reference image has a very small number of pixels, or the only non-
+    # transparent pixels are near the edges of reference image:
+    # At the smaller pyramid levels, the pixels near the edge of the reference
+    # image won't match exactly because the corresponding pixels in the
+    # down-scaled frame have been blurred. We also blur the reference image
+    # before down-scaling, but since it doesn't know what's outside its edges,
+    # it won't have the  blurring near the edge.
+    frame = stbt.load_image("images/regression/roku-tile-frame.png")
+    m = stbt.match("images/regression/roku-tile-selection.png", frame=frame)
+    assert m
+    assert stbt.Region(x=325, y=145, right=545, bottom=325).contains(m.region)
+
+
+@requires_opencv_3
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
     # on buttons
@@ -285,9 +301,9 @@ def test_that_build_pyramid_relaxes_mask():
     from _stbt.match import _build_pyramid
 
     mask = numpy.ones((20, 20, 3), dtype=numpy.uint8) * 255
-    mask[3:9, 3:9] = 0  # first 0 is an even row/col, last 0 is an odd row/col
+    mask[5:9, 5:9] = 0  # first 0 is an even row/col, last 0 is an odd row/col
     n = mask.size - numpy.count_nonzero(mask)
-    assert n == 6 * 6 * 3
+    assert n == 4 * 4 * 3
     cv2.imwrite("/tmp/dave1.png", mask)
 
     mask_pyramid = _build_pyramid(mask, 2, is_mask=True)
@@ -295,22 +311,18 @@ def test_that_build_pyramid_relaxes_mask():
 
     downsampled = mask_pyramid[1]
     cv2.imwrite("/tmp/dave2.png", downsampled)
-    assert downsampled.shape == (10, 10, 3)
+    assert downsampled.shape == (8, 8, 3)
     print downsampled[:, :, 0]  # pylint:disable=unsubscriptable-object
-    n = downsampled.size - numpy.count_nonzero(downsampled)
-    assert 3 * 3 * 3 <= n <= 6 * 6 * 3
     expected = [
         # pylint:disable=bad-whitespace
-        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0,   0, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]
+        [255, 255, 255, 255, 255, 255, 255, 255],
+        [255,   0,   0,   0,   0, 255, 255, 255],
+        [255,   0,   0,   0,   0, 255, 255, 255],
+        [255,   0,   0,   0,   0, 255, 255, 255],
+        [255,   0,   0,   0,   0, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255],
+        [255, 255, 255, 255, 255, 255, 255, 255]]
     assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
 
 

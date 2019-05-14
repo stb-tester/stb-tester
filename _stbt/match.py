@@ -579,7 +579,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     else:
         mask = None
 
-    template_pyramid = _build_pyramid(template, levels)
+    template_pyramid = _build_pyramid(template, levels, is_template=True)
     mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
@@ -698,6 +698,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
     else:
         kwargs = {}  # For OpenCV < 3.0.0
     for roi in rois:
+        roi = roi.extend(x=-1, y=-1, right=1, bottom=1)
         r = roi.extend(right=template.shape[1] - 1,
                        bottom=template.shape[0] - 1)
         ddebug("Level %d: Searching in %s" % (level, roi))
@@ -748,7 +749,7 @@ def _find_best_match_position(matches_heatmap, scale, threshold, level):
     return (matched, best_match_position, certainty)
 
 
-def _build_pyramid(image, levels, is_mask=False):
+def _build_pyramid(image, levels, is_template=False, is_mask=False):
     """A "pyramid" is [an image, the same image at 1/2 the size, at 1/4, ...]
 
     As a performance optimisation, image processing algorithms work on a
@@ -763,12 +764,16 @@ def _build_pyramid(image, levels, is_mask=False):
     if image is None:
         return [None] * levels
     pyramid = [image]
+    previous = image
     for _ in range(levels - 1):
-        if any(x < 20 for x in pyramid[-1].shape[:2]):
+        if any(x < 20 for x in previous.shape[:2]):
             break
-        downsampled = cv2.pyrDown(pyramid[-1])
+        downsampled = cv2.pyrDown(previous, borderType=cv2.BORDER_REPLICATE)
         if is_mask:
             cv2.threshold(downsampled, 254, 255, cv2.THRESH_BINARY, downsampled)
+        previous = downsampled
+        if is_template or is_mask:
+            downsampled = downsampled[1:-1, 1:-1]
         pyramid.append(downsampled)
     return pyramid
 

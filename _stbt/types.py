@@ -135,7 +135,10 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
     def to_slice(self):
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
-        return (slice(self.y, self.bottom), slice(self.x, self.right))
+        return (slice(max(0, self.y),
+                      max(0, self.bottom)),
+                slice(max(0, self.x),
+                      max(0, self.right)))
 
     @staticmethod
     def from_extents(x, y, right, bottom):
