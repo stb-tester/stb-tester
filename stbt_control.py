@@ -12,6 +12,7 @@ import collections
 import contextlib
 import curses
 import curses.ascii
+import io
 import math
 import os
 import sys
@@ -249,7 +250,7 @@ def load_keymap(keymap_file):
 
 
 def test_load_keymap():
-    keymap = load_keymap(__import__("StringIO").StringIO(
+    keymap = load_keymap(io.StringIO(
         "Backspace  BACK  Go back to previous\n"  # Test display name
         "Enter  OK  //Move forward\n"))  # Test comments
     assert keymap["Backspace"] == ("BACK", "Go back to previous")
@@ -258,7 +259,7 @@ def test_load_keymap():
 
 def test_load_keymap_with_duplicated_key():
     try:
-        load_keymap(__import__("StringIO").StringIO("o OK\no OPEN\n"))
+        load_keymap(io.StringIO("o OK\no OPEN\n"))
         assert False, "load_keymap should have thrown ConfigurationError"
     except ConfigurationError:
         pass
