@@ -16,6 +16,8 @@ from contextlib import contextmanager
 import _stbt.core
 from _stbt.black import (
     is_screen_black)
+from _stbt.color import (
+    get_color, is_color)
 from _stbt.core import (
     as_precondition,
     load_image,
@@ -74,8 +76,10 @@ __all__ = [
     "Frame",
     "FrameObject",
     "frames",
+    "get_color",
     "get_config",
     "get_frame",
+    "is_color",
     "is_screen_black",
     "load_image",
     "match",
