@@ -199,6 +199,29 @@ def test_transparent_reference_image_with_hard_edge():
 
 
 @requires_opencv_3
+@pytest.mark.parametrize("image,expected", [
+    # pylint:disable=bad-whitespace,line-too-long
+    ("red-blue-columns",             stbt.Region(x=0, y=0, width=40, height=40)),
+    ("red-blue-columns-transparent", stbt.Region(x=0, y=0, width=40, height=40)),
+    ("blue-red-columns",             stbt.Region(x=1240, y=680, width=40, height=40)),
+    ("blue-red-columns-transparent", stbt.Region(x=1240, y=680, width=40, height=40)),
+    ("red-blue-rows",                stbt.Region(x=1240, y=0, width=40, height=40)),
+    ("red-blue-rows-transparent",    stbt.Region(x=1240, y=0, width=40, height=40)),
+    ("blue-red-rows",                stbt.Region(x=0, y=680, width=40, height=40)),
+    ("blue-red-rows-transparent",    stbt.Region(x=0, y=680, width=40, height=40)),
+    ("red-dots",             stbt.Region(x=280, y=302, width=21, height=21)),
+    ("red-dots-1px-border",  stbt.Region(x=279, y=301, width=23, height=23)),
+    ("blue-dots",            stbt.Region(x=307, y=303, width=21, height=21)),
+    ("blue-dots-1px-border", stbt.Region(x=306, y=302, width=23, height=23)),
+])
+def test_match_region(image, expected):
+    frame = stbt.load_image("images/region/frame.png")
+    m = stbt.match("images/region/%s.png" % image, frame=frame)
+    assert m
+    assert m.region == expected
+
+
+@requires_opencv_3
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
     # on buttons
