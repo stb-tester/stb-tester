@@ -91,7 +91,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
         debug("Using mask %s" % mask.friendly_name)
 
-    frame = next(frames)
+    frame = next(frames)  # pylint:disable=stop-iteration-return
 
     region = Region.intersect(_image_region(frame), region)
 

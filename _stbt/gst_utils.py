@@ -124,7 +124,7 @@ def gst_iterate(gst_iterator):
     available."""
     result = Gst.IteratorResult.OK
     while result == Gst.IteratorResult.OK:
-        result, value = next(gst_iterator)
+        result, value = next(gst_iterator)  # pylint:disable=stop-iteration-return
         if result == Gst.IteratorResult.OK:
             yield value
         elif result == Gst.IteratorResult.ERROR:
