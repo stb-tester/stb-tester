@@ -33,8 +33,7 @@ import gi
 import _stbt.cv2_compat as cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
-from _stbt.gst_utils import (array_from_sample, gst_iterate,
-                             gst_sample_make_writable)
+from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
@@ -1070,7 +1069,7 @@ class Display(object):
         if source:
             if self.source_teardown_eos:
                 debug("teardown: Sending eos on source pipeline")
-                for elem in gst_iterate(source.iterate_sources()):
+                for elem in source.iterate_sources():
                     elem.send_event(Gst.Event.new_eos())
                 if not self.appsink_await_eos(
                         source.get_by_name('appsink'), timeout=10):
