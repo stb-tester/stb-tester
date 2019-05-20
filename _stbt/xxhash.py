@@ -80,7 +80,7 @@ class Xxhash64(object):
             self._state, address, ctypes.c_size_t(length.value))
 
     def digest(self):
-        return struct.pack(b">Q", _libxxhash.XXH64_digest(self._state))
+        return struct.pack(">Q", _libxxhash.XXH64_digest(self._state))
 
     def hexdigest(self):
         return binascii.hexlify(self.digest())

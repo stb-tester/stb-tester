@@ -111,19 +111,19 @@ class IRNetBox(object):
         """Reset the CPLD"""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack(b"B", 0x00))
+            struct.pack("B", 0x00))
 
     def indicators_on(self):
         """Enable LED indicators on the front panel (§5.2.4)."""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack(b"B", 0x17))
+            struct.pack("B", 0x17))
 
     def indicators_off(self):
         """Disable LED indicators on the front panel (§5.2.4)."""
         self._send(
             MessageTypes.CPLD_INSTRUCTION,
-            struct.pack(b"B", 0x18))
+            struct.pack("B", 0x18))
 
     def irsend_raw(self, port, power, data):
         """Output the IR data on the given port at the set power (§6.1.1).
@@ -139,22 +139,22 @@ class IRNetBox(object):
             self.reset()
             self.indicators_on()
             self._send(MessageTypes.SET_MEMORY)
-            self._send(MessageTypes.CPLD_INSTRUCTION, struct.pack(b"B", 0x00))
+            self._send(MessageTypes.CPLD_INSTRUCTION, struct.pack("B", 0x00))
             if power < 33:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack(b"B", port + 1))
+                    struct.pack("B", port + 1))
             elif power < 66:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack(b"B", port + 31))
+                    struct.pack("B", port + 31))
             else:
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack(b"B", port + 1))
+                    struct.pack("B", port + 1))
                 self._send(
                     MessageTypes.CPLD_INSTRUCTION,
-                    struct.pack(b"B", port + 31))
+                    struct.pack("B", port + 31))
             self._send(MessageTypes.DOWNLOAD_SIGNAL, data)
             self._send(MessageTypes.OUTPUT_IR_SIGNAL)
             self.reset()
@@ -166,10 +166,10 @@ class IRNetBox(object):
             self._send(
                 MessageTypes.OUTPUT_IR_ASYNC,
                 struct.pack(
-                    b">HH{0}s{1}s".format(self.ports, len(data)),
+                    ">HH{0}s{1}s".format(self.ports, len(data)),
                     sequence_number,
                     delay,
-                    struct.pack(b"{}B".format(self.ports), *ports),
+                    struct.pack("{}B".format(self.ports), *ports),
                     data))
 
     def _send(self, message_type, message_data=b""):
@@ -186,13 +186,13 @@ class IRNetBox(object):
                 # Sequence number in the ACK message is defined as big-endian
                 # in §5.1 and §6.1.2, but due to a known bug it is
                 # little-endian.
-                b'<HBB', response_data)
+                '<HBB', response_data)
             if ack == 1:
                 async_type, async_data = next(self._responses)
                 if async_type != MessageTypes.IR_ASYNC_COMPLETE:
                     raise Exception(
                         "IRNetBox returned unexpected message %d" % async_type)
-                (async_sequence_number,) = struct.unpack(b">H", async_data[:2])
+                (async_sequence_number,) = struct.unpack(">H", async_data[:2])
                 if async_sequence_number != sequence_number:
                     raise Exception(
                         "IRNetBox returned message IR_ASYNC_COMPLETE "
@@ -203,7 +203,7 @@ class IRNetBox(object):
                     "IRNetBox returned NACK (error code: %d)" % error_code)
         if response_type == MessageTypes.DEVICE_VERSION:
             self.irnetbox_model, = struct.unpack(
-                b'<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
+                '<H', response_data[10:12])  # == §5.2.6's payload_data[8:10]
 
     def _get_version(self):
         self._send(MessageTypes.DEVICE_VERSION)
@@ -249,7 +249,7 @@ def _message(message_type, message_data):
     # A ushort value is a 16-bit unsigned integer in big-endian format.
     #
     return struct.pack(
-        b">cHB%ds" % len(message_data),
+        ">cHB%ds" % len(message_data),
         b"#",
         len(message_data),
         message_type,
@@ -275,11 +275,11 @@ def _read_responses(stream):
             break
         buf += s
         while len(buf) >= 3:
-            data_len, = struct.unpack(b">H", buf[0:2])
+            data_len, = struct.unpack(">H", buf[0:2])
             if len(buf) < 3 + data_len:
                 break
             response_type, response_data = struct.unpack(
-                b">B%ds" % data_len,
+                ">B%ds" % data_len,
                 buf[2:(3 + data_len)])
             yield response_type, response_data
             buf = buf[(3 + data_len):]
@@ -317,7 +317,7 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 
     data = b"abcdefghij"
     m = struct.pack(
-        b">HB%ds" % len(data),
+        ">HB%ds" % len(data),
         len(data),
         0x01,
         data)
