@@ -117,22 +117,6 @@ def test_that_array_from_sample_dimensions_of_array_are_according_to_caps():
     assert a.shape == (3, 4, 3)
 
 
-def gst_iterate(gst_iterator):
-    """Wrap a Gst.Iterator to expose the Python iteration protocol.  The
-    gst-python package exposes similar functionality on Gst.Iterator itself so
-    this code should be retired in the future once gst-python is broadly enough
-    available."""
-    result = Gst.IteratorResult.OK
-    while result == Gst.IteratorResult.OK:
-        result, value = next(gst_iterator)  # pylint:disable=stop-iteration-return
-        if result == Gst.IteratorResult.OK:
-            yield value
-        elif result == Gst.IteratorResult.ERROR:
-            raise RuntimeError("Iteration Error")
-        elif result == Gst.IteratorResult.RESYNC:
-            raise RuntimeError("Iteration Resync")
-
-
 def frames_to_video(outfilename, frames, caps="image/svg",
                     container="ts"):
     """Given a list (or generator) of video frames generates a video and writes
