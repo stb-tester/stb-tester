@@ -36,11 +36,10 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import argparse
 import re
+import os
 import subprocess
 import sys
 import threading
-
-from _stbt.utils import to_unicode
 
 
 def main(argv):
@@ -77,7 +76,8 @@ def main(argv):
         stderr=subprocess.PIPE)
 
     t = threading.Thread(target=filter_warnings,
-                         args=(pylint.stderr, sys.stderr))
+                         args=(pylint.stderr,
+                               os.fdopen(sys.stderr.fileno(), "wb")))
     t.start()
 
     pylint.wait()
@@ -90,7 +90,6 @@ def filter_warnings(input_, output):
         line = input_.readline()
         if not line:
             break
-        line = to_unicode(line)
         if any(re.search(pattern, line) for pattern in WARNINGS):
             continue
         output.write(line)
@@ -98,14 +97,14 @@ def filter_warnings(input_, output):
 
 WARNINGS = [
     # pylint:disable=line-too-long
-    r"libdc1394 error: Failed to initialize libdc1394",
-    r"pygobject_register_sinkfunc is deprecated",
-    r"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
-    r"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
-    r"return isinstance\(object, \(type, types.ClassType\)\)",
-    r"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
-    r"astroid.* Use gi.require_version",
-    r"^  __import__\(m\)$",
+    br"libdc1394 error: Failed to initialize libdc1394",
+    br"pygobject_register_sinkfunc is deprecated",
+    br"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
+    br"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
+    br"return isinstance\(object, \(type, types.ClassType\)\)",
+    br"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
+    br"astroid.* Use gi.require_version",
+    br"^  __import__\(m\)$",
 ]
 
 
