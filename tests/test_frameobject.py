@@ -308,8 +308,8 @@ class Dialog(stbt.FrameObject):
     ``FrameObject`` defines ``__hash__`` too so you can store them in a set or
     in a dict:
 
-    >>> {dialog}
-    set([Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')])
+    >>> {dialog: 1}
+    {Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information'): 1}
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
 
