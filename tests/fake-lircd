@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 """Fake LIRC daemon for unit tests.
 
@@ -11,6 +11,11 @@
 
 See http://www.lirc.org/html/technical.html#applications
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import os
 import re
@@ -25,17 +30,17 @@ def main():
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(f)
         s.listen(5)
-        print "SOCKET=" + f
+        print("SOCKET=" + f)
         while True:
             client, _ = s.accept()
             for line in client.makefile():
                 line = line.strip()
-                print "fake-lircd: Received: " + line
+                print("fake-lircd: Received: " + line)
                 try:
                     r = response(line)
                     if r:
-                        print "\n".join(
-                            "fake-lircd: Sending: " + x for x in r.split("\n"))
+                        print("\n".join(
+                            "fake-lircd: Sending: " + x for x in r.split("\n")))
                         client.sendall(r)
                 except socket.error as e:
                     if e.errno == socket.errno.EPIPE:

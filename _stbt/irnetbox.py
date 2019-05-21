@@ -43,6 +43,11 @@ RemoteControlConfig
     ir.irsend_raw(port=1, power=100, data=rcu["POWER"])
 
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import binascii
 import errno
@@ -80,7 +85,7 @@ class IRNetBox(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):
+    def __exit__(self, ex_type, ex_value, ex_traceback):
         self._socket.close()
 
     def power_on(self):
@@ -167,9 +172,9 @@ class IRNetBox(object):
                     struct.pack("{}B".format(self.ports), *ports),
                     data))
 
-    def _send(self, message_type, message_data=""):
+    def _send(self, message_type, message_data=b""):
         self._socket.sendall(_message(message_type, message_data))
-        response_type, response_data = self._responses.next()
+        response_type, response_data = next(self._responses)
         if response_type == MessageTypes.ERROR:
             raise Exception("IRNetBox returned ERROR")
         if response_type != message_type:
@@ -183,7 +188,7 @@ class IRNetBox(object):
                 # little-endian.
                 '<HBB', response_data)
             if ack == 1:
-                async_type, async_data = self._responses.next()
+                async_type, async_data = next(self._responses)
                 if async_type != MessageTypes.IR_ASYNC_COMPLETE:
                     raise Exception(
                         "IRNetBox returned unexpected message %d" % async_type)
@@ -245,7 +250,7 @@ def _message(message_type, message_data):
     #
     return struct.pack(
         ">cHB%ds" % len(message_data),
-        "#",
+        b"#",
         len(message_data),
         message_type,
         message_data)
@@ -263,7 +268,7 @@ def _read_responses(stream):
     #                           b) A value (0x01) indicating "Error".
     # Data             byte[]   Any data associated with this type of message.
     #
-    buf = ""
+    buf = b""
     while True:
         s = stream.recv(4096)
         if len(s) == 0:
@@ -308,19 +313,19 @@ def _parse_config(config_file):
 # ===========================================================================
 
 def test_that_read_responses_doesnt_hang_on_incomplete_data():
-    import StringIO
+    import io
 
-    data = "abcdefghij"
+    data = b"abcdefghij"
     m = struct.pack(
         ">HB%ds" % len(data),
         len(data),
         0x01,
         data)
 
-    assert _read_responses(_FileToSocket(StringIO.StringIO(m))).next() == \
+    assert next(_read_responses(_FileToSocket(io.BytesIO(m)))) == \
         (0x01, data)
     try:
-        _read_responses(_FileToSocket(StringIO.StringIO(m[:5]))).next()
+        next(_read_responses(_FileToSocket(io.BytesIO(m[:5]))))
     except StopIteration:
         pass
     else:
@@ -328,13 +333,13 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 
 
 def test_that_parse_config_understands_redrat_format():
-    import StringIO
+    import io
 
     # pylint:disable=line-too-long
-    f = StringIO.StringIO(
+    f = io.BytesIO(
         re.sub(
-            "^ +", "", flags=re.MULTILINE, string=""
-            """Device TestRCU
+            b"^ +", b"", flags=re.MULTILINE,
+            string=b"""Device TestRCU
 
             Note: The data is of the form <signal name> MOD_SIG <max_num_lengths> <byte_array_in_ascii_hex>.
 
@@ -346,16 +351,16 @@ def test_that_parse_config_understands_redrat_format():
             RED	DMOD_SIG	signal2	16 0002BCE3FF5A0000000300000020010E2C0DB006EC00000000000000000000000000000000000000000000000000000001000100010001000100010202027F0001000100010001000100010202027F
             """))
     config = _parse_config(f)
-    assert config["DOWN"].startswith("\x00\x01\x74\xF5")
-    assert config["UP"].startswith("\x00\x01\x74\xFA")
-    assert config["RED"].startswith("\x00\x02\xBC\xAF")
+    assert config["DOWN"].startswith(b"\x00\x01\x74\xF5")
+    assert config["UP"].startswith(b"\x00\x01\x74\xFA")
+    assert config["RED"].startswith(b"\x00\x02\xBC\xAF")
 
 
 class _FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes.
 
-    >>> import StringIO
-    >>> s = _FileToSocket(StringIO.StringIO('Hello'))
+    >>> import io
+    >>> s = _FileToSocket(io.BytesIO(b'Hello'))
     >>> s.recv(3)
     'Hel'
     >>> s.recv(3)

@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import inspect
 import os
 from collections import namedtuple
@@ -7,6 +12,7 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
+from .utils import to_bytes
 
 
 class Frame(numpy.ndarray):
@@ -95,6 +101,13 @@ class _ImageFromUser(namedtuple(
             return None
         return self.relative_filename or '<Custom Image>'
 
+    def short_repr(self):
+        if self.image is None:
+            return "None"
+        if self.relative_filename:
+            return repr(os.path.basename(self.relative_filename))
+        return "<Custom Image>"
+
 
 def _load_image(image, flags=None):
     if isinstance(image, _ImageFromUser):
@@ -119,7 +132,7 @@ def imread(filename, flags=None):
     else:
         cv2_flags = flags
 
-    img = cv2.imread(filename, cv2_flags)
+    img = cv2.imread(to_bytes(filename), cv2_flags)
     if img is None:
         return None
 
@@ -203,9 +216,6 @@ def find_user_file(filename):
 
     :returns: Absolute filename, or None if it can't find the file.
     """
-    if isinstance(filename, unicode):
-        filename = filename.encode("utf-8")
-
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
 

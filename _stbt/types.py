@@ -1,6 +1,11 @@
 # coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 from collections import namedtuple
 
 
@@ -48,9 +53,9 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> Region.intersect(c, b) == c
     True
-    >>> print Region.intersect(a, c)
+    >>> print(Region.intersect(a, c))
     None
-    >>> print Region.intersect(None, a)
+    >>> print(Region.intersect(None, a))
     None
     >>> Region.intersect(a)
     Region(x=0, y=0, right=8, bottom=8)
@@ -65,7 +70,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
     True
     >>> Region.ALL
     Region.ALL
-    >>> print Region.ALL
+    >>> print(Region.ALL)
     Region.ALL
     >>> c.above()
     Region(x=10, y=-inf, right=13, bottom=4)
@@ -286,9 +291,9 @@ class Region(namedtuple('Region', 'x y right bottom')):
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
-        >>> print Region.bounding_box(None, None)
+        >>> print(Region.bounding_box(None, None))
         None
-        >>> print Region.bounding_box()
+        >>> print(Region.bounding_box())
         None
         >>> Region.bounding_box(b)
         Region(x=20, y=30, right=30, bottom=50)
@@ -298,7 +303,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         New in v30: No longer limited to just taking 2 regions.
         """
-        args = filter(None, args)
+        args = [_f for _f in args if _f]
         if not args:
             return None
         return Region.from_extents(
@@ -320,7 +325,7 @@ class Region(namedtuple('Region', 'x y right bottom')):
 
         >>> Region(20, 30, right=30, bottom=50).erode(3)
         Region(x=23, y=33, right=27, bottom=47)
-        >>> print Region(20, 30, 10, 20).erode(5)
+        >>> print(Region(20, 30, 10, 20).erode(5))
         None
         """
         if self.width > n * 2 and self.height > n * 2:

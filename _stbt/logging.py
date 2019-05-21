@@ -1,5 +1,10 @@
 # coding: utf-8
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
 import itertools
 import os
@@ -81,7 +86,7 @@ class ImageLogger(object):
             return
 
         self.name = name
-        self.frame_number = ImageLogger._frame_number.next()
+        self.frame_number = next(ImageLogger._frame_number)
 
         try:
             outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
@@ -96,19 +101,19 @@ class ImageLogger(object):
         self.images = OrderedDict()
         self.pyramid_levels = set()
         self.data = {}
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             self.data[k] = v
 
     def set(self, **kwargs):
         if not self.enabled:
             return
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             self.data[k] = v
 
     def append(self, **kwargs):
         if not self.enabled:
             return
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k not in self.data:
                 self.data[k] = []
             self.data[k].append(v)
@@ -164,16 +169,13 @@ class ImageLogger(object):
 
         with open(os.path.join(self.outdir, "index.html"), "w") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
-                    .render(frame_number=self.frame_number)
-                    .encode("utf-8"))
+                    .render(frame_number=self.frame_number))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
                     .render(annotated_image=self._draw_annotated_image,
                             draw=self._draw,
-                            **template_kwargs)
-                    .encode("utf-8"))
+                            **template_kwargs))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
-                    .render()
-                    .encode("utf-8"))
+                    .render())
 
     def _draw(self, region, source_size, css_class, title=None):
         import jinja2

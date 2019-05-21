@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # Copyright 2014-2017 Stb-tester.com Ltd.
 # Copyright 2013 YouView TV Ltd.
@@ -28,9 +28,15 @@
 * E7008: "assert True" has no effect.
 
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import re
+import os
 import subprocess
 import sys
 import threading
@@ -49,22 +55,29 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
+    if sys.version_info.major == 2:
+        executable_name = "pylint"
+    else:
+        executable_name = "pylint3"
+
     try:
         with open("/dev/null", "w") as devnull:
-            subprocess.check_call(["pylint", "--help"],
+            subprocess.check_call([executable_name, "--help"],
                                   stdout=devnull, stderr=devnull)
     except OSError as e:
         if e.errno == 2:
             sys.stderr.write(
-                "stbt lint: error: Couldn't find 'pylint' executable\n")
+                "stbt lint: error: Couldn't find '%s' executable\n"
+                % executable_name)
             return 1
 
     pylint = subprocess.Popen(
-        ["pylint", "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
+        [executable_name, "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
         stderr=subprocess.PIPE)
 
     t = threading.Thread(target=filter_warnings,
-                         args=(pylint.stderr, sys.stderr))
+                         args=(pylint.stderr,
+                               os.fdopen(sys.stderr.fileno(), "wb")))
     t.start()
 
     pylint.wait()
@@ -84,14 +97,15 @@ def filter_warnings(input_, output):
 
 WARNINGS = [
     # pylint:disable=line-too-long
-    r"libdc1394 error: Failed to initialize libdc1394",
-    r"pygobject_register_sinkfunc is deprecated",
-    r"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
-    r"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
-    r"return isinstance\(object, \(type, types.ClassType\)\)",
-    r"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
-    r"astroid.* Use gi.require_version",
-    r"^  __import__\(m\)$",
+    br"libdc1394 error: Failed to initialize libdc1394",
+    br"pygobject_register_sinkfunc is deprecated",
+    br"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
+    br"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
+    br"return isinstance\(object, \(type, types.ClassType\)\)",
+    br"return isinstance\(object, type\)",
+    br"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
+    br"astroid.* Use gi.require_version",
+    br"^  __import__\(m\)$",
 ]
 
 

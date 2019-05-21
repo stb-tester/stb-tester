@@ -8,6 +8,11 @@ context manager. For now this is a private API but we intend to make it public
 at some point so that users can add caching to any custom image-processing
 functions in their test-packs.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import functools
 import inspect
@@ -17,6 +22,7 @@ import os
 import sys
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+from future.moves.itertools import zip_longest
 
 import lmdb
 import numpy
@@ -90,25 +96,25 @@ def memoize(additional_fields=None):
     warning in future releases.  We hope to stabilise it in the future so users
     can use it with their custom image-processing functions.
     """
-    def decorator(function):
-        func_key = json.dumps([function.__name__, additional_fields],
+    def decorator(f):
+        func_key = json.dumps([f.__name__, additional_fields],
                               sort_keys=True)
 
-        @functools.wraps(function)
+        @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(function, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
-                return function(*args, **kwargs)
+                return f(*args, **kwargs)
 
             with _cache.begin() as txn:
                 out = txn.get(key)
             if out is not None:
                 return json.loads(out)
-            output = function(**full_kwargs)
+            output = f(**full_kwargs)
             _cache_put(key, output)
             return output
 
@@ -122,42 +128,42 @@ def memoize_iterator(additional_fields=None):
     iterator.
     """
 
-    def decorator(function):
-        func_key = json.dumps([function.__name__, additional_fields],
+    def decorator(f):
+        func_key = json.dumps([f.__name__, additional_fields],
                               sort_keys=True)
 
-        @functools.wraps(function)
+        @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
                 if _cache is None:
                     raise NotCachable()
-                full_kwargs = inspect.getcallargs(function, *args, **kwargs)
+                full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
-                for x in function(*args, **kwargs):
+                for x in f(*args, **kwargs):
                     yield x
                 return
 
             for i in itertools.count():
                 with _cache.begin() as txn:
-                    out = txn.get(key + str(i))
+                    out = txn.get(key + str(i).encode())
                 if out is None:
                     break
                 out_, stop_ = json.loads(out)
                 if stop_:
-                    raise StopIteration()
+                    return
                 yield out_
 
             skip = i  # pylint:disable=undefined-loop-variable
-            it = function(**full_kwargs)
+            it = f(**full_kwargs)
             for i in itertools.count():
                 try:
                     output = next(it)
                     if i >= skip:
-                        _cache_put(key + str(i), [output, None])
+                        _cache_put(key + str(i).encode(), [output, None])
                         yield output
                 except StopIteration:
-                    _cache_put(key + str(i), [None, "StopIteration"])
+                    _cache_put(key + str(i).encode(), [None, "StopIteration"])
                     raise
 
         return inner
@@ -211,6 +217,7 @@ class _ArgsEncoder(json.JSONEncoder):
 
 
 def _cache_hash(value):
+    # type: (...) -> bytes
     from _stbt.xxhash import Xxhash64
     h = Xxhash64()
 
@@ -260,8 +267,8 @@ def _check_cache_behaviour(func):
         cached_time = min(timer.repeat(10, number=1))
         cached_result = func()
 
-    print "%s with cache: %s" % (func.__name__, cached_time)
-    print "%s without cache: %s" % (func.__name__, uncached_time)
+    print("%s with cache: %s" % (func.__name__, cached_time))
+    print("%s without cache: %s" % (func.__name__, uncached_time))
 
     return cached_time, uncached_time, cached_result, uncached_result
 
@@ -277,27 +284,27 @@ def test_memoize_iterator():
 
     with named_temporary_directory() as tmpdir, cache(tmpdir):
         uncached = list(itertools.islice(cached_function(1), 5))
-        assert uncached == range(5)
+        assert uncached == list(range(5))
         assert counter[0] == 5
 
         cached = list(itertools.islice(cached_function(1), 5))
-        assert cached == range(5)
+        assert cached == list(range(5))
         assert counter[0] == 5
 
         partially_cached = list(itertools.islice(cached_function(1), 10))
-        assert partially_cached == range(10)
+        assert partially_cached == list(range(10))
         assert counter[0] == 15
 
         partially_cached = list(cached_function(1))
-        assert partially_cached == range(10)
+        assert partially_cached == list(range(10))
         assert counter[0] == 25
 
         cached = list(cached_function(1))
-        assert cached == range(10)
+        assert cached == list(range(10))
         assert counter[0] == 25
 
         uncached = list(cached_function(2))
-        assert uncached == range(10)
+        assert uncached == list(range(10))
         assert counter[0] == 35
 
 
@@ -349,8 +356,7 @@ def test_that_cache_speeds_up_match_all():
 
     assert uncached_time > (cached_time * 2)
     assert len(uncached_result) == 6
-    for cached, uncached in itertools.izip_longest(cached_result,
-                                                   uncached_result):
+    for cached, uncached in zip_longest(cached_result, uncached_result):
         _fields_eq(cached, uncached,
                    ['match', 'region', 'first_pass_result', 'frame', 'image'])
 
@@ -387,7 +393,7 @@ def test_that_cache_speeds_up_match_text():
 
     assert uncached_time > (cached_time * 10)
 
-    print cached_result
+    print(cached_result)
 
     _fields_eq(cached_result, uncached_result,
                ['match', 'region', 'frame', 'text'])

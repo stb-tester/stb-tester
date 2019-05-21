@@ -7,10 +7,14 @@ Copyright 2013-2018 stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import enum
 import itertools
-import os
 from collections import namedtuple
 
 import cv2
@@ -222,7 +226,7 @@ class MatchResult(object):
                 "<Custom Image>" if isinstance(self.image, numpy.ndarray)
                 else repr(self.image)))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.match
 
     @property
@@ -405,8 +409,7 @@ def _match_all(image, frame, match_parameters, region):
                 (template.relative_filename or template.image),
                 first_pass_matched)
             imglog.append(matches=result)
-            draw_on(frame, result, label="match(%r)" %
-                    os.path.basename(template.friendly_name))
+            draw_on(frame, result, label="match(%s)" % template.short_repr())
             yield result
 
     finally:
@@ -545,7 +548,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    method = {
+    method = {  # pylint:disable=redefined-outer-name
         MatchMethod.SQDIFF: cv2.TM_SQDIFF,
         MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
@@ -654,7 +657,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                         width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, mask, method, roi_mask, level, imwrite):
+def _match_template(image, template, mask, method, roi_mask, level, imwrite):  # pylint:disable=redefined-outer-name
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))

@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import errno
 import os
 import tempfile
@@ -11,7 +16,7 @@ def mkdir_p(d):
     exceptions"""
     try:
         os.makedirs(d)
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.EEXIST and os.path.isdir(d) \
                 and os.access(d, os.R_OK | os.W_OK):
             return
@@ -30,7 +35,7 @@ def rm_f(filename):
 
 @contextmanager
 def named_temporary_directory(
-        suffix='', prefix='tmp', dir=None):  # pylint:disable=redefined-builtin
+        suffix='', prefix='tmp', dir=None):  # pylint:disable=redefined-builtin,redefined-outer-name
     dirname = tempfile.mkdtemp(suffix, prefix, dir)
     try:
         yield dirname
@@ -71,3 +76,19 @@ def find_import_name(filename):
         import_dir, s = os.path.split(import_dir)
         import_name = "%s.%s" % (s, import_name)
     return import_dir, import_name
+
+
+def to_bytes(text):
+    if isinstance(text, str):
+        return text.encode("utf-8")
+    elif isinstance(text, bytes):
+        return text
+    else:
+        raise TypeError("Unexpected type %s" % type(text))
+
+
+def to_unicode(text):
+    if isinstance(text, bytes):
+        return text.decode("utf-8")
+    else:
+        return str(text)

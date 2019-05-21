@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import glob
 import os
 import subprocess
@@ -26,7 +31,7 @@ def main():
         done >&2
         """, shell=True)
 
-    print "screenshot,reference,min,avg,max"
+    print("screenshot,reference,min,avg,max")
 
     for fname in glob.glob("images/performance/*-frame.png"):
         tname = fname.replace("-frame.png", "-reference.png")
@@ -34,11 +39,11 @@ def main():
         t = stbt.load_image(tname)
         # pylint:disable=cell-var-from-loop
         times = timeit.repeat(lambda: stbt.match(t, f), number=1, repeat=100)
-        print "%s,%s,%f,%f,%f" % (os.path.basename(fname),
+        print("%s,%s,%f,%f,%f" % (os.path.basename(fname),
                                   os.path.basename(tname),
                                   min(times),
                                   max(times),
-                                  sum(times) / len(times))
+                                  sum(times) / len(times)))
 
 
 if __name__ == "__main__":

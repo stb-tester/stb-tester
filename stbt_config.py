@@ -1,10 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 """
 Copyright 2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import sys
@@ -35,7 +40,7 @@ def main():
         cfg = _config_init()
         for section in cfg.sections():
             for option in cfg.options(section):
-                print "%s.%s" % (section, option)
+                print("%s.%s" % (section, option))
         sys.exit(0)
 
     if args.name.rfind(".") == -1:
@@ -45,9 +50,9 @@ def main():
     section, key = args.name.rsplit(".", 1)
 
     try:
-        print get_config(section, key)
+        print(get_config(section, key))
     except ConfigurationError as e:
-        error(e.message)
+        error(e)
 
 
 if __name__ == "__main__":

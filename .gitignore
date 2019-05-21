@@ -18,7 +18,6 @@ etc/stbt.conf
 extra/debian/changelog
 extra/fedora/stb-tester.spec
 extra/stb-tester*.debian.tar.xz
-irnetbox-proxyc
 rpmbuild
 stb-tester-*.tar.gz
 stb-tester_*.deb

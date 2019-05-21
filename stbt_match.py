@@ -1,10 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 """
 Copyright 2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import sys
@@ -73,9 +78,9 @@ def main():
         for result in stbt.match_all(
                 args.reference_file, frame=source_image,
                 match_parameters=stbt.MatchParameters(**mp)):
-            print "%s: %s" % (
+            print("%s: %s" % (
                 "Match found" if result else "No match found. Closest match",
-                result)
+                result))
             if result:
                 match_found = True
             if not args.all:

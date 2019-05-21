@@ -9,6 +9,11 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import native, raise_, string_types
 
 import argparse
 import datetime
@@ -33,6 +38,7 @@ from _stbt.gst_utils import (array_from_sample, gst_iterate,
 from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
 from _stbt.logging import ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
+from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # pylint:disable=wrong-import-order
@@ -197,7 +203,7 @@ class DeviceUnderTest(object):
                 except Exception:  # pylint:disable=broad-except
                     # Don't mask original exception from the test script.
                     pass
-                raise exc_info[0], exc_info[1], exc_info[2]
+                raise_(exc_info[0], exc_info[1], exc_info[2])
             else:
                 self._control.keyup(key)
                 out.end_time = self._time.time()
@@ -400,7 +406,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
                                   stable_secs=2)
         assert match_result
         end_time = match_result.time  # this is the first stable frame
-        print "Transition took %s seconds" % (end_time - start_time)
+        print("Transition took %s seconds" % (end_time - start_time))
 
     Added in v28: The ``predicate`` and ``stable_secs`` parameters.
     """
@@ -451,11 +457,13 @@ def _callable_description(callable_):
     >>> _callable_description(
     ...     lambda: stbt.press("OK"))
     '    lambda: stbt.press("OK"))\\n'
-    >>> _callable_description(functools.partial(int, base=2))
-    'int'
-    >>> _callable_description(functools.partial(functools.partial(int, base=2),
-    ...                                         x='10'))
-    'int'
+    >>> _callable_description(functools.partial(eval, globals={}))
+    'eval'
+    >>> _callable_description(
+    ...     functools.partial(
+    ...         functools.partial(eval, globals={}),
+    ...         locals={}))
+    'eval'
     >>> class T(object):
     ...     def __call__(self): return True;
     >>> _callable_description(T())
@@ -787,7 +795,7 @@ class SinkPipeline(object):
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
             age = float(now - x.time) / 3
-            color = (int(255 * max([1 - age, 0.5])),) * 3
+            color = (native(int(255 * max([1 - age, 0.5]))).__int__(),) * 3
             _draw_text(img, x.text, origin, color)
 
         # Regions:
@@ -800,12 +808,14 @@ class SinkPipeline(object):
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
-            if isinstance(obj, (str, unicode)):
+            if isinstance(obj, string_types):
                 start_time = self._time.time()
                 text = (
-                    datetime.datetime.fromtimestamp(start_time).strftime(
-                        "%H:%M:%S.%f")[:-4] +
-                    ' ' + obj)
+                    to_unicode(
+                        datetime.datetime.fromtimestamp(start_time).strftime(
+                            "%H:%M:%S.%f")[:-4]) +
+                    ' ' +
+                    to_unicode(obj))
                 self.text_annotations.append(
                     _TextAnnotation(start_time, text, duration_secs))
             elif hasattr(obj, "region") and hasattr(obj, "time"):
@@ -911,7 +921,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', 'downstream')
+                .set_property('leaky', b'downstream')
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 
@@ -950,8 +960,7 @@ class Display(object):
 
         running_time = sample.get_segment().to_running_time(
             Gst.Format.TIME, sample.get_buffer().pts)
-        sample.time = (
-            float(appsink.base_time + running_time) / 1e9)
+        sample.time = float(appsink.base_time + running_time) / 1e9
 
         if (sample.time > self.init_time + 31536000 or
                 sample.time < self.init_time - 31536000):  # 1 year

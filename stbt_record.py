@@ -1,10 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 """
 Copyright 2012-2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import itertools
 import sys
@@ -49,7 +54,7 @@ def record(dut, control_recorder, script_out):
     def write_wait_for_match():
         if old_key is None:
             return
-        filename = "%04d-%s-complete.png" % (count.next(), old_key)
+        filename = "%04d-%s-complete.png" % (next(count), old_key)
         stbt.save_frame(dut.get_frame(), filename)
         script_out.write("    stbt.wait_for_match('%s')\n" % filename)
 

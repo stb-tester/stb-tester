@@ -34,8 +34,13 @@ in your existing Selenium/WebDriver/Appium tests. See
 """
 
 from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import raise_
 
-import ConfigParser
+import configparser
 import logging
 import re
 import subprocess
@@ -153,22 +158,22 @@ class AdbDevice(object):
             import _stbt.config
             _config = _stbt.config._config_init()  # pylint:disable=protected-access
 
-        self.adb_server = adb_server or _get_config(_config, "android",
-                                                    "adb_server", None)
-        self._adb_device = adb_device or _get_config(_config, "android",
-                                                     "adb_device", None)
-        self.adb_binary = adb_binary or _get_config(_config, "android",
-                                                    "adb_binary", "adb")
+        self.adb_server = adb_server or _config.get("android", "adb_server",
+                                                    fallback=None)
+        self._adb_device = adb_device or _config.get("android", "adb_device",
+                                                     fallback=None)
+        self.adb_binary = adb_binary or _config.get("android", "adb_binary",
+                                                    fallback="adb")
         if tcpip is None:
             try:
                 tcpip = _config.getboolean("android", "tcpip")
-            except ConfigParser.Error:
+            except configparser.Error:
                 tcpip = False
         self.tcpip = tcpip
 
         if coordinate_system is None:
-            name = _get_config(_config, "android", "coordinate_system",
-                               "ADB_NATIVE")
+            name = _config.get("android", "coordinate_system",
+                               fallback="ADB_NATIVE")
             if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "
@@ -208,8 +213,9 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise AdbError(e.returncode, e.cmd, e.output, self), \
-                None, sys.exc_info()[2]
+            raise_(AdbError(e.returncode, e.cmd, e.output.decode("utf-8"),
+                            self),
+                   None, sys.exc_info()[2])
         if capture_output:
             return output
         else:
@@ -220,7 +226,7 @@ class AdbDevice(object):
         try:
             return self._adb(["devices", "-l"], timeout_secs=5)
         except subprocess.CalledProcessError as e:
-            return e.output
+            return e.output.decode("utf-8")
 
     def get_frame(self):
         """Take a screenshot using ADB.
@@ -334,7 +340,7 @@ class AdbDevice(object):
         _command += command
         debug("AdbDevice.adb: About to run command: %r\n" % _command)
         output = subprocess.check_output(
-            _command, stderr=subprocess.STDOUT, **kwargs)
+            _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
         return output
 
     def _connect(self, timeout_secs):
@@ -826,11 +832,3 @@ def _parse_display_dimensions(dumpsys_output):
         if m:
             return _Dimensions(width=int(m.group(1)), height=int(m.group(2)))
     raise RuntimeError("AdbDevice: Didn't find display size in dumpsys output")
-
-
-def _get_config(configparser, section, key, default):
-    """Convenience function because ConfigParser.get doesn't take a default."""
-    try:
-        return configparser.get(section, key)
-    except ConfigParser.Error:
-        return default

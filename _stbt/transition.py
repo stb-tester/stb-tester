@@ -12,6 +12,11 @@ Copyright 2017-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import enum
 
@@ -259,7 +264,7 @@ class _TransitionResult(object):
                 self.duration,
                 self.animation_duration))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.status == TransitionStatus.COMPLETE
 
     @property

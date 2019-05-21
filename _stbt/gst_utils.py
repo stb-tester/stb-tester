@@ -1,5 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import ctypes
 import sys
+from functools import reduce  # pylint:disable=redefined-builtin
 
 import gi
 
@@ -63,7 +69,7 @@ class _MappedSample(object):
 
         self.__array_interface__ = {
             "shape": shape,
-            "typestr": "|u1",
+            "typestr": b"|u1",
             "data": (ctypes.addressof(data), not readwrite),
             "version": 3,
         }
@@ -82,7 +88,7 @@ def array_from_sample(sample, readwrite=False):
 
 def test_that_array_from_sample_readonly_gives_a_readonly_array():
     Gst.init([])
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(b"hello"),
                        Gst.Caps.from_string("video/x-raw"), None, None)
     array = array_from_sample(s)
     try:
@@ -95,7 +101,7 @@ def test_that_array_from_sample_readonly_gives_a_readonly_array():
 
 def test_that_array_from_sample_readwrite_gives_a_writable_array():
     Gst.init([])
-    s = Gst.Sample.new(Gst.Buffer.new_wrapped("hello"),
+    s = Gst.Sample.new(Gst.Buffer.new_wrapped(b"hello"),
                        Gst.Caps.from_string("video/x-raw"), None, None)
     array = array_from_sample(s, readwrite=True)
     array[0] = ord("j")
@@ -104,7 +110,7 @@ def test_that_array_from_sample_readwrite_gives_a_writable_array():
 
 def test_that_array_from_sample_dimensions_of_array_are_according_to_caps():
     s = Gst.Sample.new(Gst.Buffer.new_wrapped(
-        "row 1 4 px  row 2 4 px  row 3 4 px  "),
+        b"row 1 4 px  row 2 4 px  row 3 4 px  "),
         Gst.Caps.from_string("video/x-raw,format=BGR,width=4,height=3"),
         None, None)
     a = array_from_sample(s)
@@ -118,7 +124,7 @@ def gst_iterate(gst_iterator):
     available."""
     result = Gst.IteratorResult.OK
     while result == Gst.IteratorResult.OK:
-        result, value = gst_iterator.next()
+        result, value = next(gst_iterator)  # pylint:disable=stop-iteration-return
         if result == Gst.IteratorResult.OK:
             yield value
         elif result == Gst.IteratorResult.ERROR:

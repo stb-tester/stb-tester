@@ -1,5 +1,10 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
-import Queue
+import queue
 import random
 import signal
 import subprocess
@@ -22,7 +27,7 @@ def _start_x(*args, **kwargs):
     > SIGUSR1 to its parent process after it has set up the various connection
     > schemes.
     """
-    q = Queue.Queue()
+    q = queue.Queue()
 
     def on_signal(signo, _stack_frame):
         q.put(signo)

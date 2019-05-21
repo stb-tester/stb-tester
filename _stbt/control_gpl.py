@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future.utils import string_types
 import re
 import sys
 import threading
@@ -6,6 +11,7 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from .logging import debug
+from .utils import to_bytes
 
 
 class HdmiCecError(Exception):
@@ -131,19 +137,19 @@ class HdmiCecControl(object):
         # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
         sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
         try:
-            import cec
+            import cec  # pylint:disable=import-error
         finally:
             sys.path.pop(0)
 
         if source is None:
             source = 1
-        if isinstance(source, (str, unicode)):
+        if isinstance(source, string_types):
             source = int(source, 16)
-        if isinstance(destination, (str, unicode)):
+        if isinstance(destination, string_types):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
-        self.cecconfig.strDeviceName = "stb-tester"
+        self.cecconfig.strDeviceName = b"stb-tester"
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
@@ -156,6 +162,7 @@ class HdmiCecControl(object):
             device = self.detect_adapter()
             if device is None:
                 raise HdmiCecError("No adapter found")
+        device = to_bytes(device)
         if not self.lib.Open(device):
             raise HdmiCecError("Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
@@ -254,11 +261,11 @@ class HdmiCecControl(object):
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
-        keydown_str = "%X%X:44:%02X" % (self.source, self.destination, keycode)
+        keydown_str = b"%X%X:44:%02X" % (self.source, self.destination, keycode)
         return self.lib.CommandFromString(keydown_str)
 
     def keyup_command(self):
-        keyup_str = "%X%X:45" % (self.source, self.destination)
+        keyup_str = b"%X%X:45" % (self.source, self.destination)
         return self.lib.CommandFromString(keyup_str)
 
     def get_keycode(self, key):
@@ -361,36 +368,36 @@ def test_hdmi_cec_control_defaults():
 
 @contextmanager
 def _fake_cec():
-    import StringIO
+    import io
     import pytest
     from mock import patch
 
     pytest.importorskip("cec")
 
-    io = StringIO.StringIO()
+    io = io.BytesIO()
 
     def Open(_, device):
-        io.write('Open(%r)\n' % device)
+        io.write(b'Open(%r)\n' % device)
         return True
 
     def cec_cmd_get_data(cmd):
         # Ugly, but can't find another way to do it
         import ctypes
-        return str(buffer(ctypes.cast(
+        return str(buffer(ctypes.cast(  # pylint:disable=undefined-variable
             int(cmd.parameters.data), ctypes.POINTER(ctypes.c_uint8)).contents,
             0, cmd.parameters.size))
 
     def Transmit(_, cmd):
-        io.write("Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
+        io.write(b"Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
             cmd.destination, cmd.initiator, cmd.opcode,
             cec_cmd_get_data(cmd).encode('hex')))
         return True
 
     def RescanActiveDevices(_):
-        io.write("RescanActiveDevices()\n")
+        io.write(b"RescanActiveDevices()\n")
 
     def GetActiveDevices(_):
-        io.write("GetActiveDevices()\n")
+        io.write(b"GetActiveDevices()\n")
 
         class _L(list):
             @property
@@ -400,7 +407,7 @@ def _fake_cec():
         return _L([False, True, False, False, True] + [False] * 11)
 
     def GetDeviceOSDName(_, destination):
-        io.write("GetDeviceOSDName(%r)\n" % destination)
+        io.write(b"GetDeviceOSDName(%r)\n" % destination)
         return "Test"
 
     with patch('cec.ICECAdapter.Open', Open), \

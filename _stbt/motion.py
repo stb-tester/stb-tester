@@ -1,5 +1,11 @@
 # coding: utf-8
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 from collections import deque
 
 import cv2
@@ -85,7 +91,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
         debug("Using mask %s" % mask.friendly_name)
 
-    frame = next(frames)
+    frame = next(frames)  # pylint:disable=stop-iteration-return
 
     region = Region.intersect(_image_region(frame), region)
 
@@ -263,7 +269,7 @@ class MotionResult(object):
         self.region = region
         self.frame = frame
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.motion
 
     def __repr__(self):

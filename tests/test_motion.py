@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import time
 from contextlib import contextmanager
 
@@ -23,7 +28,7 @@ def test_wait_for_motion_half_motion_str_2of4():
     with MockTime().patch():
         res = stbt.wait_for_motion(
             consecutive_frames='2/4', frames=fake_frames())
-    print res
+    print(res)
     assert res.time == 1466084606.
 
 
@@ -31,7 +36,7 @@ def test_wait_for_motion_half_motion_str_2of3():
     with MockTime().patch():
         res = stbt.wait_for_motion(
             consecutive_frames='2/3', frames=fake_frames())
-    print res
+    print(res)
     assert res.time == 1466084606.
 
 
@@ -97,8 +102,8 @@ class MockTime(object):
             raise exception
         self.at(0, raise_exception)
 
-    def at(self, offset, function):
-        self._functions.append((self._time + offset, function))
+    def at(self, offset, func):
+        self._functions.append((self._time + offset, func))
         self._functions.sort()
 
     @contextmanager

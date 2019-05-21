@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import threading
 
 import stbt
@@ -27,7 +32,7 @@ class FalseyFrameObject(stbt.FrameObject):
     False
     >>> fo
     FalseyFrameObject(is_visible=False)
-    >>> print fo.public
+    >>> print(fo.public)
     None
     >>> fo._private
     6
@@ -96,7 +101,7 @@ class OrderedFrameObject(stbt.FrameObject):
     >>> bigred = OrderedFrameObject(numpy.array([[[0, 0, 255], [0, 0, 255]]]))
     >>> green = OrderedFrameObject(numpy.array([[[0, 255, 0]]]))
     >>> blue = OrderedFrameObject(numpy.array([[[255, 0, 0]]]))
-    >>> print sorted([red, green, blue, bigred])
+    >>> print(sorted([red, green, blue, bigred]))
     [...'blue'..., ...'green'..., ...'red', size=1..., ...'red', size=2)]
     """
 
@@ -143,17 +148,17 @@ class PrintingFrameObject(stbt.FrameObject):
     """
     @property
     def is_visible(self):
-        print "is_visible called"
+        print("is_visible called")
         return self._helper
 
     @property
     def _helper(self):
-        print "_helper called"
+        print("_helper called")
         return 7
 
     @property
     def another(self):
-        print "another called"
+        print("another called")
         return self._helper + 3
 
 
@@ -170,9 +175,9 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     False
     >>> m.is_visible
     False
-    >>> print m.public
+    >>> print(m.public)
     None
-    >>> print m.another
+    >>> print(m.another)
     None
     >>> m._private
     7
@@ -186,29 +191,29 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     """
     @property
     def is_visible(self):
-        print "is_visible called"
+        print("is_visible called")
         ten = self.public
         seven = self._private
         return bool(ten < seven)
 
     @property
     def _private(self):
-        print "_private called"
+        print("_private called")
         return 7
 
     @property
     def public(self):
-        print "public called"
+        print("public called")
         return self._private + 3
 
     @property
     def another(self):
-        print "another called"
+        print("another called")
         return 10
 
     @property
     def _another(self):
-        print "_another called"
+        print("_another called")
         return 11
 
 
@@ -228,7 +233,7 @@ def test_that_is_visible_and_properties_arent_racy():
         t.start()
     for t in threads:
         t.join()
-    print results
+    print(results)
     assert results == {n: None for n in range(10)}
 
 
@@ -247,9 +252,9 @@ class Dialog(stbt.FrameObject):
 
     Some basic operations:
 
-    >>> print dialog.message
+    >>> print(dialog.message)
     This set-top box is great
-    >>> print dialog_fab.message
+    >>> print(dialog_fab.message)
     This set-top box is fabulous
 
     ``FrameObject`` defines truthiness of your objects based on the mandatory
@@ -263,7 +268,7 @@ class Dialog(stbt.FrameObject):
     If ``is_visible`` is falsey, all the rest of the properties will be
     ``None``:
 
-    >>> print no_dialog.message
+    >>> print(no_dialog.message)
     None
 
     This enables usage like::
@@ -317,10 +322,10 @@ class Dialog(stbt.FrameObject):
     ``refresh`` returns a new FrameObject of the same type:
 
     >>> page = Dialog(frame=_load_frame('with-dialog'))
-    >>> print page.message
+    >>> print(page.message)
     This set-top box is great
     >>> page = page.refresh(_load_frame('with-dialog2'))
-    >>> print page.message
+    >>> print(page.message)
     This set-top box is fabulous
 
     """

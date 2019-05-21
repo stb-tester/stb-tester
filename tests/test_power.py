@@ -1,4 +1,9 @@
 """Tests for the _ATEN_PE6108G PDU class"""
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 from contextlib import contextmanager
 
 import pytest

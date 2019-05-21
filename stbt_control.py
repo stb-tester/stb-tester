@@ -1,6 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """Send remote control signals using the PC keyboard or from the command line.
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import collections
@@ -117,7 +122,7 @@ def show_help_keymap():
     3. Copying it into $XDG_CONFIG_PATH/stbt/control.conf (defaults to
        $HOME/.config/stbt/control.conf).
     """
-    print globals()["show_help_keymap"].__doc__
+    print(globals()["show_help_keymap"].__doc__)
 
 
 def main_loop(control_uri, keymap_file):
@@ -195,7 +200,7 @@ def terminal():
 
 def keymap_string(keymap):
     """
-    >>> print keymap_string({"m": ("MENU", "Main Menu")}).strip()
+    >>> print(keymap_string({"m": ("MENU", "Main Menu")}).strip())
     q - <Quit>                        m - Main Menu
     """
     keylist = ["%15s - %-15s" % (kb_key, mapping[1])
@@ -216,9 +221,8 @@ def decoded(keycode):
     'Backspace'
     >>> decoded(120)
     'x'
-    >>> decoded(curses.KEY_F12)
     """
-    if keycode in SPECIAL_CHARS.keys():
+    if keycode in SPECIAL_CHARS:
         return SPECIAL_CHARS[keycode]
     try:
         return chr(keycode)

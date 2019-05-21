@@ -225,7 +225,6 @@ check_unicode_error() {
 		Traceback (most recent call last):
 		    yield
 		    test_function.call()
-		    execfile(filename, test_globals)
 		    assert False, $u"ü"
 		AssertionError: ü
 		EOF
@@ -247,6 +246,7 @@ test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
+    echo "now trying with unbuffer to simulate interactive use"
     LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
     u="u" assert check_unicode_error
 }
@@ -264,6 +264,7 @@ test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
 
     # We use unbuffer here to provide a tty to `stbt run` to simulate
     # interactive use.
+    echo "now trying with unbuffer to simulate interactive use"
     LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
     assert check_unicode_error
 }

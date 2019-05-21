@@ -1,5 +1,12 @@
 # coding: utf-8
 
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import string_types
+
 import errno
 import glob
 import os
@@ -10,14 +17,13 @@ from enum import IntEnum
 
 import cv2
 import numpy
-from kitchen.text.converters import to_bytes
 
 from . import imgproc_cache
 from .config import get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import named_temporary_directory
+from .utils import named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -123,7 +129,7 @@ class TextMatchResult(object):
         self.text = text
 
     # pylint:disable=no-member
-    def __nonzero__(self):
+    def __bool__(self):
         return self.match
 
     def __repr__(self):
@@ -239,10 +245,10 @@ def ocr(frame=None, region=Region.ALL,
             "instead. To OCR an entire video frame, use "
             "`region=Region.ALL`.")
 
-    if isinstance(tesseract_user_words, (str, unicode)):
+    if isinstance(tesseract_user_words, string_types):
         tesseract_user_words = [tesseract_user_words]
 
-    if isinstance(tesseract_user_patterns, (str, unicode)):
+    if isinstance(tesseract_user_patterns, string_types):
         tesseract_user_patterns = [tesseract_user_patterns]
 
     imglog = ImageLogger("ocr")
@@ -315,7 +321,7 @@ def match_text(text, frame=None, region=Region.ALL,
         result = TextMatchResult(rts, False, None, frame, text)
     else:
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-        p = _hocr_find_phrase(hocr, _to_unicode(text).split(), case_sensitive)
+        p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
             box = None
@@ -369,7 +375,8 @@ def _tesseract_version(output=None):
         if _memoise_tesseract_version is None:
             try:
                 _memoise_tesseract_version = subprocess.check_output(
-                    ['tesseract', '--version'], stderr=subprocess.STDOUT)
+                    ['tesseract', '--version'],
+                    stderr=subprocess.STDOUT).decode("utf-8")
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     return None
@@ -464,7 +471,7 @@ def _tesseract_subprocess(
         diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
         frame = numpy.sqrt((diff[:, :, 0] ** 2 +
                             diff[:, :, 1] ** 2 +
-                            diff[:, :, 2] ** 2) / 3) \
+                            diff[:, :, 2] ** 2) // 3) \
                      .astype(numpy.uint8)
         imglog.imwrite("text_color_difference", frame)
         _, frame = cv2.threshold(frame, text_color_threshold, 255,
@@ -506,7 +513,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'_config[\"user_words_suffix\"]' at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(to_bytes(x) for x in user_words))
+                f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
         if user_patterns:
@@ -515,7 +522,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'_config[\"user_patterns_suffix\"]' at the same time")
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
-                f.write('\n'.join(to_bytes(x) for x in user_patterns))
+                f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
         if imglog.enabled:
@@ -523,11 +530,11 @@ def _tesseract_subprocess(
 
         if _config:
             with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
-                for k, v in _config.iteritems():
+                for k, v in _config.items():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
                     else:
-                        cfg.write("%s %s\n" % (k, to_bytes(v)))
+                        cfg.write("%s %s\n" % (k, to_unicode(v)))
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', frame)
@@ -535,7 +542,7 @@ def _tesseract_subprocess(
             subprocess.check_output(cmd, cwd=tmp, env=tessenv,
                                     stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
-            warn("Tesseract failed: %s" % e.output)
+            warn("Tesseract failed: %s" % e.output.decode("utf-8", "replace"))
             raise
 
         if imglog.enabled:
@@ -547,7 +554,7 @@ def _tesseract_subprocess(
             _, ext = os.path.splitext(filename)
             if ext == ".txt" or ext == ".hocr":
                 with open(filename) as f:
-                    return f.read().decode("utf-8")
+                    return f.read()
 
 
 def _hocr_iterate(hocr):
@@ -567,7 +574,7 @@ def _hocr_iterate(hocr):
                     if need_space and started:
                         yield (u' ', None)
                     need_space = False
-                    yield (unicode(t).strip(), e)
+                    yield (str(t).strip(), e)
                     started = True
                 else:
                     need_space = True
@@ -590,13 +597,6 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
             if all(w[0] == p for w, p in zip(sublist, phrase)):
                 return sublist
     return None
-
-
-def _to_unicode(text):
-    if isinstance(text, str):
-        return text.decode("utf-8")
-    else:
-        return unicode(text)
 
 
 def _hocr_elem_region(elem):

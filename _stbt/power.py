@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import errno
 import os
 import re
@@ -73,7 +78,7 @@ class _ShellOutlet(object):
     def get(self):
         import subprocess
         power = subprocess.check_output(self.cmd + ["status"]).strip()
-        return {'ON': True, 'OFF': False}[power]
+        return {b'ON': True, b'OFF': False}[power]
 
 
 class _Aviosys8800Pro(object):

@@ -10,7 +10,8 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-pythondir?=$(prefix)/lib/python2.7/site-packages
+python_version?=2.7
+pythondir?=$(prefix)/lib/python$(python_version)/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Enable building/installing man page
@@ -117,7 +118,6 @@ install-core: all
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
 	chmod 0755 $(DESTDIR)$(bindir)/stbt
-	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
@@ -182,7 +182,6 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
-	rm -f $(DESTDIR)$(bindir)/irnetbox-proxy
 	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
 	rm -rf $(DESTDIR)$(pythondir)/stbt
@@ -196,14 +195,13 @@ clean:
 	git clean -Xfd || true
 
 PYTHON_FILES := \
-    $(shell (git ls-files '*.py' && \
-             git grep --name-only -E '^\#!/usr/bin/(env python|python)') \
+    $(shell git ls-files '*.py' \
              | grep -v '^vendor/' \
              | sort | uniq | grep -v tests/webminspector)
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all
-	PYTHONPATH=$$PWD:/usr/lib/python2.7/dist-packages/cec \
+	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
@@ -212,7 +210,7 @@ check-pytest: all
 	              -e vendor/)
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' \
 	    $$(ls tests/test-*.sh | \
 	       grep -v -e tests/test-virtual-stb.sh) |\
@@ -225,7 +223,7 @@ install: install-virtual-stb
 check: check-virtual-stb
 check-virtual-stb: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python2.7/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
 	tests/run-tests.sh -i tests/test-virtual-stb.sh
 else
 $(info virtual-stb support disabled)
@@ -237,7 +235,7 @@ install-for-test:
 	      mandir man1dir pythondir sysconfdir && \
 	make install prefix=$$PWD/tests/test-install
 
-parallel := $(shell \
+parallel ?= $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu -j +4 || echo xargs)
 
@@ -326,7 +324,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu1804
+CI_DOCKER_IMAGES = ubuntu1804-python2 ubuntu1804-python3
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

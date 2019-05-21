@@ -1,4 +1,8 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import os
 import re
@@ -10,9 +14,10 @@ import time
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
-from . import irnetbox, utils
+from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
+from .utils import named_temporary_directory, to_bytes
 
 __all__ = ['uri_to_control', 'uri_to_control_recorder']
 
@@ -192,7 +197,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = key
+        self.videosrc.props.pattern = to_bytes(key)
         debug("Pressed %s" % key)
 
 
@@ -564,15 +569,15 @@ class SamsungTCPControl(RemoteControl):
         '\x10\x00MTkyLjE2OC4wLjEw'
         """
         from base64 import b64encode
-        from struct import pack
         b64 = b64encode(string)
-        return pack('<H', len(b64)) + b64
+        return struct.pack('<H', len(b64)) + b64
 
     def _send_payload(self, payload):
-        from struct import pack
-        sender = "iphone.iapp.samsung"
-        packet_start = pack('<BH', 0, len(sender)) + sender
-        self.socket.send(packet_start + pack('<H', len(payload)) + payload)
+        sender = b"iphone.iapp.samsung"
+        packet_start = struct.pack('<BH', 0, len(sender)) + sender
+        self.socket.send(packet_start +
+                         struct.pack('<H', len(payload)) +
+                         payload)
 
     def _hello(self):
         payload = bytearray([0x64, 0x00])
@@ -639,7 +644,7 @@ def file_control_recorder(filename):
         line = f.readline()
         if line == '':
             f.close()
-            raise StopIteration
+            return
         yield line.rstrip()
 
 
@@ -766,7 +771,7 @@ def _fake_lircd():
     # This needs to accept 2 connections (from LircControl and
     # lirc_control_listen) and, on receiving input from the LircControl
     # connection, write to the lirc_control_listen connection.
-    with utils.named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
+    with named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
         address = tmp + '/lircd'
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.bind(address)
@@ -802,7 +807,7 @@ def test_that_lirc_control_is_symmetric_with_lirc_control_listen():
         control = uri_to_control('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
-            assert listener.next() == key
+            assert next(listener) == key
 
 
 def test_that_local_lirc_socket_is_correctly_defaulted():
@@ -813,7 +818,7 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
             DEFAULT_LIRCD_SOCKET = lircd_socket
             listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
             uri_to_control('lirc::test').press('KEY')
-            assert listener.next() == 'KEY'
+            assert next(listener) == 'KEY'
     finally:
         DEFAULT_LIRCD_SOCKET = old_default
 
@@ -872,8 +877,7 @@ def test_x11_control():
 
     from .x11 import x_server
 
-    with utils.named_temporary_directory() as tmp, \
-            x_server(320, 240) as display:
+    with named_temporary_directory() as tmp, x_server(320, 240) as display:
         r = uri_to_control('x11:%s' % display)
 
         subprocess.Popen(
@@ -893,7 +897,7 @@ def test_x11_control():
             time.sleep(0.5)
         with open(tmp + '/xterm.log', 'r') as log:
             for line in log:
-                print "xterm.log: " + line,
+                print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')
 
 

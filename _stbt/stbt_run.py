@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
 import sys
 import traceback
@@ -57,7 +62,7 @@ def _import_by_filename(filename_):
     import_dir, import_name = find_import_name(filename_)
     sys.path.insert(0, import_dir)
     try:
-        module = import_module(import_name)
+        mod = import_module(import_name)
     finally:
         # If the test function is not in a module we will need to leave
         # PYTHONPATH modified here so one python file in the test-pack can
@@ -65,7 +70,7 @@ def _import_by_filename(filename_):
         # careful of modules that mess with sys.path:
         if '.' in import_name and sys.path[0] == import_dir:
             sys.path.pop(0)
-    return module
+    return mod
 
 
 _TestFunction = namedtuple(
@@ -76,11 +81,11 @@ def load_test_function(script, args):
     sys.argv = [script] + args
     if '::' in script:
         filename, funcname = script.split('::', 1)
-        module = _import_by_filename(filename)
-        function = getattr(module, funcname)
+        mod = _import_by_filename(filename)
+        func = getattr(mod, funcname)
         return _TestFunction(
-            script, filename, funcname, function.func_code.co_firstlineno,
-            function)
+            script, filename, funcname, func.__code__.co_firstlineno,
+            func)
     else:
         filename = os.path.abspath(script)
 
@@ -103,7 +108,13 @@ def load_test_function(script, args):
 
         def fn():
             sys.path.insert(0, os.path.dirname(filename))
-            execfile(filename, test_globals)
+            code = compile(open(filename, "rb").read(),
+                           filename,
+                           mode="exec",
+                           # Don't apply the __future__ imports in force in
+                           # this file.
+                           dont_inherit=1)
+            exec(code, test_globals)  # pylint:disable=exec-used
 
         return _TestFunction(script, script, "", 1, fn)
 
@@ -127,7 +138,7 @@ def sane_unicode_and_exception_handling(script):
         error_message = exception_to_bytes(e)
         if not error_message and isinstance(e, AssertionError):
             error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-        sys.stdout.write("FAIL: %s: %s: %s\n" % (
+        sys.stdout.write(b"FAIL: %s: %s: %s\n" % (
             script, type(e).__name__, error_message))
 
         # This is a hack to allow printing exceptions that have unicode messages

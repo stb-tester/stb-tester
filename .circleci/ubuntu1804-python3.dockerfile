@@ -27,27 +27,27 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         moreutils \
         parallel \
         pep8 \
-        pylint \
-        python-docutils \
-        python-flask \
-        python-gi \
-        python-jinja2 \
-        python-kitchen \
-        python-libcec \
-        python-lmdb \
-        python-lxml \
-        python-mock \
-        python-nose \
-        python-numpy \
-        python-opencv \
-        python-pip \
-        python-pysnmp4 \
-        python-pytest \
-        python-requests \
-        python-responses \
-        python-scipy \
-        python-serial \
-        python-yaml \
+        pylint3 \
+        python3-docutils \
+        python3-flask \
+        python3-future \
+        python3-gi \
+        python3-jinja2 \
+        python3-kitchen \
+        python3-lmdb \
+        python3-lxml \
+        python3-mock \
+        python3-nose \
+        python3-numpy \
+        python3-opencv \
+        python3-pip \
+        python3-pysnmp4 \
+        python3-pytest \
+        python3-requests \
+        python3-responses \
+        python3-scipy \
+        python3-serial \
+        python3-yaml \
         socat \
         ssh \
         sudo \
@@ -67,6 +67,7 @@ ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     /usr/share/tesseract-ocr/4.00/tessdata/
 
-# Work around python-libcec packaging bug
-# https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1822066
-RUN mv /usr/lib/python2.7.15rc1/dist-packages/cec /usr/lib/python2.7/dist-packages/
+RUN ln -s python3.6 /usr/bin/python && \
+    ln -s pylint3 /usr/bin/pylint && \
+    ln -s pytest-3 /usr/bin/pytest && \
+    ln -s py.test-3 /usr/bin/py.test

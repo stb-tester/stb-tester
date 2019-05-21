@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import ctypes
 import os
 
@@ -185,8 +190,8 @@ def _measure_performance():
 
     _sqdiff_numba = _make_sqdiff_numba()
 
-    print "All times in ms                         numpy\tnumba"
-    print "type    \tnumpy\tnumba\tC\tspeedup\tspeedup\tsize\talignment"
+    print("All times in ms                         numpy\tnumba")
+    print("type    \tnumpy\tnumba\tC\tspeedup\tspeedup\tsize\talignment")
     for _ in range(100):
         frame_cropped, template, template_transparent = _random_template()
 
@@ -207,8 +212,8 @@ def _measure_performance():
                     repeat=3, number=10)) / 10
             else:
                 numba_time = float('nan')
-            print "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
+            print("%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%i x %i \t%s" % (
                 l, np_time * 1000, numba_time * 1000, c_time * 1000,
                 np_time / c_time, numba_time / c_time,
                 frame_cropped.shape[1], frame_cropped.shape[0],
-                frame_cropped.ctypes.data % 8)
+                frame_cropped.ctypes.data % 8))

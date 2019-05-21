@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import pytest
 
 from _stbt.core import DeviceUnderTest, NoSinkPipeline
@@ -32,13 +37,13 @@ class FakeControl(object):
         self.keyup_called = 0
 
     def keydown(self, key):
-        print "keydown %s" % key
+        print("keydown %s" % key)
         self.keydown_called += 1
         if self.raises_on_keydown:
             raise RuntimeError("keydown %s failed" % key)
 
     def keyup(self, key):
-        print "keyup %s" % key
+        print("keyup %s" % key)
         self.keyup_called += 1
         if self.raises_on_keyup:
             raise RuntimeError("keyup %s failed" % key)

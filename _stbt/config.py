@@ -1,4 +1,9 @@
-import ConfigParser
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+import configparser
 import enum
 import os
 from contextlib import contextmanager
@@ -30,7 +35,7 @@ def get_config(section, key, default=None, type_=str):
             return _to_enum(type_, config.get(section, key), section, key)
         else:
             return type_(config.get(section, key))
-    except ConfigParser.Error as e:
+    except configparser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)
         else:
@@ -60,7 +65,7 @@ def set_config(section, option, value):
 
     config = _config_init()
 
-    parser = ConfigParser.SafeConfigParser()
+    parser = configparser.ConfigParser()
     parser.read([custom_config])
     if value is not None:
         if not parser.has_section(section):
@@ -69,7 +74,7 @@ def set_config(section, option, value):
     else:
         try:
             parser.remove_option(section, option)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             pass
 
     d = os.path.dirname(custom_config)
@@ -102,7 +107,7 @@ def _config_init(force=False):
         # with the one at the beginning taking precedence:
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.read(config_files)
         _config = config
     return _config
