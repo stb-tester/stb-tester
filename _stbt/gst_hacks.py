@@ -112,7 +112,7 @@ def test_map_sample_reading_data():
 
     s = Gst.Sample.new(Gst.Buffer.new_wrapped(b"hello"), None, None, None)
     with map_gst_sample(s, Gst.MapFlags.READ) as a:
-        assert b'hello' == b''.join(chr(x) for x in a)
+        assert b'hello' == ''.join(chr(x) for x in a).encode("ascii")
 
 
 def test_map_sample_modifying_data():
