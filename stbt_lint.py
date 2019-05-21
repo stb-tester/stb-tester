@@ -77,7 +77,7 @@ def main(argv):
 
     t = threading.Thread(target=filter_warnings,
                          args=(pylint.stderr,
-                               os.fdopen(sys.stderr.fileno(), "wb")))
+                               os.fdopen(sys.stderr.fileno(), "wb", 0)))
     t.start()
 
     pylint.wait()
