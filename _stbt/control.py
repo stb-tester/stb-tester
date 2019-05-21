@@ -173,7 +173,6 @@ class VideoTestSrcControl(RemoteControl):
         return videosrc
 
     def press(self, key):
-        key = to_bytes(key)
         if key not in [
                 0, "smpte",
                 1, "snow",
@@ -198,7 +197,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = key
+        self.videosrc.props.pattern = to_bytes(key)
         debug("Pressed %s" % key)
 
 
