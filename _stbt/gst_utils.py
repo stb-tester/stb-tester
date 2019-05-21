@@ -105,7 +105,7 @@ def test_that_array_from_sample_readwrite_gives_a_writable_array():
                        Gst.Caps.from_string("video/x-raw"), None, None)
     array = array_from_sample(s, readwrite=True)
     array[0] = ord("j")
-    assert s.get_buffer().extract_dup(0, 5) == "jello"
+    assert s.get_buffer().extract_dup(0, 5) == b"jello"
 
 
 def test_that_array_from_sample_dimensions_of_array_are_according_to_caps():
