@@ -32,7 +32,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-flask \
         python-future \
         python-gi \
-        python-gst-1.0 \
         python-jinja2 \
         python-kitchen \
         python-libcec \

@@ -114,8 +114,6 @@ def new_device_under_test_from_config(parsed_args=None):
         args.save_video = False
     if args.restart_source is None:
         args.restart_source = get_config('global', 'restart_source', type_=bool)
-    source_teardown_eos = get_config('global', 'source_teardown_eos',
-                                     type_=bool)
 
     display = [None]
 
@@ -130,8 +128,7 @@ def new_device_under_test_from_config(parsed_args=None):
             args.sink_pipeline, raise_in_user_thread, args.save_video)
 
     display[0] = Display(
-        args.source_pipeline, sink_pipeline, args.restart_source,
-        source_teardown_eos)
+        args.source_pipeline, sink_pipeline, args.restart_source)
     return DeviceUnderTest(
         display=display[0], control=uri_to_control(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop)
@@ -850,7 +847,7 @@ class NoSinkPipeline(object):
 
 class Display(object):
     def __init__(self, user_source_pipeline, sink_pipeline,
-                 restart_source=False, source_teardown_eos=False):
+                 restart_source=False):
 
         import time
 
@@ -862,7 +859,6 @@ class Display(object):
         self.underrun_timeout = None
         self.tearing_down = False
         self.restart_source_enabled = restart_source
-        self.source_teardown_eos = source_teardown_eos
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=false sync=true "
@@ -1067,13 +1063,6 @@ class Display(object):
         self.tearing_down = True
         self.source_pipeline, source = None, self.source_pipeline
         if source:
-            if self.source_teardown_eos:
-                debug("teardown: Sending eos on source pipeline")
-                for elem in source.iterate_sources():
-                    elem.send_event(Gst.Event.new_eos())
-                if not self.appsink_await_eos(
-                        source.get_by_name('appsink'), timeout=10):
-                    debug("Source pipeline did not teardown gracefully")
             source.set_state(Gst.State.NULL)
             source = None
 

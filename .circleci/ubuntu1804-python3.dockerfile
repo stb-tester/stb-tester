@@ -32,7 +32,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-flask \
         python3-future \
         python3-gi \
-        python3-gst-1.0 \
         python3-jinja2 \
         python3-kitchen \
         python3-lmdb \
