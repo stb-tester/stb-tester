@@ -211,7 +211,7 @@ class _ArgsEncoder(json.JSONEncoder):
             from _stbt.xxhash import Xxhash64
             h = Xxhash64()
             h.update(numpy.ascontiguousarray(o).data)
-            return (o.shape, h.hexdigest())
+            return (o.shape, h.hexdigest().decode("utf-8"))
         else:
             json.JSONEncoder.default(self, o)
 
