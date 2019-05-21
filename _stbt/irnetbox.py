@@ -211,7 +211,7 @@ class IRNetBox(object):
 
 
 def RemoteControlConfig(filename):
-    return _parse_config(open(filename))
+    return _parse_config(open(filename, "rb"))
 
 
 class MessageTypes(object):
@@ -292,20 +292,20 @@ def _parse_config(config_file):
     """
     d = {}
     for line in config_file:
-        fields = re.split("[\t ]+", line.rstrip(), maxsplit=4)
+        fields = re.split(b"[\t ]+", line.rstrip(), maxsplit=4)
         if len(fields) == 4:
             # (name, type, max_num_lengths, data)
             name, type_, _, data = fields
-            if type_ == "MOD_SIG":
-                d[name] = binascii.unhexlify(data)
+            if type_ == b"MOD_SIG":
+                d[name.decode("utf-8")] = binascii.unhexlify(data)
         if len(fields) == 5:
             # "Double signals" where pressing the button on the remote control
             # alternates between signal1 & signal2. We'll always send signal1,
             # but that shouldn't matter.
             # (name, type, signal1 or signal2, max_num_lengths, data)
             name, type_, signal, _, data = fields
-            if type_ == "DMOD_SIG" and signal == "signal1":
-                d[name] = binascii.unhexlify(data)
+            if type_ == b"DMOD_SIG" and signal == b"signal1":
+                d[name.decode("utf-8")] = binascii.unhexlify(data)
     return d
 
 
