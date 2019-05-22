@@ -290,3 +290,21 @@ test_that_default_control_raises_exception() {
     ! stbt run -v test.py &&
     grep -q 'FAIL: test.py: RuntimeError: No remote control configured' log
 }
+
+test_that_stbt_run_doesnt_import_unrelated_files() {
+    # This is a regression test for a bug where if you import from
+    # 'future.moves' (a Python 2/3 compatibility library) it automatically
+    # tries to import every python module it finds at the current working
+    # directory.
+    cat > test.py <<-EOF
+	print("This is coming from test.py")
+	EOF
+    cat > test2.py <<-EOF
+	import stbt
+	print("OK")
+	EOF
+    stbt run -v test2.py || fail
+    if grep -q "This is coming from test.py" log; then
+        fail "test.py was run but I asked for test2.py"
+    fi
+}
