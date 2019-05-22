@@ -112,8 +112,6 @@ def new_device_under_test_from_config(parsed_args=None):
         args.control = get_config('global', 'control')
     if args.save_video is None:
         args.save_video = False
-    if args.restart_source is None:
-        args.restart_source = get_config('global', 'restart_source', type_=bool)
 
     display = [None]
 
@@ -127,8 +125,7 @@ def new_device_under_test_from_config(parsed_args=None):
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
             args.sink_pipeline, raise_in_user_thread, args.save_video)
 
-    display[0] = Display(
-        args.source_pipeline, sink_pipeline, args.restart_source)
+    display[0] = Display(args.source_pipeline, sink_pipeline)
     return DeviceUnderTest(
         display=display[0], control=uri_to_control(args.control, display[0]),
         sink_pipeline=sink_pipeline, mainloop=mainloop)
@@ -572,11 +569,6 @@ def argparser():
         help='A gstreamer pipeline to use for video output '
              '(default: %(default)s)')
     parser.add_argument(
-        '--restart-source', action='store_true',
-        default=get_config('global', 'restart_source', type_=bool),
-        help='Restart the GStreamer source pipeline when video loss is '
-             'detected')
-    parser.add_argument(
         '--save-video', help='Record video to the specified file',
         metavar='FILE', default=get_config('run', 'save_video'))
 
@@ -846,8 +838,7 @@ class NoSinkPipeline(object):
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, sink_pipeline,
-                 restart_source=False):
+    def __init__(self, user_source_pipeline, sink_pipeline):
 
         import time
 
@@ -856,9 +847,7 @@ class Display(object):
         self.last_used_frame = None
         self.source_pipeline = None
         self.init_time = time.time()
-        self.underrun_timeout = None
         self.tearing_down = False
-        self.restart_source_enabled = restart_source
 
         appsink = (
             "appsink name=appsink max-buffers=1 drop=false sync=true "
@@ -902,14 +891,6 @@ class Display(object):
         # A realtime clock gives timestamps compatible with time.time()
         self.source_pipeline.use_clock(
             Gst.SystemClock(clock_type=Gst.ClockType.REALTIME))
-
-        if self.restart_source_enabled:
-            # Handle loss of video (but without end-of-stream event) from the
-            # Hauppauge HDPVR capture device.
-            source_queue = self.source_pipeline.get_by_name(
-                "_stbt_user_data_queue")
-            source_queue.connect("underrun", self.on_underrun)
-            source_queue.connect("running", self.on_running)
 
     def set_source_pipeline_playing(self):
         if (self.source_pipeline.set_state(Gst.State.PAUSED) ==
@@ -1009,22 +990,6 @@ class Display(object):
             warn("Got EOS from source pipeline")
             self.restart_source()
 
-    def on_underrun(self, _element):
-        if self.underrun_timeout:
-            ddebug("underrun: I already saw a recent underrun; ignoring")
-        else:
-            ddebug("underrun: scheduling 'restart_source' in 2s")
-            self.underrun_timeout = GObjectTimeout(2, self.restart_source)
-            self.underrun_timeout.start()
-
-    def on_running(self, _element):
-        if self.underrun_timeout:
-            ddebug("running: cancelling underrun timer")
-            self.underrun_timeout.cancel()
-            self.underrun_timeout = None
-        else:
-            ddebug("running: no outstanding underrun timers; ignoring")
-
     def restart_source(self, *_args):
         warn("Attempting to recover from video loss: "
              "Stopping source pipeline and waiting 5s...")
@@ -1040,8 +1005,6 @@ class Display(object):
         self.create_source_pipeline()
         self.set_source_pipeline_playing()
         warn("Restarted source pipeline")
-        if self.restart_source_enabled:
-            self.underrun_timeout.start()
         return False  # stop the timeout from running again
 
     @staticmethod
