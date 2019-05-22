@@ -277,7 +277,7 @@ def _read_lircd_reply(stream, command):
             try:
                 num_data_lines = int(reply[4])
                 raise RuntimeError("LIRC remote control returned error: %s"
-                                   % " ".join(reply[5:5 + num_data_lines]))
+                                   % b" ".join(reply[5:5 + num_data_lines]))
             except ValueError:
                 pass
         raise RuntimeError("LIRC remote control returned unknown error")

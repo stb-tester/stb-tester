@@ -41,6 +41,7 @@ import sys
 
 import _stbt.logging
 from _stbt.control import uri_to_control
+from _stbt.utils import to_bytes
 
 
 def main(argv):
@@ -68,47 +69,45 @@ def main(argv):
 
     while True:
         conn, _ = s.accept()
-        f = conn.makefile('r', 0)
+        f = conn.makefile('rb', 0)
         while True:
             cmd = f.readline()
             if not cmd:
                 break
-            cmd = cmd.rstrip("\n")
-            m = re.match(r"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
-                         r"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
+            cmd = cmd.rstrip(b"\n")
+            m = re.match(br"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
+                         br"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
             if not m:
                 debug("Invalid command: %s" % cmd)
                 send_response(conn, cmd, success=False,
-                              data="Invalid command: %s" % cmd)
+                              data=b"Invalid command: %s" % cmd)
                 continue
-            action = m.groupdict()["action"]
-            key = m.groupdict()["key"]
+            action = m.group("action")
+            key = m.group("key")
             debug("Received %s %s" % (action, key))
             try:
-                if action == "SEND_ONCE":
+                if action == b"SEND_ONCE":
                     control.press(key)
-                elif action == "SEND_START":
+                elif action == b"SEND_START":
                     control.keydown(key)
-                elif action == "SEND_STOP":
+                elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
                 debug("Error pressing key %r: %r" % (key, e))
-                send_response(conn, cmd, success=False, data=str(e))
+                send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
             send_response(conn, cmd, success=True)
 
 
-def send_response(sock, request, success, data=""):
+def send_response(sock, request, success, data=b""):
     # See http://www.lirc.org/html/lircd.html
-    message = "BEGIN\n{cmd}\n{status}\n".format(
-        cmd=request,
-        status="SUCCESS" if success else "ERROR")
+    message = b"BEGIN\n%s\n%s\n" % (
+        request,
+        b"SUCCESS" if success else b"ERROR")
     if data:
-        data = data.split("\n")
-        message += "DATA\n{length}\n{data}\n".format(
-            length=len(data),
-            data="\n".join(data))
-    message += "END\n"
+        data = data.split(b"\n")
+        message += b"DATA\n%d\n%s\n" % (len(data), b"\n".join(data))
+    message += b"END\n"
 
     try:
         sock.sendall(message)
