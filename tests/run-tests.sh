@@ -23,6 +23,7 @@ shift $(($OPTIND-1))
 
 export testdir="$(cd "$(dirname "$0")" && pwd)"
 export srcdir="$testdir/.."
+export LANG=C.UTF-8
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
 : ${python_version:=2.7}
