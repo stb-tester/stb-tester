@@ -33,7 +33,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-future \
         python3-gi \
         python3-jinja2 \
-        python3-kitchen \
         python3-lmdb \
         python3-lxml \
         python3-mock \
