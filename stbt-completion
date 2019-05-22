@@ -50,7 +50,7 @@ _stbt_run() {
         --save-video=*) COMPREPLY=($(_stbt_filenames "$cur"));;
         *) COMPREPLY=(
                 $(compgen -W "$(_stbt_trailing_space \
-                        --help --verbose --restart-source --save-video \
+                        --help --verbose --save-video \
                         --control --source-pipeline --sink-pipeline)" \
                     -- "$cur")
                 $(_stbt_filename_possibly_with_test_functions));;
@@ -69,7 +69,7 @@ _stbt_record() {
         -o=*|--output-file=*) COMPREPLY=($(_stbt_filenames "$cur"));;
         *) COMPREPLY=($(compgen \
             -W "$(_stbt_trailing_space \
-                    --help --verbose --restart-source \
+                    --help --verbose \
                     --control --source-pipeline --sink-pipeline \
                     --control-recorder --output-file)" \
             -- "$cur"));;
