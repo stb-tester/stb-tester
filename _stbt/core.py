@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import native, raise_, string_types
+from future.utils import native, raise_, string_types, text_to_native_str
 
 import argparse
 import datetime
@@ -921,7 +921,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', b'downstream')
+                .set_property('leaky', text_to_native_str('downstream'))
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 
