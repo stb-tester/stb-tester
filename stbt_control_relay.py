@@ -92,6 +92,7 @@ def main(argv):
             key = m.group("key")
             logging.debug("Received %s %s", action, key)
             try:
+                key = key.decode("utf-8")
                 if action == b"SEND_ONCE":
                     control.press(key)
                 elif action == b"SEND_START":
