@@ -250,7 +250,7 @@ def ocr(frame=None, region=Region.ALL,
     if isinstance(tesseract_user_patterns, (bytes, str)):
         tesseract_user_patterns = [tesseract_user_patterns]
 
-    imglog = ImageLogger("ocr")
+    imglog = ImageLogger("ocr", result=None)
 
     text, region = _tesseract(
         frame, region, mode, lang, tesseract_config,
