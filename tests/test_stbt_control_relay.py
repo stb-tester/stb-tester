@@ -113,7 +113,8 @@ def socket_passing_setup(socket):
 
 
 def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # pylint: disable=unused-argument
-    with NamedTemporaryFile(prefix="stbt-control-relay-test-") as tmpfile:
+    with NamedTemporaryFile(mode="w+",
+                            prefix="stbt-control-relay-test-") as tmpfile:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('127.0.0.1', 0))
         s.listen(5)
