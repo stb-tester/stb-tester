@@ -6,6 +6,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 import os
 import socket
 import subprocess
+import sys
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
@@ -104,6 +105,8 @@ def socket_passing_setup(socket):
         os.environ['LISTEN_PID'] = str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
+        if sys.version_info.major > 2:
+            os.set_inheritable(3, True)  # pylint:disable=no-member
         os.closerange(4, 100)
 
     return preexec_fn
@@ -117,7 +120,8 @@ def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # 
 
         proc = subprocess.Popen(
             ["stbt-control-relay", "-vv", "file:" + tmpfile.name],
-            preexec_fn=socket_passing_setup(s))
+            preexec_fn=socket_passing_setup(s),
+            close_fds=False)
         with scoped_process(proc):
             testcontrol = uri_to_control("lirc:%s:%i:stbt" % s.getsockname())
 
