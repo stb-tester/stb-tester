@@ -33,13 +33,13 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
+import logging
 import os
 import re
 import signal
 import socket
 import sys
 
-import _stbt.logging
 from _stbt.control import uri_to_control
 from _stbt.utils import to_bytes
 
@@ -50,10 +50,14 @@ def main(argv):
     parser.add_argument(
         "--socket", default="/var/run/lirc/lircd", help="""LIRC socket to read
         remote control presses from (defaults to %(default)s).""")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("output", help="""Remote control configuration to
         transmit on. Values are the same as stbt run's --control.""")
-    _stbt.logging.argparser_add_verbose_argument(parser)
     args = parser.parse_args(argv[1:])
+
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s",
+        level=logging.DEBUG if args.verbose else logging.INFO)
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
@@ -67,6 +71,8 @@ def main(argv):
 
     control = uri_to_control(args.output)
 
+    logging.info("stbt-control-relay started up with output '%s'", args.output)
+
     while True:
         conn, _ = s.accept()
         f = conn.makefile('rb', 0)
@@ -78,13 +84,13 @@ def main(argv):
             m = re.match(br"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
                          br"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
             if not m:
-                debug("Invalid command: %s" % cmd)
+                logging.error("Invalid command: %s", cmd)
                 send_response(conn, cmd, success=False,
                               data=b"Invalid command: %s" % cmd)
                 continue
             action = m.group("action")
             key = m.group("key")
-            debug("Received %s %s" % (action, key))
+            logging.debug("Received %s %s", action, key)
             try:
                 if action == b"SEND_ONCE":
                     control.press(key)
@@ -93,7 +99,8 @@ def main(argv):
                 elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
-                debug("Error pressing key %r: %r" % (key, e))
+                logging.error("Error pressing key %r: %s", key, e,
+                              exc_info=True)
                 send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
             send_response(conn, cmd, success=True)
@@ -113,10 +120,6 @@ def send_response(sock, request, success, data=b""):
         sock.sendall(message)
     except Exception:  # pylint: disable=broad-except
         pass
-
-
-def debug(s):
-    _stbt.logging.debug("stbt-control-relay: %s" % s)
 
 
 if __name__ == "__main__":
