@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import text_to_native_str
 
 import os
 import re
@@ -197,7 +198,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = to_bytes(key)
+        self.videosrc.props.pattern = text_to_native_str(key)
         debug("Pressed %s" % key)
 
 
