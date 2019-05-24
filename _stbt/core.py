@@ -523,7 +523,7 @@ def as_precondition(message):
     except (UITestFailure, AssertionError) as original:
         debug("stbt.as_precondition caught a %s exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % (type(original).__name__, traceback.format_exc(original)))
+              % (type(original).__name__, traceback.format_exc()))
         exc = PreconditionError(message, original)
         if hasattr(original, 'screenshot'):
             exc.screenshot = original.screenshot  # pylint:disable=attribute-defined-outside-init,no-member
