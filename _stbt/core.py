@@ -520,13 +520,13 @@ def as_precondition(message):
     """
     try:
         yield
-    except (UITestFailure, AssertionError) as e:
+    except (UITestFailure, AssertionError) as original:
         debug("stbt.as_precondition caught a %s exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % (type(e).__name__, traceback.format_exc(e)))
-        exc = PreconditionError(message, e)
-        if hasattr(e, 'screenshot'):
-            exc.screenshot = e.screenshot  # pylint: disable=attribute-defined-outside-init,no-member
+              % (type(original).__name__, traceback.format_exc(original)))
+        exc = PreconditionError(message, original)
+        if hasattr(original, 'screenshot'):
+            exc.screenshot = original.screenshot  # pylint:disable=attribute-defined-outside-init,no-member
         raise exc
 
 
