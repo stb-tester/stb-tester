@@ -7,7 +7,6 @@ Standards-Version: 3.9.2
 Build-Depends: curl,
                debhelper (>= 9),
                expect,
-               gdb,
                gir1.2-gstreamer-1.0,
                gir1.2-gudev-1.0,
                git,
