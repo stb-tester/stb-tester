@@ -271,7 +271,7 @@ class DeviceUnderTest(object):
         while True:
             ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
-                max(10, timeout_secs), since=timestamp)
+                max(10, timeout_secs or 0), since=timestamp)
             ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
