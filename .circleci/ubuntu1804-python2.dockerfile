@@ -18,10 +18,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-tools \
         gzip \
         language-pack-en \
-        libgstreamer1.0-dev \
-        libgstreamer-plugins-base1.0-dev \
-        libopencv-dev \
-        liborc-0.4-dev \
         librsvg2-bin \
         moreutils \
         parallel \
