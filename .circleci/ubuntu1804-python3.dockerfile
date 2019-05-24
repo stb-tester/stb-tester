@@ -4,7 +4,8 @@ FROM ubuntu:18.04
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
         curl \
         expect \
@@ -15,6 +16,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
         gstreamer1.0-tools \
+        gstreamer1.0-x \
         gzip \
         language-pack-en \
         librsvg2-bin \
@@ -45,6 +47,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         ssh \
         sudo \
         tar \
+        tcl8.6 \
         tesseract-ocr \
         time \
         wget \
