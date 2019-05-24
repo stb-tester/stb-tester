@@ -67,8 +67,8 @@ test_get_config() {
 test_that_frames_returns_at_least_one_frame() {
     cat > test.py <<-EOF
 	import stbt
-	stbt.frames(timeout_secs=0).next()
-	stbt.frames(timeout_secs=0).next()
+	next(stbt.frames(timeout_secs=0))
+	next(stbt.frames(timeout_secs=0))
 	EOF
     stbt run -v test.py
 }
@@ -139,11 +139,11 @@ test_that_frames_doesnt_deadlock() {
 	    print(frame.time)
 	    break
 	frames = stbt.frames()
-	frame1 = frames.next()
+	frame1 = next(frames)
 	frames = stbt.frames()  # Drop reference to old 'frames'; should be GCd.
-	frame2 = frames.next()
+	frame2 = next(frames)
 	frames3 = stbt.frames()
-	frame3 = frames3.next()  # old 'frames' still holds lock
+	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
     timeout 10 stbt run -v test.py &&
 
