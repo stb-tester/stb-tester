@@ -78,8 +78,8 @@ test_that_stbt_lint_ignores_multiline_image_name() {
 
 test_that_stbt_lint_ignores_image_urls() {
     cat > test.py <<-EOF &&
-	import urllib2
-	urllib2.urlopen("http://example.com/image.png")
+	def urlopen(x): pass
+	urlopen("http://example.com/image.png")
 	EOF
     stbt lint --errors-only test.py
 }
