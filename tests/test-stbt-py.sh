@@ -176,6 +176,8 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 }
 
 test_that_video_index_is_written_on_eos() {
+    which python2 || skip "Requires Python 2"
+
     _test_that_video_index_is_written_on_eos 5 && return
     echo "Failed with 5s video; trying again with 20s video"
     _test_that_video_index_is_written_on_eos 20
@@ -189,7 +191,8 @@ _test_that_video_index_is_written_on_eos() {
         --sink-pipeline \
             "queue ! vp8enc cpu-used=6 ! webmmux ! filesink location=video.webm" \
         test.py &&
-    "$testdir"/webminspector/webminspector.py video.webm &> webminspector.log &&
+    python2 "$testdir"/webminspector/webminspector.py video.webm \
+        &> webminspector.log &&
     grep "Cue Point" webminspector.log || {
       cat webminspector.log
       echo "error: Didn't find 'Cue Point' in $scratchdir/webminspector.log"
