@@ -7,15 +7,17 @@
 #/         -i      Run against installed version of stbt
 #/         -l      Leave the scratch dir created in /tmp.
 #/         -v      Verbose (don't suppress console output from tests).
+#/         -x      Stop on first failure.
 #/
 #/         If any test names are specified, only those test cases will be run.
 
 
-while getopts "lvi" option; do
+while getopts "ilvx" option; do
     case $option in
         i) test_the_installed_version=true;;
         l) leave_scratch_dir=true;;
         v) verbose=true;;
+        x) stop_on_first_failure=true;;
         *) grep '^#/' < "$0" | cut -c4- >&2; exit 1;; # Print usage message
     esac
 done
@@ -89,6 +91,9 @@ yellow() { tput setaf 3; printf "%s" "$*"; tput sgr0; }
 ret=0
 for t in ${testcases[*]}; do
     run $t || ret=1
+    if [[ "$stop_on_first_failure" == "true" && $ret -eq 1 ]]; then
+        break
+    fi
 done
 if [[ -n "$test_installation_prefix" ]]; then
     rm -rf "$test_installation_prefix"
