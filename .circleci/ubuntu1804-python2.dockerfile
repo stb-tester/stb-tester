@@ -22,7 +22,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         librsvg2-bin \
         moreutils \
         parallel \
-        pep8 \
         pylint \
         python-docutils \
         python-flask \
