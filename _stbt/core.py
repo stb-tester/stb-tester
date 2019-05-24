@@ -526,7 +526,7 @@ def as_precondition(message):
               % (type(original).__name__, traceback.format_exc()))
         exc = PreconditionError(message, original)
         if hasattr(original, 'screenshot'):
-            exc.screenshot = original.screenshot  # pylint:disable=attribute-defined-outside-init,no-member
+            exc.screenshot = original.screenshot  # pylint:disable=no-member
         raise exc
 
 
@@ -541,6 +541,7 @@ class PreconditionError(UITestError):
         super(PreconditionError, self).__init__()
         self.message = message
         self.original_exception = original_exception
+        self.screenshot = None
 
     def __str__(self):
         return (
