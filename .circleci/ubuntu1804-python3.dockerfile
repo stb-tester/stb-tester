@@ -8,7 +8,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         ca-certificates \
         curl \
         expect \
-        expect-dev \
         gdb \
         gir1.2-gstreamer-1.0 \
         git \
