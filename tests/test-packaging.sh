@@ -13,8 +13,8 @@ test_importing_stbt_without_stbt_run() {
 test_that_stbt_imports_the_installed_version() {
     cat > test.py <<-EOF
 	import re, stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
 	def firstdir(path):
 	    return re.match("/?[^/]+", path).group()
 	assert firstdir(stbt.__file__) == firstdir(stbt._stbt.__file__)
@@ -26,16 +26,16 @@ test_that_stbt_imports_the_installed_version() {
 test_that_stbt_imports_the_source_version() {
     (cd "$srcdir" && python <<-EOF) || fail "Python from srcdir imported the wrong _stbt"
 	import stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
 	assert stbt.__file__.startswith("stbt/__init__.py")
 	assert stbt._stbt.__file__.startswith("_stbt/__init__.py")
 	EOF
 
     cat > test.py <<-EOF
 	import re, stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
 	def firstdir(path):
 	    return re.match("/?[^/]+", path).group()
 	assert firstdir(stbt.__file__) == firstdir(stbt._stbt.__file__)

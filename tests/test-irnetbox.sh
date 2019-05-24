@@ -78,9 +78,9 @@ test_that_press_waits_for_irnetbox_async_complete() {
 
     cat > test.py <<-EOF
 	import time
-	print "Before press: %d" % time.time()
+	print("Before press: %d" % time.time())
 	press("MENU")
-	print "After press: %d" % time.time()
+	print("After press: %d" % time.time())
 	EOF
     stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \

@@ -316,7 +316,7 @@ test_that_stbt_lint_understands_assert_false() {
     cat > test.py <<-EOF
 	def moo():
 	    assert False
-	    print "Hi there"
+	    print("Hi there")
 	
 	
 	def cow(a):
