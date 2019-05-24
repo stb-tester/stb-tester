@@ -46,8 +46,8 @@ test_that_press_times_out_when_lircd_doesnt_reply() {
 	EOF
     timeout 10s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
-    [ $? -eq $timedout ] && fail "'press' timed out"
-    [ $? -ne 0 ] || fail "Expected 'press' to raise exception"
+    [ $ret -eq $timedout ] && fail "'press' timed out"
+    [ $ret -ne 0 ] || fail "Expected 'press' to raise exception"
 }
 
 test_that_press_ignores_lircd_broadcast_messages_on_success() {
@@ -79,8 +79,8 @@ test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {
 	EOF
     timeout 10s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
-    [ $? -eq $timedout ] && fail "'press' timed out"
-    [ $? -ne 0 ] || fail "Expected 'press' to raise exception"
+    [ $ret -eq $timedout ] && fail "'press' timed out"
+    [ $ret -ne 0 ] || fail "Expected 'press' to raise exception"
 }
 
 test_press_hold_secs_with_lirc() {
