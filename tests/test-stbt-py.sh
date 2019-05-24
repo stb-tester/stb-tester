@@ -573,10 +573,13 @@ test_that_get_frame_may_return_the_same_frame_twice() {
 
 test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
     cat > test.py <<-EOF &&
-	import itertools
+	try:
+	    from itertools import izip as zip
+	except ImportError:
+	    pass
 	sa = set()
 	sb = set()
-	for a, b in itertools.izip(stbt.frames(), stbt.frames()):
+	for a, b in zip(stbt.frames(), stbt.frames()):
 	    if len(sa) >= 10:
 	        break
 	    sa.add(a.time)
