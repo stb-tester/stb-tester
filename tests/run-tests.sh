@@ -64,7 +64,8 @@ run() {
     unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
     printf "$(bold $1...) "
-    ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1
+    ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1 &
+    wait $!
     local status=$?
     case $status in
         0) echo "$(green OK)";;
