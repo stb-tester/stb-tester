@@ -33,14 +33,13 @@ def main():
         print("SOCKET=" + f)
         while True:
             client, _ = s.accept()
-            for line in client.makefile():
+            for line in client.makefile("rb"):
                 line = line.strip()
-                print("fake-lircd: Received: " + line)
+                print("fake-lircd: Received: %s" % line)
                 try:
                     r = response(line)
                     if r:
-                        print("\n".join(
-                            "fake-lircd: Sending: " + x for x in r.split("\n")))
+                        print("fake-lircd: Sending: %s" % r)
                         client.sendall(r)
                 except socket.error as e:
                     if e.errno == socket.errno.EPIPE:
@@ -50,18 +49,18 @@ def main():
 
 
 def response(req):
-    s = ""
-    if re.search("sighup", req):
-        s += "BEGIN\nSIGHUP\nEND\n"
-    if re.search("broadcast", req):
-        s += "000f00b 01 OK My-IR-remote\n"
-    if req.startswith("SEND_"):
-        if re.search("error", req):
-            s += "BEGIN\n%s\nERROR\nDATA\n1\nfake-lircd error\nEND\n" % req
-        elif re.search("timeout", req):
+    s = b""
+    if re.search(b"sighup", req):
+        s += b"BEGIN\nSIGHUP\nEND\n"
+    if re.search(b"broadcast", req):
+        s += b"000f00b 01 OK My-IR-remote\n"
+    if req.startswith(b"SEND_"):
+        if re.search(b"error", req):
+            s += b"BEGIN\n%s\nERROR\nDATA\n1\nfake-lircd error\nEND\n" % req
+        elif re.search(b"timeout", req):
             pass
         else:
-            s += "BEGIN\n%s\nSUCCESS\nEND\n" % req
+            s += b"BEGIN\n%s\nSUCCESS\nEND\n" % req
     return s
 
 

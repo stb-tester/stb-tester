@@ -21,8 +21,8 @@ test_press_with_lirc() {
 	press("ok")
 	EOF
     stbt run -v --control lirc:$lircd_socket:test test.py || return
-    grep -q "fake-lircd: Received: SEND_ONCE test menu" fake-lircd.log &&
-    grep -q "fake-lircd: Received: SEND_ONCE test ok" fake-lircd.log ||
+    grep -Eq "fake-lircd: Received: b?'?SEND_ONCE test menu" fake-lircd.log &&
+    grep -Eq "fake-lircd: Received: b?'?SEND_ONCE test ok" fake-lircd.log ||
         fail "fake-lircd didn't receive 2 SEND_ONCE messages"
 }
 
@@ -96,11 +96,11 @@ test_press_hold_secs_with_lirc() {
     stbt run -v --control lirc:$lircd_socket:test test.py ||
         fail "stbt run failed"
 
-    grep -q "fake-lircd: Received: SEND_START test KEY_LEFT" fake-lircd.log &&
-    grep -q "fake-lircd: Received: SEND_STOP test KEY_LEFT" fake-lircd.log ||
+    grep -Eq "fake-lircd: Received: b?'?SEND_START test KEY_LEFT" fake-lircd.log &&
+    grep -Eq "fake-lircd: Received: b?'?SEND_STOP test KEY_LEFT" fake-lircd.log ||
         fail "press: fake-lircd dind't see SEND_START and SEND_STOP"
 
-    grep -q "fake-lircd: Received: SEND_START test KEY_RIGHT" fake-lircd.log &&
-    grep -q "fake-lircd: Received: SEND_STOP test KEY_RIGHT" fake-lircd.log ||
+    grep -Eq "fake-lircd: Received: b?'?SEND_START test KEY_RIGHT" fake-lircd.log &&
+    grep -Eq "fake-lircd: Received: b?'?SEND_STOP test KEY_RIGHT" fake-lircd.log ||
         fail "pressing: fake-lircd didn't see SEND_START and SEND_STOP"
 }
