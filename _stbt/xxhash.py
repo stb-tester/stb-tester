@@ -64,8 +64,6 @@ class Xxhash64(object):
         _libxxhash.XXH64_freeState(self._state)
 
     def update(self, data):
-        if isinstance(data, str):
-            data = data.encode("utf-8")
         # Passing a buffer/memoryview object via ctypes is inconvenient.  See
         # http://thread.gmane.org/gmane.comp.python.devel/134936/focus=134941
         if sys.version_info.major == 2:  # Python 2
@@ -85,4 +83,4 @@ class Xxhash64(object):
         return struct.pack(">Q", _libxxhash.XXH64_digest(self._state))
 
     def hexdigest(self):
-        return binascii.hexlify(self.digest())
+        return binascii.hexlify(self.digest()).decode("utf-8")

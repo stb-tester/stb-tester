@@ -216,7 +216,7 @@ class _ArgsEncoder(json.JSONEncoder):
             from _stbt.xxhash import Xxhash64
             h = Xxhash64()
             h.update(numpy.ascontiguousarray(o).data)
-            return (o.shape, h.hexdigest().decode("utf-8"))
+            return (o.shape, h.hexdigest())
         else:
             json.JSONEncoder.default(self, o)
 
@@ -228,6 +228,8 @@ def _cache_hash(value):
 
     class HashWriter(object):
         def write(self, data):
+            if isinstance(data, str):
+                data = data.encode("utf-8")
             h.update(data)
             return len(data)
 
