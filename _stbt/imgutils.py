@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import text_to_native_str
+
 import inspect
 import os
 from collections import namedtuple
@@ -12,7 +14,6 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
-from .utils import to_bytes
 
 
 class Frame(numpy.ndarray):
@@ -132,7 +133,8 @@ def imread(filename, flags=None):
     else:
         cv2_flags = flags
 
-    img = cv2.imread(to_bytes(filename), cv2_flags)
+    img = cv2.imread(text_to_native_str(filename, encoding="utf-8"),
+                     cv2_flags)
     if img is None:
         return None
 

@@ -138,13 +138,13 @@ def _to_enum(type_, value, section, key):
 
 
 @contextmanager
-def _sponge(filename):
+def _sponge(filename, mode="w"):
     """Opens a file to be written, which will be atomically replaced if the
     contextmanager exits cleanly.  Useful like the UNIX moreutils command
     `sponge`
     """
     from tempfile import NamedTemporaryFile
-    with NamedTemporaryFile(prefix=filename + '.', suffix='~',
+    with NamedTemporaryFile(mode=mode, prefix=filename + '.', suffix='~',
                             delete=False) as f:
         try:
             yield f

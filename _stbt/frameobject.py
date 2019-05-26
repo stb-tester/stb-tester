@@ -197,12 +197,30 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         """
         return bool(self.is_visible)
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
         """
         Two instances of the same ``FrameObject`` type are considered equal if
         the values of all the public properties match, even if the underlying
         frame is different. All falsey FrameObjects of the same type are equal.
         """
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return self.__cmp__(other) != 0
+
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    def __le__(self, other):
+        return self.__cmp__(other) <= 0
+
+    def __gt__(self, other):
+        return self.__cmp__(other) > 0
+
+    def __ge__(self, other):
+        return self.__cmp__(other) >= 0
+
+    def __cmp__(self, other):
         # pylint: disable=protected-access
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):

@@ -74,7 +74,7 @@ class Xxhash64(object):
         length = ctypes.c_ssize_t()
         ctypes.pythonapi.PyObject_AsReadBuffer(
             ctypes.py_object(buf), ctypes.byref(address), ctypes.byref(length))
-        assert length >= 0
+        assert length.value >= 0
 
         _libxxhash.XXH64_update(
             self._state, address, ctypes.c_size_t(length.value))
@@ -83,4 +83,4 @@ class Xxhash64(object):
         return struct.pack(">Q", _libxxhash.XXH64_digest(self._state))
 
     def hexdigest(self):
-        return binascii.hexlify(self.digest())
+        return binascii.hexlify(self.digest()).decode("utf-8")

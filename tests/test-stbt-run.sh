@@ -218,55 +218,107 @@ test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
          || fail "Relative imports in package should work"
 }
 
-check_unicode_error() {
-    cat >expected.log <<-EOF
-		Saved screenshot to 'screenshot.png'.
-		FAIL: test.py: AssertionError: ü
-		Traceback (most recent call last):
-		    yield
-		    test_function.call()
-		    assert False, $u"ü"
-		AssertionError: ü
-		EOF
-    cat expected.log | while read line; do
-        grep -q -F -e "$line" mylog || fail "Didn't find line: $line"
-    done
-}
-
 test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
     which unbuffer &>/dev/null || skip "unbuffer is not installed"
 
     cat > test.py <<-EOF
-	# coding: utf-8
-	assert False, u"ü"
+	# coding:utf-8
+	import sys
+	print(sys.argv[1])
+	if sys.argv[1] == "raise-unicode":
+	    raise RuntimeError(u"Röthlisberger")
+	elif sys.argv[1] == "raise-bytes":
+	    raise RuntimeError(u"Röthlisberger".encode("utf-8"))
+	elif sys.argv[1] == "raise-non-utf8-bytes":
+	    # https://www.cl.cam.ac.uk/~mgk25/ucs/examples/UTF-8-test.txt
+	    raise RuntimeError(b"\xfe")
+	elif sys.argv[1] == "assert-unicode":
+	    assert False, u"Röthlisberger"
+	elif sys.argv[1] == "assert-bytes":
+	    assert False, u"Röthlisberger".encode("utf-8")
+	elif sys.argv[1] == "assert-without-message":
+	    assert u"Röthlisberger" is None
 	EOF
 
-    stbt run test.py &> mylog
-    u="u" assert check_unicode_error
-
-    # We use unbuffer here to provide a tty to `stbt run` to simulate
-    # interactive use.
-    echo "now trying with unbuffer to simulate interactive use"
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
-    u="u" assert check_unicode_error
+    unicode_test raise-unicode
+    unicode_test raise-bytes
+    unicode_test raise-non-utf8-bytes
+    unicode_test assert-unicode
+    unicode_test assert-bytes
+    unicode_test assert-without-message
 }
 
-test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
-    which unbuffer &>/dev/null || skip "unbuffer is not installed"
+unicode_test() {
+    echo "unicode_test $1: writing to file"
+    stbt run test.py $1 &> $1.log
+    assert check_unicode_error $1 $1.log
 
-    cat > test.py <<-EOF
-	# coding: utf-8
-	assert False, "ü"
-	EOF
+    echo "unicode_test $1: using unbuffer to simulate interactive use"
+    unbuffer bash -c "stbt run test.py $1" &> $1.unbuffer.log
+    assert check_unicode_error $1 $1.unbuffer.log
+}
 
-    stbt run test.py &> mylog
-    assert check_unicode_error
+check_unicode_error() {
+    local scenario=$1 output=$2
 
-    # We use unbuffer here to provide a tty to `stbt run` to simulate
-    # interactive use.
-    echo "now trying with unbuffer to simulate interactive use"
-    LANG=C.UTF-8 unbuffer bash -c 'stbt run test.py' &> mylog
-    assert check_unicode_error
+    case "$python_version,$scenario" in
+        *,raise-unicode|2.7,raise-bytes) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: RuntimeError: Röthlisberger
+		Traceback (most recent call last):
+		  File ".*/test.py", line .*, in <module>
+		    raise RuntimeError(u"Röthlisberger".*)
+		RuntimeError: Röthlisberger
+		EOF
+        3,raise-bytes) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: RuntimeError: b'R.xc3.xb6thlisberger'
+		Traceback (most recent call last):
+		  File ".*/test.py", line .*, in <module>
+		    raise RuntimeError(u"Röthlisberger".encode("utf-8"))
+		RuntimeError: b'R.xc3.xb6thlisberger'
+		EOF
+        # It looks like "RuntimeError: �" but I can't get grep to match it:
+        *,raise-non-utf8-bytes) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: RuntimeError:
+		Traceback (most recent call last):
+		  File ".*/test.py", line .*, in <module>
+		    raise RuntimeError(b".xfe")
+		RuntimeError:
+		EOF
+        *,assert-unicode|2.7,assert-bytes) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: AssertionError: Röthlisberger
+		Traceback (most recent call last):
+		  File ".*/test.py", line .*, in <module>
+		    assert False, u"Röthlisberger".*
+		AssertionError: Röthlisberger
+		EOF
+        3,assert-bytes) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: AssertionError: b'R.xc3.xb6thlisberger'
+		Traceback (most recent call last):
+		  File ".*/test.py", line .*, in <module>
+		    assert False, u"Röthlisberger".encode("utf-8")
+		AssertionError: b'R.xc3.xb6thlisberger'
+		EOF
+        *,assert-without-message) cat <<-EOF ;;
+		Saved screenshot to 'screenshot.png'.
+		FAIL: test.py: AssertionError: assert u"Röthlisberger" is None
+		Traceback (most recent call last):
+		  File ".*test.py", line .*, in <module>
+		    assert u"Röthlisberger" is None
+		AssertionError
+		EOF
+        *) fail "check_unicode_error isn't implemented for $scenario" ;;
+    esac |
+    while IFS='' read line; do
+        grep -q -e "^$line" $output || {
+            cat $output;
+            fail "Didn't find line: «$line»";
+        }
+    done
 }
 
 test_that_error_control_raises_exception() {
@@ -289,4 +341,22 @@ test_that_default_control_raises_exception() {
 	EOF
     ! stbt run -v test.py &&
     grep -q 'FAIL: test.py: RuntimeError: No remote control configured' log
+}
+
+test_that_stbt_run_doesnt_import_unrelated_files() {
+    # This is a regression test for a bug where if you import from
+    # 'future.moves' (a Python 2/3 compatibility library) it automatically
+    # tries to import every python module it finds at the current working
+    # directory.
+    cat > test.py <<-EOF
+	print("This is coming from test.py")
+	EOF
+    cat > test2.py <<-EOF
+	import stbt
+	print("OK")
+	EOF
+    stbt run -v test2.py || fail
+    if grep -q "This is coming from test.py" log; then
+        fail "test.py was run but I asked for test2.py"
+    fi
 }

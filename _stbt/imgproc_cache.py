@@ -22,13 +22,18 @@ import os
 import sys
 from contextlib import contextmanager
 from distutils.version import LooseVersion
-from future.moves.itertools import zip_longest
 
 import lmdb
 import numpy
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    # Python 2:
+    from itertools import izip_longest as zip_longest
 
 
 MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024  # 1GiB
@@ -223,6 +228,8 @@ def _cache_hash(value):
 
     class HashWriter(object):
         def write(self, data):
+            if isinstance(data, str):
+                data = data.encode("utf-8")
             h.update(data)
             return len(data)
 

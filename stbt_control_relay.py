@@ -33,14 +33,15 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
+import logging
 import os
 import re
 import signal
 import socket
 import sys
 
-import _stbt.logging
 from _stbt.control import uri_to_control
+from _stbt.utils import to_bytes
 
 
 def main(argv):
@@ -49,10 +50,14 @@ def main(argv):
     parser.add_argument(
         "--socket", default="/var/run/lirc/lircd", help="""LIRC socket to read
         remote control presses from (defaults to %(default)s).""")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("output", help="""Remote control configuration to
         transmit on. Values are the same as stbt run's --control.""")
-    _stbt.logging.argparser_add_verbose_argument(parser)
     args = parser.parse_args(argv[1:])
+
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s",
+        level=logging.DEBUG if args.verbose else logging.INFO)
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
@@ -66,58 +71,56 @@ def main(argv):
 
     control = uri_to_control(args.output)
 
+    logging.info("stbt-control-relay started up with output '%s'", args.output)
+
     while True:
         conn, _ = s.accept()
-        f = conn.makefile('r', 0)
+        f = conn.makefile('rb', 0)
         while True:
             cmd = f.readline()
             if not cmd:
                 break
-            cmd = cmd.rstrip("\n")
-            m = re.match(r"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
-                         r"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
+            cmd = cmd.rstrip(b"\n")
+            m = re.match(br"(?P<action>SEND_ONCE|SEND_START|SEND_STOP) "
+                         br"(?P<ctrl>\S+) (?P<key>\S+)", cmd)
             if not m:
-                debug("Invalid command: %s" % cmd)
+                logging.error("Invalid command: %s", cmd)
                 send_response(conn, cmd, success=False,
-                              data="Invalid command: %s" % cmd)
+                              data=b"Invalid command: %s" % cmd)
                 continue
-            action = m.groupdict()["action"]
-            key = m.groupdict()["key"]
-            debug("Received %s %s" % (action, key))
+            action = m.group("action")
+            key = m.group("key")
+            logging.debug("Received %s %s", action, key)
             try:
-                if action == "SEND_ONCE":
+                key = key.decode("utf-8")
+                if action == b"SEND_ONCE":
                     control.press(key)
-                elif action == "SEND_START":
+                elif action == b"SEND_START":
                     control.keydown(key)
-                elif action == "SEND_STOP":
+                elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
-                debug("Error pressing key %r: %r" % (key, e))
-                send_response(conn, cmd, success=False, data=str(e))
+                logging.error("Error pressing key %r: %s", key, e,
+                              exc_info=True)
+                send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
             send_response(conn, cmd, success=True)
 
 
-def send_response(sock, request, success, data=""):
+def send_response(sock, request, success, data=b""):
     # See http://www.lirc.org/html/lircd.html
-    message = "BEGIN\n{cmd}\n{status}\n".format(
-        cmd=request,
-        status="SUCCESS" if success else "ERROR")
+    message = b"BEGIN\n%s\n%s\n" % (
+        request,
+        b"SUCCESS" if success else b"ERROR")
     if data:
-        data = data.split("\n")
-        message += "DATA\n{length}\n{data}\n".format(
-            length=len(data),
-            data="\n".join(data))
-    message += "END\n"
+        data = data.split(b"\n")
+        message += b"DATA\n%d\n%s\n" % (len(data), b"\n".join(data))
+    message += b"END\n"
 
     try:
         sock.sendall(message)
     except Exception:  # pylint: disable=broad-except
         pass
-
-
-def debug(s):
-    _stbt.logging.debug("stbt-control-relay: %s" % s)
 
 
 if __name__ == "__main__":

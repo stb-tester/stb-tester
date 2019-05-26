@@ -217,22 +217,25 @@ class LircControl(RemoteControl):
 
     def press(self, key):
         s = self._connect()
-        command = "SEND_ONCE %s %s" % (self.control_name, key)
-        s.sendall(command + "\n")
+        command = b"SEND_ONCE %s %s" % (to_bytes(self.control_name),
+                                        to_bytes(key))
+        s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
         debug("Pressed " + key)
 
     def keydown(self, key):
         s = self._connect()
-        command = "SEND_START %s %s" % (self.control_name, key)
-        s.sendall(command + "\n")
+        command = b"SEND_START %s %s" % (to_bytes(self.control_name),
+                                         to_bytes(key))
+        s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
         debug("Holding " + key)
 
     def keyup(self, key):
         s = self._connect()
-        command = "SEND_STOP %s %s" % (self.control_name, key)
-        s.sendall(command + "\n")
+        command = b"SEND_STOP %s %s" % (to_bytes(self.control_name),
+                                        to_bytes(key))
+        s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
         debug("Released " + key)
 
@@ -259,22 +262,22 @@ def _read_lircd_reply(stream, command):
     """
     reply = []
     try:
-        for line in read_records(stream, "\n"):
-            if line == "BEGIN":
+        for line in read_records(stream, b"\n"):
+            if line == b"BEGIN":
                 reply = []
             reply.append(line)
-            if line == "END" and reply[1] == command:
+            if line == b"END" and reply[1] == command:
                 break
     except socket.timeout:
         raise RuntimeError(
             "Timed out: No reply from LIRC remote control within %d seconds"
             % stream.gettimeout())
-    if "SUCCESS" not in reply:
-        if "ERROR" in reply and len(reply) >= 6 and reply[3] == "DATA":
+    if b"SUCCESS" not in reply:
+        if b"ERROR" in reply and len(reply) >= 6 and reply[3] == b"DATA":
             try:
                 num_data_lines = int(reply[4])
                 raise RuntimeError("LIRC remote control returned error: %s"
-                                   % " ".join(reply[5:5 + num_data_lines]))
+                                   % b" ".join(reply[5:5 + num_data_lines]))
             except ValueError:
                 pass
         raise RuntimeError("LIRC remote control returned unknown error")
@@ -569,7 +572,7 @@ class SamsungTCPControl(RemoteControl):
         '\x10\x00MTkyLjE2OC4wLjEw'
         """
         from base64 import b64encode
-        b64 = b64encode(string)
+        b64 = b64encode(to_bytes(string))
         return struct.pack('<H', len(b64)) + b64
 
     def _send_payload(self, payload):
@@ -651,12 +654,12 @@ def file_control_recorder(filename):
 def read_records(stream, sep):
     r"""Generator that splits stream into records given a separator
 
-    >>> import StringIO
-    >>> s = StringIO.StringIO('hello\n\0This\n\0is\n\0a\n\0test\n\0')
-    >>> list(read_records(FileToSocket(s), '\n\0'))
+    >>> import io
+    >>> s = io.BytesIO(b'hello\n\0This\n\0is\n\0a\n\0test\n\0')
+    >>> list(read_records(FileToSocket(s), b'\n\0'))
     ['hello', 'This', 'is', 'a', 'test']
     """
-    buf = ""
+    buf = b""
     while True:
         s = stream.recv(4096)
         if len(s) == 0:
@@ -682,7 +685,7 @@ def lirc_control_listen(lircd_socket, control_name):
           lircd_socket)
     lircd.connect(lircd_socket)
     debug("control-recorder connected to lirc file socket")
-    return lirc_key_reader(lircd.makefile(), control_name)
+    return lirc_key_reader(lircd.makefile("rb"), control_name)
 
 
 def lirc_control_listen_tcp(address, port, control_name):
@@ -694,7 +697,7 @@ def lirc_control_listen_tcp(address, port, control_name):
           (address, port))
     lircd = _connect_tcp_socket(address, port, timeout=None)
     debug("control-recorder connected to lirc TCP socket")
-    return lirc_key_reader(lircd.makefile(), control_name)
+    return lirc_key_reader(lircd.makefile("rb"), control_name)
 
 
 def stbt_control_listen(keymap_file):
@@ -717,17 +720,18 @@ def stbt_control_listen(keymap_file):
 def lirc_key_reader(cmd_iter, control_name):
     r"""Convert lircd messages into list of keypresses
 
-    >>> list(lirc_key_reader(['0000dead 00 MENU My-IR-remote',
-    ...                       '0000beef 00 OK My-IR-remote',
-    ...                       '0000f00b 01 OK My-IR-remote',
-    ...                       'BEGIN', 'SIGHUP', 'END'],
+    >>> list(lirc_key_reader([b'0000dead 00 MENU My-IR-remote',
+    ...                       b'0000beef 00 OK My-IR-remote',
+    ...                       b'0000f00b 01 OK My-IR-remote',
+    ...                       b'BEGIN', b'SIGHUP', b'END'],
     ...                      'My-IR-remote'))
     ['MENU', 'OK']
     """
     for s in cmd_iter:
         debug("lirc_key_reader received: %s" % s.rstrip())
         m = re.match(
-            r"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" % control_name,
+            br"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" % (
+                to_bytes(control_name)),
             s)
         if m and int(m.group('repeat_count')) == 0:
             yield m.group('key')
@@ -751,8 +755,8 @@ def _connect_tcp_socket(address, port, timeout=3):
 class FileToSocket(object):
     """Makes something File-like behave like a Socket for testing purposes
 
-    >>> import StringIO
-    >>> s = FileToSocket(StringIO.StringIO("Hello"))
+    >>> import io
+    >>> s = FileToSocket(io.BytesIO(b"Hello"))
     >>> s.recv(3)
     'Hel'
     >>> s.recv(3)
@@ -784,12 +788,14 @@ def _fake_lircd():
             listener, _ = s.accept()
             while True:
                 control, _ = s.accept()
-                for cmd in control.makefile():
-                    m = re.match(r'SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)', cmd)
+                for cmd in control.makefile("rb"):
+                    m = re.match(br'SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)', cmd)
                     if m:
                         listener.sendall(
-                            '00000000 0 %(key)s %(ctrl)s\n' % m.groupdict())
-                    control.sendall('BEGIN\n%sSUCCESS\nEND\n' % cmd)
+                            b'00000000 0 %(key)s %(ctrl)s\n' %
+                            {b"key": m.group("key"),
+                             b"ctrl": m.group("ctrl")})
+                    control.sendall(b'BEGIN\n%sSUCCESS\nEND\n' % cmd)
                 control.close()
 
         t = multiprocessing.Process(target=listen)
@@ -807,7 +813,7 @@ def test_that_lirc_control_is_symmetric_with_lirc_control_listen():
         control = uri_to_control('lirc:%s:test' % (lircd_socket))
         for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
             control.press(key)
-            assert next(listener) == key
+            assert next(listener) == to_bytes(key)
 
 
 def test_that_local_lirc_socket_is_correctly_defaulted():
@@ -818,7 +824,7 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
             DEFAULT_LIRCD_SOCKET = lircd_socket
             listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
             uri_to_control('lirc::test').press('KEY')
-            assert next(listener) == 'KEY'
+            assert next(listener) == b'KEY'
     finally:
         DEFAULT_LIRCD_SOCKET = old_default
 

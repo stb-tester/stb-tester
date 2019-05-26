@@ -80,7 +80,7 @@ def find_import_name(filename):
 
 def to_bytes(text):
     if isinstance(text, str):
-        return text.encode("utf-8")
+        return text.encode("utf-8", errors="backslashreplace")
     elif isinstance(text, bytes):
         return text
     else:
@@ -89,6 +89,6 @@ def to_bytes(text):
 
 def to_unicode(text):
     if isinstance(text, bytes):
-        return text.decode("utf-8")
+        return text.decode("utf-8", errors="replace")
     else:
         return str(text)
