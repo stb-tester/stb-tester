@@ -2,7 +2,7 @@
 
 skip_if_opencv_2() {
     local version=$(
-        python -c 'from _stbt.cv2_compat import version; print(version[0])')
+        $python -c 'from _stbt.cv2_compat import version; print(version[0])')
     [[ "$version" -ge 3 ]] || skip "Skipping because OpenCV version < 3"
 }
 

@@ -29,6 +29,14 @@ MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
 
+ifeq ($(python_version), 2.7)
+PYLINT := pylint
+PYTEST := pytest
+else
+PYLINT := pylint3
+PYTEST := pytest-3
+endif
+
 CFLAGS?=-O2
 
 
@@ -206,7 +214,7 @@ check: check-pylint check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
-	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
+	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
@@ -219,7 +227,7 @@ check-integrationtests: install-for-test
 	       grep -v -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
-	PYTHONPATH=$$PWD extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD PYLINT=$(PYLINT) extra/pylint.sh $(PYTHON_FILES)
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb

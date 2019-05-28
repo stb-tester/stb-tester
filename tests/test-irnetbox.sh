@@ -6,7 +6,8 @@ start_fake_irnetbox() {
         return 1
     }
 
-    PYTHONPATH=$srcdir "$testdir"/fake-irnetbox "$@" > fake-irnetbox.log &
+    PYTHONPATH=$srcdir $python "$testdir"/fake-irnetbox "$@" \
+        > fake-irnetbox.log &
     fake_irnetbox=$!
     trap "kill $fake_irnetbox" EXIT
     waitfor "^PORT=" fake-irnetbox.log || fail "fake-irnetbox failed to start"
@@ -24,7 +25,7 @@ test_irnetbox_commands() {
 	    ir.irsend_raw(port=1, power=100, data=rcu["MENU"])
 	    ir.irsend_raw(port=1, power=100, data=rcu["OK"])
 	EOF
-    PYTHONPATH=$srcdir python test.py || return
+    PYTHONPATH=$srcdir $python test.py || return
     grep -q "Received message POWER_ON" fake-irnetbox.log ||
         fail "fake-irnetbox didn't receive POWER_ON message"
     [[ "$(grep "Received message OUTPUT_IR_ASYNC" fake-irnetbox.log |

@@ -112,7 +112,7 @@ test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
     ! stbt run -v test.py &&
     [ -f screenshot.png ] &&
     ! [ -f thumbnail.jpg ] &&
-    python <<-EOF
+    $python <<-EOF
 	import cv2, numpy
 	ss = cv2.imread('screenshot.png')
 	gf = cv2.imread('grabbed-frame.png')

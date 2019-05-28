@@ -266,7 +266,7 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" python -c "import stbt, _stbt.ocr, distutils, sys; \
+    PYTHONPATH="$srcdir" $python -c "import stbt, _stbt.ocr, distutils, sys; \
         sys.exit(0 if (_stbt.ocr._tesseract_version() \
                        >= distutils.version.LooseVersion('3.03')) else 77)"
     case $? in

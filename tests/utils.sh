@@ -25,7 +25,7 @@ killtree() {
 }
 
 set_config() {
-    PYTHONPATH=$srcdir python - "$@" <<-EOF
+    PYTHONPATH=$srcdir $python - "$@" <<-EOF
 	import sys, _stbt.config
 	section, name = sys.argv[1].split('.')
 	_stbt.config.set_config(section, name, sys.argv[2])
