@@ -1,6 +1,4 @@
-# Portable timeout command. Usage: timeout <secs> <command> [<args>...]
-timeout() { "$testdir"/timeout.pl "$@"; }
-timedout=142
+timedout=124
 
 fail() { echo "error: $*"; exit 1; }
 skip() { echo "skipping: $*"; exit 77; }

@@ -54,6 +54,16 @@ def scoped_curdir():
             os.chdir(olddir)
 
 
+@contextmanager
+def scoped_process(process):
+    try:
+        yield process
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+
+
 def find_import_name(filename):
     """
     To import an arbitrary filename we need to set PYTHONPATH and we need to

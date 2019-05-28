@@ -184,7 +184,8 @@ def _in_frameobject(node):
 def _in_property(node):
     while node is not None:
         if isinstance(node, FunctionDef):
-            if "__builtin__.property" in node.decoratornames():
+            if ("__builtin__.property" in node.decoratornames() or
+                    "builtins.property" in node.decoratornames()):
                 return True
         node = node.parent
     return False

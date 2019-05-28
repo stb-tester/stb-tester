@@ -12,12 +12,13 @@ test_importing_stbt_without_stbt_run() {
 
 test_that_stbt_imports_the_installed_version() {
     cat > test.py <<-EOF
-	import re, stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
-	def firstdir(path):
-	    return re.match("/?[^/]+", path).group()
-	assert firstdir(stbt.__file__) == firstdir(stbt._stbt.__file__)
+	import os, re, stbt
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
+	print(os.environ["PYTHONPATH"])
+	prefix, _ = os.environ["PYTHONPATH"].split(":", 1)
+	assert stbt.__file__.startswith(prefix)
+	assert stbt._stbt.__file__.startswith(prefix)
 	EOF
     python test.py || fail "Python imported the wrong _stbt"
     stbt run test.py || fail "stbt run imported the wrong _stbt"
@@ -25,20 +26,20 @@ test_that_stbt_imports_the_installed_version() {
 
 test_that_stbt_imports_the_source_version() {
     (cd "$srcdir" && python <<-EOF) || fail "Python from srcdir imported the wrong _stbt"
-	import stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
-	assert stbt.__file__.startswith("stbt/__init__.py")
-	assert stbt._stbt.__file__.startswith("_stbt/__init__.py")
+	import re, stbt
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
+	print("$srcdir/")
+	assert re.match(r"($srcdir/)?stbt/__init__.pyc?$", stbt.__file__)
+	assert re.match(r"($srcdir/)?_stbt/__init__.pyc?$", stbt._stbt.__file__)
 	EOF
 
     cat > test.py <<-EOF
 	import re, stbt
-	print stbt.__file__
-	print stbt._stbt.__file__
-	def firstdir(path):
-	    return re.match("/?[^/]+", path).group()
-	assert firstdir(stbt.__file__) == firstdir(stbt._stbt.__file__)
+	print(stbt.__file__)
+	print(stbt._stbt.__file__)
+	assert re.match(r"$srcdir/stbt/__init__.pyc?$", stbt.__file__)
+	assert re.match(r"$srcdir/_stbt/__init__.pyc?$", stbt._stbt.__file__)
 	EOF
 
     PYTHONPATH="$srcdir" python test.py ||

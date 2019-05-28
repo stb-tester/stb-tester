@@ -10,6 +10,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import binascii
 import socket
 import socketserver
 import struct
@@ -22,7 +23,7 @@ from _stbt.irnetbox import MessageTypes
 class FakeIRNetBox(socketserver.BaseRequestHandler):
     def handle(self):
         x = None
-        while x != "#":
+        while x != b"#":
             try:
                 x = self.recv(1)
             except socket.error as e:
@@ -81,7 +82,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
     def recv(self, bufsize):
         data = self.request.recv(bufsize)
         if data:
-            print("fake-irnetbox: recv %s" % hexstring(data))
+            print("fake-irnetbox: recv %s" % binascii.hexlify(data))
         else:  # Apparently SocketServer gives me a non-blocking socket
             time.sleep(0.1)
         return data
@@ -94,11 +95,7 @@ class FakeIRNetBox(socketserver.BaseRequestHandler):
             data)
         self.request.sendall(m)
         print("fake-irnetbox: Sent response %s: %s" % (
-            name(message_type), hexstring(m)))
-
-
-def hexstring(s):
-    return " ".join(["%02x" % ord(x) for x in s])
+            name(message_type), binascii.hexlify(m)))
 
 
 def name(message_type):

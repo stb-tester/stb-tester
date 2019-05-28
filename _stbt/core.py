@@ -271,7 +271,7 @@ class DeviceUnderTest(object):
         while True:
             ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
-                max(10, timeout_secs), since=timestamp)
+                max(10, timeout_secs or 0), since=timestamp)
             ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
@@ -520,13 +520,13 @@ def as_precondition(message):
     """
     try:
         yield
-    except (UITestFailure, AssertionError) as e:
+    except (UITestFailure, AssertionError) as original:
         debug("stbt.as_precondition caught a %s exception and will "
               "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % (type(e).__name__, traceback.format_exc(e)))
-        exc = PreconditionError(message, e)
-        if hasattr(e, 'screenshot'):
-            exc.screenshot = e.screenshot  # pylint: disable=attribute-defined-outside-init,no-member
+              % (type(original).__name__, traceback.format_exc()))
+        exc = PreconditionError(message, original)
+        if hasattr(original, 'screenshot'):
+            exc.screenshot = original.screenshot  # pylint:disable=no-member
         raise exc
 
 
@@ -541,6 +541,7 @@ class PreconditionError(UITestError):
         super(PreconditionError, self).__init__()
         self.message = message
         self.original_exception = original_exception
+        self.screenshot = None
 
     def __str__(self):
         return (

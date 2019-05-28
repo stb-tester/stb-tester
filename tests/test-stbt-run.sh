@@ -21,7 +21,7 @@ test_script_accesses_its_path() {
     touch module.py
     cat > test.py <<-EOF
 	import module
-	print '__file__: ' + __file__
+	print('__file__: ' + __file__)
 	assert __file__ == "test.py"
 	EOF
     stbt run -v test.py
@@ -131,9 +131,9 @@ test_that_stbt_run_exits_on_ctrl_c() {
 	from gi.repository import GLib
 	
 	for c in range(5, 0, -1):
-	    print "%i bottles of beer on the wall" % c
+	    print("%i bottles of beer on the wall" % c)
 	    time.sleep(1)
-	print "No beer left"
+	print("No beer left")
 	EOF
     stbt run test.py &
     STBT_PID=$!
@@ -168,7 +168,7 @@ test_that_relative_imports_work_when_stbt_run_runs_a_specific_function() {
     mkdir tests
     cat >tests/helpers.py <<-EOF
 	def my_helper():
-	    print "my_helper() called"
+	    print("my_helper() called")
 	    open("touched", "w").close()
 	EOF
     cat >tests/test.py <<-EOF

@@ -1,4 +1,5 @@
 test_python_2_script() {
+    [[ "$python_version" == "2.7" ]] || skip "Requires Python 2"
     cat > test.py <<-EOF
 	print "hi"
 	EOF
@@ -6,6 +7,7 @@ test_python_2_script() {
 }
 
 test_python_2_function() {
+    [[ "$python_version" == "2.7" ]] || skip "Requires Python 2"
     cat > test.py <<-EOF
 	def test_print_statement():
 	    print "hi"

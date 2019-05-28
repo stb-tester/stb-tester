@@ -2,7 +2,7 @@
 
 skip_if_opencv_2() {
     local version=$(
-        python -c 'from _stbt.cv2_compat import version; print version[0]')
+        python -c 'from _stbt.cv2_compat import version; print(version[0])')
     [[ "$version" -ge 3 ]] || skip "Skipping because OpenCV version < 3"
 }
 
@@ -211,8 +211,8 @@ test_match_nonexistent_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Trying to match an non-existant template should throw"
-    cat log | grep -q "FAIL: test.py: IOError: No such file: idontexist.png" \
-        || fail "Didn't see 'IOError: No such file'"
+    cat log | grep -Eq "FAIL: test.py: (IO|OS)Error: No such file: idontexist.png" \
+        || fail "Didn't see 'No such file'"
 }
 
 test_match_invalid_template() {
@@ -397,7 +397,7 @@ test_match_searches_in_provided_region() {
 	for search_area in [Region.ALL, Region(228, 0, 92, 160),
 	                    Region(200, 0, 300, 400), Region(200, 0, 300, 400),
 	                    Region(-200, -100, 600, 800)]:
-	    print "\nSearch Area:", search_area
+	    print("\nSearch Area: %s" % (search_area,))
 	    match_result = match("$testdir/videotestsrc-redblue.png",
 	                         region=search_area)
 	    assert match_result and match_result.region == Region(228, 0, 92, 160)
@@ -407,7 +407,7 @@ test_match_searches_in_provided_region() {
 	
 	for search_area in [Region(228, 3, 92, 260), Region(10, 0, 300, 200),
 	                    Region(-210, -23, 400, 200)]:
-	    print "Search Area:", search_area
+	    print("Search Area: %s" % (search_area,))
 	    assert not match("$testdir/videotestsrc-redblue.png",
 	                     region=search_area)
 	    try:

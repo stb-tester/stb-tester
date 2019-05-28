@@ -67,8 +67,8 @@ test_get_config() {
 test_that_frames_returns_at_least_one_frame() {
     cat > test.py <<-EOF
 	import stbt
-	stbt.frames(timeout_secs=0).next()
-	stbt.frames(timeout_secs=0).next()
+	next(stbt.frames(timeout_secs=0))
+	next(stbt.frames(timeout_secs=0))
 	EOF
     stbt run -v test.py
 }
@@ -115,13 +115,13 @@ test_using_frames_to_measure_black_screen() {
 	frames = stbt.frames(timeout_secs=10)
 	for frame in frames:
 	    black = stbt.is_screen_black(frame)
-	    print "%s: %s" % (frame.time, black)
+	    print("%s: %s" % (frame.time, black))
 	    if black:
 	        break
 	assert black, "Failed to find black screen"
 	for frame in frames:
 	    black = stbt.is_screen_black(frame)
-	    print "%s: %s" % (frame.time, black)
+	    print("%s: %s" % (frame.time, black))
 	    if not black:
 	        break
 	assert not black, "Failed to find non-black screen"
@@ -133,17 +133,17 @@ test_that_frames_doesnt_deadlock() {
     cat > test.py <<-EOF &&
 	import stbt
 	for frame in stbt.frames():
-	    print frame.time
+	    print(frame.time)
 	    break
 	for frame in stbt.frames():
-	    print frame.time
+	    print(frame.time)
 	    break
 	frames = stbt.frames()
-	frame1 = frames.next()
+	frame1 = next(frames)
 	frames = stbt.frames()  # Drop reference to old 'frames'; should be GCd.
-	frame2 = frames.next()
+	frame2 = next(frames)
 	frames3 = stbt.frames()
-	frame3 = frames3.next()  # old 'frames' still holds lock
+	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
     timeout 10 stbt run -v test.py &&
 
@@ -176,6 +176,8 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 }
 
 test_that_video_index_is_written_on_eos() {
+    which python2 || skip "Requires Python 2"
+
     _test_that_video_index_is_written_on_eos 5 && return
     echo "Failed with 5s video; trying again with 20s video"
     _test_that_video_index_is_written_on_eos 20
@@ -189,7 +191,8 @@ _test_that_video_index_is_written_on_eos() {
         --sink-pipeline \
             "queue ! vp8enc cpu-used=6 ! webmmux ! filesink location=video.webm" \
         test.py &&
-    "$testdir"/webminspector/webminspector.py video.webm &> webminspector.log &&
+    python2 "$testdir"/webminspector/webminspector.py video.webm \
+        &> webminspector.log &&
     grep "Cue Point" webminspector.log || {
       cat webminspector.log
       echo "error: Didn't find 'Cue Point' in $scratchdir/webminspector.log"
@@ -381,9 +384,9 @@ test_that_get_frame_time_is_wall_time() {
 	f = stbt.get_frame()
 	t = time.time()
 
-	print "stbt.get_frame().time:", f.time
-	print "time.time():", t
-	print "latency:", t - f.time
+	print("stbt.get_frame().time: %.6f" % f.time)
+	print("time.time(): %.6f" % t)
+	print("latency: %.6f" % (t - f.time))
 
 	# get_frame() gives us the last frame that arrived.  This may arrived a
 	# little time ago and have been waiting in a buffer.
@@ -526,11 +529,15 @@ test_multithreaded() {
 	
 	# Kick off the threads
 	pool = ThreadPool(processes=2)
-	result_iter = pool.imap_unordered(apply, [
-	    lambda: wait_for_motion(timeout_secs=2),
-	    lambda: wait_for_match(
-	        "$testdir/videotestsrc-checkers-8.png", timeout_secs=2)
-	])
+	result_iter = pool.imap_unordered(
+	    lambda f: f(),
+	    [
+	        lambda: stbt.wait_for_motion(timeout_secs=2),
+	        lambda: stbt.wait_for_match(
+	            "$testdir/videotestsrc-checkers-8.png",
+	            timeout_secs=2),
+	    ],
+	    chunksize=1)
 	
 	# Change the pattern
 	stbt.press(sys.argv[1])
@@ -538,9 +545,9 @@ test_multithreaded() {
 	# See which matched
 	result = result_iter.next()
 	if isinstance(result, MotionResult):
-	    print "Motion"
+	    print("Motion")
 	elif isinstance(result, MatchResult):
-	    print "Checkers"
+	    print("Checkers")
 	EOF
 
     stbt run -v test.py checkers-8 >out.log
@@ -558,7 +565,7 @@ test_that_get_frame_may_return_the_same_frame_twice() {
 	ts = set()
 	for _ in range(10):
 	    ts.add(stbt.get_frame().time)
-	print "Saw %i unique frames" % len(ts)
+	print("Saw %i unique frames" % len(ts))
 	assert len(ts) < 5
 	EOF
     stbt run test.py || fail "Incorrect get_frame() behaviour"
@@ -566,16 +573,19 @@ test_that_get_frame_may_return_the_same_frame_twice() {
 
 test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
     cat > test.py <<-EOF &&
-	import itertools
+	try:
+	    from itertools import izip as zip
+	except ImportError:
+	    pass
 	sa = set()
 	sb = set()
-	for a, b in itertools.izip(stbt.frames(), stbt.frames()):
+	for a, b in zip(stbt.frames(), stbt.frames()):
 	    if len(sa) >= 10:
 	        break
 	    sa.add(a.time)
 	    sb.add(b.time)
-	print sorted(sa)
-	print sorted(sb)
+	print(sorted(sa))
+	print(sorted(sb))
 	assert len(sa) == 10
 	assert len(sb) == 10
 	# sa and sb contain the same frames:

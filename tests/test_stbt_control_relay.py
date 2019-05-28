@@ -15,21 +15,11 @@ import pytest
 
 from _stbt.control import uri_to_control
 from _stbt.core import wait_until
-from _stbt.utils import named_temporary_directory
+from _stbt.utils import named_temporary_directory, scoped_process
 
 
 # For py.test fixtures:
 # pylint: disable=redefined-outer-name
-
-
-@contextmanager
-def scoped_process(process):
-    try:
-        yield process
-    finally:
-        if process.poll() is None:
-            process.kill()
-            process.wait()
 
 
 @contextmanager
