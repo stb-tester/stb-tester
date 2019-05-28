@@ -123,7 +123,9 @@ install-core: all
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	for filename in $(INSTALL_CORE_SCRIPTS); do \
-	    $(INSTALL) -m 0755 $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	    sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	        $$filename > $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	    chmod 0755 $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
@@ -156,7 +158,7 @@ etc/stbt.conf : _stbt/stbt.conf
 	mkdir -p etc
 	awk '/^$$/ { print  }; /^#/ { print "#" $$0}; /^\[/ { print $$0 }; /^[^\[#]/ {print "# " $$0 }' _stbt/stbt.conf >$@
 
-STBT_CONTROL_RELAY_FILES = \
+STBT_CONTROL_RELAY_PYLIB_FILES = \
     _stbt/__init__.py \
     _stbt/config.py \
     _stbt/control.py \
@@ -165,17 +167,19 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/logging.py \
     _stbt/stbt.conf \
     _stbt/types.py \
-    _stbt/utils.py \
-    stbt_control_relay.py
+    _stbt/utils.py
 
-install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
+install-stbt-control-relay: $(STBT_CONTROL_RELAY_PYLIB_FILES) stbt-control-relay
 	$(INSTALL) -m 0755 -d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt-control-relay/%,$(sort $(dir $(STBT_CONTROL_RELAY_FILES))))
-	for filename in $(STBT_CONTROL_RELAY_FILES); do \
-	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
-	    $(INSTALL) -m $$mode $$filename \
+	    $(DESTDIR)$(bindir) \
+	    $(DESTDIR)$(libexecdir)/stbt-control-relay/_stbt
+	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
+	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	    stbt_control_relay.py \
+	    > $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
+	chmod 0755 $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
+	for filename in $(STBT_CONTROL_RELAY_PYLIB_FILES); do \
+	    $(INSTALL) -m 0644 $$filename \
 	        $(DESTDIR)$(libexecdir)/stbt-control-relay/$$filename; \
 	done
 
