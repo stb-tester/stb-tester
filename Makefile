@@ -89,7 +89,7 @@ INSTALL_PYLIB_FILES = \
     stbt/__init__.py \
     stbt/android.py
 
-INSTALL_CORE_FILES = \
+INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
     stbt_control.py \
     stbt_lint.py \
@@ -100,7 +100,7 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES) etc/stbt.conf
+all: $(INSTALL_CORE_SCRIPTS) $(INSTALL_PYLIB_FILES) etc/stbt.conf
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -113,7 +113,7 @@ install-core: all
 	    $(DESTDIR)$(pythondir)/_stbt \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
+	    $(DESTDIR)$(libexecdir)/stbt
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
@@ -122,9 +122,8 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
-	for filename in $(INSTALL_CORE_FILES); do \
-	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
-	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	for filename in $(INSTALL_CORE_SCRIPTS); do \
+	    $(INSTALL) -m 0755 $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
