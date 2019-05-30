@@ -7,7 +7,7 @@ test_importing_stbt_without_stbt_run() {
 	    "$testdir/videotestsrc-redblue.png",
 	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))
 	EOF
-    python test.py
+    $python test.py
 }
 
 test_that_stbt_imports_the_installed_version() {
@@ -20,12 +20,12 @@ test_that_stbt_imports_the_installed_version() {
 	assert stbt.__file__.startswith(prefix)
 	assert stbt._stbt.__file__.startswith(prefix)
 	EOF
-    python test.py || fail "Python imported the wrong _stbt"
+    $python test.py || fail "Python imported the wrong _stbt"
     stbt run test.py || fail "stbt run imported the wrong _stbt"
 }
 
 test_that_stbt_imports_the_source_version() {
-    (cd "$srcdir" && python <<-EOF) || fail "Python from srcdir imported the wrong _stbt"
+    (cd "$srcdir" && $python <<-EOF) || fail "Python from srcdir imported the wrong _stbt"
 	import re, stbt
 	print(stbt.__file__)
 	print(stbt._stbt.__file__)
@@ -42,9 +42,9 @@ test_that_stbt_imports_the_source_version() {
 	assert re.match(r"$srcdir/_stbt/__init__.pyc?$", stbt._stbt.__file__)
 	EOF
 
-    PYTHONPATH="$srcdir" python test.py ||
+    PYTHONPATH="$srcdir" $python test.py ||
         fail 'Python with PYTHONPATH=$srcdir imported the wrong _stbt'
 
-    "$srcdir"/stbt_run.py "$scratchdir"/test.py ||
+    $python "$srcdir"/stbt_run.py "$scratchdir"/test.py ||
         fail "stbt run imported the wrong _stbt"
 }

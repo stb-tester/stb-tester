@@ -28,7 +28,8 @@ export srcdir=$(realpath --no-symlinks "$testdir/..")
 export LANG=C.UTF-8
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
-: ${python_version:=2.7}
+export python_version=${python_version:=2.7}
+export python=python$python_version
 
 testsuites=()
 testcases=()

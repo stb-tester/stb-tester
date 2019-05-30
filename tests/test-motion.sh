@@ -49,9 +49,7 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    timeout 10 stbt run -v test.py &> test.log
-    local ret=$?
-    [ $ret -ne $timedout -a $ret -ne 0 ] || fail "Unexpected exit status $ret"
+    ! stbt run -v test.py &> test.log || fail "Expected script to fail"
     grep -q "No such file: idontexist.png" test.log ||
         fail "Expected 'No such file: idontexist.png' but saw '$(
             grep 'No such file' test.log | head -n1)'"

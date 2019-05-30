@@ -29,6 +29,14 @@ MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
 
+ifeq ($(python_version), 2.7)
+PYLINT := pylint
+PYTEST := pytest
+else
+PYLINT := pylint3
+PYTEST := pytest-3
+endif
+
 CFLAGS?=-O2
 
 
@@ -89,7 +97,7 @@ INSTALL_PYLIB_FILES = \
     stbt/__init__.py \
     stbt/android.py
 
-INSTALL_CORE_FILES = \
+INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
     stbt_control.py \
     stbt_lint.py \
@@ -100,7 +108,7 @@ INSTALL_CORE_FILES = \
     stbt-screenshot \
     stbt-tv
 
-all: $(INSTALL_CORE_FILES) $(INSTALL_PYLIB_FILES) etc/stbt.conf
+all: $(INSTALL_CORE_SCRIPTS) $(INSTALL_PYLIB_FILES) etc/stbt.conf
 
 INSTALL_VSTB_FILES = \
     stbt_virtual_stb.py
@@ -113,7 +121,7 @@ install-core: all
 	    $(DESTDIR)$(pythondir)/_stbt \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt/%,$(sort $(dir $(INSTALL_CORE_FILES))))
+	    $(DESTDIR)$(libexecdir)/stbt
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	     bin/stbt >$(DESTDIR)$(bindir)/stbt
@@ -122,9 +130,10 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
-	for filename in $(INSTALL_CORE_FILES); do \
-	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
-	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	for filename in $(INSTALL_CORE_SCRIPTS); do \
+	    sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	        $$filename > $(DESTDIR)$(libexecdir)/stbt/$$filename; \
+	    chmod 0755 $(DESTDIR)$(libexecdir)/stbt/$$filename; \
 	done
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
@@ -157,7 +166,7 @@ etc/stbt.conf : _stbt/stbt.conf
 	mkdir -p etc
 	awk '/^$$/ { print  }; /^#/ { print "#" $$0}; /^\[/ { print $$0 }; /^[^\[#]/ {print "# " $$0 }' _stbt/stbt.conf >$@
 
-STBT_CONTROL_RELAY_FILES = \
+STBT_CONTROL_RELAY_PYLIB_FILES = \
     _stbt/__init__.py \
     _stbt/config.py \
     _stbt/control.py \
@@ -166,17 +175,19 @@ STBT_CONTROL_RELAY_FILES = \
     _stbt/logging.py \
     _stbt/stbt.conf \
     _stbt/types.py \
-    _stbt/utils.py \
-    stbt_control_relay.py
+    _stbt/utils.py
 
-install-stbt-control-relay: $(STBT_CONTROL_RELAY_FILES) stbt-control-relay
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(bindir)
-	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
+install-stbt-control-relay: $(STBT_CONTROL_RELAY_PYLIB_FILES) stbt-control-relay
 	$(INSTALL) -m 0755 -d \
-	    $(patsubst %,$(DESTDIR)$(libexecdir)/stbt-control-relay/%,$(sort $(dir $(STBT_CONTROL_RELAY_FILES))))
-	for filename in $(STBT_CONTROL_RELAY_FILES); do \
-	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
-	    $(INSTALL) -m $$mode $$filename \
+	    $(DESTDIR)$(bindir) \
+	    $(DESTDIR)$(libexecdir)/stbt-control-relay/_stbt
+	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
+	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	    stbt_control_relay.py \
+	    > $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
+	chmod 0755 $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
+	for filename in $(STBT_CONTROL_RELAY_PYLIB_FILES); do \
+	    $(INSTALL) -m 0644 $$filename \
 	        $(DESTDIR)$(libexecdir)/stbt-control-relay/$$filename; \
 	done
 
@@ -203,7 +214,7 @@ check: check-pylint check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
-	py.test -vv -rs --doctest-modules $(PYTEST_OPTS) \
+	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files '*.py' |\
 	      grep -v -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
@@ -216,7 +227,7 @@ check-integrationtests: install-for-test
 	       grep -v -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
-	PYTHONPATH=$$PWD extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD PYLINT=$(PYLINT) extra/pylint.sh $(PYTHON_FILES)
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb

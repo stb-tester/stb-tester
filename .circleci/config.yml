@@ -10,7 +10,6 @@ jobs:
       SHELL: /bin/bash
       TERM: xterm
       enable_virtual_stb: no
-      parallel: xargs
     steps:
       - checkout
       - pylint
@@ -26,7 +25,6 @@ jobs:
       SHELL: /bin/bash
       TERM: xterm
       enable_virtual_stb: no
-      parallel: xargs
     steps:
       - checkout
       - pylint
@@ -40,7 +38,6 @@ commands:
           name: make check-pylint
           command: |
             tesseract --version
-            pylint --version
             make check-pylint
   pytest:
     steps:

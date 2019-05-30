@@ -6,7 +6,7 @@ start_fake_lircd() {
         return 1
     }
 
-    "$testdir"/fake-lircd "$@" > fake-lircd.log &
+    $python "$testdir"/fake-lircd "$@" > fake-lircd.log &
     fake_lircd=$!
     trap "kill $fake_lircd" EXIT
     waitfor "^SOCKET=" fake-lircd.log || fail "fake-lircd failed to start"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -u
 
 #/ Usage: pylint.sh file.py [file.py...]
 #/
@@ -25,7 +25,9 @@ else
     echo "warning: pep8 not installed; skipping pep8 and only running pylint" >&2
 fi
 
-out=$(pylint --rcfile="$(dirname "$0")/pylint.conf" "$@" 2>&1) || ret=1
+$PYLINT --version
+
+out=$($PYLINT --rcfile="$(dirname "$0")/pylint.conf" "$@" 2>&1) || ret=1
 printf "%s" "$out" |
     grep -v \
         -e 'libdc1394 error: Failed to initialize libdc1394' \
