@@ -15,6 +15,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [Getting Started]: https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
 [test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
 [Stb-tester hardware]: https://stb-tester.com/solutions
+[license]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 
 
 #### v31
@@ -23,13 +24,59 @@ UNRELEASED.
 
 ##### Major new features
 
+* Supports test-scripts written in Python 3 (Python 2 is also still supported
+  from the same stb-tester codebase, but you will need separate stb-tester
+  installations). If building stb-tester from source, you'll to do `make
+  install python_version=3`. So far we haven't created a debian package for
+  the Python 3 version.
+
+* The [RedRat-X](https://www.redrat.co.uk/products/redrat-x/) infrared
+  transmitter is now supported via ethernet (USB is still not supported).
+  Configure your RedRat X as an IRNetBox in your stbt.conf file.
+
 ##### Breaking changes since v30
+
+* Dropped support for Ubuntu 16.04.
+
+* The changes that we made to support Python 3 *may* have introduced bugs even
+  for test-scripts using Python 2. Please let us know if you find any problems.
+
+* Removed unmaintained tools `stbt auto-selftest`, `stbt batch`, `stbt camera`,
+  and `irnetbox-proxy`. If you want to use any of these tools feel free to
+  maintain them in a separate repo as per the [license].
+
+* Removed support for `restart_source` config setting. This was a workaround
+  for a bug in the Hauppauge HDPVR video-capture device, which is ancient and
+  unreliable hardware. As far as I know, nobody uses this setting. What it did
+  was watch for source pipeline underruns (without receiving an explicit EOS)
+  and then restart the source pipeline. If you need this behaviour, the correct
+  solution is to fix your GStreamer source element.
+
+* Remove `source_teardown_eos` config setting. This was a workaround for an
+  ancient bug in decklinksrc (the GStreamer element for Blackmagic
+  video-capture cards). As far as I know, nobody uses this since we made the
+  behaviour optional in v28.
 
 ##### Minor additions, bugfixes & improvements
 
-* The [RedRat-X](https://www.redrat.co.uk/products/redrat-x/) IR blaster is now
-  supported via ethernet (USB is still not supported). Configure your RedRat X
-  as an IRNetBox in your stbt.conf file.
+* stbt lint: New checkers:
+
+  * E7006: FrameObject properties must use `self._frame`, not `stbt.get_frame()`.
+  * E7007: FrameObject properties must not have side-effects that change
+    the state of the device-under-test by calling `stbt.press()` or
+    `stbt.press_and_wait()`.
+  * E7008: "assert True" has no effect.
+
+* stbt lint: Teach pylint that `assert False` is the same as `raise
+  AssertionError`. This fixes incorrect behaviour of pylint's "unreachable
+  code" and "inconsistent return statements" checkers.
+
+* stbt.match: Fix false negative when using `MatchMethod.SQDIFF` and a
+  reference image that is mostly transparent except around the edges (for
+  example to find a "highlight" or "selection" around some dynamic content).
+
+* stbt.match: Improve error message when you give it an explicit region that
+  is smaller than the reference image.
 
 
 #### v30
