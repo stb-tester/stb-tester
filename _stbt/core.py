@@ -168,7 +168,11 @@ class DeviceUnderTest(object):
 
         if hold_secs is None:
             with self._interpress_delay(interpress_delay_secs):
-                out = _Keypress(key, self._time.time(), None, self.get_frame())
+                if self._display is None:
+                    frame_before = None
+                else:
+                    frame_before = self.get_frame()
+                out = _Keypress(key, self._time.time(), None, frame_before)
                 self._control.press(key)
                 out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
