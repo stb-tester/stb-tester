@@ -283,6 +283,9 @@ class DeviceUnderTest(object):
             first = False
 
     def get_frame(self):
+        if self._display is None:
+            raise RuntimeError(
+                "stbt.get_frame(): Video capture has not been initialised")
         return self._display.get_frame()
 
 
