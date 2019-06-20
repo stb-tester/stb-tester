@@ -6,8 +6,8 @@
 #/
 #/ Device URI is read from the stbt config file; the address of the individual
 #/ power outlet is replaced with the ones specified as command line arguments.
-#/ Example: `power-switch-stress-test.sh 1-A{1-8}` sends requests to switch all
-#/ 8 outlets of a PDUeX KWX unit simultaneously.
+#/ Example: `power-switch-stress-test.sh 1-A{1..8}` sends requests to switch
+#/ all 8 outlets of a PDUeX KWX unit simultaneously.
 
 set -u
 
