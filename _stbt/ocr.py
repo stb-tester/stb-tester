@@ -431,6 +431,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     imglog.imwrite("source", frame)
     imglog.set(engine=engine, mode=mode, lang=lang,
+               tesseract_config=_config.copy(),
                user_patterns=user_patterns, user_words=user_words,
                upsample=upsample, text_color=text_color,
                text_color_threshold=text_color_threshold,
@@ -688,6 +689,7 @@ def _log_ocr_image_debug(imglog, output=None):
           <li>engine={{engine}}
           <li>lang={{lang}}
           <li>mode={{mode}}
+          <li>tesseract_config={{tesseract_config}}
           <li>tesseract_user_patterns={{user_patterns}}
           <li>tesseract_user_words={{user_words}}
           <li>tesseract_version={{tesseract_version}}
