@@ -677,7 +677,12 @@ def _log_ocr_image_debug(imglog, output=None):
 
         {{ annotated_image(result) }}
 
-        <h5>Text:</h5>
+        {% if match_text %}
+        <h5>Result:</h5>
+        <pre><code>{{ result | escape }}</code></pre>
+        {% endif %}
+
+        <h5>Tesseract output:</h5>
         <pre><code>{{ output | escape }}</code></pre>
 
         <h5>Parameters:</h5>
