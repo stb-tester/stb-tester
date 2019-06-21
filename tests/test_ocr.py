@@ -154,6 +154,14 @@ def test_tesseract_user_patterns(patterns):
         tesseract_user_patterns=patterns)
 
 
+def test_char_whitelist():
+    # Without char_whitelist tesseract reads "OO" (the letter oh).
+    assert u'00' == stbt.ocr(
+        frame=load_image('ocr/00.png'),
+        mode=stbt.OcrMode.SINGLE_WORD,
+        char_whitelist="0123456789")
+
+
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],

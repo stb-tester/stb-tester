@@ -146,7 +146,7 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None, engine=None):
+        text_color_threshold=None, engine=None, char_whitelist=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -229,9 +229,16 @@ def ocr(frame=None, region=Region.ALL,
         section of :ref:`.stbt.conf`.
     :type engine: `OcrEngine`
 
+    :type char_whitelist: unicode string
+    :param char_whitelist:
+        String of characters that are allowed. Useful when you know that the
+        text is only going to contain numbers or IP addresses, for example so
+        that tesseract won't think that a zero is the letter o.
+
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
+    | Added in v31: The ``char_whitelist`` parameter.
     """
     if frame is None:
         import stbt
@@ -255,7 +262,7 @@ def ocr(frame=None, region=Region.ALL,
     text, region = _tesseract(
         frame, region, mode, lang, tesseract_config,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
-        text_color_threshold, engine, imglog)
+        text_color_threshold, engine, char_whitelist, imglog)
     text = text.strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     _log_ocr_image_debug(imglog, text)
@@ -266,7 +273,7 @@ def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
                tesseract_config=None, case_sensitive=False, upsample=True,
                text_color=None, text_color_threshold=None,
-               engine=None):
+               engine=None, char_whitelist=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -282,6 +289,7 @@ def match_text(text, frame=None, region=Region.ALL,
     :param text_color: See `ocr`.
     :param text_color_threshold: See `ocr`.
     :param engine: See `ocr`.
+    :param char_whitelist: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
 
     :returns:
@@ -299,6 +307,7 @@ def match_text(text, frame=None, region=Region.ALL,
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
+    | Added in v31: The ``char_whitelist`` parameter.
     """
     import lxml.etree
     if frame is None:
@@ -314,7 +323,8 @@ def match_text(text, frame=None, region=Region.ALL,
 
     xml, region = _tesseract(frame, region, mode, lang, _config,
                              None, text.split(), upsample, text_color,
-                             text_color_threshold, engine, imglog)
+                             text_color_threshold, engine, char_whitelist,
+                             imglog)
     if xml == '':
         hocr = None
         result = TextMatchResult(rts, False, None, frame, text)
@@ -388,7 +398,8 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
-               upsample, text_color, text_color_threshold, engine, imglog):
+               upsample, text_color, text_color_threshold, engine,
+               char_whitelist, imglog):
 
     if _config is None:
         _config = {}
@@ -423,6 +434,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                user_patterns=user_patterns, user_words=user_words,
                upsample=upsample, text_color=text_color,
                text_color_threshold=text_color_threshold,
+               char_whitelist=char_whitelist,
                tesseract_version=tesseract_version)
 
     frame_region = _image_region(frame)
@@ -439,14 +451,15 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
                                   user_patterns, user_words, upsample,
                                   text_color, text_color_threshold, engine,
-                                  imglog, tesseract_version),
+                                  char_whitelist, imglog, tesseract_version),
             region)
 
 
 @imgproc_cache.memoize({"version": "30"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold, engine, imglog, tesseract_version):
+        text_color, text_color_threshold, engine, char_whitelist,
+        imglog, tesseract_version):
 
     if tesseract_version >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
@@ -494,7 +507,8 @@ def _tesseract_subprocess(
 
         tessenv = os.environ.copy()
 
-        if _config or user_words or user_patterns or imglog.enabled:
+        if (_config or user_words or user_patterns or char_whitelist or
+                imglog.enabled):
             tessdata_dir = tmp + '/tessdata'
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(tessdata_suffix), tmp)
@@ -510,7 +524,8 @@ def _tesseract_subprocess(
             if 'user_words_suffix' in _config:
                 raise ValueError(
                     "You cannot specify 'user_words' and " +
-                    "'_config[\"user_words_suffix\"]' at the same time")
+                    "'tesseract_config[\"user_words_suffix\"]' " +
+                    "at the same time")
             with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
@@ -519,10 +534,19 @@ def _tesseract_subprocess(
             if 'user_patterns_suffix' in _config:
                 raise ValueError(
                     "You cannot specify 'user_patterns' and " +
-                    "'_config[\"user_patterns_suffix\"]' at the same time")
+                    "'tesseract_config[\"user_patterns_suffix\"]' " +
+                    "at the same time")
             with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
+
+        if char_whitelist:
+            if 'tessedit_char_whitelist' in _config:
+                raise ValueError(
+                    "You cannot specify 'char_whitelist' and " +
+                    "'tesseract_config[\"tessedit_char_whitelist\"]' " +
+                    "at the same time")
+            _config["tessedit_char_whitelist"] = char_whitelist
 
         if imglog.enabled:
             _config['tessedit_write_images'] = True
@@ -660,6 +684,7 @@ def _log_ocr_image_debug(imglog, output=None):
           {% if match_text %}
           <li>case_sensitive={{case_sensitive}}
           {% endif %}
+          <li>char_whitelist={{char_whitelist}}
           <li>engine={{engine}}
           <li>lang={{lang}}
           <li>mode={{mode}}
