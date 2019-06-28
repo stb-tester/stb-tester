@@ -63,6 +63,7 @@ def press_and_wait(
         An object that will evaluate to true if the transition completed, false
         otherwise. It has the following attributes:
 
+        * **key** (*str*) – The name of the key that was pressed.
         * **frame** (`stbt.Frame`) – If successful, the first video frame when
           the transition completed; if timed out, the last frame seen.
         * **status** (`TransitionStatus`) – Either ``START_TIMEOUT``,
@@ -177,12 +178,12 @@ class _Transition(object):
                     "Transition didn't start within %s seconds of pressing %s",
                     f, self.timeout_secs, press_result.key)
                 return _TransitionResult(
-                    f, TransitionStatus.START_TIMEOUT,
+                    press_result.key, f, TransitionStatus.START_TIMEOUT,
                     press_result.end_time, None, None)
 
         end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
         return _TransitionResult(
-            end_result.frame, end_result.status,
+            press_result.key, end_result.frame, end_result.status,
             press_result.end_time, animation_start_time, end_result.end_time)
 
     def wait_for_transition_to_end(self, initial_frame):
@@ -205,13 +206,13 @@ class _Transition(object):
                        first_stable_frame, self.stable_secs,
                        first_stable_frame.time)
                 return _TransitionResult(
-                    first_stable_frame, TransitionStatus.COMPLETE,
+                    None, first_stable_frame, TransitionStatus.COMPLETE,
                     None, initial_frame.time, first_stable_frame.time)
             if f.time >= self.expiry_time:
                 _debug("Transition didn't end within %s seconds",
                        f, self.timeout_secs)
                 return _TransitionResult(
-                    f, TransitionStatus.STABLE_TIMEOUT,
+                    None, f, TransitionStatus.STABLE_TIMEOUT,
                     None, initial_frame.time, None)
 
 
@@ -234,8 +235,9 @@ def strict_diff(f1, f2, region, mask_image):
 
 
 class _TransitionResult(object):
-    def __init__(
-            self, frame, status, press_time, animation_start_time, end_time):
+    def __init__(self, key, frame, status, press_time, animation_start_time,
+                 end_time):
+        self.key = key
         self.frame = frame
         self.status = status
         self.press_time = press_time
@@ -244,8 +246,9 @@ class _TransitionResult(object):
 
     def __repr__(self):
         return (
-            "_TransitionResult(frame=<Frame>, status=%s, press_time=%s, "
-            "animation_start_time=%s, end_time=%s)" % (
+            "_TransitionResult(key=%r, frame=<Frame>, status=%s, "
+            "press_time=%s, animation_start_time=%s, end_time=%s)" % (
+                self.key,
                 self.status,
                 self.press_time,
                 self.animation_start_time,
@@ -254,9 +257,10 @@ class _TransitionResult(object):
     def __str__(self):
         # Also lists the properties -- it's useful to see them in the logs.
         return (
-            "_TransitionResult(frame=<Frame>, status=%s, press_time=%s, "
-            "animation_start_time=%s, end_time=%s, duration=%s, "
+            "_TransitionResult(key=%r, frame=<Frame>, status=%s, "
+            "press_time=%s, animation_start_time=%s, end_time=%s, duration=%s, "
             "animation_duration=%s)" % (
+                self.key,
                 self.status,
                 self.press_time,
                 self.animation_start_time,
