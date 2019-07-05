@@ -55,7 +55,7 @@ class FrameObjectWithProperties(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectWithProperties(frame)
-    FrameObjectWithProperties(is_visible=True, public=5)
+    FrameObjectWithProperties(is_visible=True, offset_secs=0.017, public=5)
     """
     @property
     def is_visible(self):
@@ -66,8 +66,19 @@ class FrameObjectWithProperties(stbt.FrameObject):
         return 5
 
     @property
+    def offset_secs(self):
+        return 1 / 60
+
+    @property
     def _private(self):
         return 6
+
+
+def test_frameobject_repr():
+    # Needs an explicit test because we run doctests with pytest's ALLOW_UNICODE
+    assert (repr(FrameObjectWithProperties(_load_frame("with-dialog"))) ==
+            "FrameObjectWithProperties(is_visible=True, "
+            "offset_secs=0.017, public=5)")
 
 
 class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):

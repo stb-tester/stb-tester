@@ -180,8 +180,13 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         """
         The object's string representation includes all its public properties.
         """
-        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
-        return "%s(%s)" % (self.__class__.__name__, args)
+        args = []
+        for name, value in self._iter_fields():
+            if isinstance(value, float) and ("time" in name or "_secs" in name):
+                args.append("%s=%.3f" % (name, value))
+            else:
+                args.append("%s=%r" % (name, value))
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(args))
 
     def _iter_fields(self):
         if self:
