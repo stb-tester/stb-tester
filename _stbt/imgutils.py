@@ -194,10 +194,11 @@ def pixel_bounding_box(img):
     ...     [0, 0, 0, 1, 0, 0],
     ...     [0, 1, 0, 0, 0, 0],
     ...     [0, 0, 0, 0, 1, 0],
+    ...     [0, 0, 0, 0, 0, 0],
     ...     [0, 0, 1, 0, 0, 0],
     ...     [0, 0, 0, 0, 0, 0]
     ... ], dtype=numpy.uint8))
-    Region(x=1, y=1, right=5, bottom=5)
+    Region(x=1, y=1, right=5, bottom=6)
     """
     if len(img.shape) == 2:
         pass
