@@ -218,11 +218,11 @@ class _Transition(object):
 
 
 def _debug(s, f, *args):
-    debug(("transition: %.3f: " + s) % ((f.time,) + args))
+    debug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
 def _ddebug(s, f, *args):
-    ddebug(("transition: %.3f: " + s) % ((f.time,) + args))
+    ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
 def strict_diff(prev, frame, region, mask_image):
