@@ -24,7 +24,9 @@ import cv2
 import numpy
 
 from .core import load_image
-from .logging import debug
+from .imgutils import pixel_bounding_box
+from .logging import ddebug, debug, draw_on
+from .motion import MotionResult
 from .types import Region
 
 
@@ -219,18 +221,44 @@ def _debug(s, f, *args):
     debug(("transition: %.3f: " + s) % ((f.time,) + args))
 
 
-def strict_diff(f1, f2, region, mask_image):
+def _ddebug(s, f, *args):
+    ddebug(("transition: %.3f: " + s) % ((f.time,) + args))
+
+
+def strict_diff(prev, frame, region, mask_image):
     if region is not None:
-        full_frame = Region(0, 0, f1.shape[1], f1.shape[0])
+        full_frame = Region(0, 0, frame.shape[1], frame.shape[0])
         region = Region.intersect(full_frame, region)
-        f1 = f1[region.y:region.bottom, region.x:region.right]
-        f2 = f2[region.y:region.bottom, region.x:region.right]
+        f1 = prev[region.y:region.bottom, region.x:region.right]
+        f2 = frame[region.y:region.bottom, region.x:region.right]
 
     absdiff = cv2.absdiff(f1, f2)
     if mask_image is not None:
         absdiff = cv2.bitwise_and(absdiff, mask_image, absdiff)
 
-    return numpy.count_nonzero(absdiff) > 50 or (absdiff > 20).any()
+    diffs_found = False
+    out_region = None
+    maxdiff = numpy.max(absdiff)
+    if maxdiff > 20:
+        diffs_found = True
+        big_diffs = absdiff > 20
+        out_region = pixel_bounding_box(big_diffs)
+        _ddebug("found %s diffs above 20 (max %s) in %r", frame,
+                numpy.count_nonzero(big_diffs), maxdiff, out_region)
+    elif maxdiff > 0:
+        small_diffs_count = numpy.count_nonzero(absdiff)
+        if small_diffs_count > 50:
+            diffs_found = True
+            out_region = pixel_bounding_box(absdiff)
+            _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
+                    maxdiff, out_region)
+    if out_region:
+        out_region = out_region.translate(region.x, region.y)
+
+    result = MotionResult(getattr(frame, "time", None), diffs_found,
+                          out_region, frame)
+    draw_on(frame, result, label="transition")
+    return result
 
 
 class _TransitionResult(object):
