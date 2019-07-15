@@ -5,13 +5,12 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import pytest
 
-from _stbt.core import DeviceUnderTest, NoSinkPipeline
+from _stbt.core import DeviceUnderTest
 
 
 def test_that_pressing_context_manager_raises_keyup_exceptions():
     dut = DeviceUnderTest(control=FakeControl(raises_on_keyup=True),
-                          display=_FakeDisplay(),
-                          sink_pipeline=NoSinkPipeline())
+                          display=_FakeDisplay())
     with pytest.raises(RuntimeError) as excinfo:
         with dut.pressing("KEY_MENU"):
             pass
@@ -21,8 +20,7 @@ def test_that_pressing_context_manager_raises_keyup_exceptions():
 def test_that_pressing_context_manager_suppresses_keyup_exceptions():
     # ...if doing so would hide an exception raised by the test script.
     control = FakeControl(raises_on_keyup=True)
-    dut = DeviceUnderTest(control=control, display=_FakeDisplay(),
-                          sink_pipeline=NoSinkPipeline())
+    dut = DeviceUnderTest(control=control, display=_FakeDisplay())
     with pytest.raises(AssertionError):
         with dut.pressing("KEY_MENU"):
             assert False

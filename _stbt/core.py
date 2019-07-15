@@ -113,42 +113,42 @@ def new_device_under_test_from_config(parsed_args=None):
     if args.save_video is None:
         args.save_video = False
 
-    display = [None]
-
-    def raise_in_user_thread(exception):
-        display[0].tell_user_thread(exception)
     mainloop = _mainloop()
+
+    display = Display(args.source_pipeline)
+    dut = DeviceUnderTest(
+        display=display, control=uri_to_control(args.control, display),
+        mainloop=mainloop)
 
     if not args.sink_pipeline and not args.save_video:
         sink_pipeline = NoSinkPipeline()
     else:
         sink_pipeline = SinkPipeline(  # pylint: disable=redefined-variable-type
-            args.sink_pipeline, raise_in_user_thread, args.save_video)
+            args.sink_pipeline, display.tell_user_thread, args.save_video)
+    dut.set_sink_pipeline(sink_pipeline)
 
-    display[0] = Display(args.source_pipeline, sink_pipeline)
-    return DeviceUnderTest(
-        display=display[0], control=uri_to_control(args.control, display[0]),
-        sink_pipeline=sink_pipeline, mainloop=mainloop)
+    return dut
 
 
 class DeviceUnderTest(object):
-    def __init__(self, display=None, control=None, sink_pipeline=None,
-                 mainloop=None, _time=None):
+    def __init__(self, display=None, control=None, mainloop=None, _time=None):
         if _time is None:
             import time as _time
         self._time_of_last_press = None
         self._display = display
         self._control = control
-        self._sink_pipeline = sink_pipeline
+        self._sink_pipeline = NoSinkPipeline()
         self._mainloop = mainloop
         self._time = _time
         self._last_keypress = None
+        self._running = False
 
     def __enter__(self):
         if self._display:
             self._mainloop.__enter__()
             self._sink_pipeline.__enter__()
             self._display.__enter__()
+            self._running = True
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
@@ -159,7 +159,21 @@ class DeviceUnderTest(object):
             self._sink_pipeline.__exit__(exc_type, exc_value, tb)
             self._sink_pipeline = None
             self._mainloop.__exit__(exc_type, exc_value, tb)
+            self._running = False
         self._control = None
+
+    def set_sink_pipeline(self, new_sink_pipeline):
+        old_sink_pipeline = self._sink_pipeline
+        assert isinstance(self._sink_pipeline, NoSinkPipeline)
+        if self._running:
+            new_sink_pipeline.__enter__()
+        try:
+            self._sink_pipeline = new_sink_pipeline
+            self._display.set_sink_pipeline(new_sink_pipeline)
+        finally:
+            if self._running:
+                old_sink_pipeline.exit_prep()
+                old_sink_pipeline.__exit__(None, None, None)
 
     def press(self, key, interpress_delay_secs=None, hold_secs=None):
         if hold_secs is not None and hold_secs > 60:
@@ -839,7 +853,7 @@ class NoSinkPipeline(object):
 
 
 class Display(object):
-    def __init__(self, user_source_pipeline, sink_pipeline):
+    def __init__(self, user_source_pipeline):
 
         import time
 
@@ -874,9 +888,12 @@ class Display(object):
             appsink])
         self.create_source_pipeline()
 
-        self._sink_pipeline = sink_pipeline
+        self._sink_pipeline = NoSinkPipeline()
 
         debug("source pipeline: %s" % self.source_pipeline_description)
+
+    def set_sink_pipeline(self, sink_pipeline):
+        self._sink_pipeline = sink_pipeline
 
     def create_source_pipeline(self):
         self.source_pipeline = Gst.parse_launch(
@@ -948,9 +965,10 @@ class Display(object):
         frame.flags.writeable = False
 
         # See also: logging.draw_on
-        frame._draw_sink = weakref.ref(self._sink_pipeline)  # pylint: disable=protected-access
+        sink_pipeline = self._sink_pipeline
+        frame._draw_sink = weakref.ref(sink_pipeline)  # pylint: disable=protected-access
         self.tell_user_thread(frame)
-        self._sink_pipeline.on_sample(sample)
+        sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
 
     def tell_user_thread(self, frame_or_exception):
