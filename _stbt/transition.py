@@ -253,6 +253,9 @@ def strict_diff(prev, frame, region, mask_image):
             out_region = pixel_bounding_box(small_diffs)
             _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
                     maxdiff, out_region)
+        else:
+            _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
+                    maxdiff)
     if out_region:
         out_region = out_region.translate(region.x, region.y)
 
