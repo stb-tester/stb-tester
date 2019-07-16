@@ -250,7 +250,7 @@ def strict_diff(prev, frame, region, mask_image):
         small_diffs_count = numpy.count_nonzero(small_diffs)
         if small_diffs_count > 50:
             diffs_found = True
-            out_region = pixel_bounding_box(small_diffs.max(axis=2))
+            out_region = pixel_bounding_box(small_diffs)
             _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
                     maxdiff, out_region)
     if out_region:
