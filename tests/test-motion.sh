@@ -247,6 +247,7 @@ test_detect_motion_visualisation() {
         --source-pipeline "multifilesrc location=$testdir/box-%05d.png loop=true \
                            ! image/png,framerate=25/1" \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
+        --save-screenshot=never \
         detect_motion.py &
     source_pid=$!
     trap "kill $source_pid; rm fifo" EXIT
@@ -255,6 +256,28 @@ test_detect_motion_visualisation() {
 	wait_for_match("$testdir/motion-visualisation.png")
 	EOF
     stbt run -v --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py
+}
+
+test_press_and_wait_visualisation() {
+    cat > press_and_wait.py <<-EOF &&
+	import stbt
+	stbt.press_and_wait("ball")
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        --save-screenshot=never \
+        press_and_wait.py &
+    source_pid=$!
+    trap "kill $source_pid; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	wait_for_match("$testdir/press_and_wait_visualisation.png")
+	EOF
+    stbt run -v --control=none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
         verify.py
 }
