@@ -22,8 +22,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
 
-    The `MotionResult` indicates whether any motion was detected -- that is,
-    any difference between two consecutive frames.
+    The `MotionResult` indicates whether any motion was detected.
 
     Use it in a ``for`` loop like this::
 
@@ -118,7 +117,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         imglog.imwrite("previous_frame_gray", previous_frame_gray)
 
         absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
-        previous_frame_gray = frame_gray
         imglog.imwrite("absdiff", absdiff)
 
         if mask.image is not None:
@@ -143,6 +141,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
             out_region = out_region.translate(region.x, region.y)
 
         motion = bool(out_region)
+        if motion:
+            # Only update the comparison frame if it's different to the previous
+            # one.  This makes `detect_motion` more sensitive to slow motion
+            # because the differences between frames 1 and 2 might be small and
+            # the differences between frames 2 and 3 might be small but we'd see
+            # the difference by looking between 1 and 3.
+            previous_frame_gray = frame_gray
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
@@ -158,7 +163,7 @@ def wait_for_motion(
         noise_threshold=None, mask=None, region=Region.ALL, frames=None):
     """Search for motion in the device-under-test's video stream.
 
-    "Motion" is difference in pixel values between two consecutive frames.
+    "Motion" is difference in pixel values between two frames.
 
     :type timeout_secs: int or float or None
     :param timeout_secs:
