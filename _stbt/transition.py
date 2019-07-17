@@ -246,12 +246,16 @@ def strict_diff(prev, frame, region, mask_image):
         _ddebug("found %s diffs above 20 (max %s) in %r", frame,
                 numpy.count_nonzero(big_diffs), maxdiff, out_region)
     elif maxdiff > 0:
-        small_diffs_count = numpy.count_nonzero(absdiff)
+        small_diffs = absdiff > 5
+        small_diffs_count = numpy.count_nonzero(small_diffs)
         if small_diffs_count > 50:
             diffs_found = True
-            out_region = pixel_bounding_box(absdiff)
+            out_region = pixel_bounding_box(small_diffs)
             _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
                     maxdiff, out_region)
+        else:
+            _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
+                    maxdiff)
     if out_region:
         out_region = out_region.translate(region.x, region.y)
 
