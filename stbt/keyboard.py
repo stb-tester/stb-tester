@@ -63,7 +63,6 @@ class Keyboard(object):
     # TODO: self.page.selection.text
     #   This property can return a string, or an object with a ``text``
     #   attribute that is a string.
-    # TODO: ambiguous edges
     # TODO: case sensitive
     # TODO: timeout
 
@@ -77,14 +76,15 @@ class Keyboard(object):
 
     def navigate_to(self, target):
         current = self.page.selection
-        keys = list(_keys_to_press(self.G, current, target))
-        log.info("Keyboard: navigating from %s to %s by pressing %r",
-                 current, target, keys)
-        for k in keys[:-1]:
-            stbt.press(k)
-        assert stbt.press_and_wait(keys[-1], mask=self.mask)
-        self.page = self.page.refresh()
-        assert self.page.selection == target
+        while current != target:
+            keys = list(_keys_to_press(self.G, current, target))
+            log.info("Keyboard: navigating from %s to %s by pressing %r",
+                     current, target, keys)
+            for k in keys[:-1]:
+                stbt.press(k)
+            assert stbt.press_and_wait(keys[-1], mask=self.mask)
+            self.page = self.page.refresh()
+            current = self.page.selection
 
 
 def _keys_to_press(G, source, target):
@@ -96,3 +96,10 @@ def _keys_to_press(G, source, target):
     for s, t in zip(path[:-1], path[1:]):
         key = G.edges[s, t]["key"]
         yield key
+
+        # If there are multiple edges from this node with the same key, we
+        # don't know which one we will *actually* end up on. So don't do
+        # any further blind keypresses; let the caller re-calculate and call
+        # us again.
+        if len([tt for _, tt, kk in G.edges(s, data="key") if kk == key]) > 1:
+            break

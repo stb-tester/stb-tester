@@ -148,4 +148,4 @@ def test_keys_to_press():
     assert list(_keys_to_press(G, "H", "A")) == ["KEY_UP"]
     assert list(_keys_to_press(G, "A", "I")) in (["KEY_RIGHT", "KEY_DOWN"],
                                                  ["KEY_DOWN", "KEY_RIGHT"])
-    assert list(_keys_to_press(G, "SPACE", "A")) == ["KEY_UP"] * 4
+    assert list(_keys_to_press(G, "SPACE", "A")) == ["KEY_UP"]
