@@ -4,9 +4,14 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import random
+
 import networkx as nx
+import mock
+import pytest
 
 from stbt.keyboard import Keyboard, _keys_to_press
+from _stbt.transition import _TransitionResult, TransitionStatus
 
 
 YOUTUBE_SEARCH_KEYBOARD = """
@@ -149,3 +154,49 @@ def test_keys_to_press():
     assert list(_keys_to_press(G, "A", "I")) in (["KEY_RIGHT", "KEY_DOWN"],
                                                  ["KEY_DOWN", "KEY_RIGHT"])
     assert list(_keys_to_press(G, "SPACE", "A")) == ["KEY_UP"]
+
+
+class YouTubeKeyboard(object):
+    """PageObject that mocks out stbt.get_frame() for testing."""
+    def __init__(self):
+        self._frame = None
+        self.is_visible = True
+        self.selection = "A"
+        self.actual_state = "A"
+        self.entered = ""
+
+    def refresh(self):
+        self.selection = self.actual_state
+        return self
+
+    def enter_text(self, text):
+        kb = Keyboard(self, YOUTUBE_SEARCH_KEYBOARD)
+        kb.enter_text(text.upper())
+
+    def press(self, key):
+        print("Pressed %s" % key)
+        if key == "KEY_OK":
+            self.entered += self.actual_state
+        else:
+            self.actual_state = random.choice([
+                t for _, t, k in G.edges(self.actual_state, data="key")
+                if k == key])
+
+    def press_and_wait(self, key, mask):  # pylint:disable=unused-argument
+        self.press(key)
+        return _TransitionResult(None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+
+@pytest.fixture(scope="function")
+def youtubekeyboard():
+    kb = YouTubeKeyboard()
+    with mock.patch("stbt.press", kb.press), \
+            mock.patch("stbt.press_and_wait", kb.press_and_wait):
+        yield kb
+
+
+def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
+    assert youtubekeyboard.selection == "A"
+    youtubekeyboard.enter_text("hi")
+    assert youtubekeyboard.entered == "HI"
+    assert youtubekeyboard.selection == "I"
