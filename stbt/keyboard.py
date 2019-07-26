@@ -26,7 +26,7 @@ class Keyboard(object):
         that implements the following:
 
         * ``selection`` — property that returns the name of the currently
-          selected letter, for example "A" or "SPACE".
+          selected character, for example "A" or " ".
 
     :param str graph: A specification of the complete navigation graph (state
         machine) between adjacent keys, as a multiline string where each line
@@ -37,6 +37,12 @@ class Keyboard(object):
             Q A KEY_DOWN
             W Q KEY_LEFT
             <etc>
+
+        For nodes that enter a character, use that character as the node name.
+        For the space-bar use SPACE. For other nodes that don't enter a
+        character when pressed use a descriptive name such as CLEAR or ENTER
+        (these nodes won't be used by ``enter_text`` but you can use them as a
+        target of ``navigate_to``).
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -53,6 +59,7 @@ class Keyboard(object):
         self.G = nx.parse_edgelist(graph.split("\n"),
                                    create_using=nx.DiGraph,
                                    data=[("key", str)])
+        nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
 
         self.mask = None
         if isinstance(mask, numpy.ndarray):

@@ -141,6 +141,7 @@ YOUTUBE_SEARCH_KEYBOARD = """
 G = nx.parse_edgelist(YOUTUBE_SEARCH_KEYBOARD.split("\n"),
                       create_using=nx.DiGraph,
                       data=[("key", str)])
+nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
 
 def test_keys_to_press():
@@ -153,7 +154,7 @@ def test_keys_to_press():
     assert list(_keys_to_press(G, "H", "A")) == ["KEY_UP"]
     assert list(_keys_to_press(G, "A", "I")) in (["KEY_RIGHT", "KEY_DOWN"],
                                                  ["KEY_DOWN", "KEY_RIGHT"])
-    assert list(_keys_to_press(G, "SPACE", "A")) == ["KEY_UP"]
+    assert list(_keys_to_press(G, " ", "A")) == ["KEY_UP"]
 
 
 class YouTubeKeyboard(object):
@@ -197,6 +198,6 @@ def youtubekeyboard():
 
 def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
     assert youtubekeyboard.selection == "A"
-    youtubekeyboard.enter_text("hi")
-    assert youtubekeyboard.entered == "HI"
-    assert youtubekeyboard.selection == "I"
+    youtubekeyboard.enter_text("hi there")
+    assert youtubekeyboard.entered == "HI THERE"
+    assert youtubekeyboard.selection == "E"
