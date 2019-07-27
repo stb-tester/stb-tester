@@ -67,6 +67,7 @@ class Keyboard(object):
                                    create_using=nx.DiGraph,
                                    data=[("key", str)])
         nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
+        _add_weights(self.G)
 
         self.mask = None
         if isinstance(mask, numpy.ndarray):
@@ -107,7 +108,7 @@ class Keyboard(object):
 
 
 def _keys_to_press(G, source, target):
-    path = nx.shortest_path(G, source=source, target=target)
+    path = nx.shortest_path(G, source=source, target=target, weight="weight")
     # nx.shortest_path(G, "A", "V") -> ["A", "H", "O", "V"]
     # nx.shortest_path(G, "A", "A") -> ["A"]
     if len(path) == 1:
@@ -122,3 +123,21 @@ def _keys_to_press(G, source, target):
         # us again.
         if len([tt for _, tt, kk in G.edges(s, data="key") if kk == key]) > 1:
             break
+
+
+def _add_weights(G):
+    for node in G:
+        edges = list(G.edges(node, data="key"))
+        keys = set(k for _, _, k in edges)
+        for key in keys:
+            targets = [t for _, t, k in edges if k == key]
+            if len(targets) > 1:
+                # Nondeterministic: Multiple targets from the same node with
+                # the same action (key). No doubt the keyboard-under-test *is*
+                # deterministic, but our model of it (in the test-pack) isn't
+                # because we don't remember the previous nodes before we
+                # landed on the current node. Give these edges a large weight
+                # so that the shortest path algorithm doesn't think it can
+                # take a shortcut through here.
+                for target in targets:
+                    G.edges[node, target]["weight"] = 100

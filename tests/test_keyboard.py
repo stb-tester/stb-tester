@@ -4,13 +4,11 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
-import random
-
 import networkx as nx
 import mock
 import pytest
 
-from stbt.keyboard import Keyboard, _keys_to_press
+from stbt.keyboard import Keyboard, _add_weights, _keys_to_press
 from _stbt.transition import _TransitionResult, TransitionStatus
 
 
@@ -157,6 +155,31 @@ def test_keys_to_press():
     assert list(_keys_to_press(G, " ", "A")) == ["KEY_UP"]
 
 
+def test_add_weights():
+    G = nx.parse_edgelist(  # pylint:disable=redefined-outer-name
+        """ W SPACE KEY_DOWN
+            X SPACE KEY_DOWN
+            Y SPACE KEY_DOWN
+            Z SPACE KEY_DOWN
+            SPACE W KEY_UP
+            SPACE X KEY_UP
+            SPACE Y KEY_UP
+            SPACE Z KEY_UP
+            W X KEY_RIGHT
+            X Y KEY_RIGHT
+            Y Z KEY_RIGHT""".split("\n"),
+        create_using=nx.DiGraph,
+        data=[("key", str)])
+
+    # This is the bug:
+    assert nx.shortest_path(G, "W", "Z") == ["W", "SPACE", "Z"]
+
+    # And this is how we fix it:
+    _add_weights(G)
+    assert nx.shortest_path(G, "W", "Z", weight="weight") == [
+        "W", "X", "Y", "Z"]
+
+
 class YouTubeKeyboard(object):
     """PageObject that mocks out stbt.get_frame() for testing."""
     def __init__(self):
@@ -165,6 +188,8 @@ class YouTubeKeyboard(object):
         self.selection = "A"
         self.actual_state = "A"
         self.entered = ""
+        # Pressing up from SPACE returns to the last letter we were at:
+        self.prev_state = "A"
 
     def refresh(self):
         self.selection = self.actual_state
@@ -179,9 +204,16 @@ class YouTubeKeyboard(object):
         if key == "KEY_OK":
             self.entered += self.actual_state
         else:
-            self.actual_state = random.choice([
+            next_states = [
                 t for _, t, k in G.edges(self.actual_state, data="key")
-                if k == key])
+                if k == key]
+            if self.prev_state in next_states:
+                next_state = self.prev_state
+            else:
+                next_state = next_states[0]
+            if self.actual_state not in (" ", "CLEAR", "SEARCH"):
+                self.prev_state = self.actual_state
+            self.actual_state = next_state
 
     def press_and_wait(self, key, mask):  # pylint:disable=unused-argument
         self.press(key)
