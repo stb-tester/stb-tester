@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import time
 from logging import getLogger
 
 import networkx as nx
@@ -52,9 +53,15 @@ class Keyboard(object):
         appear, as well as any other regions with dynamic content (such as a
         picture-in-picture with live TV). See `stbt.press_and_wait` for more
         details about the mask.
+
+    :type navigate_timeout: int or float
+    :param navigate_timeout: Timeout (in seconds) for ``navigate_to``. In
+        practice ``navigate_to`` should only time out if you have a bug in your
+        ``graph`` state machine specification.
+
     """
 
-    def __init__(self, page, graph, mask=None):
+    def __init__(self, page, graph, mask=None, navigate_timeout=20):
         self.page = page
         self.G = nx.parse_edgelist(graph.split("\n"),
                                    create_using=nx.DiGraph,
@@ -67,11 +74,12 @@ class Keyboard(object):
         elif mask:
             self.mask = stbt.load_image(mask)
 
+        self.navigate_timeout = navigate_timeout
+
     # TODO: self.page.selection.text
     #   This property can return a string, or an object with a ``text``
     #   attribute that is a string.
     # TODO: case sensitive
-    # TODO: timeout
 
     def enter_text(self, text):
         if not text:
@@ -82,8 +90,12 @@ class Keyboard(object):
         self.enter_text(text[1:])
 
     def navigate_to(self, target):
+        deadline = time.time() + self.navigate_timeout
         current = self.page.selection
         while current != target:
+            assert time.time() < deadline, (
+                "Keyboard.navigate_to: Didn't reach %r after %s seconds"
+                % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G, current, target))
             log.info("Keyboard: navigating from %s to %s by pressing %r",
                      current, target, keys)

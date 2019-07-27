@@ -171,7 +171,7 @@ class YouTubeKeyboard(object):
         return self
 
     def enter_text(self, text):
-        kb = Keyboard(self, YOUTUBE_SEARCH_KEYBOARD)
+        kb = Keyboard(self, YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
         kb.enter_text(text.upper())
 
     def press(self, key):
