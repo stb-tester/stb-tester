@@ -118,6 +118,7 @@ class Keyboard(object):
         deadline = time.time() + self.navigate_timeout
         current = self.page.selection
         while current != target:
+            assert self.page, "%s page isn't visible" % type(self.page).__name__
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
