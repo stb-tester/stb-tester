@@ -77,10 +77,34 @@ class Keyboard(object):
 
         self.navigate_timeout = navigate_timeout
 
+    # pylint:disable=fixme
     # TODO: self.page.selection.text
     #   This property can return a string, or an object with a ``text``
     #   attribute that is a string.
-    # TODO: case sensitive
+    #
+    # TODO: case sensitive keyboards
+    #   Caps lock can be supported with a graph like this:
+    #       A CAPSLOCK_OFF KEY_LEFT
+    #       CAPSLOCK_OFF CAPSLOCK_ON KEY_OK
+    #       CAPSLOCK_ON a KEY_RIGHT
+    #       a q KEY_UP
+    #       <etc>
+    #   (Other mode changes like ABC -> 123!@# can be supported in the same
+    #   way.)
+    #
+    #   I don't know how best to support SHIFT (temporary mode change):
+    #   - In shifted state KEY_OK will go from "A" to "a". We'd want to use
+    #     press_and_wait before we check the new state. But...
+    #   - In non-shifted state KEY_OK just enters the letter; the screen doesn't
+    #     change otherwise. Currently we don't use press_and_wait here because
+    #     typically the text-box where the text appears is masked out (because
+    #     some UIs have a blinking cursor there) and there is no change anywhere
+    #     else on the screen.
+    #
+    # TODO: Check that KEY_OK adds to the search text? With a property on the
+    #   page object? OCR might be too unreliable for incomplete words. We don't
+    #   use press_and_wait because the text-box might be masked out (some UIs
+    #   have a blinking cursor there).
 
     def enter_text(self, text):
         if not text:
