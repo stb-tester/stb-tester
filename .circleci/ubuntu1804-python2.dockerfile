@@ -34,6 +34,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-lmdb \
         python-lxml \
         python-mock \
+        python-networkx \
         python-nose \
         python-numpy \
         python-opencv \
