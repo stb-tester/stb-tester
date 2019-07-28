@@ -64,7 +64,7 @@ class Keyboard(object):
     def __init__(self, page, graph, mask=None, navigate_timeout=20):
         self.page = page
         self.G = nx.parse_edgelist(graph.split("\n"),
-                                   create_using=nx.DiGraph,
+                                   create_using=nx.DiGraph(),
                                    data=[("key", str)])
         nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
         _add_weights(self.G)
@@ -114,7 +114,7 @@ def _keys_to_press(G, source, target):
     if len(path) == 1:
         return
     for s, t in zip(path[:-1], path[1:]):
-        key = G.edges[s, t]["key"]
+        key = G[s][t]["key"]
         yield key
 
         # If there are multiple edges from this node with the same key, we
@@ -140,4 +140,4 @@ def _add_weights(G):
                 # so that the shortest path algorithm doesn't think it can
                 # take a shortcut through here.
                 for target in targets:
-                    G.edges[node, target]["weight"] = 100
+                    G[node][target]["weight"] = 100

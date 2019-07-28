@@ -137,7 +137,7 @@ YOUTUBE_SEARCH_KEYBOARD = """
     SEARCH ' KEY_UP
 """
 G = nx.parse_edgelist(YOUTUBE_SEARCH_KEYBOARD.split("\n"),
-                      create_using=nx.DiGraph,
+                      create_using=nx.DiGraph(),
                       data=[("key", str)])
 nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
@@ -168,7 +168,7 @@ def test_add_weights():
             W X KEY_RIGHT
             X Y KEY_RIGHT
             Y Z KEY_RIGHT""".split("\n"),
-        create_using=nx.DiGraph,
+        create_using=nx.DiGraph(),
         data=[("key", str)])
 
     # This is the bug:
