@@ -107,12 +107,9 @@ class Keyboard(object):
     #   have a blinking cursor there).
 
     def enter_text(self, text):
-        if not text:
-            return  # finished
-        letter = text[0]
-        self.navigate_to(letter)
-        stbt.press("KEY_OK")
-        self.enter_text(text[1:])
+        for letter in text:
+            self.navigate_to(letter)
+            stbt.press("KEY_OK")
 
     def navigate_to(self, target):
         deadline = time.time() + self.navigate_timeout
