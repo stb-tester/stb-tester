@@ -140,10 +140,8 @@ class Keyboard(object):
         so your test scripts won't call this ``Keyboard`` class directly. For
         example::
 
-            from stbt.keyboard import Keyboard
-
             class YouTubeSearch(stbt.FrameObject):
-                _kb = Keyboard('''
+                _kb = stbt.Keyboard('''
                     A B KEY_RIGHT
                     ...etc...
                     ''')

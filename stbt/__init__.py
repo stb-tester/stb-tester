@@ -66,6 +66,7 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
+from stbt.keyboard import Keyboard
 
 __all__ = [
     "as_precondition",
@@ -81,6 +82,7 @@ __all__ = [
     "get_config",
     "get_frame",
     "is_screen_black",
+    "Keyboard",
     "load_image",
     "match",
     "match_all",

@@ -8,7 +8,8 @@ import networkx as nx
 import mock
 import pytest
 
-from stbt.keyboard import Keyboard, _add_weights, _keys_to_press
+import stbt
+from stbt.keyboard import _add_weights, _keys_to_press
 from _stbt.transition import _TransitionResult, TransitionStatus
 
 
@@ -181,7 +182,7 @@ def test_add_weights():
 
 
 class YouTubeKeyboard(object):
-    KEYBOARD = Keyboard(YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
+    KEYBOARD = stbt.Keyboard(YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
 
     """FrameObject-alike that doesn't require real video-capture."""
     def __init__(self):
