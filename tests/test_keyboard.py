@@ -181,9 +181,8 @@ def test_add_weights():
 
 
 class YouTubeKeyboard(object):
-    """PageObject that mocks out stbt.get_frame() for testing."""
+    """FrameObject-alike that doesn't require real video-capture."""
     def __init__(self):
-        self._frame = None
         self.is_visible = True
         self.selection = "A"
         self.actual_state = "A"
