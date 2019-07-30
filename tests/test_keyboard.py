@@ -188,6 +188,7 @@ class YouTubeKeyboard(object):
         self.is_visible = True
         self.selection = "A"
         self.actual_state = "A"
+        self.pressed = []
         self.entered = ""
         # Pressing up from SPACE returns to the last letter we were at:
         self.prev_state = "A"
@@ -199,8 +200,12 @@ class YouTubeKeyboard(object):
     def enter_text(self, text):
         self.KEYBOARD.enter_text(self, text.upper())
 
+    def navigate_to(self, target):
+        self.KEYBOARD.navigate_to(self, target)
+
     def press(self, key):
         print("Pressed %s" % key)
+        self.pressed.append(key)
         if key == "KEY_OK":
             self.entered += self.actual_state
         else:
@@ -233,3 +238,10 @@ def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
     youtubekeyboard.enter_text("hi there")
     assert youtubekeyboard.entered == "HI THERE"
     assert youtubekeyboard.selection == "E"
+
+
+def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
+    assert youtubekeyboard.selection == "A"
+    youtubekeyboard.navigate_to("SEARCH")
+    assert youtubekeyboard.selection == "SEARCH"
+    assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
