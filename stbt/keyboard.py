@@ -29,7 +29,8 @@ class Keyboard(object):
         * ``selection`` — property that returns the name of the currently
           selected character, for example "A" or " ".
 
-    :param str graph: A specification of the complete navigation graph (state
+    :type graph: str or networkx.DiGraph
+    :param graph: A specification of the complete navigation graph (state
         machine) between adjacent keys, as a multiline string where each line
         is in the format ``<start_node> <end_node> <action>``. For example, the
         specification for a qwerty keyboard might look like this::
@@ -44,6 +45,10 @@ class Keyboard(object):
         character when pressed use a descriptive name such as CLEAR or ENTER
         (these nodes won't be used by ``enter_text`` but you can use them as a
         target of ``navigate_to``).
+
+        For advanced users: instead of a string, ``graph`` can be a
+        `networkx.DiGraph` where each edge has an attribute called ``key`` with
+        a value like ``"KEY_RIGHT"`` etc.
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -63,9 +68,12 @@ class Keyboard(object):
 
     def __init__(self, page, graph, mask=None, navigate_timeout=20):
         self.page = page
-        self.G = nx.parse_edgelist(graph.split("\n"),
-                                   create_using=nx.DiGraph(),
-                                   data=[("key", str)])
+        if isinstance(graph, nx.DiGraph):
+            self.G = graph
+        else:
+            self.G = nx.parse_edgelist(graph.split("\n"),
+                                       create_using=nx.DiGraph(),
+                                       data=[("key", str)])
         nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
         _add_weights(self.G)
 
