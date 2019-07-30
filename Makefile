@@ -95,7 +95,8 @@ INSTALL_PYLIB_FILES = \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
     stbt/__init__.py \
-    stbt/android.py
+    stbt/android.py \
+    stbt/keyboard.py
 
 INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
