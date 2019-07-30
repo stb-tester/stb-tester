@@ -92,10 +92,6 @@ class Keyboard(object):
         self.navigate_timeout = navigate_timeout
 
     # pylint:disable=fixme
-    # TODO: page.selection.text
-    #   This property can return a string, or an object with a ``text``
-    #   attribute that is a string.
-    #
     # TODO: case sensitive keyboards
     #   Caps lock can be supported with a graph like this:
     #       A CAPSLOCK_OFF KEY_LEFT
@@ -129,7 +125,9 @@ class Keyboard(object):
             It must implement the following:
 
             * ``selection`` — property that returns the name of the currently
-              selected character, for example "A" or " ".
+              selected character, for example "A" or " ". This property can
+              return a string, or an object with a ``text`` attribute that is
+              a string.
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
@@ -180,7 +178,7 @@ class Keyboard(object):
         """
 
         deadline = time.time() + self.navigate_timeout
-        current = page.selection
+        current = _selection_to_text(page.selection)
         while current != target:
             assert page, "%s page isn't visible" % type(page).__name__
             assert time.time() < deadline, (
@@ -193,7 +191,14 @@ class Keyboard(object):
                 stbt.press(k)
             assert stbt.press_and_wait(keys[-1], mask=self.mask)
             page = page.refresh()
-            current = page.selection
+            current = _selection_to_text(page.selection)
+
+
+def _selection_to_text(selection):
+    if hasattr(selection, "text"):
+        return selection.text
+    else:
+        return selection
 
 
 def _keys_to_press(G, source, target):
