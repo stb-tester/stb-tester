@@ -181,6 +181,8 @@ def test_add_weights():
 
 
 class YouTubeKeyboard(object):
+    KEYBOARD = Keyboard(YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
+
     """FrameObject-alike that doesn't require real video-capture."""
     def __init__(self):
         self.is_visible = True
@@ -195,8 +197,7 @@ class YouTubeKeyboard(object):
         return self
 
     def enter_text(self, text):
-        kb = Keyboard(self, YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
-        kb.enter_text(text.upper())
+        self.KEYBOARD.enter_text(self, text.upper())
 
     def press(self, key):
         print("Pressed %s" % key)

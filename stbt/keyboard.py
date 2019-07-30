@@ -19,15 +19,21 @@ log = getLogger("stbt.keyboard")
 
 
 class Keyboard(object):
-    """Enter text into an on-screen keyboard using the remote control.
+    """Helper for navigating an on-screen keyboard using the remote control.
+
+    You customize for the appearance & behaviour of the keyboard you're testing
+    by specifying two things:
+
+    * A `stbt.FrameObject` class that can tell you which key is currently
+      selected on the screen. See the ``page`` parameter to ``enter_text`` and
+      ``navigate_to``, below.
+
+    * A `Directed Graph`_ that specifies the navigation between every key on
+      the keyboard (for example on a qwerty keyboard: when Q is selected,
+      pressing KEY_RIGHT on the remote control goes to W, and so on). See the
+      ``graph`` parameter below.
 
     The constructor takes the following parameters:
-
-    :param stbt.FrameObject page: An instance of a `stbt.FrameObject` sub-class
-        that implements the following:
-
-        * ``selection`` — property that returns the name of the currently
-          selected character, for example "A" or " ".
 
     :type graph: str or networkx.DiGraph
     :param graph: A specification of the complete navigation graph (state
@@ -64,10 +70,10 @@ class Keyboard(object):
         practice ``navigate_to`` should only time out if you have a bug in your
         ``graph`` state machine specification.
 
+    .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     """
 
-    def __init__(self, page, graph, mask=None, navigate_timeout=20):
-        self.page = page
+    def __init__(self, graph, mask=None, navigate_timeout=20):
         if isinstance(graph, nx.DiGraph):
             self.G = graph
         else:
@@ -86,7 +92,7 @@ class Keyboard(object):
         self.navigate_timeout = navigate_timeout
 
     # pylint:disable=fixme
-    # TODO: self.page.selection.text
+    # TODO: page.selection.text
     #   This property can return a string, or an object with a ``text``
     #   attribute that is a string.
     #
@@ -114,16 +120,69 @@ class Keyboard(object):
     #   use press_and_wait because the text-box might be masked out (some UIs
     #   have a blinking cursor there).
 
-    def enter_text(self, text):
+    def enter_text(self, page, text):
+        """
+        Enter the specified text using the on-screen keyboard.
+
+        :param stbt.FrameObject page: An instance of a `stbt.FrameObject`
+            sub-class that describes the appearance of the on-screen keyboard.
+            It must implement the following:
+
+            * ``selection`` — property that returns the name of the currently
+              selected character, for example "A" or " ".
+
+            The ``page`` instance that you provide must represent the current
+            state of the device-under-test.
+
+        :param str text: The text to enter. If your keyboard only supports a
+            single case then you need to convert the text to uppercase or
+            lowercase, as appropriate, before passing it to this method.
+
+        Typically your FrameObject will provide its own ``enter_text`` method,
+        so your test scripts won't call this ``Keyboard`` class directly. For
+        example::
+
+            from stbt.keyboard import Keyboard
+
+            class YouTubeSearch(stbt.FrameObject):
+                _kb = Keyboard('''
+                    A B KEY_RIGHT
+                    ...etc...
+                    ''')
+
+                @property
+                def is_visible(self):
+                    ...  # implementation not shown
+
+                @property
+                def selection(self):
+                    ...  # implementation not shown
+
+                def enter_text(self, text):
+                    self._kb.enter_text(page=self, text=text.upper())
+                    self._kb.navigate_to(page=self, target="SEARCH")
+                    stbt.press("KEY_OK")
+
+        """
         for letter in text:
-            self.navigate_to(letter)
+            self.navigate_to(page, letter)
             stbt.press("KEY_OK")
 
-    def navigate_to(self, target):
+    def navigate_to(self, page, target):
+        """Move the selection to the specified character.
+
+        Note that this won't press KEY_OK on the target, it only moves the
+        selection there.
+
+        :param stbt.FrameObject page: See ``enter_text``.
+        :param str target: The key or button to navigate to, for example "A",
+            " ", or "CLEAR".
+        """
+
         deadline = time.time() + self.navigate_timeout
-        current = self.page.selection
+        current = page.selection
         while current != target:
-            assert self.page, "%s page isn't visible" % type(self.page).__name__
+            assert page, "%s page isn't visible" % type(page).__name__
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
@@ -133,8 +192,8 @@ class Keyboard(object):
             for k in keys[:-1]:
                 stbt.press(k)
             assert stbt.press_and_wait(keys[-1], mask=self.mask)
-            self.page = self.page.refresh()
-            current = self.page.selection
+            page = page.refresh()
+            current = page.selection
 
 
 def _keys_to_press(G, source, target):
