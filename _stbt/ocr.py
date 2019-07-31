@@ -82,13 +82,16 @@ class OcrMode(IntEnum):
 
 class OcrEngine(IntEnum):
 
-    #: Tesseract's "legacy" OCR engine (v3).
+    #: Tesseract's "legacy" OCR engine (v3). Recommended.
     TESSERACT = 0
 
-    #: Tesseract v4's "Long Short-Term Memory" neural network.
+    #: Tesseract v4's "Long Short-Term Memory" neural network. Not recommended
+    #: for reading menus, buttons, prices, numbers, times, etc, because it
+    #: hallucinates text that isn't there when the input isn't long prose.
     LSTM = 1
 
-    #: Combine results from Tesseract legacy & LSTM engines.
+    #: Combine results from Tesseract legacy & LSTM engines. Not recommended
+    #: because it favours the result from the LSTM engine too heavily.
     TESSERACT_AND_LSTM = 2
 
     #: Default engine, based on what is installed.
