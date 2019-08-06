@@ -13,7 +13,7 @@ from stbt.keyboard import _add_weights, _keys_to_press
 from _stbt.transition import _TransitionResult, TransitionStatus
 
 
-YOUTUBE_SEARCH_KEYBOARD = """
+GRAPH = """
     A B KEY_RIGHT
     A H KEY_DOWN
     B A KEY_LEFT
@@ -137,7 +137,7 @@ YOUTUBE_SEARCH_KEYBOARD = """
     SEARCH - KEY_UP
     SEARCH ' KEY_UP
 """
-G = nx.parse_edgelist(YOUTUBE_SEARCH_KEYBOARD.split("\n"),
+G = nx.parse_edgelist(GRAPH.split("\n"),
                       create_using=nx.DiGraph(),
                       data=[("key", str)])
 nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
@@ -182,7 +182,7 @@ def test_add_weights():
 
 
 class YouTubeKeyboard(object):
-    KEYBOARD = stbt.Keyboard(YOUTUBE_SEARCH_KEYBOARD, navigate_timeout=0.1)
+    KEYBOARD = stbt.Keyboard(GRAPH, navigate_timeout=0.1)
 
     """FrameObject-alike that doesn't require real video-capture."""
     def __init__(self):
