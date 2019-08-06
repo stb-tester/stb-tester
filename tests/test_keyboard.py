@@ -252,7 +252,7 @@ class YouTubeKeyboard(object):
 
     def press_and_wait(self, key, mask):  # pylint:disable=unused-argument
         self.press(key)
-        return _TransitionResult(None, TransitionStatus.COMPLETE, 0, 0, 0)
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
 @pytest.fixture(scope="function")
