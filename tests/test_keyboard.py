@@ -6,6 +6,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import networkx as nx
 import mock
+import numpy
 import pytest
 
 import stbt
@@ -181,45 +182,73 @@ def test_add_weights():
         "W", "X", "Y", "Z"]
 
 
-class YouTubeKeyboard(object):
+class _Keyboard(stbt.FrameObject):
+    """Immutable FrameObject representing the test's view of the Device Under
+    Test (``dut``).
+
+    The keyboard looks like this::
+
+        A  B  C  D  E  F  G
+        H  I  J  K  L  M  N
+        O  P  Q  R  S  T  U
+        V  W  X  Y  Z  -  '
+         SPACE  CLEAR  SEARCH
+
+    """
+    def __init__(self, dut):
+        super(_Keyboard, self).__init__(
+            frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
+        self._dut = dut  # Device Under Test -- i.e. ``YouTubeKeyboard``
+        self._selection = self._dut.selection
+
+    @property
+    def is_visible(self):
+        return True
+
+    @property
+    def selection(self):
+        return self._selection
+
+    def refresh(self, frame=None, **kwargs):
+        print("_Keyboard.refresh: Now on %r" % self._dut.selection)
+        return _Keyboard(dut=self._dut)
+
     KEYBOARD = stbt.Keyboard(GRAPH, navigate_timeout=0.1)
 
-    """FrameObject-alike that doesn't require real video-capture."""
+    def enter_text(self, text):
+        return self.KEYBOARD.enter_text(self, text.upper())
+
+    def navigate_to(self, target):
+        return self.KEYBOARD.navigate_to(self, target)
+
+
+class YouTubeKeyboard(object):
+    """Fake keyboard implementation for testing."""
+
     def __init__(self):
-        self.is_visible = True
         self.selection = "A"
-        self.actual_state = "A"
+        self.page = _Keyboard(dut=self)
         self.pressed = []
         self.entered = ""
         # Pressing up from SPACE returns to the last letter we were at:
         self.prev_state = "A"
 
-    def refresh(self):
-        self.selection = self.actual_state
-        return self
-
-    def enter_text(self, text):
-        self.KEYBOARD.enter_text(self, text.upper())
-
-    def navigate_to(self, target):
-        self.KEYBOARD.navigate_to(self, target)
-
     def press(self, key):
         print("Pressed %s" % key)
         self.pressed.append(key)
         if key == "KEY_OK":
-            self.entered += self.actual_state
+            self.entered += self.selection
         else:
             next_states = [
-                t for _, t, k in G.edges(self.actual_state, data="key")
+                t for _, t, k in G.edges(self.selection, data="key")
                 if k == key]
             if self.prev_state in next_states:
                 next_state = self.prev_state
             else:
                 next_state = next_states[0]
-            if self.actual_state not in (" ", "CLEAR", "SEARCH"):
-                self.prev_state = self.actual_state
-            self.actual_state = next_state
+            if self.selection not in (" ", "CLEAR", "SEARCH"):
+                self.prev_state = self.selection
+            self.selection = next_state
 
     def press_and_wait(self, key, mask):  # pylint:disable=unused-argument
         self.press(key)
@@ -235,14 +264,24 @@ def youtubekeyboard():
 
 
 def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    assert youtubekeyboard.selection == "A"
-    youtubekeyboard.enter_text("hi there")
+    page = youtubekeyboard.page
+    assert page.selection == "A"
+    page.enter_text("hi there")
     assert youtubekeyboard.entered == "HI THERE"
     assert youtubekeyboard.selection == "E"
 
 
+def test_that_enter_text_uses_minimal_keypresses(youtubekeyboard):  # pylint:disable=redefined-outer-name
+    page = youtubekeyboard.page
+    assert page.selection == "A"
+    page.enter_text("HI")
+    assert youtubekeyboard.pressed == ["KEY_DOWN", "KEY_OK",
+                                       "KEY_RIGHT", "KEY_OK"]
+
+
 def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    assert youtubekeyboard.selection == "A"
-    youtubekeyboard.navigate_to("SEARCH")
+    page = youtubekeyboard.page
+    assert page.selection == "A"
+    page.navigate_to("SEARCH")
     assert youtubekeyboard.selection == "SEARCH"
     assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
