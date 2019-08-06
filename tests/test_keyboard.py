@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
@@ -277,6 +279,16 @@ def test_that_enter_text_uses_minimal_keypresses(youtubekeyboard):  # pylint:dis
     page.enter_text("HI")
     assert youtubekeyboard.pressed == ["KEY_DOWN", "KEY_OK",
                                        "KEY_RIGHT", "KEY_OK"]
+
+
+def test_that_keyboard_validates_the_targets(youtubekeyboard):  # pylint:disable=redefined-outer-name
+    page = youtubekeyboard.page
+    with pytest.raises(ValueError):
+        page.enter_text("ABCÑ")
+    assert youtubekeyboard.pressed == []
+    with pytest.raises(ValueError):
+        page.navigate_to("Ñ")
+    assert youtubekeyboard.pressed == []
 
 
 def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name

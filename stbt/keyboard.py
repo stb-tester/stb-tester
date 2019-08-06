@@ -158,8 +158,12 @@ class Keyboard(object):
                     self._kb.enter_text(page=self, text=text.upper())
                     self._kb.navigate_to(page=self, target="SEARCH")
                     stbt.press("KEY_OK")
-
         """
+
+        for letter in text:
+            if letter not in self.G:
+                raise ValueError("'%s' isn't in the keyboard" % (letter,))
+
         for letter in text:
             page = self.navigate_to(page, letter)
             stbt.press("KEY_OK")
@@ -179,6 +183,9 @@ class Keyboard(object):
             reflecting the device-under-test's new state after the navigation
             completed.
         """
+
+        if target not in self.G:
+            raise ValueError("'%s' isn't in the keyboard" % (target,))
 
         deadline = time.time() + self.navigate_timeout
         current = _selection_to_text(page.selection)
