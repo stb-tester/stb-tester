@@ -26,7 +26,7 @@ UNRELEASED.
 
 * Supports test-scripts written in Python 3 (Python 2 is also still supported
   from the same stb-tester codebase, but you will need separate stb-tester
-  installations). If building stb-tester from source, you'll to do `make
+  installations). If building stb-tester from source, you need to do `make
   install python_version=3`. So far we haven't created a debian package for
   the Python 3 version.
 
