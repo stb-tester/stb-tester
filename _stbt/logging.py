@@ -5,10 +5,12 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import argparse
 import itertools
-import logging.config
+import logging
 import os
+import sys
 from collections import OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
@@ -37,8 +39,66 @@ def warn(msg, *args):
 
 
 def init_logging():
-    logging.config.fileConfig(_config_init())
+    fileConfig(_config_init())
     _set_stbt_log_level(get_debug_level())
+
+
+if sys.version_info.major == 2:
+    # Python 2's `logging.config.fileConfig` doesn't accept a `ConfigParser`
+    # instance, only a filename or file object.
+    def fileConfig(cp, disable_existing_loggers=True):
+        from logging.config import _install_handlers, _install_loggers
+
+        # The below is copied from the Python 2.7.15 implementation:
+        # https://github.com/python/cpython/blob/2.7/Lib/logging/config.py
+        # pylint:disable=protected-access
+
+        formatters = _create_formatters(cp)
+
+        # critical section
+        logging._acquireLock()
+        try:
+            logging._handlers.clear()
+            del logging._handlerList[:]
+            # Handlers add themselves to logging._handlers
+            handlers = _install_handlers(cp, formatters)
+            _install_loggers(cp, handlers, disable_existing_loggers)
+        finally:
+            logging._releaseLock()
+
+    # Also copied from Python 2.7.15, but I have fixed calls to `cp.get`
+    # to use the Python 3 API (on Python 2 we use the `configparser` backport).
+    def _create_formatters(cp):
+        from logging.config import _resolve, _strip_spaces
+
+        flist = cp.get("formatters", "keys")
+        if not len(flist):
+            return {}
+        flist = flist.split(",")
+        flist = _strip_spaces(flist)
+        formatters = {}
+        for form in flist:
+            sectname = "formatter_%s" % form
+            opts = cp.options(sectname)
+            if "format" in opts:
+                fs = cp.get(sectname, "format", raw=True, fallback=1)
+            else:
+                fs = None
+            if "datefmt" in opts:
+                dfs = cp.get(sectname, "datefmt", raw=True, fallback=1)
+            else:
+                dfs = None
+            c = logging.Formatter
+            if "class" in opts:
+                class_name = cp.get(sectname, "class")
+                if class_name:
+                    c = _resolve(class_name)
+            f = c(fs, dfs)
+            formatters[form] = f
+        return formatters
+
+else:
+    from logging.config import fileConfig
 
 
 def _set_stbt_log_level(debug_level):
