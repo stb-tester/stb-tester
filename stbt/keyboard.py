@@ -158,11 +158,16 @@ class Keyboard(object):
                     self._kb.enter_text(page=self, text=text.upper())
                     self._kb.navigate_to(page=self, target="SEARCH")
                     stbt.press("KEY_OK")
-
         """
+
         for letter in text:
-            self.navigate_to(page, letter)
+            if letter not in self.G:
+                raise ValueError("'%s' isn't in the keyboard" % (letter,))
+
+        for letter in text:
+            page = self.navigate_to(page, letter)
             stbt.press("KEY_OK")
+        return page
 
     def navigate_to(self, page, target):
         """Move the selection to the specified character.
@@ -173,7 +178,14 @@ class Keyboard(object):
         :param stbt.FrameObject page: See ``enter_text``.
         :param str target: The key or button to navigate to, for example "A",
             " ", or "CLEAR".
+
+        :returns: A new FrameObject instance of the same type as ``page``,
+            reflecting the device-under-test's new state after the navigation
+            completed.
         """
+
+        if target not in self.G:
+            raise ValueError("'%s' isn't in the keyboard" % (target,))
 
         deadline = time.time() + self.navigate_timeout
         current = _selection_to_text(page.selection)
@@ -190,6 +202,7 @@ class Keyboard(object):
             assert stbt.press_and_wait(keys[-1], mask=self.mask)
             page = page.refresh()
             current = _selection_to_text(page.selection)
+        return page
 
 
 def _selection_to_text(selection):
