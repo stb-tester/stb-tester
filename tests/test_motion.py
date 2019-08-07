@@ -62,6 +62,11 @@ def test_wait_for_motion_half_motion_int():
         stbt.wait_for_motion(consecutive_frames=2, frames=fake_frames())
 
 
+def test_that_wait_for_motion_detects_a_wipe():
+    stbt.wait_for_motion(consecutive_frames="10/30", frames=wipe())
+    stbt.wait_for_motion(frames=gradient_wipe())
+
+
 def fake_frames():
     a = numpy.zeros((2, 2, 3), dtype=numpy.uint8)
     a.flags.writeable = False
@@ -79,6 +84,54 @@ def fake_frames():
         t = start_time + n
         time.sleep(t - time.time())
         yield stbt.Frame(x, time=t)
+
+
+def wipe():
+    frame = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
+    for x in range(0, 720, 2):
+        frame[x:x + 2, :, :] = 255
+        yield stbt.Frame(frame, time=x / 30.)
+
+
+def clamp(x, bottom, top):
+    return min(top, max(bottom, x))
+
+
+def gradient_wipe(min_=100, max_=200, swipe_height=40):
+    """Use write_video(gradient_wipe()) to see what this looks like."""
+    frame = min_ * numpy.ones(
+        (720 + swipe_height * 4, 1280, 3), dtype=numpy.uint8)
+    diff = max_ - min_
+
+    # detect_motion ignores differences of under 40, so what's the fastest we
+    # can wipe while making sure the inter-frame differences are always under
+    # 40?:
+    speed = 40 * swipe_height / diff
+
+    print("pixel difference: %f" % (diff / swipe_height))
+    print("max_speed: %f" % speed)
+
+    edge = numpy.ones((swipe_height * 3, 1280, 3), dtype=numpy.uint8) * min_
+    for n in range(swipe_height * 3):
+        edge[n, :, :] = clamp(max_ - (n - swipe_height) * diff / swipe_height,
+                              min_, max_)
+
+    for x in range(0, frame.shape[0] - swipe_height * 3, int(speed)):
+        frame[x:x + swipe_height * 3, :, :] = edge
+        yield stbt.Frame(frame[swipe_height * 2:swipe_height * 2 + 720],
+                         time=x / 30.)
+
+
+def write_video(g):
+    """This was useful during the development of wipe and gradient_wipe.
+    Usage: write_video(gradient_wipe())"""
+    import cv2
+
+    vw = cv2.VideoWriter("test.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'),
+                         30, (1280, 720))
+    for frame in g:
+        vw.write(frame)
+    vw.release()
 
 
 class MockTime(object):
