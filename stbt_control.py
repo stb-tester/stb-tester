@@ -22,6 +22,8 @@ from textwrap import dedent
 
 import _stbt.control
 from _stbt.config import ConfigurationError, get_config
+from _stbt.logging import init_logging
+
 
 SPECIAL_CHARS = {
     curses.ascii.SP: "Space",
@@ -44,9 +46,10 @@ SPECIAL_CHARS = {
 
 def main(argv):
     args = argparser().parse_args(argv[1:])
-
     if args.help_keymap:
         sys.exit(show_help_keymap())
+
+    init_logging()
 
     control = _stbt.control.uri_to_control(args.control, None)
 

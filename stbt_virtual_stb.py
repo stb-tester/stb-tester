@@ -41,6 +41,7 @@ import time
 from contextlib import contextmanager
 
 from _stbt.config import get_config, set_config
+from _stbt.logging import init_logging
 from _stbt.x11 import x_server
 
 
@@ -100,6 +101,7 @@ def main(argv):
                              help="Ignore errors")
 
     args = parser.parse_args(argv[1:])
+    init_logging()
 
     if args.subcommand == 'run':
         # Do run our `finally` teardown blocks on SIGTERM
