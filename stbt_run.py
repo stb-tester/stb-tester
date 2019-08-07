@@ -17,6 +17,7 @@ import sys
 
 import _stbt.core
 import stbt
+from _stbt.logging import init_logging
 from _stbt.stbt_run import (load_test_function,
                             sane_unicode_and_exception_handling, video)
 
@@ -43,6 +44,7 @@ def main(argv):
         help='Additional arguments passed on to the test script (in sys.argv)')
 
     args = parser.parse_args(argv[1:])
+    init_logging()
     stbt.debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 

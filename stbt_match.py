@@ -17,8 +17,8 @@ from contextlib import contextmanager
 
 import cv2
 
-import _stbt.logging
 import stbt
+from _stbt.logging import init_logging, scoped_debug_level
 
 
 def error(s):
@@ -48,6 +48,7 @@ def main():
             'MatchParameters' in the stbt API documentation. For example:
             'confirm_threshold=0.70')""")
     args = parser.parse_args(sys.argv[1:])
+    init_logging()
 
     mp = {}
     try:
@@ -72,8 +73,7 @@ def main():
     if source_image is None:
         error("Invalid image '%s'" % args.source_file)
 
-    with (_stbt.logging.scoped_debug_level(2) if args.verbose
-          else noop_contextmanager()):
+    with (scoped_debug_level(2) if args.verbose else noop_contextmanager()):
         match_found = False
         for result in stbt.match_all(
                 args.reference_file, frame=source_image,

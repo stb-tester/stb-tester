@@ -7,35 +7,50 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
 import itertools
+import logging.config
 import os
-import sys
 from collections import OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
 
-from .config import get_config
+from .config import _config_init, get_config
 from .types import Region
 from .utils import mkdir_p
 
 _debug_level = None
+_logger = logging.getLogger("stbt")
+_trace_logger = logging.getLogger("stbt.trace")
 
 
-def debug(msg):
+def debug(msg, *args):
     """Print the given string to stderr if stbt run `--verbose` was given."""
-    if get_debug_level() > 0:
-        sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
+    _logger.debug(msg, *args)
 
 
-def ddebug(s):
+def ddebug(msg, *args):
     """Extra verbose debug for stbt developers, not end users"""
-    if get_debug_level() > 1:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
+    _trace_logger.debug(msg, *args)
 
 
-def warn(s):
-    sys.stderr.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), s))
+def warn(msg, *args):
+    _logger.warning(msg, *args)
+
+
+def init_logging():
+    logging.config.fileConfig(_config_init())
+    _set_stbt_log_level(get_debug_level())
+
+
+def _set_stbt_log_level(debug_level):
+    if debug_level > 0:
+        _logger.setLevel(logging.DEBUG)
+    else:
+        _logger.setLevel(logging.INFO)
+
+    if debug_level > 1:
+        _trace_logger.setLevel(logging.DEBUG)
+    else:
+        _trace_logger.setLevel(logging.INFO)
 
 
 def get_debug_level():
@@ -48,12 +63,14 @@ def get_debug_level():
 @contextmanager
 def scoped_debug_level(level):
     global _debug_level
-    oldlevel = _debug_level
+    oldlevel = get_debug_level()
     _debug_level = level
+    _set_stbt_log_level(_debug_level)
     try:
         yield
     finally:
         _debug_level = oldlevel
+        _set_stbt_log_level(_debug_level)
 
 
 def argparser_add_verbose_argument(argparser):

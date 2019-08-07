@@ -17,6 +17,7 @@ import sys
 import _stbt.control
 import _stbt.core
 import stbt
+from _stbt.logging import init_logging
 
 
 def main(argv):
@@ -32,6 +33,7 @@ def main(argv):
         default=stbt.get_config('record', 'output_file'),
         help='The filename of the generated script (default: %(default)s)')
     args = parser.parse_args(argv[1:])
+    init_logging()
     stbt.debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 

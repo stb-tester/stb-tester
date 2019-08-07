@@ -10,6 +10,7 @@ import sys
 from textwrap import dedent
 
 from _stbt.config import get_config
+from _stbt.logging import init_logging
 from _stbt.power import uri_to_power_outlet
 
 
@@ -46,6 +47,7 @@ def main(argv):
             status:  Prints ON if the outlet is powered, otherwise prints OFF
             """))
     args = parser.parse_args(argv[1:])
+    init_logging()
 
     outlet = uri_to_power_outlet(args.power_outlet)
 
