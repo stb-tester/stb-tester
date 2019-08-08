@@ -100,3 +100,53 @@ def get_mask_by_color_range(hsv_starting_boundary, hsv_ending_boundary, frame=No
         cv2.rectangle(roi, (region.x, region.y), (region.right, region.bottom), color=255, thickness=cv2.FILLED)
         mask = cv2.bitwise_and(mask, mask, mask=roi)
     return mask
+
+
+def get_colored_box_region(hsv_starting_boundary, hsv_ending_boundary, outer_area=stbt.Region.ALL, inner_area=0,
+                           frame=None, region=None):
+    """
+    The method to determine the bounding box of a colored region, very useful when searching for a colored rectangle
+    or round-cornered rectangle (e.g. a tab, text field in a box or keyboard keys) from the screen, especially when
+    you find it hard to match the rectangle by images (e.g. the tab size/content are variable, or there are too many
+    different tabs). After the bounding region is found, you can carry out OCR or further image processing within the
+    region. To ensure the best matching accuracy, outer_area and inner_area must be specified, otherwise any possible
+    contour filled with the color specified will be returned. To leave some allowance between the outer_area and
+    inner_area helps you to better handle a range of possible box size or tab length.
+
+        +--- outer_area ----------------------+
+        | ####################################|
+        | #+--- inner_area -----------------+#|
+        | #|################################|#|
+        | #|################################|#|
+        | #+--------------------------------+#|
+        | # the colored box ##################|
+        +-------------------------------------+
+
+    :param hsv_starting_boundary:
+        See `stbt.get_mask_by_color_range`
+    :param hsv_ending_boundary:
+        See `stbt.get_mask_by_color_range`
+    :type outer_area: int
+    :param outer_area:
+        The maximum possible area of the colored box, you can pass something like 100 * 50 for convenience.
+    :type inner_area: int
+    :param inner_area:
+        The minimum possible area of the colored box, you can pass something like 90 * 40 for convenience.
+    :param frame:
+        The target frame to search from, grab a new frame from DUT if not defined.
+    :type region: `stbt.Region`
+    :param region:
+        See `stbt.get_mask_by_color_range`
+    :return:
+        An `stbt.Region` which is the rectangular bounding box of a colored area on screen, None if no colored box could
+        be found.
+    """
+    # get the mask by color
+    color_mask = get_mask_by_color_range(hsv_starting_boundary, hsv_ending_boundary, frame=frame, region=region)
+
+    # extract all contours from the mask get the first one which satisfies the target outer and inner area if defined
+    _, contours, _ = cv2.findContours(color_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for c in contours:
+        if outer_area >= cv2.contourArea(c) >= inner_area:
+            x, y, w, h = cv2.boundingRect(c)
+            return stbt.Region(x, y, width=w, height=h)

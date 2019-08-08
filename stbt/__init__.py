@@ -67,7 +67,10 @@ from _stbt.types import (
     UITestError,
     UITestFailure)
 from stbt.keyboard import Keyboard
-from _stbt.color import Color, get_mask_by_color_range
+from _stbt.color import (
+    Color,
+    get_mask_by_color_range,
+    get_colored_box_region)
 
 __all__ = [
     "as_precondition",
@@ -114,7 +117,8 @@ __all__ = [
     "wait_for_transition_to_end",
     "wait_until",
     "Color",
-    "get_mask_by_color_range"
+    "get_mask_by_color_range",
+    "get_colored_box_region"
 ]
 
 _dut = _stbt.core.DeviceUnderTest()
