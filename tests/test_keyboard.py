@@ -6,6 +6,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import logging
+
 import networkx as nx
 import mock
 import numpy
@@ -212,7 +214,7 @@ class _Keyboard(stbt.FrameObject):
         return self._selection
 
     def refresh(self, frame=None, **kwargs):
-        print("_Keyboard.refresh: Now on %r" % self._dut.selection)
+        logging.debug("_Keyboard.refresh: Now on %r", self._dut.selection)
         return _Keyboard(dut=self._dut)
 
     KEYBOARD = stbt.Keyboard(GRAPH, navigate_timeout=0.1)
@@ -236,7 +238,7 @@ class YouTubeKeyboard(object):
         self.prev_state = "A"
 
     def press(self, key):
-        print("Pressed %s" % key)
+        logging.debug("Pressed %s", key)
         self.pressed.append(key)
         if key == "KEY_OK":
             self.entered += self.selection
