@@ -67,6 +67,7 @@ from _stbt.types import (
     UITestError,
     UITestFailure)
 from stbt.keyboard import Keyboard
+from _stbt.color import Color
 
 __all__ = [
     "as_precondition",
@@ -112,6 +113,7 @@ __all__ = [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
+    "Color",
 ]
 
 _dut = _stbt.core.DeviceUnderTest()
