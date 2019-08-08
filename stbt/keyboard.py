@@ -195,8 +195,8 @@ class Keyboard(object):
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G, current, target))
-            log.info("Keyboard: navigating from %s to %s by pressing %r",
-                     current, target, keys)
+            log.info("Navigating from %s to %s by pressing %s",
+                     current, target, ", ".join(keys))
             for k in keys[:-1]:
                 stbt.press(k)
             assert stbt.press_and_wait(keys[-1], mask=self.mask)
