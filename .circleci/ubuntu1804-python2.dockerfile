@@ -45,6 +45,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python-responses \
         python-scipy \
         python-serial \
+        python-structlog \
         python-yaml \
         socat \
         ssh \
