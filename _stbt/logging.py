@@ -23,6 +23,8 @@ from .utils import mkdir_p
 
 _debug_level = None
 _logger = structlog.get_logger("stbt")
+structlog.stdlib._NAME_TO_LEVEL["trace"] = 5  # pylint:disable=protected-access
+structlog.stdlib._LEVEL_TO_NAME[5] = "trace"  # pylint:disable=protected-access
 
 
 def debug(msg, *args):
