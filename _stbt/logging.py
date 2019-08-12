@@ -23,8 +23,7 @@ from .utils import mkdir_p
 
 _debug_level = None
 _logger = structlog.get_logger("stbt")
-structlog.stdlib._NAME_TO_LEVEL["trace"] = 5  # pylint:disable=protected-access
-structlog.stdlib._LEVEL_TO_NAME[5] = "trace"  # pylint:disable=protected-access
+_trace_logger = structlog.get_logger("stbt.trace")
 
 
 def debug(msg, *args):
@@ -34,7 +33,7 @@ def debug(msg, *args):
 
 def ddebug(msg, *args):
     """Extra verbose debug for stbt developers, not end users"""
-    _logger.log(5, msg, *args)
+    _trace_logger.debug(msg, *args)
 
 
 def warn(msg, *args):
@@ -50,12 +49,11 @@ def init_logging():
     # "[global].verbose" setting:
     stbt_verbose = get_debug_level()
     if stbt_verbose > 1:
-        new_level = 5
-    elif stbt_verbose > 0:
-        new_level = logging.DEBUG
-    stdlib_logger = logging.getLogger("stbt")
-    if new_level < stdlib_logger.level:
-        stdlib_logger.setLevel(new_level)
+        logging.getLogger("stbt.trace").setLevel(logging.DEBUG)
+    if stbt_verbose > 0:
+        stdlib_logger = logging.getLogger("stbt")
+        if stdlib_logger.level > logging.DEBUG:
+            stdlib_logger.setLevel(logging.DEBUG)
 
     # structlog configuration:
     # https://www.structlog.org/en/stable/standard-library.html#rendering-using-logging-based-formatters
@@ -215,22 +213,24 @@ def scoped_debug_level(level):
     global _debug_level
 
     old_stbt_level = get_debug_level()
-    stdlib_logger = logging.getLogger("stbt")
-    old_stdlib_level = stdlib_logger.level
+    stbt_logger = logging.getLogger("stbt")
+    trace_logger = logging.getLogger("stbt.trace")
+    old_stdlib_levels = (stbt_logger.level, trace_logger.level)
 
     _debug_level = level
     if level > 1:
-        stdlib_logger.setLevel(5)
-    elif level > 0:
-        stdlib_logger.setLevel(logging.DEBUG)
-    elif stdlib_logger.level < logging.INFO:
-        stdlib_logger.setLevel(logging.INFO)
+        trace_logger.setLevel(logging.DEBUG)
+    if level > 0:
+        stbt_logger.setLevel(logging.DEBUG)
+    elif stbt_logger.level < logging.INFO:
+        stbt_logger.setLevel(logging.INFO)
 
     try:
         yield
     finally:
         _debug_level = old_stbt_level
-        stdlib_logger.setLevel(old_stdlib_level)
+        stbt_logger.setLevel(old_stdlib_levels[0])
+        trace_logger.setLevel(old_stdlib_levels[1])
 
 
 def argparser_add_verbose_argument(argparser):
