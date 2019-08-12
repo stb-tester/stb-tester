@@ -15,13 +15,15 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
 
+import structlog
+
 from .config import _config_init, get_config
 from .types import Region
 from .utils import mkdir_p
 
 _debug_level = None
-_logger = logging.getLogger("stbt")
-_trace_logger = logging.getLogger("stbt.trace")
+_logger = structlog.get_logger("stbt")
+_trace_logger = structlog.get_logger("stbt.trace")
 
 
 def debug(msg, *args):
@@ -39,8 +41,26 @@ def warn(msg, *args):
 
 
 def init_logging():
+    # stdlib logging configuration
     fileConfig(_config_init())
     _set_stbt_log_level(get_debug_level())
+
+    # structlog configuration:
+    # https://www.structlog.org/en/stable/standard-library.html#rendering-using-logging-based-formatters
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.stdlib.render_to_log_kwargs,
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True)
 
 
 if sys.version_info.major == 2:
@@ -97,8 +117,78 @@ if sys.version_info.major == 2:
             formatters[form] = f
         return formatters
 
+    # This is instantiated by our logging configuration in stbt.conf. The
+    # implementation of `format` is copied from Python 2.7.15's `logging`
+    # module, but after `record.getMessage()` we also format any keyword
+    # arguments provided to structlog.
+    class Formatter(logging.Formatter):
+        def format(self, record):
+            msg = record.getMessage()
+            msg = msg.format(**record.__dict__)
+            record.message = msg
+
+            if self.usesTime():
+                record.asctime = self.formatTime(record, self.datefmt)
+            try:
+                s = self._fmt % record.__dict__
+            except UnicodeDecodeError as e:
+                # Issue 25664. The logger name may be Unicode. Try again ...
+                try:
+                    record.name = record.name.decode('utf-8')
+                    s = self._fmt % record.__dict__
+                except UnicodeDecodeError:
+                    raise e
+            if record.exc_info:
+                # Cache the traceback text to avoid converting it multiple times
+                # (it's constant anyway)
+                if not record.exc_text:
+                    record.exc_text = self.formatException(record.exc_info)
+            if record.exc_text:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                try:
+                    s = s + record.exc_text
+                except UnicodeError:
+                    # Sometimes filenames have non-ASCII chars, which can lead
+                    # to errors when s is Unicode and record.exc_text is str
+                    # See issue 8924.
+                    # We also use replace for when there are multiple
+                    # encodings, e.g. UTF-8 for the filesystem and latin-1
+                    # for a script. See issue 13232.
+                    s = s + record.exc_text.decode(sys.getfilesystemencoding(),
+                                                   'replace')
+            return s
+
 else:
     from logging.config import fileConfig
+
+    # This is instantiated by our logging configuration in stbt.conf.
+    # The implementation of `format` is copied from Python 3.6's `logging`
+    # module, but after `record.getMessage()` we also format any keyword
+    # arguments provided to structlog.
+    class Formatter(logging.Formatter):
+        def format(self, record):
+            msg = record.getMessage()
+            msg = msg.format(**record.__dict__)
+            record.message = msg
+
+            if self.usesTime():
+                record.asctime = self.formatTime(record, self.datefmt)
+            s = self.formatMessage(record)  # pylint:disable=no-member
+            if record.exc_info:
+                # Cache the traceback text to avoid converting it multiple times
+                # (it's constant anyway)
+                if not record.exc_text:
+                    record.exc_text = self.formatException(record.exc_info)
+            if record.exc_text:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + record.exc_text
+            if record.stack_info:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + self.formatStack(record.stack_info)  # pylint:disable=no-member
+            return s
 
 
 def _set_stbt_log_level(debug_level):
