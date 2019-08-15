@@ -155,8 +155,9 @@ class Keyboard(object):
                     ...  # implementation not shown
 
                 def enter_text(self, text):
-                    self._kb.enter_text(page=self, text=text.upper())
-                    self._kb.navigate_to(page=self, target="SEARCH")
+                    page = self
+                    page = self._kb.enter_text(page, text.upper())
+                    self._kb.navigate_to(page, "SEARCH")
                     stbt.press("KEY_OK")
         """
 
