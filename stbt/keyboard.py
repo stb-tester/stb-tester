@@ -199,7 +199,8 @@ class Keyboard(object):
                      current, target, keys)
             for k in keys[:-1]:
                 stbt.press(k)
-            assert stbt.press_and_wait(keys[-1], mask=self.mask)
+            assert stbt.press_and_wait(keys[-1], mask=self.mask,
+                                       stable_secs=0.5)
             page = page.refresh()
             current = _selection_to_text(page.selection)
         return page
