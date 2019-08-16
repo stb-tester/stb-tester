@@ -580,18 +580,19 @@ test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
 	sa = set()
 	sb = set()
 	for a, b in zip(stbt.frames(), stbt.frames()):
-	    if len(sa) >= 10:
+	    if len(sa) >= 2:
 	        break
 	    sa.add(a.time)
 	    sb.add(b.time)
 	print(sorted(sa))
 	print(sorted(sb))
-	assert len(sa) == 10
-	assert len(sb) == 10
 	# sa and sb contain the same frames:
 	assert sa == sb
 	EOF
-    stbt run -vv test.py || fail "Incorrect frames() behaviour"
+    stbt run -vv \
+        --source-pipeline="videotestsrc is-live=true ! \
+            video/x-raw,format=BGR,width=320,height=240,framerate=2/1" \
+        test.py || fail "Incorrect frames() behaviour"
 }
 
 test_that_press_returns_a_pressresult() {
