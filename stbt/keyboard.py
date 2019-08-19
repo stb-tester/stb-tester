@@ -135,9 +135,10 @@ class Keyboard(object):
             It must implement the following:
 
             * ``selection`` (*str* or `Keyboard.Selection`) — property that
-              returns the name of the currently selected character, for example
-              "A" or " ". This property can return a string, or an object with
-              a ``text`` attribute that is a string.
+              returns the name of the currently selected character (for example
+              "A" or " ") or button (for example "CLEAR" or "SEARCH"). This
+              property can return a string, or an object with a ``text``
+              attribute that is a string.
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
