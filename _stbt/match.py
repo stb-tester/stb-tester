@@ -26,7 +26,7 @@ from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
 from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .sqdiff import sqdiff
-from .types import Region, UITestFailure
+from .types import Position, Region, UITestFailure
 
 
 class MatchMethod(enum.Enum):
@@ -168,15 +168,6 @@ class MatchParameters(object):
             "confirm_method=%r, confirm_threshold=%r, erode_passes=%r)"
             % (self.match_method, self.match_threshold,
                self.confirm_method, self.confirm_threshold, self.erode_passes))
-
-
-class Position(namedtuple('Position', 'x y')):
-    """A point within the video frame.
-
-    `x` and `y` are integer coordinates (measured in number of pixels) from the
-    top left corner of the video frame.
-    """
-    pass
 
 
 class MatchResult(object):

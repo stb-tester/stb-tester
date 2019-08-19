@@ -32,6 +32,8 @@ from _stbt.config import (
     get_config)
 from _stbt.frameobject import (
     FrameObject)
+from _stbt.grid import (
+    Grid)
 from _stbt.imgutils import (
     crop,
     Frame)
@@ -45,7 +47,6 @@ from _stbt.match import (
     MatchParameters,
     MatchResult,
     MatchTimeout,
-    Position,
     wait_for_match)
 from _stbt.motion import (
     detect_motion,
@@ -63,6 +64,7 @@ from _stbt.transition import (
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    Position,
     Region,
     UITestError,
     UITestFailure)
@@ -81,6 +83,7 @@ __all__ = [
     "frames",
     "get_config",
     "get_frame",
+    "Grid",
     "is_screen_black",
     "Keyboard",
     "load_image",
