@@ -116,9 +116,13 @@ class Keyboard(object):
     #   use press_and_wait because the text-box might be masked out (some UIs
     #   have a blinking cursor there).
 
-    def enter_text(self, page, text):
+    def enter_text(self, text, page):
         """
         Enter the specified text using the on-screen keyboard.
+
+        :param str text: The text to enter. If your keyboard only supports a
+            single case then you need to convert the text to uppercase or
+            lowercase, as appropriate, before passing it to this method.
 
         :param stbt.FrameObject page: An instance of a `stbt.FrameObject`
             sub-class that describes the appearance of the on-screen keyboard.
@@ -131,10 +135,6 @@ class Keyboard(object):
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
-
-        :param str text: The text to enter. If your keyboard only supports a
-            single case then you need to convert the text to uppercase or
-            lowercase, as appropriate, before passing it to this method.
 
         Typically your FrameObject will provide its own ``enter_text`` method,
         so your test scripts won't call this ``Keyboard`` class directly. For
@@ -156,8 +156,8 @@ class Keyboard(object):
 
                 def enter_text(self, text):
                     page = self
-                    page = self._kb.enter_text(page, text.upper())
-                    self._kb.navigate_to(page, "SEARCH")
+                    page = self._kb.enter_text(text.upper(), page)
+                    self._kb.navigate_to("SEARCH", page)
                     stbt.press("KEY_OK")
         """
 
@@ -166,19 +166,19 @@ class Keyboard(object):
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
         for letter in text:
-            page = self.navigate_to(page, letter)
+            page = self.navigate_to(letter, page)
             stbt.press("KEY_OK")
         return page
 
-    def navigate_to(self, page, target):
+    def navigate_to(self, target, page):
         """Move the selection to the specified character.
 
         Note that this won't press KEY_OK on the target, it only moves the
         selection there.
 
-        :param stbt.FrameObject page: See ``enter_text``.
         :param str target: The key or button to navigate to, for example "A",
             " ", or "CLEAR".
+        :param stbt.FrameObject page: See ``enter_text``.
 
         :returns: A new FrameObject instance of the same type as ``page``,
             reflecting the device-under-test's new state after the navigation
