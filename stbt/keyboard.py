@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import time
+from collections import namedtuple
 from logging import getLogger
 
 import networkx as nx
@@ -88,6 +89,15 @@ class Keyboard(object):
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     """
 
+    Selection = namedtuple("Selection", "text region")
+    """Type that your Page Object's ``selection`` property can return.
+
+    Has two attributes:
+
+    * ``text`` (*str*) — The selected letter or button.
+    * ``region`` (`stbt.Region`) — The position on screen of the selection box.
+    """
+
     def __init__(self, graph, mask=None, navigate_timeout=20):
         if isinstance(graph, nx.DiGraph):
             self.G = graph
@@ -143,10 +153,11 @@ class Keyboard(object):
             sub-class that describes the appearance of the on-screen keyboard.
             It must implement the following:
 
-            * ``selection`` — property that returns the name of the currently
-              selected character, for example "A" or " ". This property can
-              return a string, or an object with a ``text`` attribute that is
-              a string.
+            * ``selection`` (*str* or `Keyboard.Selection`) — property that
+              returns the name of the currently selected character (for example
+              "A" or " ") or button (for example "CLEAR" or "SEARCH"). This
+              property can return a string, or an object with a ``text``
+              attribute that is a string.
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
