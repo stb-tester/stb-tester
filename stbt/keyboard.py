@@ -48,9 +48,21 @@ class Keyboard(object):
 
         For nodes that enter a character, use that character as the node name.
         For the space-bar use SPACE. For other nodes that don't enter a
-        character when pressed use a descriptive name such as CLEAR or ENTER
+        character when pressed, use a descriptive name such as CLEAR or ENTER
         (these nodes won't be used by ``enter_text`` but you can use them as a
         target of ``navigate_to``).
+
+        On some keyboards, buttons like the space-bar are wider than other
+        buttons and the navigation away from the button depends on the previous
+        state. Our ``graph`` can't model this state, so specify all the
+        possible transitions from the button. For example, on a qwerty
+        keyboard::
+
+            SPACE C KEY_UP
+            SPACE V KEY_UP
+            SPACE B KEY_UP
+            SPACE N KEY_UP
+            SPACE M KEY_UP
 
         For advanced users: instead of a string, ``graph`` can be a
         `networkx.DiGraph` where each edge has an attribute called ``key`` with
