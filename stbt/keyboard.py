@@ -105,7 +105,10 @@ class Keyboard(object):
             self.G = nx.parse_edgelist(graph.split("\n"),
                                        create_using=nx.DiGraph(),
                                        data=[("key", str)])
-        nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
+        try:
+            nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
+        except KeyError:  # Node SPACE is not in the graph
+            pass
         _add_weights(self.G)
 
         self.mask = None
