@@ -6,6 +6,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import networkx as nx
+
 from _stbt.types import Position, Region
 
 
@@ -156,3 +158,45 @@ class Grid(object):
         :returns: See `Grid.position_to_region`.
         """
         return self.position_to_region(self.index_to_position(index))
+
+    def navigation_graph(self, names):
+        """Generate a Graph that describes navigation between cells in the grid.
+
+        Creates a `Directed Graph`_ that links adjacent cells in the grid with
+        edges named "KEY_LEFT", "KEY_RIGHT", "KEY_UP", and "KEY_DOWN",
+        corresponding to the keypress that will move a selection from one cell
+        to another.
+
+        :param names: An iterable containing the names for each node in the
+            graph (cell in the grid) in the order corresponding to the cell's
+            1D index into the grid (see `Grid.index_to_position`). For example
+            if you have an on-screen keyboard that looks like this::
+
+                A  B  C  D  E  F  G
+                H  I  J  K  L  M  N
+                O  P  Q  R  S  T  U
+                V  W  X  Y  Z  -  '
+
+            then ``names`` could be the string "ABCDEFGHIJKLMNOPQRSTUVWXYZ-'".
+
+        :returns: A `networkx.DiGraph` suitable as the ``graph`` parameter of
+            `stbt.Keyboard`.
+
+        .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
+        """
+        G = nx.DiGraph()
+        for index, name in enumerate(names):
+            x, y = self.index_to_position(index)
+            if x > 0:
+                G.add_edge(name, names[self.position_to_index((x - 1, y))],
+                           key="KEY_LEFT")
+            if x < self.cols - 1:
+                G.add_edge(name, names[self.position_to_index((x + 1, y))],
+                           key="KEY_RIGHT")
+            if y > 0:
+                G.add_edge(name, names[self.position_to_index((x, y - 1))],
+                           key="KEY_UP")
+            if y < self.rows - 1:
+                G.add_edge(name, names[self.position_to_index((x, y + 1))],
+                           key="KEY_DOWN")
+        return G
