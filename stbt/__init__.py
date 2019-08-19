@@ -32,6 +32,8 @@ from _stbt.config import (
     get_config)
 from _stbt.frameobject import (
     FrameObject)
+from _stbt.grid import (
+    Grid)
 from _stbt.imgutils import (
     crop,
     Frame)
@@ -81,6 +83,7 @@ __all__ = [
     "frames",
     "get_config",
     "get_frame",
+    "Grid",
     "is_screen_black",
     "Keyboard",
     "load_image",
