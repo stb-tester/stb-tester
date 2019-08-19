@@ -45,7 +45,6 @@ from _stbt.match import (
     MatchParameters,
     MatchResult,
     MatchTimeout,
-    Position,
     wait_for_match)
 from _stbt.motion import (
     detect_motion,
@@ -63,6 +62,7 @@ from _stbt.transition import (
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    Position,
     Region,
     UITestError,
     UITestFailure)

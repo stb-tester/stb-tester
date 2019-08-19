@@ -9,6 +9,11 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 from collections import namedtuple
 
 
+class Position(namedtuple('Position', 'x y')):
+    """A point with ``x`` and ``y`` coordinates."""
+    pass
+
+
 class Region(namedtuple('Region', 'x y right bottom')):
     u"""
     ``Region(x, y, width=width, height=height)`` or
