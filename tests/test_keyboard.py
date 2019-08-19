@@ -252,7 +252,7 @@ class YouTubeKeyboard(object):
                 self.prev_state = self.selection
             self.selection = next_state
 
-    def press_and_wait(self, key, mask):  # pylint:disable=unused-argument
+    def press_and_wait(self, key, **kwargs):  # pylint:disable=unused-argument
         self.press(key)
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
