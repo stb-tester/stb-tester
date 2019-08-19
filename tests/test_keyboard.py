@@ -218,10 +218,10 @@ class _Keyboard(stbt.FrameObject):
     KEYBOARD = stbt.Keyboard(GRAPH, navigate_timeout=0.1)
 
     def enter_text(self, text):
-        return self.KEYBOARD.enter_text(self, text.upper())
+        return self.KEYBOARD.enter_text(text.upper(), page=self)
 
     def navigate_to(self, target):
-        return self.KEYBOARD.navigate_to(self, target)
+        return self.KEYBOARD.navigate_to(target, page=self)
 
 
 class YouTubeKeyboard(object):
