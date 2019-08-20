@@ -98,7 +98,8 @@ class Keyboard(object):
     Has two attributes:
 
     * ``text`` (*str*) — The selected letter or button.
-    * ``region`` (`stbt.Region`) — The position on screen of the selection box.
+    * ``region`` (`stbt.Region`) — The position on screen of the selection /
+      highlight.
     """
 
     def __init__(self, graph, mask=None, navigate_timeout=20):
@@ -146,8 +147,7 @@ class Keyboard(object):
     #   have a blinking cursor there).
 
     def enter_text(self, text, page):
-        """
-        Enter the specified text using the on-screen keyboard.
+        """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
             single case then you need to convert the text to uppercase or
