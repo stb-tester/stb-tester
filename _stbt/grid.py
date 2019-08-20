@@ -227,7 +227,7 @@ class _GridIter(object):
     def __next__(self):
         i = self.index
         if i == self.grid.area:
-            raise StopIteration
+            raise StopIteration()
         self.index += 1
         return self.grid[i]
 
