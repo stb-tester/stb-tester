@@ -120,10 +120,12 @@ class Grid(object):
                              "any data associated" % data)
         if index is not None:
             position = self._index_to_position(index)
-            region = self._position_to_region(position)
+            region = (None if self.region is None
+                      else self._position_to_region(position))
         elif position is not None:
             index = self._position_to_index(position)
-            region = self._position_to_region(position)
+            region = (None if self.region is None
+                      else self._position_to_region(position))
         elif region is not None:
             position = self._region_to_position(region)
             index = self._position_to_index(position)
@@ -132,7 +134,8 @@ class Grid(object):
                 position = self._index_to_position(i)
                 if data == self.data[position.y][position.x]:
                     index = i
-                    region = self._position_to_region(position)
+                    region = (None if self.region is None
+                              else self._position_to_region(position))
                     break
             else:
                 raise IndexError("data '%r' not found" % data)
