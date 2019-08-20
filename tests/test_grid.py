@@ -52,6 +52,9 @@ def test_grid():
     for r1, r2 in combinations(g.cells, 2):
         assert Region.intersect(r1.region, r2.region) is None
 
+    for i, c in enumerate(g):
+        assert i == c.index
+
 
 def test_grid_with_data():
     layout = ["ABCDEFG",

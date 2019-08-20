@@ -157,6 +157,9 @@ class Grid(object):
         else:
             return self.get(data=key)
 
+    def __iter__(self):
+        return _GridIter(self)
+
     def _index_to_position(self, index):
         area = self.cols * self.rows
         if index < -area:
@@ -250,3 +253,22 @@ class Grid(object):
                 G.add_edge(name, names[self._position_to_index((x, y + 1))],
                            key="KEY_DOWN")
         return G
+
+
+class _GridIter(object):
+    def __init__(self, grid):
+        self.grid = grid
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        i = self.index
+        if i == self.grid.area:
+            raise StopIteration
+        self.index += 1
+        return self.grid[i]
+
+    def next(self):  # Python 2
+        return self.__next__()
