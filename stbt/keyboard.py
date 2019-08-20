@@ -42,10 +42,12 @@ class Keyboard(object):
         is in the format ``<start_node> <end_node> <action>``. For example, the
         specification for a qwerty keyboard might look like this::
 
+            '''
             Q W KEY_RIGHT
             Q A KEY_DOWN
             W Q KEY_LEFT
             <etc>
+            '''
 
         For nodes that enter a character, use that character as the node name.
         For the space-bar use SPACE. For other nodes that don't enter a
@@ -71,6 +73,7 @@ class Keyboard(object):
         in a regular grid, you can use `stbt.grid_to_navigation_graph` to
         generate this graph (or part of the graph, and then you can add any
         irregular connections explicitly with `networkx.DiGraph.add_edge`).
+        See also `Keyboard.parse_edgelist`.
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -102,9 +105,7 @@ class Keyboard(object):
         if isinstance(graph, nx.DiGraph):
             self.G = graph
         else:
-            self.G = nx.parse_edgelist(graph.split("\n"),
-                                       create_using=nx.DiGraph(),
-                                       data=[("key", str)])
+            self.G = Keyboard.parse_edgelist(graph)
         try:
             nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
         except KeyError:  # Node SPACE is not in the graph
@@ -234,6 +235,36 @@ class Keyboard(object):
             page = page.refresh()
             current = _selection_to_text(page.selection)
         return page
+
+    @staticmethod
+    def parse_edgelist(graph):
+        """Create a `networkx.DiGraph` from a string specification of the graph.
+
+        This is useful when you want to specify part of the keyboard's
+        navigation graph programmatically using `stbt.grid_to_navigation_graph`
+        (for the parts of the keyboard that are laid out in a grid and behave
+        regularly) but you still need to specify some extra edges that behave
+        differently. For example::
+
+            letters = stbt.Grid(...)
+            space_bar = stbt.Keyboard.parse_edgelist('''
+                C SPACE KEY_DOWN
+                V SPACE KEY_DOWN
+                B SPACE KEY_DOWN
+                SPACE C KEY_UP
+                SPACE V KEY_UP
+                SPACE B KEY_UP
+            ''')
+            keyboard = stbt.Keyboard(networkx.compose_all([
+                stbt.grid_to_navigation_graph(letters),
+                space_bar]))
+
+        :param str graph: See the `Keyboard` constructor.
+        :returns: A new `networkx.DiGraph` instance.
+        """
+        return nx.parse_edgelist(graph.split("\n"),
+                                 create_using=nx.DiGraph(),
+                                 data=[("key", str)])
 
 
 def _selection_to_text(selection):

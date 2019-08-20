@@ -140,9 +140,7 @@ GRAPH = """
     SEARCH - KEY_UP
     SEARCH ' KEY_UP
 """
-G = nx.parse_edgelist(GRAPH.split("\n"),
-                      create_using=nx.DiGraph(),
-                      data=[("key", str)])
+G = stbt.Keyboard.parse_edgelist(GRAPH)
 nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
 
@@ -297,3 +295,89 @@ def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
     page.navigate_to("SEARCH")
     assert youtubekeyboard.selection == "SEARCH"
     assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
+
+
+def test_composing_complex_keyboards():
+    """The YouTube keyboard on Roku looks like this::
+
+        A  B  C  D  E  F  G
+        H  I  J  K  L  M  N
+        O  P  Q  R  S  T  U
+        V  W  X  Y  Z  -  '
+         SPACE  CLEAR  SEARCH
+
+    The first 4 rows behave normally within themselves. The bottom row behaves
+    normally within itself. But navigating to or from the bottom row is a bit
+    irregular: No matter what column you're in, when you press KEY_DOWN you
+    always land on SPACE. Then when you press KEY_UP, you go back to the column
+    you were last on -- even if you had pressed KEY_RIGHT/KEY_LEFT to move
+    within the bottom row. It's almost like they're two separate state
+    machines, and we can model them as such, with a few explicit connections
+    between the two.
+    """
+    letters = stbt.Grid(stbt.Region(x=540, y=100, right=840, bottom=280),
+                        data=["ABCDEFG",
+                              "HIJKLMN",
+                              "OPQRSTU",
+                              "VWXYZ-'"])
+    space_row = stbt.Grid(stbt.Region(x=540, y=280, right=840, bottom=330),
+                          data=[[" ", "CLEAR", "SEARCH"]])
+
+    # Technique #0: Write the entire edgelist manually (as per previous tests)
+    K0 = stbt.Keyboard(GRAPH)
+
+    # Technique #1: Manipulate the graph (manually or programmatically) directly
+    G1 = nx.compose(stbt.grid_to_navigation_graph(letters),
+                    stbt.grid_to_navigation_graph(space_row))
+    # Pressing down from the bottom row always goes to SPACE:
+    for k in letters.data[-1]:
+        G1.add_edge(k, " ", key="KEY_DOWN")
+    # Pressing back up from the space/clear/search row can go to any column
+    # in the bottom row:
+    for k in space_row.data[0]:
+        for j in letters.data[-1]:
+            G1.add_edge(k, j, key="KEY_UP")
+    K1 = stbt.Keyboard(G1)
+
+    assert sorted(K0.G.edges(data=True)) == sorted(K1.G.edges(data=True))
+
+    # Technique #2: Use manually-written edgelist only for the irregular edges
+    # Note that Keyboard.__init__ will normalise "SPACE" -> " " so it doesn't
+    # matter if the 3 different graphs have different representations for
+    # "SPACE".
+    connections = stbt.Keyboard.parse_edgelist("""
+        V SPACE KEY_DOWN
+        W SPACE KEY_DOWN
+        X SPACE KEY_DOWN
+        Y SPACE KEY_DOWN
+        Z SPACE KEY_DOWN
+        - SPACE KEY_DOWN
+        ' SPACE KEY_DOWN
+        SPACE V KEY_UP
+        SPACE W KEY_UP
+        SPACE X KEY_UP
+        SPACE Y KEY_UP
+        SPACE Z KEY_UP
+        SPACE - KEY_UP
+        SPACE ' KEY_UP
+        CLEAR V KEY_UP
+        CLEAR W KEY_UP
+        CLEAR X KEY_UP
+        CLEAR Y KEY_UP
+        CLEAR Z KEY_UP
+        CLEAR - KEY_UP
+        CLEAR ' KEY_UP
+        SEARCH V KEY_UP
+        SEARCH W KEY_UP
+        SEARCH X KEY_UP
+        SEARCH Y KEY_UP
+        SEARCH Z KEY_UP
+        SEARCH - KEY_UP
+        SEARCH ' KEY_UP
+    """)
+    G2 = nx.compose_all([stbt.grid_to_navigation_graph(letters),
+                         stbt.grid_to_navigation_graph(space_row),
+                         connections])
+    K2 = stbt.Keyboard(G2)
+
+    assert sorted(K0.G.edges(data=True)) == sorted(K2.G.edges(data=True))
