@@ -163,6 +163,10 @@ class Keyboard(object):
               property can return a string, or an object with a ``text``
               attribute that is a string.
 
+              For grid-shaped keyboards, you can map the region of the
+              selection (highlight) to the corresponding letter using
+              `stbt.Grid` (see the example below).
+
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
 
@@ -175,6 +179,13 @@ class Keyboard(object):
                     A B KEY_RIGHT
                     ...etc...
                     ''')
+                letters = stbt.Grid(region=...,
+                                    data=["ABCDEFG",
+                                          "HIJKLMN",
+                                          "OPQRSTU",
+                                          "VWXYZ-'"])
+                space_row = stbt.Grid(region=...,
+                                      data=[[" ", "CLEAR", "SEARCH"]])
 
                 @property
                 def is_visible(self):
@@ -182,7 +193,14 @@ class Keyboard(object):
 
                 @property
                 def selection(self):
-                    ...  # implementation not shown
+                    m = stbt.match("keyboard-selection.png", frame=self._frame)
+                    if not m:
+                        return stbt.Keyboard.Selection(None, None)
+                    try:
+                        text = self.letters.get(region=m.region).data
+                    except IndexError:
+                        text = self.space_row.get(region=m.region).data
+                    return stbt.Keyboard.Selection(text, r)
 
                 def enter_text(self, text):
                     page = self
