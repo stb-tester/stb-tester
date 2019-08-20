@@ -68,9 +68,9 @@ class Keyboard(object):
         For advanced users: instead of a string, ``graph`` can be a
         `networkx.DiGraph` where each edge has an attribute called ``key`` with
         a value like ``"KEY_RIGHT"``. If your keyboard's buttons are positioned
-        in a regular grid, you can use `stbt.Grid.navigation_graph` to generate
-        this graph (or part of the graph, and then you can add any irregular
-        connections explicitly with `networkx.DiGraph.add_edge`).
+        in a regular grid, you can use `stbt.grid_to_navigation_graph` to
+        generate this graph (or part of the graph, and then you can add any
+        irregular connections explicitly with `networkx.DiGraph.add_edge`).
 
     :type mask: str or `numpy.ndarray`
     :param str mask:

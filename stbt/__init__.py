@@ -33,7 +33,8 @@ from _stbt.config import (
 from _stbt.frameobject import (
     FrameObject)
 from _stbt.grid import (
-    Grid)
+    Grid,
+    grid_to_navigation_graph)
 from _stbt.imgutils import (
     crop,
     Frame)
@@ -84,6 +85,7 @@ __all__ = [
     "get_config",
     "get_frame",
     "Grid",
+    "grid_to_navigation_graph",
     "is_screen_black",
     "Keyboard",
     "load_image",
