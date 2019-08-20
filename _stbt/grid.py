@@ -132,7 +132,7 @@ class Grid(object):
         elif data is not None:
             for i in range(self.cols * self.rows):
                 position = self._index_to_position(i)
-                if data == self.data[position.y][position.x]:
+                if data == self.data[position[1]][position[0]]:
                     index = i
                     region = (None if self.region is None
                               else self._position_to_region(position))
@@ -144,7 +144,7 @@ class Grid(object):
             index,
             position,
             region,
-            self.data and self.data[position.y][position.x])
+            self.data and self.data[position[1]][position[0]])
 
     def __getitem__(self, key):
         if isinstance(key, int):

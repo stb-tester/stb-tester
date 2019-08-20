@@ -68,6 +68,8 @@ def test_grid_with_data():
     assert g.get(position=Position(x=2, y=1)).data == "J"
     assert g.get(data="J").index == 9
     assert g["J"].index == 9
+    assert g[Position(x=2, y=1)].data == "J"
+    assert g[2, 1].data == "J"
     assert g[-1].data == "'"
     for x in ["a", layout[0], layout]:
         with raises(IndexError):
