@@ -161,7 +161,11 @@ class Grid(object):
             return self.get(data=key)
 
     def __iter__(self):
-        return _GridIter(self)
+        for i in range(len(self)):  # pylint:disable=consider-using-enumerate
+            yield self[i]
+
+    def __len__(self):
+        return self.cols * self.rows
 
     def _index_to_position(self, index):
         area = self.cols * self.rows
@@ -214,25 +218,6 @@ class Grid(object):
         else:
             raise IndexError("Index out of range: position %r in %r" %
                              (position, self))
-
-
-class _GridIter(object):
-    def __init__(self, grid):
-        self.grid = grid
-        self.index = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        i = self.index
-        if i == self.grid.area:
-            raise StopIteration()
-        self.index += 1
-        return self.grid[i]
-
-    def next(self):  # Python 2
-        return self.__next__()
 
 
 def grid_to_navigation_graph(grid):

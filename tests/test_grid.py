@@ -15,6 +15,7 @@ from stbt import Grid, grid_to_navigation_graph, Position, Region
 def test_grid():
     g = Grid(Region(0, 0, 6, 2), cols=6, rows=2)
     assert g.area == 12
+    assert len(g) == 12
 
     def check_conversions(g, region, position, index):
         c = g.get(index=index)
