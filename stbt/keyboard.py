@@ -42,10 +42,12 @@ class Keyboard(object):
         is in the format ``<start_node> <end_node> <action>``. For example, the
         specification for a qwerty keyboard might look like this::
 
+            '''
             Q W KEY_RIGHT
             Q A KEY_DOWN
             W Q KEY_LEFT
             <etc>
+            '''
 
         For nodes that enter a character, use that character as the node name.
         For the space-bar use SPACE. For other nodes that don't enter a
@@ -68,9 +70,10 @@ class Keyboard(object):
         For advanced users: instead of a string, ``graph`` can be a
         `networkx.DiGraph` where each edge has an attribute called ``key`` with
         a value like ``"KEY_RIGHT"``. If your keyboard's buttons are positioned
-        in a regular grid, you can use `stbt.Grid.navigation_graph` to generate
-        this graph (or part of the graph, and then you can add any irregular
-        connections explicitly with `networkx.DiGraph.add_edge`).
+        in a regular grid, you can use `stbt.grid_to_navigation_graph` to
+        generate this graph (or part of the graph, and then you can add any
+        irregular connections explicitly with `networkx.DiGraph.add_edge`).
+        See also `Keyboard.parse_edgelist`.
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -95,17 +98,19 @@ class Keyboard(object):
     Has two attributes:
 
     * ``text`` (*str*) — The selected letter or button.
-    * ``region`` (`stbt.Region`) — The position on screen of the selection box.
+    * ``region`` (`stbt.Region`) — The position on screen of the selection /
+      highlight.
     """
 
     def __init__(self, graph, mask=None, navigate_timeout=20):
         if isinstance(graph, nx.DiGraph):
             self.G = graph
         else:
-            self.G = nx.parse_edgelist(graph.split("\n"),
-                                       create_using=nx.DiGraph(),
-                                       data=[("key", str)])
-        nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
+            self.G = Keyboard.parse_edgelist(graph)
+        try:
+            nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
+        except KeyError:  # Node SPACE is not in the graph
+            pass
         _add_weights(self.G)
 
         self.mask = None
@@ -142,8 +147,7 @@ class Keyboard(object):
     #   have a blinking cursor there).
 
     def enter_text(self, text, page):
-        """
-        Enter the specified text using the on-screen keyboard.
+        """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
             single case then you need to convert the text to uppercase or
@@ -159,6 +163,10 @@ class Keyboard(object):
               property can return a string, or an object with a ``text``
               attribute that is a string.
 
+              For grid-shaped keyboards, you can map the region of the
+              selection (highlight) to the corresponding letter using
+              `stbt.Grid` (see the example below).
+
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
 
@@ -171,6 +179,13 @@ class Keyboard(object):
                     A B KEY_RIGHT
                     ...etc...
                     ''')
+                letters = stbt.Grid(region=...,
+                                    data=["ABCDEFG",
+                                          "HIJKLMN",
+                                          "OPQRSTU",
+                                          "VWXYZ-'"])
+                space_row = stbt.Grid(region=...,
+                                      data=[[" ", "CLEAR", "SEARCH"]])
 
                 @property
                 def is_visible(self):
@@ -178,7 +193,14 @@ class Keyboard(object):
 
                 @property
                 def selection(self):
-                    ...  # implementation not shown
+                    m = stbt.match("keyboard-selection.png", frame=self._frame)
+                    if not m:
+                        return stbt.Keyboard.Selection(None, None)
+                    try:
+                        text = self.letters.get(region=m.region).data
+                    except IndexError:
+                        text = self.space_row.get(region=m.region).data
+                    return stbt.Keyboard.Selection(text, r)
 
                 def enter_text(self, text):
                     page = self
@@ -231,6 +253,36 @@ class Keyboard(object):
             page = page.refresh()
             current = _selection_to_text(page.selection)
         return page
+
+    @staticmethod
+    def parse_edgelist(graph):
+        """Create a `networkx.DiGraph` from a string specification of the graph.
+
+        This is useful when you want to specify part of the keyboard's
+        navigation graph programmatically using `stbt.grid_to_navigation_graph`
+        (for the parts of the keyboard that are laid out in a grid and behave
+        regularly) but you still need to specify some extra edges that behave
+        differently. For example::
+
+            letters = stbt.Grid(...)
+            space_bar = stbt.Keyboard.parse_edgelist('''
+                C SPACE KEY_DOWN
+                V SPACE KEY_DOWN
+                B SPACE KEY_DOWN
+                SPACE C KEY_UP
+                SPACE V KEY_UP
+                SPACE B KEY_UP
+            ''')
+            keyboard = stbt.Keyboard(networkx.compose_all([
+                stbt.grid_to_navigation_graph(letters),
+                space_bar]))
+
+        :param str graph: See the `Keyboard` constructor.
+        :returns: A new `networkx.DiGraph` instance.
+        """
+        return nx.parse_edgelist(graph.split("\n"),
+                                 create_using=nx.DiGraph(),
+                                 data=[("key", str)])
 
 
 def _selection_to_text(selection):
