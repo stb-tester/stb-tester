@@ -14,6 +14,7 @@ import pytest
 
 import stbt
 from _stbt import cv2_compat
+from _stbt.logging import scoped_debug_level
 from _stbt.match import _merge_regions
 from tests.test_core import _find_file
 
@@ -204,6 +205,31 @@ def test_transparent_reference_image_with_hard_edge():
     m = stbt.match("images/regression/roku-tile-selection.png", frame=frame)
     assert m
     assert stbt.Region(x=325, y=145, right=545, bottom=325).contains(m.region)
+
+
+@pytest.mark.parametrize("frame,image", [
+    # pylint:disable=bad-whitespace,line-too-long
+    ("images/regression/badpyramid-frame.png",  "images/regression/badpyramid-reference.png"),
+    ("images/regression/badpyramid-frame2.png", "images/regression/badpyramid-reference2.png"),
+])
+@pytest.mark.parametrize("match_method,match_threshold", [
+    (stbt.MatchMethod.SQDIFF, 0.98),
+    (stbt.MatchMethod.SQDIFF_NORMED, 0.8),
+    (stbt.MatchMethod.CCORR_NORMED, 0.8),
+    (stbt.MatchMethod.CCOEFF_NORMED, 0.8),
+])
+def test_pyramid_roi_too_small(frame, image, match_method, match_threshold):
+    # This is a regression test for an error that was seen with a particular
+    # frame from a single test-run, with SQDIFF_NORMED:
+    # cv2.error: (-215) _img.size().height <= _templ.size().height &&
+    # _img.size().width <= _templ.size().width in function matchTemplate
+    with scoped_debug_level(2):
+        stbt.match(
+            image,
+            frame=stbt.load_image(frame),
+            match_parameters=stbt.MatchParameters(
+                match_method=match_method,
+                match_threshold=match_threshold))
 
 
 @requires_opencv_3
