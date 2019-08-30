@@ -138,7 +138,7 @@ class Grid(object):
                               else self._position_to_region(position))
                     break
             else:
-                raise IndexError("data '%r' not found" % data)
+                raise IndexError("data %r not found" % (data,))
 
         return Grid.Cell(
             index,
