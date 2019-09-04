@@ -705,7 +705,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):  #
     for roi in rois:
         r = roi.extend(right=template.shape[1] - 1,
                        bottom=template.shape[0] - 1)
-        ddebug("Level %d: Searching in %s" % (level, roi))
+        ddebug("Level %d: Searching in %s" % (level, r))
         cv2.matchTemplate(
             image[r.to_slice()],
             template,
