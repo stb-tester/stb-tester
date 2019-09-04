@@ -665,8 +665,8 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):  #
                                  dtype=numpy.float32)
 
     if roi_mask is None:
-        rois = [  # Initial region of interest: The whole image.
-            Region(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+        # Initial region of interest: The whole image.
+        rois = [_image_region(matches_heatmap)]
     else:
         rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
