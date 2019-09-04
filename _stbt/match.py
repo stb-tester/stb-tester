@@ -752,8 +752,8 @@ def _build_pyramid(image, levels, is_template=False, is_mask=False):
     See http://docs.opencv.org/doc/tutorials/imgproc/pyramids/pyramids.html
 
     The original-sized image is called "level 0", the next smaller image "level
-    1", and so on. This numbering corresponds to the array index of the
-    "pyramid" array.
+    1", and so on. This numbering corresponds to the index of the "pyramid"
+    array.
     """
     if image is None:
         return [None] * levels
