@@ -258,7 +258,7 @@ def strict_diff(prev, frame, region, mask_image):
             _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
                     maxdiff)
     if out_region:
-        out_region = out_region.translate(region.x, region.y)
+        out_region = out_region.translate(region)
 
     result = MotionResult(getattr(frame, "time", None), diffs_found,
                           out_region, frame)

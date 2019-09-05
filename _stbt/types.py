@@ -113,6 +113,11 @@ class Region(with_metaclass(_RegionClsMethods,
     Region(x=-inf, y=-inf, right=2, bottom=2)
     >>> c.translate(x=-9, y=-3)
     Region(x=1, y=1, right=4, bottom=3)
+    >>> Region(2, 3, 2, 1).translate(b)
+    Region(x=6, y=7, right=8, bottom=8)
+    >>> Region(2, 3, 2, 1).translate(b, 5)
+    Traceback (most recent call last):
+    TypeError
     >>> Region.intersect(Region.ALL, c) == c
     True
     >>> Region.ALL
@@ -262,13 +267,20 @@ class Region(with_metaclass(_RegionClsMethods,
         return (other and self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
 
-    def translate(self, x=0, y=0):
+    def translate(self, x=None, y=None):
         """
         :returns: A new region with the position of the region adjusted by the
             given amounts.
         """
-        return Region.from_extents(self.x + x, self.y + y,
-                                   self.right + x, self.bottom + y)
+        try:
+            p = x[0], x[1]
+        except TypeError:
+            p = x or 0, y or 0
+        else:
+            if y is not None:
+                raise TypeError()
+        return Region.from_extents(self.x + p[0], self.y + p[1],
+                                   self.right + p[0], self.bottom + p[1])
 
     def extend(self, x=0, y=0, right=0, bottom=0):
         """
