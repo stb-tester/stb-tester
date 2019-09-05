@@ -67,7 +67,8 @@ def test_region_intersect():
     r2 = stbt.Region(5, 5, right=25, bottom=15)
     expected = stbt.Region(5, 5, right=20, bottom=10)
     assert expected == stbt.Region.intersect(r1, r2)
-    assert expected == r1.intersect(r2)
+    with pytest.raises(AttributeError):
+        r1.intersect(r2)  # pylint:disable=no-member
 
 
 def test_region_bounding_box():
@@ -75,7 +76,8 @@ def test_region_bounding_box():
     r2 = stbt.Region(5, 5, right=25, bottom=15)
     expected = stbt.Region(0, 0, right=25, bottom=15)
     assert expected == stbt.Region.bounding_box(r1, r2)
-    assert expected == r1.bounding_box(r2)
+    with pytest.raises(AttributeError):
+        r1.bounding_box(r2)  # pylint:disable=no-member
 
 
 def test_region_replace():

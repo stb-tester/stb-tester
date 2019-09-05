@@ -6,6 +6,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import with_metaclass
+
 from collections import namedtuple
 
 
@@ -14,7 +16,84 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
-class Region(namedtuple('Region', 'x y right bottom')):
+class _RegionClsMethods(type):
+    """Metaclass for `Region`.
+
+    This defines some classmethods for Region, but in a way that they can't be
+    called on an instance of Region (which is an easy mistake to make, but with
+    incorrect behaviour). See <https://stackoverflow.com/a/42327454/606705>.
+    """
+
+    def intersect(cls, *args):
+        """
+        :returns: The intersection of the passed regions, or ``None`` if the
+            regions don't intersect.
+
+        Any parameter can ``None`` so intersect is commutative and associative.
+
+        New in v30: intersect can now take an arbitrary number of region
+        arguments rather than exactly two.
+        """
+        out = Region.ALL
+        args = iter(args)
+        try:
+            out = next(args)
+        except StopIteration:
+            # No arguments passed:
+            return Region.ALL
+        if out is None:
+            return None
+
+        for r in args:
+            if not r:
+                return None
+            out = (max(out[0], r[0]), max(out[1], r[1]),
+                   min(out[2], r[2]), min(out[3], r[3]))
+            if out[0] >= out[2] or out[1] >= out[3]:
+                return None
+        return Region.from_extents(*out)
+
+    def bounding_box(cls, *args):
+        r"""Find the bounding box of the given regions.  Returns the smallest
+        region which contains all passed regions.
+
+        >>> a = Region(50, 20, right=60, bottom=40)
+        >>> b = Region(20, 30, right=30, bottom=50)
+        >>> c = Region(55, 25, right=70, bottom=35)
+        >>> Region.bounding_box(a, b)
+        Region(x=20, y=20, right=60, bottom=50)
+        >>> Region.bounding_box(b, b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(None, b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(b, None)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(b, Region.ALL)
+        Region.ALL
+        >>> print(Region.bounding_box(None, None))
+        None
+        >>> print(Region.bounding_box())
+        None
+        >>> Region.bounding_box(b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(a, b, c) == \
+        ...     Region.bounding_box(a, Region.bounding_box(b, c))
+        True
+
+        New in v30: No longer limited to just taking 2 regions.
+        """
+        args = [_f for _f in args if _f]
+        if not args:
+            return None
+        return Region.from_extents(
+            min(r.x for r in args),
+            min(r.y for r in args),
+            max(r.right for r in args),
+            max(r.bottom for r in args))
+
+
+class Region(with_metaclass(_RegionClsMethods,
+                            namedtuple('Region', 'x y right bottom'))):
     u"""
     ``Region(x, y, width=width, height=height)`` or
     ``Region(x, y, right=right, bottom=bottom)``
@@ -165,36 +244,6 @@ class Region(namedtuple('Region', 'x y right bottom')):
         """
         return Region(x, y, right=right, bottom=bottom)
 
-    @staticmethod
-    def intersect(*args):
-        """
-        :returns: The intersection of the passed regions, or ``None`` if the
-            regions don't intersect.
-
-        Any parameter can ``None`` so intersect is commutative and associative.
-
-        New in v30: intersect can now take an arbitrary number of region
-        arguments rather than exactly two.
-        """
-        out = Region.ALL
-        args = iter(args)
-        try:
-            out = next(args)
-        except StopIteration:
-            # No arguments passed:
-            return Region.ALL
-        if out is None:
-            return None
-
-        for r in args:
-            if not r:
-                return None
-            out = (max(out[0], r[0]), max(out[1], r[1]),
-                   min(out[2], r[2]), min(out[3], r[3]))
-            if out[0] >= out[2] or out[1] >= out[3]:
-                return None
-        return Region.from_extents(*out)
-
     def contains(self, other):
         """:returns: True if ``other`` is entirely contained within self."""
         return (other and self.x <= other.x and self.y <= other.y and
@@ -277,45 +326,6 @@ class Region(namedtuple('Region', 'x y right bottom')):
             the left edge of the frame (or to the specified width).
         """
         return self.replace(x=self.x - width, right=self.x)
-
-    @staticmethod
-    def bounding_box(*args):
-        r"""Find the bounding box of the given regions.  Returns the smallest
-        region which contains all passed regions.
-
-        >>> a = Region(50, 20, right=60, bottom=40)
-        >>> b = Region(20, 30, right=30, bottom=50)
-        >>> c = Region(55, 25, right=70, bottom=35)
-        >>> Region.bounding_box(a, b)
-        Region(x=20, y=20, right=60, bottom=50)
-        >>> Region.bounding_box(b, b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, None)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, Region.ALL)
-        Region.ALL
-        >>> print(Region.bounding_box(None, None))
-        None
-        >>> print(Region.bounding_box())
-        None
-        >>> Region.bounding_box(b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(a, b, c) == \
-        ...     Region.bounding_box(a, Region.bounding_box(b, c))
-        True
-
-        New in v30: No longer limited to just taking 2 regions.
-        """
-        args = [_f for _f in args if _f]
-        if not args:
-            return None
-        return Region.from_extents(
-            min(r.x for r in args),
-            min(r.y for r in args),
-            max(r.right for r in args),
-            max(r.bottom for r in args))
 
     def dilate(self, n):
         """Expand the region by n px in all directions.
