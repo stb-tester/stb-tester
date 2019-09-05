@@ -62,6 +62,22 @@ def test_crop():
         stbt.crop(f, stbt.Region(x=1045, y=672, right=1281, bottom=721))
 
 
+def test_region_intersect():
+    r1 = stbt.Region(0, 0, right=20, bottom=10)
+    r2 = stbt.Region(5, 5, right=25, bottom=15)
+    expected = stbt.Region(5, 5, right=20, bottom=10)
+    assert expected == stbt.Region.intersect(r1, r2)
+    assert expected == r1.intersect(r2)
+
+
+def test_region_bounding_box():
+    r1 = stbt.Region(0, 0, right=20, bottom=10)
+    r2 = stbt.Region(5, 5, right=25, bottom=15)
+    expected = stbt.Region(0, 0, right=25, bottom=15)
+    assert expected == stbt.Region.bounding_box(r1, r2)
+    assert expected == r1.bounding_box(r2)
+
+
 def test_region_replace():
     r = stbt.Region(x=10, y=20, width=20, height=30)
 
