@@ -4,6 +4,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 from future.utils import string_types
+
+import os
 import random
 import re
 import timeit
@@ -14,6 +16,7 @@ import pytest
 
 import stbt
 from _stbt import cv2_compat
+from _stbt.imgutils import _image_region
 from _stbt.logging import scoped_debug_level
 from _stbt.match import _merge_regions
 from tests.test_core import _find_file
@@ -253,6 +256,84 @@ def test_match_region(image, expected):
     m = stbt.match("images/region/%s.png" % image, frame=frame)
     assert m
     assert m.region == expected
+
+
+@pytest.mark.parametrize("x,y", [
+    # "-20" means "1 image width away from the frame's right or bottom edge".
+    (0, 0), (-20, 0), (0, -20), (-20, -20),  # corners
+    (50, 0), (-20, 50), (50, -20), (0, 50),  # edges
+])
+@pytest.mark.parametrize("offset_x,offset_y", [
+    # Right at the edge or corner; 1px away horizontally, or vertically, or
+    # both; 2px away etc.
+    (0, 0),
+    (1, 0),
+    (0, 1),
+    (1, 1),
+    (2, 0),
+    (0, 2),
+    (2, 2),
+    (3, 3),
+    (4, 4),
+    (5, 5),
+    # These are outside of the frame so they shouldn't match
+    (-1, 0),
+    (0, -1),
+    (-1, -1),
+    (-2, 0),
+    (0, -2),
+    (-2, -2),
+    (-10, 0),
+    (0, -10),
+    (-10, -10),
+])
+@pytest.mark.parametrize("width,height", [
+    (20, 20),
+    (20, 21),
+    (21, 20),
+    (21, 21),
+    (31, 30),
+    (40, 40),
+    (40, 41),
+    (41, 40),
+    (41, 41),
+    (158, 88),
+])
+@pytest.mark.parametrize("frame_width,frame_height", [
+    (160, 90),
+    (159, 89),  # an odd-sized "frame" can happen if the user gives a region
+])
+def test_match_region2(x, y, offset_x, offset_y, width, height,
+                       frame_width, frame_height):
+    if x >= 0:
+        x = x + offset_x
+    else:
+        x = frame_width - width - offset_x
+    if y >= 0:
+        y = y + offset_y
+    else:
+        y = frame_height - height - offset_y
+    region = stbt.Region(x, y, width=width, height=height)
+    image = numpy.ones((region.height, region.width, 3), numpy.uint8) * 255
+    image[5:-5, 5:-5] = (255, 0, 0)
+    frame = black(frame_width, frame_height)
+    frame[region.to_slice()] = image[
+        0 if region.y >= 0 else -region.y :
+            region.height if region.bottom <= frame_height
+            else frame_height - region.y,
+        0 if region.x >= 0 else -region.x :
+            region.width if region.right <= frame_width
+            else frame_width - region.x]
+
+    should_match = _image_region(frame).contains(region)
+
+    m = stbt.match(image, frame)
+    if should_match != m.match or os.environ.get("STBT_DEBUG"):
+        with scoped_debug_level(2):
+            stbt.match(image, frame)
+    assert should_match == m.match
+    if should_match:
+        assert m.region == region
 
 
 @requires_opencv_3
