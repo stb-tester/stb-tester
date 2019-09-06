@@ -246,6 +246,10 @@ class Region(with_metaclass(_RegionClsMethods,
     def height(self):
         return self.bottom - self.y
 
+    @staticmethod
+    def from_extents(x, y, right, bottom):
+        return Region(x, y, right=right, bottom=bottom)
+
     def to_slice(self):
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
         return (slice(max(0, self.y),
@@ -253,14 +257,18 @@ class Region(with_metaclass(_RegionClsMethods,
                 slice(max(0, self.x),
                       max(0, self.right)))
 
-    @staticmethod
-    def from_extents(x, y, right, bottom):
-        return Region(x, y, right=right, bottom=bottom)
-
     def contains(self, other):
         """:returns: True if ``other`` is entirely contained within self."""
         return (other and self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
+
+    def translate(self, x=0, y=0):
+        """
+        :returns: A new region with the position of the region adjusted by the
+            given amounts.
+        """
+        return Region.from_extents(self.x + x, self.y + y,
+                                   self.right + x, self.bottom + y)
 
     def extend(self, x=0, y=0, right=0, bottom=0):
         """
@@ -304,13 +312,26 @@ class Region(with_metaclass(_RegionClsMethods,
 
         return Region(x=x, y=y, right=right, bottom=bottom)
 
-    def translate(self, x=0, y=0):
+    def dilate(self, n):
+        """Expand the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).dilate(3)
+        Region(x=17, y=27, right=33, bottom=53)
         """
-        :returns: A new region with the position of the region adjusted by the
-            given amounts.
+        return self.extend(x=-n, y=-n, right=n, bottom=n)
+
+    def erode(self, n):
+        """Shrink the region by n px in all directions.
+
+        >>> Region(20, 30, right=30, bottom=50).erode(3)
+        Region(x=23, y=33, right=27, bottom=47)
+        >>> print(Region(20, 30, 10, 20).erode(5))
+        None
         """
-        return Region.from_extents(self.x + x, self.y + y,
-                                   self.right + x, self.bottom + y)
+        if self.width > n * 2 and self.height > n * 2:
+            return self.dilate(-n)
+        else:
+            return None
 
     def above(self, height=float('inf')):
         """
@@ -339,27 +360,6 @@ class Region(with_metaclass(_RegionClsMethods,
             the left edge of the frame (or to the specified width).
         """
         return self.replace(x=self.x - width, right=self.x)
-
-    def dilate(self, n):
-        """Expand the region by n px in all directions.
-
-        >>> Region(20, 30, right=30, bottom=50).dilate(3)
-        Region(x=17, y=27, right=33, bottom=53)
-        """
-        return self.extend(x=-n, y=-n, right=n, bottom=n)
-
-    def erode(self, n):
-        """Shrink the region by n px in all directions.
-
-        >>> Region(20, 30, right=30, bottom=50).erode(3)
-        Region(x=23, y=33, right=27, bottom=47)
-        >>> print(Region(20, 30, 10, 20).erode(5))
-        None
-        """
-        if self.width > n * 2 and self.height > n * 2:
-            return self.dilate(-n)
-        else:
-            return None
 
 
 Region.ALL = Region(x=-float('inf'), y=-float('inf'),
