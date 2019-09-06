@@ -25,15 +25,6 @@ class _RegionClsMethods(type):
     """
 
     def intersect(cls, *args):
-        """
-        :returns: The intersection of the passed regions, or ``None`` if the
-            regions don't intersect.
-
-        Any parameter can ``None`` so intersect is commutative and associative.
-
-        New in v30: intersect can now take an arbitrary number of region
-        arguments rather than exactly two.
-        """
         out = Region.ALL
         args = iter(args)
         try:
@@ -54,34 +45,6 @@ class _RegionClsMethods(type):
         return Region.from_extents(*out)
 
     def bounding_box(cls, *args):
-        r"""Find the bounding box of the given regions.  Returns the smallest
-        region which contains all passed regions.
-
-        >>> a = Region(50, 20, right=60, bottom=40)
-        >>> b = Region(20, 30, right=30, bottom=50)
-        >>> c = Region(55, 25, right=70, bottom=35)
-        >>> Region.bounding_box(a, b)
-        Region(x=20, y=20, right=60, bottom=50)
-        >>> Region.bounding_box(b, b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, None)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, Region.ALL)
-        Region.ALL
-        >>> print(Region.bounding_box(None, None))
-        None
-        >>> print(Region.bounding_box())
-        None
-        >>> Region.bounding_box(b)
-        Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(a, b, c) == \
-        ...     Region.bounding_box(a, Region.bounding_box(b, c))
-        True
-
-        New in v30: No longer limited to just taking 2 regions.
-        """
         args = [_f for _f in args if _f]
         if not args:
             return None
@@ -94,7 +57,7 @@ class _RegionClsMethods(type):
 
 class Region(with_metaclass(_RegionClsMethods,
                             namedtuple('Region', 'x y right bottom'))):
-    u"""
+    r"""
     ``Region(x, y, width=width, height=height)`` or
     ``Region(x, y, right=right, bottom=bottom)``
 
@@ -187,8 +150,71 @@ class Region(with_metaclass(_RegionClsMethods,
         The y coordinate of the bottom edge of the region, measured in pixels
         from the top of the video frame (exclusive).
 
-    ``x``, ``y``, ``right``, and ``bottom`` can be infinite -- that is,
-    ``float("inf")`` or ``-float("inf")``.
+    .. py:attribute:: width
+
+        The width of the region, measured in pixels.
+
+    .. py:attribute:: height
+
+        The height of the region, measured in pixels.
+
+    ``x``, ``y``, ``right``, ``bottom``, ``width`` and ``height`` can be
+    infinite --- that is, ``float("inf")`` or ``-float("inf")``.
+
+    .. py:staticmethod:: from_extents
+
+        Create a Region using right and bottom extents rather than width and
+        height.
+
+        Typically you'd use the ``right`` and ``bottom`` parameters of the
+        ``Region`` constructor instead, but this factory function is useful
+        if you need to create a ``Region`` from a tuple.
+
+        >>> extents = (4, 4, 13, 10)
+        >>> Region.from_extents(*extents)
+        Region(x=4, y=4, right=13, bottom=10)
+
+    .. py:staticmethod:: bounding_box(*args)
+
+        :returns: The smallest region that contains all the given regions.
+
+        >>> a = Region(50, 20, right=60, bottom=40)
+        >>> b = Region(20, 30, right=30, bottom=50)
+        >>> c = Region(55, 25, right=70, bottom=35)
+        >>> Region.bounding_box(a, b)
+        Region(x=20, y=20, right=60, bottom=50)
+        >>> Region.bounding_box(b, b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(None, b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(b, None)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(b, Region.ALL)
+        Region.ALL
+        >>> print(Region.bounding_box(None, None))
+        None
+        >>> print(Region.bounding_box())
+        None
+        >>> Region.bounding_box(b)
+        Region(x=20, y=30, right=30, bottom=50)
+        >>> Region.bounding_box(a, b, c) == \
+        ...     Region.bounding_box(a, Region.bounding_box(b, c))
+        True
+
+        Changed in v30: ``bounding_box`` can take an arbitrary number of region
+        arguments, rather than exactly two.
+
+    .. py:staticmethod:: intersect(*args)
+
+        :returns: The intersection of the passed regions, or ``None`` if the
+            regions don't intersect.
+
+        Any parameter can be ``None`` (an empty Region) so intersect is
+        commutative and associative.
+
+        Changed in v30: ``intersect`` can take an arbitrary number of region
+        arguments, rather than exactly two.
+
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         if (width is None) == (right is None):
@@ -214,12 +240,10 @@ class Region(with_metaclass(_RegionClsMethods,
 
     @property
     def width(self):
-        """The width of the region, measured in pixels."""
         return self.right - self.x
 
     @property
     def height(self):
-        """The height of the region, measured in pixels."""
         return self.bottom - self.y
 
     def to_slice(self):
@@ -231,17 +255,6 @@ class Region(with_metaclass(_RegionClsMethods,
 
     @staticmethod
     def from_extents(x, y, right, bottom):
-        """Create a Region using right and bottom extents rather than width and
-        height.
-
-        Typically you'd use the ``right`` and ``bottom`` parameters of the
-        ``Region`` constructor instead, but this factory function is useful
-        if you need to create a ``Region`` from a tuple.
-
-        >>> extents = (4, 4, 13, 10)
-        >>> Region.from_extents(*extents)
-        Region(x=4, y=4, right=13, bottom=10)
-        """
         return Region(x, y, right=right, bottom=bottom)
 
     def contains(self, other):
