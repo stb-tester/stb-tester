@@ -597,7 +597,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         if level == 0:
             relax = 0
         elif match_parameters.match_method == MatchMethod.SQDIFF:
-            relax = 0.01
+            relax = 0.02
         else:
             relax = 0.2
         threshold = max(0, match_parameters.match_threshold - relax)
