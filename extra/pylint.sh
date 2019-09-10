@@ -12,6 +12,7 @@ ret=0
 
 if pep8 --version &>/dev/null; then
     # E124: closing bracket does not match visual indentation
+    # E203: whitespace before ':'
     # E241: multiple spaces after ',' (because pylint does it)
     # E305: expected 2 blank lines after class or function definition (pylint)
     # E402: module level import not at top of file (because pylint does it)
@@ -20,7 +21,7 @@ if pep8 --version &>/dev/null; then
     # E722: do not use bare except (because pylint does it)
     # E731: do not assign a lambda expression, use a def
     # W291: trailing whitespace (because pylint does it)
-    pep8 --ignore=E124,E241,E305,E402,E501,E721,E722,E731,W291 "$@" || ret=1
+    pep8 --ignore=E124,E203,E241,E305,E402,E501,E721,E722,E731,W291 "$@" || ret=1
 else
     echo "warning: pep8 not installed; skipping pep8 and only running pylint" >&2
 fi

@@ -597,7 +597,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         if level == 0:
             relax = 0
         elif match_parameters.match_method == MatchMethod.SQDIFF:
-            relax = 0.01
+            relax = 0.02
         else:
             relax = 0.2
         threshold = max(0, match_parameters.match_threshold - relax)
@@ -665,9 +665,20 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):  #
                                  dtype=numpy.float32)
 
     if roi_mask is None:
-        rois = [  # Initial region of interest: The whole image.
-            Region(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+        # Initial region of interest: The whole image.
+        rois = [_image_region(matches_heatmap)]
     else:
+        ddebug("Level %d: roi_mask=%r, matches_heatmap=%r" % (
+            level, roi_mask.shape, matches_heatmap.shape))
+
+        # roi_mask comes from the previous pyramid level so it has gone through
+        # pyrDown -> pyrUp. If the starting size was odd-numbered then after
+        # this round-trip you end up with a size 1 pixel larger than the
+        # original. We can discard the extra pixel safely because pyrUp blurs
+        # with a 5x5 kernel after upscaling, so in effect it is dilating all
+        # our ROIs by 1 pixel.
+        roi_mask = crop(roi_mask, _image_region(matches_heatmap))
+
         rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
         _merge_regions(rois)
@@ -692,10 +703,9 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):  #
     else:
         kwargs = {}  # For OpenCV < 3.0.0
     for roi in rois:
-        roi = roi.extend(x=-1, y=-1, right=1, bottom=1)
         r = roi.extend(right=template.shape[1] - 1,
                        bottom=template.shape[0] - 1)
-        ddebug("Level %d: Searching in %s" % (level, roi))
+        ddebug("Level %d: Searching in %s" % (level, r))
         cv2.matchTemplate(
             image[r.to_slice()],
             template,
@@ -752,8 +762,8 @@ def _build_pyramid(image, levels, is_template=False, is_mask=False):
     See http://docs.opencv.org/doc/tutorials/imgproc/pyramids/pyramids.html
 
     The original-sized image is called "level 0", the next smaller image "level
-    1", and so on. This numbering corresponds to the array index of the
-    "pyramid" array.
+    1", and so on. This numbering corresponds to the index of the "pyramid"
+    array.
     """
     if image is None:
         return [None] * levels
@@ -767,7 +777,19 @@ def _build_pyramid(image, levels, is_template=False, is_mask=False):
             cv2.threshold(downsampled, 254, 255, cv2.THRESH_BINARY, downsampled)
         previous = downsampled
         if is_template or is_mask:
+            # Ignore pixels on the edge of the template, because pyrDown's
+            # blurring will affect them differently than the corresponding
+            # pixels in the frame (which do have neighbours, unlike the
+            # template's edge pixels).
             downsampled = downsampled[1:-1, 1:-1]
+        else:
+            # ...and adjust the coordinate system of the match positions we're
+            # returning accordingly. Because of the cropping, match position
+            # 0,0 means pixel 1,1 of the template matched at pixel 1,1 of
+            # the frame (this is the same as saying pixel 0,0 of the template
+            # matched at pixel 0,0 of the frame, so we won't need to adjust
+            # the match position afterwards).
+            downsampled = downsampled[1:, 1:]
         if is_mask and numpy.count_nonzero(downsampled) == 0:
             break
         pyramid.append(downsampled)
