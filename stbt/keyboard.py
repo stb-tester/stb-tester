@@ -25,9 +25,9 @@ class Keyboard(object):
     You customize for the appearance & behaviour of the keyboard you're testing
     by specifying two things:
 
-    * A `stbt.FrameObject` class that can tell you which key is currently
-      selected on the screen. See the ``page`` parameter to ``enter_text`` and
-      ``navigate_to``, below.
+    * A `Page Object`_ that can tell you which key is currently selected on the
+      screen. See the ``page`` parameter to ``enter_text`` and ``navigate_to``,
+      below.
 
     * A `Directed Graph`_ that specifies the navigation between every key on
       the keyboard (for example on a qwerty keyboard: when Q is selected,
@@ -89,6 +89,7 @@ class Keyboard(object):
         practice ``navigate_to`` should only time out if you have a bug in your
         ``graph`` state machine specification.
 
+    .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     """
 
