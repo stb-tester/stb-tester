@@ -50,6 +50,12 @@ def test_grid():
     check_conversions(g, Region(351, 212, 126, 133), (2, 0), 2)
     check_conversions(g, Region(477, 345, 126, 134), (3, 1), 8)
 
+    # If you use a region from a different source (e.g. stbt.match) then the
+    # region you get *back* from the Grid should be the region defined by the
+    # grid.
+    r = Region(x=99, y=212, width=126, height=133)
+    assert r == g.get(region=r.extend(right=5, bottom=5)).region
+
     for r1, r2 in combinations(g.cells, 2):
         assert Region.intersect(r1.region, r2.region) is None
 
