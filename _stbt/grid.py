@@ -129,6 +129,8 @@ class Grid(object):
         elif region is not None:
             position = self._region_to_position(region)
             index = self._position_to_index(position)
+            region = (None if self.region is None
+                      else self._position_to_region(position))
         elif data is not None:
             for i in range(self.cols * self.rows):
                 position = self._index_to_position(i)
