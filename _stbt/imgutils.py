@@ -303,13 +303,9 @@ def crop(frame, region):
 
 
 def _validate_region(frame, region):
-    if region is None:
-        raise TypeError(
-            "'region=None' means an empty region. To analyse the entire "
-            "frame use 'region=Region.ALL' (which is the default)")
     f = _image_region(frame)
     r = Region.intersect(f, region)
-    if r is None:
+    if not r:
         raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
                          % (region, frame.shape[1], frame.shape[0]))
     return r

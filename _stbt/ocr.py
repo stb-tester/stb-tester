@@ -338,7 +338,7 @@ def match_text(text, frame=None, region=Region.ALL,
                      imglog)
     if xml == '':
         hocr = None
-        result = TextMatchResult(rts, False, None, frame, text)
+        result = TextMatchResult(rts, False, Region.EMPTY, frame, text)
     else:
         import lxml.etree
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
@@ -355,7 +355,7 @@ def match_text(text, frame=None, region=Region.ALL,
                 region.x + box.right // n, region.y + box.bottom // n)
             result = TextMatchResult(rts, True, box, frame, text)
         else:
-            result = TextMatchResult(rts, False, None, frame, text)
+            result = TextMatchResult(rts, False, Region.EMPTY, frame, text)
 
     if result.match:
         debug("match_text: Match found: %s" % str(result))
