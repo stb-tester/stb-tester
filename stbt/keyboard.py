@@ -170,9 +170,9 @@ class Keyboard(object):
               property can return a string, or an object with a ``text``
               attribute that is a string.
 
-              For grid-shaped keyboards, you can map the region of the
-              selection (highlight) to the corresponding letter using
-              `stbt.Grid` (see the example below).
+              For grid-shaped keyboards, you can implement this property using
+              `stbt.Grid` to map from the region of the selection (highlight)
+              to the corresponding letter; see the example below.
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
@@ -220,13 +220,16 @@ class Keyboard(object):
                         text = self.letters.get(region=m.region).data
                     except IndexError:
                         text = self.space_row.get(region=m.region).data
-                    return stbt.Keyboard.Selection(text, r)
+                    return stbt.Keyboard.Selection(text, m.region)
 
                 def enter_text(self, text):
                     page = self
                     page = self._kb.enter_text(text.upper(), page)
                     self._kb.navigate_to("SEARCH", page)
                     stbt.press("KEY_OK")
+
+                def navigate_to(self, target):
+                    return self._kb.navigate_to(target, page=self)
         """
 
         for letter in text:

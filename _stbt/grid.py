@@ -15,13 +15,16 @@ from .utils import native_int
 
 
 class Grid(object):
-    """A grid with items arranged left to right then down.
+    """A grid with items arranged left to right, then down.
 
     For example a keyboard, or a grid of posters, arranged like this::
 
         ABCDE
         FGHIJ
         KLMNO
+
+    All items must be the same size, and the spacing between them must be
+    consistent.
 
     This class is useful for converting between pixel coordinates on a screen,
     to x & y indexes into the grid positions.
