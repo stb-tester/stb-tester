@@ -222,8 +222,9 @@ class _Keyboard(stbt.FrameObject):
     def enter_text(self, text):
         return self.KEYBOARD.enter_text(text.upper(), page=self)
 
-    def navigate_to(self, target):
-        return self.KEYBOARD.navigate_to(target, page=self)
+    def navigate_to(self, target, verify_every_keypress=False):
+        return self.KEYBOARD.navigate_to(
+            target, page=self, verify_every_keypress=verify_every_keypress)
 
 
 class YouTubeKeyboard(object):
@@ -259,9 +260,30 @@ class YouTubeKeyboard(object):
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
+class BuggyKeyboard(YouTubeKeyboard):
+    def press(self, key):
+        super(BuggyKeyboard, self).press(key)
+        if key == "KEY_RIGHT" and self.selection == "B":
+            self.selection = "C"
+
+
 @pytest.fixture(scope="function")
 def youtubekeyboard():
     kb = YouTubeKeyboard()
+    with mock.patch("stbt.press", kb.press), \
+            mock.patch("stbt.press_and_wait", kb.press_and_wait):
+        yield kb
+
+
+@pytest.fixture(scope="function")
+def buggykeyboard():
+    """Pressing KEY_RIGHT from A skips over B and lands on C.
+
+    Note that the model we specify in our test-scripts still thinks that
+    KEY_RIGHT should land on B. This simulates a bug in the device-under-test,
+    not in the test-scripts.
+    """
+    kb = BuggyKeyboard()
     with mock.patch("stbt.press", kb.press), \
             mock.patch("stbt.press_and_wait", kb.press_and_wait):
         yield kb
@@ -299,6 +321,22 @@ def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
     page.navigate_to("SEARCH")
     assert youtubekeyboard.selection == "SEARCH"
     assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
+
+
+@pytest.mark.parametrize("target,verify_every_keypress,num_presses", [
+    ("B", False, 1),
+    ("B", True, 1),
+    ("C", False, 2),
+    ("C", True, 1),
+])
+def test_that_navigate_to_checks_target(
+        buggykeyboard, target, verify_every_keypress, num_presses):  # pylint:disable=redefined-outer-name
+    """buggykeyboard skips the B when pressing right from A (and lands on C)."""
+    page = buggykeyboard.page
+    assert page.selection == "A"
+    with pytest.raises(AssertionError):
+        page.navigate_to(target, verify_every_keypress)
+    assert buggykeyboard.pressed == ["KEY_RIGHT"] * num_presses
 
 
 def test_composing_complex_keyboards():
