@@ -16,7 +16,7 @@ import numpy
 import stbt
 
 
-log = getLogger("stbt.keyboard")
+log = getLogger("stbt.Keyboard")
 
 
 class Keyboard(object):
@@ -219,6 +219,8 @@ class Keyboard(object):
             if letter not in self.G:
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
+        log.info("enter_text %r", text)
+
         for letter in text:
             page = self.navigate_to(letter, page)
             stbt.press("KEY_OK")
@@ -250,7 +252,7 @@ class Keyboard(object):
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G, current, target))
-            log.info("Navigating from %s to %s by pressing %s",
+            log.info("Navigating from %r to %r by pressing %s",
                      current, target, ", ".join(keys))
             for k in keys[:-1]:
                 stbt.press(k)
