@@ -292,9 +292,9 @@ def buggykeyboard():
 def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
     page = youtubekeyboard.page
     assert page.selection == "A"
-    page.enter_text("hi there")
+    page = page.enter_text("hi there")
+    assert page.selection == "E"
     assert youtubekeyboard.entered == "HI THERE"
-    assert youtubekeyboard.selection == "E"
 
 
 def test_that_enter_text_uses_minimal_keypresses(youtubekeyboard):  # pylint:disable=redefined-outer-name
@@ -318,8 +318,8 @@ def test_that_keyboard_validates_the_targets(youtubekeyboard):  # pylint:disable
 def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
     page = youtubekeyboard.page
     assert page.selection == "A"
-    page.navigate_to("SEARCH")
-    assert youtubekeyboard.selection == "SEARCH"
+    page = page.navigate_to("SEARCH")
+    assert page.selection == "SEARCH"
     assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
 
 
