@@ -93,15 +93,20 @@ class Keyboard(object):
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     """
 
-    Selection = namedtuple("Selection", "text region")
-    """Type that your Page Object's ``selection`` property can return.
+    class Selection(namedtuple("Selection", "text region")):
+        """Type that your Page Object's ``selection`` property can return.
 
-    Has two attributes:
+        Has two attributes:
 
-    * ``text`` (*str*) — The selected letter or button.
-    * ``region`` (`stbt.Region`) — The position on screen of the selection /
-      highlight.
-    """
+        * ``text`` (*str*) — The selected letter or button.
+        * ``region`` (`stbt.Region`) — The position on screen of the selection /
+          highlight.
+
+        Is falsey if ``text`` and ``region`` are both ``None``.
+        """
+
+        def __bool__(self):
+            return self.text is not None or self.region is not None
 
     def __init__(self, graph, mask=None, navigate_timeout=20):
         if isinstance(graph, nx.DiGraph):
