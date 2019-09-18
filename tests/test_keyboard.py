@@ -146,15 +146,19 @@ nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
 def test_keys_to_press():
     assert list(_keys_to_press(G, "A", "A")) == []
-    assert list(_keys_to_press(G, "A", "B")) == ["KEY_RIGHT"]
-    assert list(_keys_to_press(G, "B", "A")) == ["KEY_LEFT"]
-    assert list(_keys_to_press(G, "A", "C")) == ["KEY_RIGHT", "KEY_RIGHT"]
-    assert list(_keys_to_press(G, "C", "A")) == ["KEY_LEFT", "KEY_LEFT"]
-    assert list(_keys_to_press(G, "A", "H")) == ["KEY_DOWN"]
-    assert list(_keys_to_press(G, "H", "A")) == ["KEY_UP"]
-    assert list(_keys_to_press(G, "A", "I")) in (["KEY_RIGHT", "KEY_DOWN"],
-                                                 ["KEY_DOWN", "KEY_RIGHT"])
-    assert list(_keys_to_press(G, " ", "A")) == ["KEY_UP"]
+    assert list(_keys_to_press(G, "A", "B")) == [("KEY_RIGHT", {"B"})]
+    assert list(_keys_to_press(G, "B", "A")) == [("KEY_LEFT", {"A"})]
+    assert list(_keys_to_press(G, "A", "C")) == [("KEY_RIGHT", {"B"}),
+                                                 ("KEY_RIGHT", {"C"})]
+    assert list(_keys_to_press(G, "C", "A")) == [("KEY_LEFT", {"B"}),
+                                                 ("KEY_LEFT", {"A"})]
+    assert list(_keys_to_press(G, "A", "H")) == [("KEY_DOWN", {"H"})]
+    assert list(_keys_to_press(G, "H", "A")) == [("KEY_UP", {"A"})]
+    assert list(_keys_to_press(G, "A", "I")) in (
+        [("KEY_RIGHT", {"B"}), ("KEY_DOWN", {"I"})],
+        [("KEY_DOWN", {"H"}), ("KEY_RIGHT", {"I"})])
+    assert list(_keys_to_press(G, " ", "A")) == [
+        ("KEY_UP", {"V", "W", "X", "Y", "Z", "-", "'"})]
 
 
 def test_add_weights():
