@@ -237,6 +237,7 @@ def ocr(frame=None, region=Region.ALL,
         String of characters that are allowed. Useful when you know that the
         text is only going to contain numbers or IP addresses, for example so
         that tesseract won't think that a zero is the letter o.
+        Note that Tesseract 4.0's LSTM engine ignores ``char_whitelist``.
 
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
