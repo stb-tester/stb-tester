@@ -5,37 +5,200 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import argparse
 import itertools
+import logging
 import os
 import sys
 from collections import OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
 
-from .config import get_config
+import structlog
+
+from .config import _config_init, get_config
 from .types import Region
 from .utils import mkdir_p
 
 _debug_level = None
+_logger = structlog.get_logger("stbt")
+_trace_logger = structlog.get_logger("stbt.trace")
 
 
-def debug(msg):
+def debug(msg, *args):
     """Print the given string to stderr if stbt run `--verbose` was given."""
-    if get_debug_level() > 0:
-        sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
+    _logger.debug(msg, *args)
 
 
-def ddebug(s):
+def ddebug(msg, *args):
     """Extra verbose debug for stbt developers, not end users"""
-    if get_debug_level() > 1:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
+    _trace_logger.debug(msg, *args)
 
 
-def warn(s):
-    sys.stderr.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), s))
+def warn(msg, *args):
+    _logger.warning(msg, *args)
+
+
+def init_logging():
+    # stdlib logging configuration from stbt.conf:
+    # https://docs.python.org/3.6/library/logging.config.html#logging-config-fileformat
+    fileConfig(_config_init())
+
+    # Override stbt.conf's "[logger_stbt].level" with "-v" command-line flag or
+    # "[global].verbose" setting:
+    stbt_verbose = get_debug_level()
+    if stbt_verbose > 1:
+        logging.getLogger("stbt.trace").setLevel(logging.DEBUG)
+    if stbt_verbose > 0:
+        stdlib_logger = logging.getLogger("stbt")
+        if stdlib_logger.level > logging.DEBUG:
+            stdlib_logger.setLevel(logging.DEBUG)
+
+    # structlog configuration:
+    # https://www.structlog.org/en/stable/standard-library.html#rendering-using-logging-based-formatters
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.stdlib.render_to_log_kwargs,
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True)
+
+
+if sys.version_info.major == 2:
+    # Python 2's `logging.config.fileConfig` doesn't accept a `ConfigParser`
+    # instance, only a filename or file object.
+    def fileConfig(cp, disable_existing_loggers=True):
+        from logging.config import _install_handlers, _install_loggers
+
+        # The below is copied from the Python 2.7.15 implementation:
+        # https://github.com/python/cpython/blob/2.7/Lib/logging/config.py
+        # pylint:disable=protected-access
+
+        formatters = _create_formatters(cp)
+
+        # critical section
+        logging._acquireLock()
+        try:
+            logging._handlers.clear()
+            del logging._handlerList[:]
+            # Handlers add themselves to logging._handlers
+            handlers = _install_handlers(cp, formatters)
+            _install_loggers(cp, handlers, disable_existing_loggers)
+        finally:
+            logging._releaseLock()
+
+    # Also copied from Python 2.7.15, but I have fixed calls to `cp.get`
+    # to use the Python 3 API (on Python 2 we use the `configparser` backport).
+    def _create_formatters(cp):
+        from logging.config import _resolve, _strip_spaces
+
+        flist = cp.get("formatters", "keys")
+        if not len(flist):
+            return {}
+        flist = flist.split(",")
+        flist = _strip_spaces(flist)
+        formatters = {}
+        for form in flist:
+            sectname = "formatter_%s" % form
+            opts = cp.options(sectname)
+            if "format" in opts:
+                fs = cp.get(sectname, "format", raw=True, fallback=1)
+            else:
+                fs = None
+            if "datefmt" in opts:
+                dfs = cp.get(sectname, "datefmt", raw=True, fallback=1)
+            else:
+                dfs = None
+            c = logging.Formatter
+            if "class" in opts:
+                class_name = cp.get(sectname, "class")
+                if class_name:
+                    c = _resolve(class_name)
+            f = c(fs, dfs)
+            formatters[form] = f
+        return formatters
+
+    # This is instantiated by our logging configuration in stbt.conf. The
+    # implementation of `format` is copied from Python 2.7.15's `logging`
+    # module, but after `record.getMessage()` we also format any keyword
+    # arguments provided to structlog.
+    class Formatter(logging.Formatter):
+        def format(self, record):
+            msg = record.getMessage()
+            msg = msg.format(**record.__dict__)
+            record.message = msg
+
+            if self.usesTime():
+                record.asctime = self.formatTime(record, self.datefmt)
+            try:
+                s = self._fmt % record.__dict__
+            except UnicodeDecodeError as e:
+                # Issue 25664. The logger name may be Unicode. Try again ...
+                try:
+                    record.name = record.name.decode('utf-8')
+                    s = self._fmt % record.__dict__
+                except UnicodeDecodeError:
+                    raise e
+            if record.exc_info:
+                # Cache the traceback text to avoid converting it multiple times
+                # (it's constant anyway)
+                if not record.exc_text:
+                    record.exc_text = self.formatException(record.exc_info)
+            if record.exc_text:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                try:
+                    s = s + record.exc_text
+                except UnicodeError:
+                    # Sometimes filenames have non-ASCII chars, which can lead
+                    # to errors when s is Unicode and record.exc_text is str
+                    # See issue 8924.
+                    # We also use replace for when there are multiple
+                    # encodings, e.g. UTF-8 for the filesystem and latin-1
+                    # for a script. See issue 13232.
+                    s = s + record.exc_text.decode(sys.getfilesystemencoding(),
+                                                   'replace')
+            return s
+
+else:
+    from logging.config import fileConfig
+
+    # This is instantiated by our logging configuration in stbt.conf.
+    # The implementation of `format` is copied from Python 3.6's `logging`
+    # module, but after `record.getMessage()` we also format any keyword
+    # arguments provided to structlog.
+    class Formatter(logging.Formatter):
+        def format(self, record):
+            msg = record.getMessage()
+            msg = msg.format(**record.__dict__)
+            record.message = msg
+
+            if self.usesTime():
+                record.asctime = self.formatTime(record, self.datefmt)
+            s = self.formatMessage(record)  # pylint:disable=no-member
+            if record.exc_info:
+                # Cache the traceback text to avoid converting it multiple times
+                # (it's constant anyway)
+                if not record.exc_text:
+                    record.exc_text = self.formatException(record.exc_info)
+            if record.exc_text:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + record.exc_text
+            if record.stack_info:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + self.formatStack(record.stack_info)  # pylint:disable=no-member
+            return s
 
 
 def get_debug_level():
@@ -48,12 +211,26 @@ def get_debug_level():
 @contextmanager
 def scoped_debug_level(level):
     global _debug_level
-    oldlevel = _debug_level
+
+    old_stbt_level = get_debug_level()
+    stbt_logger = logging.getLogger("stbt")
+    trace_logger = logging.getLogger("stbt.trace")
+    old_stdlib_levels = (stbt_logger.level, trace_logger.level)
+
     _debug_level = level
+    if level > 1:
+        trace_logger.setLevel(logging.DEBUG)
+    if level > 0:
+        stbt_logger.setLevel(logging.DEBUG)
+    elif stbt_logger.level < logging.INFO:
+        stbt_logger.setLevel(logging.INFO)
+
     try:
         yield
     finally:
-        _debug_level = oldlevel
+        _debug_level = old_stbt_level
+        stbt_logger.setLevel(old_stdlib_levels[0])
+        trace_logger.setLevel(old_stdlib_levels[1])
 
 
 def argparser_add_verbose_argument(argparser):
