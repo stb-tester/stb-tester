@@ -20,7 +20,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 
 #### v31
 
-UNRELEASED.
+18 September 2019.
 
 ##### Major new features
 
@@ -30,16 +30,18 @@ UNRELEASED.
   install python_version=3`. So far we haven't created a debian package for
   the Python 3 version.
 
+* New Python APIs: `stbt.Keyboard` for navigating on-screen keyboards, and
+  `stbt.Grid` for describing grid-like regions. See the Python API reference
+  for details.
+
 * The [RedRat-X](https://www.redrat.co.uk/products/redrat-x/) infrared
   transmitter is now supported via ethernet (USB is still not supported).
-  Configure your RedRat X as an IRNetBox in your stbt.conf file.
+  Configure your RedRat X as an IRNetBox in your stbt.conf file. Thanks to
+  Martin Sidén for the pull request & testing.
 
 ##### Breaking changes since v30
 
 * Dropped support for Ubuntu 16.04.
-
-* The changes that we made to support Python 3 *may* have introduced bugs even
-  for test-scripts using Python 2. Please let us know if you find any problems.
 
 * Removed unmaintained tools `stbt auto-selftest`, `stbt batch`, `stbt camera`,
   and `irnetbox-proxy`. If you want to use any of these tools feel free to
@@ -50,9 +52,10 @@ UNRELEASED.
   unreliable hardware. As far as I know, nobody uses this setting. What it did
   was watch for source pipeline underruns (without receiving an explicit EOS)
   and then restart the source pipeline. If you need this behaviour, the correct
-  solution is to fix your GStreamer source element.
+  solution is to fix your GStreamer source element. Note that `stbt run` still
+  restarts the source pipeline if it receives EOS.
 
-* Remove `source_teardown_eos` config setting. This was a workaround for an
+* Removed `source_teardown_eos` config setting. This was a workaround for an
   ancient bug in decklinksrc (the GStreamer element for Blackmagic
   video-capture cards). As far as I know, nobody uses this since we made the
   behaviour optional in v28.
@@ -78,6 +81,27 @@ UNRELEASED.
 * stbt.match: Improve error message when you give it an explicit region that
   is smaller than the reference image.
 
+* stbt.ocr: New parameter `char_whitelist`. Useful when you're reading text of
+  a specific format, like the time from a clock, a serial number, or a
+  passcode.
+
+* stbt.press_and_wait: Ignore small moiré-like differences between frames
+  (temporal dithering?) seen with Apple TV.
+
+* stbt.press_and_wait: Draw motion bounding-box on output video (similar to
+  stbt.wait_for_motion).
+
+* stbt.press_and_wait: Add `key` attribute (the name of the key that was
+  pressed) to the return value.
+
+* stbt.Region: The static methods `intersect` and `bounding_box` will fail if
+  called on an instance. That is, instead of calling `self.intersect(other)`
+  you must call `stbt.Region.intersect(self, other)`. Previously, if called on
+  an instance it would silently return a wrong value.
+
+* stbt.wait_for_motion: More sensitive to slow motion (such as a slow fade to
+  black) by comparing against the last frame since significant differences were
+  seen, instead of always comparing against the previous frame.
 
 #### v30
 
