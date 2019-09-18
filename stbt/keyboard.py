@@ -152,7 +152,7 @@ class Keyboard(object):
     #   use press_and_wait because the text-box might be masked out (some UIs
     #   have a blinking cursor there).
 
-    def enter_text(self, text, page):
+    def enter_text(self, text, page, verify_every_keypress=False):
         """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
@@ -175,6 +175,19 @@ class Keyboard(object):
 
             The ``page`` instance that you provide must represent the current
             state of the device-under-test.
+
+        :param bool verify_every_keypress:
+            If True, we will read the selected key after every keypress and
+            assert that it matches the model (``graph``). If False (the
+            default) we will only verify the selected key corresponding to each
+            of the characters in ``text``. For example: to get from Q to D on a
+            qwerty keyboard you need to press KEY_DOWN, KEY_RIGHT, KEY_RIGHT.
+            The default behaviour will only verify that the selected key is D
+            after pressing KEY_RIGHT the last time. This is faster, and closer
+            to the way a human uses the on-screen keyboard.
+
+            Set this to True to help debug your model if ``enter_text`` is
+            behaving incorrectly.
 
         Typically your FrameObject will provide its own ``enter_text`` method,
         so your test scripts won't call this ``Keyboard`` class directly. For
@@ -220,11 +233,11 @@ class Keyboard(object):
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
         for letter in text:
-            page = self.navigate_to(letter, page)
+            page = self.navigate_to(letter, page, verify_every_keypress)
             stbt.press("KEY_OK")
         return page
 
-    def navigate_to(self, target, page):
+    def navigate_to(self, target, page, verify_every_keypress=False):
         """Move the selection to the specified character.
 
         Note that this won't press KEY_OK on the target, it only moves the
@@ -233,6 +246,7 @@ class Keyboard(object):
         :param str target: The key or button to navigate to, for example "A",
             " ", or "CLEAR".
         :param stbt.FrameObject page: See ``enter_text``.
+        :param bool verify_every_keypress: See ``enter_text``.
 
         :returns: A new FrameObject instance of the same type as ``page``,
             reflecting the device-under-test's new state after the navigation
@@ -242,22 +256,32 @@ class Keyboard(object):
         if target not in self.G:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
 
+        assert page, "%s page isn't visible" % type(page).__name__
         deadline = time.time() + self.navigate_timeout
         current = _selection_to_text(page.selection)
         while current != target:
-            assert page, "%s page isn't visible" % type(page).__name__
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G, current, target))
             log.info("Keyboard: navigating from %s to %s by pressing %r",
                      current, target, keys)
-            for k in keys[:-1]:
-                stbt.press(k)
-            assert stbt.press_and_wait(keys[-1], mask=self.mask,
-                                       stable_secs=0.5)
-            page = page.refresh()
-            current = _selection_to_text(page.selection)
+            if not verify_every_keypress:
+                for k, _ in keys[:-1]:
+                    stbt.press(k)
+                keys = keys[-1:]  # only verify the last one
+            for key, possible_targets in keys:
+                assert stbt.press_and_wait(key, mask=self.mask, stable_secs=0.5)
+                page = page.refresh()
+                assert page, "%s page isn't visible" % type(page).__name__
+                current = _selection_to_text(page.selection)
+                assert current in possible_targets, \
+                    "Expected to see %s after pressing %s, but saw %r" % (
+                        _join_with_commas(
+                            [repr(x) for x in sorted(possible_targets)],
+                            last_one=" or "),
+                        key,
+                        current)
         return page
 
     @staticmethod
@@ -306,13 +330,15 @@ def _keys_to_press(G, source, target):
         return
     for s, t in zip(path[:-1], path[1:]):
         key = G[s][t]["key"]
-        yield key
+        possible_targets = set(tt for _, tt, kk in G.edges(s, data="key")
+                               if kk == key)
+        yield key, possible_targets
 
         # If there are multiple edges from this node with the same key, we
         # don't know which one we will *actually* end up on. So don't do
         # any further blind keypresses; let the caller re-calculate and call
         # us again.
-        if len([tt for _, tt, kk in G.edges(s, data="key") if kk == key]) > 1:
+        if len(possible_targets) > 1:
             break
 
 
@@ -332,3 +358,24 @@ def _add_weights(G):
                 # take a shortcut through here.
                 for target in targets:
                     G[node][target]["weight"] = 100
+
+
+def _join_with_commas(items, last_one=", "):
+    """
+    >>> _join_with_commas(["A", "B", "C"], last_one=" or ")
+    'A, B or C'
+    >>> _join_with_commas(["A", "C"], last_one=" or ")
+    'A or C'
+    >>> _join_with_commas(["A"], last_one=" or ")
+    'A'
+    >>> _join_with_commas([], last_one=" or ")
+    ''
+    """
+    if len(items) > 1:
+        return last_one.join([
+            ", ".join(items[:-1]),
+            items[-1]])
+    elif len(items) == 1:
+        return items[0]
+    else:
+        return ""
