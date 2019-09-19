@@ -307,7 +307,9 @@ class Region(with_metaclass(_RegionClsMethods,
             p = x or 0, y or 0
         else:
             if y is not None:
-                raise TypeError()
+                raise TypeError(
+                    "translate() takes either a single Region argument or two "
+                    "ints (both given)")
         return Region.from_extents(self.x + p[0], self.y + p[1],
                                    self.right + p[0], self.bottom + p[1])
 
