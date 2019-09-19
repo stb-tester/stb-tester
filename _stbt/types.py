@@ -270,7 +270,36 @@ class Region(with_metaclass(_RegionClsMethods,
     def translate(self, x=None, y=None):
         """
         :returns: A new region with the position of the region adjusted by the
-            given amounts.
+            given amounts.  The width and height are unaffected.
+
+        `translate` either accepts seperate `int` x and y coordinates or a
+        single `Region` argument:
+
+        >>> b = Region(4, 4, 9, 6)
+
+        Move the region 1px right and 2px down:
+
+        >>> b.translate(1, 2)
+        Region(x=5, y=6, right=14, bottom=12)
+
+        Move the region 1px to the left:
+
+        >>> b.translate(x=-1)
+        Region(x=3, y=4, right=12, bottom=10)
+
+        Move the region 3px up:
+
+        >>> b.translate(y=-3)
+        Region(x=4, y=1, right=13, bottom=7)
+
+        Move the region by another region.  This can be helpful if `TITLE`
+        defines a region relative another UI element on screen.  You can then
+        combine the two like so:
+
+        >>> TITLE = Region(20, 5, 160, 40)
+        >>> CELL = Region(140, 45, 200, 200)
+        >>> TITLE.translate(CELL)
+        Region(x=160, y=50, right=320, bottom=90)
         """
         try:
             p = x[0], x[1]
