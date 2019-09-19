@@ -115,9 +115,6 @@ class Region(with_metaclass(_RegionClsMethods,
     Region(x=1, y=1, right=4, bottom=3)
     >>> Region(2, 3, 2, 1).translate(b)
     Region(x=6, y=7, right=8, bottom=8)
-    >>> Region(2, 3, 2, 1).translate(b, 5)
-    Traceback (most recent call last):
-    TypeError
     >>> Region.intersect(Region.ALL, c) == c
     True
     >>> Region.ALL
