@@ -113,6 +113,8 @@ class Region(with_metaclass(_RegionClsMethods,
     Region(x=-inf, y=-inf, right=2, bottom=2)
     >>> c.translate(x=-9, y=-3)
     Region(x=1, y=1, right=4, bottom=3)
+    >>> Region(2, 3, 2, 1).translate(b)
+    Region(x=6, y=7, right=8, bottom=8)
     >>> Region.intersect(Region.ALL, c) == c
     True
     >>> Region.ALL
@@ -262,13 +264,49 @@ class Region(with_metaclass(_RegionClsMethods,
         return (other and self.x <= other.x and self.y <= other.y and
                 self.right >= other.right and self.bottom >= other.bottom)
 
-    def translate(self, x=0, y=0):
+    def translate(self, x=None, y=None):
         """
         :returns: A new region with the position of the region adjusted by the
-            given amounts.
+            given amounts.  The width and height are unaffected.
+
+        ``translate`` accepts separate x and y arguments, or a single `Region`.
+
+        For example, move the region 1px right and 2px down:
+
+        >>> b = Region(4, 4, 9, 6)
+        >>> b.translate(1, 2)
+        Region(x=5, y=6, right=14, bottom=12)
+
+        Move the region 1px to the left:
+
+        >>> b.translate(x=-1)
+        Region(x=3, y=4, right=12, bottom=10)
+
+        Move the region 3px up:
+
+        >>> b.translate(y=-3)
+        Region(x=4, y=1, right=13, bottom=7)
+
+        Move the region by another region.  This can be helpful if `TITLE`
+        defines a region relative another UI element on screen.  You can then
+        combine the two like so:
+
+        >>> TITLE = Region(20, 5, 160, 40)
+        >>> CELL = Region(140, 45, 200, 200)
+        >>> TITLE.translate(CELL)
+        Region(x=160, y=50, right=320, bottom=90)
         """
-        return Region.from_extents(self.x + x, self.y + y,
-                                   self.right + x, self.bottom + y)
+        try:
+            p = x[0], x[1]
+        except TypeError:
+            p = x or 0, y or 0
+        else:
+            if y is not None:
+                raise TypeError(
+                    "translate() takes either a single Region argument or two "
+                    "ints (both given)")
+        return Region.from_extents(self.x + p[0], self.y + p[1],
+                                   self.right + p[0], self.bottom + p[1])
 
     def extend(self, x=0, y=0, right=0, bottom=0):
         """

@@ -108,6 +108,12 @@ def test_region_replace():
     yield t, dict(x=11, right=21, y=0, height=5), stbt.Region(x=11, y=0, width=10, height=5)
 
 
+def test_region_translate():
+    with pytest.raises(TypeError):
+        # Both region and y provided
+        stbt.Region(2, 3, 2, 1).translate(stbt.Region(0, 0, 1, 1), 5)
+
+
 @pytest.mark.parametrize("frame,mask,threshold,region,expected", [
     # pylint:disable=line-too-long
     ("black-full-frame.png", None, None, stbt.Region.ALL, True),

@@ -138,7 +138,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
             # Undo cv2.erode above:
             out_region = out_region.extend(x=-1, y=-1)
             # Undo crop:
-            out_region = out_region.translate(region.x, region.y)
+            out_region = out_region.translate(region)
 
         motion = bool(out_region)
         if motion:

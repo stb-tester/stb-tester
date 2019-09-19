@@ -393,7 +393,7 @@ def _match_all(image, frame, match_parameters, region):
                 crop(frame, input_region), t, match_parameters, imglog):
 
             match_region = Region.from_extents(*match_region) \
-                                 .translate(input_region.x, input_region.y)
+                                 .translate(input_region)
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
                 first_pass_certainty, frame,
