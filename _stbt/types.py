@@ -269,13 +269,11 @@ class Region(with_metaclass(_RegionClsMethods,
         :returns: A new region with the position of the region adjusted by the
             given amounts.  The width and height are unaffected.
 
-        `translate` either accepts seperate `int` x and y coordinates or a
-        single `Region` argument:
+        ``translate`` accepts separate x and y arguments, or a single `Region`.
+
+        For example, move the region 1px right and 2px down:
 
         >>> b = Region(4, 4, 9, 6)
-
-        Move the region 1px right and 2px down:
-
         >>> b.translate(1, 2)
         Region(x=5, y=6, right=14, bottom=12)
 
