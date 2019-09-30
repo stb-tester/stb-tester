@@ -362,9 +362,8 @@ def match_text(text, frame=None, region=Region.ALL,
         p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
-            box = None
-            for _, elem in p:
-                box = Region.bounding_box(box, _hocr_elem_region(elem))
+            box = Region.bounding_box(*[_hocr_elem_region(elem)
+                                        for _, elem in p])
             # _tesseract crops to region and scales up by a factor of 3 so
             # we must undo this transformation here.
             n = 3 if upsample else 1
