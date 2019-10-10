@@ -2,9 +2,10 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import errno
 import os
+import sys
 import tempfile
 from contextlib import contextmanager
 from shutil import rmtree
@@ -88,8 +89,51 @@ def find_import_name(filename):
     return import_dir, import_name
 
 
+if sys.version_info.major == 2:  # Python 2
+    text_type = unicode  # pylint: disable=undefined-variable
+
+    def strip_newtypes(text):
+        """python-future's string newtypes can behave in surprising ways.  We
+        want to avoid returning them in our APIs and we need to cope with
+        handling them internally, so we have this function."""
+        # newbytes overrides __instancecheck__, so we can't use isinstance to
+        # check if it's an instance
+        typename = type(text).__name__
+        if typename == b"newbytes":
+            from future.types.newbytes import newbytes
+            # newbytes derives from bytes, but overloads __str__, adding a b'
+            # prefix, so we avoid this by calling the base class
+            return super(newbytes, text).__str__()
+        elif typename == b'newstr':
+            return unicode(text)  # pylint: disable=undefined-variable
+        else:
+            return text
+
+    def test_strip_newtypes():
+        from future.types.newbytes import newbytes
+        from future.types.newstr import newstr
+
+        def check(x, y):
+            assert x == y
+            assert type(x).__name__ == type(y).__name__
+
+        check(strip_newtypes(newstr("abc")), "abc")
+        check(strip_newtypes(newbytes(b"abc")), b"abc")
+else:
+    text_type = str
+
+    def strip_newtypes(text):
+        # newtypes won't be used on Python 3
+        return text
+
+
+native_str = str
+
+
 def to_bytes(text):
-    if isinstance(text, str):
+    text = strip_newtypes(text)
+
+    if isinstance(text, text_type):
         return text.encode("utf-8", errors="backslashreplace")
     elif isinstance(text, bytes):
         return text
@@ -98,7 +142,9 @@ def to_bytes(text):
 
 
 def to_unicode(text):
+    text = strip_newtypes(text)
+
     if isinstance(text, bytes):
         return text.decode("utf-8", errors="replace")
     else:
-        return str(text)
+        return text_type(text)
