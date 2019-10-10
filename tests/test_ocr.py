@@ -38,6 +38,9 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
     text = stbt.ocr(load_image("ocr/" + image), **kwargs)
     assert text == expected_text
 
+    # Don't leak python future newtypes
+    assert type(text).__name__ in ["unicode", "str"]
+
 
 # Remove when region=None doesn't raise -- see #433
 def test_that_ocr_region_none_isnt_allowed():
@@ -249,6 +252,9 @@ def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
     assert result.match is False
     assert result.region is None
     assert result.text == "Onion Bhaji"
+
+    # Avoid future.types.newtypes in return values
+    assert type(result.text).__name__ in ["str", "unicode"]
 
 
 @pytest.mark.parametrize("region", [
