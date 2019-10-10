@@ -31,7 +31,8 @@ except ImportError:
     lmdb = None
 
 from _stbt.logging import ImageLogger
-from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
+from _stbt.utils import (
+    mkdir_p, named_temporary_directory, scoped_curdir, to_bytes)
 
 try:
     from itertools import zip_longest
@@ -155,7 +156,7 @@ def memoize_iterator(additional_fields=None):
 
             for i in itertools.count():
                 with _cache.begin() as txn:
-                    out = txn.get(key + str(i).encode())
+                    out = txn.get(key + to_bytes(str(i)))
                 if out is None:
                     break
                 out_, stop_ = json.loads(out)
@@ -169,10 +170,10 @@ def memoize_iterator(additional_fields=None):
                 try:
                     output = next(it)
                     if i >= skip:
-                        _cache_put(key + str(i).encode(), [output, None])
+                        _cache_put(key + to_bytes(str(i)), [output, None])
                         yield output
                 except StopIteration:
-                    _cache_put(key + str(i).encode(), [None, "StopIteration"])
+                    _cache_put(key + to_bytes(str(i)), [None, "StopIteration"])
                     raise
 
         return inner
