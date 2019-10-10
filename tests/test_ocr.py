@@ -89,8 +89,9 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
 def test_that_match_text_accepts_unicode():
     f = load_image("ocr/unicode.png")
     assert stbt.match_text("David", f, lang='eng+deu')  # ascii
-    assert stbt.match_text(u"Röthlisberger", f, lang='eng+deu')  # unicode
-    assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # utf-8 bytes
+    assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # unicode
+    assert stbt.match_text(
+        "Röthlisberger".encode('utf-8'), f, lang='eng+deu')  # utf-8 bytes
 
 
 def test_that_default_language_is_configurable():
