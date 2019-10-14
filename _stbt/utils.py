@@ -128,6 +128,7 @@ else:
 
 
 native_str = str
+native_int = int
 
 
 def to_bytes(text):

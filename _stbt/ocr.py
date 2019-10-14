@@ -22,7 +22,8 @@ from .config import get_config
 from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import named_temporary_directory, native_str, text_type, to_unicode
+from .utils import (
+    named_temporary_directory, native_int, native_str, text_type, to_unicode)
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -631,7 +632,7 @@ def _hocr_elem_region(elem):
     while elem is not None:
         m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
         if m:
-            extents = [int(x) for x in m.groups()]
+            extents = [native_int(x) for x in m.groups()]
             return Region.from_extents(*extents)
         elem = elem.getparent()
 
