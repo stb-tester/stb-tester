@@ -133,14 +133,7 @@ class HdmiCecControl(object):
     }
 
     def __init__(self, device, source, destination):
-        # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
-        # find it.
-        # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
-        sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
-        try:
-            import cec  # pylint:disable=import-error
-        finally:
-            sys.path.pop(0)
+        cec = import_cec()
 
         if source is None:
             source = 1
@@ -367,6 +360,28 @@ def test_hdmi_cec_control_defaults():
         """)
 
 
+def import_cec():
+    if sys.version_info.major == 2:
+        # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
+        # find it.
+        # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
+        sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
+
+        # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1822066
+        sys.path.insert(0, "/usr/lib/python2.7.15rc1/dist-packages")
+        sys.path.insert(0, "/usr/lib/python2.7.15rc1/dist-packages/cec")
+        try:
+            import cec  # pylint:disable=import-error
+        finally:
+            sys.path.pop(0)
+            sys.path.pop(0)
+            sys.path.pop(0)
+    else:
+        import cec  # pylint:disable=import-error
+
+    return cec
+
+
 @contextmanager
 def _fake_cec():
     import io
@@ -376,7 +391,10 @@ def _fake_cec():
     except ImportError:
         from mock import patch  # Python 2 backport
 
-    pytest.importorskip("cec")
+    try:
+        import_cec()
+    except ImportError:
+        pytest.skip("could not import cec")
 
     io = io.BytesIO()
 
