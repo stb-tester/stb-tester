@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from future.utils import string_types
+import codecs
 import re
 import sys
 import threading
@@ -386,14 +387,14 @@ def _fake_cec():
     def cec_cmd_get_data(cmd):
         # Ugly, but can't find another way to do it
         import ctypes
-        return str(buffer(ctypes.cast(  # pylint:disable=undefined-variable
+        return bytes(memoryview(ctypes.cast(  # pylint:disable=undefined-variable
             int(cmd.parameters.data), ctypes.POINTER(ctypes.c_uint8)).contents,
             0, cmd.parameters.size))
 
     def Transmit(_, cmd):
         io.write(b"Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
             cmd.destination, cmd.initiator, cmd.opcode,
-            cec_cmd_get_data(cmd).encode('hex')))
+            codecs.encode(cec_cmd_get_data(cmd), 'hex')))
         return True
 
     def RescanActiveDevices(_):
