@@ -14,6 +14,7 @@ from logging import getLogger
 import networkx as nx
 import numpy
 import stbt
+from _stbt.utils import text_type
 
 
 log = getLogger("stbt.keyboard")
@@ -315,7 +316,7 @@ class Keyboard(object):
         """
         return nx.parse_edgelist(graph.split("\n"),
                                  create_using=nx.DiGraph(),
-                                 data=[("key", str)])
+                                 data=[("key", text_type)])
 
 
 def _selection_to_text(selection):

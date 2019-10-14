@@ -6,6 +6,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import sys
+
 import networkx as nx
 import mock
 import numpy
@@ -143,21 +145,29 @@ GRAPH = """
 G = stbt.Keyboard.parse_edgelist(GRAPH)
 nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
+if sys.version_info.major == 2:
+    G_BYTES = stbt.Keyboard.parse_edgelist(GRAPH.encode('utf-8'))
+    nx.relabel_nodes(G_BYTES, {b"SPACE": b" "}, copy=False)
+    GRAPHS = [G, G_BYTES]
+else:
+    GRAPHS = [G]
 
-def test_keys_to_press():
-    assert list(_keys_to_press(G, "A", "A")) == []
-    assert list(_keys_to_press(G, "A", "B")) == [("KEY_RIGHT", {"B"})]
-    assert list(_keys_to_press(G, "B", "A")) == [("KEY_LEFT", {"A"})]
-    assert list(_keys_to_press(G, "A", "C")) == [("KEY_RIGHT", {"B"}),
+
+@pytest.mark.parametrize("g", GRAPHS)
+def test_keys_to_press(g):
+    assert list(_keys_to_press(g, "A", "A")) == []
+    assert list(_keys_to_press(g, "A", "B")) == [("KEY_RIGHT", {"B"})]
+    assert list(_keys_to_press(g, "B", "A")) == [("KEY_LEFT", {"A"})]
+    assert list(_keys_to_press(g, "A", "C")) == [("KEY_RIGHT", {"B"}),
                                                  ("KEY_RIGHT", {"C"})]
-    assert list(_keys_to_press(G, "C", "A")) == [("KEY_LEFT", {"B"}),
+    assert list(_keys_to_press(g, "C", "A")) == [("KEY_LEFT", {"B"}),
                                                  ("KEY_LEFT", {"A"})]
-    assert list(_keys_to_press(G, "A", "H")) == [("KEY_DOWN", {"H"})]
-    assert list(_keys_to_press(G, "H", "A")) == [("KEY_UP", {"A"})]
-    assert list(_keys_to_press(G, "A", "I")) in (
+    assert list(_keys_to_press(g, "A", "H")) == [("KEY_DOWN", {"H"})]
+    assert list(_keys_to_press(g, "H", "A")) == [("KEY_UP", {"A"})]
+    assert list(_keys_to_press(g, "A", "I")) in (
         [("KEY_RIGHT", {"B"}), ("KEY_DOWN", {"I"})],
         [("KEY_DOWN", {"H"}), ("KEY_RIGHT", {"I"})])
-    assert list(_keys_to_press(G, " ", "A")) == [
+    assert list(_keys_to_press(g, " ", "A")) == [
         ("KEY_UP", {"V", "W", "X", "Y", "Z", "-", "'"})]
 
 

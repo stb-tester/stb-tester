@@ -38,6 +38,9 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
     text = stbt.ocr(load_image("ocr/" + image), **kwargs)
     assert text == expected_text
 
+    # Don't leak python future newtypes
+    assert type(text).__name__ in ["unicode", "str"]
+
 
 # Remove when region=None doesn't raise -- see #433
 def test_that_ocr_region_none_isnt_allowed():
@@ -89,8 +92,9 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
 def test_that_match_text_accepts_unicode():
     f = load_image("ocr/unicode.png")
     assert stbt.match_text("David", f, lang='eng+deu')  # ascii
-    assert stbt.match_text(u"Röthlisberger", f, lang='eng+deu')  # unicode
-    assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # utf-8 bytes
+    assert stbt.match_text("Röthlisberger", f, lang='eng+deu')  # unicode
+    assert stbt.match_text(
+        "Röthlisberger".encode('utf-8'), f, lang='eng+deu')  # utf-8 bytes
 
 
 def test_that_default_language_is_configurable():
@@ -248,6 +252,9 @@ def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
     assert result.match is False
     assert result.region is None
     assert result.text == "Onion Bhaji"
+
+    # Avoid future.types.newtypes in return values
+    assert type(result.text).__name__ in ["str", "unicode"]
 
 
 @pytest.mark.parametrize("region", [
