@@ -405,9 +405,9 @@ def _fake_cec():
     def cec_cmd_get_data(cmd):
         # Ugly, but can't find another way to do it
         import ctypes
-        return bytes(memoryview(ctypes.cast(  # pylint:disable=undefined-variable
-            int(cmd.parameters.data), ctypes.POINTER(ctypes.c_uint8)).contents,
-            0, cmd.parameters.size))
+        return bytearray(ctypes.cast(
+            int(cmd.parameters.data),
+            ctypes.POINTER(ctypes.c_uint8 * cmd.parameters.size)).contents)
 
     def Transmit(_, cmd):
         io.write(b"Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
