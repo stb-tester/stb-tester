@@ -51,6 +51,7 @@ from collections import namedtuple
 from enum import Enum
 
 from _stbt.logging import debug
+from _stbt.utils import native_str
 
 
 class CoordinateSystem(Enum):
@@ -308,7 +309,8 @@ class AdbDevice(object):
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
         command = ["shell", "input", "swipe",
-                   str(x1), str(y1), str(x2), str(y2)]
+                   native_str(x1), native_str(y1),
+                   native_str(x2), native_str(y2)]
         self.adb(command, timeout_secs=10)
 
     def tap(self, position):
@@ -326,7 +328,8 @@ class AdbDevice(object):
         debug("AdbDevice.tap((%d,%d))" % (x, y))
 
         x, y = self._to_native_coordinates(x, y)
-        self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
+        self.adb(["shell", "input", "tap", native_str(x), native_str(y)],
+                 timeout_secs=10)
 
     def _adb(self, command, timeout_secs=None, **kwargs):
         _command = []

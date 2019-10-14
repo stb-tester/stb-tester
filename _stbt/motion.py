@@ -15,6 +15,7 @@ from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
                        pixel_bounding_box, crop, limit_time)
 from .logging import debug, draw_on, ImageLogger
 from .types import Region, UITestFailure
+from .utils import text_type
 
 
 def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
@@ -153,7 +154,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
                               out_region, frame)
         draw_on(frame, result, label="detect_motion()")
         debug("%s found: %s" % (
-            "Motion" if motion else "No motion", str(result)))
+            "Motion" if motion else "No motion", text_type(result)))
         _log_motion_image_debug(imglog, result)
         yield result
 
@@ -207,7 +208,7 @@ def wait_for_motion(
     if consecutive_frames is None:
         consecutive_frames = get_config('motion', 'consecutive_frames')
 
-    consecutive_frames = str(consecutive_frames)
+    consecutive_frames = text_type(consecutive_frames)
     if '/' in consecutive_frames:
         motion_frames = int(consecutive_frames.split('/')[0])
         considered_frames = int(consecutive_frames.split('/')[1])

@@ -13,6 +13,8 @@ import gi
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # pylint:disable=wrong-import-order
 
+from .utils import text_type
+
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see
 # [bz #678663]).  Apparently this is fixed upstream but we are still awaiting
@@ -91,7 +93,7 @@ def _sample_borrow_buffer(sample):
     """
     if not isinstance(sample, Gst.Sample):
         raise TypeError("sample_borrow_buffer must take a Gst.Sample.  "
-                        "Received a %s instead" % str(type(sample)))
+                        "Received a %s instead" % text_type(type(sample)))
 
     # hashing a GObject actually gives the address (pointer) of the C struct
     # that backs it!:

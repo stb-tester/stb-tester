@@ -15,7 +15,7 @@ import pytest
 
 from _stbt.control import uri_to_control
 from _stbt.wait import wait_until
-from _stbt.utils import named_temporary_directory, scoped_process
+from _stbt.utils import named_temporary_directory, native_str, scoped_process
 
 
 # For py.test fixtures:
@@ -92,7 +92,7 @@ def socket_passing_setup(socket):
     def preexec_fn():
         fd = socket.fileno()
         os.environ['LISTEN_FDS'] = '1'
-        os.environ['LISTEN_PID'] = str(os.getpid())
+        os.environ['LISTEN_PID'] = native_str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
         if sys.version_info.major > 2:

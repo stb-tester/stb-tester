@@ -41,7 +41,7 @@ import socket
 import sys
 
 from _stbt.control import uri_to_control
-from _stbt.utils import to_bytes
+from _stbt.utils import native_str, to_bytes
 
 
 def main(argv):
@@ -62,7 +62,7 @@ def main(argv):
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
     if os.environ.get('LISTEN_FDS') == '1' and \
-            os.environ.get('LISTEN_PID') == str(os.getpid()):
+            os.environ.get('LISTEN_PID') == native_str(os.getpid()):
         s = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_STREAM)
     else:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -102,7 +102,8 @@ def main(argv):
             except Exception as e:  # pylint: disable=broad-except
                 logging.error("Error pressing key %r: %s", key, e,
                               exc_info=True)
-                send_response(conn, cmd, success=False, data=to_bytes(str(e)))
+                send_response(conn, cmd, success=False,
+                              data=to_bytes(native_str(e)))
                 continue
             send_response(conn, cmd, success=True)
 

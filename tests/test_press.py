@@ -6,6 +6,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 import pytest
 
 from _stbt.core import DeviceUnderTest, NoSinkPipeline
+from _stbt.utils import text_type
 
 
 def test_that_pressing_context_manager_raises_keyup_exceptions():
@@ -15,7 +16,7 @@ def test_that_pressing_context_manager_raises_keyup_exceptions():
     with pytest.raises(RuntimeError) as excinfo:
         with dut.pressing("KEY_MENU"):
             pass
-    assert "keyup KEY_MENU failed" in str(excinfo.value)
+    assert "keyup KEY_MENU failed" in text_type(excinfo.value)
 
 
 def test_that_pressing_context_manager_suppresses_keyup_exceptions():

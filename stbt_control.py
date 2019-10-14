@@ -22,6 +22,7 @@ from textwrap import dedent
 
 import _stbt.control
 from _stbt.config import ConfigurationError, get_config
+from _stbt.utils import text_type
 
 SPECIAL_CHARS = {
     curses.ascii.SP: "Space",
@@ -164,7 +165,7 @@ def main_loop(control_uri, keymap_file):
                 clear_last_command(term)
             if control_key:
                 yield control_key
-            term.addstr(str(control_key))
+            term.addstr(text_type(control_key))
             timer = threading.Timer(1, clear_last_command, [term])
             timer.start()
             time.sleep(.2)
@@ -291,7 +292,7 @@ def default_keymap_file():
 
 def error(s):
     sys.stderr.write("%s: error: %s\n" % (
-        os.path.basename(sys.argv[0]), str(s)))
+        os.path.basename(sys.argv[0]), text_type(s)))
     sys.exit(1)
 
 

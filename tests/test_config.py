@@ -12,8 +12,7 @@ import pytest
 
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
-from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
-                         to_native_str)
+from _stbt.utils import named_temporary_directory, scoped_curdir, to_native_str
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -133,7 +132,7 @@ def test_to_enum():
 
         with pytest.raises(ConfigurationError) as excinfo:
             get_config("global", "byvaluc", type_=MyEnum)
-        assert "Valid values are NAME_1, NAME_2" in str(excinfo.value)
+        assert "Valid values are NAME_1, NAME_2" in text_type(excinfo.value)
 
         with pytest.raises(ConfigurationError):
             get_config("global", "badstr", type_=MyEnum)
@@ -148,7 +147,7 @@ def test_to_enum():
 
         with pytest.raises(ConfigurationError) as excinfo:
             get_config("global", "badint", type_=MyIntEnum)
-        assert "Valid values are NAME_5, NAME_6" in str(excinfo.value)
+        assert "Valid values are NAME_5, NAME_6" in text_type(excinfo.value)
 
 
 @contextmanager

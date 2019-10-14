@@ -352,9 +352,9 @@ def match_text(text, frame=None, region=Region.ALL,
             result = TextMatchResult(rts, False, None, frame, text)
 
     if result.match:
-        debug("match_text: Match found: %s" % str(result))
+        debug("match_text: Match found: %s" % text_type(result))
     else:
-        debug("match_text: No match found: %s" % str(result))
+        debug("match_text: No match found: %s" % text_type(result))
 
     imglog.set(text=text, case_sensitive=case_sensitive,
                result=result, hocr=hocr)
@@ -447,7 +447,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     intersection = Region.intersect(frame_region, region)
     if intersection is None:
         warn("Requested OCR in region %s which doesn't overlap with "
-             "the frame %s" % (str(region), frame_region))
+             "the frame %s" % (text_type(region), frame_region))
         imglog.set(region=None)
         return (u'', None)
     else:
@@ -468,7 +468,7 @@ def _tesseract_subprocess(
         imglog, tesseract_version):
 
     if tesseract_version >= LooseVersion("4.0"):
-        engine_flags = ["--oem", str(int(engine))]
+        engine_flags = ["--oem", native_str(int(engine))]
         tessdata_suffix = ''
     else:
         engine_flags = []
@@ -509,7 +509,7 @@ def _tesseract_subprocess(
         cmd = ["tesseract", '-l', lang,
                tmp + '/input.png',
                tmp + '/output',
-               psm_flag, str(int(mode))] + engine_flags
+               psm_flag, native_str(int(mode))] + engine_flags
 
         tessenv = os.environ.copy()
 

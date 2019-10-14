@@ -18,7 +18,7 @@ import pytest
 import _stbt.config
 import stbt
 from _stbt.ocr import _tesseract_version
-from _stbt.utils import named_temporary_directory
+from _stbt.utils import named_temporary_directory, text_type
 from stbt import load_image
 
 
@@ -251,7 +251,7 @@ def test_match_text_stringify_result():
     assert re.match(
         r"TextMatchResult\(time=None, match=True, region=Region\(.*\), "
         r"frame=<1280x720x3>, text=u?'Onion Bhaji'\)",
-        str(result))
+        text_type(result))
 
 
 @requires_tesseract

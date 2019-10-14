@@ -41,6 +41,7 @@ import time
 from contextlib import contextmanager
 
 from _stbt.config import get_config, set_config
+from _stbt.utils import text_type
 from _stbt.x11 import x_server
 
 
@@ -70,8 +71,8 @@ def virtual_stb(command, x_keymap=None, verbose=False):
                     'ximagesrc use-damage=false remote=true show-pointer=false '
                     'display-name=%(x_display)s ! video/x-raw,framerate=24/1'),
                 "x_display": display,
-                "vstb_child_pid": str(child.pid),
-                "vstb_pid": str(os.getpid()),
+                "vstb_child_pid": text_type(child.pid),
+                "vstb_pid": text_type(os.getpid()),
             })
             yield (child, config)
         finally:

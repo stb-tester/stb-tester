@@ -10,7 +10,7 @@ import pytest
 
 from stbt import wait_until
 from _stbt.control import uri_to_control
-from _stbt.utils import named_temporary_directory, scoped_process
+from _stbt.utils import named_temporary_directory, scoped_process, native_str
 
 # pylint:disable=redefined-outer-name
 
@@ -119,14 +119,14 @@ def test_press_with_unknown_remote(lircd):
     control = uri_to_control("lirc:%s:roku" % lircd.socket)
     with pytest.raises(RuntimeError) as excinfo:
         control.press("KEY_OK")
-    assert 'unknown remote: "roku"' in str(excinfo.value)
+    assert 'unknown remote: "roku"' in native_str(excinfo.value)
 
 
 def test_press_with_unknown_key(lircd):
     control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)
     with pytest.raises(RuntimeError) as excinfo:
         control.press("KEY_MAGIC")
-    assert 'unknown command: "KEY_MAGIC"' in str(excinfo.value)
+    assert 'unknown command: "KEY_MAGIC"' in native_str(excinfo.value)
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):

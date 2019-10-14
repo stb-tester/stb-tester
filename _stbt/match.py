@@ -27,7 +27,7 @@ from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .utils import native_str
+from .utils import native_str, text_type
 
 try:
     from .sqdiff import sqdiff
@@ -273,9 +273,9 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     """
     result = next(_match_all(image, frame, match_parameters, region))
     if result.match:
-        debug("Match found: %s" % str(result))
+        debug("Match found: %s" % text_type(result))
     else:
-        debug("No match found. Closest match: %s" % str(result))
+        debug("No match found. Closest match: %s" % text_type(result))
     return result
 
 
@@ -304,12 +304,12 @@ def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
     any_matches = False
     for result in _match_all(image, frame, match_parameters, region):
         if result.match:
-            debug("Match found: %s" % str(result))
+            debug("Match found: %s" % text_type(result))
             any_matches = True
             yield result
         else:
             if not any_matches:
-                debug("No match found. Closest match: %s" % str(result))
+                debug("No match found. Closest match: %s" % text_type(result))
             break
 
 

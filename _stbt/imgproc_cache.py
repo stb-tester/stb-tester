@@ -32,7 +32,7 @@ except ImportError:
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import (
-    mkdir_p, named_temporary_directory, scoped_curdir, to_bytes)
+    mkdir_p, named_temporary_directory, scoped_curdir, text_type, to_bytes)
 
 try:
     from itertools import zip_longest
@@ -207,7 +207,7 @@ class _ArgsEncoder(json.JSONEncoder):
                 raise NotCachable()
             return None
         elif isinstance(o, LooseVersion):
-            return str(o)
+            return text_type(o)
         elif isinstance(o, set):
             return sorted(o)
         elif isinstance(o, MatchParameters):

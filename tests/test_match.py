@@ -19,6 +19,7 @@ from _stbt import cv2_compat
 from _stbt.imgutils import _image_region
 from _stbt.logging import scoped_debug_level
 from _stbt.match import _merge_regions
+from _stbt.utils import text_type
 from tests.test_core import _find_file
 from tests.test_ocr import requires_tesseract
 
@@ -43,11 +44,11 @@ def test_that_matchresult_image_matches_template_passed_to_match():
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
     assert re.search(r"image=u?'black.png'",
-                     str(stbt.match("black.png", frame=black())))
+                     text_type(stbt.match("black.png", frame=black())))
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
-    assert "image=<Custom Image>" in str(
+    assert "image=<Custom Image>" in text_type(
         stbt.match(black(30, 30), frame=black()))
 
 
@@ -79,14 +80,14 @@ def test_match_error_message_for_too_small_frame_and_region():
                    frame=black(width=91, height=160))
     assert (
         "Frame (160, 91, 3) must be larger than reference image (160, 92, 3)"
-        in str(excinfo.value))
+        in text_type(excinfo.value))
 
     with pytest.raises(ValueError) as excinfo:
         stbt.match("videotestsrc-redblue.png",
                    frame=black(width=92, height=159))
     assert (
         "Frame (159, 92, 3) must be larger than reference image (160, 92, 3)"
-        in str(excinfo.value))
+        in text_type(excinfo.value))
 
     with pytest.raises(ValueError) as excinfo:
         # Region seems large enough but actually it extends beyond the frame
@@ -95,7 +96,7 @@ def test_match_error_message_for_too_small_frame_and_region():
     assert (
         "Region(x=1189, y=560, right=1280, bottom=720) must be larger than "
         "reference image (160, 92, 3)"
-        in str(excinfo.value))
+        in text_type(excinfo.value))
 
     with pytest.raises(ValueError) as excinfo:
         # Region seems large enough but actually it extends beyond the frame
@@ -104,7 +105,7 @@ def test_match_error_message_for_too_small_frame_and_region():
     assert (
         "Region(x=1188, y=561, right=1280, bottom=720) must be larger than "
         "reference image (160, 92, 3)"
-        in str(excinfo.value))
+        in text_type(excinfo.value))
 
 
 @pytest.mark.parametrize("match_method", [
@@ -369,7 +370,7 @@ def test_that_results_dont_overlap(match_method):
                             match_parameters=mp(match_method=match_method)):
         print(m)
         assert m.region not in all_matches, "Match %s already seen:\n    %s" % (
-            m, "\n    ".join(str(x) for x in all_matches))
+            m, "\n    ".join(text_type(x) for x in all_matches))
         assert all(stbt.Region.intersect(m.region, x) is None
                    for x in all_matches)
         all_matches.add(m.region)

@@ -11,6 +11,7 @@ import gi
 
 from .gst_hacks import map_gst_sample, sample_get_size
 from .imgutils import Frame
+from .utils import text_type
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst  # pylint:disable=wrong-import-order
@@ -51,7 +52,7 @@ class _MappedSample(object):
     def __init__(self, sample, readwrite=False):
         if not isinstance(sample, Gst.Sample):
             raise TypeError("MappedSample must take a Gst.Sample.  Received a "
-                            "%s" % str(type(sample)))
+                            "%s" % text_type(type(sample)))
 
         flags = Gst.MapFlags.READ
         if readwrite:
