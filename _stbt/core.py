@@ -12,7 +12,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from builtins import (ascii, chr, filter, hex, input, map, next, oct, open, pow,  # pylint:disable=redefined-builtin,unused-import,wildcard-import,wrong-import-order
+                      range, round, super, zip)
 from future.utils import native, raise_, string_types, text_to_native_str
 
 import argparse

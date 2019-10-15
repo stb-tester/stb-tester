@@ -8,7 +8,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from past.builtins import cmp
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from builtins import (ascii, chr, filter, hex, input, map, next, oct, open, pow,  # pylint:disable=redefined-builtin,unused-import,wildcard-import,wrong-import-order
+                      range, round, super, zip)
 import functools
 import threading
 from future.utils import with_metaclass
