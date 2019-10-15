@@ -222,7 +222,7 @@ class LircControl(RemoteControl):
                                         to_bytes(key))
         s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
-        debug("Pressed " + key)
+        debug("Pressed %s" % key)
 
     def keydown(self, key):
         s = self._connect()
@@ -230,7 +230,7 @@ class LircControl(RemoteControl):
                                          to_bytes(key))
         s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
-        debug("Holding " + key)
+        debug("Holding %s" % key)
 
     def keyup(self, key):
         s = self._connect()
@@ -238,7 +238,7 @@ class LircControl(RemoteControl):
                                         to_bytes(key))
         s.sendall(command + b"\n")
         _read_lircd_reply(s, command)
-        debug("Released " + key)
+        debug("Released %s" % key)
 
 
 def _read_lircd_reply(stream, command):
@@ -477,7 +477,7 @@ class IRNetBoxControl(RemoteControl):
         with self._connect() as irnb:
             irnb.irsend_raw(
                 port=self.output, power=100, data=self.config[key])
-        debug("Pressed " + key)
+        debug("Pressed %s" % key)
 
     def _connect(self):
         try:
@@ -534,7 +534,7 @@ class RokuHttpControl(RemoteControl):
             "http://%s:8060/keypress/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
-        debug("Pressed " + key)
+        debug("Pressed %s" % key)
 
     def keydown(self, key):
         import requests
@@ -544,7 +544,7 @@ class RokuHttpControl(RemoteControl):
             "http://%s:8060/keydown/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
-        debug("Holding " + key)
+        debug("Holding %s" % key)
 
     def keyup(self, key):
         import requests
@@ -554,7 +554,7 @@ class RokuHttpControl(RemoteControl):
             "http://%s:8060/keyup/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
-        debug("Released " + key)
+        debug("Released %s" % key)
 
 
 class SamsungTCPControl(RemoteControl):
@@ -596,7 +596,7 @@ class SamsungTCPControl(RemoteControl):
         payload_start = bytearray([0x00, 0x00, 0x00])
         key_enc = self._encode_string(key)
         self._send_payload(payload_start + key_enc)
-        debug("Pressed " + key)
+        debug("Pressed %s" % key)
         reply = self.socket.recv(4096)
         debug("SamsungTCPControl reply: %s\n" % reply)
 
@@ -632,7 +632,7 @@ class X11Control(RemoteControl):
             e['DISPLAY'] = self.display
         subprocess.check_call(
             ['xdotool', 'key', self.mapping.get(key, key)], env=e)
-        debug("Pressed " + key)
+        debug("Pressed %s" % key)
 
 
 def file_control_recorder(filename):

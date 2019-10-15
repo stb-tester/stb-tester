@@ -27,6 +27,7 @@ from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
 from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
 from .sqdiff import sqdiff
 from .types import Position, Region, UITestFailure
+from .utils import native_str
 
 
 class MatchMethod(enum.Enum):
@@ -37,7 +38,7 @@ class MatchMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return str(self)
+        return native_str(self)
 
 
 class ConfirmMethod(enum.Enum):
@@ -47,7 +48,7 @@ class ConfirmMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return str(self)
+        return native_str(self)
 
 
 class MatchParameters(object):
