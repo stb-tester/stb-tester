@@ -20,6 +20,38 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 
 
+def for_object_repository(cls=None):
+    """A decorator that marks classes and functions so they appear in the Object
+    Repository.
+
+    Classes that directly derive from `stbt.FrameObject` have this decorator
+    applied to them automatically.  This can be used to register other classes
+    and functions.
+
+    Usage:
+
+        @for_object_repository
+        class MyClass(object):
+            ...
+    """
+    # These classes are extracted by static analysis, so return the class
+    # unchanged:
+    if cls is None:
+        # Called like:
+        #
+        #     @for_object_repository()
+        #     class MyClass(object):
+        def decorator(cls):
+            return cls
+        return decorator
+    else:
+        # Called like:
+        #
+        #    @for_object_repository
+        #    class MyClass(object):
+        return cls
+
+
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
@@ -93,6 +125,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
+@for_object_repository()
 class FrameObject(with_metaclass(_FrameObjectMeta, object)):
     # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.

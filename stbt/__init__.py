@@ -31,6 +31,7 @@ from _stbt.config import (
     ConfigurationError,
     get_config)
 from _stbt.frameobject import (
+    for_object_repository,
     FrameObject)
 from _stbt.grid import (
     Grid,
@@ -79,6 +80,7 @@ __all__ = [
     "debug",
     "detect_motion",
     "draw_text",
+    "for_object_repository",
     "Frame",
     "FrameObject",
     "frames",
