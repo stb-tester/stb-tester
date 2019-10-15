@@ -109,9 +109,6 @@ class _FrameObjectMeta(type):
                     f = _noneify_property_fn(f)
                 dct[k] = property(f)
 
-        if 'AUTO_SELFTEST_EXPRESSIONS' not in dct:
-            dct['AUTO_SELFTEST_EXPRESSIONS'] = ['%s(frame={frame})' % name]
-
         return super(_FrameObjectMeta, mcs).__new__(mcs, name, parents, dct)
 
     def __init__(cls, name, parents, dct):
