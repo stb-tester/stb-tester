@@ -301,7 +301,7 @@ XXHASH_SOURCES = \
     vendor/xxHash/xxhash.h
 
 _stbt/libxxhash.so : $(XXHASH_SOURCES)
-	$(CC) -shared -fPIC -O3 -o $@ $(XXHASH_SOURCES) $(CFLAGS)
+	$(CC) -shared -fPIC -O3 -o $@ $(filter-out %.h,$(XXHASH_SOURCES)) $(CFLAGS)
 
 _stbt/libstbt.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
