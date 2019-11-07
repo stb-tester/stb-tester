@@ -84,6 +84,8 @@ class Region(with_metaclass(_RegionClsMethods,
     8
     >>> b.bottom
     10
+    >>> b.center
+    Position(x=8, y=7)
     >>> b.contains(c), a.contains(b), c.contains(b)
     (True, False, False)
     >>> b.extend(x=6, bottom=-4) == c
@@ -162,6 +164,11 @@ class Region(with_metaclass(_RegionClsMethods,
 
     ``x``, ``y``, ``right``, ``bottom``, ``width`` and ``height`` can be
     infinite --- that is, ``float("inf")`` or ``-float("inf")``.
+
+    .. py:attribute:: center
+
+        A `stbt.Position` specifying the x & y coordinates of the region's
+        center.
 
     .. py:staticmethod:: from_extents
 
@@ -247,6 +254,11 @@ class Region(with_metaclass(_RegionClsMethods,
     @property
     def height(self):
         return self.bottom - self.y
+
+    @property
+    def center(self):
+        return Position((self.x + self.right) // 2,
+                        (self.y + self.bottom) // 2)
 
     @staticmethod
     def from_extents(x, y, right, bottom):
