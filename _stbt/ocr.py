@@ -23,7 +23,8 @@ from .imgutils import _frame_repr, _image_region, crop
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import (
-    named_temporary_directory, native_int, native_str, text_type, to_unicode)
+    basestring, named_temporary_directory, native_int, native_str, text_type,
+    to_unicode)
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -150,7 +151,8 @@ def ocr(frame=None, region=Region.ALL,
         mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         lang=None, tesseract_config=None, tesseract_user_words=None,
         tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None, engine=None, char_whitelist=None):
+        text_color_threshold=None, engine=None, char_whitelist=None,
+        corrections=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -240,10 +242,26 @@ def ocr(frame=None, region=Region.ALL,
         that tesseract won't think that a zero is the letter o.
         Note that Tesseract 4.0's LSTM engine ignores ``char_whitelist``.
 
+    :param dict corrections:
+        Dictionary of corrections to replace known OCR mis-reads. Each key of
+        the dict is the text to search for; the value is the corrected string
+        to replace the matching key. If the key is a string, it is treated as
+        plain text and it will only match at word boundaries (for example the
+        string ``"he saw"`` won't match ``"the saw"`` nor ``"he saws"``). If
+        the key is a regular expression pattern (created with `re.compile`) it
+        can match anywhere, and the replacement string can contain
+        backreferences such as ``"\1"`` which are replaced with the
+        corresponding group in the pattern (same as Python's `re.sub`).
+        Example::
+
+            corrections={'bad': 'good',
+                         re.compile(r'[oO]'): '0'}
+
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
+    | Added in v32: The ``corrections`` parameter.
     """
     if frame is None:
         import stbt
@@ -269,6 +287,10 @@ def ocr(frame=None, region=Region.ALL,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
         text_color_threshold, engine, char_whitelist, imglog)
     text = text.strip().translate(_ocr_transtab)
+
+    if corrections is not None:
+        text = apply_ocr_corrections(text, corrections)
+
     debug(u"OCR in region %s read '%s'." % (region, text))
     _log_ocr_image_debug(imglog, text)
     return text
@@ -361,6 +383,31 @@ def match_text(text, frame=None, region=Region.ALL,
     _log_ocr_image_debug(imglog)
 
     return result
+
+
+# Python 2.7 & 3.6 have `re._pattern_type` but that will be removed in Python
+# 3.7 where they introduce `re.Pattern`.
+PatternType = type(re.compile(""))
+
+
+def apply_ocr_corrections(text, corrections):
+    """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
+
+    This is also available as a separate function, so that you can use it to
+    post-process old test artifacts using new corrections.
+    """
+    # Match plain strings at word boundaries:
+    pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
+                       for k in corrections
+                       if isinstance(k, basestring))
+    if pattern:
+        replace = lambda matchobj: corrections[matchobj.group(0)]
+        text = re.sub(pattern, replace, text)
+    # Match regexes:
+    for k, v in corrections.items():
+        if isinstance(k, PatternType):
+            text = re.sub(k, v, text)
+    return text
 
 
 _memoise_tesseract_version = None
