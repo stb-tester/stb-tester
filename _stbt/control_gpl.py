@@ -41,7 +41,7 @@ class HdmiCecControl(object):
         "KEY_BACK": 13,
 
         # 0x0E - 0x1F Reserved
-        "KEY_TV": 16,
+        "KEY_TV": 16,  # Apple TV
 
         # Back to official CEC names
         "KEY_0": 32,
