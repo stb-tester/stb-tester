@@ -12,8 +12,38 @@ from collections import namedtuple
 
 
 class Position(namedtuple('Position', 'x y')):
-    """A point with ``x`` and ``y`` coordinates."""
-    pass
+    """A point with ``x`` and ``y`` coordinates.
+
+    >>> Region.bounding_box(Position(1, 8), Position(7, 3))
+    Region(x=1, y=3, right=7, bottom=8)
+    >>> b = Region(4, 4, right=13, bottom=10)
+    >>> b.contains(Position(1, 3))
+    False
+    >>> b.contains(Position(7, 8))
+    True
+    >>> b.contains(Position(13, 10))
+    True
+    >>> b.contains(Position(14, 9))
+    False
+    """
+
+    # Properties included so code can polymorphically deal with both positions
+    # and regions.  In particular this allows region.contains(position) and
+    # Region.bounding_box to work.
+    @property
+    def right(self):
+        return self.x
+
+    @property
+    def bottom(self):
+        return self.y
+
+    @property
+    def center(self):
+        return self
+
+    width = 0
+    height = 0
 
 
 class _RegionClsMethods(type):
