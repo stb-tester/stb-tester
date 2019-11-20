@@ -1,3 +1,6 @@
+from future.types.newbytes import newbytes
+from future.types.newstr import newstr
+
 import os
 import subprocess
 from collections import namedtuple
@@ -31,80 +34,85 @@ def lircd():
 
 
 def test_press(lircd):
-    control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)
-    control.press("KEY_OK")
-    lircd_output = open(lircd.logfile, "r").read()
-    expected = dedent("""\
-        pulse 9000
-        space 4500
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 527
-        pulse 527
-        space 527
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 1703
-        pulse 527
-        space 527
-        pulse 527
-        space 38000
-        """)
-    assert expected == lircd_output
+    logfile = open(lircd.logfile)
+
+    # newbytes doesn't play well with parameterize here, so we use a for loop:
+    for key in [b'KEY_OK', u'KEY_OK', newbytes(b'KEY_OK'), newstr(u'KEY_OK')]:
+        print("key = %r (%s)" % (key, type(key)))  # pylint: disable=superfluous-parens
+        control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)
+        control.press(key)
+        lircd_output = logfile.read()
+        expected = dedent("""\
+            pulse 9000
+            space 4500
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 527
+            pulse 527
+            space 527
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 1703
+            pulse 527
+            space 527
+            pulse 527
+            space 38000
+            """)
+        assert expected == lircd_output
 
 
 def test_press_with_unknown_remote(lircd):
