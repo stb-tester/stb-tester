@@ -3,6 +3,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+from future.utils import native_str
+
 import configparser
 import enum
 import os
@@ -106,7 +108,8 @@ def _config_init(force=False):
         # Config files specific to the test suite / test run,
         # with the one at the beginning taking precedence:
         config_files.extend(
-            reversed(os.environ.get('STBT_CONFIG_FILE', '').split(':')))
+            reversed(os.environ.get('STBT_CONFIG_FILE', '')
+                     .split(native_str(':'))))
         config = configparser.ConfigParser()
         config.read(config_files)
         _config = config

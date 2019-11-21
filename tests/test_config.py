@@ -12,7 +12,8 @@ import pytest
 
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
-from _stbt.utils import named_temporary_directory, scoped_curdir
+from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
+                         to_native_str)
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -151,11 +152,12 @@ def test_to_enum():
 
 
 @contextmanager
-def temporary_config(contents):
-    with named_temporary_directory(prefix="stbt-test-config") as d:
+def temporary_config(contents, prefix="stbt-test-config"):
+    with named_temporary_directory(prefix=prefix) as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         filename = os.path.join(d, "stbt.conf")
-        os.environ["STBT_CONFIG_FILE"] = ":".join([filename, original_env])
+        os.environ["STBT_CONFIG_FILE"] = to_native_str(":".join([filename,
+                                                                 original_env]))
         with open(filename, "w") as f:
             f.write(dedent(contents))
         _config_init(force=True)
@@ -164,3 +166,26 @@ def temporary_config(contents):
         finally:
             os.environ["STBT_CONFIG_FILE"] = original_env
             _config_init(force=True)
+
+
+def test_unicode_in_STBT_CONFIG_FILE():
+    with temporary_config(test_config, prefix="\xf8"):
+        assert get_config("global", "test") == "hello"
+
+
+def test_unicode_in_config_file_contents():
+    with temporary_config("""\
+            [global]
+            unicodeinkey\xf8 = hi
+            unicodeinvalue = \xf8
+
+            [unicodeinsection\xf8]
+            key = bye
+            """):
+
+        assert get_config("global", "unicodeinkey\xf8") == "hi"
+        assert get_config("global", "unicodeinvalue") == "\xf8"
+        assert get_config("unicodeinsection\xf8", "key") == "bye"
+
+        # This is `unicode` on python 2 and `str` (i.e. unicode) on python 3.
+        assert isinstance(get_config("global", "unicodeinvalue"), text_type)
