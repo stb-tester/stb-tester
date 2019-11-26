@@ -34,7 +34,7 @@ from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
 from _stbt.logging import _Annotation, ddebug, debug, warn
-from _stbt.types import Region
+from _stbt.types import NoVideo, Region
 from _stbt.utils import text_type, to_unicode
 
 gi.require_version("Gst", "1.0")
@@ -262,15 +262,6 @@ class _Keypress(object):
             "_Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
                 self.key, self.start_time, self.end_time,
                 _frame_repr(self.frame_before)))
-
-
-# Utility functions
-# ===========================================================================
-
-
-class NoVideo(Exception):
-    """No video available from the source pipeline."""
-    pass
 
 
 # stbt-run initialisation and convenience functions

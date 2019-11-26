@@ -20,8 +20,6 @@ from contextlib import contextmanager
 import _stbt.core
 from _stbt.black import (
     is_screen_black)
-from _stbt.core import (
-    NoVideo)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -66,6 +64,7 @@ from _stbt.transition import (
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    NoVideo,
     Position,
     Region,
     UITestError,
