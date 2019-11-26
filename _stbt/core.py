@@ -34,7 +34,7 @@ import _stbt.cv2_compat as cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
-from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
+from _stbt.imgutils import _frame_repr, Frame
 from _stbt.logging import _Annotation, ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 from _stbt.utils import text_type, to_unicode
@@ -50,47 +50,6 @@ warnings.filterwarnings(
 
 # Functions available to stbt scripts
 # ===========================================================================
-
-
-def load_image(filename, flags=None):
-    """Find & read an image from disk.
-
-    If given a relative filename, this will search in the directory of the
-    Python file that called ``load_image``, then in the directory of that
-    file's caller, etc. This allows you to use ``load_image`` in a helper
-    function, and then call that helper function from a different Python file
-    passing in a filename relative to the caller.
-
-    Finally this will search in the current working directory. This allows
-    loading an image that you had previously saved to disk during the same
-    test run.
-
-    This is the same lookup algorithm used by `stbt.match` and similar
-    functions.
-
-    :type filename: str or unicode
-    :param filename: A relative or absolute filename.
-
-    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
-
-    :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
-        values. With the default ``flags`` parameter this will be 3 channels
-        BGR, or 4 channels BGRA if the file has transparent pixels.
-    :raises: `IOError` if the specified path doesn't exist or isn't a valid
-        image file.
-
-    * Added in v28.
-    * Changed in v30: Include alpha (transparency) channel if the file has
-      transparent pixels.
-    """
-
-    absolute_filename = find_user_file(filename)
-    if not absolute_filename:
-        raise IOError("No such file: %s" % filename)
-    image = imread(absolute_filename, flags)
-    if image is None:
-        raise IOError("Failed to load image: %s" % absolute_filename)
-    return image
 
 
 def new_device_under_test_from_config(parsed_args=None):

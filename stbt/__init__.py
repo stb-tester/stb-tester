@@ -22,7 +22,6 @@ from _stbt.black import (
     is_screen_black)
 from _stbt.core import (
     as_precondition,
-    load_image,
     NoVideo,
     PreconditionError,
     save_frame,
@@ -38,7 +37,8 @@ from _stbt.grid import (
     grid_to_navigation_graph)
 from _stbt.imgutils import (
     crop,
-    Frame)
+    Frame,
+    load_image)
 from _stbt.logging import (
     debug)
 from _stbt.match import (

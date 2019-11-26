@@ -23,8 +23,7 @@ import enum
 import cv2
 import numpy
 
-from .core import load_image
-from .imgutils import pixel_bounding_box
+from .imgutils import load_image, pixel_bounding_box
 from .logging import ddebug, debug, draw_on
 from .motion import MotionResult
 from .types import Region

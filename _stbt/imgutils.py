@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
@@ -90,6 +92,47 @@ def crop(frame, region):
 def _image_region(image):
     s = image.shape
     return Region(0, 0, s[1], s[0])
+
+
+def load_image(filename, flags=None):
+    """Find & read an image from disk.
+
+    If given a relative filename, this will search in the directory of the
+    Python file that called ``load_image``, then in the directory of that
+    file's caller, etc. This allows you to use ``load_image`` in a helper
+    function, and then call that helper function from a different Python file
+    passing in a filename relative to the caller.
+
+    Finally this will search in the current working directory. This allows
+    loading an image that you had previously saved to disk during the same
+    test run.
+
+    This is the same lookup algorithm used by `stbt.match` and similar
+    functions.
+
+    :type filename: str or unicode
+    :param filename: A relative or absolute filename.
+
+    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
+
+    :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
+        values. With the default ``flags`` parameter this will be 3 channels
+        BGR, or 4 channels BGRA if the file has transparent pixels.
+    :raises: `IOError` if the specified path doesn't exist or isn't a valid
+        image file.
+
+    * Added in v28.
+    * Changed in v30: Include alpha (transparency) channel if the file has
+      transparent pixels.
+    """
+
+    absolute_filename = find_user_file(filename)
+    if not absolute_filename:
+        raise IOError("No such file: %s" % filename)
+    image = imread(absolute_filename, flags)
+    if image is None:
+        raise IOError("Failed to load image: %s" % absolute_filename)
+    return image
 
 
 class _ImageFromUser(namedtuple(
