@@ -17,7 +17,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 from contextlib import contextmanager
 
-import _stbt.core
 from _stbt.black import (
     is_screen_black)
 from _stbt.config import (
@@ -122,7 +121,7 @@ __all__ = [
     "wait_until",
 ]
 
-_dut = _stbt.core.DeviceUnderTest()
+_dut = None
 
 # Functions available to stbt scripts
 # ===========================================================================
