@@ -23,8 +23,12 @@ import sys
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 
-import lmdb
 import numpy
+
+try:
+    import lmdb
+except ImportError:
+    lmdb = None
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
@@ -43,7 +47,7 @@ _cache_full_warning = None
 
 @contextmanager
 def cache(filename=None):
-    if os.environ.get('STBT_DISABLE_CACHING'):
+    if lmdb is None or os.environ.get('STBT_DISABLE_CACHING'):
         yield
         return
 
