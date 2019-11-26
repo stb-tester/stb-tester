@@ -9,25 +9,16 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         ca-certificates \
         curl \
         expect \
-        gir1.2-gstreamer-1.0 \
         git \
-        gstreamer1.0-libav \
-        gstreamer1.0-plugins-bad \
-        gstreamer1.0-plugins-base \
-        gstreamer1.0-plugins-good \
-        gstreamer1.0-tools \
-        gstreamer1.0-x \
         gzip \
         language-pack-en \
         librsvg2-bin \
-        lirc \
         moreutils \
         parallel \
         pep8 \
         pylint3 \
         python3-docutils \
         python3-future \
-        python3-gi \
         python3-jinja2 \
         python3-lmdb \
         python3-lxml \

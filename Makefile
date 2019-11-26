@@ -221,6 +221,17 @@ check-pytest: all
 	      grep -v -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/)
+check-pythononly:
+	PYTHONPATH=$$PWD \
+	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
+	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
+	    $(shell git ls-files 'tests/*.py' |\
+	      grep -v \
+	          -e tests/test_lirc_control.py \
+	          -e tests/test_press.py \
+	          -e tests/test_stbt_control_relay.py \
+	          -e tests/vstb-example-html5/ \
+	          -e tests/webminspector/)
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
@@ -337,7 +348,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu1804-python2 ubuntu1804-python3
+CI_DOCKER_IMAGES = python-only ubuntu1804-python2 ubuntu1804-python3
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

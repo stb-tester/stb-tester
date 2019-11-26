@@ -31,6 +31,19 @@ jobs:
       - pytest
       - integrationtests
 
+  python-only:
+    docker:
+      - image: stbtester/circleci:python-only
+    environment:
+      python_version: 3
+      LANG: en_GB.UTF-8
+      SHELL: /bin/bash
+      TERM: xterm
+      enable_virtual_stb: no
+    steps:
+      - checkout
+      - check-pythononly
+
 commands:
   pylint:
     steps:
@@ -42,6 +55,9 @@ commands:
   pytest:
     steps:
       - run: make check-pytest
+  check-pythononly:
+    steps:
+      - run: make check-pythononly
   integrationtests:
     steps:
       - run: make check-integrationtests
@@ -49,5 +65,6 @@ commands:
 workflows:
   test_all:
     jobs:
+      - python-only
       - ubuntu1804-python2
       - ubuntu1804-python3
