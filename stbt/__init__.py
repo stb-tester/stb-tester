@@ -21,9 +21,7 @@ import _stbt.core
 from _stbt.black import (
     is_screen_black)
 from _stbt.core import (
-    as_precondition,
-    NoVideo,
-    PreconditionError)
+    NoVideo)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -60,6 +58,9 @@ from _stbt.ocr import (
     OcrEngine,
     OcrMode,
     TextMatchResult)
+from _stbt.precondition import (
+    as_precondition,
+    PreconditionError)
 from _stbt.transition import (
     press_and_wait,
     TransitionStatus,

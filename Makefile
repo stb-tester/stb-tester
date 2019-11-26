@@ -82,6 +82,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/match.py \
     _stbt/motion.py \
     _stbt/ocr.py \
+    _stbt/precondition.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
