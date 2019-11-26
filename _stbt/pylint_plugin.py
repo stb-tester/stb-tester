@@ -230,7 +230,7 @@ def _in_whitelisted_functions(node):
             "re.search",
             "re.sub",
             "stbt.save_frame",
-            "_stbt.core.save_frame",  # handles "from stbt import save_frame"
+            "_stbt.imgutils.save_frame",  # "from stbt import save_frame"
         )))
 
 

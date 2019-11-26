@@ -135,6 +135,15 @@ def load_image(filename, flags=None):
     return image
 
 
+def save_frame(image, filename):
+    """Saves an OpenCV image to the specified file.
+
+    Takes an image obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
+    """
+    cv2.imwrite(filename, image)
+
+
 class _ImageFromUser(namedtuple(
         '_ImageFromUser',
         'image relative_filename absolute_filename')):

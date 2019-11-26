@@ -23,8 +23,7 @@ from _stbt.black import (
 from _stbt.core import (
     as_precondition,
     NoVideo,
-    PreconditionError,
-    save_frame)
+    PreconditionError)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -37,7 +36,8 @@ from _stbt.grid import (
 from _stbt.imgutils import (
     crop,
     Frame,
-    load_image)
+    load_image,
+    save_frame)
 from _stbt.logging import (
     debug)
 from _stbt.match import (
