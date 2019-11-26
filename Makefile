@@ -223,15 +223,18 @@ check-pytest: all
 	      grep -v -e tests/vstb-example-html5/ \
 	              -e tests/webminspector/ \
 	              -e vendor/)
-check-pythononly:
+check-pythonpackage:
 	PYTHONPATH=$$PWD \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $(shell git ls-files 'tests/*.py' |\
 	      grep -v \
+	          -e tests/run_performance_test.py \
 	          -e tests/test_lirc_control.py \
+	          -e tests/test_power.py \
 	          -e tests/test_press.py \
 	          -e tests/test_stbt_control_relay.py \
+	          -e tests/validate-ocr.py \
 	          -e tests/vstb-example-html5/ \
 	          -e tests/webminspector/)
 check-integrationtests: install-for-test

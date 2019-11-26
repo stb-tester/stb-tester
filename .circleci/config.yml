@@ -31,7 +31,7 @@ jobs:
       - pytest
       - integrationtests
 
-  python-only:
+  python-package:
     docker:
       - image: stbtester/circleci:python-only
     environment:
@@ -42,7 +42,7 @@ jobs:
       enable_virtual_stb: no
     steps:
       - checkout
-      - check-pythononly
+      - check-pythonpackage
 
 commands:
   pylint:
@@ -55,16 +55,19 @@ commands:
   pytest:
     steps:
       - run: make check-pytest
-  check-pythononly:
-    steps:
-      - run: make check-pythononly
   integrationtests:
     steps:
       - run: make check-integrationtests
+  check-pythonpackage:
+    steps:
+      - run: python3 setup.py sdist
+      - run: pip3 install dist/*.tar.gz
+      - run: rm -rf stbt _stbt
+      - run: make check-pythonpackage
 
 workflows:
   test_all:
     jobs:
-      - python-only
+      - python-package
       - ubuntu1804-python2
       - ubuntu1804-python3
