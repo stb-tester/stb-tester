@@ -24,8 +24,7 @@ from _stbt.core import (
     as_precondition,
     NoVideo,
     PreconditionError,
-    save_frame,
-    wait_until)
+    save_frame)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -70,6 +69,8 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
+from _stbt.wait import (
+    wait_until)
 from stbt.keyboard import Keyboard
 
 __all__ = [

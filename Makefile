@@ -91,6 +91,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/transition.py \
     _stbt/types.py \
     _stbt/utils.py \
+    _stbt/wait.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
