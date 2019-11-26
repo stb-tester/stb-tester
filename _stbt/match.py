@@ -24,7 +24,8 @@ from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
-from .logging import ddebug, debug, draw_on, get_debug_level, ImageLogger
+from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
+                      ImageLogger)
 from .sqdiff import sqdiff
 from .types import Position, Region, UITestFailure
 from .utils import native_str
@@ -881,8 +882,6 @@ def _merge_regions(regions):
 def _log_match_image_debug(imglog):
     if not imglog.enabled:
         return
-
-    from _stbt.core import _Annotation
 
     title = "stbt.match(%r): %s" % (
         imglog.data["template_name"],

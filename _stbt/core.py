@@ -35,7 +35,7 @@ from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
-from _stbt.logging import ddebug, debug, warn
+from _stbt.logging import _Annotation, ddebug, debug, warn
 from _stbt.types import Region, UITestError, UITestFailure
 from _stbt.utils import text_type, to_unicode
 
@@ -606,26 +606,18 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
-class _Annotation(namedtuple("_Annotation", "time region label colour")):
-    MATCHED = (32, 0, 255)  # Red
-    NO_MATCH = (32, 255, 255)  # Yellow
+def _draw_annotation(img, annotation):
+    if not annotation.region:
+        return
+    cv2.rectangle(
+        img, (annotation.region.x, annotation.region.y),
+        (annotation.region.right, annotation.region.bottom), annotation.colour,
+        thickness=3)
 
-    @staticmethod
-    def from_result(result, label=""):
-        colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
-        return _Annotation(result.time, result.region, label, colour)
-
-    def draw(self, img):
-        if not self.region:
-            return
-        cv2.rectangle(
-            img, (self.region.x, self.region.y),
-            (self.region.right, self.region.bottom), self.colour,
-            thickness=3)
-
-        # Slightly above the match annotation
-        label_loc = (self.region.x, self.region.y - 10)
-        _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
+    # Slightly above the match annotation
+    label_loc = (annotation.region.x, annotation.region.y - 10)
+    _draw_text(img, annotation.label, label_loc, (255, 255, 255),
+               font_scale=0.5)
 
 
 class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
@@ -796,7 +788,7 @@ class SinkPipeline(object):
 
         # Regions:
         for annotation in annotations:
-            annotation.draw(img)
+            _draw_annotation(img, annotation)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
