@@ -26,7 +26,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pep8 \
         pylint3 \
         python3-docutils \
-        python3-flask \
         python3-future \
         python3-gi \
         python3-jinja2 \
@@ -42,10 +41,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-pytest \
         python3-requests \
         python3-responses \
-        python3-scipy \
         python3-serial \
         python3-yaml \
-        socat \
         ssh \
         sudo \
         tar \
