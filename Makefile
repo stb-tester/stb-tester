@@ -211,18 +211,17 @@ clean:
 
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
-             | grep -v '^vendor/' \
-             | sort | uniq | grep -v tests/webminspector)
+      | grep -v -e ^setup.py \
+                -e ^tests/webminspector/ \
+                -e ^vendor/)
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
-	    $(shell git ls-files '*.py' |\
-	      grep -v -e tests/vstb-example-html5/ \
-	              -e tests/webminspector/ \
-	              -e vendor/)
+	    $$(printf "%s\n" $(PYTHON_FILES) |\
+	       grep -v tests/vstb-example-html5/)
 check-pythonpackage:
 	PYTHONPATH=$$PWD \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
