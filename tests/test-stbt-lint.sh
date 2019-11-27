@@ -118,7 +118,7 @@ test_that_stbt_lint_reports_uncommitted_images() {
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
-    stbt lint --errors-only "$srcdir"/_stbt/pylint_plugin.py
+    stbt lint --errors-only "$srcdir"/stbt/pylint_plugin.py
 }
 
 test_that_stbt_lint_checks_uses_of_stbt_return_values() {

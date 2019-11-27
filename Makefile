@@ -84,7 +84,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/ocr.py \
     _stbt/precondition.py \
     _stbt/power.py \
-    _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
@@ -99,7 +98,8 @@ INSTALL_PYLIB_FILES = \
     _stbt/xxhash.py \
     stbt/__init__.py \
     stbt/android.py \
-    stbt/keyboard.py
+    stbt/keyboard.py \
+    stbt/pylint_plugin.py
 
 INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
