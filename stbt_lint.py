@@ -90,12 +90,12 @@ def filter_warnings(input_, output):
         line = input_.readline()
         if not line:
             break
-        if any(re.search(pattern, line) for pattern in WARNINGS):
+        if WARNINGS.search(line):
             continue
         output.write(line)
 
 
-WARNINGS = [
+WARNINGS = re.compile(b"|".join([
     # pylint:disable=line-too-long
     br"libdc1394 error: Failed to initialize libdc1394",
     br"pygobject_register_sinkfunc is deprecated",
@@ -106,7 +106,7 @@ WARNINGS = [
     br"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
     br"astroid.* Use gi.require_version",
     br"^  __import__\(m\)$",
-]
+]))
 
 
 if __name__ == "__main__":
