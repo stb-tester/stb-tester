@@ -366,6 +366,13 @@ publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
 	    docker push stbtester/circleci:$$x; \
 	done
 
+### PyPI Packaging ###########################################################
+
+pypi-publish:
+	rm -rf dist/
+	python3 setup.py sdist
+	twine upload dist/*
+
 ### Debian Packaging #########################################################
 
 ubuntu_releases ?= bionic
@@ -432,5 +439,5 @@ rpm: $(src_rpm)
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
-.PHONY: ppa-publish rpm srpm
+.PHONY: ppa-publish pypi-publish rpm srpm
 .PHONY: FORCE TAGS
