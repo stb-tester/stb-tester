@@ -27,6 +27,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://stb-tester.com",
     packages=["stbt", "_stbt"],
+    package_data={
+        "_stbt": ["stbt.conf"],
+    },
     classifiers=[
         # pylint:disable=line-too-long
         "Development Status :: 5 - Production/Stable",
