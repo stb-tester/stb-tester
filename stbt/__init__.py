@@ -121,8 +121,6 @@ __all__ = [
     "wait_until",
 ]
 
-_dut = None
-
 # Functions available to stbt scripts
 # ===========================================================================
 
@@ -273,6 +271,39 @@ def get_frame():
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
     """
     return _dut.get_frame()
+
+
+# Internal
+# ===========================================================================
+
+class UnconfiguredDeviceUnderTest(object):
+    # pylint:disable=unused-argument
+    def press(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.press isn't configured to run on your hardware")
+
+    def pressing(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.pressing isn't configured to run on your hardware")
+
+    def draw_text(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.draw_text isn't configured to run on your hardware")
+
+    def press_until_match(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.press_until_match isn't configured to run on your hardware")
+
+    def frames(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.frames isn't configured to run on your hardware")
+
+    def get_frame(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.get_frame isn't configured to run on your hardware")
+
+
+_dut = UnconfiguredDeviceUnderTest()
 
 
 @contextmanager

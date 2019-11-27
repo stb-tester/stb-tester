@@ -44,6 +44,6 @@ setuptools.setup(
         "lxml==4.2",
         "networkx==1.11",
         "numpy==1.13",
-        "opencv-python==3.2.0",
+        "opencv-python~=3.2.0",
     ],
 )
