@@ -39,14 +39,11 @@ setuptools.setup(
     # I have only tested Python 2.7 & 3.6
     python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
     install_requires=[
-        "future",
-        "Jinja2",
-        "lxml",
-        "networkx",
-        "numpy",
-        # opencv: User must decide whether to install opencv-python,
-        # opencv-contrib-python, opencv-python-headless, or
-        # opencv-contrib-python-headless (only one can be installed
-        # simultaneously).
+        "future==0.15.2",
+        "Jinja2==2.10",
+        "lxml==4.2",
+        "networkx==1.11",
+        "numpy==1.13",
+        "opencv-python==3.2.0",
     ],
 )
