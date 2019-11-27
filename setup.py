@@ -19,7 +19,7 @@ written for running on the [Stb-tester Platform](https://stb-tester.com).
 
 setuptools.setup(
     name="stb-tester",
-    version="32rc1",
+    version="31.1",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
