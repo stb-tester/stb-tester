@@ -11,6 +11,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gzip \
         language-pack-en \
         pylint3 \
+        python3-mock \
         python3-pip \
         python3-pytest \
         ssh \
