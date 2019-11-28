@@ -1,0 +1,29 @@
+environment:
+  matrix:
+    - PYTHON: "C:\\Python36-x64"
+
+build: off
+
+test_script:
+  - ps: |
+      &$env:PYTHON\python.exe setup.py sdist
+      rmdir -Recurse -Force stbt
+      rmdir -Recurse -Force _stbt
+      &$env:PYTHON\python.exe -m venv build_env
+      . build_env\Scripts\activate.ps1
+      build_env\Scripts\pip.exe install pytest==3.3.2 attrs==17.4.0
+      Get-ChildItem dist
+      build_env\Scripts\pip.exe install (Get-Item dist\*.tar.gz)
+      $env:PYTHONPATH=(Get-Location)
+      $env:STBT_CONFIG_FILE="$(Get-Location)\tests\stbt.conf"
+      build_env\Scripts\pytest.exe -vv -rs \
+        tests\subdirectory\test_load_image_from_subdirectory.py \
+        tests\test_android.py \
+        tests\test_config.py \
+        tests\test_core.py \
+        tests\test_grid.py \
+        tests\test_keyboard.py \
+        tests\test_match.py \
+        tests\test_motion.py \
+        tests\test_stbt_debug.py \
+        tests\test_transition.py
