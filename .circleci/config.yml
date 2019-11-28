@@ -33,10 +33,10 @@ jobs:
 
   python-package:
     docker:
-      - image: stbtester/circleci:python-only
+      - image: circleci/python:3.6.9
     environment:
       python_version: 3
-      LANG: en_GB.UTF-8
+      LANG: C.UTF-8
       SHELL: /bin/bash
       TERM: xterm
       enable_virtual_stb: no
@@ -61,9 +61,15 @@ commands:
   check-pythonpackage:
     steps:
       - run: python3 setup.py sdist
-      - run: pip3 install dist/*.tar.gz
-      - run: rm -rf stbt _stbt
-      - run: make check-pythonpackage
+      - run:
+          name: install & test
+          command: |
+            rm -rf stbt _stbt &&
+            python3 -m venv build_env &&
+            source build_env/bin/activate &&
+            pip3 install pytest==3.3.2 attrs==17.4.0 mock==2.0.0 &&
+            pip3 install dist/*.tar.gz &&
+            make check-pythonpackage PYTEST=pytest
 
 workflows:
   test_all:

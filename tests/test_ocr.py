@@ -22,6 +22,16 @@ from _stbt.utils import named_temporary_directory
 from stbt import load_image
 
 
+def requires_tesseract(func):
+    """Decorator for tests that require Tesseract to be installed."""
+    try:
+        _tesseract_version()
+    except:
+        raise SkipTest("tesseract isn't installed")
+    return func
+
+
+@requires_tesseract
 @pytest.mark.parametrize("image, expected_text, region, mode", [
     # pylint: disable=line-too-long
     ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
@@ -43,17 +53,20 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
 
 
 # Remove when region=None doesn't raise -- see #433
+@requires_tesseract
 def test_that_ocr_region_none_isnt_allowed():
     with pytest.raises(TypeError):
         stbt.ocr(frame=load_image("ocr/small.png"), region=None)
 
 
+@requires_tesseract
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=load_image('ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, str)
     assert u'£500\nDavid Röthlisberger' == text
 
 
+@requires_tesseract
 def test_that_ocr_can_read_small_text():
     text = stbt.ocr(frame=load_image('ocr/small.png'))
     assert u'Small anti-aliased text is hard to read\nunless you magnify' == \
@@ -73,6 +86,7 @@ ligature_text = dedent(u"""\
     horizontal-bar.""")
 
 
+@requires_tesseract
 def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     frame = load_image('ocr/ambig.png')
     text = stbt.ocr(frame)
@@ -89,6 +103,7 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     assert stbt.match_text(u"em\u2014dash,", frame)
 
 
+@requires_tesseract
 def test_that_match_text_accepts_unicode():
     f = load_image("ocr/unicode.png")
     assert stbt.match_text("David", f, lang='eng+deu')  # ascii
@@ -97,6 +112,7 @@ def test_that_match_text_accepts_unicode():
         "Röthlisberger".encode('utf-8'), f, lang='eng+deu')  # utf-8 bytes
 
 
+@requires_tesseract
 def test_that_default_language_is_configurable():
     f = load_image("ocr/unicode.png")
     assert not stbt.match_text(u"Röthlisberger", f)  # reads Réthlisberger
@@ -120,6 +136,7 @@ def temporary_config(config):
             _stbt.config._config_init(force=True)  # pylint:disable=protected-access
 
 
+@requires_tesseract
 def test_that_setting_config_options_has_an_effect():
     # Unfortunately there are many tesseract config options and they are very
     # complicated so it's difficult to write a test that tests that a config
@@ -141,6 +158,7 @@ def test_that_setting_config_options_has_an_effect():
             stbt.ocr(frame=load_image('ocr/ambig.png')))
 
 
+@requires_tesseract
 @pytest.mark.parametrize("patterns", [
     pytest.param(None, marks=pytest.mark.xfail),
     [r'\d\*.\d\*.\d\*.\d\*'],
@@ -158,6 +176,7 @@ def test_tesseract_user_patterns(patterns):
         tesseract_user_patterns=patterns)
 
 
+@requires_tesseract
 def test_char_whitelist():
     # Without char_whitelist tesseract reads "OO" (the letter oh).
     assert u'00' == stbt.ocr(
@@ -166,6 +185,7 @@ def test_char_whitelist():
         char_whitelist="0123456789")
 
 
+@requires_tesseract
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],
@@ -205,6 +225,7 @@ def iterate_menu():
                 '\n' in text)
 
 
+@requires_tesseract
 def test_that_text_location_is_recognised():
     frame = load_image("ocr/menu.png")
 
@@ -222,6 +243,7 @@ def test_that_text_location_is_recognised():
         yield (test, text, region, False)
 
 
+@requires_tesseract
 def test_match_text_stringify_result():
     frame = load_image("ocr/menu.png")
     result = stbt.match_text(u"Onion Bhaji", frame=frame)
@@ -232,6 +254,7 @@ def test_match_text_stringify_result():
         str(result))
 
 
+@requires_tesseract
 def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
     frame = load_image("ocr/menu.png")
     text, region, _ = list(iterate_menu())[6]
@@ -241,6 +264,7 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
     assert region.contains(result.region)
 
 
+@requires_tesseract
 @pytest.mark.parametrize("region", [
     stbt.Region(1280, 0, 1280, 720),
     None,
@@ -257,6 +281,7 @@ def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
     assert type(result.text).__name__ in ["str", "unicode"]
 
 
+@requires_tesseract
 @pytest.mark.parametrize("region", [
     stbt.Region(1280, 0, 1280, 720),
     # None,  # uncomment when region=None doesn't raise -- see #433
@@ -267,11 +292,13 @@ def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame(region):
     assert result == u''
 
 
+@requires_tesseract
 def test_that_match_text_returns_no_match_for_non_matching_text():
     frame = load_image("ocr/menu.png")
     assert not stbt.match_text(u"Noodle Soup", frame=frame)
 
 
+@requires_tesseract
 def test_that_match_text_gives_tesseract_a_hint():
     frame = load_image("ocr/itv-player.png")
     if "ITV Player" in stbt.ocr(frame=frame):
@@ -281,11 +308,13 @@ def test_that_match_text_gives_tesseract_a_hint():
     assert stbt.match_text("ITV Player", frame=frame)
 
 
+@requires_tesseract
 def test_match_text_on_single_channel_image():
     frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
     assert stbt.match_text("Onion Bhaji", frame)
 
 
+@requires_tesseract
 def test_match_text_case_sensitivity():
     frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
     assert stbt.match_text("ONION BHAJI", frame)
@@ -293,6 +322,7 @@ def test_match_text_case_sensitivity():
     assert not stbt.match_text("ONION BHAJI", frame, case_sensitive=True)
 
 
+@requires_tesseract
 def test_ocr_on_text_next_to_image_match():
     frame = load_image("action-panel.png")
     m = stbt.match("action-panel-blue-button.png", frame)
@@ -300,6 +330,7 @@ def test_ocr_on_text_next_to_image_match():
                                       region=m.region.right_of(width=150))
 
 
+@requires_tesseract
 @pytest.mark.parametrize("image,color,expected,region", [
     # This region has a selected "Summary" button (white on light blue) and
     # unselected buttons "Details" and "More Episodes" (light grey on black).
@@ -328,6 +359,7 @@ def test_ocr_text_color(image, color, expected, region):
     assert stbt.match_text(expected, frame, region, mode, text_color=color)
 
 
+@requires_tesseract
 def test_ocr_text_color_threshold():
     f = load_image("ocr/blue-search-white-guide.png")
     c = (220, 220, 220)
@@ -341,6 +373,7 @@ def test_ocr_text_color_threshold():
         assert stbt.ocr(f, text_color=c) == "Guide"
 
 
+@requires_tesseract
 def test_that_ocr_engine_has_an_effect():
     if _tesseract_version() < LooseVersion("4.0"):
         raise SkipTest('tesseract is too old')

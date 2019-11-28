@@ -20,6 +20,7 @@ from _stbt.imgutils import _image_region
 from _stbt.logging import scoped_debug_level
 from _stbt.match import _merge_regions
 from tests.test_core import _find_file
+from tests.test_ocr import requires_tesseract
 
 
 requires_opencv_3 = pytest.mark.skipif(cv2_compat.version < [3, 0, 0],
@@ -339,6 +340,7 @@ def test_match_region2(x, y, offset_x, offset_y, width, height,
 
 
 @requires_opencv_3
+@requires_tesseract
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
     # on buttons

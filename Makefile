@@ -30,11 +30,11 @@ MKTAR = $(TAR) --format=gnu --owner=root --group=root \
 GZIP ?= gzip
 
 ifeq ($(python_version), 2.7)
-PYLINT := pylint
-PYTEST := pytest
+PYLINT ?= pylint
+PYTEST ?= pytest
 else
-PYLINT := pylint3
-PYTEST := pytest-3
+PYLINT ?= pylint3
+PYTEST ?= pytest-3
 endif
 
 CFLAGS?=-O2
@@ -225,17 +225,16 @@ check-pytest: all
 check-pythonpackage:
 	PYTHONPATH=$$PWD \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
-	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
-	    $(shell git ls-files 'tests/*.py' |\
-	      grep -v \
-	          -e tests/run_performance_test.py \
-	          -e tests/test_lirc_control.py \
-	          -e tests/test_power.py \
-	          -e tests/test_press.py \
-	          -e tests/test_stbt_control_relay.py \
-	          -e tests/validate-ocr.py \
-	          -e tests/vstb-example-html5/ \
-	          -e tests/webminspector/)
+	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
+	    tests/subdirectory/test_load_image_from_subdirectory.py \
+	    tests/test_android.py \
+	    tests/test_config.py \
+	    tests/test_core.py \
+	    tests/test_grid.py \
+	    tests/test_keyboard.py \
+	    tests/test_match.py \
+	    tests/test_motion.py \
+	    tests/test_transition.py
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
@@ -352,7 +351,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = python-only ubuntu1804-python2 ubuntu1804-python3
+CI_DOCKER_IMAGES = ubuntu1804-python2 ubuntu1804-python3
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \
