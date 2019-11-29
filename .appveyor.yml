@@ -27,4 +27,4 @@ test_script:
         tests\test_motion.py \
         tests\test_stbt_debug.py \
         tests\test_transition.py
-      if ( ! $? ) { throw "pytest failed" }
+      $host.SetShouldExit($LastExitCode)
