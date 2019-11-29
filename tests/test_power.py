@@ -7,8 +7,12 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 from contextlib import contextmanager
 
 import pytest
-from mock import patch
 from pysnmp.proto.rfc1902 import Integer
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch  # Python 2 backport
 
 from _stbt.power import uri_to_power_outlet
 

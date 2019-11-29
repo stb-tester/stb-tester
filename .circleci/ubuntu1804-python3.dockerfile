@@ -31,7 +31,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-jinja2 \
         python3-lmdb \
         python3-lxml \
-        python3-mock \
         python3-networkx \
         python3-nose \
         python3-numpy \
