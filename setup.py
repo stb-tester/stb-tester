@@ -19,7 +19,7 @@ written for running on the [Stb-tester Platform](https://stb-tester.com).
 
 setuptools.setup(
     name="stb-tester",
-    version="31.1",
+    version="31.1.1",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
@@ -46,7 +46,6 @@ setuptools.setup(
         "Jinja2==2.10",
         "lxml==4.2",
         "networkx==1.11",
-        "numpy==1.13",
-        "opencv-python~=3.2.0",
+        "opencv-python~=3.2",
     ],
 )
