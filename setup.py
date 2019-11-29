@@ -14,12 +14,26 @@ long_description = """\
 
 This package contains the "stbt" Python APIs that you can use in test-scripts
 written for running on the [Stb-tester Platform](https://stb-tester.com).
+The primary purpose of this package is to make the stbt library easy to
+install locally for IDE linting & autocompletion.
 
+This package doesn't support video-capture, so `stbt.get_frame()` and
+`stbt.frames()` won't work -- but you will be able to run `stbt.match()` if you
+specify the `frame` parameter explicitly, for example by loading a screenshot
+from disk with `stbt.load_image()`.
+
+This package doesn't include remote-control integrations, so `stbt.press()` and
+similar functions won't work.
+
+This package doesn't bundle the Tesseract OCR engine, so `stbt.ocr()` and
+`stbt.match_text()` won't work.
+
+[LICENSE]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 """
 
 setuptools.setup(
     name="stb-tester",
-    version="31.1.1",
+    version="31.1.2",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
