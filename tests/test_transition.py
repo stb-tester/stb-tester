@@ -65,6 +65,8 @@ def F(state, t):
 
 
 def test_press_and_wait():
+    assert False, "Testing AppVeyor build status"
+
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.press_and_wait("white", stable_secs=0.1, _dut=_stbt)
