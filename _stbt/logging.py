@@ -9,7 +9,7 @@ import argparse
 import itertools
 import os
 import sys
-from collections import OrderedDict
+from collections import namedtuple, OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
 
@@ -305,3 +305,13 @@ def draw_on(frame, *args, **kwargs):
     if not draw_sink:
         return
     draw_sink.draw(*args, **kwargs)
+
+
+class _Annotation(namedtuple("_Annotation", "time region label colour")):
+    MATCHED = (32, 0, 255)  # Red
+    NO_MATCH = (32, 255, 255)  # Yellow
+
+    @staticmethod
+    def from_result(result, label=""):
+        colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
+        return _Annotation(result.time, result.region, label, colour)

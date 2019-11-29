@@ -17,16 +17,8 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 from contextlib import contextmanager
 
-import _stbt.core
 from _stbt.black import (
     is_screen_black)
-from _stbt.core import (
-    as_precondition,
-    load_image,
-    NoVideo,
-    PreconditionError,
-    save_frame,
-    wait_until)
 from _stbt.config import (
     ConfigurationError,
     get_config)
@@ -38,7 +30,9 @@ from _stbt.grid import (
     grid_to_navigation_graph)
 from _stbt.imgutils import (
     crop,
-    Frame)
+    Frame,
+    load_image,
+    save_frame)
 from _stbt.logging import (
     debug)
 from _stbt.match import (
@@ -61,15 +55,21 @@ from _stbt.ocr import (
     OcrEngine,
     OcrMode,
     TextMatchResult)
+from _stbt.precondition import (
+    as_precondition,
+    PreconditionError)
 from _stbt.transition import (
     press_and_wait,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    NoVideo,
     Position,
     Region,
     UITestError,
     UITestFailure)
+from _stbt.wait import (
+    wait_until)
 from stbt.keyboard import Keyboard
 
 __all__ = [
@@ -120,8 +120,6 @@ __all__ = [
     "wait_for_transition_to_end",
     "wait_until",
 ]
-
-_dut = _stbt.core.DeviceUnderTest()
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -273,6 +271,39 @@ def get_frame():
     :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
     """
     return _dut.get_frame()
+
+
+# Internal
+# ===========================================================================
+
+class UnconfiguredDeviceUnderTest(object):
+    # pylint:disable=unused-argument
+    def press(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.press isn't configured to run on your hardware")
+
+    def pressing(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.pressing isn't configured to run on your hardware")
+
+    def draw_text(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.draw_text isn't configured to run on your hardware")
+
+    def press_until_match(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.press_until_match isn't configured to run on your hardware")
+
+    def frames(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.frames isn't configured to run on your hardware")
+
+    def get_frame(self, *args, **kwargs):
+        raise RuntimeError(
+            "stbt.get_frame isn't configured to run on your hardware")
+
+
+_dut = UnconfiguredDeviceUnderTest()
 
 
 @contextmanager

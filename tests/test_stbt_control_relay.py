@@ -14,7 +14,7 @@ from textwrap import dedent
 import pytest
 
 from _stbt.control import uri_to_control
-from _stbt.core import wait_until
+from _stbt.wait import wait_until
 from _stbt.utils import named_temporary_directory, scoped_process
 
 

@@ -3,7 +3,9 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import time
+from collections import namedtuple
 
 import cv2
 import numpy
@@ -20,7 +22,6 @@ class FakeDeviceUnderTest(object):
         self._frames = frames
 
     def press(self, key):
-        from _stbt.core import _Keypress
         frame_before = next(self.frames())
         self.state = key
         return _Keypress(key, time.time(), time.time(), frame_before)
@@ -43,6 +44,9 @@ class FakeDeviceUnderTest(object):
                 elif self.state == "fade-to-white":
                     self.state = "white"
                 yield stbt.Frame(array, time=t)
+
+
+_Keypress = namedtuple("_Keypress", "key start_time end_time frame_before")
 
 
 def F(state, t):

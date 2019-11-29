@@ -2,11 +2,11 @@
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
 
-* Copyright (C) 2013-2016 Stb-tester.com Ltd,
+* Copyright © 2013-2019 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
-* <a href="https://travis-ci.org/stb-tester/stb-tester">
-    <img src="https://travis-ci.org/stb-tester/stb-tester.png?branch=master">
+* <a href="https://circleci.com/gh/stb-tester/stb-tester/tree/master">
+    <img src="https://circleci.com/gh/stb-tester/stb-tester/tree/master.svg?style=svg">
   </a>
 
 Stb-tester issues commands to the device-under-test in the same way a real user

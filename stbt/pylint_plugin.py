@@ -96,8 +96,8 @@ class StbtChecker(BaseChecker):
             if isinstance(node.parent, Expr):
                 for inferred in _infer(node.func):
                     if inferred.root().name in (
-                            'stbt', '_stbt.black', '_stbt.core', '_stbt.match',
-                            '_stbt.ocr', '_stbt.transition'):
+                            '_stbt.black', '_stbt.match', '_stbt.ocr',
+                            '_stbt.transition', '_stbt.wait'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
 
@@ -230,7 +230,7 @@ def _in_whitelisted_functions(node):
             "re.search",
             "re.sub",
             "stbt.save_frame",
-            "_stbt.core.save_frame",  # handles "from stbt import save_frame"
+            "_stbt.imgutils.save_frame",  # "from stbt import save_frame"
         )))
 
 

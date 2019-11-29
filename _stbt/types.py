@@ -427,3 +427,8 @@ class UITestFailure(Exception):
     Inherit from this if you need to define your own test-failure exceptions.
     """
     pass
+
+
+class NoVideo(Exception):
+    """No video available from the source pipeline."""
+    pass

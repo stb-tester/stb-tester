@@ -30,11 +30,11 @@ MKTAR = $(TAR) --format=gnu --owner=root --group=root \
 GZIP ?= gzip
 
 ifeq ($(python_version), 2.7)
-PYLINT := pylint
-PYTEST := pytest
+PYLINT ?= pylint
+PYTEST ?= pytest
 else
-PYLINT := pylint3
-PYTEST := pytest-3
+PYLINT ?= pylint3
+PYTEST ?= pytest-3
 endif
 
 CFLAGS?=-O2
@@ -82,8 +82,8 @@ INSTALL_PYLIB_FILES = \
     _stbt/match.py \
     _stbt/motion.py \
     _stbt/ocr.py \
+    _stbt/precondition.py \
     _stbt/power.py \
-    _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
@@ -91,13 +91,15 @@ INSTALL_PYLIB_FILES = \
     _stbt/transition.py \
     _stbt/types.py \
     _stbt/utils.py \
+    _stbt/wait.py \
     _stbt/x-key-mapping.conf \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
     stbt/__init__.py \
     stbt/android.py \
-    stbt/keyboard.py
+    stbt/keyboard.py \
+    stbt/pylint_plugin.py
 
 INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
@@ -209,18 +211,30 @@ clean:
 
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
-             | grep -v '^vendor/' \
-             | sort | uniq | grep -v tests/webminspector)
+      | grep -v -e ^setup.py \
+                -e ^tests/webminspector/ \
+                -e ^vendor/)
 
 check: check-pylint check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
-	    $(shell git ls-files '*.py' |\
-	      grep -v -e tests/vstb-example-html5/ \
-	              -e tests/webminspector/ \
-	              -e vendor/)
+	    $$(printf "%s\n" $(PYTHON_FILES) |\
+	       grep -v tests/vstb-example-html5/)
+check-pythonpackage:
+	PYTHONPATH=$$PWD \
+	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
+	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
+	    tests/subdirectory/test_load_image_from_subdirectory.py \
+	    tests/test_android.py \
+	    tests/test_config.py \
+	    tests/test_core.py \
+	    tests/test_grid.py \
+	    tests/test_keyboard.py \
+	    tests/test_match.py \
+	    tests/test_motion.py \
+	    tests/test_transition.py
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
@@ -351,6 +365,13 @@ publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
 	    docker push stbtester/circleci:$$x; \
 	done
 
+### PyPI Packaging ###########################################################
+
+pypi-publish:
+	rm -rf dist/
+	python3 setup.py sdist
+	twine upload dist/*
+
 ### Debian Packaging #########################################################
 
 ubuntu_releases ?= bionic
@@ -417,5 +438,5 @@ rpm: $(src_rpm)
 .PHONY: all clean deb dist doc install install-core uninstall
 .PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
-.PHONY: ppa-publish rpm srpm
+.PHONY: ppa-publish pypi-publish rpm srpm
 .PHONY: FORCE TAGS

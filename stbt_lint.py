@@ -35,11 +35,8 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
-import re
-import os
 import subprocess
 import sys
-import threading
 
 
 def main(argv):
@@ -71,42 +68,8 @@ def main(argv):
                 % executable_name)
             return 1
 
-    pylint = subprocess.Popen(
-        [executable_name, "--load-plugins=_stbt.pylint_plugin"] + pylint_args,
-        stderr=subprocess.PIPE)
-
-    t = threading.Thread(target=filter_warnings,
-                         args=(pylint.stderr,
-                               os.fdopen(sys.stderr.fileno(), "wb", 0)))
-    t.start()
-
-    pylint.wait()
-    t.join()
-    return pylint.returncode
-
-
-def filter_warnings(input_, output):
-    while True:
-        line = input_.readline()
-        if not line:
-            break
-        if any(re.search(pattern, line) for pattern in WARNINGS):
-            continue
-        output.write(line)
-
-
-WARNINGS = [
-    # pylint:disable=line-too-long
-    br"libdc1394 error: Failed to initialize libdc1394",
-    br"pygobject_register_sinkfunc is deprecated",
-    br"assertion .G_TYPE_IS_BOXED \(boxed_type\). failed",
-    br"assertion .G_IS_PARAM_SPEC \(pspec\). failed",
-    br"return isinstance\(object, \(type, types.ClassType\)\)",
-    br"return isinstance\(object, type\)",
-    br"gsignal.c:.*: parameter 1 of type '<invalid>' for signal \".*\" is not a value type",
-    br"astroid.* Use gi.require_version",
-    br"^  __import__\(m\)$",
-]
+    return subprocess.call(
+        [executable_name, "--load-plugins=stbt.pylint_plugin"] + pylint_args)
 
 
 if __name__ == "__main__":

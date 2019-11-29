@@ -17,8 +17,6 @@ from future.utils import native, raise_, string_types, text_to_native_str
 
 import argparse
 import datetime
-import functools
-import inspect
 import sys
 import threading
 import traceback
@@ -34,9 +32,9 @@ import _stbt.cv2_compat as cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
-from _stbt.imgutils import _frame_repr, find_user_file, Frame, imread
-from _stbt.logging import ddebug, debug, warn
-from _stbt.types import Region, UITestError, UITestFailure
+from _stbt.imgutils import _frame_repr, Frame
+from _stbt.logging import _Annotation, ddebug, debug, warn
+from _stbt.types import NoVideo, Region
 from _stbt.utils import text_type, to_unicode
 
 gi.require_version("Gst", "1.0")
@@ -50,47 +48,6 @@ warnings.filterwarnings(
 
 # Functions available to stbt scripts
 # ===========================================================================
-
-
-def load_image(filename, flags=None):
-    """Find & read an image from disk.
-
-    If given a relative filename, this will search in the directory of the
-    Python file that called ``load_image``, then in the directory of that
-    file's caller, etc. This allows you to use ``load_image`` in a helper
-    function, and then call that helper function from a different Python file
-    passing in a filename relative to the caller.
-
-    Finally this will search in the current working directory. This allows
-    loading an image that you had previously saved to disk during the same
-    test run.
-
-    This is the same lookup algorithm used by `stbt.match` and similar
-    functions.
-
-    :type filename: str or unicode
-    :param filename: A relative or absolute filename.
-
-    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
-
-    :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
-        values. With the default ``flags`` parameter this will be 3 channels
-        BGR, or 4 channels BGRA if the file has transparent pixels.
-    :raises: `IOError` if the specified path doesn't exist or isn't a valid
-        image file.
-
-    * Added in v28.
-    * Changed in v30: Include alpha (transparency) channel if the file has
-      transparent pixels.
-    """
-
-    absolute_filename = find_user_file(filename)
-    if not absolute_filename:
-        raise IOError("No such file: %s" % filename)
-    image = imread(absolute_filename, flags)
-    if image is None:
-        raise IOError("Failed to load image: %s" % absolute_filename)
-    return image
 
 
 def new_device_under_test_from_config(parsed_args=None):
@@ -307,255 +264,6 @@ class _Keypress(object):
                 _frame_repr(self.frame_before)))
 
 
-# Utility functions
-# ===========================================================================
-
-
-def save_frame(image, filename):
-    """Saves an OpenCV image to the specified file.
-
-    Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
-    """
-    cv2.imwrite(filename, image)
-
-
-def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
-               stable_secs=0):
-    """Wait until a condition becomes true, or until a timeout.
-
-    Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
-    between successive calls) until it succeeds (that is, it returns a
-    `truthy`_ value) or until ``timeout_secs`` seconds have passed.
-
-    .. _truthy: https://docs.python.org/2/library/stdtypes.html#truth-value-testing
-
-    :param callable_: any Python callable (such as a function or a lambda
-        expression) with no arguments.
-
-    :type timeout_secs: int or float, in seconds
-    :param timeout_secs: After this timeout elapses, ``wait_until`` will return
-        the last value that ``callable_`` returned, even if it's falsey.
-
-    :type interval_secs: int or float, in seconds
-    :param interval_secs: Delay between successive invocations of ``callable_``.
-
-    :param predicate: A function that takes a single value. It will be given
-        the return value from ``callable_``. The return value of *this* function
-        will then be used to determine truthiness. If the predicate test
-        succeeds, ``wait_until`` will still return the original value from
-        ``callable_``, not the predicate value.
-
-    :type stable_secs: int or float, in seconds
-    :param stable_secs: Wait for ``callable_``'s return value to remain the same
-        (as determined by ``==``) for this duration before returning. If
-        ``predicate`` is also given, the values returned from ``predicate``
-        will be compared.
-
-    :returns: The return value from ``callable_`` (which will be truthy if it
-        succeeded, or falsey if ``wait_until`` timed out). If the value was
-        truthy when the timeout was reached but it failed the ``predicate`` or
-        ``stable_secs`` conditions (if any) then ``wait_until`` returns
-        ``None``.
-
-    After you send a remote-control signal to the device-under-test it usually
-    takes a few frames to react, so a test script like this would probably
-    fail::
-
-        press("KEY_EPG")
-        assert match("guide.png")
-
-    Instead, use this::
-
-        press("KEY_EPG")
-        assert wait_until(lambda: match("guide.png"))
-
-    Note that instead of the above ``assert wait_until(...)`` you could use
-    ``wait_for_match("guide.png")``. ``wait_until`` is a generic solution that
-    also works with stbt's other functions, like `match_text` and
-    `is_screen_black`.
-
-    ``wait_until`` allows composing more complex conditions, such as::
-
-        # Wait until something disappears:
-        assert wait_until(lambda: not match("xyz.png"))
-
-        # Assert that something doesn't appear within 10 seconds:
-        assert not wait_until(lambda: match("xyz.png"))
-
-        # Assert that two images are present at the same time:
-        assert wait_until(lambda: match("a.png") and match("b.png"))
-
-        # Wait but don't raise an exception:
-        if not wait_until(lambda: match("xyz.png")):
-            do_something_else()
-
-        # Wait for a menu selection to change. Here ``Menu`` is a `FrameObject`
-        # with a property called `selection` that returns a string with the
-        # name of the currently-selected menu item:
-        # The return value (``menu``) is an instance of ``Menu``.
-        menu = wait_until(Menu, predicate=lambda x: x.selection == "Home")
-
-        # Wait for a match to stabilise position, returning the first stable
-        # match. Used in performance measurements, for example to wait for a
-        # selection highlight to finish moving:
-        press("KEY_DOWN")
-        start_time = time.time()
-        match_result = wait_until(lambda: stbt.match("selection.png"),
-                                  predicate=lambda x: x and x.region,
-                                  stable_secs=2)
-        assert match_result
-        end_time = match_result.time  # this is the first stable frame
-        print("Transition took %s seconds" % (end_time - start_time))
-
-    Added in v28: The ``predicate`` and ``stable_secs`` parameters.
-    """
-    import time
-
-    if predicate is None:
-        predicate = lambda x: x
-    stable_value = None
-    stable_predicate_value = None
-    expiry_time = time.time() + timeout_secs
-
-    while True:
-        t = time.time()
-        value = callable_()
-        predicate_value = predicate(value)
-
-        if stable_secs:
-            if predicate_value != stable_predicate_value:
-                stable_since = t
-                stable_value = value
-                stable_predicate_value = predicate_value
-            if predicate_value and t - stable_since >= stable_secs:
-                debug("wait_until succeeded: %s"
-                      % _callable_description(callable_))
-                return stable_value
-        else:
-            if predicate_value:
-                debug("wait_until succeeded: %s"
-                      % _callable_description(callable_))
-                return value
-
-        if t >= expiry_time:
-            debug("wait_until timed out after %s seconds: %s"
-                  % (timeout_secs, _callable_description(callable_)))
-            if not value:
-                return value  # it's falsey
-            else:
-                return None  # must have failed stable_secs or predicate checks
-
-        time.sleep(interval_secs)
-
-
-def _callable_description(callable_):
-    """Helper to provide nicer debug output when `wait_until` fails.
-
-    >>> _callable_description(wait_until)
-    'wait_until'
-    >>> _callable_description(
-    ...     lambda: stbt.press("OK"))
-    '    lambda: stbt.press("OK"))\\n'
-    >>> _callable_description(functools.partial(eval, globals={}))
-    'eval'
-    >>> _callable_description(
-    ...     functools.partial(
-    ...         functools.partial(eval, globals={}),
-    ...         locals={}))
-    'eval'
-    >>> class T(object):
-    ...     def __call__(self): return True;
-    >>> _callable_description(T())
-    '<_stbt.core.T object at 0x...>'
-    """
-    if hasattr(callable_, "__name__"):
-        name = callable_.__name__
-        if name == "<lambda>":
-            try:
-                name = inspect.getsource(callable_)
-            except IOError:
-                pass
-        return name
-    elif isinstance(callable_, functools.partial):
-        return _callable_description(callable_.func)
-    else:
-        return repr(callable_)
-
-
-@contextmanager
-def as_precondition(message):
-    """Context manager that replaces test failures with test errors.
-
-    Stb-tester's reports show test failures (that is, `UITestFailure` or
-    `AssertionError` exceptions) as red results, and test errors (that is,
-    unhandled exceptions of any other type) as yellow results. Note that
-    `wait_for_match`, `wait_for_motion`, and similar functions raise a
-    `UITestFailure` when they detect a failure. By running such functions
-    inside an `as_precondition` context, any `UITestFailure` or
-    `AssertionError` exceptions they raise will be caught, and a
-    `PreconditionError` will be raised instead.
-
-    When running a single testcase hundreds or thousands of times to reproduce
-    an intermittent defect, it is helpful to mark unrelated failures as test
-    errors (yellow) rather than test failures (red), so that you can focus on
-    diagnosing the failures that are most likely to be the particular defect
-    you are looking for. For more details see `Test failures vs. errors
-    <http://stb-tester.com/preconditions>`__.
-
-    :param str message:
-        A description of the precondition. Word this positively: "Channels
-        tuned", not "Failed to tune channels".
-
-    :raises:
-        `PreconditionError` if the wrapped code block raises a `UITestFailure`
-        or `AssertionError`.
-
-    Example::
-
-        def test_that_the_on_screen_id_is_shown_after_booting():
-            channel = 100
-
-            with stbt.as_precondition("Tuned to channel %s" % channel):
-                mainmenu.close_any_open_menu()
-                channels.goto_channel(channel)
-                power.cold_reboot()
-                assert channels.is_on_channel(channel)
-
-            stbt.wait_for_match("on-screen-id.png")
-
-    """
-    try:
-        yield
-    except (UITestFailure, AssertionError) as original:
-        debug("stbt.as_precondition caught a %s exception and will "
-              "re-raise it as PreconditionError.\nOriginal exception was:\n%s"
-              % (type(original).__name__, traceback.format_exc()))
-        exc = PreconditionError(message, original)
-        if hasattr(original, 'screenshot'):
-            exc.screenshot = original.screenshot  # pylint:disable=no-member
-        raise exc
-
-
-class NoVideo(Exception):
-    """No video available from the source pipeline."""
-    pass
-
-
-class PreconditionError(UITestError):
-    """Exception raised by `as_precondition`."""
-    def __init__(self, message, original_exception):
-        super(PreconditionError, self).__init__()
-        self.message = message
-        self.original_exception = original_exception
-        self.screenshot = None
-
-    def __str__(self):
-        return (
-            "Didn't meet precondition '%s' (original exception was: %s)"
-            % (self.message, self.original_exception))
-
-
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 # ===========================================================================
@@ -606,26 +314,18 @@ def _mainloop():
               "is still alive!" if thread.isAlive() else "ok"))
 
 
-class _Annotation(namedtuple("_Annotation", "time region label colour")):
-    MATCHED = (32, 0, 255)  # Red
-    NO_MATCH = (32, 255, 255)  # Yellow
+def _draw_annotation(img, annotation):
+    if not annotation.region:
+        return
+    cv2.rectangle(
+        img, (annotation.region.x, annotation.region.y),
+        (annotation.region.right, annotation.region.bottom), annotation.colour,
+        thickness=3)
 
-    @staticmethod
-    def from_result(result, label=""):
-        colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
-        return _Annotation(result.time, result.region, label, colour)
-
-    def draw(self, img):
-        if not self.region:
-            return
-        cv2.rectangle(
-            img, (self.region.x, self.region.y),
-            (self.region.right, self.region.bottom), self.colour,
-            thickness=3)
-
-        # Slightly above the match annotation
-        label_loc = (self.region.x, self.region.y - 10)
-        _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
+    # Slightly above the match annotation
+    label_loc = (annotation.region.x, annotation.region.y - 10)
+    _draw_text(img, annotation.label, label_loc, (255, 255, 255),
+               font_scale=0.5)
 
 
 class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
@@ -796,7 +496,7 @@ class SinkPipeline(object):
 
         # Regions:
         for annotation in annotations:
-            annotation.draw(img)
+            _draw_annotation(img, annotation)
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())

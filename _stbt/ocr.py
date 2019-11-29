@@ -393,7 +393,7 @@ def _tesseract_version(output=None):
                     stderr=subprocess.STDOUT).decode("utf-8")
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    return None
+                    raise RuntimeError("Tesseract OCR engine isn't installed")
                 else:
                     raise
         output = _memoise_tesseract_version

@@ -431,16 +431,6 @@ test_match_reports_no_match() {
     stbt run -v test.py
 }
 
-test_precondition_script() {
-    cat > test.py <<-EOF
-	from preconditions import *
-	checkers_via_gamut()
-	wait_for_match(
-	    "$testdir/videotestsrc-checkers-8.png")
-	EOF
-    PYTHONPATH="$testdir:$PYTHONPATH" stbt run -v test.py
-}
-
 test_match_visualisation() {
     cat > match.py <<-EOF &&
 	wait_for_match(

@@ -9,9 +9,13 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 import sys
 
 import networkx as nx
-import mock
 import numpy
 import pytest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # Python 2 backport
 
 import stbt
 from stbt.keyboard import _add_weights, _keys_to_press

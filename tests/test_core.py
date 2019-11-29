@@ -13,9 +13,13 @@ import sys
 import time
 
 import cv2
-import mock
 import numpy
 import pytest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # Python 2 backport
 
 import stbt
 from stbt import wait_until
