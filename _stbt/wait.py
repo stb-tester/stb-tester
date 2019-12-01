@@ -53,27 +53,30 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
     takes a few frames to react, so a test script like this would probably
     fail::
 
-        press("KEY_EPG")
-        assert match("guide.png")
+        stbt.press("KEY_EPG")
+        assert stbt.match("guide.png")
 
     Instead, use this::
 
-        press("KEY_EPG")
-        assert wait_until(lambda: match("guide.png"))
+        import stbt
+        from stbt import wait_until
+
+        stbt.press("KEY_EPG")
+        assert wait_until(lambda: stbt.match("guide.png"))
 
     ``wait_until`` allows composing more complex conditions, such as::
 
         # Wait until something disappears:
-        assert wait_until(lambda: not match("xyz.png"))
+        assert wait_until(lambda: not stbt.match("xyz.png"))
 
         # Assert that something doesn't appear within 10 seconds:
-        assert not wait_until(lambda: match("xyz.png"))
+        assert not wait_until(lambda: stbt.match("xyz.png"))
 
         # Assert that two images are present at the same time:
-        assert wait_until(lambda: match("a.png") and match("b.png"))
+        assert wait_until(lambda: stbt.match("a.png") and stbt.match("b.png"))
 
         # Wait but don't raise an exception if the image isn't present:
-        if not wait_until(lambda: match("xyz.png")):
+        if not wait_until(lambda: stbt.match("xyz.png")):
             do_something_else()
 
         # Wait for a menu selection to change. Here ``Menu`` is a `FrameObject`
@@ -85,7 +88,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         # Wait for a match to stabilise position, returning the first stable
         # match. Used in performance measurements, for example to wait for a
         # selection highlight to finish moving:
-        keypress = press("KEY_DOWN")
+        keypress = stbt.press("KEY_DOWN")
         match_result = wait_until(lambda: stbt.match("selection.png"),
                                   predicate=lambda x: x and x.region,
                                   stable_secs=2)
