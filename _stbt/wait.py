@@ -61,11 +61,6 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         press("KEY_EPG")
         assert wait_until(lambda: match("guide.png"))
 
-    Note that instead of the above ``assert wait_until(...)`` you could use
-    ``wait_for_match("guide.png")``. ``wait_until`` is a generic solution that
-    also works with stbt's other functions, like `match_text` and
-    `is_screen_black`.
-
     ``wait_until`` allows composing more complex conditions, such as::
 
         # Wait until something disappears:
@@ -77,27 +72,26 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         # Assert that two images are present at the same time:
         assert wait_until(lambda: match("a.png") and match("b.png"))
 
-        # Wait but don't raise an exception:
+        # Wait but don't raise an exception if the image isn't present:
         if not wait_until(lambda: match("xyz.png")):
             do_something_else()
 
         # Wait for a menu selection to change. Here ``Menu`` is a `FrameObject`
-        # with a property called `selection` that returns a string with the
-        # name of the currently-selected menu item:
-        # The return value (``menu``) is an instance of ``Menu``.
+        # subclass with a property called `selection` that returns the name of
+        # the currently-selected menu item. The return value (``menu``) is an
+        # instance of ``Menu``.
         menu = wait_until(Menu, predicate=lambda x: x.selection == "Home")
 
         # Wait for a match to stabilise position, returning the first stable
         # match. Used in performance measurements, for example to wait for a
         # selection highlight to finish moving:
-        press("KEY_DOWN")
-        start_time = time.time()
+        keypress = press("KEY_DOWN")
         match_result = wait_until(lambda: stbt.match("selection.png"),
                                   predicate=lambda x: x and x.region,
                                   stable_secs=2)
         assert match_result
-        end_time = match_result.time  # this is the first stable frame
-        print("Transition took %s seconds" % (end_time - start_time))
+        match_time = match_result.time  # this is the first stable frame
+        print("Transition took %s seconds" % (match_time - keypress.end_time))
 
     Added in v28: The ``predicate`` and ``stable_secs`` parameters.
     """
