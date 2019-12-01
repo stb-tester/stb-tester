@@ -63,5 +63,6 @@ setuptools.setup(
         "networkx==1.11",
         "opencv-python~=3.2",
         "pylint==1.8.3",
+        "stbt-extra-stubs~=31.0",
     ],
 )
