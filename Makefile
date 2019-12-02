@@ -223,7 +223,6 @@ check-pytest: all
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v tests/vstb-example-html5/)
 check-pythonpackage:
-	PYTHONPATH=$$PWD \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
 	    tests/subdirectory/test_load_image_from_subdirectory.py \
