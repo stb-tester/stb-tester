@@ -44,8 +44,8 @@ def test_load_image_with_unicode_filename():
     print(sys.getfilesystemencoding())
     shutil.copyfile(_find_file("Rothlisberger.png"),
                     _find_file("Röthlisberger.png"))
-    assert stbt.load_image("Röthlisberger.png") is not None
     assert stbt.load_image(u"Röthlisberger.png") is not None
+    assert stbt.load_image(u"Röthlisberger.png".encode("utf-8")) is not None
     assert stbt.load_image(u"R\xf6thlisberger.png") is not None
 
 

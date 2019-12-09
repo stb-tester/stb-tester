@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import native, raise_, string_types, text_to_native_str
+from future.utils import native, raise_, string_types
 
 import argparse
 import datetime
@@ -35,7 +35,7 @@ from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
 from _stbt.logging import _Annotation, ddebug, debug, warn
 from _stbt.types import NoVideo, Region
-from _stbt.utils import text_type, to_unicode
+from _stbt.utils import text_type, to_native_str, to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, GObject, Gst  # pylint:disable=wrong-import-order
@@ -605,7 +605,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', text_to_native_str('downstream'))
+                .set_property('leaky', to_native_str('downstream'))
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 

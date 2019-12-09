@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import text_to_native_str
 
 import inspect
 import os
@@ -16,6 +15,7 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
+from .utils import to_native_str, to_unicode
 
 
 class Frame(numpy.ndarray):
@@ -128,10 +128,11 @@ def load_image(filename, flags=None):
 
     absolute_filename = find_user_file(filename)
     if not absolute_filename:
-        raise IOError("No such file: %s" % filename)
+        raise IOError(to_native_str("No such file: %s" % to_unicode(filename)))
     image = imread(absolute_filename, flags)
     if image is None:
-        raise IOError("Failed to load image: %s" % absolute_filename)
+        raise IOError(to_native_str("Failed to load image: %s" %
+                                    to_unicode(absolute_filename)))
     return image
 
 
@@ -185,8 +186,7 @@ def imread(filename, flags=None):
     else:
         cv2_flags = flags
 
-    img = cv2.imread(text_to_native_str(filename, encoding="utf-8"),
-                     cv2_flags)
+    img = cv2.imread(to_native_str(filename), cv2_flags)
     if img is None:
         return None
 
@@ -295,6 +295,7 @@ def find_user_file(filename):
     #   _load_image's caller (e.g. `match`) so we still need to check until
     #   we're outside of the _stbt directory.
 
+    filename = to_native_str(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     caller = inspect.currentframe()
     try:
