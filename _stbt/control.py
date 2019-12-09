@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import text_to_native_str
 
 import os
 import re
@@ -18,7 +17,7 @@ from distutils.spawn import find_executable
 from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
-from .utils import named_temporary_directory, to_bytes
+from .utils import named_temporary_directory, to_bytes, to_native_str
 
 __all__ = ['uri_to_control', 'uri_to_control_recorder']
 
@@ -198,7 +197,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = text_to_native_str(key)
+        self.videosrc.props.pattern = to_native_str(key)
         debug("Pressed %s" % key)
 
 
