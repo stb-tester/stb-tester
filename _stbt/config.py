@@ -19,13 +19,36 @@ class ConfigurationError(Exception):
 
 
 def get_config(section, key, default=None, type_=str):
-    """Read the value of `key` from `section` of the stbt config file.
+    """Read the value of ``key`` from ``section`` of the test-pack
+    configuration file.
 
-    See 'CONFIGURATION' in the stbt(1) man page for the config file search
-    path.
+    For example, if your configuration file looks like this::
 
-    Raises `ConfigurationError` if the specified `section` or `key` is not
-    found, unless `default` is specified (in which case `default` is returned).
+        [test_pack]
+        stbt_version = 30
+
+        [my_company_name]
+        backend_ip = 192.168.1.23
+
+    then you can read the value from your test script like this::
+
+        backend_ip = stbt.get_config("my_company_name", "backend_ip")
+
+    This searches in the ``.stbt.conf`` file at the root of your test-pack, and
+    in the ``config/test-farm/<hostname>.conf`` file matching the hostname of
+    the stb-tester device where the script is running. Values in the
+    host-specific config file override values in ``.stbt.conf``. See
+    `Configuration files
+    <https://stb-tester.com/manual/advanced-configuration#configuration-files>`__
+    for more details.
+
+    Test scripts can use ``get_config`` to read tags that you specify at
+    run-time: see `Automatic configuration keys
+    <https://stb-tester.com/manual/advanced-configuration#automatic-configuration-keys>`__.
+
+    Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
+    found, unless ``default`` is specified (in which case ``default`` is
+    returned).
     """
 
     config = _config_init()
