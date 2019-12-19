@@ -18,9 +18,18 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [license]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 
 
-#### Unreleased
+#### v32
 
- * Support for OpenCV4
+UNRELEASED.
+
+##### Major new features
+
+##### Breaking changes since v31
+
+##### Minor additions, bugfixes & improvements
+
+* Support for OpenCV4
+
 
 #### v31
 
@@ -106,6 +115,7 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 * stbt.wait_for_motion: More sensitive to slow motion (such as a slow fade to
   black) by comparing against the last frame since significant differences were
   seen, instead of always comparing against the previous frame.
+
 
 #### v30
 
