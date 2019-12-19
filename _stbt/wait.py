@@ -10,6 +10,11 @@ import inspect
 
 from .logging import debug
 
+try:
+    from inspect import getfullargspec as getargspec
+except ImportError:  # Python 2
+    from inspect import getargspec
+
 
 def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
                stable_secs=0):
@@ -22,7 +27,8 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
     .. _truthy: https://docs.python.org/3.6/library/stdtypes.html#truth-value-testing
 
     :param callable_: any Python callable (such as a function or a lambda
-        expression) with no arguments.
+        expression) with no arguments, or with a single argument called
+        ``frame``.
 
     :type timeout_secs: int or float, in seconds
     :param timeout_secs: After this timeout elapses, ``wait_until`` will return
@@ -95,11 +101,22 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         assert match_result
         match_time = match_result.time  # this is the first stable frame
         print("Transition took %s seconds" % (match_time - keypress.end_time))
+
+    Changed in v32: The ``callable_`` function can optionally take a parameter
+    called ``frame``.
     """
     import time
 
     if predicate is None:
         predicate = lambda x: x
+
+    if (inspect.isfunction(callable_) and
+            "frame" in getargspec(callable_).args):  # pylint:disable=deprecated-method
+        import stbt
+        frames = stbt.frames()
+        f = callable_
+        callable_ = lambda: f(frame=next(frames))
+
     stable_value = None
     stable_predicate_value = None
     expiry_time = time.time() + timeout_secs

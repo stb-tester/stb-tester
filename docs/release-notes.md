@@ -28,6 +28,14 @@ UNRELEASED.
 
 ##### Minor additions, bugfixes & improvements
 
+* `stbt.wait_until`'s first parameter (the function to call) can now,
+  optionally, take a single parameter called "frame". This allows the code in
+  the following example to guarantee that both of the calls to `stbt.match` are
+  operating on the same frame of video:
+
+        wait_until(lambda frame: stbt.match("image1.png", frame) or
+                                 stbt.match("image2.png", frame))
+
 * Support for OpenCV4
 
 

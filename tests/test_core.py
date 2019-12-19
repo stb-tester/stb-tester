@@ -342,5 +342,18 @@ def test_that_wait_until_doesnt_compare_return_values(mock_time):
         result = wait_until(MR, stable_secs=2)
 
 
+def test_wait_until_with_function_that_takes_a_frame():
+    def _frames():
+        for i in range(10):
+            yield numpy.ones((1, 1), dtype=numpy.uint8) * i
+
+    def m(frame):
+        print(frame)
+        return frame[0, 0] == 5
+
+    with mock.patch("stbt.frames", _frames):
+        assert wait_until(lambda frame, other=None: m(frame) and m(frame))
+
+
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
