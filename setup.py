@@ -33,7 +33,7 @@ This package doesn't bundle the Tesseract OCR engine, so `stbt.ocr()` and
 
 setuptools.setup(
     name="stb-tester",
-    version="31.1.4",
+    version="31.1.5",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
@@ -63,6 +63,6 @@ setuptools.setup(
         "networkx==1.11",
         "opencv-python~=3.2",
         "pylint==1.8.3",
-        "stbt-extra-stubs~=31.0",
+        "stbt-premium-stubs~=31.0",
     ],
 )
