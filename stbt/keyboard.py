@@ -236,6 +236,9 @@ class Keyboard(object):
             if letter not in self.G:
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
+        if page._frame.time < stbt._dut._last_keypress.end_time:  # pylint:disable=protected-access
+            page = page.refresh()
+
         for letter in text:
             page = self.navigate_to(letter, page, verify_every_keypress)
             stbt.press("KEY_OK")
@@ -259,6 +262,9 @@ class Keyboard(object):
 
         if target not in self.G:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
+
+        if page._frame.time < stbt._dut._last_keypress.end_time:  # pylint:disable=protected-access
+            page = page.refresh()
 
         assert page, "%s page isn't visible" % type(page).__name__
         deadline = time.time() + self.navigate_timeout
