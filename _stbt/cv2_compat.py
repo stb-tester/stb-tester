@@ -18,7 +18,8 @@ if version >= [3, 2, 0]:
         contours = cv2.findContours(image=image, mode=mode, method=method)
 
         # In OpenCV 4, the behavior of find findContours changes from returning
-        # (img, contours, hierarchy) back to (contours, hierarchy): https://bit.ly/31bWiIP
+        # (img, contours, hierarchy) back to (contours, hierarchy):
+        # https://bit.ly/31bWiIP
         contours = contours[0] if version >= [4, 0, 0] else contours[1]
         return [cv2.boundingRect(x) for x in contours]
 else:
@@ -31,9 +32,9 @@ else:
         return (x - 1, y - 1, w + 2, h + 2)
 
     def find_contour_boxes(image, mode, method):  # pylint:disable=redefined-outer-name
-        # In v3.0.0 cv2.findContours started returning (img, contours, hierarchy)
-        # rather than (contours, hierarchy).  Index -2 selects contours on both
-        # versions:
+        # In v3.0.0 cv2.findContours started returning
+        # (img, contours, hierarchy) rather than (contours, hierarchy).
+        # Index -2 selects contours on both versions:
         contours = cv2.findContours(image=image, mode=mode, method=method)[-2]
         return [_fix_pre_3_2_rects(cv2.boundingRect(x)) for x in contours]
 

@@ -18,6 +18,10 @@ open-source project, or update [test_pack.stbt_version] if you're using the
 [license]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 
 
+#### Unreleased
+
+ * Support for OpenCV4
+
 #### v31
 
 18 September 2019.
