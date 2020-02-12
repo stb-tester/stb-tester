@@ -189,3 +189,15 @@ def test_unicode_in_config_file_contents():
 
         # This is `unicode` on python 2 and `str` (i.e. unicode) on python 3.
         assert isinstance(get_config("global", "unicodeinvalue"), text_type)
+
+
+def test_get_config_with_default_value():
+    with temporary_config("""\
+            [global]
+            test=hello"""):
+        assert get_config("global", "test", "my default") == "hello"
+        assert get_config("global", "nosuchkey", "my default") == "my default"
+        assert get_config("nosuchsection", "test", "my default") == "my default"
+        assert get_config("nosuchsection", "test", None) is None
+        with pytest.raises(ConfigurationError):
+            get_config("nosuchsection", "test")

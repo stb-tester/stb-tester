@@ -18,7 +18,11 @@ class ConfigurationError(Exception):
     pass
 
 
-def get_config(section, key, default=None, type_=str):
+class NoDefault(object):
+    pass
+
+
+def get_config(section, key, default=NoDefault, type_=str):
     """Read the value of ``key`` from ``section`` of the test-pack
     configuration file.
 
@@ -61,7 +65,7 @@ def get_config(section, key, default=None, type_=str):
         else:
             return type_(config.get(section, key))
     except configparser.Error as e:
-        if default is None:
+        if default is NoDefault:
             raise ConfigurationError(e.message)
         else:
             return default
