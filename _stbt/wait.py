@@ -109,7 +109,10 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
     while True:
         t = time.time()
         value = callable_()
-        predicate_value = predicate(value)
+        if value:
+            predicate_value = predicate(value)
+        else:
+            predicate_value = None
 
         if stable_secs:
             if predicate_value != stable_predicate_value:
