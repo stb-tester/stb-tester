@@ -200,6 +200,7 @@ def draw_text(text, duration_secs=3):
     :param duration_secs: The number of seconds to display the text.
     :type duration_secs: int or float
     """
+    debug(text)
     return _dut.draw_text(text, duration_secs)
 
 
