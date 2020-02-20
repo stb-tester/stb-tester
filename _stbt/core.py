@@ -789,7 +789,8 @@ class SinkPipeline(object):
         img = array_from_sample(sample, readwrite=True)
         # Text:
         _draw_text(
-            img, datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4],
+            img,
+            datetime.datetime.fromtimestamp(now).strftime("%H:%M:%S.%f")[:-4],
             (10, 30), (255, 255, 255))
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
