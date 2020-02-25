@@ -22,7 +22,7 @@ class Position(namedtuple('Position', 'x y')):
     >>> b.contains(Position(7, 8))
     True
     >>> b.contains(Position(13, 10))
-    True
+    False
     >>> b.contains(Position(14, 9))
     False
     """
