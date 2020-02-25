@@ -118,6 +118,8 @@ class Region(with_metaclass(_RegionClsMethods,
     Position(x=8, y=7)
     >>> b.contains(c), a.contains(b), c.contains(b)
     (True, False, False)
+    >>> b.contains(c.center), a.contains(b.center)
+    (True, False)
     >>> b.extend(x=6, bottom=-4) == c
     True
     >>> a.extend(right=5).contains(c)
