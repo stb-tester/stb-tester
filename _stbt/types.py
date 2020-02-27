@@ -86,8 +86,10 @@ class Region(with_metaclass(_RegionClsMethods,
     10
     >>> b.center
     Position(x=8, y=7)
-    >>> b.contains(c), a.contains(b), c.contains(b)
-    (True, False, False)
+    >>> b.contains(c), a.contains(b), c.contains(b), c.contains(None)
+    (True, False, False, False)
+    >>> b.contains(c.center), a.contains(b.center)
+    (True, False)
     >>> b.extend(x=6, bottom=-4) == c
     True
     >>> a.extend(right=5).contains(c)
@@ -272,9 +274,21 @@ class Region(with_metaclass(_RegionClsMethods,
                       max(0, self.right)))
 
     def contains(self, other):
-        """:returns: True if ``other`` is entirely contained within self."""
-        return (other and self.x <= other.x and self.y <= other.y and
-                self.right >= other.right and self.bottom >= other.bottom)
+        """:returns: True if ``other`` (a `Region` or `Position`) is entirely
+        contained within self.
+        """
+        if other is None:
+            return False
+        elif all(hasattr(other, a) for a in ("x", "y", "right", "bottom")):
+            # a Region
+            return (self.x <= other.x and other.right <= self.right and
+                    self.y <= other.y and other.bottom <= self.bottom)
+        elif all(hasattr(other, a) for a in ("x", "y")):  # a Position
+            return (self.x <= other.x < self.right and
+                    self.y <= other.y < self.bottom)
+        else:
+            raise TypeError("Region.contains expects a Region, Position, or "
+                            "None. Got %r" % (other,))
 
     def translate(self, x=None, y=None):
         """
