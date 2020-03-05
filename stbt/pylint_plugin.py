@@ -101,7 +101,7 @@ class StbtChecker(BaseChecker):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
 
-        if re.search(r"\bwait_until", node.func.as_string()):
+        if re.search(r"\bwait_until$", node.func.as_string()):
             if node.args:
                 arg = node.args[0]
                 if not _is_callable(arg):
