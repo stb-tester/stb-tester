@@ -124,8 +124,12 @@ def load_image(filename, flags=None):
     * Added in v28.
     * Changed in v30: Include alpha (transparency) channel if the file has
       transparent pixels.
+    * Changed in v32: Allows passing an image (`numpy.ndarray`) in which case
+      this function is a no-op.
     """
 
+    if isinstance(filename, numpy.ndarray):
+        return filename
     absolute_filename = find_user_file(filename)
     if not absolute_filename:
         raise IOError(to_native_str("No such file: %s" % to_unicode(filename)))
