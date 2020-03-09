@@ -49,6 +49,12 @@ def test_load_image_with_unicode_filename():
     assert stbt.load_image(u"R\xf6thlisberger.png") is not None
 
 
+def test_load_image_with_image():
+    img = numpy.zeros((720, 1280), dtype=numpy.uint8)
+    img2 = stbt.load_image(img)
+    assert img is img2
+
+
 def test_crop():
     f = stbt.load_image("action-panel.png")
     cropped = stbt.crop(f, stbt.Region(x=1045, y=672, right=1081, bottom=691))
