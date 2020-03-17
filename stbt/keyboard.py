@@ -236,9 +236,14 @@ class Keyboard(object):
             if letter not in self.G:
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
+        prev = None
         for letter in text:
             page = self.navigate_to(letter, page, verify_every_keypress)
-            stbt.press("KEY_OK")
+            if letter == prev:
+                stbt.press("KEY_OK", interpress_delay_secs=1)
+            else:
+                stbt.press("KEY_OK")
+            prev = letter
         return page
 
     def navigate_to(self, target, page, verify_every_keypress=False):
