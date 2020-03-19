@@ -600,29 +600,29 @@ test_that_press_returns_a_pressresult() {
 	import time
 	
 	before = time.time()
-	result = stbt.press("KEY_MENU")
+	result1 = stbt.press("KEY_MENU")
 	after = time.time()
 
-	assert before < result.start_time < result.end_time < after
-	assert result.key == "KEY_MENU"
-	assert isinstance(result.frame_before, stbt.Frame)
+	assert before < result1.start_time < result1.end_time < after
+	assert result1.key == "KEY_MENU"
+	assert isinstance(result1.frame_before, stbt.Frame)
 
 	before = time.time()
-	result = stbt.press("KEY_HOME", hold_secs=0.001)
+	result2 = stbt.press("KEY_HOME", hold_secs=0.001)
 	after = time.time()
 
-	assert before < result.start_time < result.end_time < after
-	assert result.key == "KEY_HOME"
-	assert isinstance(result.frame_before, stbt.Frame)
+	assert before < result2.start_time < result2.end_time < after
+	assert result2.key == "KEY_HOME"
+	assert isinstance(result2.frame_before, stbt.Frame)
 
 	before = time.time()
-	with stbt.pressing("KEY_VOLUMEUP") as result:
-	    assert before < result.start_time
-	    assert result.end_time is None
-	    assert result.key == "KEY_VOLUMEUP"
-	    assert isinstance(result.frame_before, stbt.Frame)
+	with stbt.pressing("KEY_VOLUMEUP") as result3:
+	    assert before < result3.start_time
+	    assert result3.end_time is None
+	    assert result3.key == "KEY_VOLUMEUP"
+	    assert isinstance(result3.frame_before, stbt.Frame)
 	after = time.time()
-	assert result.start_time < result.end_time < after
+	assert result3.start_time < result3.end_time < after
 	EOF
     stbt run -vv --control=none test.py || fail "Incorrect press() behaviour"
 }
