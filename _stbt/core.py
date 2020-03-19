@@ -118,6 +118,9 @@ class DeviceUnderTest(object):
             self._mainloop.__exit__(exc_type, exc_value, tb)
         self._control = None
 
+    def last_keypress(self):
+        return self._last_keypress
+
     def press(self, key, interpress_delay_secs=None, hold_secs=None):
         if hold_secs is not None and hold_secs > 60:
             # You must ensure that lircd's --repeat-max is set high enough.

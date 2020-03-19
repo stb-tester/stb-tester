@@ -90,6 +90,7 @@ __all__ = [
     "grid_to_navigation_graph",
     "is_screen_black",
     "Keyboard",
+    "last_keypress",
     "load_image",
     "match",
     "match_all",
@@ -123,6 +124,15 @@ __all__ = [
 
 # Functions available to stbt scripts
 # ===========================================================================
+
+
+def last_keypress():
+    """Returns information about the last key-press sent to the device under
+    test.
+
+    See the return type of `stbt.press`.
+    """
+    return _dut.last_keypress()
 
 
 def press(key, interpress_delay_secs=None, hold_secs=None):
@@ -279,6 +289,9 @@ def get_frame():
 
 class UnconfiguredDeviceUnderTest(object):
     # pylint:disable=unused-argument
+    def last_keypress(self):
+        return None
+
     def press(self, *args, **kwargs):
         raise RuntimeError(
             "stbt.press isn't configured to run on your hardware")
