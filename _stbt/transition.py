@@ -107,12 +107,11 @@ def wait_for_transition_to_end(
     transition you can use `wait_for_transition_to_end` as the last
     measurement. For example::
 
-        stbt.press("KEY_OK")  # Launch my app
-        press_time = time.time()
+        keypress = stbt.press("KEY_OK")  # Launch my app
         m = stbt.wait_for_match("my-app-home-screen.png")
-        time_to_first_frame = m.time - press_time
+        time_to_first_frame = m.time - keypress.start_time
         end = wait_for_transition_to_end(m.frame)
-        time_to_fully_populated = end.end_time - press_time
+        time_to_fully_populated = end.end_time - keypress.start_time
 
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
