@@ -276,7 +276,7 @@ _INDEX_HTML_HEADER = dedent(u"""\
     </style>
     </head>
     <body>
-    <div class="container">
+    <div class="container-fluid">
     {% if not jupyter %}
     {%   if frame_number > 1 %}
     <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
