@@ -175,6 +175,7 @@ class ImageLogger(object):
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
                     .render(annotated_image=self._draw_annotated_image,
                             draw=self._draw,
+                            jupyter=self.jupyter,
                             **template_kwargs))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
                     .render())
