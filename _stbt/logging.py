@@ -81,7 +81,8 @@ class ImageLogger(object):
     _frame_number = itertools.count(1)
 
     def __init__(self, name, **kwargs):
-        self.enabled = get_debug_level() > 1
+        self.jupyter = "JPY_PARENT_PID" in os.environ  # in a Jupyter Notebook
+        self.enabled = get_debug_level() > 1 or self.jupyter
         if not self.enabled:
             return
 
@@ -99,7 +100,6 @@ class ImageLogger(object):
             return
 
         self.images = OrderedDict()
-        self.pyramid_levels = set()
         self.data = {}
         for k, v in kwargs.items():
             self.data[k] = v
@@ -167,15 +167,22 @@ class ImageLogger(object):
         template_kwargs["images"] = self.images
         template_kwargs.update(kwargs)
 
-        with open(os.path.join(self.outdir, "index.html"), "w") as f:
+        index_html = os.path.join(self.outdir, "index.html")
+        with open(index_html, "w") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
-                    .render(frame_number=self.frame_number))
+                    .render(frame_number=self.frame_number,
+                            jupyter=self.jupyter))
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
                     .render(annotated_image=self._draw_annotated_image,
                             draw=self._draw,
+                            jupyter=self.jupyter,
                             **template_kwargs))
             f.write(jinja2.Template(_INDEX_HTML_FOOTER)
                     .render())
+
+        if self.jupyter:
+            from IPython.display import display, IFrame  # pylint:disable=import-error
+            display(IFrame(src=index_html, width=974, height=600))
 
     def _draw(self, region, source_size, css_class, title=None):
         import jinja2
@@ -251,7 +258,6 @@ _INDEX_HTML_HEADER = dedent(u"""\
     <link href="https://stb-tester.com/assets/bootstrap-3.3.2.min.css" rel="stylesheet">
     <style>
         a.nav { margin: 10px; }
-        a.nav[href*="/00000/"] { visibility: hidden; }
         a.nav.pull-left { margin-left: 0; }
         a.nav.pull-right { margin-right: 0; }
         h5 { margin-top: 40px; }
@@ -271,12 +277,15 @@ _INDEX_HTML_HEADER = dedent(u"""\
     </style>
     </head>
     <body>
-    <div class="container">
+    <div class="container-fluid">
+    {% if not jupyter %}
+    {%   if frame_number > 1 %}
     <a href="../{{ "%05d" % (frame_number - 1) }}/index.html"
        class="nav pull-left">«prev</a>
+    {%   endif %}
     <a href="../{{ "%05d" % (frame_number + 1) }}/index.html"
        class="nav pull-right">next»</a>
-
+    {% endif %}
     """)
 
 _INDEX_HTML_FOOTER = dedent(u"""\
