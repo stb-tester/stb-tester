@@ -99,7 +99,6 @@ class ImageLogger(object):
             return
 
         self.images = OrderedDict()
-        self.pyramid_levels = set()
         self.data = {}
         for k, v in kwargs.items():
             self.data[k] = v
