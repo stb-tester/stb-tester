@@ -1,5 +1,7 @@
 # Run with ./run-tests.sh
 
+: ${stbt_lint:=stbt lint}
+
 assert_lint_log() {
     cat > lint.expected
     diff -u lint.expected <(grep -v "Using config file" lint.log) \
@@ -11,7 +13,7 @@ test_that_stbt_lint_passes_existing_images() {
 	import stbt
 	stbt.wait_for_match('$testdir/videotestsrc-redblue.png')
 	EOF
-    stbt lint --errors-only test.py
+    $stbt_lint --errors-only test.py
 }
 
 test_that_stbt_lint_fails_nonexistent_image() {
@@ -19,7 +21,7 @@ test_that_stbt_lint_fails_nonexistent_image() {
 	import stbt
 	stbt.wait_for_match('idontexist.png')
 	EOF
-    stbt lint --errors-only test.py &> lint.log
+    $stbt_lint --errors-only test.py &> lint.log
     assert_lint_log <<-EOF
 	************* Module test
 	E:  2,20: Image "idontexist.png" not found on disk (stbt-missing-image)
@@ -40,7 +42,7 @@ test_that_stbt_lint_ignores_generated_image_names() {
 	var.replace('idontexist', 'idontexist.png')
 	re.sub(r'idontexist$', 'idontexist.png', var)
 	EOF
-    stbt lint --errors-only test.py
+    $stbt_lint --errors-only test.py
 }
 
 test_that_stbt_lint_ignores_regular_expressions() {
@@ -48,7 +50,7 @@ test_that_stbt_lint_ignores_regular_expressions() {
 	import re
 	re.match(r'.*/(.*)\.png', '')
 	EOF
-    stbt lint --errors-only test.py
+    $stbt_lint --errors-only test.py
 }
 
 test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
@@ -62,7 +64,7 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
 	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
-    stbt lint --errors-only --extension-pkg-whitelist=cv2 test.py
+    $stbt_lint --errors-only --extension-pkg-whitelist=cv2 test.py
 }
 
 test_that_stbt_lint_ignores_multiline_image_name() {
@@ -73,7 +75,7 @@ test_that_stbt_lint_ignores_multiline_image_name() {
 	    sudo fbi -T 1 -noverbose original.png
 	    sudo fbi -T 2 -noverbose original.png""")
 	EOF
-    stbt lint --errors-only test.py
+    $stbt_lint --errors-only test.py
 }
 
 test_that_stbt_lint_ignores_image_urls() {
@@ -81,7 +83,7 @@ test_that_stbt_lint_ignores_image_urls() {
 	def urlopen(x): pass
 	urlopen("http://example.com/image.png")
 	EOF
-    stbt lint --errors-only test.py
+    $stbt_lint --errors-only test.py
 }
 
 test_that_stbt_lint_reports_uncommitted_images() {
@@ -92,33 +94,34 @@ test_that_stbt_lint_reports_uncommitted_images() {
 	assert stbt.match("images/reference.png")
 	EOF
     cd repo
-    stbt lint --errors-only tests/test.py ||
+    $stbt_lint --errors-only tests/test.py ||
         fail "checker should be disabled because we're not in a git repo"
 
     git init .
-    stbt lint --errors-only tests/test.py &> lint.log
+    $stbt_lint --errors-only tests/test.py &> lint.log
     assert_lint_log <<-EOF
 	************* Module test
 	E:  2,18: Image "tests/images/reference.png" not committed to git (stbt-uncommitted-image)
 	EOF
 
-    (cd tests && stbt lint --errors-only test.py) &> lint.log
+    (cd tests && $stbt_lint --errors-only test.py) &> lint.log
     assert_lint_log <<-EOF
 	************* Module test
 	E:  2,18: Image "images/reference.png" not committed to git (stbt-uncommitted-image)
 	EOF
 
     git add tests/images/reference.png
-    stbt lint --errors-only tests/test.py || fail "stbt-lint should succeed"
+    $stbt_lint --errors-only tests/test.py || fail "stbt-lint should succeed"
 
-    (cd tests && stbt lint --errors-only test.py) ||
+    (cd tests && $stbt_lint --errors-only test.py) ||
         fail "stbt-lint should succeed from subdirectory too"
 }
 
 test_pylint_plugin_on_itself() {
     # It should work on arbitrary python files, so that you can just enable it
     # as a pylint plugin across your entire project, not just for stbt scripts.
-    stbt lint --errors-only "$srcdir"/stbt/pylint_plugin.py
+    [ -f "$srcdir"/stbt/pylint_plugin.py ] || skip 'Running outside $srcdir'
+    $stbt_lint --errors-only "$srcdir"/stbt/pylint_plugin.py
 }
 
 test_that_stbt_lint_checks_uses_of_stbt_return_values() {
@@ -146,7 +149,7 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
 	    assert press_and_wait("KEY_DOWN")
 	    assert stbt.press_and_wait("KEY_DOWN")
 	EOF
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
 
     assert_lint_log <<-'EOF'
 	************* Module test
@@ -183,7 +186,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	    assert wait_until(partial(lambda x: True, x=3))  # Pylint can't infer functools.partial. pylint:disable=stbt-wait-until-callable
 	    assert wait_until(partial(lambda x: True, x=3)())
 	EOF
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
 
     assert_lint_log <<-'EOF'
 	************* Module test
@@ -258,7 +261,7 @@ test_that_stbt_lint_checks_frameobjects() {
 	    assert stbt.match("videotestsrc-redblue.png")
 	EOF
     cp "$testdir/videotestsrc-redblue.png" .
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
 
     cat > expected.log <<-'EOF'
 	************* Module test
@@ -280,7 +283,7 @@ test_that_stbt_lint_checks_frameobjects() {
     sed -e 's/^import stbt$/from stbt import FrameObject, get_frame, is_screen_black, match, match_text, ocr, press, press_and_wait, wait_until/' \
         -e 's/stbt\.//g' \
         -i test.py expected.log
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
     assert_lint_log < expected.log
 }
 
@@ -289,7 +292,7 @@ test_that_stbt_lint_ignores_astroid_inference_exceptions() {
 	import stbt
 	assert stbt.wait_until(InfoPage)
 	EOF
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
 
     assert_lint_log <<-'EOF'
 	************* Module test
@@ -303,7 +306,7 @@ test_that_stbt_lint_warns_on_assert_true() {
 	assert True
 	assert True, "My message"
 	EOF
-    stbt lint --errors-only test.py > lint.log
+    $stbt_lint --errors-only test.py > lint.log
 
     assert_lint_log <<-'EOF'
 	************* Module test
@@ -328,7 +331,7 @@ test_that_stbt_lint_understands_assert_false() {
 	    # them should").
 	    assert False, "My Message"
 	EOF
-    stbt lint --disable=missing-docstring,invalid-name --score=no test.py > lint.log
+    $stbt_lint --disable=missing-docstring,invalid-name --score=no test.py > lint.log
 
     assert_lint_log <<-'EOF'
 	************* Module test

@@ -223,7 +223,7 @@ check-pytest: all
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v tests/vstb-example-html5/)
 check-pythonpackage:
-	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
+	export STBT_CONFIG_FILE=$$PWD/tests/stbt.conf && \
 	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
 	    tests/subdirectory/test_load_image_from_subdirectory.py \
 	    tests/test_android.py \
@@ -233,7 +233,9 @@ check-pythonpackage:
 	    tests/test_keyboard.py \
 	    tests/test_match.py \
 	    tests/test_motion.py \
-	    tests/test_transition.py
+	    tests/test_transition.py && \
+	stbt_lint="pylint --load-plugins=stbt.pylint_plugin" \
+	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
