@@ -20,10 +20,9 @@ import os
 import re
 import subprocess
 
-from astroid import MANAGER, YES
-from astroid.node_classes import (
-    Assert, BinOp, Call, Const, Expr, Keyword, Name, Raise)
-from astroid.scoped_nodes import ClassDef, FunctionDef
+from astroid import (
+    Assert, BinOp, Call, ClassDef, Const, Expr, FunctionDef, Keyword, MANAGER,
+    Name, Raise, YES)
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
