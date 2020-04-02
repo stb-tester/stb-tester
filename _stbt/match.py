@@ -580,9 +580,10 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     else:
         mask = None
 
-    template_pyramid = _build_pyramid(template, levels, is_template=True)
-    mask_pyramid = _build_pyramid(mask, len(template_pyramid), is_mask=True)
-    image_pyramid = _build_pyramid(image, len(mask_pyramid))
+    mask_pyramid = _build_pyramid(mask, levels, is_mask=True)
+    template_pyramid = _build_pyramid(template, len(mask_pyramid),
+                                      is_template=True)
+    image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
     for level in reversed(range(len(image_pyramid))):
@@ -797,7 +798,7 @@ def _build_pyramid(image, levels, is_template=False, is_mask=False):
             # matched at pixel 0,0 of the frame, so we won't need to adjust
             # the match position afterwards).
             downsampled = downsampled[1:, 1:]
-        if is_mask and numpy.count_nonzero(downsampled) == 0:
+        if is_mask and numpy.count_nonzero(downsampled) // 3 < 400:
             break
         pyramid.append(downsampled)
     return pyramid

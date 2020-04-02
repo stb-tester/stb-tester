@@ -196,7 +196,13 @@ def test_completely_transparent_reference_image():
 
 
 @requires_opencv_3
-def test_transparent_reference_image_with_hard_edge():
+@pytest.mark.parametrize("frame,image,expected_region", [
+    # pylint:disable=bad-whitespace,line-too-long
+    ("images/regression/roku-tile-frame.png", "images/regression/roku-tile-selection.png", stbt.Region(x=325, y=145, right=545, bottom=325)),
+    ("images/regression/xfinity-frame.png",   "images/regression/xfinity-selection.png",   stbt.Region(x=68, y=157, right=300, bottom=473)),
+])
+def test_transparent_reference_image_false_negative_caused_by_pyramid(
+        frame, image, expected_region):
     # This is a regression test for a bug in the pyramid optimisation when
     # the reference image has a very small number of pixels, or the only non-
     # transparent pixels are near the edges of reference image:
@@ -205,10 +211,10 @@ def test_transparent_reference_image_with_hard_edge():
     # down-scaled frame have been blurred. We also blur the reference image
     # before down-scaling, but since it doesn't know what's outside its edges,
     # it won't have the  blurring near the edge.
-    frame = stbt.load_image("images/regression/roku-tile-frame.png")
-    m = stbt.match("images/regression/roku-tile-selection.png", frame=frame)
+    frame = stbt.load_image(frame)
+    m = stbt.match(image, frame=frame)
     assert m
-    assert stbt.Region(x=325, y=145, right=545, bottom=325).contains(m.region)
+    assert expected_region.contains(m.region)
 
 
 @pytest.mark.parametrize("frame,image", [
@@ -442,29 +448,28 @@ def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
 def test_that_build_pyramid_relaxes_mask():
     from _stbt.match import _build_pyramid
 
-    mask = numpy.ones((20, 20, 3), dtype=numpy.uint8) * 255
+    mask = numpy.ones((200, 20, 3), dtype=numpy.uint8) * 255
     mask[5:9, 5:9] = 0  # first 0 is an even row/col, last 0 is an odd row/col
     n = mask.size - numpy.count_nonzero(mask)
     assert n == 4 * 4 * 3
     cv2.imwrite("/tmp/dave1.png", mask)
 
-    mask_pyramid = _build_pyramid(mask, 2, is_mask=True)
+    with scoped_debug_level(2):
+        mask_pyramid = _build_pyramid(mask, 2, is_mask=True)
     assert numpy.all(mask_pyramid[0] == mask)
 
     downsampled = mask_pyramid[1]
     cv2.imwrite("/tmp/dave2.png", downsampled)
-    assert downsampled.shape == (8, 8, 3)
+    assert downsampled.shape == (98, 8, 3)
     print(downsampled[:, :, 0])  # pylint:disable=unsubscriptable-object
-    expected = [
-        # pylint:disable=bad-whitespace
-        [255, 255, 255, 255, 255, 255, 255, 255],
-        [255,   0,   0,   0,   0, 255, 255, 255],
-        [255,   0,   0,   0,   0, 255, 255, 255],
-        [255,   0,   0,   0,   0, 255, 255, 255],
-        [255,   0,   0,   0,   0, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255],
-        [255, 255, 255, 255, 255, 255, 255, 255]]
+    # pylint:disable=bad-whitespace
+    expected = \
+        [[255, 255, 255, 255, 255, 255, 255, 255],
+         [255,   0,   0,   0,   0, 255, 255, 255],
+         [255,   0,   0,   0,   0, 255, 255, 255],
+         [255,   0,   0,   0,   0, 255, 255, 255],
+         [255,   0,   0,   0,   0, 255, 255, 255]] + \
+        [[255, 255, 255, 255, 255, 255, 255, 255]] * 93
     assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
 
 
