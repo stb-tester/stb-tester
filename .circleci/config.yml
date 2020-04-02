@@ -67,7 +67,8 @@ commands:
             rm -rf stbt _stbt &&
             python3 -m venv build_env &&
             source build_env/bin/activate &&
-            pip3 install pytest==3.3.2 attrs==17.4.0 &&
+            pip3 install pytest==3.3.2 attrs==17.4.0 \
+                         pylint==2.4.4 astroid==2.3.3 &&
             pip3 install dist/*.tar.gz &&
             make check-pythonpackage PYTEST=pytest
 
