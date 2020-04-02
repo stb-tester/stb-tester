@@ -22,7 +22,7 @@ import subprocess
 
 from astroid import (
     Assert, BinOp, Call, ClassDef, Const, Expr, FunctionDef, Keyword, MANAGER,
-    Name, Raise, YES)
+    Name, Raise, Uninferable)
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
@@ -283,10 +283,8 @@ def _in_git_repo():
 def _infer(node):
     try:
         for inferred in node.infer():
-            # Sometimes when `infer()` fails it returns `YES` which returns
-            # True to everything, including `callable()` and
-            # `isinstance(YES, <anything else>)`, so it isn't useful.
-            if inferred == YES:
+            # When `infer()` fails it returns this singleton:
+            if inferred is Uninferable:
                 continue
             yield inferred
     except Exception:  # pylint:disable=broad-except
