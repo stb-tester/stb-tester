@@ -319,7 +319,7 @@ def find_user_file(filename):
     finally:
         # Avoid circular references between stack frame objects and themselves
         # for more deterministic GC.  See
-        # https://docs.python.org/3.7/library/inspect.html#the-interpreter-stack
+        # https://docs.python.org/3.6/library/inspect.html#the-interpreter-stack
         # for more information.
         del caller
 
