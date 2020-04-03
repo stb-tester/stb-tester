@@ -6,7 +6,7 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 
 * http://docs.pylint.org/extend.html#writing-your-own-checker
 * http://hg.logilab.org/review/pylint/file/default/examples/custom.py
-* http://docs.python.org/2/library/ast.html
+* http://docs.python.org/3.6/library/ast.html
 
 """
 from __future__ import unicode_literals

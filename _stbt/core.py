@@ -328,7 +328,7 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
     between successive calls) until it succeeds (that is, it returns a
     `truthy`_ value) or until ``timeout_secs`` seconds have passed.
 
-    .. _truthy: https://docs.python.org/2/library/stdtypes.html#truth-value-testing
+    .. _truthy: https://docs.python.org/3.6/library/stdtypes.html#truth-value-testing
 
     :param callable_: any Python callable (such as a function or a lambda
         expression) with no arguments.
