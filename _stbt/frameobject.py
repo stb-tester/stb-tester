@@ -174,16 +174,10 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
     The FrameObject base class defines several convenient methods and
     attributes (see below).
 
-    Further reading:
-
-    * The `PageObject <fowler_>`_ pattern by Martin Fowler.
-    * Tutorial: `Creating new Page Objects <tutorial_>`_.
-    * Stb-tester's `Object Repository`_ GUI for creating, debugging, and
-      viewing FrameObjects.
+    For more details see `Object Repository`_ in the Stb-tester manual.
 
     .. _@property: https://docs.python.org/3.6/library/functions.html#property
     .. _fowler: https://martinfowler.com/bliki/PageObject.html
-    .. _tutorial: https://stb-tester.com/manual/object-repository#creating-new-page-objects
     .. _Object Repository: https://stb-tester.com/manual/object-repository
 
     Added in v30: ``_fields`` and ``refresh``.
