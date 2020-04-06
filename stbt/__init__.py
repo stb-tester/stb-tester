@@ -55,6 +55,7 @@ from _stbt.ocr import (
     ocr,
     OcrEngine,
     OcrMode,
+    set_global_ocr_corrections,
     TextMatchResult)
 from _stbt.precondition import (
     as_precondition,
@@ -113,6 +114,7 @@ __all__ = [
     "press_until_match",
     "Region",
     "save_frame",
+    "set_global_ocr_corrections",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",

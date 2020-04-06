@@ -257,6 +257,14 @@ def ocr(frame=None, region=Region.ALL,
             corrections={'bad': 'good',
                          re.compile(r'[oO]'): '0'}
 
+        Plain strings are replaced first (in the order they are specified),
+        followed by regular expresions (in the order they are specified).
+
+        The default value for this parameter can be set with
+        `stbt.set_global_ocr_corrections`. If global corrections have been set
+        *and* this ``corrections`` parameter is specified, the corrections in
+        this parameter are applied first.
+
     | Added in v28: The ``upsample`` and ``text_color`` parameters.
     | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
@@ -287,9 +295,7 @@ def ocr(frame=None, region=Region.ALL,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
         text_color_threshold, engine, char_whitelist, imglog)
     text = text.strip().translate(_ocr_transtab)
-
-    if corrections is not None:
-        text = apply_ocr_corrections(text, corrections)
+    text = apply_ocr_corrections(text, corrections)
 
     debug(u"OCR in region %s read '%s'." % (region, text))
     _log_ocr_image_debug(imglog, text)
@@ -390,12 +396,21 @@ def match_text(text, frame=None, region=Region.ALL,
 PatternType = type(re.compile(""))
 
 
-def apply_ocr_corrections(text, corrections):
+def apply_ocr_corrections(text, corrections=None):
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
     This is also available as a separate function, so that you can use it to
-    post-process old test artifacts using new corrections.
+    post-process old test artifacts using new corrections. See also
+    `stbt.set_global_ocr_corrections`.
     """
+    if corrections:
+        text = _apply_ocr_corrections(text, corrections)
+    if global_ocr_corrections:
+        text = _apply_ocr_corrections(text, global_ocr_corrections)
+    return text
+
+
+def _apply_ocr_corrections(text, corrections):
     # Match plain strings at word boundaries:
     pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
                        for k in corrections
@@ -408,6 +423,23 @@ def apply_ocr_corrections(text, corrections):
         if isinstance(k, PatternType):
             text = re.sub(k, v, text)
     return text
+
+
+global_ocr_corrections = {}
+
+
+def set_global_ocr_corrections(corrections):
+    """Specify default OCR corrections that apply to all calls to `stbt.ocr`
+    and `stbt.apply_ocr_corrections`.
+
+    See the ``corrections`` parameter of `stbt.ocr` for more details.
+
+    We recommend calling this function from ``tests/__init__.py`` to ensure it
+    is called before any test script is executed.
+    """
+    global global_ocr_corrections
+    debug("Initialising global ocr corrections to: %r" % (corrections,))
+    global_ocr_corrections = corrections
 
 
 _memoise_tesseract_version = None

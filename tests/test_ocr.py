@@ -207,6 +207,15 @@ def test_corrections(corrections, expected):
     assert expected == stbt.ocr(frame=f, mode=stbt.OcrMode.SINGLE_WORD,
                                 corrections=corrections)
 
+    try:
+        stbt.set_global_ocr_corrections({'OO': '11'})
+        if expected == "OO":
+            expected = "11"
+        assert expected == stbt.ocr(frame=f, mode=stbt.OcrMode.SINGLE_WORD,
+                                    corrections=corrections)
+    finally:
+        stbt.set_global_ocr_corrections({})
+
 
 @requires_tesseract
 @pytest.mark.parametrize("words", [
