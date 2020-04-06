@@ -186,6 +186,38 @@ def test_char_whitelist():
 
 
 @requires_tesseract
+@pytest.mark.parametrize("corrections,expected", [
+    # pylint:disable=bad-whitespace
+    # Default ocr output:
+    (None,                                           'OO'),
+    # Corrections string must match entire word:
+    ({'O': '0'},                                     'OO'),
+    ({'OO': '00'},                                   '00'),
+    # Strings are case-sensitive, and they aren't regexes:
+    ({'oo': '00', '[oO]': '0'},                      'OO'),
+    # Regexes do match anywhere:
+    ({re.compile('[oO]'): '0'},                      '00'),
+    # Make sure it tries all the patterns:
+    ({'AA': 'BB', 'OO': '00'},                       '00'),
+    ({re.compile('^O'): '1', re.compile('O$'): '2'}, '12'),
+])
+def test_corrections(corrections, expected):
+    f = load_image('ocr/00.png')
+    print(corrections)
+    assert expected == stbt.ocr(frame=f, mode=stbt.OcrMode.SINGLE_WORD,
+                                corrections=corrections)
+
+    try:
+        stbt.set_global_ocr_corrections({'OO': '11'})
+        if expected == "OO":
+            expected = "11"
+        assert expected == stbt.ocr(frame=f, mode=stbt.OcrMode.SINGLE_WORD,
+                                    corrections=corrections)
+    finally:
+        stbt.set_global_ocr_corrections({})
+
+
+@requires_tesseract
 @pytest.mark.parametrize("words", [
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],

@@ -50,10 +50,12 @@ from _stbt.motion import (
     MotionTimeout,
     wait_for_motion)
 from _stbt.ocr import (
+    apply_ocr_corrections,
     match_text,
     ocr,
     OcrEngine,
     OcrMode,
+    set_global_ocr_corrections,
     TextMatchResult)
 from _stbt.precondition import (
     as_precondition,
@@ -73,6 +75,7 @@ from _stbt.wait import (
 from stbt.keyboard import Keyboard
 
 __all__ = [
+    "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
     "ConfirmMethod",
@@ -112,6 +115,7 @@ __all__ = [
     "press_until_match",
     "Region",
     "save_frame",
+    "set_global_ocr_corrections",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",
