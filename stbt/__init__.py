@@ -50,6 +50,7 @@ from _stbt.motion import (
     MotionTimeout,
     wait_for_motion)
 from _stbt.ocr import (
+    apply_ocr_corrections,
     match_text,
     ocr,
     OcrEngine,
@@ -73,6 +74,7 @@ from _stbt.wait import (
 from stbt.keyboard import Keyboard
 
 __all__ = [
+    "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
     "ConfirmMethod",
