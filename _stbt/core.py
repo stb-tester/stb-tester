@@ -647,6 +647,9 @@ class SinkPipeline(object):
         self._time = _time
         self._sample_count = 0
 
+        # Just used for logging:
+        self._appsrc_was_full = False
+
         # The test script can draw on the video, but this happens in a different
         # thread.  We don't know when they're finished drawing so we just give
         # them 0.5s instead.
@@ -797,6 +800,19 @@ class SinkPipeline(object):
         # Regions:
         for annotation in annotations:
             annotation.draw(img)
+
+        APPSRC_LIMIT_BYTES = 100 * 1024 * 1024  # 100MB
+        if self.appsrc.props.current_level_bytes > APPSRC_LIMIT_BYTES:
+            # appsrc is backed-up, perhaps something's gone wrong.  We don't
+            # want to use up all RAM, so let's drop the buffer on the floor.
+            if not self._appsrc_was_full:
+                warn("sink pipeline appsrc is full, dropping buffers from now "
+                     "on")
+                self._appsrc_was_full = True
+            return
+        elif self._appsrc_was_full:
+            debug("sink pipeline appsrc no longer full, pushing buffers again")
+            self._appsrc_was_full = False
 
         self.appsrc.props.caps = sample.get_caps()
         self.appsrc.emit("push-buffer", sample.get_buffer())
