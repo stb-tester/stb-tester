@@ -61,9 +61,6 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
 
         * **black** (*bool*) – True if the frame was black.
         * **frame** (`stbt.Frame`) – The video frame that was analysed.
-
-    | Added in v28: The ``region`` parameter.
-    | Added in v29: Return an object with a frame attribute, instead of bool.
     """
     if threshold is None:
         threshold = get_config('is_screen_black', 'threshold', type_=int)

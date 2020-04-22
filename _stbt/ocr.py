@@ -265,8 +265,6 @@ def ocr(frame=None, region=Region.ALL,
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
 
-    | Added in v28: The ``upsample`` and ``text_color`` parameters.
-    | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     | Added in v32: The ``corrections`` parameter.
@@ -337,8 +335,6 @@ def match_text(text, frame=None, region=Region.ALL,
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
 
-    | Added in v28: The ``upsample`` and ``text_color`` parameters.
-    | Added in v29: The ``text_color_threshold`` parameter.
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     """

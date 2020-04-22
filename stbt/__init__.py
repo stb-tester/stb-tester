@@ -200,8 +200,6 @@ def pressing(key, interpress_delay_secs=None):
             stbt.wait_for_match("last-page.png")
 
     The same limitations apply as `stbt.press`'s ``hold_secs`` parameter.
-
-    This function was added in v29.
     """
     return _dut.pressing(key, interpress_delay_secs)
 
@@ -251,8 +249,6 @@ def press_until_match(
 
     :returns: `MatchResult` when the image is found.
     :raises: `MatchTimeout` if no match is found after ``timeout_secs`` seconds.
-
-    Added in v28: The ``region`` parameter.
     """
     return _dut.press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
@@ -272,10 +268,6 @@ def frames(timeout_secs=None):
     :rtype: Iterator[stbt.Frame]
     :returns:
       An iterator of frames in OpenCV format (`stbt.Frame`).
-
-    Changed in v29: Returns ``Iterator[stbt.Frame]`` instead of
-    ``Iterator[(stbt.Frame, int)]``. Use the Frame's ``time`` attribute
-    instead.
     """
     return _dut.frames(timeout_secs)
 

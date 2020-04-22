@@ -95,8 +95,6 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
         assert match_result
         match_time = match_result.time  # this is the first stable frame
         print("Transition took %s seconds" % (match_time - keypress.end_time))
-
-    Added in v28: The ``predicate`` and ``stable_secs`` parameters.
     """
     import time
 
