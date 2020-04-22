@@ -27,8 +27,6 @@ Note that you can instead use Stb-tester features such as image-matching
 in your existing Selenium/WebDriver/Appium tests. See
 <https://stb-tester.com/blog/2016/09/20/add-visual-verification-to-your-selenium-tests-with-stb-tester>.
 
-``stbt.android`` was added in stb-tester v28.
-
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 .. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """

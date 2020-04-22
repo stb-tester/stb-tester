@@ -68,9 +68,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     :type frames: Iterator[stbt.Frame]
     :param frames: An iterable of video-frames to analyse. Defaults to
         ``stbt.frames()``.
-
-    | Added in v28: The ``region`` parameter.
-    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
@@ -196,9 +193,6 @@ def wait_for_motion(
         which motion was detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
-
-    | Added in v28: The ``region`` parameter.
-    | Added in v29: The ``frames`` parameter.
     """
     if frames is None:
         import stbt
@@ -266,8 +260,6 @@ class MotionResult(object):
         if no motion was found.
 
     :ivar Frame frame: The video frame in which motion was (or wasn't) found.
-
-    Added in v28: The ``frame`` attribute.
     """
     _fields = ("time", "motion", "region", "frame")
 

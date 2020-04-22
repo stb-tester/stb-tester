@@ -80,8 +80,6 @@ def crop(frame, region):
     :returns: An OpenCV image (`numpy.ndarray`) containing the specified region
       of the source frame. This is a view onto the original data, so if you
       want to modify the cropped image call its ``copy()`` method first.
-
-    Added in v28.
     """
     if not _image_region(frame).contains(region):
         raise ValueError("frame with dimensions %r doesn't contain %r"
@@ -121,7 +119,6 @@ def load_image(filename, flags=None):
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    * Added in v28.
     * Changed in v30: Include alpha (transparency) channel if the file has
       transparent pixels.
     * Changed in v32: Allows passing an image (`numpy.ndarray`) in which case
