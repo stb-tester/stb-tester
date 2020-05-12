@@ -46,6 +46,9 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
     assert (f.__array_interface__["data"][0] !=
             f3.__array_interface__["data"][0])
 
+    f4 = stbt.Frame(f)
+    assert f4.time == 1234
+
 
 def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in
