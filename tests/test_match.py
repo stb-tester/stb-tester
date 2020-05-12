@@ -492,7 +492,6 @@ def test_match_fast_path():
 
 @requires_opencv_3
 def test_that_match_fast_path_is_equivalent():
-    from _stbt.match import _load_image
     black_reference = black(10, 10)
     almost_black_reference = black(10, 10, value=1)
     black_frame = black(1280, 720)
@@ -516,7 +515,7 @@ def test_that_match_fast_path_is_equivalent():
     for reference, frame in images:
         if isinstance(frame, string_types):
             frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
-        reference = _load_image(reference)
+        reference = stbt.load_image(reference)
         orig_m = stbt.match(reference, frame=frame)
         fast_m = stbt.match(reference, frame=frame, region=orig_m.region)
         assert orig_m.time == fast_m.time

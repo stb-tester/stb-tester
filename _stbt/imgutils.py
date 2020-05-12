@@ -8,7 +8,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import inspect
 import os
-from collections import namedtuple
 
 import cv2
 import numpy
@@ -220,41 +219,6 @@ def save_frame(image, filename):
     cv2.imwrite(filename, image)
 
 
-class _ImageFromUser(namedtuple(
-        '_ImageFromUser',
-        'image relative_filename absolute_filename')):
-
-    @property
-    def friendly_name(self):
-        if self.image is None:
-            return None
-        return self.relative_filename or '<Custom Image>'
-
-    def short_repr(self):
-        if self.image is None:
-            return "None"
-        if self.relative_filename:
-            return repr(os.path.basename(self.relative_filename))
-        return "<Custom Image>"
-
-
-def _load_image(image, flags=None):
-    if isinstance(image, _ImageFromUser):
-        return image
-    if isinstance(image, numpy.ndarray):
-        return _ImageFromUser(image, None, None)
-    else:
-        relative_filename = image
-        absolute_filename = find_user_file(relative_filename)
-        if not absolute_filename:
-            raise IOError("No such file: %s" % relative_filename)
-        numpy_image = imread(absolute_filename, flags)
-        if numpy_image is None:
-            raise IOError("Failed to load image: %s" %
-                          absolute_filename)
-        return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
-
-
 def imread(filename, flags=None):
     if flags is None:
         cv2_flags = cv2.IMREAD_UNCHANGED
@@ -364,11 +328,11 @@ def find_user_file(filename):
     # the _stbt installation directory (this file's directory). We can ignore
     # the first 2 stack-frames:
     #
-    # * stack()[0] is _find_user_file;
-    # * stack()[1] is _find_user_file's caller: load_image or _load_image;
-    # * stack()[2] is load_image's caller (the user script). It could also be
-    #   _load_image's caller (e.g. `match`) so we still need to check until
-    #   we're outside of the _stbt directory.
+    # * stack()[0] is find_user_file;
+    # * stack()[1] is find_user_file's caller: load_image
+    # * stack()[2] is load_image's caller -- load_image can be called
+    #   directly from the user script, or indirectly via stbt.match so we still
+    #   need to check until we're outside of the _stbt directory.
 
     filename = to_native_str(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))

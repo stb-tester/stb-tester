@@ -23,11 +23,11 @@ import numpy
 from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
-from .imgutils import _frame_repr, _image_region, _load_image, crop, limit_time
+from .imgutils import _frame_repr, _image_region, crop, limit_time, load_image
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .utils import native_str
+from .utils import native_str, to_native_str
 
 try:
     from .sqdiff import sqdiff
@@ -325,10 +325,10 @@ def _match_all(image, frame, match_parameters, region):
         from stbt_core import get_frame
         frame = get_frame()
 
-    template = _load_image(image)
+    template = load_image(image)
 
     # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
-    t = template.image.view()
+    t = template.view()
     if len(t.shape) == 2:
         t.shape = t.shape + (1,)
 
@@ -339,7 +339,7 @@ def _match_all(image, frame, match_parameters, region):
     if len(t.shape) != 3:
         raise ValueError(
             "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
-            (template.image.shape,))
+            (template.shape,))
     if len(frame.shape) != 3:
         raise ValueError(
             "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
@@ -349,7 +349,7 @@ def _match_all(image, frame, match_parameters, region):
         pass
     else:
         raise ValueError("Expected 3-channel image, got %d channels: %s"
-                         % (t.shape[2], template.absolute_filename))
+                         % (t.shape[2], template.relative_filename))
 
     if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
         raise ValueError("Frame %r must be larger than reference image %r"
@@ -389,7 +389,7 @@ def _match_all(image, frame, match_parameters, region):
 
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
-        template_name=template.friendly_name,
+        template_name=template.filename or "<Image>",
         input_region=input_region)
 
     # pylint:disable=undefined-loop-variable
@@ -403,10 +403,12 @@ def _match_all(image, frame, match_parameters, region):
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
                 first_pass_certainty, frame,
-                (template.relative_filename or template.image),
+                (template.relative_filename or template),
                 first_pass_matched)
             imglog.append(matches=result)
-            draw_on(frame, result, label="match(%s)" % template.short_repr())
+            draw_on(frame, result, label="match(%s)" % (
+                "<Image>" if template.relative_filename is None else
+                repr(to_native_str(template.relative_filename))))
             yield result
 
     finally:
@@ -454,8 +456,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 
     match_count = 0
     last_pos = Position(0, 0)
-    image = _load_image(image)
-    debug("Searching for " + image.friendly_name)
+    image = load_image(image)
+    debug("Searching for " + (image.relative_filename or "<Image>"))
     for frame in frames:
         res = match(image, match_parameters=match_parameters,
                     region=region, frame=frame)
@@ -465,10 +467,10 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             match_count = 0
         last_pos = res.position
         if match_count == consecutive_matches:
-            debug("Matched " + image.friendly_name)
+            debug("Matched " + (image.relative_filename or "<Image>"))
             return res
 
-    raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint:disable=undefined-loop-variable
+    raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)  # pylint:disable=undefined-loop-variable
 
 
 class MatchTimeout(UITestFailure):

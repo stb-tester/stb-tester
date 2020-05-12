@@ -11,7 +11,7 @@ from collections import deque
 import cv2
 
 from .config import ConfigurationError, get_config
-from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
+from .imgutils import (_frame_repr, _image_region, load_image,
                        pixel_bounding_box, crop, limit_time)
 from .logging import debug, draw_on, ImageLogger
 from .types import Region, UITestFailure
@@ -81,11 +81,9 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     debug("Searching for motion")
 
-    if mask is None:
-        mask = _ImageFromUser(None, None, None)
-    else:
-        mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
-        debug("Using mask %s" % mask.friendly_name)
+    if mask is not None:
+        mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
+        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
 
     try:
         frame = next(frames)
@@ -96,13 +94,12 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     previous_frame_gray = cv2.cvtColor(crop(frame, region),
                                        cv2.COLOR_BGR2GRAY)
-    if (mask.image is not None and
-            mask.image.shape[:2] != previous_frame_gray.shape[:2]):
+    if (mask is not None and
+            mask.shape[:2] != previous_frame_gray.shape[:2]):
         raise ValueError(
-            "The dimensions of the mask '%s' %s don't match the "
-            "video frame %s" % (
-                mask.friendly_name, mask.image.shape,
-                previous_frame_gray.shape))
+            "The dimensions of the mask %s %s don't match the video frame %s"
+            % (repr(mask.relative_filename) or "<Image>",
+               mask.shape, previous_frame_gray.shape))
 
     for frame in frames:
         imglog = ImageLogger("detect_motion", region=region)
@@ -116,9 +113,9 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
         imglog.imwrite("absdiff", absdiff)
 
-        if mask.image is not None:
-            absdiff = cv2.bitwise_and(absdiff, mask.image)
-            imglog.imwrite("mask", mask.image)
+        if mask is not None:
+            absdiff = cv2.bitwise_and(absdiff, mask)
+            imglog.imwrite("mask", mask)
             imglog.imwrite("absdiff_masked", absdiff)
 
         _, thresholded = cv2.threshold(
@@ -216,11 +213,9 @@ def wait_for_motion(
     debug("Waiting for %d out of %d frames with motion" % (
         motion_frames, considered_frames))
 
-    if mask is None:
-        mask = _ImageFromUser(None, None, None)
-    else:
-        mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
-        debug("Using mask %s" % mask.friendly_name)
+    if mask is not None:
+        mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
+        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
 
     matches = deque(maxlen=considered_frames)
     motion_count = 0
@@ -242,7 +237,9 @@ def wait_for_motion(
                            "should never be reached")
         last_frame = res.frame
 
-    raise MotionTimeout(last_frame, mask.friendly_name, timeout_secs)
+    raise MotionTimeout(last_frame,
+                        None if mask is None else mask.relative_filename,
+                        timeout_secs)
 
 
 class MotionResult(object):
