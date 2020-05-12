@@ -108,8 +108,7 @@ def load_image(filename, flags=None):
     This is the same lookup algorithm used by `stbt.match` and similar
     functions.
 
-    :type filename: str or unicode
-    :param filename: A relative or absolute filename.
+    :param str filename: A relative or absolute filename.
 
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
 
