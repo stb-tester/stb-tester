@@ -53,10 +53,16 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
 def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in
     # ./subdirectory/test_load_image_from_subdirectory.py
+
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
+
+    f = stbt.load_image("videotestsrc-redblue.png")
     assert numpy.array_equal(
-        stbt.load_image("videotestsrc-redblue.png"),
+        f,
         cv2.imread(os.path.join(os.path.dirname(__file__),
                                 "videotestsrc-redblue.png")))
+    assert f.filename == "videotestsrc-redblue.png"
+    assert f.relative_filename == "videotestsrc-redblue.png"
 
     with pytest.raises(IOError):
         stbt.load_image("info2.png")
@@ -71,27 +77,40 @@ def test_load_image_with_unicode_filename():
     assert stbt.load_image(u"R\xf6thlisberger.png") is not None
 
 
+def test_load_image_with_numpy_array():
+    a = numpy.zeros((720, 1280), dtype=numpy.uint8)
+    img = stbt.load_image(a)
+    assert (a.__array_interface__["data"][0] ==
+            img.__array_interface__["data"][0])
+    assert img.filename is None
+    assert img.relative_filename is None
+    assert img.absolute_filename is None
+
+
 def test_load_image_with_image():
-    img = numpy.zeros((720, 1280), dtype=numpy.uint8)
-    img2 = stbt.load_image(img)
-    assert img is img2
+    img1 = stbt.load_image("videotestsrc-redblue.png")
+    img2 = stbt.load_image(img1)
+    assert img1 is img2
 
 
 def test_crop():
-    f = stbt.load_image("action-panel.png")
-    cropped = stbt.crop(f, stbt.Region(x=1045, y=672, right=1081, bottom=691))
+    img = stbt.load_image("action-panel.png")
+    cropped = stbt.crop(img, stbt.Region(x=1045, y=672, right=1081, bottom=691))
     reference = stbt.load_image("action-panel-blue-button.png")
     assert numpy.array_equal(reference, cropped)
 
     # It's a view onto the same memory:
-    assert cropped[0, 0, 0] == f[672, 1045, 0]
+    assert cropped[0, 0, 0] == img[672, 1045, 0]
     cropped[0, 0, 0] = 0
-    assert cropped[0, 0, 0] == f[672, 1045, 0]
+    assert cropped[0, 0, 0] == img[672, 1045, 0]
+
+    assert img.filename == "action-panel.png"
+    assert cropped.filename == img.filename
 
     # Region must be inside the frame (unfortunately this means that you can't
     # use stbt.Region.ALL):
     with pytest.raises(ValueError):
-        stbt.crop(f, stbt.Region(x=1045, y=672, right=1281, bottom=721))
+        stbt.crop(img, stbt.Region(x=1045, y=672, right=1281, bottom=721))
 
 
 def test_region_intersect():
