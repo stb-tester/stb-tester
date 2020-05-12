@@ -28,6 +28,25 @@ from stbt_core import wait_until
 # pylint:disable=redefined-outer-name,unused-argument
 
 
+def test_that_slicing_a_Frame_is_still_a_Frame():
+    f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8),
+                   time=1234)
+
+    f1 = f[10:20, 10:, 0]
+    assert isinstance(f1, stbt.Frame)
+    assert f1.time == 1234
+
+    f2 = stbt.crop(f, stbt.Region(10, 10, 20, 20))
+    assert isinstance(f2, stbt.Frame)
+    assert f2.time == 1234
+
+    f3 = f.copy()
+    assert isinstance(f3, stbt.Frame)
+    assert f3.time == 1234
+    assert (f.__array_interface__["data"][0] !=
+            f3.__array_interface__["data"][0])
+
+
 def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in
     # ./subdirectory/test_load_image_from_subdirectory.py
