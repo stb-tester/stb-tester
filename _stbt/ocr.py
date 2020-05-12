@@ -120,7 +120,7 @@ class TextMatchResult(object):
     :ivar Frame frame: The video frame that was searched, as given to
         `match_text`.
 
-    :ivar unicode text: The text that was searched for, as given to
+    :ivar str text: The text that was searched for, as given to
         `match_text`.
     """
     _fields = ("time", "match", "region", "frame", "text")
@@ -310,7 +310,7 @@ def match_text(text, frame=None, region=Region.ALL,
     This can be used as an alternative to `match`, searching for text instead
     of an image.
 
-    :param unicode text: The text to search for.
+    :param str text: The text to search for.
     :param frame: See `ocr`.
     :param region: See `ocr`.
     :param mode: See `ocr`.
