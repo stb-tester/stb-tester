@@ -36,7 +36,10 @@ class Frame(numpy.ndarray):
     def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         i = isinstance(array, Frame)
-        obj.time = time or (i and array.time) or None
+        if time is None and i:
+            obj.time = array.time
+        else:
+            obj.time = time
         obj._draw_sink = _draw_sink or (i and array._draw_sink) or None  # pylint: disable=protected-access
         return obj
 
