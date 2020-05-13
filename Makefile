@@ -84,6 +84,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/logging.py \
     _stbt/match.py \
     _stbt/motion.py \
+    _stbt/multipress.py \
     _stbt/ocr.py \
     _stbt/precondition.py \
     _stbt/power.py \
@@ -233,6 +234,7 @@ check-pythonpackage:
 	    tests/test_grid.py \
 	    tests/test_match.py \
 	    tests/test_motion.py \
+	    tests/test_multipress.py \
 	    tests/test_transition.py && \
 	stbt_lint="pylint --load-plugins=stbt_core.pylint_plugin" \
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
