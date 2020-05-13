@@ -132,12 +132,12 @@ def _parse_mapping_from_docstring(s):
 
 def _letters_to_keys(keys_to_letters):
     """
-    >>> _letters_to_keys({'KEY_1': '1', 'KEY_2': 'abc2'})
-    {'1': ('KEY_1', 1),
-     'a': ('KEY_2', 1),
-     'b': ('KEY_2', 2),
-     'c': ('KEY_2', 3),
-     '2': ('KEY_2', 4)}
+    >>> sorted(_letters_to_keys({'KEY_1': '1', 'KEY_2': 'abc2'}).items())
+    [('1', ('KEY_1', 1)),
+     ('2', ('KEY_2', 4)),
+     ('a', ('KEY_2', 1)),
+     ('b', ('KEY_2', 2)),
+     ('c', ('KEY_2', 3))]
     """
     out = {}
     for key, letters in keys_to_letters.items():
