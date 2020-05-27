@@ -162,7 +162,7 @@ class HdmiCecControl(object):
             device = self.detect_adapter()
             if device is None:
                 raise HdmiCecError("No adapter found")
-        device = to_bytes(device)
+        device = to_bytes(device)  # Don't execute
         if not self.lib.Open(device):
             raise HdmiCecError("Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
