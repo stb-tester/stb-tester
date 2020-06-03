@@ -34,18 +34,18 @@ class MultiPress(object):
     :param dict key_mapping:
         The mapping from number keys to letters. The default mapping is::
 
-        {
-            "KEY_0": " 0",
-            "KEY_1": "1.,",
-            "KEY_2": "abc2",
-            "KEY_3": "def3",
-            "KEY_4": "ghi4",
-            "KEY_5": "jkl5",
-            "KEY_6": "mno6",
-            "KEY_7": "pqrs7",
-            "KEY_8": "tuv8",
-            "KEY_9": "wxyz9",
-        }
+            {
+                "KEY_0": " 0",
+                "KEY_1": "1.,",
+                "KEY_2": "abc2",
+                "KEY_3": "def3",
+                "KEY_4": "ghi4",
+                "KEY_5": "jkl5",
+                "KEY_6": "mno6",
+                "KEY_7": "pqrs7",
+                "KEY_8": "tuv8",
+                "KEY_9": "wxyz9",
+            }
 
         This matches the arrangement of digits A-Z from ITU E.161 / ISO 9995-8.
 
@@ -121,11 +121,11 @@ def _parse_mapping_from_docstring(s):
     code = []
     in_mapping = False
     for line in s.split("\n"):
-        if re.match(r"^        {", line):
+        if re.match(r"^            {", line):
             in_mapping = True
         if in_mapping:
             code.append(line)
-        if re.match(r"^        }", line):
+        if re.match(r"^            }", line):
             break
     return eval("\n".join(code))
 
