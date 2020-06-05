@@ -67,7 +67,7 @@ def press_and_wait(
         * **key** (*str*) – The name of the key that was pressed.
         * **frame** (`stbt.Frame`) – If successful, the first video frame when
           the transition completed; if timed out, the last frame seen.
-        * **status** (`TransitionStatus`) – Either ``START_TIMEOUT``,
+        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT``,
           ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
           object will evaluate as true.
         * **press_time** (*float*) – When the key-press completed.
@@ -315,6 +315,12 @@ class _TransitionResult(object):
 
 
 class TransitionStatus(enum.Enum):
+
+    #: The transition didn't start (nothing moved).
     START_TIMEOUT = 0
+
+    #: The transition didn't end (movement didn't stop).
     STABLE_TIMEOUT = 1
+
+    #: The transition started and then stopped.
     COMPLETE = 2
