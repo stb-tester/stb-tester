@@ -274,8 +274,9 @@ class Region(with_metaclass(_RegionClsMethods,
                       max(0, self.right)))
 
     def contains(self, other):
-        """:returns: True if ``other`` (a `Region` or `Position`) is entirely
-        contained within self.
+        """
+        :returns: True if ``other`` (a `Region` or `Position`) is entirely
+            contained within self.
         """
         if other is None:
             return False
