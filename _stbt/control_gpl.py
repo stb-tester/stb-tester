@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from .logging import debug
-from .utils import to_bytes, to_native_str
+from .utils import to_native_str
 
 
 class HdmiCecError(Exception):
