@@ -261,7 +261,8 @@ class HdmiCecControl(object):
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
-        keydown_str = to_native_str("%X%X:44:%02X") % (self.source, self.destination, keycode)
+        keydown_str = to_native_str("%X%X:44:%02X") % (
+            self.source, self.destination, keycode)
         return self.lib.CommandFromString(keydown_str)
 
     def keyup_command(self):
