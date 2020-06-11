@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from .logging import debug
-from .utils import to_bytes
+from .utils import to_native_str
 
 
 class HdmiCecError(Exception):
@@ -149,7 +149,7 @@ class HdmiCecControl(object):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
-        self.cecconfig.strDeviceName = b"stb-tester"
+        self.cecconfig.strDeviceName = to_native_str("stb-tester")
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
@@ -162,7 +162,7 @@ class HdmiCecControl(object):
             device = self.detect_adapter()
             if device is None:
                 raise HdmiCecError("No adapter found")
-        device = to_bytes(device)
+        device = to_native_str(device)
         if not self.lib.Open(device):
             raise HdmiCecError("Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
@@ -261,11 +261,12 @@ class HdmiCecControl(object):
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
-        keydown_str = b"%X%X:44:%02X" % (self.source, self.destination, keycode)
+        keydown_str = to_native_str("%X%X:44:%02X") % (
+            self.source, self.destination, keycode)
         return self.lib.CommandFromString(keydown_str)
 
     def keyup_command(self):
-        keyup_str = b"%X%X:45" % (self.source, self.destination)
+        keyup_str = to_native_str("%X%X:45") % (self.source, self.destination)
         return self.lib.CommandFromString(keyup_str)
 
     def get_keycode(self, key):
