@@ -437,3 +437,26 @@ def test_composing_complex_keyboards():
     K2 = stbt.Keyboard(G2)
 
     assert sorted(K0.G.edges(data=True)) == sorted(K2.G.edges(data=True))
+
+
+def test_keyboard_with_hash_sign():
+    """Regression test. `networkx.parse_edgelist` treats "#" as a comment."""
+    kb = stbt.Keyboard("""
+        @hotmail.com !#$ KEY_DOWN
+        @hotmail.com @ KEY_DOWN
+        @ # KEY_RIGHT
+        # @ KEY_LEFT
+        L K KEY_LEFT
+        K L KEY_RIGHT
+    """)
+    keys = list(_keys_to_press(kb.G, "@hotmail.com", "@"))
+    assert keys == [('KEY_DOWN', {'@', '!#$'})]
+
+    assert list(_keys_to_press(kb.G, "@", "#")) == [('KEY_RIGHT', {'#'})]
+    assert list(_keys_to_press(kb.G, "#", "@")) == [('KEY_LEFT', {'@'})]
+
+    # L is the first character of the random comments delimiter in
+    # `Keyboard.parse_edgelist`. Check that networkx uses the whole string, not
+    # just the first character.
+    assert list(_keys_to_press(kb.G, "K", "L")) == [('KEY_RIGHT', {'L'})]
+    assert list(_keys_to_press(kb.G, "L", "K")) == [('KEY_LEFT', {'K'})]

@@ -319,9 +319,11 @@ class Keyboard(object):
         :param str graph: See the `Keyboard` constructor.
         :returns: A new `networkx.DiGraph` instance.
         """
-        return nx.parse_edgelist(graph.split("\n"),
-                                 create_using=nx.DiGraph(),
-                                 data=[("key", text_type)])
+        return nx.parse_edgelist(
+            graph.split("\n"),
+            comments="LCYG2RXNHIXJGPLLMQQIJ7VECIYURYEQTPNGBNUQCPQW34PMO5NQETM",
+            create_using=nx.DiGraph(),
+            data=[("key", text_type)])
 
 
 def _selection_to_text(selection):
