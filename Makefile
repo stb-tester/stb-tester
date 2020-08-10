@@ -54,7 +54,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt-control-relay: \
+stbt-control-relay: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
