@@ -37,8 +37,9 @@ test_stbt_run_irnetbox_control() {
     start_fake_irnetbox
 
     cat > test.py <<-EOF
-	press("MENU")
-	press("OK")
+	import stbt
+	stbt.press("MENU")
+	stbt.press("OK")
 	EOF
     stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
@@ -52,7 +53,8 @@ test_that_press_fails_on_irnetbox_error() {
     start_fake_irnetbox error
 
     cat > test.py <<-EOF
-	press("MENU")
+	import stbt
+	stbt.press("MENU")
 	EOF
     ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
@@ -65,7 +67,8 @@ test_that_press_fails_on_irnetbox_nack() {
     start_fake_irnetbox nack
 
     cat > test.py <<-EOF
-	press("MENU")
+	import stbt
+	stbt.press("MENU")
 	EOF
     ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
@@ -78,9 +81,9 @@ test_that_press_waits_for_irnetbox_async_complete() {
     start_fake_irnetbox wait
 
     cat > test.py <<-EOF
-	import time
+	import time, stbt
 	print("Before press: %d" % time.time())
-	press("MENU")
+	stbt.press("MENU")
 	print("After press: %d" % time.time())
 	EOF
     stbt run -v \
@@ -97,7 +100,8 @@ test_that_press_times_out_when_irnetbox_doesnt_reply() {
     start_fake_irnetbox noreply
 
     cat > test.py <<-EOF
-	press("MENU")
+	import stbt
+	stbt.press("MENU")
 	EOF
     ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \

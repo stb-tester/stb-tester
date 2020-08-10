@@ -30,6 +30,7 @@ test_script_accesses_its_path() {
 test_stbt_run_return_code_on_test_failure() {
     local ret
     cat > test.py <<-EOF
+	from stbt import wait_for_match
 	wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
     stbt run -v test.py
@@ -42,8 +43,9 @@ test_stbt_run_return_code_on_precondition_error() {
     cat > test.py <<-EOF
 	import stbt
 	with stbt.as_precondition("Tune to gamut pattern"):
-	    press("gamut")
-	    wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
+	    stbt.press("gamut")
+	    stbt.wait_for_match("$testdir/videotestsrc-gamut.png",
+	                        timeout_secs=0)
 	EOF
     stbt run -v --control none test.py &> test.log
     ret=$?
@@ -74,6 +76,7 @@ test_that_stbt_run_prints_assert_statement_if_no_assertion_message_given() {
 
 test_that_stbt_run_saves_screenshot_attached_to_exception() {
     cat > test.py <<-EOF
+	from stbt import press, wait_for_match
 	try:
 	    wait_for_match(
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
@@ -92,7 +95,7 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
     cat > test.py <<-EOF
 	import stbt
 	with stbt.as_precondition("Impossible precondition"):
-	    wait_for_match(
+	    stbt.wait_for_match(
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
 	EOF
     ! stbt run -v test.py &&

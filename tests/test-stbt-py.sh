@@ -19,6 +19,7 @@ test_invalid_source_pipeline() {
 
 test_get_frame_and_save_frame() {
     cat > get-screenshot.py <<-EOF
+	from stbt import get_frame, press, save_frame, wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("gamut")
 	wait_for_match("$testdir/videotestsrc-gamut.png")
@@ -29,6 +30,7 @@ test_get_frame_and_save_frame() {
         fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
     cat > match-screenshot.py <<-EOF
+	from stbt import MatchParameters, press, wait_for_match
 	press("gamut")
 	# confirm_threshold accounts for match rectangle in the screenshot.
 	wait_for_match("gamut.png",
@@ -48,17 +50,17 @@ test_get_config() {
 	try:
 	    stbt.get_config("global", "no_such_key")
 	    assert False
-	except ConfigurationError:
+	except stbt.ConfigurationError:
 	    pass
 	try:
 	    stbt.get_config("no_such_section", "test_key")
 	    assert False
-	except ConfigurationError:
+	except stbt.ConfigurationError:
 	    pass
 	try:
 	    stbt.get_config("special", "not_special")
 	    assert False
-	except ConfigurationError:
+	except stbt.ConfigurationError:
 	    pass
 	EOF
     stbt run -v test.py
@@ -154,6 +156,7 @@ EOF
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
+	import stbt
 	assert not stbt.is_screen_black()
 	EOF
     stbt run -v --control none \
@@ -166,6 +169,7 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
 test_that_is_screen_black_threshold_parameter_overrides_default() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
+	import stbt
 	assert stbt.is_screen_black(threshold=3)
 	EOF
     stbt run -v --control none \
@@ -208,6 +212,7 @@ test_save_video() {
     set_config run.save_video "video.webm" &&
     stbt run -v record.py &&
     cat > test.py <<-EOF &&
+	from stbt import wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
@@ -232,13 +237,13 @@ test_that_verbose_command_line_argument_overrides_config_file() {
 
 test_press_visualisation() {
     cat > press.py <<-EOF &&
-	import signal, time
+	import signal, time, stbt
 	def press_black(signo, frame):
-	    press("black")
+	    stbt.press("black")
 	    time.sleep(60)
 	def press_black_and_red(signo, frame):
-	    press("black")
-	    press("red")
+	    stbt.press("black")
+	    stbt.press("red")
 	    time.sleep(60)
 	signal.signal(signal.SIGUSR1, press_black)
 	signal.signal(signal.SIGUSR2, press_black_and_red)
@@ -253,12 +258,12 @@ test_press_visualisation() {
     trap "kill $press_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
-	import os, signal
-	wait_for_match("$testdir/videotestsrc-redblue.png")
+	import os, signal, stbt
+	stbt.wait_for_match("$testdir/videotestsrc-redblue.png")
 	os.kill($press_script, signal.SIGUSR1)
-	wait_for_match("$testdir/black.png")
+	stbt.wait_for_match("$testdir/black.png")
 	os.kill($press_script, signal.SIGUSR2)
-	wait_for_match("$testdir/red-black.png")
+	stbt.wait_for_match("$testdir/red-black.png")
 	EOF
     stbt run -v --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \
@@ -460,7 +465,7 @@ test_draw_text() {
 	EOF
     cat > verify-draw-text.py <<-EOF &&
 	import stbt
-	wait_for_match("$testdir/draw-text.png")
+	stbt.wait_for_match("$testdir/draw-text.png")
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
@@ -544,9 +549,9 @@ test_multithreaded() {
 	
 	# See which matched
 	result = result_iter.next()
-	if isinstance(result, MotionResult):
+	if isinstance(result, stbt.MotionResult):
 	    print("Motion")
-	elif isinstance(result, MatchResult):
+	elif isinstance(result, stbt.MatchResult):
 	    print("Checkers")
 	EOF
 
@@ -562,6 +567,7 @@ test_multithreaded() {
 
 test_that_get_frame_may_return_the_same_frame_twice() {
     cat > test.py <<-EOF &&
+	import stbt
 	ts = set()
 	for _ in range(10):
 	    ts.add(stbt.get_frame().time)
@@ -573,6 +579,7 @@ test_that_get_frame_may_return_the_same_frame_twice() {
 
 test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
     cat > test.py <<-EOF &&
+	import stbt
 	try:
 	    from itertools import izip as zip
 	except ImportError:
@@ -597,7 +604,7 @@ test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
 
 test_that_press_returns_a_pressresult() {
     cat > test.py <<-EOF &&
-	import time
+	import time, stbt
 	
 	assert stbt.last_keypress() is None
 

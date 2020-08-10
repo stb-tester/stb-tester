@@ -95,16 +95,7 @@ def load_test_function(script, args):
             '__file__': script,
             '__doc__': None,
             '__package__': None,
-            'stbt': stbt,
         }
-
-        # For backwards compatibility. We want to encourage people to expli-
-        # citly import stbt in their scripts, so don't add new APIs here.
-        for x in '''press press_until_match wait_for_match wait_for_motion
-                    MatchResult Position detect_motion MotionResult save_frame
-                    get_frame MatchParameters debug UITestError UITestFailure
-                    MatchTimeout MotionTimeout ConfigurationError'''.split():
-            test_globals[x] = getattr(stbt, x)
 
         def fn():
             sys.path.insert(0, os.path.dirname(filename))
