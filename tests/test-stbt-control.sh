@@ -27,7 +27,7 @@ validate_stbt_record_control_recorder() {
     expect test.expect &&
 
     cat > expected <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	
 	
 	def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():

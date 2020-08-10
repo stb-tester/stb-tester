@@ -17,8 +17,8 @@ try:
 except ImportError:
     import mock  # Python 2 backport
 
-import stbt
-from stbt.keyboard import _add_weights, _keys_to_press
+import stbt_core as stbt
+from _stbt.keyboard import _add_weights, _keys_to_press
 from _stbt.transition import _TransitionResult, TransitionStatus
 
 
@@ -284,8 +284,8 @@ class BuggyKeyboard(YouTubeKeyboard):
 @pytest.fixture(scope="function")
 def youtubekeyboard():
     kb = YouTubeKeyboard()
-    with mock.patch("stbt.press", kb.press), \
-            mock.patch("stbt.press_and_wait", kb.press_and_wait):
+    with mock.patch("stbt_core.press", kb.press), \
+            mock.patch("stbt_core.press_and_wait", kb.press_and_wait):
         yield kb
 
 
@@ -298,8 +298,8 @@ def buggykeyboard():
     not in the test-scripts.
     """
     kb = BuggyKeyboard()
-    with mock.patch("stbt.press", kb.press), \
-            mock.patch("stbt.press_and_wait", kb.press_and_wait):
+    with mock.patch("stbt_core.press", kb.press), \
+            mock.patch("stbt_core.press_and_wait", kb.press_and_wait):
         yield kb
 
 

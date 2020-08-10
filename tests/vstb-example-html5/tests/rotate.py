@@ -1,5 +1,5 @@
 # pylint: disable=F0401
-from stbt import press, wait_for_match
+from stbt_core import press, wait_for_match
 
 
 def wait_for_vstb_startup():

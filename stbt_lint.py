@@ -69,7 +69,8 @@ def main(argv):
             return 1
 
     return subprocess.call(
-        [executable_name, "--load-plugins=stbt.pylint_plugin"] + pylint_args)
+        [executable_name, "--load-plugins=stbt_core.pylint_plugin"] +
+        pylint_args)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import threading
 
-import stbt
+import stbt_core as stbt
 
 
 class TruthyFrameObject(stbt.FrameObject):

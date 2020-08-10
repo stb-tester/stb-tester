@@ -8,7 +8,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 Usage::
 
-    from stbt.android import AdbDevice
+    from _stbt.android import AdbDevice
     adb = AdbDevice()
     adb.tap((100, 50))
 
@@ -243,7 +243,7 @@ class AdbDevice(object):
 
         import cv2
         import numpy
-        import stbt
+        from _stbt.imgutils import Frame
 
         for attempt in range(1, 4):
             timestamp = time.time()
@@ -265,7 +265,7 @@ class AdbDevice(object):
                 "Failed to capture screenshot from android device")
 
         img = _resize(img, self.coordinate_system)
-        return stbt.Frame(img, time=timestamp)
+        return Frame(img, time=timestamp)
 
     def press(self, key):
         """Send a keypress.

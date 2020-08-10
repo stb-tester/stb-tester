@@ -30,7 +30,7 @@ test_script_accesses_its_path() {
 test_stbt_run_return_code_on_test_failure() {
     local ret
     cat > test.py <<-EOF
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/videotestsrc-gamut.png", timeout_secs=0)
 	EOF
     stbt run -v test.py
@@ -41,7 +41,7 @@ test_stbt_run_return_code_on_test_failure() {
 test_stbt_run_return_code_on_precondition_error() {
     local ret
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	with stbt.as_precondition("Tune to gamut pattern"):
 	    stbt.press("gamut")
 	    stbt.wait_for_match("$testdir/videotestsrc-gamut.png",
@@ -76,7 +76,7 @@ test_that_stbt_run_prints_assert_statement_if_no_assertion_message_given() {
 
 test_that_stbt_run_saves_screenshot_attached_to_exception() {
     cat > test.py <<-EOF
-	from stbt import press, wait_for_match
+	from stbt_core import press, wait_for_match
 	try:
 	    wait_for_match(
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
@@ -93,7 +93,7 @@ test_that_stbt_run_saves_screenshot_attached_to_exception() {
 
 test_that_stbt_run_saves_screenshot_on_precondition_error() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	with stbt.as_precondition("Impossible precondition"):
 	    stbt.wait_for_match(
 	        "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
@@ -105,7 +105,7 @@ test_that_stbt_run_saves_screenshot_on_precondition_error() {
 
 test_that_stbt_run_saves_last_grabbed_screenshot_on_error() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	from time import sleep
 	my_frame = stbt.get_frame()
 	stbt.save_frame(my_frame, "grabbed-frame.png")
@@ -158,7 +158,7 @@ test_that_stbt_run_exits_on_ctrl_c() {
 
 test_that_stbt_run_will_run_a_specific_function() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	def test_that_this_test_is_run():
 	    open("touched", "w").close()
 	EOF
@@ -326,7 +326,7 @@ check_unicode_error() {
 
 test_that_error_control_raises_exception() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("KEY_UP")
 	EOF
     ! stbt run -v --control=error test.py &&
@@ -339,7 +339,7 @@ test_that_error_control_raises_exception() {
 test_that_default_control_raises_exception() {
     sed '/^control/ d' config/stbt/stbt.conf | sponge config/stbt/stbt.conf
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("KEY_UP")
 	EOF
     ! stbt run -v test.py &&
@@ -355,7 +355,7 @@ test_that_stbt_run_doesnt_import_unrelated_files() {
 	print("This is coming from test.py")
 	EOF
     cat > test2.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	print("OK")
 	EOF
     stbt run -v test2.py || fail

@@ -8,10 +8,10 @@ import os
 import subprocess
 from textwrap import dedent
 
-import stbt
+import stbt_core as stbt
 from _stbt.logging import ImageLogger, scoped_debug_level
 from _stbt.utils import scoped_curdir
-from stbt import MatchParameters as mp
+from stbt_core import MatchParameters as mp
 
 
 def test_match_debug():

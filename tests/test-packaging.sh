@@ -2,7 +2,7 @@
 
 test_importing_stbt_without_stbt_run() {
     cat > test.py <<-EOF
-	import stbt, cv2
+	import stbt_core as stbt, cv2
 	assert stbt.match(
 	    "$testdir/videotestsrc-redblue.png",
 	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))
@@ -12,7 +12,7 @@ test_importing_stbt_without_stbt_run() {
 
 test_that_stbt_imports_the_installed_version() {
     cat > test.py <<-EOF
-	import os, re, sys, stbt
+	import os, re, sys, stbt_core as stbt
 	print(stbt.__file__)
 	print(sys.modules[stbt.match.__module__].__file__)
 	print(os.environ["PYTHONPATH"])
@@ -26,20 +26,20 @@ test_that_stbt_imports_the_installed_version() {
 
 test_that_stbt_imports_the_source_version() {
     (cd "$srcdir" && $python <<-EOF) || fail "Python from srcdir imported the wrong _stbt"
-	import re, sys, stbt
+	import re, sys, stbt_core as stbt
 	print(stbt.__file__)
 	print(sys.modules[stbt.match.__module__].__file__)
 	print("$srcdir/")
-	assert re.match(r"($srcdir/)?stbt/__init__.pyc?$", stbt.__file__)
+	assert re.match(r"($srcdir/)?stbt_core/__init__.pyc?$", stbt.__file__)
 	assert re.match(r"($srcdir/)?_stbt/match.pyc?$",
 	                sys.modules[stbt.match.__module__].__file__)
 	EOF
 
     cat > test.py <<-EOF
-	import re, sys, stbt
+	import re, sys, stbt_core as stbt
 	print(stbt.__file__)
 	print(sys.modules[stbt.match.__module__].__file__)
-	assert re.match(r"$srcdir/stbt/__init__.pyc?$", stbt.__file__)
+	assert re.match(r"$srcdir/stbt_core/__init__.pyc?$", stbt.__file__)
 	assert re.match(r"($srcdir/)?_stbt/match.pyc?$",
 	                sys.modules[stbt.match.__module__].__file__)
 	EOF

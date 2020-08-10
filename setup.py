@@ -40,7 +40,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://stb-tester.com",
-    packages=["stbt", "_stbt"],
+    packages=["stbt_core", "_stbt"],
     package_data={
         "_stbt": ["stbt.conf"],
     },

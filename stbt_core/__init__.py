@@ -33,6 +33,8 @@ from _stbt.imgutils import (
     Frame,
     load_image,
     save_frame)
+from _stbt.keyboard import (
+    Keyboard)
 from _stbt.logging import (
     debug)
 from _stbt.match import (
@@ -72,7 +74,6 @@ from _stbt.types import (
     UITestFailure)
 from _stbt.wait import (
     wait_until)
-from stbt.keyboard import Keyboard
 
 __all__ = [
     "apply_ocr_corrections",

@@ -18,7 +18,7 @@
 filename=${1:-screenshot.png}
 
 "$(dirname "$0")/stbt_run.py" -v --control=none --save-video= <(cat <<-EOF
-	import time, stbt
+	import time, stbt_core as stbt
 	stbt.get_frame()
 	if stbt._dut._display.source_pipeline_description.startswith("decklink"):
 	    time.sleep(2)  # First second of Blackmagic video has purple tint

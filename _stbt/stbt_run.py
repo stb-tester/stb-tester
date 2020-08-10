@@ -9,7 +9,8 @@ import traceback
 from collections import namedtuple
 from contextlib import contextmanager
 
-import stbt
+from stbt_core import _set_dut_singleton
+from _stbt.types import UITestFailure
 from _stbt.utils import find_import_name
 
 
@@ -40,7 +41,7 @@ def _save_screenshot(dut, result_dir, exception, save_jpg, save_png):
 @contextmanager
 def video(args, dut):
     result_dir = os.path.abspath(os.curdir)
-    with stbt._set_dut_singleton(dut), dut:  # pylint: disable=protected-access
+    with _set_dut_singleton(dut), dut:
         try:
             yield
         except Exception as e:  # pylint: disable=broad-except
@@ -145,7 +146,7 @@ if sys.version_info.major == 2:  # Python 2
             traceback._some_str = to_bytes  # pylint: disable=protected-access
             traceback.print_exc(file=sys.stderr)
 
-            if isinstance(e, (stbt.UITestFailure, AssertionError)):
+            if isinstance(e, (UITestFailure, AssertionError)):
                 sys.exit(1)  # Failure
             else:
                 sys.exit(2)  # Error
@@ -163,7 +164,7 @@ else:  # Python 3
             sys.stdout.write("FAIL: %s: %s: %s\n" % (
                 script, type(e).__name__, error_message))
             traceback.print_exc(file=sys.stderr)
-            if isinstance(e, (stbt.UITestFailure, AssertionError)):
+            if isinstance(e, (UITestFailure, AssertionError)):
                 sys.exit(1)  # Failure
             else:
                 sys.exit(2)  # Error

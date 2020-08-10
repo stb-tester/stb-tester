@@ -85,8 +85,8 @@ def press_and_wait(
         ``time.time()``).
     """
     if _dut is None:
-        import stbt
-        _dut = stbt
+        import stbt_core
+        _dut = stbt_core
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     press_result = _dut.press(key)
@@ -124,8 +124,8 @@ def wait_for_transition_to_end(
     :returns: See `press_and_wait`.
     """
     if _dut is None:
-        import stbt
-        _dut = stbt
+        import stbt_core
+        _dut = stbt_core
 
     t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
@@ -137,8 +137,8 @@ class _Transition(object):
     def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
                  stable_secs=1, dut=None):
         if dut is None:
-            import stbt
-            dut = stbt
+            import stbt_core
+            dut = stbt_core
 
         if region is not Region.ALL and mask is not None:
             raise ValueError(

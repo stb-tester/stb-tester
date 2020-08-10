@@ -45,7 +45,7 @@ import yaml
 
 
 def check(imgname, phrases, params):
-    from stbt import ocr
+    from stbt_core import ocr
 
     img = cv2.imread(imgname)
     if img is None:

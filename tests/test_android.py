@@ -14,11 +14,11 @@ import cv2
 import pytest
 from numpy import isclose
 
-from stbt import match, Region, wait_until
-from stbt.android import (_centre_point, _Dimensions,
-                          _parse_display_dimensions, _resize,
-                          _to_native_coordinates, AdbDevice, AdbError,
-                          CoordinateSystem)
+from stbt_core import match, Region, wait_until
+from _stbt.android import (_centre_point, _Dimensions,
+                           _parse_display_dimensions, _resize,
+                           _to_native_coordinates, AdbDevice, AdbError,
+                           CoordinateSystem)
 
 
 @pytest.mark.parametrize("r", [

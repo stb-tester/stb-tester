@@ -19,7 +19,7 @@ test_invalid_source_pipeline() {
 
 test_get_frame_and_save_frame() {
     cat > get-screenshot.py <<-EOF
-	from stbt import get_frame, press, save_frame, wait_for_match
+	from stbt_core import get_frame, press, save_frame, wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("gamut")
 	wait_for_match("$testdir/videotestsrc-gamut.png")
@@ -30,7 +30,7 @@ test_get_frame_and_save_frame() {
         fail "Screenshot '$scratchdir/gamut.png' wasn't created"
 
     cat > match-screenshot.py <<-EOF
-	from stbt import MatchParameters, press, wait_for_match
+	from stbt_core import MatchParameters, press, wait_for_match
 	press("gamut")
 	# confirm_threshold accounts for match rectangle in the screenshot.
 	wait_for_match("gamut.png",
@@ -41,7 +41,7 @@ test_get_frame_and_save_frame() {
 
 test_get_config() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	assert stbt.get_config("global", "test_key") == "this is a test value"
 	assert stbt.get_config("special", "test_key") == \
 	    "not the global value"
@@ -68,7 +68,7 @@ test_get_config() {
 
 test_that_frames_returns_at_least_one_frame() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	next(stbt.frames(timeout_secs=0))
 	next(stbt.frames(timeout_secs=0))
 	EOF
@@ -77,7 +77,7 @@ test_that_frames_returns_at_least_one_frame() {
 
 test_that_frames_doesnt_time_out() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	for _ in stbt.frames():
 	    pass
 	EOF
@@ -88,7 +88,7 @@ test_that_frames_doesnt_time_out() {
 
 test_that_frames_raises_NoVideo() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	for _ in stbt.frames():
 	    pass
 	EOF
@@ -102,7 +102,7 @@ test_that_frames_raises_NoVideo() {
 test_using_frames_to_measure_black_screen() {
     cat > test.py <<-EOF &&
 	import cv2
-	import stbt
+	import stbt_core as stbt
 	import threading
 	import time
 	
@@ -133,7 +133,7 @@ test_using_frames_to_measure_black_screen() {
 
 test_that_frames_doesnt_deadlock() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	for frame in stbt.frames():
 	    print(frame.time)
 	    break
@@ -156,7 +156,7 @@ EOF
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	assert not stbt.is_screen_black()
 	EOF
     stbt run -v --control none \
@@ -169,7 +169,7 @@ test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
 test_that_is_screen_black_threshold_parameter_overrides_default() {
     set_config is_screen_black.threshold "0" &&
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	assert stbt.is_screen_black(threshold=3)
 	EOF
     stbt run -v --control none \
@@ -212,7 +212,7 @@ test_save_video() {
     set_config run.save_video "video.webm" &&
     stbt run -v record.py &&
     cat > test.py <<-EOF &&
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
@@ -237,7 +237,7 @@ test_that_verbose_command_line_argument_overrides_config_file() {
 
 test_press_visualisation() {
     cat > press.py <<-EOF &&
-	import signal, time, stbt
+	import signal, time, stbt_core as stbt
 	def press_black(signo, frame):
 	    stbt.press("black")
 	    time.sleep(60)
@@ -258,7 +258,7 @@ test_press_visualisation() {
     trap "kill $press_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
-	import os, signal, stbt
+	import os, signal, stbt_core as stbt
 	stbt.wait_for_match("$testdir/videotestsrc-redblue.png")
 	os.kill($press_script, signal.SIGUSR1)
 	stbt.wait_for_match("$testdir/black.png")
@@ -271,7 +271,7 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" $python -c "import stbt, _stbt.ocr, distutils, sys; \
+    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, distutils, sys; \
         sys.exit(0 if (_stbt.ocr._tesseract_version() \
                        >= distutils.version.LooseVersion('3.03')) else 77)"
     case $? in
@@ -294,7 +294,7 @@ test_clock_visualisation() {
     trap "kill $test_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
-	import datetime, time, stbt
+	import datetime, time, stbt_core as stbt
 	
 	def read_time(frame):
 	    s = stbt.ocr(
@@ -327,7 +327,7 @@ test_clock_visualisation() {
 
 test_that_visualisation_doesnt_write_to_user_frame() {
     cat > test.py <<-EOF
-	import numpy, stbt, time
+	import numpy, stbt_core as stbt, time
 	
 	f = stbt.get_frame()
 	orig = f.copy()
@@ -345,7 +345,7 @@ test_that_visualisation_doesnt_write_to_user_frame() {
 
 test_that_frames_are_read_only() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	
 	f = stbt.get_frame()
 	try:
@@ -384,7 +384,7 @@ test_that_frames_are_read_only() {
 
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
-	import stbt, time
+	import stbt_core as stbt, time
 
 	f = stbt.get_frame()
 	t = time.time()
@@ -403,7 +403,7 @@ test_that_get_frame_time_is_wall_time() {
 
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	for frame in stbt.frames(timeout_secs=20):
 	    stbt.match("${testdir}/videotestsrc-ball.png", frame)
 	EOF
@@ -419,7 +419,7 @@ test_template_annotation_labels() {
     trap "kill $test_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match("${testdir}/videotestsrc-ball-label.png")
 	EOF
     stbt run -v --control none \
@@ -429,7 +429,7 @@ test_template_annotation_labels() {
 
 test_template_annotation_with_ndarray_template() {
     cat > test.py <<-EOF &&
-	import cv2, stbt
+	import cv2, stbt_core as stbt
 	template = cv2.imread("${testdir}/videotestsrc-ball.png")
 	assert template is not None
 	for frame in stbt.frames(timeout_secs=20):
@@ -447,7 +447,7 @@ test_template_annotation_with_ndarray_template() {
     trap "kill $test_script; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match("${testdir}/custom-image-label.png")
 	EOF
     stbt run -v --control none \
@@ -458,13 +458,13 @@ test_template_annotation_with_ndarray_template() {
 
 test_draw_text() {
     cat > draw-text.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	from time import sleep
 	stbt.draw_text("Test", duration_secs=60)
 	sleep(60)
 	EOF
     cat > verify-draw-text.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match("$testdir/draw-text.png")
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
@@ -482,7 +482,7 @@ test_draw_text() {
 
 test_that_press_waits_between_subsequent_presses() {
     cat > test.py <<-EOF &&
-	import stbt, datetime
+	import stbt_core as stbt, datetime
 	time1 = datetime.datetime.now()
 	stbt.press('OK')
 	stbt.press('OK', interpress_delay_secs=0.5)
@@ -495,7 +495,7 @@ test_that_press_waits_between_subsequent_presses() {
 
 test_that_press_doesnt_wait_any_longer_than_necessary() {
     cat > test.py <<-EOF &&
-	import stbt, time
+	import stbt_core as stbt, time
 	
 	def fake_sleep(x):
 	    assert False, "Unexpected call to time.sleep"
@@ -511,7 +511,7 @@ test_that_press_doesnt_wait_any_longer_than_necessary() {
 test_that_press_reads_default_delay_from_stbt_conf() {
     set_config press.interpress_delay_secs "0.5" &&
     cat > test.py <<-EOF &&
-	import stbt, datetime
+	import stbt_core as stbt, datetime
 	stbt.press('OK')
 	time1 = datetime.datetime.now()
 	stbt.press('OK')
@@ -527,7 +527,7 @@ test_multithreaded() {
 	import sys, time
 	from multiprocessing.pool import ThreadPool
 	
-	import stbt
+	import stbt_core as stbt
 	
 	stbt.press('black')
 	assert stbt.wait_until(stbt.is_screen_black)
@@ -567,7 +567,7 @@ test_multithreaded() {
 
 test_that_get_frame_may_return_the_same_frame_twice() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	ts = set()
 	for _ in range(10):
 	    ts.add(stbt.get_frame().time)
@@ -579,7 +579,7 @@ test_that_get_frame_may_return_the_same_frame_twice() {
 
 test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	try:
 	    from itertools import izip as zip
 	except ImportError:
@@ -604,7 +604,7 @@ test_that_two_frames_iterators_can_return_the_same_frames_as_each_other() {
 
 test_that_press_returns_a_pressresult() {
     cat > test.py <<-EOF &&
-	import time, stbt
+	import time, stbt_core as stbt
 	
 	assert stbt.last_keypress() is None
 
@@ -644,7 +644,7 @@ test_press_and_wait() {
     # This is a regression test - dut was incorrectly injected into
     # press_and_wait causing failures that our pytest tests didn't find.
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	import threading
 
 	stbt.press("black")

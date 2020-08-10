@@ -70,8 +70,8 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         ``stbt.frames()``.
     """
     if frames is None:
-        import stbt
-        frames = stbt.frames()
+        import stbt_core
+        frames = stbt_core.frames()
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
 
@@ -195,8 +195,8 @@ def wait_for_motion(
         seconds.
     """
     if frames is None:
-        import stbt
-        frames = stbt.frames()
+        import stbt_core
+        frames = stbt_core.frames()
 
     if consecutive_frames is None:
         consecutive_frames = get_config('motion', 'consecutive_frames')

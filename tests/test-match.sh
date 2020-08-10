@@ -8,7 +8,7 @@ skip_if_opencv_2() {
 
 test_wait_for_match() {
     cat > test.py <<-EOF
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png", consecutive_matches=2)
 	EOF
@@ -17,7 +17,7 @@ test_wait_for_match() {
 
 test_wait_for_match_no_match() {
     cat > test.py <<-EOF
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=1)
 	EOF
@@ -28,7 +28,7 @@ test_wait_for_match_changing_template() {
     # Tests that we can change the image given to templatematch.
     # Also tests the remote-control infrastructure by using the null control.
     cat > test.py <<-EOF
-	from stbt import press, wait_for_match
+	from stbt_core import press, wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("MENU")
 	wait_for_match("$testdir/videotestsrc-bw.png")
@@ -41,7 +41,7 @@ test_wait_for_match_changing_template() {
 
 test_wait_for_match_nonexistent_template() {
     cat > test.py <<-EOF
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("idontexist.png")
 	EOF
     ! stbt run -v test.py &> test.log || fail "Test should have failed"
@@ -52,7 +52,7 @@ test_wait_for_match_nonexistent_template() {
 
 test_wait_for_match_opencv_image_can_be_used_as_template() {
     cat > test.py <<-EOF &&
-	import stbt, cv2
+	import stbt_core as stbt, cv2
 	stbt.wait_for_match(cv2.imread("$testdir/videotestsrc-redblue.png"))
 	stbt.wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
@@ -66,7 +66,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
     # a match, whereas match_method="sqdiff-normed" does not produce a
     # first_pass_result above 0.80 and so the match fails.
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
@@ -77,7 +77,7 @@ test_wait_for_match_match_method_param_affects_first_pass() {
     stbt run -v test.py || return
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue-flipped.png",
 	    match_parameters=MatchParameters(
@@ -95,7 +95,7 @@ test_wait_for_match_match_threshold_param_affects_match() {
     # first_pass_result of this match, we can get one to pass and the other
     # to fail.
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-checkers-8.png", timeout_secs=1,
 	    match_parameters=MatchParameters(
@@ -104,7 +104,7 @@ test_wait_for_match_match_threshold_param_affects_match() {
     ! stbt run -v test.py || return
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-checkers-8.png", timeout_secs=1,
 	    match_parameters=MatchParameters(
@@ -118,7 +118,7 @@ test_wait_for_match_confirm_method_none_matches_anything_with_match_threshold_ze
     # confirm_method="none", any image with match any source.
     # (In use, this scenario is completely useless).
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	for img in ['circle-big.png', 'videotestsrc-redblue-flipped.png',
 	            'videotestsrc-checkers-8.png', 'videotestsrc-gamut.png']:
 	    wait_for_match("$testdir/" + img, match_parameters=MatchParameters(
@@ -133,7 +133,7 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 
     # Expect correct nomatch.
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/known-fail-template.png",
 	    match_parameters=MatchParameters(confirm_method="normed-absdiff"))
@@ -143,7 +143,7 @@ test_wait_for_match_confirm_methods_produce_different_results() {
 
     # Expect false match.
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match(
 	    "$testdir/known-fail-template.png",
 	    match_parameters=MatchParameters(confirm_method="absdiff"))
@@ -158,7 +158,7 @@ test_wait_for_match_erode_passes_affects_match() {
         decodebin ! imagefreeze ! videoconvert"
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match("$testdir/circle-small.png",
 	               match_parameters=MatchParameters(match_threshold=0.9,
 	                                                erode_passes=2))
@@ -167,7 +167,7 @@ test_wait_for_match_erode_passes_affects_match() {
         || return
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match("$testdir/circle-small.png",
 	               match_parameters=MatchParameters(match_threshold=0.9,
 	                                                erode_passes=1))
@@ -182,7 +182,7 @@ test_wait_for_match_confirm_threshold_affects_match() {
         decodebin ! imagefreeze ! videoconvert"
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
 	               match_parameters=MatchParameters(
 	                   confirm_method="absdiff", confirm_threshold=0.5))
@@ -191,7 +191,7 @@ test_wait_for_match_confirm_threshold_affects_match() {
         || return
 
     cat > test.py <<-EOF
-	from stbt import MatchParameters, wait_for_match
+	from stbt_core import MatchParameters, wait_for_match
 	wait_for_match("$testdir/slight-variation-2.png", timeout_secs=1,
 	               match_parameters=MatchParameters(
 	                   confirm_method="absdiff", confirm_threshold=0.6))
@@ -201,7 +201,7 @@ test_wait_for_match_confirm_threshold_affects_match() {
 
 test_wait_for_match_with_pyramid_optimisation_disabled() {
     cat > test.py <<-EOF &&
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config match.pyramid_levels "1" &&
@@ -211,7 +211,7 @@ test_wait_for_match_with_pyramid_optimisation_disabled() {
 test_wait_for_match_transparency() {
     skip_if_opencv_2
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match(
 	    "$testdir/videotestsrc-blacktransparent-blue.png",
 	    match_parameters=stbt.MatchParameters(stbt.MatchMethod.SQDIFF),
@@ -222,7 +222,7 @@ test_wait_for_match_transparency() {
 
 test_match_nonexistent_template() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.match("idontexist.png")
 	EOF
     ! stbt run -vv test.py \
@@ -236,7 +236,7 @@ test_match_invalid_template() {
     # that "stbt run -vv" doesn't report a later exception from the _match_all
     # teardown. (This is a regression test.)
     cat > test.py <<-EOF
-	import numpy, stbt
+	import numpy, stbt_core as stbt
 	grey = numpy.zeros((20, 20), dtype=numpy.uint8)
 	stbt.match(grey)
 	EOF
@@ -248,7 +248,7 @@ test_match_invalid_template() {
 
 test_press_until_match_presses_once() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png",
 	    interval_secs=1)
@@ -260,7 +260,7 @@ test_press_until_match_presses_once() {
 
 test_press_until_match_presses_zero_times_if_match_already_present() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press_until_match("smpte", "$testdir/videotestsrc-redblue.png")
 	EOF
     stbt run -v test.py &> test.log || { cat test.log; return 1; }
@@ -270,7 +270,7 @@ test_press_until_match_presses_zero_times_if_match_already_present() {
 
 test_press_until_match_max_presses() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press_until_match(
 	    "ball", "$testdir/videotestsrc-checkers-8.png",
 	    interval_secs=1, max_presses=3)
@@ -283,7 +283,7 @@ test_press_until_match_max_presses() {
 test_press_until_match_reads_interval_secs_from_config_file() {
     cat > test-3s.py <<-EOF &&
 	import time
-	import stbt
+	import stbt_core as stbt
 	start = stbt.get_frame().time
 	match = stbt.press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
@@ -294,7 +294,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 
     cat > test-1s.py <<-EOF &&
 	import time
-	import stbt
+	import stbt_core as stbt
 	start = stbt.get_frame().time
 	match = stbt.press_until_match(
 	    "checkers-8", "$testdir/videotestsrc-checkers-8.png")
@@ -307,7 +307,7 @@ test_press_until_match_reads_interval_secs_from_config_file() {
 
 test_wait_for_match_searches_in_script_directory() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match("in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
@@ -316,7 +316,7 @@ test_wait_for_match_searches_in_script_directory() {
 
 test_press_until_match_searches_in_script_directory() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press_until_match("checkers-8", "in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-checkers-8.png in-script-dir.png
@@ -325,7 +325,7 @@ test_press_until_match_searches_in_script_directory() {
 
 test_match_searches_in_script_directory() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	assert stbt.match("in-script-dir.png")
 	EOF
     cp "$testdir"/videotestsrc-bw.png in-script-dir.png
@@ -339,7 +339,7 @@ test_match_searches_in_library_directory() {
 	EOF
     mkdir stbt_helpers
     cat > stbt_helpers/__init__.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	def find():
 	    m = stbt.match("in-helpers-dir.png")
 	    if not m:
@@ -362,7 +362,7 @@ test_match_searches_in_caller_directory() {
 	EOF
     mkdir stbt_helpers
     cat > stbt_helpers/__init__.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	def find(image):
 	    m = stbt.match(image)
 	    if not m:
@@ -374,7 +374,7 @@ test_match_searches_in_caller_directory() {
 
 test_changing_input_video_with_the_test_control() {
     cat > test.py <<-EOF
-	from stbt import press, wait_for_match
+	from stbt_core import press, wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	press("checkers-8")
 	wait_for_match("$testdir/videotestsrc-checkers-8.png")
@@ -385,7 +385,7 @@ test_changing_input_video_with_the_test_control() {
 test_match_reports_match() {
     cat > test.py <<-EOF
 	# Should report a match
-	import stbt
+	import stbt_core as stbt
 	match_result = stbt.match("$testdir/videotestsrc-redblue.png")
 	assert match_result
 	assert match_result.match
@@ -395,7 +395,7 @@ test_match_reports_match() {
 
 test_match_reports_match_region() {
     cat > test.py <<-EOF
-	from stbt import match, Position, Region
+	from stbt_core import match, Position, Region
 	match_result = match("$testdir/videotestsrc-redblue.png")
 	assert match_result.region == Region(228, 0, 92, 160)
 	assert match_result.position == Position(228, 0)
@@ -405,7 +405,7 @@ test_match_reports_match_region() {
 
 test_match_searches_in_provided_frame() {
     cat > test.py <<-EOF
-	import cv2, stbt
+	import cv2, stbt_core as stbt
 	assert stbt.match(
 	    "$testdir/videotestsrc-redblue.png",
 	    frame=cv2.imread("$testdir/videotestsrc-full-frame.png"))
@@ -415,7 +415,7 @@ test_match_searches_in_provided_frame() {
 
 test_match_searches_in_provided_region() {
     cat > test.py <<-EOF
-	from stbt import match, MatchTimeout, Region, wait_for_match
+	from stbt_core import match, MatchTimeout, Region, wait_for_match
 	for search_area in [Region.ALL, Region(228, 0, 92, 160),
 	                    Region(200, 0, 300, 400), Region(200, 0, 300, 400),
 	                    Region(-200, -100, 600, 800)]:
@@ -444,7 +444,7 @@ test_match_searches_in_provided_region() {
 
 test_match_reports_no_match() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	# Should not report a match
 	match_result = stbt.match("$testdir/videotestsrc-checkers-8.png")
 	assert not match_result
@@ -455,12 +455,12 @@ test_match_reports_no_match() {
 
 test_match_visualisation() {
     cat > match.py <<-EOF &&
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match(
 	    "$testdir/videotestsrc-redblue.png", consecutive_matches=240)
 	EOF
     cat > verify.py <<-EOF &&
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue-with-border.png")
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
@@ -477,7 +477,7 @@ test_match_visualisation() {
 
 test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     cat > test.py <<-EOF &&
-	from stbt import wait_for_match
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/videotestsrc-redblue.png", timeout_secs=0)
 	EOF
     ! stbt run -v --source-pipeline 'videotestsrc pattern=black is-live=true' \

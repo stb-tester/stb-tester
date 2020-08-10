@@ -17,7 +17,7 @@ test_press_with_lirc() {
     start_fake_lircd
 
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press("menu")
 	stbt.press("ok")
 	EOF
@@ -31,7 +31,7 @@ test_that_press_fails_on_lircd_error() {
     start_fake_lircd
 
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press("button_that_causes_error")
 	EOF
     ! stbt run -v --control lirc:$lircd_socket:test test.py ||
@@ -44,7 +44,7 @@ test_that_press_times_out_when_lircd_doesnt_reply() {
     start_fake_lircd
 
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("button_that_causes_timeout")
 	EOF
     timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
@@ -57,7 +57,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_success() {
     start_fake_lircd
 
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("button_that_causes_sighup_and_broadcast_and_ack")
 	EOF
     stbt run -v --control lirc:$lircd_socket:test test.py || return
@@ -67,7 +67,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_error() {
     start_fake_lircd
 
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("button_that_causes_sighup_and_broadcast_and_error")
 	EOF
     ! stbt run -v --control lirc:$lircd_socket:test test.py ||
@@ -80,7 +80,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {
     start_fake_lircd
 
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	stbt.press("button_that_causes_sighup_and_broadcast_and_timeout")
 	EOF
     timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
@@ -93,7 +93,7 @@ test_press_hold_secs_with_lirc() {
     start_fake_lircd
 
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press("KEY_LEFT", hold_secs=0.1)
 	with stbt.pressing("KEY_RIGHT"):
 	    pass

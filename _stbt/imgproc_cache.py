@@ -243,7 +243,7 @@ def _cache_hash(value):
 
 def test_that_cache_is_disabled_when_debug_match():
     # debug logging is a side effect that the cache cannot reproduce
-    import stbt
+    import stbt_core as stbt
     import _stbt.logging
     with scoped_curdir() as srcdir, cache('cache.lmdb'):
         stbt.match(srcdir + '/tests/red-black.png',
@@ -339,7 +339,7 @@ def test_memoize_iterator_on_empty_iterator():
 
 
 def test_that_cache_speeds_up_match():
-    import stbt
+    import stbt_core as stbt
     black = numpy.zeros((1440, 2560, 3), dtype=numpy.uint8)
 
     def match():
@@ -354,7 +354,7 @@ def test_that_cache_speeds_up_match():
 
 
 def test_that_cache_speeds_up_match_all():
-    import stbt
+    import stbt_core as stbt
     import cv2
 
     frame = cv2.imread('tests/buttons.png')
@@ -373,7 +373,7 @@ def test_that_cache_speeds_up_match_all():
 
 
 def test_that_cache_speeds_up_ocr():
-    import stbt
+    import stbt_core as stbt
     import cv2
 
     frame = cv2.imread('tests/red-black.png')
@@ -391,7 +391,7 @@ def test_that_cache_speeds_up_ocr():
 
 
 def test_that_cache_speeds_up_match_text():
-    import stbt
+    import stbt_core as stbt
     import cv2
 
     frame = cv2.imread('tests/red-black.png')

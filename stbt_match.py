@@ -18,7 +18,7 @@ from contextlib import contextmanager
 import cv2
 
 import _stbt.logging
-import stbt
+import stbt_core as stbt
 
 
 def error(s):

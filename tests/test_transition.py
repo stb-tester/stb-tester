@@ -12,7 +12,7 @@ import numpy
 import pytest
 from numpy import isclose
 
-import stbt
+import stbt_core as stbt
 from _stbt.transition import strict_diff
 
 

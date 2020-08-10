@@ -16,10 +16,10 @@ import cv2
 import pytest
 
 import _stbt.config
-import stbt
+import stbt_core as stbt
+from _stbt.imgutils import load_image
 from _stbt.ocr import _tesseract_version
 from _stbt.utils import named_temporary_directory
-from stbt import load_image
 
 
 def requires_tesseract(func):

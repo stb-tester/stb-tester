@@ -13,7 +13,7 @@ import timeit
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 "..")))
-import stbt
+import stbt_core as stbt
 sys.path.pop(0)
 
 
