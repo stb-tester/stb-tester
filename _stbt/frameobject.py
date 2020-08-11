@@ -192,8 +192,8 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         ``frame`` parameter and supply it to the super-class's constructor.
         """
         if frame is None:
-            import stbt
-            frame = stbt.get_frame()
+            from stbt_core import get_frame
+            frame = get_frame()
         self.__frame_object_cache = {}
         self.__local = threading.local()
         self._frame = frame

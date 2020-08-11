@@ -99,7 +99,7 @@ def uri_to_control_recorder(uri):
 
 
 def new_adb_device(address):
-    from stbt.android import AdbDevice
+    from _stbt.android import AdbDevice
     tcpip = bool(re.match(r"\d+\.\d+\.\d+\.\d+", address))
     return AdbDevice(adb_device=address, tcpip=tcpip)
 

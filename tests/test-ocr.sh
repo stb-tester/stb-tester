@@ -2,7 +2,7 @@
 
 test_ocr_on_live_video() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	
 	next(stbt.frames(timeout_secs=60))  # wait 'til video pipeline playing
 	text = stbt.ocr()

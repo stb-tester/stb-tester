@@ -5,7 +5,7 @@ test_long_running_stbt_run_process_for_memory_leaks() {
         skip "Skipping because \$STBT_RUN_SOAK_TESTS isn't set"
 
     cat > test.py <<-EOF
-	import os, time, stbt
+	import os, time, stbt_core as stbt
 	
 	initial_rss = None
 	

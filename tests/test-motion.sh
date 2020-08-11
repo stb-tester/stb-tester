@@ -2,6 +2,7 @@
 
 test_wait_for_motion_int() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(consecutive_frames=10)
 	EOF
     stbt run -v test.py
@@ -9,6 +10,7 @@ test_wait_for_motion_int() {
 
 test_wait_for_motion_str() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(consecutive_frames='10/10')
 	EOF
     stbt run -v test.py
@@ -16,6 +18,7 @@ test_wait_for_motion_str() {
 
 test_wait_for_motion_no_motion_int() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(consecutive_frames=10, timeout_secs=1)
 	EOF
     ! stbt run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
@@ -23,6 +26,7 @@ test_wait_for_motion_no_motion_int() {
 
 test_wait_for_motion_no_motion_str() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(consecutive_frames='10/10', timeout_secs=1)
 	EOF
     ! stbt run -v --source-pipeline="videotestsrc ! imagefreeze" test.py
@@ -30,6 +34,7 @@ test_wait_for_motion_no_motion_str() {
 
 test_wait_for_motion_with_mask_reports_motion() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(mask="$testdir/videotestsrc-mask-video.png")
 	EOF
     stbt run -v test.py
@@ -37,6 +42,7 @@ test_wait_for_motion_with_mask_reports_motion() {
 
 test_wait_for_motion_with_mask_does_not_report_motion() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(
 	    mask="$testdir/videotestsrc-mask-no-video.png", timeout_secs=1)
 	EOF
@@ -45,6 +51,7 @@ test_wait_for_motion_with_mask_does_not_report_motion() {
 
 test_wait_for_motion_nonexistent_mask() {
     cat > test.py <<-EOF
+	from stbt_core import press, wait_for_motion
 	wait_for_motion(mask="idontexist.png")
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
@@ -57,9 +64,9 @@ test_wait_for_motion_nonexistent_mask() {
 
 test_wait_for_motion_with_region_reports_motion() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	region = stbt.Region(x=230, y=170, right=320, bottom=240)
-	result = wait_for_motion(region=region)
+	result = stbt.wait_for_motion(region=region)
 	assert result.region.x >= 240
 	assert result.region.y >= 180
 	EOF
@@ -68,20 +75,20 @@ test_wait_for_motion_with_region_reports_motion() {
 
 test_wait_for_motion_with_region_does_not_report_motion() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	region = stbt.Region(x=0, y=0, right=240, bottom=240)
-	wait_for_motion(region=region, timeout_secs=1)
+	stbt.wait_for_motion(region=region, timeout_secs=1)
 	EOF
     ! stbt run -v test.py
 }
 
 test_wait_for_motion_with_region_and_mask() {
     cat > test.py <<-EOF
-	import stbt, numpy
+	import stbt_core as stbt, numpy
 	region = stbt.Region(x=240, y=180, right=320, bottom=240)
 	mask = numpy.zeros((60, 80), dtype=numpy.uint8)
 	mask[30:, 40:] = 255
-	result = wait_for_motion(region=region, mask=mask)
+	result = stbt.wait_for_motion(region=region, mask=mask)
 	assert result.region.x >= 280
 	assert result.region.y >= 210
 	EOF
@@ -90,6 +97,7 @@ test_wait_for_motion_with_region_and_mask() {
 
 test_wait_for_motion_with_high_noisethreshold_reports_motion() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(noise_threshold=1.0)
 	EOF
     stbt run -v test.py
@@ -97,6 +105,7 @@ test_wait_for_motion_with_high_noisethreshold_reports_motion() {
 
 test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
     cat > test.py <<-EOF
+	from stbt_core import wait_for_motion
 	wait_for_motion(noise_threshold=0.0, timeout_secs=1)
 	EOF
     ! stbt run -v test.py
@@ -104,8 +113,9 @@ test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
 
 test_detect_motion_reports_motion() {
     cat > test.py <<-EOF
+	import stbt_core as stbt
 	# Should report motion
-	for motion_result in detect_motion():
+	for motion_result in stbt.detect_motion():
 	    assert bool(motion_result) == motion_result.motion
 	    if motion_result:
 	        # videotestsrc has motion in bottom right corner:
@@ -122,11 +132,11 @@ test_detect_motion_reports_motion() {
 
 test_detect_motion_reports_valid_timestamp() {
     cat > test.py <<-EOF
-	import time
+	import time, stbt_core as stbt
 	
 	start_time = time.time()
 	last_timestamp = None
-	for motion_result in detect_motion():
+	for motion_result in stbt.detect_motion():
 	    assert motion_result.time >= start_time
 	    if last_timestamp != None:
 	        if motion_result.time - last_timestamp >= 0:
@@ -147,6 +157,7 @@ test_detect_motion_reports_valid_timestamp() {
 
 test_detect_motion_reports_no_motion() {
     cat > test.py <<-EOF
+	from stbt_core import detect_motion
 	# Should not report motion
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-no-video.png"):
@@ -163,6 +174,7 @@ test_detect_motion_reports_no_motion() {
 
 test_detect_motion_times_out() {
     cat > test.py <<-EOF
+	from stbt_core import detect_motion
 	for motion_result in detect_motion(timeout_secs=1):
 	    pass
 	EOF
@@ -171,6 +183,7 @@ test_detect_motion_times_out() {
 
 test_detect_motion_times_out_during_yield() {
     cat > test.py <<-EOF
+	from stbt_core import detect_motion
 	i = 0
 	for motion_result in detect_motion(timeout_secs=1):
 	    import time
@@ -184,6 +197,7 @@ test_detect_motion_times_out_during_yield() {
 test_detect_motion_changing_mask() {
     # Tests that we can change the mask given to motiondetect.
     cat > test.py <<-EOF
+	from stbt_core import detect_motion, wait_for_motion
 	wait_for_motion(mask="$testdir/videotestsrc-mask-video.png")
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-no-video.png"):
@@ -197,6 +211,7 @@ test_detect_motion_changing_mask() {
 
 test_detect_motion_changing_mask_is_not_racy() {
     cat > test.py <<-EOF
+	from stbt_core import detect_motion
 	for motion_result in detect_motion(
 	        mask="$testdir/videotestsrc-mask-video.png"):
 	    if not motion_result:
@@ -220,6 +235,7 @@ test_detect_motion_changing_mask_is_not_racy() {
 
 test_detect_motion_example_press_and_wait_for_no_motion() {
     cat > test.py <<-EOF
+	from stbt_core import detect_motion, press
 	key_sent = False
 	for motion_result in detect_motion():
 	    if not key_sent:
@@ -238,6 +254,7 @@ test_detect_motion_example_press_and_wait_for_no_motion() {
 
 test_detect_motion_visualisation() {
     cat > detect_motion.py <<-EOF &&
+	from stbt_core import detect_motion
 	for result in detect_motion():
 	    pass
 	EOF
@@ -253,6 +270,7 @@ test_detect_motion_visualisation() {
     trap "kill $source_pid; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/motion-visualisation.png")
 	EOF
     stbt run -v --control none \
@@ -262,7 +280,7 @@ test_detect_motion_visualisation() {
 
 test_press_and_wait_visualisation() {
     cat > press_and_wait.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.press_and_wait("ball")
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
@@ -275,6 +293,7 @@ test_press_and_wait_visualisation() {
     trap "kill $source_pid; rm fifo" EXIT
 
     cat > verify.py <<-EOF &&
+	from stbt_core import wait_for_match
 	wait_for_match("$testdir/press_and_wait_visualisation.png")
 	EOF
     stbt run -v --control=none \
@@ -288,7 +307,7 @@ test_that_wait_for_motion_returns_first_frame_with_motion() {
     # motion (green -> black). Then we have a couple of frames with no motion.
     # wait_for_motion should return the green frame.
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	m = stbt.wait_for_motion(consecutive_frames="2/2")
 	assert stbt.match("$testdir/box-00003.png", m.frame)
 	EOF

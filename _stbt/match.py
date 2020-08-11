@@ -322,8 +322,8 @@ def _match_all(image, frame, match_parameters, region):
         match_parameters = MatchParameters()
 
     if frame is None:
-        import stbt
-        frame = stbt.get_frame()
+        from stbt_core import get_frame
+        frame = get_frame()
 
     template = _load_image(image)
 
@@ -447,8 +447,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
         match_parameters = MatchParameters()
 
     if frames is None:
-        import stbt
-        frames = stbt.frames(timeout_secs=timeout_secs)
+        import stbt_core
+        frames = stbt_core.frames(timeout_secs=timeout_secs)
     else:
         frames = limit_time(frames, timeout_secs)
 

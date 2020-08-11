@@ -33,6 +33,8 @@ from _stbt.imgutils import (
     Frame,
     load_image,
     save_frame)
+from _stbt.keyboard import (
+    Keyboard)
 from _stbt.logging import (
     debug)
 from _stbt.match import (
@@ -70,11 +72,12 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
+from _stbt.utils import (
+    to_native_str)
 from _stbt.wait import (
     wait_until)
-from stbt.keyboard import Keyboard
 
-__all__ = [
+__all__ = [to_native_str(x) for x in [
     "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
@@ -124,7 +127,7 @@ __all__ = [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
-]
+]]
 
 # Functions available to stbt scripts
 # ===========================================================================

@@ -21,8 +21,8 @@ try:
 except ImportError:
     import mock  # Python 2 backport
 
-import stbt
-from stbt import wait_until
+import stbt_core as stbt
+from stbt_core import wait_until
 
 
 # pylint:disable=redefined-outer-name,unused-argument

@@ -6,7 +6,7 @@ test_record() {
         sleep 1; echo checkers-8;
         sleep 1; echo smpte; sleep 1;) &&
     diff -u - test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	
 	
 	def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():

@@ -9,7 +9,7 @@ from itertools import combinations
 import networkx as nx
 from pytest import raises
 
-from stbt import Grid, grid_to_navigation_graph, Position, Region
+from stbt_core import Grid, grid_to_navigation_graph, Position, Region
 
 
 def test_grid():

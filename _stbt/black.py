@@ -66,8 +66,8 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         threshold = get_config('is_screen_black', 'threshold', type_=int)
 
     if frame is None:
-        import stbt
-        frame = stbt.get_frame()
+        from stbt_core import get_frame
+        frame = get_frame()
 
     if mask is None:
         mask = _ImageFromUser(None, None, None)

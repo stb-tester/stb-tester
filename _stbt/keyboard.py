@@ -13,7 +13,7 @@ from logging import getLogger
 
 import networkx as nx
 import numpy
-import stbt
+from _stbt.imgutils import load_image
 from _stbt.utils import text_type
 
 
@@ -124,7 +124,7 @@ class Keyboard(object):
         if isinstance(mask, numpy.ndarray):
             self.mask = mask
         elif mask:
-            self.mask = stbt.load_image(mask)
+            self.mask = load_image(mask)
 
         self.navigate_timeout = navigate_timeout
 
@@ -232,6 +232,8 @@ class Keyboard(object):
                     return self._kb.navigate_to(target, page=self)
         """
 
+        import stbt_core as stbt
+
         for letter in text:
             if letter not in self.G:
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
@@ -261,6 +263,8 @@ class Keyboard(object):
             reflecting the device-under-test's new state after the navigation
             completed.
         """
+
+        import stbt_core as stbt
 
         if target not in self.G:
             raise ValueError("'%s' isn't in the keyboard" % (target,))

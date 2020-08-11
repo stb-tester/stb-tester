@@ -16,7 +16,7 @@ import sys
 
 import _stbt.control
 import _stbt.core
-import stbt
+import stbt_core as stbt
 
 
 def main(argv):
@@ -58,7 +58,7 @@ def record(dut, control_recorder, script_out):
         stbt.save_frame(dut.get_frame(), filename)
         script_out.write("    stbt.wait_for_match('%s')\n" % filename)
 
-    script_out.write("import stbt\n\n\n")
+    script_out.write("import stbt_core as stbt\n\n\n")
     script_out.write("def test_that_WRITE_TESTCASE_DESCRIPTION_HERE():\n")
     try:
         for key in _stbt.control.uri_to_control_recorder(control_recorder):

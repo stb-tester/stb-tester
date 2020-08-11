@@ -9,7 +9,7 @@ from contextlib import contextmanager
 import numpy
 import pytest
 
-import stbt
+import stbt_core as stbt
 
 
 def test_motionresult_repr():

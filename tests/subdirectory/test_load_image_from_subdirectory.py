@@ -9,7 +9,7 @@ import cv2
 import numpy
 import pytest
 
-import stbt
+import stbt_core as stbt
 
 
 def test_that_load_image_looks_in_callers_directory():

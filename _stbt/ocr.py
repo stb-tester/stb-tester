@@ -270,8 +270,8 @@ def ocr(frame=None, region=Region.ALL,
     | Added in v32: The ``corrections`` parameter.
     """
     if frame is None:
-        import stbt
-        frame = stbt.get_frame()
+        from stbt_core import get_frame
+        frame = get_frame()
 
     if region is None:
         raise TypeError(
@@ -340,8 +340,8 @@ def match_text(text, frame=None, region=Region.ALL,
     """
     import lxml.etree
     if frame is None:
-        import stbt
-        frame = stbt.get_frame()
+        from stbt_core import get_frame
+        frame = get_frame()
 
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1

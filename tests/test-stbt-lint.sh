@@ -10,7 +10,7 @@ assert_lint_log() {
 
 test_that_stbt_lint_passes_existing_images() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match('$testdir/videotestsrc-redblue.png')
 	EOF
     $stbt_lint --errors-only test.py
@@ -18,7 +18,7 @@ test_that_stbt_lint_passes_existing_images() {
 
 test_that_stbt_lint_fails_nonexistent_image() {
     cat > test.py <<-EOF &&
-	import stbt
+	import stbt_core as stbt
 	stbt.wait_for_match('idontexist.png')
 	EOF
     $stbt_lint --errors-only test.py &> lint.log
@@ -32,7 +32,7 @@ test_that_stbt_lint_ignores_generated_image_names() {
     cat > test.py <<-EOF &&
 	import os
 	import re
-	import stbt
+	import stbt_core as stbt
 	from os.path import join
 	var = 'idontexist'
 	stbt.wait_for_match(var + '.png')
@@ -55,12 +55,12 @@ test_that_stbt_lint_ignores_regular_expressions() {
 
 test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     cat > test.py <<-EOF &&
-	import cv2, stbt
+	import cv2, stbt_core as stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	cv2.imwrite('neither-do-i.png', stbt.get_frame())
 	
 	from cv2 import imwrite
-	from stbt import save_frame
+	from stbt_core import save_frame
 	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	imwrite('neither-do-i.png', stbt.get_frame())
 	EOF
@@ -90,7 +90,7 @@ test_that_stbt_lint_reports_uncommitted_images() {
     mkdir -p repo/tests/images
     touch repo/tests/images/reference.png
     cat > repo/tests/test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	assert stbt.match("images/reference.png")
 	EOF
     cd repo
@@ -126,8 +126,8 @@ test_pylint_plugin_on_itself() {
 
 test_that_stbt_lint_checks_uses_of_stbt_return_values() {
     cat > test.py <<-EOF &&
-	import re, stbt
-	from stbt import (is_screen_black, match, match_text, ocr, press,
+	import re, stbt_core as stbt
+	from stbt_core import (is_screen_black, match, match_text, ocr, press,
 	                  press_and_wait, wait_until)
 	
 	def test_something():
@@ -168,7 +168,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
     cat > test.py <<-EOF &&
 	import functools
 	from functools import partial
-	from stbt import is_screen_black, press, wait_until
+	from stbt_core import is_screen_black, press, wait_until
 	
 	def return_a_function():
 	    return lambda: True
@@ -200,7 +200,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 
 test_that_stbt_lint_checks_frameobjects() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	
 	def find_boxes(frame=None):
 	    pass
@@ -280,7 +280,7 @@ test_that_stbt_lint_checks_frameobjects() {
     assert_lint_log < expected.log
 
     # Also test `match` instead of `stbt.match` (etc).
-    sed -e 's/^import stbt$/from stbt import FrameObject, get_frame, is_screen_black, match, match_text, ocr, press, press_and_wait, wait_until/' \
+    sed -e 's/^import stbt_core as stbt$/from stbt_core import FrameObject, get_frame, is_screen_black, match, match_text, ocr, press, press_and_wait, wait_until/' \
         -e 's/stbt\.//g' \
         -i test.py expected.log
     $stbt_lint --errors-only test.py > lint.log
@@ -289,7 +289,7 @@ test_that_stbt_lint_checks_frameobjects() {
 
 test_that_stbt_lint_ignores_astroid_inference_exceptions() {
     cat > test.py <<-EOF
-	import stbt
+	import stbt_core as stbt
 	assert stbt.wait_until(InfoPage)
 	EOF
     $stbt_lint --errors-only test.py > lint.log

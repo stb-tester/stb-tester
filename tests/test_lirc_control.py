@@ -8,7 +8,7 @@ from textwrap import dedent
 
 import pytest
 
-from stbt import wait_until
+from stbt_core import wait_until
 from _stbt.control import uri_to_control
 from _stbt.utils import named_temporary_directory, scoped_process
 

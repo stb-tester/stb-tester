@@ -14,7 +14,7 @@ import cv2
 import numpy
 import pytest
 
-import stbt
+import stbt_core as stbt
 from _stbt import cv2_compat
 from _stbt.imgutils import _image_region
 from _stbt.logging import scoped_debug_level

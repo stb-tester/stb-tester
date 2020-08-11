@@ -54,7 +54,7 @@ RELEASE?=1
 .DELETE_ON_ERROR:
 
 
-extra/fedora/stb-tester.spec stbt-control-relay: \
+stbt-control-relay: \
   %: %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
@@ -64,6 +64,7 @@ extra/fedora/stb-tester.spec stbt-control-relay: \
 
 INSTALL_PYLIB_FILES = \
     _stbt/__init__.py \
+    _stbt/android.py \
     _stbt/black.py \
     _stbt/config.py \
     _stbt/control.py \
@@ -76,6 +77,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/imgproc_cache.py \
     _stbt/imgutils.py \
     _stbt/irnetbox.py \
+    _stbt/keyboard.py \
     _stbt/libstbt.so \
     _stbt/libxxhash.so \
     _stbt/logging.py \
@@ -96,10 +98,8 @@ INSTALL_PYLIB_FILES = \
     _stbt/x11.py \
     _stbt/xorg.conf.in \
     _stbt/xxhash.py \
-    stbt/__init__.py \
-    stbt/android.py \
-    stbt/keyboard.py \
-    stbt/pylint_plugin.py
+    stbt_core/__init__.py \
+    stbt_core/pylint_plugin.py
 
 INSTALL_CORE_SCRIPTS = \
     stbt_config.py \
@@ -121,7 +121,7 @@ install: install-core
 install-core: all
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
-	    $(DESTDIR)$(pythondir)/stbt \
+	    $(DESTDIR)$(pythondir)/stbt_core \
 	    $(DESTDIR)$(pythondir)/_stbt \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d \
@@ -199,7 +199,7 @@ uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
 	rm -rf $(DESTDIR)$(libexecdir)/stbt
 	rm -f $(DESTDIR)$(man1dir)/stbt.1
-	rm -rf $(DESTDIR)$(pythondir)/stbt
+	rm -rf $(DESTDIR)$(pythondir)/stbt_core
 	rm -rf $(DESTDIR)$(pythondir)/_stbt
 	rm -f $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
@@ -234,7 +234,7 @@ check-pythonpackage:
 	    tests/test_match.py \
 	    tests/test_motion.py \
 	    tests/test_transition.py && \
-	stbt_lint="pylint --load-plugins=stbt.pylint_plugin" \
+	stbt_lint="pylint --load-plugins=stbt_core.pylint_plugin" \
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
@@ -307,7 +307,7 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 	fi
 
 TAGS:
-	etags stbt/**.py _stbt/**.py
+	etags stbt_core/**.py _stbt/**.py
 
 ### Third-party dependencies #################################################
 
