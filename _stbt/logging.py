@@ -232,7 +232,7 @@ class ImageLogger(object):
                 if not isinstance(r, tuple) or len(r) != 3:
                     raise ValueError(
                         "_draw_annotated_image expected 3-tuple "
-                        "(region, css_class, title); got %r" % r)
+                        "(region, css_class, title); got %r" % (r,))
                 _regions.append(r)
 
         return jinja2.Template(dedent("""\
