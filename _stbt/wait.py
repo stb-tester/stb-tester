@@ -110,8 +110,11 @@ def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
     if predicate is None:
         predicate = lambda x: x
 
-    if (inspect.isfunction(callable_) and
-            "frame" in getargspec(callable_).args):  # pylint:disable=deprecated-method
+    if ((inspect.isfunction(callable_) and
+            "frame" in getargspec(callable_).args) or  # pylint:disable=deprecated-method
+        (inspect.isclass(callable_) and
+            "frame" in getargspec(callable_.__init__).args)  # pylint:disable=deprecated-method
+    ):
         import stbt
         frames = stbt.frames()
         f = callable_

@@ -347,12 +347,22 @@ def test_wait_until_with_function_that_takes_a_frame():
         for i in range(10):
             yield numpy.ones((1, 1), dtype=numpy.uint8) * i
 
-    def m(frame):
+    def f(frame):
         print(frame)
         return frame[0, 0] == 5
 
+    class PageObject(stbt.FrameObject):
+        @property
+        def is_visible(self):
+            return self._frame[0, 0] == 5
+
+    class NormalClass(object):
+        pass
+
     with mock.patch("stbt.frames", _frames):
-        assert wait_until(lambda frame, other=None: m(frame) and m(frame))
+        assert wait_until(lambda frame, other=None: f(frame) and f(frame))
+        assert wait_until(PageObject)
+        assert wait_until(NormalClass)
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
