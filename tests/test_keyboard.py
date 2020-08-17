@@ -147,11 +147,9 @@ GRAPH = """
     SEARCH ' KEY_UP
 """
 G = stbt.Keyboard.parse_edgelist(GRAPH)
-nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
 
 if sys.version_info.major == 2:
     G_BYTES = stbt.Keyboard.parse_edgelist(GRAPH.encode('utf-8'))
-    nx.relabel_nodes(G_BYTES, {b"SPACE": b" "}, copy=False)
     GRAPHS = [G, G_BYTES]
 else:
     GRAPHS = [G]
@@ -398,9 +396,8 @@ def test_composing_complex_keyboards():
     assert sorted(K0.G.edges(data=True)) == sorted(K1.G.edges(data=True))
 
     # Technique #2: Use manually-written edgelist only for the irregular edges
-    # Note that Keyboard.__init__ will normalise "SPACE" -> " " so it doesn't
-    # matter if the 3 different graphs have different representations for
-    # "SPACE".
+    # Note that `Keyboard.parse_edgelist` will normalise "SPACE" -> " " so all
+    # 3 graphs will have the same representation for space: " ".
     connections = stbt.Keyboard.parse_edgelist("""
         V SPACE KEY_DOWN
         W SPACE KEY_DOWN

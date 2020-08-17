@@ -114,10 +114,6 @@ class Keyboard(object):
             self.G = graph
         else:
             self.G = Keyboard.parse_edgelist(graph)
-        try:
-            nx.relabel_nodes(self.G, {"SPACE": " "}, copy=False)
-        except KeyError:  # Node SPACE is not in the graph
-            pass
         _add_weights(self.G)
 
         self.mask = None
@@ -323,11 +319,16 @@ class Keyboard(object):
         :param str graph: See the `Keyboard` constructor.
         :returns: A new `networkx.DiGraph` instance.
         """
-        return nx.parse_edgelist(
+        G = nx.parse_edgelist(
             graph.split("\n"),
             comments="LCYG2RXNHIXJGPLLMQQIJ7VECIYURYEQTPNGBNUQCPQW34PMO5NQETM",
             create_using=nx.DiGraph(),
             data=[("key", text_type)])
+        try:
+            nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
+        except KeyError:  # Node SPACE is not in the graph
+            pass
+        return G
 
 
 def _selection_to_text(selection):
