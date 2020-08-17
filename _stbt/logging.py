@@ -19,6 +19,9 @@ from .utils import mkdir_p
 
 _debug_level = None
 
+# Running in a Jupyter Notebook:
+_jupyter_logging_enabled = "JPY_PARENT_PID" in os.environ
+
 
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
@@ -81,7 +84,7 @@ class ImageLogger(object):
     _frame_number = itertools.count(1)
 
     def __init__(self, name, **kwargs):
-        self.jupyter = "JPY_PARENT_PID" in os.environ  # in a Jupyter Notebook
+        self.jupyter = _jupyter_logging_enabled
         self.enabled = get_debug_level() > 1 or self.jupyter
         if not self.enabled:
             return
