@@ -14,7 +14,6 @@ from logging import getLogger
 import networkx as nx
 import numpy
 from _stbt.imgutils import load_image
-from _stbt.utils import text_type
 
 
 log = getLogger("stbt.keyboard")
@@ -319,11 +318,20 @@ class Keyboard(object):
         :param str graph: See the `Keyboard` constructor.
         :returns: A new `networkx.DiGraph` instance.
         """
-        G = nx.parse_edgelist(
-            graph.split("\n"),
-            comments="LCYG2RXNHIXJGPLLMQQIJ7VECIYURYEQTPNGBNUQCPQW34PMO5NQETM",
-            create_using=nx.DiGraph(),
-            data=[("key", text_type)])
+        G = nx.DiGraph()
+        for i, line in enumerate(graph.split("\n")):
+            fields = line.split()
+            if len(fields) == 0:
+                continue
+            elif len(fields) == 3:
+                source, target, key = fields
+                G.add_edge(source, target, key=key)
+            else:
+                raise ValueError(
+                    "Invalid line %d in keyboard edgelist "
+                    "(must contain 3 fields): %r"
+                    % (i, line.strip()))
+
         try:
             nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
         except KeyError:  # Node SPACE is not in the graph

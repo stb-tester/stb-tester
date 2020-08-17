@@ -457,3 +457,20 @@ def test_keyboard_with_hash_sign():
     # just the first character.
     assert list(_keys_to_press(kb.G, "K", "L")) == [('KEY_RIGHT', {'L'})]
     assert list(_keys_to_press(kb.G, "L", "K")) == [('KEY_LEFT', {'K'})]
+
+
+def test_invalid_edgelist():
+    with pytest.raises(ValueError) as excinfo:
+        stbt.Keyboard("""
+            A B KEY_RIGHT
+            B A
+        """)
+    assert "line 2" in str(excinfo.value)
+    assert "'B A'" in str(excinfo.value)
+
+    with pytest.raises(ValueError):
+        stbt.Keyboard("""
+            A B KEY_RIGHT toomanyfields
+        """)
+
+    stbt.Keyboard("")  # Doesn't raise
