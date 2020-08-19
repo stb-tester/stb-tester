@@ -116,6 +116,7 @@ __all__ = [to_native_str(x) for x in [
     "press",
     "press_and_wait",
     "press_until_match",
+    "pressing",
     "Region",
     "save_frame",
     "set_global_ocr_corrections",
