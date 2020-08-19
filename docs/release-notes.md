@@ -47,8 +47,10 @@ UNRELEASED
   years. This doesn't apply to Stb-tester.com customers, who never had this
   behaviour.
 
-* `is_screen_black`: Increase default threshold to 20. This doesn't apply
-  to Stb-tester.com customers, who were all already using the new threshold.
+* `is_screen_black`: Increase default threshold to 20. This doesn't apply to
+  Stb-tester.com customers, who were all already using the new threshold. To
+  keep the old default, set `threshold = 10` in the `[is_screen_black]` section
+  of your config file.
 
 ##### Minor additions, bugfixes & improvements
 
