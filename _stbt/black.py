@@ -44,7 +44,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
       Even when a video frame appears to be black, the intensity of its pixels
       is not always 0. To differentiate almost-black from non-black pixels, a
       binary threshold is applied to the frame. The ``threshold`` value is in
-      the range 0 (black) to 255 (white). The global default (10) can be
+      the range 0 (black) to 255 (white). The global default (20) can be
       changed by setting ``threshold`` in the ``[is_screen_black]`` section of
       :ref:`.stbt.conf`.
 
