@@ -1,26 +1,102 @@
 Stb-tester release notes
 ========================
 
-[Stb-tester] Python APIs for use in test scripts are stable: Upgrading to a
-newer stb-tester version shouldn't affect any of your test scripts.
-Occasionally we might break some rare edge cases, but we don't expect them to
-affect most users, and we mention such changes under "Breaking changes" in the
-release notes.
-
-For installation instructions see [Getting Started] if you're using the
-open-source project, or update [test_pack.stbt_version] if you're using the
-[Stb-tester hardware].
-
-[Stb-tester]: https://stb-tester.com
-[Getting Started]: https://github.com/stb-tester/stb-tester/wiki/Getting-started-with-stb-tester
-[test_pack.stbt_version]: https://stb-tester.com/manual/advanced-configuration#stbt-conf
-[Stb-tester hardware]: https://stb-tester.com/solutions
-[license]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
+These release notes apply to the Stb-tester open-source version. Customers of
+Stb-tester.com Ltd. should refer to the release notes at
+https://stb-tester.com/manual/python-api#release-notes instead.
 
 
-#### Unreleased
+#### v32
 
- * Support for OpenCV4
+UNRELEASED
+
+##### Major new features
+
+* New Python API `last_keypress()`: Returns information about the last
+  key-press sent to the device under test.
+
+* ocr: New `corrections` parameter: A dict of {bad: good} mappings to correct
+  known OCR mistakes.
+  * New function `apply_ocr_corrections` to apply the same corrections to any
+    string -- useful for post-processing old test artifacts using new
+    corrections.
+  * New function `set_global_ocr_corrections` to specify the default value for
+    ocr's `corrections` parameter. Call this early in your tests, for example
+    in the top-level of `tests/__init__.py`.
+
+* Region:
+  * New `center` property that returns a `Position` value with `x` and `y`
+    attributes.
+  * `contains` accepts a `Position` as the argument (previously it only
+    accepted a `Region`).
+  * `translate` can take another `stbt.Region` as its argument, instead of
+    separate `x` and `y` coordinates.
+
+* Support for OpenCV 4.
+
+* Pylint plugin: Support pylint 2 / astroid 2.
+
+##### Breaking changes since v31
+
+* Python module renamed from `stbt` to `stbt_core`. This doesn't apply to
+  Stb-tester.com customers.
+
+* stbt run: Don't expose `press`, `match`, etc. as globals. Instead you have to
+  `import stbt_core as stbt` and call `stbt.press()` (or `from stbt_core import
+  press`). This is an ancient behaviour that has been deprecated for at least 6
+  years. This doesn't apply to Stb-tester.com customers, who never had this
+  behaviour.
+
+* `is_screen_black`: Increase default threshold to 20. This doesn't apply
+  to Stb-tester.com customers, who were all already using the new threshold.
+
+##### Minor additions, bugfixes & improvements
+
+* draw_text: Also write text to stderr.
+
+* get_config: Allow `None` as a default value.
+
+* Keyboard:
+  * The edgelist format now allows key names with "#" in them (previously they
+    were treated as comments).
+  * `enter_text` adds a 1s inter-press delay when entering the same letter
+    twice, because some keyboard implementations ignore the second keypress if
+    pressed too quickly.
+
+* load_image:
+  * Fix UnicodeDecodeError when filename is utf8-encoded bytes.
+  * Allow passing an image (in this case `load_image` is a no-op and just 
+    returns the given image).
+
+* match: Disable pyramid optimisation if too few non-transparent pixels, to
+  avoid false negatives with small, mostly transparent, reference images.
+
+* Fix `from stbt_core import *` with Python 2.7.
+
+* Pylint plugin:
+  * Fix false positive for user-defined functions called "wait_until_...".
+
+* Allow utf-8 paths in `$STBT_CONFIG_FILE` environment variable.
+
+* Fix frame timestamps drawn on output video: It should be the frame's time,
+  not the current wall-clock time. Stb-tester's sink pipeline buffers half a
+  second of frames to give the user code enough time to draw annotations on
+  them before they are pushed to the video encoder -- so these timestamps were
+  all wrong by half a second.
+
+* Packaging changes: Importing the `stbt_core` Python module doesn't require
+  GStreamer. Without GStreamer installed you can't run a test but you can call
+  APIs like `stbt.match()` if you pass a `frame` in explicitly, for example a
+  screenshot loaded from disk. More importantly, this allows IDEs to import the
+  Python module and provide linting & autocompletion, without having to install
+  GStreamer.
+  * Make GStreamer dependencies optional when importing `stbt_core` Python
+    module.
+  * get_frame, press, ocr, etc: Improve error message if called without
+    GStreamer/LIRC/Tesseract being installed/configured/initialised.
+  * match: Make the sqdiff C optimisation optional.
+  * imgproc_cache: Disable cache if we can't import lmdb.
+
 
 #### v31
 
