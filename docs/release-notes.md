@@ -69,6 +69,9 @@ UNRELEASED
   * Fix UnicodeDecodeError when filename is utf8-encoded bytes.
   * Allow passing a numpy array (in this case `load_image` is a no-op and just
     returns the given image).
+  * Return type changed from `numpy.ndarray` to `Image`, which is a sub-class
+    of `numpy.ndarray` with the additional attributes `filename`,
+    `absolute_filename`, and `relative_filename`.
 
 * match: Disable pyramid optimisation if too few non-transparent pixels, to
   avoid false negatives with small, mostly transparent, reference images.
