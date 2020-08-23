@@ -185,12 +185,11 @@ def load_image(filename, flags=None):
 
     * Changed in v30: Include alpha (transparency) channel if the file has
       transparent pixels.
-    * Changed in v32:
-        * Return type is now `stbt.Image`, which is a `numpy.ndarray` sub-class
-          with additional attributes ``filename``, ``relative_filename`` and
-          ``absolute_filename``.
-        * Allows passing an image (`numpy.ndarray` or `stbt.Image`) instead of
-          a string, in which case this function is a no-op.
+    * Changed in v32: Return type is now `stbt.Image`, which is a
+      `numpy.ndarray` sub-class with additional attributes ``filename``,
+      ``relative_filename`` and ``absolute_filename``.
+    * Changed in v32: Allows passing an image (`numpy.ndarray` or `stbt.Image`)
+      instead of a string, in which case this function returns the given image.
     """
 
     obj = filename
