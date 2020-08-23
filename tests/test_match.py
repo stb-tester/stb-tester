@@ -38,16 +38,16 @@ def black(width=1280, height=720, value=0):
 
 
 def test_that_matchresult_image_matches_template_passed_to_match():
-    assert stbt.match("black.png", frame=black()).image == "black.png"
+    assert stbt.match("black.png", frame=black()).image.filename == "black.png"
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
-    assert re.search(r"image=u?'black.png'",
+    assert re.search(r"image=<stbt.Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
-    assert "image=<Custom Image>" in str(
+    assert "image=<stbt.Image(filename=None, dimensions=30x30x3)>" in str(
         stbt.match(black(30, 30), frame=black()))
 
 

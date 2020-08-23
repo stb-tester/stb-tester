@@ -52,6 +52,11 @@ UNRELEASED
   keep the old default, set `threshold = 10` in the `[is_screen_black]` section
   of your config file.
 
+* MatchResult (the return value from `match`): The `image` attribute is now an
+  instance of `Image`. Previously it was a string or a numpy array, depending
+  on what you had passed to `match`.
+
+
 ##### Minor additions, bugfixes & improvements
 
 * draw_text: Also write text to stderr.

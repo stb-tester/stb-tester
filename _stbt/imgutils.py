@@ -123,7 +123,7 @@ class Image(numpy.ndarray):
 def _frame_repr(frame):
     if frame is None:
         return "None"
-    if isinstance(frame, Frame):
+    if isinstance(frame, (Image, Frame)):
         return repr(frame)
     if len(frame.shape) == 3:
         return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])

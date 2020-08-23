@@ -196,7 +196,11 @@ class MatchResult(object):
 
     :ivar Frame frame: The video frame that was searched, as given to `match`.
 
-    :ivar image: The reference image that was searched for, as given to `match`.
+    :ivar Image image: The reference image that was searched for, as given to
+        `match`.
+
+    Changed in v32: The type of the ``image`` attribute is now `stbt.Image`.
+    Previously it was a string or a numpy array.
     """
     _fields = ("time", "match", "region", "first_pass_result", "frame", "image")
 
@@ -220,8 +224,7 @@ class MatchResult(object):
                 self.region,
                 self.first_pass_result,
                 _frame_repr(self.frame),
-                "<Custom Image>" if isinstance(self.image, numpy.ndarray)
-                else repr(self.image)))
+                _frame_repr(self.image)))
 
     def __bool__(self):
         return self.match
@@ -403,7 +406,7 @@ def _match_all(image, frame, match_parameters, region):
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
                 first_pass_certainty, frame,
-                (template.relative_filename or template),
+                template,
                 first_pass_matched)
             imglog.append(matches=result)
             draw_on(frame, result, label="match(%s)" % (
