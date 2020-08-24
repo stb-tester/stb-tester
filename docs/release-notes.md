@@ -63,8 +63,9 @@ UNRELEASED
 * get_config: Allow `None` as a default value.
 
 * Keyboard:
-  * The edgelist format now allows key names with "#" in them (previously they
-    were treated as comments).
+  * The edgelist format now allows key names with "#" in them. Previously
+    anything starting with "#" was treated as a comment. Now comments are lines
+    starting with "###" (three hashes), optionally preceded by whitespace.
   * `enter_text` adds a 1s inter-press delay when entering the same letter
     twice, because some keyboard implementations ignore the second keypress if
     pressed too quickly.

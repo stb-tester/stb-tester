@@ -439,6 +439,7 @@ def test_composing_complex_keyboards():
 def test_keyboard_with_hash_sign():
     """Regression test. `networkx.parse_edgelist` treats "#" as a comment."""
     kb = stbt.Keyboard("""
+        ### three hashes for a comment
         @hotmail.com !#$ KEY_DOWN
         @hotmail.com @ KEY_DOWN
         @ # KEY_RIGHT

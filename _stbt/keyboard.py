@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import re
 import time
 from collections import namedtuple
 from logging import getLogger
@@ -320,6 +321,8 @@ class Keyboard(object):
         """
         G = nx.DiGraph()
         for i, line in enumerate(graph.split("\n")):
+            if re.match(r"^\s*###", line):  # comment
+                continue
             fields = line.split()
             if len(fields) == 0:
                 continue
