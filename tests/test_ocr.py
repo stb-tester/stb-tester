@@ -282,7 +282,8 @@ def test_match_text_stringify_result():
 
     assert re.match(
         r"TextMatchResult\(time=None, match=True, region=Region\(.*\), "
-        r"frame=<1280x720x3>, text=u?'Onion Bhaji'\)",
+        r"frame=<stbt.Image\(filename=u?'ocr/menu.png', "
+        r"dimensions=1280x720x3\)>, text=u?'Onion Bhaji'\)",
         str(result))
 
 

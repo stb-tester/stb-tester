@@ -404,6 +404,7 @@ test_that_get_frame_time_is_wall_time() {
 test_template_annotation_labels() {
     cat > test.py <<-EOF &&
 	import stbt_core as stbt
+	stbt.TEST_PACK_ROOT = "${testdir}"
 	for frame in stbt.frames(timeout_secs=20):
 	    stbt.match("${testdir}/videotestsrc-ball.png", frame)
 	EOF

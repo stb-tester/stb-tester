@@ -29,8 +29,8 @@ UNRELEASED
     attributes.
   * `contains` accepts a `Position` as the argument (previously it only
     accepted a `Region`).
-  * `translate` can take another `stbt.Region` as its argument, instead of
-    separate `x` and `y` coordinates.
+  * `translate` can take another `Region` as its argument, instead of separate
+    `x` and `y` coordinates.
 
 * Support for OpenCV 4.
 
@@ -41,16 +41,20 @@ UNRELEASED
 * Python module renamed from `stbt` to `stbt_core`. This doesn't apply to
   Stb-tester.com customers.
 
-* stbt run: Don't expose `press`, `match`, etc. as globals. Instead you have to
-  `import stbt_core as stbt` and call `stbt.press()` (or `from stbt_core import
-  press`). This is an ancient behaviour that has been deprecated for at least 6
-  years. This doesn't apply to Stb-tester.com customers, who never had this
-  behaviour.
+* stbt run: Don't expose `press`, `match`, etc. as globals (now you have to
+  import the Python module explicitly). This was an ancient behaviour that has
+  been deprecated for at least 6 years. This doesn't apply to Stb-tester.com
+  customers, who never had this behaviour.
 
-* `is_screen_black`: Increase default threshold to 20. This doesn't apply to
+* is_screen_black: Increase default threshold to 20. This doesn't apply to
   Stb-tester.com customers, who were all already using the new threshold. To
   keep the old default, set `threshold = 10` in the `[is_screen_black]` section
   of your config file.
+
+* MatchResult (the return value from `match`): The `image` attribute is now an
+  instance of `Image`. Previously it was a string or a numpy array, depending
+  on what you had passed to `match`.
+
 
 ##### Minor additions, bugfixes & improvements
 
@@ -69,6 +73,9 @@ UNRELEASED
   * Fix UnicodeDecodeError when filename is utf8-encoded bytes.
   * Allow passing a numpy array (in this case `load_image` is a no-op and just
     returns the given image).
+  * Return type changed from `numpy.ndarray` to `Image`, which is a sub-class
+    of `numpy.ndarray` with the additional attributes `filename`,
+    `absolute_filename`, and `relative_filename`.
 
 * match: Disable pyramid optimisation if too few non-transparent pixels, to
   avoid false negatives with small, mostly transparent, reference images.
@@ -88,7 +95,7 @@ UNRELEASED
 
 * Packaging changes: Importing the `stbt_core` Python module doesn't require
   GStreamer. Without GStreamer installed you can't run a test but you can call
-  APIs like `stbt.match()` if you pass a `frame` in explicitly, for example a
+  APIs like `match()` if you pass a `frame` in explicitly, for example a
   screenshot loaded from disk. More importantly, this allows IDEs to import the
   Python module and provide linting & autocompletion, without having to install
   GStreamer.

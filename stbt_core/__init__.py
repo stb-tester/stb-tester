@@ -31,6 +31,7 @@ from _stbt.grid import (
 from _stbt.imgutils import (
     crop,
     Frame,
+    Image,
     load_image,
     save_frame)
 from _stbt.keyboard import (
@@ -94,6 +95,7 @@ __all__ = [to_native_str(x) for x in [
     "get_frame",
     "Grid",
     "grid_to_navigation_graph",
+    "Image",
     "is_screen_black",
     "Keyboard",
     "last_keypress",

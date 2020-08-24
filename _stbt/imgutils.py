@@ -8,7 +8,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import inspect
 import os
-from collections import namedtuple
 
 import cv2
 import numpy
@@ -35,8 +34,12 @@ class Frame(numpy.ndarray):
     """
     def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
-        obj.time = time
-        obj._draw_sink = _draw_sink  # pylint: disable=protected-access
+        i = isinstance(array, Frame)
+        if time is None and i:
+            obj.time = array.time
+        else:
+            obj.time = time
+        obj._draw_sink = _draw_sink or (i and array._draw_sink) or None  # pylint: disable=protected-access
         return obj
 
     def __array_finalize__(self, obj):
@@ -56,10 +59,71 @@ class Frame(numpy.ndarray):
             dimensions)
 
 
+class Image(numpy.ndarray):
+    """An image, possibly loaded from disk.
+
+    This is a subclass of `numpy.ndarray`, which is the type that OpenCV uses
+    to represent images.
+
+    In addition to the members inherited from `numpy.ndarray`, ``Image``
+    defines the following attributes:
+
+    :vartype filename: str or None
+    :ivar filename: The filename that was given to `stbt.load_image`.
+
+    :vartype absolute_filename: str or None
+    :ivar absolute_filename: The absolute path resolved by `stbt.load_image`.
+
+    :vartype relative_filename: str or None
+    :ivar relative_filename: The path resolved by `stbt.load_image`, relative
+        to the root of the test-pack git repo.
+
+    Added in v32.
+    """
+    def __new__(cls, array, dtype=None, order=None,
+                filename=None, absolute_filename=None):
+
+        obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
+        i = isinstance(array, Image)
+        obj.filename = filename or (i and array.filename) or None
+        obj.absolute_filename = (absolute_filename or
+                                 (i and array.absolute_filename) or
+                                 None)
+        obj.relative_filename = None
+
+        if obj.absolute_filename is not None:
+            import stbt_core
+            root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+            if root is not None:
+                obj.relative_filename = os.path.relpath(obj.absolute_filename,
+                                                        root)
+            else:
+                obj.relative_filename = obj.absolute_filename
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        # pylint: disable=attribute-defined-outside-init
+        self.filename = getattr(obj, "filename", None)
+        self.relative_filename = getattr(obj, "relative_filename", None)
+        self.absolute_filename = getattr(obj, "absolute_filename", None)
+
+    def __repr__(self):
+        if len(self.shape) == 3:
+            dimensions = "%dx%dx%d" % (
+                self.shape[1], self.shape[0], self.shape[2])
+        else:
+            dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+        return "<stbt.Image(filename=%r, dimensions=%s)>" % (
+            self.filename, dimensions)
+
+
 def _frame_repr(frame):
     if frame is None:
         return "None"
-    if isinstance(frame, Frame):
+    if isinstance(frame, (Image, Frame)):
         return repr(frame)
     if len(frame.shape) == 3:
         return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])
@@ -112,6 +176,7 @@ def load_image(filename, flags=None):
 
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
 
+    :rtype: stbt.Image
     :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
         values. With the default ``flags`` parameter this will be 3 channels
         BGR, or 4 channels BGRA if the file has transparent pixels.
@@ -120,12 +185,19 @@ def load_image(filename, flags=None):
 
     * Changed in v30: Include alpha (transparency) channel if the file has
       transparent pixels.
-    * Changed in v32: Allows passing an image (`numpy.ndarray`) in which case
-      this function is a no-op.
+    * Changed in v32: Return type is now `stbt.Image`, which is a
+      `numpy.ndarray` sub-class with additional attributes ``filename``,
+      ``relative_filename`` and ``absolute_filename``.
+    * Changed in v32: Allows passing an image (`numpy.ndarray` or `stbt.Image`)
+      instead of a string, in which case this function returns the given image.
     """
 
-    if isinstance(filename, numpy.ndarray):
-        return filename
+    obj = filename
+    if isinstance(obj, Image):
+        return obj
+    if isinstance(obj, numpy.ndarray):
+        return Image(obj)  # obj.filename etc. will be None
+
     absolute_filename = find_user_file(filename)
     if not absolute_filename:
         raise IOError(to_native_str("No such file: %s" % to_unicode(filename)))
@@ -133,7 +205,8 @@ def load_image(filename, flags=None):
     if image is None:
         raise IOError(to_native_str("Failed to load image: %s" %
                                     to_unicode(absolute_filename)))
-    return image
+    return Image(image, filename=to_unicode(filename),
+                 absolute_filename=to_unicode(absolute_filename))
 
 
 def save_frame(image, filename):
@@ -143,41 +216,6 @@ def save_frame(image, filename):
     property of `MatchTimeout` or `MotionTimeout`.
     """
     cv2.imwrite(filename, image)
-
-
-class _ImageFromUser(namedtuple(
-        '_ImageFromUser',
-        'image relative_filename absolute_filename')):
-
-    @property
-    def friendly_name(self):
-        if self.image is None:
-            return None
-        return self.relative_filename or '<Custom Image>'
-
-    def short_repr(self):
-        if self.image is None:
-            return "None"
-        if self.relative_filename:
-            return repr(os.path.basename(self.relative_filename))
-        return "<Custom Image>"
-
-
-def _load_image(image, flags=None):
-    if isinstance(image, _ImageFromUser):
-        return image
-    if isinstance(image, numpy.ndarray):
-        return _ImageFromUser(image, None, None)
-    else:
-        relative_filename = image
-        absolute_filename = find_user_file(relative_filename)
-        if not absolute_filename:
-            raise IOError("No such file: %s" % relative_filename)
-        numpy_image = imread(absolute_filename, flags)
-        if numpy_image is None:
-            raise IOError("Failed to load image: %s" %
-                          absolute_filename)
-        return _ImageFromUser(numpy_image, relative_filename, absolute_filename)
 
 
 def imread(filename, flags=None):
@@ -289,11 +327,11 @@ def find_user_file(filename):
     # the _stbt installation directory (this file's directory). We can ignore
     # the first 2 stack-frames:
     #
-    # * stack()[0] is _find_user_file;
-    # * stack()[1] is _find_user_file's caller: load_image or _load_image;
-    # * stack()[2] is load_image's caller (the user script). It could also be
-    #   _load_image's caller (e.g. `match`) so we still need to check until
-    #   we're outside of the _stbt directory.
+    # * stack()[0] is find_user_file;
+    # * stack()[1] is find_user_file's caller: load_image
+    # * stack()[2] is load_image's caller -- load_image can be called
+    #   directly from the user script, or indirectly via stbt.match so we still
+    #   need to check until we're outside of the _stbt directory.
 
     filename = to_native_str(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))

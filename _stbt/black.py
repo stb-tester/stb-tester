@@ -16,7 +16,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 import cv2
 
 from .config import get_config
-from .imgutils import (_frame_repr, _image_region, _ImageFromUser, _load_image,
+from .imgutils import (_frame_repr, _image_region, load_image,
                        pixel_bounding_box, crop)
 from .logging import debug, ImageLogger
 from .types import Region
@@ -38,7 +38,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         the area to ignore. The mask must be the same size as the video frame.
 
         This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
+        `stbt.load_image`) or a single-channel image in OpenCV format.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
@@ -69,19 +69,17 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         from stbt_core import get_frame
         frame = get_frame()
 
-    if mask is None:
-        mask = _ImageFromUser(None, None, None)
-    else:
-        mask = _load_image(mask, cv2.IMREAD_GRAYSCALE)
+    if mask is not None:
+        mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
 
     imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
 
     _region = Region.intersect(_image_region(frame), region)
     greyframe = cv2.cvtColor(crop(frame, _region), cv2.COLOR_BGR2GRAY)
-    if mask.image is not None:
-        imglog.imwrite("mask", mask.image)
-        cv2.bitwise_and(greyframe, mask.image, dst=greyframe)
+    if mask is not None:
+        imglog.imwrite("mask", mask)
+        cv2.bitwise_and(greyframe, mask, dst=greyframe)
     maxVal = greyframe.max()
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
@@ -89,7 +87,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
           "threshold={threshold}, region={region}: "
           "{result}, maximum_intensity={maxVal}".format(
               found="Found" if result.black else "Didn't find",
-              mask=mask.friendly_name,
+              mask=mask,
               threshold=threshold,
               region=region,
               result=result,

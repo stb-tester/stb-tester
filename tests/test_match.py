@@ -38,16 +38,16 @@ def black(width=1280, height=720, value=0):
 
 
 def test_that_matchresult_image_matches_template_passed_to_match():
-    assert stbt.match("black.png", frame=black()).image == "black.png"
+    assert stbt.match("black.png", frame=black()).image.filename == "black.png"
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
-    assert re.search(r"image=u?'black.png'",
+    assert re.search(r"image=<stbt.Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
-    assert "image=<Custom Image>" in str(
+    assert "image=<stbt.Image(filename=None, dimensions=30x30x3)>" in str(
         stbt.match(black(30, 30), frame=black()))
 
 
@@ -492,7 +492,6 @@ def test_match_fast_path():
 
 @requires_opencv_3
 def test_that_match_fast_path_is_equivalent():
-    from _stbt.match import _load_image
     black_reference = black(10, 10)
     almost_black_reference = black(10, 10, value=1)
     black_frame = black(1280, 720)
@@ -516,7 +515,7 @@ def test_that_match_fast_path_is_equivalent():
     for reference, frame in images:
         if isinstance(frame, string_types):
             frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
-        reference = _load_image(reference)
+        reference = stbt.load_image(reference)
         orig_m = stbt.match(reference, frame=frame)
         fast_m = stbt.match(reference, frame=frame, region=orig_m.region)
         assert orig_m.time == fast_m.time
