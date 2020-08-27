@@ -351,7 +351,7 @@ def test_that_navigate_to_checks_target(
     assert buggykeyboard.pressed == ["KEY_RIGHT"] * num_presses
 
 
-def test_composing_complex_keyboards():
+def test_composing_complex_keyboards():  # TODO
     """The YouTube keyboard on Roku looks like this::
 
         A  B  C  D  E  F  G

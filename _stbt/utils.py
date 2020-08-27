@@ -95,6 +95,7 @@ def find_import_name(filename):
 
 
 if sys.version_info.major == 2:  # Python 2
+    py3 = False
     text_type = unicode  # pylint: disable=undefined-variable
     basestring = basestring  # pylint: disable=redefined-builtin,undefined-variable
 
@@ -126,6 +127,7 @@ if sys.version_info.major == 2:  # Python 2
         check(strip_newtypes(newstr("abc")), "abc")
         check(strip_newtypes(newbytes(b"abc")), b"abc")
 else:
+    py3 = True
     text_type = str
     basestring = str
 
