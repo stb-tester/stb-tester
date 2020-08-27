@@ -293,54 +293,6 @@ class Keyboard(object):
                         current)
         return page
 
-    @staticmethod
-    def parse_edgelist(graph):
-        """Create a `networkx.DiGraph` from a string specification of the graph.
-
-        This is useful when you want to specify part of the keyboard's
-        navigation graph programmatically using `stbt.grid_to_navigation_graph`
-        (for the parts of the keyboard that are laid out in a grid and behave
-        regularly) but you still need to specify some extra edges that behave
-        differently. For example::
-
-            letters = stbt.Grid(...)
-            space_bar = stbt.Keyboard.parse_edgelist('''
-                C SPACE KEY_DOWN
-                V SPACE KEY_DOWN
-                B SPACE KEY_DOWN
-                SPACE C KEY_UP
-                SPACE V KEY_UP
-                SPACE B KEY_UP
-            ''')
-            keyboard = stbt.Keyboard(networkx.compose_all([
-                stbt.grid_to_navigation_graph(letters),
-                space_bar]))
-
-        :param str graph: See the `Keyboard` constructor.
-        :returns: A new `networkx.DiGraph` instance.
-        """
-        G = nx.DiGraph()
-        for i, line in enumerate(graph.split("\n")):
-            if re.match(r"^\s*###", line):  # comment
-                continue
-            fields = line.split()
-            if len(fields) == 0:
-                continue
-            elif len(fields) == 3:
-                source, target, key = fields
-                G.add_edge(source, target, key=key)
-            else:
-                raise ValueError(
-                    "Invalid line %d in keyboard edgelist "
-                    "(must contain 3 fields): %r"
-                    % (i, line.strip()))
-
-        try:
-            nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
-        except KeyError:  # Node SPACE is not in the graph
-            pass
-        return G
-
 
 def _selection_to_text(selection):
     if hasattr(selection, "text"):
