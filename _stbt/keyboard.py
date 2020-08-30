@@ -150,8 +150,8 @@ class Keyboard(object):
 
         :raises: `ValueError` if the key is already present in the model.
         """
-        return self._add_node({"name": name, "text": text, "region": region,
-                               "mode": mode})
+        return self._add_key({"name": name, "text": text, "region": region,
+                              "mode": mode})
 
     def find_key(self, name=None, text=None, region=None, mode=None):
         """Find a key in the model (specification) of the keyboard.
@@ -181,32 +181,85 @@ class Keyboard(object):
             can't be identified unambiguously (that is, if two or more keys
             match the given parameters).
         """
-        keys = self.find_keys(name=name, text=text, region=region, mode=mode)
-        if len(keys) == 0:
-            raise ValueError("Query %r doesn't match any key in the keyboard"
-                             % (_minimal_spec(text=text, name=name,
-                                              region=region, mode=mode),))
-        elif len(keys) == 1:
-            return keys[0]
-        else:
-            raise ValueError("Ambiguous key: Could mean " +
-                             _join_with_commas([str(x) for x in sorted(keys)],
-                                               last_one=" or "))
+        return self._find_key({"name": name, "text": text, "region": region,
+                               "mode": mode})
 
     def find_keys(self, name=None, text=None, region=None, mode=None):
         """Find matching keys in the model of the keyboard.
 
         This is like `Keyboard.find_key`, but it returns a list containing any
         keys that match the given parameters. For example, if there is a space
-        key in both the lowercase and uppercase mode of the keyboard, calling
+        key in both the lowercase and uppercase modes of the keyboard, calling
         ``find_keys(text=" ")`` will return a list of 2 objects
         ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
 
         This method doesn't raise an exception; the list will be empty if no
         keys matched.
         """
-        return self._find_nodes({"name": name, "text": text, "region": region,
-                                 "mode": mode})
+        return self._find_keys({"name": name, "text": text, "region": region,
+                                "mode": mode})
+
+    def _find_key(self, query):
+        """Like the public ``find_keys``, but takes a "query"  which can be
+        a dict containing one or more of "name", "text", "region", and "mode";
+        or a string, which means ``{"name": query}``; or a `Key`.
+        """
+        keys = self._find_keys(query)
+        if len(keys) == 0:
+            raise ValueError("Query %r doesn't match any key in the keyboard"
+                             % (_minimal_query(query),))
+        elif len(keys) == 1:
+            return keys[0]
+        else:
+            raise ValueError("Ambiguous query %r: Could mean %s" % (
+                _minimal_query(query),
+                _join_with_commas([str(x) for x in sorted(keys)],
+                                  last_one=" or ")))
+
+    def _find_keys(self, query):
+        """Like the public `find_keys`, but takes a "query" (see _find_key)."""
+        if isinstance(query, Key):
+            if query in self.G:
+                return [query]
+            else:
+                raise ValueError("%r isn't in the keyboard" % (query,))
+        elif isinstance(query, basestring):
+            query = {"name": query}
+        else:
+            query = _minimal_query(query)
+        if len(query) == 0:
+            raise ValueError("Empty query %r" % (query,))
+        return [x for x in self.G.nodes() if all(getattr(x, k, None) == v
+                                                 for k, v in query.items())]
+
+    def _find_or_add_key(self, query):
+        """Note: We don't want to expose this operation in the public API
+        because it's too easy to create bugs in your model of the keyboard.
+        That's why `add_transition` requires you to add the keys explicitly,
+        first.
+        """
+        keys = self._find_keys(query)
+        if len(keys) == 0:
+            self._add_key(query)
+        elif len(keys) == 1:
+            return keys[0]
+        else:
+            raise ValueError("Ambiguous key %r: Could mean %s" % (
+                _minimal_query(query),
+                _join_with_commas([str(x) for x in sorted(keys)],
+                                  last_one=" or ")))
+
+    def _add_key(self, spec):
+        """Add a node to the graph. Raises if the node already exists."""
+        nodes = self._find_keys(spec)
+        if len(nodes) > 0:
+            raise ValueError("Key already exists: %r" % (nodes[0],))
+
+        if spec.get("text") is None and len(spec["name"]) == 1:
+            spec["text"] = spec["name"]
+        node = Key(**spec)
+        self.G.add_node(node)
+        return node
 
     def add_transition(self, source, target, keypress, symmetrical=True):
         """Add a transition to the model (specification) of the keyboard.
@@ -215,11 +268,11 @@ class Keyboard(object):
         control.
 
         :param source: The starting key. This can be an object returned from
-            `Keyboard.add_key`, or it can be a dict that contains one or more
+            `Keyboard.add_key`; or it can be a dict that contains one or more
             of "name", "text", "region", and "mode" (as many as are needed to
-            uniquely identify the key). For example: ``{"name": "a"}``.
-            For convenience, a single string is treated as "name" (but this may
-            not be enough to uniquely identify the key if your keyboard has
+            uniquely identify the key using `Keyboard.find_key`). For
+            convenience, a single string is treated as "name" (but this may not
+            be enough to uniquely identify the key if your keyboard has
             multiple modes).
 
         :param target: The key you'll land on after pressing the button
@@ -235,9 +288,12 @@ class Keyboard(object):
             transition ``("b", "a", "KEY_LEFT)"``. Set this parameter to False
             to disable this behaviour. This parameter has no effect if
             ``keypress`` is not one of the 4 directional keys.
+
+        :raises: `ValueError` if the ``source`` or ``target`` keys do not exist
+            in the model, or if they can't be identified unambiguously.
         """
-        source = self._add_node(source)
-        target = self._add_node(target)
+        source = self._find_key(source)
+        target = self._find_key(target)
         self._add_edge(source, target, keypress)
         if symmetrical and keypress in SYMMETRICAL_KEYS:
             self._add_edge(target, source, SYMMETRICAL_KEYS[keypress])
@@ -280,10 +336,9 @@ class Keyboard(object):
                     source = " "
                 if target == "SPACE":
                     target = " "
-                self.add_transition({"name": source, "mode": mode},
-                                    {"name": target, "mode": mode},
-                                    keypress,
-                                    symmetrical)
+                source = self._find_or_add_key({"name": source, "mode": mode})
+                target = self._find_or_add_key({"name": target, "mode": mode})
+                self.add_transition(source, target, keypress, symmetrical)
             else:
                 raise ValueError(
                     "Invalid line %d in keyboard edgelist "
@@ -418,7 +473,7 @@ class Keyboard(object):
 
         for letter in text:
             # Sanity check so we don't fail halfway through typing.
-            if not self._find_nodes({"text": letter}):
+            if not self._find_keys({"text": letter}):
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
         prev = None
@@ -450,7 +505,7 @@ class Keyboard(object):
 
         import stbt_core as stbt
 
-        targets = self._find_nodes(target)
+        targets = self._find_keys(target)
         if not targets:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
 
@@ -482,28 +537,6 @@ class Keyboard(object):
                         current)
         return page
 
-    def _add_node(self, spec):
-        """Add a node to the graph. Raises if the node already exists.
-        """
-        nodes = self._find_nodes(spec)
-        if len(nodes) > 0:
-            raise ValueError("Key already exists: %r" % (nodes[0],))
-
-        if spec.get("text") is None and len(spec["name"]) == 1:
-            spec["text"] = spec["name"]
-        node = Key(**spec)
-        self.G.add_node(node)
-        return node
-
-    def _find_nodes(self, spec):
-        if isinstance(spec, Key):
-            spec = Key.__dict__
-        elif isinstance(spec, basestring):
-            spec = {"name": spec}
-        spec = _minimal_spec(**spec)
-        return [x for x in self.G.nodes() if all(getattr(x, k, None) == v
-                                                 for k, v in spec.items())]
-
     def _add_edge(self, source, target, key):
         # type: (Key, Key, str) -> None
         self.G.add_edge(source, target, key=key)
@@ -523,25 +556,22 @@ class Keyboard(object):
                 region = selection.region
             if mode is None and hasattr(selection, "mode"):
                 mode = selection.mode
-        spec = {"name": name, "region": region, "mode": mode}
-        nodes = self._find_nodes(spec)
+        query = _minimal_query({"name": name, "region": region, "mode": mode})
+        nodes = self._find_keys(query)
         if len(nodes) == 0:
-            raise RuntimeError("No key %r matches page %r" % (
-                {k: v for k, v in spec.items() if v is not None},
-                page))
+            raise RuntimeError("No key %r matches page %r" % (query, page))
         if len(nodes) == 1:
             return nodes[0]
         else:
             raise RuntimeError(
                 "Page %r doesn't specify current key unambiguously. "
-                "Matching keys for query %r: %r" % (
-                    page,
-                    {k: v for k, v in spec.items() if v is not None},
-                    nodes))
+                "Matching keys for query %r: %r" % (page, query, nodes))
 
 
-def _minimal_spec(**kwargs):
-    return {k: v for k, v in kwargs.items() if v is not None}
+def _minimal_query(query):
+    if not isinstance(query, dict):
+        return query
+    return {k: v for k, v in query.items() if v is not None}
 
 
 def _keys_to_press(G, source, targets):
