@@ -51,25 +51,24 @@ SYMMETRICAL_KEYS = {
 
 
 class Keyboard(object):
-    """Models the behaviour of an on-screen keyboard.
+    '''Models the behaviour of an on-screen keyboard.
 
     You customize for the appearance & behaviour of the keyboard you're testing
     by specifying two things:
 
-    * A `Page Object`_ that can tell you which key is currently selected on the
-      screen. See the ``page`` parameter to ``enter_text`` and ``navigate_to``,
-      below.
-
     * A `Directed Graph`_ that specifies the navigation between every key on
-      the keyboard (for example on a qwerty keyboard: when Q is selected,
-      pressing KEY_RIGHT on the remote control goes to W, and so on). See the
-      ``graph`` parameter below.
+      the keyboard. For example: When *A* is selected, pressing *KEY_RIGHT* on
+      the remote control goes to *B*, and so on.
+
+    * A `Page Object`_ that tells you which key is currently selected on the
+      screen. See the ``page`` parameter to `enter_text` and `navigate_to`.
 
     The constructor takes the following parameters:
 
-    :param graph: Deprecated. First create the Keyboard object, then use
-    `add_key`, `add_transition`, `add_edgelist`, and `add_grid` to build the
-    model of the keyboard.
+    :param graph: Deprecated; will be removed in the next release. Instead,
+        first create the Keyboard object, and then use `add_key`,
+        `add_transition`, `add_edgelist`, and `add_grid` to build the model of
+        the keyboard.
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -83,11 +82,116 @@ class Keyboard(object):
     :type navigate_timeout: int or float
     :param navigate_timeout: Timeout (in seconds) for ``navigate_to``. In
         practice ``navigate_to`` should only time out if you have a bug in your
-        ``graph`` state machine specification.
+        model or in the real keyboard under test.
+
+    .. _keyboard-example:
+
+    For example, let's model the lowercase keyboard from the YouTube search
+    page on Apple TV:
+
+    .. figure:: images/keyboard/youtube-keyboard.png
+       :align: center
+
+    ::
+
+        # 1. Specify the keyboard's navigation model
+        # ------------------------------------------
+
+        kb = stbt.Keyboard()
+
+        # The 6x6 grid of letters & numbers:
+        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=140, right=430, bottom=445),
+                              data=["abcdef",
+                                    "ghijkl",
+                                    "mnopqr",
+                                    "stuvwx",
+                                    "yz1234",
+                                    "567890"]))
+        # The 3x1 grid of special keys:
+        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=445, right=430, bottom=500),
+                              data=[[" ", "BACKSPACE", "CLEAR"]]))
+
+        # The `add_grid` calls (above) defined the transitions within each grid.
+        # Now we need to specify the transitions from the bottom row of numbers
+        # to the larger keys below them:
+        #
+        #     5 6 7 8 9 0
+        #     ↕ ↕ ↕ ↕ ↕ ↕
+        #     SPC DEL CLR
+        #
+        # Note that `add_transition` adds the symmetrical transition (KEY_UP)
+        # by default.
+        kb.add_transition("5", " ", "KEY_DOWN")
+        kb.add_transition("6", " ", "KEY_DOWN")
+        kb.add_transition("7", "BACKSPACE", "KEY_DOWN")
+        kb.add_transition("8", "BACKSPACE", "KEY_DOWN")
+        kb.add_transition("9", "CLEAR", "KEY_DOWN")
+        kb.add_transition("0", "CLEAR", "KEY_DOWN")
+
+        # 2. A Page Object that describes the appearance of the keyboard
+        # --------------------------------------------------------------
+
+        class SearchKeyboard(stbt.FrameObject):
+            """The YouTube search keyboard on Apple TV"""
+
+            @property
+            def is_visible(self):
+                # Implementation left to the reader. Should return True if the
+                # keyboard is visible and focused.
+                ...
+
+            @property
+            def selection(self):
+                """Returns the selected key.
+
+                Used by `Keyboard.enter_text` and `Keyboard.navigate_to`.
+
+                Note: The reference image (selection.png) is carefully cropped
+                so that it will match the normal keys as well as the larger
+                "SPACE", "BACKSPACE" and "CLEAR" keys. The middle of the image
+                (where the key's label appears) is transparent so that it will
+                match any key.
+                """
+                m = stbt.match("selection.png", frame=self._frame)
+                if m:
+                    return kb.find_key(region=m.region)
+                else:
+                    return None
+
+            # Your Page Object can also define methods for your test scripts to
+            # use:
+
+            def enter_text(self, text):
+                return kb.enter_text(text.lower(), page=self)
+
+            def clear(self):
+                page = kb.navigate_to("CLEAR", page=self)
+                stbt.press_and_wait("KEY_OK")
+                return page.refresh()
+
+    For a detailed tutorial, including an example that handles multiple
+    keyboard modes (lowercase, uppercase, and symbols) see the
+    `Stb-tester.com blog <https://stb-tester.com/blog/>`__.
+
+    ``stbt.Keyboard`` was added in v31.
+
+    Changed in v32:
+
+    * Added support for keyboards with different modes (such as uppercase,
+      lowercase, and symbols).
+    * Changed the internal representation of the Directed Graph. Manipulating
+      the networkx graph directly is no longer supported.
+    * Removed ``stbt.Keyboard.parse_edgelist`` and
+      ``stbt.grid_to_navigation_graph``. Instead, first create the Keyboard
+      object, and then use `add_key`, `add_transition`, `add_edgelist`, and
+      `add_grid` to build the model of the keyboard.
+    * Removed the ``stbt.Keyboard.Selection`` type. Instead, your Page Object's
+      ``selection`` property should return a Key value obtained from
+      `find_key`.
 
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
-    """
+    '''
 
     def __init__(self, graph=None, mask=None, navigate_timeout=20):
         if graph is not None:
@@ -122,23 +226,23 @@ class Keyboard(object):
             string). An empty string indicates that the key doesn't type any
             text when pressed (for example a "caps lock" key to change modes).
 
-        :param Region region: The location of this key on the screen. If
+        :param stbt.Region region: The location of this key on the screen. If
             specified, you can look up a key's name & text by region using
-            `Keyboard.find_key`.
+            ``find_key(region=...)``.
 
-        :param str mode: The mode that the key belongs to, such as "lowercase",
-            "uppercase", "shift", or "symbols", if your keyboard supports
+        :param str mode: The mode that the key belongs to (such as "lowercase",
+            "uppercase", "shift", or "symbols") if your keyboard supports
             different modes. Note that the same key, if visible in different
-            modes, needs to be specified as separate keys (for example
+            modes, needs to be modelled as separate keys (for example
             ``(name="space", mode="lowercase")`` and ``(name="space",
-            mode="uppercase")`` because their navigation connections are
+            mode="uppercase")``) because their navigation connections are
             totally different: pressing up from the former goes to lowercase
-            "c", or to uppercase "C" from the latter. ``mode`` is optional if
-            your keyboard doesn't have modes, or if you only need to use the
-            default mode.
+            "c", but pressing up from the latter goes to uppercase "C".
+            ``mode`` is optional if your keyboard doesn't have modes, or if you
+            only need to use the default mode.
 
         :returns: The added key. This is an object that you can use with
-            `Keyboard.add_transition`.
+            `add_transition`.
 
         :raises: `ValueError` if the key is already present in the model.
         """
@@ -153,21 +257,13 @@ class Keyboard(object):
 
         For example, your Page Object's ``selection`` property would do some
         image processing to find the selection on screen, and then use
-        ``find_key`` to identify the current key based on the location of that
-        selection::
-
-            class LoginPage(stbt.FrameObject):
-
-                kb = stbt.Keyboard(...)
-
-                @property
-                def selection(self):
-                    m = stbt.match("selection.png", frame=self._frame)
-                    if m:
-                        return self.kb.find_key(region=m.region)
+        ``find_key`` to identify the current key based on the region of that
+        selection.
 
         :returns: An object that unambiguously identifies the key in the
-            model.
+            model. It has "name", "text", "region", and "mode" attributes.
+            You can use this object as the ``source`` or ``target`` parameter
+            of `add_transition`.
 
         :raises: `ValueError` if the key does not exist in the model, or if it
             can't be identified unambiguously (that is, if two or more keys
@@ -179,7 +275,7 @@ class Keyboard(object):
     def find_keys(self, name=None, text=None, region=None, mode=None):
         """Find matching keys in the model of the keyboard.
 
-        This is like `Keyboard.find_key`, but it returns a list containing any
+        This is like `find_key`, but it returns a list containing any
         keys that match the given parameters. For example, if there is a space
         key in both the lowercase and uppercase modes of the keyboard, calling
         ``find_keys(text=" ")`` will return a list of 2 objects
@@ -217,6 +313,9 @@ class Keyboard(object):
             if query in self.G:
                 return [query]
             else:
+                # This shouldn't happen unless you're doing something seriously
+                # weird, so let's raise instead of the usual behaviour of
+                # returning [].
                 raise ValueError("%r isn't in the keyboard" % (query,))
         elif isinstance(query, basestring):
             query = {"name": query}
@@ -297,13 +396,12 @@ class Keyboard(object):
         For example: To go from "A" to "B", press "KEY_RIGHT" on the remote
         control.
 
-        :param source: The starting key. This can be an object returned from
-            `Keyboard.add_key`; or it can be a dict that contains one or more
-            of "name", "text", "region", and "mode" (as many as are needed to
-            uniquely identify the key using `Keyboard.find_key`). For
-            convenience, a single string is treated as "name" (but this may not
-            be enough to uniquely identify the key if your keyboard has
-            multiple modes).
+        :param source: The starting key. This can be a Key object returned from
+            `add_key` or `find_key`; or it can be a dict that contains one or
+            more of "name", "text", "region", and "mode" (as many as are needed
+            to uniquely identify the key using `find_key`). For convenience, a
+            single string is treated as "name" (but this may not be enough to
+            uniquely identify the key if your keyboard has multiple modes).
 
         :param target: The key you'll land on after pressing the button
             on the remote control. This accepts the same types as ``source``.
@@ -314,7 +412,8 @@ class Keyboard(object):
         :param str mode: Optional keyboard mode that applies to both ``source``
             and ``target``. For example, the two following calls are the same::
 
-                add_transition("c", " ", "KEY_DOWN", "lowercase")
+                add_transition("c", " ", "KEY_DOWN", mode="lowercase")
+
                 add_transition({"name": "c", "mode": "lowercase"},
                                {"name": " ", "mode": "lowercase"},
                                "KEY_DOWN")
@@ -360,12 +459,14 @@ class Keyboard(object):
             This is because space is used as the field separator; otherwise it
             wouldn't be possible to specify the space key using this format.
 
-        :param str mode: The mode that applies to all the keys specified in
-            ``edgelist``. See `Keyboard.add_key` for more details about modes.
-            It isn't possible to specify transitions *between* different modes
-            using this edgelist format; use `Keyboard.add_transition` for that.
+            Lines starting with "###" are ignored (comments).
 
-        :param bool symmetrical: See `Keyboard.add_transition`.
+        :param str mode: Optional mode that applies to all the keys specified
+            in ``edgelist``. See `add_key` for more details about modes. It
+            isn't possible to specify transitions between different modes using
+            this edgelist format; use `add_transition` for that.
+
+        :param bool symmetrical: See `add_transition`.
         """
         for i, line in enumerate(edgelist.split("\n")):
             if re.match(r"^\s*###", line):  # comment
@@ -396,20 +497,17 @@ class Keyboard(object):
         grid, you can use `stbt.Grid` to easily specify the positions of those
         keys. This only works if the columns & rows are all of the same size.
 
-        For example::
-
-            kb = stbt.Keyboard()
-            kb.add_grid(stbt.Grid(region, data=["ABCDEFG",
-                                                "HIJKLMN",
-                                                "OPQRSTU",
-                                                "VWXYZ-'"])
+        If your keyboard has keys outside the grid, you will still need to
+        specify the transitions from the edge of the grid onto the outside
+        keys, using `add_transition`. See the :ref:`example above
+        <keyboard-example>`.
 
         :param stbt.Grid grid: The grid to model. The data associated with each
-            cells will be used for the key's "name" attribute (see
-            `Keyboard.add_key`).
+            cell will be used for the key's "name" attribute (see
+            `add_key`).
 
-        :param str mode: The mode that applies to all the keys specified in
-            ``grid``. See `Keyboard.add_key` for more details about modes.
+        :param str mode: Optional mode that applies to all the keys specified
+            in ``grid``. See `add_key` for more details about modes.
 
         :returns: A new `stbt.Grid` where each cell's data is a key object
             that can be used with `add_transition` (for example to define
@@ -419,8 +517,8 @@ class Keyboard(object):
 
         # First add the keys. It's an exception if any of them already exist.
         # The data is a string or a dict; we don't support previously-created
-        # Key instances (for now) because what should we do with the existing
-        # Key's `region`?
+        # Key instances because what should we do with the existing Key's
+        # `region`?
         keys = []
         for cell in grid:
             x, y = cell.position
@@ -472,72 +570,28 @@ class Keyboard(object):
             sub-class that describes the appearance of the on-screen keyboard.
             It must implement the following:
 
-            * ``selection`` (*str* or `Keyboard.Selection`) — property that
-              returns the name of the currently selected character (for example
-              "A" or " ") or button (for example "CLEAR" or "SEARCH"). This
-              property can return a string, or an object with a ``text``
-              attribute that is a string.
+            * ``selection`` (*Key*) — property that returns a Key object, as
+              returned from `find_key`.
 
-              For grid-shaped keyboards, you can implement this property using
-              `stbt.Grid` to map from the region of the selection (highlight)
-              to the corresponding letter; see the example below.
-
-            The ``page`` instance that you provide must represent the current
+            When you call *enter_text*, ``page`` must represent the current
             state of the device-under-test.
 
         :param bool verify_every_keypress:
             If True, we will read the selected key after every keypress and
-            assert that it matches the model (``graph``). If False (the
-            default) we will only verify the selected key corresponding to each
-            of the characters in ``text``. For example: to get from Q to D on a
-            qwerty keyboard you need to press KEY_DOWN, KEY_RIGHT, KEY_RIGHT.
-            The default behaviour will only verify that the selected key is D
-            after pressing KEY_RIGHT the last time. This is faster, and closer
-            to the way a human uses the on-screen keyboard.
+            assert that it matches the model. If False (the default) we will
+            only verify the selected key corresponding to each of the
+            characters in ``text``. For example: to get from *A* to *D* you
+            need to press *KEY_RIGHT* three times. The default behaviour will
+            only verify that the selected key is *D* after the third keypress.
+            This is faster, and closer to the way a human uses the on-screen
+            keyboard.
 
             Set this to True to help debug your model if ``enter_text`` is
             behaving incorrectly.
 
         Typically your FrameObject will provide its own ``enter_text`` method,
-        so your test scripts won't call this ``Keyboard`` class directly. For
-        example::
-
-            class YouTubeSearch(stbt.FrameObject):
-                _kb = stbt.Keyboard('''
-                    A B KEY_RIGHT
-                    ...etc...
-                    ''')
-                letters = stbt.Grid(region=...,
-                                    data=["ABCDEFG",
-                                          "HIJKLMN",
-                                          "OPQRSTU",
-                                          "VWXYZ-'"])
-                space_row = stbt.Grid(region=...,
-                                      data=[[" ", "CLEAR", "SEARCH"]])
-
-                @property
-                def is_visible(self):
-                    ...  # implementation not shown
-
-                @property
-                def selection(self):
-                    m = stbt.match("keyboard-selection.png", frame=self._frame)
-                    if not m:
-                        return stbt.Keyboard.Selection(None, None)
-                    try:
-                        text = self.letters.get(region=m.region).data
-                    except IndexError:
-                        text = self.space_row.get(region=m.region).data
-                    return stbt.Keyboard.Selection(text, m.region)
-
-                def enter_text(self, text):
-                    page = self
-                    page = self._kb.enter_text(text.upper(), page)
-                    self._kb.navigate_to("SEARCH", page)
-                    stbt.press("KEY_OK")
-
-                def navigate_to(self, target):
-                    return self._kb.navigate_to(target, page=self)
+        so your test scripts won't call this ``Keyboard`` class directly. See
+        the :ref:`example above <keyboard-example>`.
         """
 
         import stbt_core as stbt
@@ -559,15 +613,19 @@ class Keyboard(object):
         return page
 
     def navigate_to(self, target, page, verify_every_keypress=False):
-        """Move the selection to the specified character.
+        """Move the selection to the specified key.
 
-        Note that this won't press KEY_OK on the target, it only moves the
-        selection there.
+        This won't press *KEY_OK* on the target; it only moves the selection
+        there.
 
-        :param str target: The key or button to navigate to, for example "A",
-            " ", or "CLEAR".
-        :param stbt.FrameObject page: See ``enter_text``.
-        :param bool verify_every_keypress: See ``enter_text``.
+        :param target: This can be a Key object returned from `find_key`, or it
+            can be a dict that contains one or more of "name", "text",
+            "region", and "mode" (as many as are needed to identify the key
+            using `find_keys`). If more than one key matches the given
+            parameters, ``navigate_to`` will navigate to the closest one. For
+            convenience, a single string is treated as "name".
+        :param stbt.FrameObject page: See `enter_text`.
+        :param bool verify_every_keypress: See `enter_text`.
 
         :returns: A new FrameObject instance of the same type as ``page``,
             reflecting the device-under-test's new state after the navigation
