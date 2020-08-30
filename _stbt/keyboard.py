@@ -368,27 +368,45 @@ class Keyboard(object):
             ``grid``. See `Keyboard.add_key` for more details about modes.
         """
 
+        # First add the keys. It's an exception if any of them already exist.
+        # The data is a string or a dict; we don't support previously-created
+        # Key instances (for now) because what should we do with the existing
+        # Key's `region`?
+        keys = []
         for cell in grid:
             x, y = cell.position
             if cell.data is None:
-                # `add_edge` would raise too, but this is a clearer message.
                 raise ValueError("Grid cell [%i,%i] doesn't have any data"
                                  % (x, y))
-            source = Key(name=cell.data, region=cell.region, mode=mode)
+            if isinstance(cell.data, basestring):
+                spec = {"name": cell.data}
+            elif isinstance(cell.data, dict):
+                if "mode" in cell.data:
+                    if cell.data["mode"] != mode:
+                        raise ValueError("Grid cell [%i,%i] specifies mode %r "
+                                         "but add_grid specifies mode %r"
+                                         % (x, y, cell.data["mode"], mode))
+                spec = cell.data.copy()
+            else:
+                raise ValueError("Unexpected data type %s in grid cell "
+                                 "[%i, %i]. Expected str or dict."
+                                 % (type(cell.data), x, y))
+
+            spec["mode"] = mode
+            spec["region"] = cell.region
+            keys.append(self._add_key(spec))
+
+        # Now add the transitions. Note that `add_transition` defaults to
+        # `symmetrical=True`, which will add the down & right transitions.
+        for cell in grid:
+            x, y = cell.position
+            source = keys[grid[x, y].index]
             if x > 0:
-                target = grid[x - 1, y]
-                self.add_transition(
-                    source,
-                    Key(name=target.data, region=target.region, mode=mode),
-                    "KEY_LEFT")
+                target = keys[grid[x - 1, y].index]
+                self.add_transition(source, target, "KEY_LEFT")
             if y > 0:
-                target = grid[x, y - 1]
-                self.add_transition(
-                    source,
-                    Key(name=target.data, region=target.region, mode=mode),
-                    "KEY_UP")
-            # Note: add_transition's symmetrical=True will add the down &
-            # right transitions.
+                target = keys[grid[x, y - 1].index]
+                self.add_transition(source, target, "KEY_UP")
 
     def enter_text(self, text, page, verify_every_keypress=False):
         """Enter the specified text using the on-screen keyboard.
