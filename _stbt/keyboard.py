@@ -133,7 +133,8 @@ class Keyboard(object):
             text when pressed (for example a "caps lock" key to change modes).
 
         :param Region region: The location of this key on the screen. If
-            specified, you can look up key names & text by region.
+            specified, you can look up a key's name & text by region using
+            `Keyboard.find_key`.
 
         :param str mode: The mode that the key belongs to, such as "lowercase",
             "uppercase", "shift", or "symbols", if your keyboard supports
@@ -151,6 +152,61 @@ class Keyboard(object):
         """
         return self._add_node({"name": name, "text": text, "region": region,
                                "mode": mode})
+
+    def find_key(self, name=None, text=None, region=None, mode=None):
+        """Find a key in the model (specification) of the keyboard.
+
+        Specify one or more of ``name``, ``text``, ``region``, and ``mode``
+        (as many as are needed to uniquely identify the key).
+
+        For example, your Page Object's ``selection`` property would do some
+        image processing to find the selection on screen, and then use
+        ``find_key`` to identify the current key based on the location of that
+        selection::
+
+            class LoginPage(stbt.FrameObject):
+
+                kb = stbt.Keyboard(...)
+
+                @property
+                def selection(self):
+                    m = stbt.match("selection.png", frame=self._frame)
+                    if m:
+                        return self.kb.find_key(region=m.region)
+
+        :returns: An object that unambiguously identifies the key in the
+            model.
+
+        :raises: `ValueError` if the key does not exist in the model, or if it
+            can't be identified unambiguously (that is, if two or more keys
+            match the given parameters).
+        """
+        keys = self.find_keys(name=name, text=text, region=region, mode=mode)
+        if len(keys) == 0:
+            raise ValueError("Query %r doesn't match any key in the keyboard"
+                             % (_minimal_spec(text=text, name=name,
+                                              region=region, mode=mode),))
+        elif len(keys) == 1:
+            return keys[0]
+        else:
+            raise ValueError("Ambiguous key: Could mean " +
+                             _join_with_commas([str(x) for x in sorted(keys)],
+                                               last_one=" or "))
+
+    def find_keys(self, name=None, text=None, region=None, mode=None):
+        """Find matching keys in the model of the keyboard.
+
+        This is like `Keyboard.find_key`, but it returns a list containing any
+        keys that match the given parameters. For example, if there is a space
+        key in both the lowercase and uppercase mode of the keyboard, calling
+        ``find_keys(text=" ")`` will return a list of 2 objects
+        ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
+
+        This method doesn't raise an exception; the list will be empty if no
+        keys matched.
+        """
+        return self._find_nodes({"name": name, "text": text, "region": region,
+                                 "mode": mode})
 
     def add_transition(self, source, target, keypress, symmetrical=True):
         """Add a transition to the model (specification) of the keyboard.
@@ -493,6 +549,10 @@ class Keyboard(object):
                     page,
                     {k: v for k, v in spec.items() if v is not None},
                     nodes))
+
+
+def _minimal_spec(**kwargs):
+    return {k: v for k, v in kwargs.items() if v is not None}
 
 
 def _keys_to_press(G, source, targets):
