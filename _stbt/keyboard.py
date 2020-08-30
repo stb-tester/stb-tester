@@ -122,8 +122,6 @@ class Keyboard(object):
     def add_key(self, name, text=None, region=None, mode=None):
         """Add a key to the model (specification) of the keyboard.
 
-        If the key already exists, just return it.
-
         :param str name: The text or label you can see on the key.
 
         :param str text: The text that will be typed if you press OK on the
@@ -149,6 +147,8 @@ class Keyboard(object):
 
         :returns: The added key. This is an object that you can use with
             `Keyboard.add_transition`.
+
+        :raises: `ValueError` if the key is already present in the model.
         """
         return self._add_node({"name": name, "text": text, "region": region,
                                "mode": mode})
@@ -483,35 +483,24 @@ class Keyboard(object):
         return page
 
     def _add_node(self, spec):
-        """Add a node to the graph. No-op if the node already exists. Raises
-        if spec matches more than 1 existing node.
+        """Add a node to the graph. Raises if the node already exists.
         """
-        if isinstance(spec, Key):
-            spec = Key.__dict__
-        elif isinstance(spec, basestring):
-            spec = {"name": spec}
         nodes = self._find_nodes(spec)
-        if len(nodes) == 0:
-            if spec.get("text") is None and len(spec["name"]) == 1:
-                spec["text"] = spec["name"]
-            node = Key(**spec)
-            self.G.add_node(node)
-            return node
-        elif len(nodes) == 1:
-            return nodes[0]
-        else:
-            raise ValueError("Ambiguous key: Could mean " +
-                             _join_with_commas([str(x) for x in sorted(nodes)],
-                                               last_one=" or "))
+        if len(nodes) > 0:
+            raise ValueError("Key already exists: %r" % (nodes[0],))
+
+        if spec.get("text") is None and len(spec["name"]) == 1:
+            spec["text"] = spec["name"]
+        node = Key(**spec)
+        self.G.add_node(node)
+        return node
 
     def _find_nodes(self, spec):
         if isinstance(spec, Key):
             spec = Key.__dict__
         elif isinstance(spec, basestring):
             spec = {"name": spec}
-        spec = {k: v
-                for k, v in spec.items()
-                if v is not None}
+        spec = _minimal_spec(**spec)
         return [x for x in self.G.nodes() if all(getattr(x, k, None) == v
                                                  for k, v in spec.items())]
 
