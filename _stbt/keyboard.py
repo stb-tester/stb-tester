@@ -199,12 +199,12 @@ class Keyboard(object):
         return self._find_keys({"name": name, "text": text, "region": region,
                                 "mode": mode})
 
-    def _find_key(self, query):
+    def _find_key(self, query, mode=None):
         """Like the public ``find_keys``, but takes a "query"  which can be
         a dict containing one or more of "name", "text", "region", and "mode";
         or a string, which means ``{"name": query}``; or a `Key`.
         """
-        keys = self._find_keys(query)
+        keys = self._find_keys(query, mode)
         if len(keys) == 0:
             raise ValueError("Query %r doesn't match any key in the keyboard"
                              % (_minimal_query(query),))
@@ -216,9 +216,11 @@ class Keyboard(object):
                 _join_with_commas([str(x) for x in sorted(keys)],
                                   last_one=" or ")))
 
-    def _find_keys(self, query):
+    def _find_keys(self, query, mode=None):
         """Like the public `find_keys`, but takes a "query" (see _find_key)."""
         if isinstance(query, Key):
+            if mode is not None and query.mode != mode:
+                raise ValueError("mode %r doesn't match %r" % (mode, query))
             if query in self.G:
                 return [query]
             else:
@@ -227,6 +229,8 @@ class Keyboard(object):
             query = {"name": query}
         else:
             query = _minimal_query(query)
+        if mode is not None and "mode" in query and query["mode"] != mode:
+            raise ValueError("mode %r doesn't match key %r" % (mode, query))
         if len(query) == 0:
             raise ValueError("Empty query %r" % (query,))
         return [x for x in self.G.nodes() if all(getattr(x, k, None) == v
@@ -261,7 +265,8 @@ class Keyboard(object):
         self.G.add_node(node)
         return node
 
-    def add_transition(self, source, target, keypress, symmetrical=True):
+    def add_transition(self, source, target, keypress, mode=None,
+                       symmetrical=True):
         """Add a transition to the model (specification) of the keyboard.
 
         For example: To go from "A" to "B", press "KEY_RIGHT" on the remote
@@ -281,6 +286,14 @@ class Keyboard(object):
         :param str keypress: The name of the key you need to press on the
             remote control, for example "KEY_RIGHT".
 
+        :param str mode: Optional keyboard mode that applies to both ``source``
+            and ``target``. For example, the two following calls are the same::
+
+                add_transition("c", " ", "KEY_DOWN", "lowercase")
+                add_transition({"name": "c", "mode": "lowercase"},
+                               {"name": " ", "mode": "lowercase"},
+                               "KEY_DOWN")
+
         :param bool symmetrical: By default, if the keypress is "KEY_LEFT",
             "KEY_RIGHT", "KEY_UP", or "KEY_DOWN", this will automatically add
             the opposite transition. For example, if you call
@@ -292,8 +305,8 @@ class Keyboard(object):
         :raises: `ValueError` if the ``source`` or ``target`` keys do not exist
             in the model, or if they can't be identified unambiguously.
         """
-        source = self._find_key(source)
-        target = self._find_key(target)
+        source = self._find_key(source, mode)
+        target = self._find_key(target, mode)
         self._add_edge(source, target, keypress)
         if symmetrical and keypress in SYMMETRICAL_KEYS:
             self._add_edge(target, source, SYMMETRICAL_KEYS[keypress])
