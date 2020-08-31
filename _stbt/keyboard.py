@@ -311,6 +311,11 @@ class Keyboard(object):
         if symmetrical and keypress in SYMMETRICAL_KEYS:
             self._add_edge(target, source, SYMMETRICAL_KEYS[keypress])
 
+    def _add_edge(self, source, target, key):
+        # type: (Key, Key, str) -> None
+        self.G.add_edge(source, target, key=key)
+        _add_weight(self.G, source, key)
+
     def add_transitions_from_edgelist(self, edgelist, mode=None,
                                       symmetrical=True):
         """Add keys and transitions specified in a string in "edgelist" format.
@@ -567,11 +572,6 @@ class Keyboard(object):
                         key,
                         current)
         return page
-
-    def _add_edge(self, source, target, key):
-        # type: (Key, Key, str) -> None
-        self.G.add_edge(source, target, key=key)
-        _add_weight(self.G, source, key)
 
     def _page_to_node(self, page):
         selection = getattr(page, "selection")
