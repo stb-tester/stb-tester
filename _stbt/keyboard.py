@@ -217,8 +217,15 @@ class Keyboard(object):
             raise ValueError("mode %r doesn't match key %r" % (mode, query))
         if len(query) == 0:
             raise ValueError("Empty query %r" % (query,))
-        return [x for x in self.G.nodes() if all(getattr(x, k, None) == v
-                                                 for k, v in query.items())]
+        return [x for x in self.G.nodes()
+                if all(Keyboard.QUERYER[k](x, v) for k, v in query.items())]
+
+    QUERYER = {
+        "name": lambda x, v: x.name == v,
+        "text": lambda x, v: x.text == v,
+        "region": lambda x, v: x.region.contains(v.center),
+        "mode": lambda x, v: x.mode == v,
+    }
 
     def _find_or_add_key(self, query):
         """Note: We don't want to expose this operation in the public API
