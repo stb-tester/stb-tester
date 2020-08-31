@@ -9,7 +9,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import re
 import time
-from collections import namedtuple
 from logging import getLogger
 
 import networkx as nx
@@ -88,21 +87,6 @@ class Keyboard(object):
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     """
-
-    class Selection(namedtuple("Selection", "text region")):
-        """Type that your Page Object's ``selection`` property can return.
-
-        Has two attributes:
-
-        * ``text`` (*str*) — The selected letter or button.
-        * ``region`` (`stbt.Region`) — The position on screen of the selection /
-          highlight.
-
-        Is falsey if ``text`` and ``region`` are both ``None``.
-        """
-
-        def __bool__(self):
-            return self.text is not None or self.region is not None
 
     def __init__(self, graph=None, mask=None, navigate_timeout=20):
         if graph is not None:
@@ -547,7 +531,7 @@ class Keyboard(object):
 
         assert page, "%s page isn't visible" % type(page).__name__
         deadline = time.time() + self.navigate_timeout
-        current = self._page_to_node(page)
+        current = page.selection
         while current not in targets:
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
@@ -563,7 +547,7 @@ class Keyboard(object):
                 assert stbt.press_and_wait(key, mask=self.mask, stable_secs=0.5)
                 page = page.refresh()
                 assert page, "%s page isn't visible" % type(page).__name__
-                current = self._page_to_node(page)
+                current = page.selection
                 assert current in possible_targets, \
                     "Expected to see %s after pressing %s, but saw %r" % (
                         _join_with_commas(
@@ -572,31 +556,6 @@ class Keyboard(object):
                         key,
                         current)
         return page
-
-    def _page_to_node(self, page):
-        selection = getattr(page, "selection")
-        mode = getattr(page, "mode")
-        name = None
-        region = None
-        if isinstance(selection, basestring):
-            name = selection
-        else:
-            if hasattr(selection, "text"):
-                name = selection.text
-            if hasattr(selection, "region"):
-                region = selection.region
-            if mode is None and hasattr(selection, "mode"):
-                mode = selection.mode
-        query = _minimal_query({"name": name, "region": region, "mode": mode})
-        nodes = self._find_keys(query)
-        if len(nodes) == 0:
-            raise RuntimeError("No key %r matches page %r" % (query, page))
-        if len(nodes) == 1:
-            return nodes[0]
-        else:
-            raise RuntimeError(
-                "Page %r doesn't specify current key unambiguously. "
-                "Matching keys for query %r: %r" % (page, query, nodes))
 
 
 def _minimal_query(query):
