@@ -210,11 +210,11 @@ class HdmiCecControl(object):
             if self.press_and_holding:
                 raise HdmiCecError(
                     "Can't call 'keydown' while holding another key")
-            self.press_and_holding = True
 
             if not self.lib.Transmit(self.keydown_command(key)):
                 raise HdmiCecError("Failed to send keydown for %s" % key)
 
+            self.press_and_holding = True
             self.press_and_hold_thread = threading.Thread(
                 target=self.send_keydowns, args=(key,))
             self.press_and_hold_thread.daemon = True
