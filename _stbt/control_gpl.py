@@ -34,9 +34,11 @@ class HdmiCecControl(object):
         "KEY_LEFT_UP": 7,
         "KEY_LEFT_DOWN": 8,
         "KEY_ROOT_MENU": 9,
-        "KEY_MENU": 9,
+        "KEY_MENU": 9,  # Alias
+        "KEY_HOME": 9,  # Alias for Amazon Fire
         "KEY_SETUP": 10,
         "KEY_CONTENTS_MENU": 11,  # <- not in input-event-codes.h
+        "KEY_OPTIONS": 11,  # Alias for Amazon Fire
         "KEY_FAVORITE_MENU": 12,  # <- not in input-event-codes.h
         "KEY_BACK": 13,
 
@@ -168,20 +170,11 @@ class HdmiCecControl(object):
         debug("Connection to CEC adapter opened")
 
         if destination is None:
-            ds = list(self._list_active_devices())
-            debug("HDMI-CEC scan complete.  Found %r" % ds)
-            if len(ds) == 0:
-                raise HdmiCecError(
-                    "Failed to find a device on the CEC bus to talk to.")
-            # Choose the last one, the first one is likely to be a TV if there's
-            # one plugged in
-            destination = ds[-1]
-            debug("HDMI-CEC: Chose to talk to device %i %r" % (
-                destination, self.lib.GetDeviceOSDName(destination)))
+            self.rescan()
+        else:
+            self.destination = destination
 
         self.source = source
-        self.destination = destination
-
         self.press_and_hold_thread = None
         self.press_and_holding = False
         self.lock = threading.Condition()
@@ -192,7 +185,10 @@ class HdmiCecControl(object):
                 raise HdmiCecError(
                     "Can't call 'press' while holding another key")
 
+            if self.destination is None:
+                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
+                self.destination = None
                 raise HdmiCecError("Failed to send keydown for %s" % key)
             if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
@@ -210,11 +206,14 @@ class HdmiCecControl(object):
             if self.press_and_holding:
                 raise HdmiCecError(
                     "Can't call 'keydown' while holding another key")
-            self.press_and_holding = True
 
+            if self.destination is None:
+                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
+                self.destination = None
                 raise HdmiCecError("Failed to send keydown for %s" % key)
 
+            self.press_and_holding = True
             self.press_and_hold_thread = threading.Thread(
                 target=self.send_keydowns, args=(key,))
             self.press_and_hold_thread.daemon = True
@@ -233,7 +232,8 @@ class HdmiCecControl(object):
         thread.join()
 
         with self.lock:
-            if not self.lib.Transmit(self.keyup_command()):
+            if (self.destination is None or
+                    not self.lib.Transmit(self.keyup_command())):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
         debug("Released %s" % key)
 
@@ -249,6 +249,9 @@ class HdmiCecControl(object):
             while True:
                 self.lock.wait(max(0, next_press_deadline - time.time()))
                 if not self.press_and_holding:
+                    return
+                if self.destination is None:
+                    self.press_and_holding = False
                     return
                 if time.time() > end_time:
                     debug("cec: Warning: Releasing %s as I've been holding it "
@@ -299,6 +302,19 @@ class HdmiCecControl(object):
                 (adapter.strComName, adapter.iVendorId, adapter.iProductId))
             retval = adapter.strComName
         return retval
+
+    def rescan(self):
+        ds = list(self._list_active_devices())
+        debug("HDMI-CEC scan complete.  Found %r" % ds)
+        if len(ds) == 0:
+            raise HdmiCecError(
+                "Failed to find a device on the CEC bus to talk to.")
+        # Choose the last one, the first one is likely to be a TV if there's
+        # one plugged in
+        destination = ds[-1]
+        debug("HDMI-CEC: Chose to talk to device %i %r" % (
+            destination, self.lib.GetDeviceOSDName(destination)))
+        self.destination = destination
 
     def _list_active_devices(self):
         self.lib.RescanActiveDevices()

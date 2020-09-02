@@ -40,6 +40,7 @@ import signal
 import socket
 import sys
 
+import _stbt.logging
 from _stbt.control import uri_to_control
 from _stbt.utils import to_bytes
 
@@ -58,6 +59,9 @@ def main(argv):
     logging.basicConfig(
         format="%(levelname)s: %(message)s",
         level=logging.DEBUG if args.verbose else logging.INFO)
+
+    if args.verbose:
+        _stbt.logging._debug_level = 1  # pylint:disable=protected-access
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 
@@ -100,7 +104,7 @@ def main(argv):
                 elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
-                logging.error("Error pressing key %r: %s", key, e,
+                logging.error("Error pressing or releasing key %r: %s", key, e,
                               exc_info=True)
                 send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
