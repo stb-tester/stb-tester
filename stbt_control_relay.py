@@ -100,7 +100,7 @@ def main(argv):
                 elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
-                logging.error("Error pressing key %r: %s", key, e,
+                logging.error("Error pressing or releasing key %r: %s", key, e,
                               exc_info=True)
                 send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
