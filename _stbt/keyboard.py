@@ -16,13 +16,13 @@ import numpy
 from attr import attrs, attrib
 from _stbt.imgutils import load_image
 from _stbt.types import Region
-from _stbt.utils import basestring, py3, text_type
+from _stbt.utils import basestring, text_type
 
 
 log = getLogger("stbt.keyboard")
 
 
-@attrs(**{"frozen": True, "kw_only": True} if py3 else {"frozen": True})
+@attrs(frozen=True)
 class Key(object):
     """A node in the directed graph, representing a key on the keyboard.
 
