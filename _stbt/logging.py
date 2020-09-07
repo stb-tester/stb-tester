@@ -15,7 +15,7 @@ from textwrap import dedent
 
 from .config import get_config
 from .types import Region
-from .utils import mkdir_p
+from .utils import basestring, mkdir_p
 
 _debug_level = None
 
@@ -74,6 +74,24 @@ def argparser_add_verbose_argument(argparser):
         default=get_debug_level(),  # for stbt-run arguments dump
         help='Enable debug output (specify twice to enable GStreamer element '
              'dumps to ./stbt-debug directory)')
+
+
+def imshow(img):
+    """Displays the image in a Jupyter Notebook Notebook.
+
+    You can only call this if you're already inside a Jupyter Notebook.
+    """
+    if "JPY_PARENT_PID" not in os.environ:
+        raise RuntimeError(
+            "_stbt.logging.imshow can only be run inside a Jupyter Notebook")
+
+    from IPython.core.display import Image, display  # pylint:disable=import-error
+    if isinstance(img, basestring):
+        display(Image(img))
+    else:
+        import cv2
+        _, data = cv2.imencode(".png", img)
+        display(Image(data=bytes(data.data), format="png"))
 
 
 class ImageLogger(object):
