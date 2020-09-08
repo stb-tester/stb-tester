@@ -51,6 +51,9 @@ def main(argv):
     parser.add_argument(
         "--socket", default="/var/run/lirc/lircd", help="""LIRC socket to read
         remote control presses from (defaults to %(default)s).""")
+    parser.add_argument("--timeout", default=0, type=float, help="""
+        Timeout, in seconds, before exiting if no commands are received. If not
+        specified, never times out.""")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("output", help="""Remote control configuration to
         transmit on. Values are the same as stbt run's --control.""")
@@ -73,12 +76,18 @@ def main(argv):
         s.bind(args.socket)
         s.listen(5)
 
+    if args.timeout:
+        s.settimeout(args.timeout)
+
     control = uri_to_control(args.output)
 
     logging.info("stbt-control-relay started up with output '%s'", args.output)
 
     while True:
-        conn, _ = s.accept()
+        try:
+            conn, _ = s.accept()
+        except socket.timeout:
+            return 0
         f = conn.makefile('rb', 0)
         while True:
             cmd = f.readline()
