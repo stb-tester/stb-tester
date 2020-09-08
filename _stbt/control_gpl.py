@@ -20,6 +20,10 @@ class HdmiCecError(Exception):
     pass
 
 
+class HdmiCecFatalError(BaseException):
+    pass
+
+
 class HdmiCecControl(object):
     # Map our recommended keynames (from linux input-event-codes.h) to the
     # equivalent CEC commands.
@@ -174,10 +178,11 @@ class HdmiCecControl(object):
         if device is None:
             device = self.detect_adapter()
             if device is None:
-                raise HdmiCecError("No adapter found")
+                raise HdmiCecFatalError("No adapter found")
         device = to_native_str(device)
         if not self.lib.Open(device):
-            raise HdmiCecError("Failed to open a connection to the CEC adapter")
+            raise HdmiCecFatalError(
+                "Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
 
         if destination is None:
@@ -318,7 +323,7 @@ class HdmiCecControl(object):
         ds = list(self._list_active_devices())
         debug("HDMI-CEC scan complete.  Found %r" % ds)
         if len(ds) == 0:
-            raise HdmiCecError(
+            raise HdmiCecFatalError(
                 "Failed to find a device on the CEC bus to talk to.")
         # Choose the last one, the first one is likely to be a TV if there's
         # one plugged in
@@ -452,6 +457,7 @@ def _fake_cec():
             patch('cec.ICECAdapter.GetActiveDevices', GetActiveDevices), \
             patch('cec.ICECAdapter.GetDeviceOSDName', GetDeviceOSDName):
         yield io
+
 
 controls = [
     # pylint: disable=line-too-long
