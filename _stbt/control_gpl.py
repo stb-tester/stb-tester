@@ -185,10 +185,9 @@ class HdmiCecControl(object):
                 "Failed to open a connection to the CEC adapter")
         debug("Connection to CEC adapter opened")
 
-        if destination is None:
-            self.rescan()
-        else:
-            self.destination = destination
+        self.configured_destination = destination
+        self.destination = None  # set by `rescan`
+        self.rescan()
 
         self.source = source
         self.press_and_hold_thread = None
@@ -201,10 +200,8 @@ class HdmiCecControl(object):
                 raise HdmiCecError(
                     "Can't call 'press' while holding another key")
 
-            if self.destination is None:
-                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.destination = None
+                self.rescan()
                 raise HdmiCecError("Failed to send keydown for %s" % key)
             if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
@@ -223,10 +220,8 @@ class HdmiCecControl(object):
                 raise HdmiCecError(
                     "Can't call 'keydown' while holding another key")
 
-            if self.destination is None:
-                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.destination = None
+                self.rescan()
                 raise HdmiCecError("Failed to send keydown for %s" % key)
 
             self.press_and_holding = True
@@ -248,8 +243,7 @@ class HdmiCecControl(object):
         thread.join()
 
         with self.lock:
-            if (self.destination is None or
-                    not self.lib.Transmit(self.keyup_command())):
+            if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
         debug("Released %s" % key)
 
@@ -265,9 +259,6 @@ class HdmiCecControl(object):
             while True:
                 self.lock.wait(max(0, next_press_deadline - time.time()))
                 if not self.press_and_holding:
-                    return
-                if self.destination is None:
-                    self.press_and_holding = False
                     return
                 if time.time() > end_time:
                     debug("cec: Warning: Releasing %s as I've been holding it "
@@ -325,12 +316,21 @@ class HdmiCecControl(object):
         if len(ds) == 0:
             raise HdmiCecFatalError(
                 "Failed to find a device on the CEC bus to talk to.")
-        # Choose the last one, the first one is likely to be a TV if there's
-        # one plugged in
-        destination = ds[-1]
-        debug("HDMI-CEC: Chose to talk to device %i %r" % (
-            destination, self.lib.GetDeviceOSDName(destination)))
-        self.destination = destination
+        if self.configured_destination is not None:
+            if self.configured_destination not in ds:
+                raise HdmiCecFatalError(
+                    "Destination device %i isn't on the CEC bus. "
+                    "Available devices: %r"
+                    % (self.configured_destination,
+                       [(x, self.lib.GetDeviceOSDName(x)) for x in ds]))
+            self.destination = self.configured_destination
+        else:
+            # Choose the last one; the first one is likely to be a TV if
+            # there's one plugged in.
+            destination = ds[-1]
+            debug("HDMI-CEC: Chose to talk to device %i %r" % (
+                destination, self.lib.GetDeviceOSDName(destination)))
+            self.destination = destination
 
     def _list_active_devices(self):
         self.lib.RescanActiveDevices()
@@ -366,6 +366,8 @@ def test_hdmi_cec_control():
 
     expected = dedent("""\
         Open('test-device')
+        RescanActiveDevices()
+        GetActiveDevices()
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
@@ -398,9 +400,9 @@ def test_hdmi_cec_control_defaults():
         Open('test-device')
         RescanActiveDevices()
         GetActiveDevices()
-        GetDeviceOSDName(4)
-        Transmit(dest: 0x4, src: 0x1, op: 0x44, data: <00>)
-        Transmit(dest: 0x4, src: 0x1, op: 0x45, data: <>)
+        GetDeviceOSDName(10)
+        Transmit(dest: 0xa, src: 0x1, op: 0x44, data: <00>)
+        Transmit(dest: 0xa, src: 0x1, op: 0x45, data: <>)
         """)
 
 
@@ -445,7 +447,8 @@ def _fake_cec():
             def primary(self):
                 return 1
 
-        return _L([False, True, False, False, True] + [False] * 11)
+        return _L([False, True, False, False, True, False, False, False,
+                   False, False, True, False, False, False, False, False])
 
     def GetDeviceOSDName(_, destination):
         io.write(b"GetDeviceOSDName(%r)\n" % destination)
