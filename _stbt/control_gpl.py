@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from textwrap import dedent
 
 from .logging import debug
-from .utils import to_native_str
+from .utils import to_native_str, to_unicode
 
 
 class HdmiCecError(Exception):
@@ -339,7 +339,8 @@ class HdmiCecControl(object):
                 yield n
 
     def _log_cec_message(self, level, _time, message):
-        logging.log(self.cec_to_log_level[level], "libcec: %s", message)
+        logging.log(self.cec_to_log_level[level], "libcec: %s",
+                    to_unicode(message))
         return 0
 
 
