@@ -463,6 +463,6 @@ def _fake_cec():
 
 controls = [
     # pylint: disable=line-too-long
-    (r'hdmi-cec(:(?P<device>[^:]+)(:(?P<source>[^:]+)(:(?P<destination>[^:]+))?)?)?',
+    (r'hdmi-cec(:(?P<device>[^:]+)?(:(?P<source>[^:]+)?(:(?P<destination>[^:]+)?)?)?)?',
      HdmiCecControl),
 ]
