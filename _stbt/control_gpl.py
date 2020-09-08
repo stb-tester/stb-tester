@@ -3,6 +3,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from future.utils import string_types
+
+import logging
 import re
 import sys
 import threading
@@ -155,10 +157,19 @@ class HdmiCecControl(object):
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
+        self.cecconfig.SetLogCallback(self._log_cec_message)
         self.lib = cec.ICECAdapter.Create(self.cecconfig)
         debug("libCEC version %s loaded: %s" % (
             self.lib.VersionToString(self.cecconfig.serverVersion),
             self.lib.GetLibInfo()))
+
+        self.cec_to_log_level = {
+            cec.CEC_LOG_ERROR: logging.ERROR,
+            cec.CEC_LOG_WARNING: logging.WARNING,
+            cec.CEC_LOG_NOTICE: logging.INFO,
+            cec.CEC_LOG_TRAFFIC: logging.DEBUG,
+            cec.CEC_LOG_DEBUG: logging.DEBUG,
+        }
 
         if device is None:
             device = self.detect_adapter()
@@ -326,6 +337,10 @@ class HdmiCecControl(object):
             # active.primary is us
             if n != active.primary and active[n]:
                 yield n
+
+    def _log_cec_message(self, level, _time, message):
+        logging.log(self.cec_to_log_level[level], "libcec: %s", message)
+        return 0
 
 
 def test_hdmi_cec_control():
