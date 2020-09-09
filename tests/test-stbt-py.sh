@@ -367,8 +367,8 @@ test_that_frames_are_read_only() {
 	    pass
 	f = F()
 	try:
-	    f._frame[0,0,0] = 0
-	    assert False, "stbt.FrameObject._frame is writeable"
+	    f.frame[0,0,0] = 0
+	    assert False, "stbt.FrameObject.frame is writeable"
 	except (ValueError, RuntimeError):
 	    pass
 	

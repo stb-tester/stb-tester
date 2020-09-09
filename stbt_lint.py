@@ -16,11 +16,11 @@
   use "assert").
 * E7003: The argument given to "wait_until" must be a callable (such as
   a function or lambda expression).
-* E7004: FrameObject properties must always provide "self._frame" as the
+* E7004: FrameObject properties must always provide "self.frame" as the
   "frame" parameter to functions such as "stbt.match".
 * E7005: The image path given to "stbt.match" (and similar functions)
   exists on disk, but isn't committed to git.
-* E7006: FrameObject properties must use "self._frame", not
+* E7006: FrameObject properties must use "self.frame", not
   "stbt.get_frame()".
 * E7007: FrameObject properties must not have side-effects that change
   the state of the device-under-test by calling "stbt.press()" or

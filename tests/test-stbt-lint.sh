@@ -240,16 +240,16 @@ test_that_stbt_lint_checks_frameobjects() {
 	class Good(stbt.FrameObject):
 	    @property
 	    def is_visible(self):
-	        return find_boxes(self._frame) and Button(self._frame)
+	        return find_boxes(self.frame) and Button(self.frame)
 	
 	    @property
 	    def property1(self):
-	        return bool(stbt.match("videotestsrc-redblue.png", self._frame))
+	        return bool(stbt.match("videotestsrc-redblue.png", self.frame))
 	
 	    @property
 	    def property2(self):
 	        return bool(stbt.match("videotestsrc-redblue.png",
-	                               frame=self._frame))
+	                               frame=self.frame))
 	
 	    def not_a_property(self):
 	        if not bool(stbt.match("videotestsrc-redblue.png")):
@@ -273,9 +273,9 @@ test_that_stbt_lint_checks_frameobjects() {
 	E: 24,15: "stbt.ocr()" missing "frame" argument (stbt-frame-object-missing-frame)
 	E: 28,15: FrameObject properties must not use "stbt.press_and_wait" (stbt-frame-object-property-press)
 	E: 29, 8: FrameObject properties must not use "stbt.press" (stbt-frame-object-property-press)
-	E: 30,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
-	E: 34,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
-	E: 36,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 30,12: FrameObject properties must use "self.frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 34,38: FrameObject properties must use "self.frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 36,32: FrameObject properties must use "self.frame", not "get_frame()" (stbt-frame-object-get-frame)
 	EOF
     assert_lint_log < expected.log
 

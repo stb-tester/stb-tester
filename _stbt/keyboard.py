@@ -213,7 +213,7 @@ class Keyboard(object):
 
                 @property
                 def selection(self):
-                    m = stbt.match("keyboard-selection.png", frame=self._frame)
+                    m = stbt.match("keyboard-selection.png", frame=self.frame)
                     if not m:
                         return stbt.Keyboard.Selection(None, None)
                     try:

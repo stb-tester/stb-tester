@@ -151,7 +151,7 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
       from the frame.
     * Inside each property, when you call an image-processing function (like
       `stbt.match` or `stbt.ocr`) you must specify the parameter
-      ``frame=self._frame``.
+      ``frame=self.frame``.
 
     The following behaviours are provided automatically by the FrameObject
     base class:
@@ -196,6 +196,7 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
             frame = get_frame()
         self.__frame_object_cache = {}
         self.__local = threading.local()
+        self.frame = frame
         self._frame = frame
 
     def __repr__(self):

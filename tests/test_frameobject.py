@@ -111,15 +111,15 @@ class OrderedFrameObject(stbt.FrameObject):
 
     @property
     def size(self):
-        return self._frame.shape[0] * self._frame.shape[1]
+        return self.frame.shape[0] * self.frame.shape[1]
 
     @property
     def color(self):
-        if self._frame[0, 0, 0] == 255:
+        if self.frame[0, 0, 0] == 255:
             return "blue"
-        elif self._frame[0, 0, 1] == 255:
+        elif self.frame[0, 0, 1] == 255:
             return "green"
-        elif self._frame[0, 0, 2] == 255:
+        elif self.frame[0, 0, 2] == 255:
             return "red"
         else:
             return "grey?"
@@ -352,7 +352,7 @@ class Dialog(stbt.FrameObject):
     @property
     def title(self):
         """
-        The base class provides a ``self._frame`` member. Here we're using
+        The base class provides a ``self.frame`` member. Here we're using
         `stbt.ocr` to extract the dialog's title text from this frame. This is
         the basic form that many Frame Object properties will take.
 
@@ -371,13 +371,13 @@ class Dialog(stbt.FrameObject):
         only need to update the implementation of ``Dialog.title``; you won't
         need to change any of your testcases.
 
-        When defining Frame Objects you must take care to pass ``self._frame``
+        When defining Frame Objects you must take care to pass ``self.frame``
         into every call to an image processing function (like our ``title``
         property does when it calls ``ocr``, above). Otherwise the return
         values won't correspond to the frame you were expecting.
         """
         return stbt.ocr(region=stbt.Region(396, 249, 500, 50),
-                        frame=self._frame)
+                        frame=self.frame)
 
     @property
     def message(self):
@@ -392,7 +392,7 @@ class Dialog(stbt.FrameObject):
         right_of_info = stbt.Region(
             x=self._info.region.right, y=self._info.region.y,
             width=390, height=self._info.region.height)
-        return stbt.ocr(region=right_of_info, frame=self._frame) \
+        return stbt.ocr(region=right_of_info, frame=self.frame) \
                    .replace('\n', ' ')
 
     @property
@@ -408,4 +408,4 @@ class Dialog(stbt.FrameObject):
         You wouldn't want this to be a public property because it returns a
         `MatchResult` which includes the entire frame passed into `match`.
         """
-        return stbt.match('tests/info.png', frame=self._frame)
+        return stbt.match('tests/info.png', frame=self.frame)

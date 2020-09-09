@@ -48,17 +48,17 @@ class StbtChecker(BaseChecker):
                   '(such as a function or a lambda expression).'),
         'E7004': ('"%s" missing "frame" argument',
                   'stbt-frame-object-missing-frame',
-                  'FrameObject properties must always provide "self._frame" as '
+                  'FrameObject properties must always provide "self.frame" as '
                   'the "frame" parameter to functions such as "stbt.match".'),
         'E7005': ('Image "%s" not committed to git',
                   'stbt-uncommitted-image',
                   'The image path given to "stbt.match" '
                   '(and similar functions) exists on disk, '
                   "but isn't committed to git."),
-        'E7006': ('FrameObject properties must use "self._frame", not '
+        'E7006': ('FrameObject properties must use "self.frame", not '
                   '"get_frame()"',
                   'stbt-frame-object-get-frame',
-                  'FrameObject properties must use "self._frame", not '
+                  'FrameObject properties must use "self.frame", not '
                   '"stbt.get_frame()".'),
         'E7007': ('FrameObject properties must not use "%s"',
                   'stbt-frame-object-property-press',
