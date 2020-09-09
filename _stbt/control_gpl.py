@@ -3,6 +3,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from future.utils import string_types
+
+import logging
 import re
 import sys
 import threading
@@ -10,11 +12,14 @@ import time
 from contextlib import contextmanager
 from textwrap import dedent
 
-from .logging import debug
-from .utils import to_native_str
+from .utils import to_native_str, to_unicode
 
 
 class HdmiCecError(Exception):
+    pass
+
+
+class HdmiCecFatalError(BaseException):
     pass
 
 
@@ -155,24 +160,33 @@ class HdmiCecControl(object):
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
+        self.cecconfig.SetLogCallback(self._log_cec_message)
         self.lib = cec.ICECAdapter.Create(self.cecconfig)
-        debug("libCEC version %s loaded: %s" % (
-            self.lib.VersionToString(self.cecconfig.serverVersion),
-            self.lib.GetLibInfo()))
+        logging.info("HdmiCecControl: libCEC version %s loaded: %s",
+                     self.lib.VersionToString(self.cecconfig.serverVersion),
+                     self.lib.GetLibInfo())
+
+        self.cec_to_log_level = {
+            cec.CEC_LOG_ERROR: logging.ERROR,
+            cec.CEC_LOG_WARNING: logging.WARNING,
+            cec.CEC_LOG_NOTICE: logging.INFO,
+            cec.CEC_LOG_TRAFFIC: logging.DEBUG,
+            cec.CEC_LOG_DEBUG: logging.DEBUG,
+        }
 
         if device is None:
             device = self.detect_adapter()
             if device is None:
-                raise HdmiCecError("No adapter found")
+                raise HdmiCecFatalError("No adapter found")
         device = to_native_str(device)
         if not self.lib.Open(device):
-            raise HdmiCecError("Failed to open a connection to the CEC adapter")
-        debug("Connection to CEC adapter opened")
+            raise HdmiCecFatalError(
+                "Failed to open a connection to the CEC adapter")
+        logging.info("HdmiCecControl: Opened connection to CEC adapter")
 
-        if destination is None:
-            self.rescan()
-        else:
-            self.destination = destination
+        self.configured_destination = destination
+        self.destination = None  # set by `rescan`
+        self.rescan()
 
         self.source = source
         self.press_and_hold_thread = None
@@ -185,15 +199,13 @@ class HdmiCecControl(object):
                 raise HdmiCecError(
                     "Can't call 'press' while holding another key")
 
-            if self.destination is None:
-                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.destination = None
+                self.rescan()
                 raise HdmiCecError("Failed to send keydown for %s" % key)
             if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
 
-        debug("Pressed %s" % key)
+        logging.debug("HdmiCecControl: Pressed %s", key)
 
     def keydown(self, key):
         # CEC spec section 13.13.3 says that the receiver should assume a
@@ -207,10 +219,8 @@ class HdmiCecControl(object):
                 raise HdmiCecError(
                     "Can't call 'keydown' while holding another key")
 
-            if self.destination is None:
-                self.rescan()
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.destination = None
+                self.rescan()
                 raise HdmiCecError("Failed to send keydown for %s" % key)
 
             self.press_and_holding = True
@@ -218,7 +228,7 @@ class HdmiCecControl(object):
                 target=self.send_keydowns, args=(key,))
             self.press_and_hold_thread.daemon = True
             self.press_and_hold_thread.start()
-        debug("Holding %s" % key)
+        logging.debug("HdmiCecControl: Holding %s", key)
 
     def keyup(self, key):
         with self.lock:
@@ -232,10 +242,9 @@ class HdmiCecControl(object):
         thread.join()
 
         with self.lock:
-            if (self.destination is None or
-                    not self.lib.Transmit(self.keyup_command())):
+            if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
-        debug("Released %s" % key)
+        logging.debug("HdmiCecControl: Released %s", key)
 
     def send_keydowns(self, key):
         # CEC spec section 13.13.3 says that the receiver should assume a keyup
@@ -250,17 +259,14 @@ class HdmiCecControl(object):
                 self.lock.wait(max(0, next_press_deadline - time.time()))
                 if not self.press_and_holding:
                     return
-                if self.destination is None:
-                    self.press_and_holding = False
-                    return
                 if time.time() > end_time:
-                    debug("cec: Warning: Releasing %s as I've been holding it "
-                          "longer than 60 seconds" % key)
+                    logging.warning("HdmiCecControl: Releasing %s as I've been "
+                                    "holding it longer than 60 seconds", key)
                     return
                 next_press_deadline = time.time() + 0.3
                 if not self.lib.Transmit(self.keydown_command(key)):
-                    debug("cec: Warning: Failed to send repeated keydown for %s"
-                          % key)
+                    logging.warning("HdmiCecControl: Failed to send repeated "
+                                    "keydown for %s", key)
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
@@ -293,28 +299,37 @@ class HdmiCecControl(object):
         retval = None
         adapters = self.lib.DetectAdapters()
         for adapter in adapters:
-            debug(
+            logging.debug(
                 dedent("""\
-                    Found a CEC adapter:"
+                    HdmiCecControl: Found a CEC adapter:
                     Port:     %s
                     Vendor:   %x
-                    Product:  %x""") %
-                (adapter.strComName, adapter.iVendorId, adapter.iProductId))
+                    Product:  %x"""),
+                adapter.strComName, adapter.iVendorId, adapter.iProductId)
             retval = adapter.strComName
         return retval
 
     def rescan(self):
         ds = list(self._list_active_devices())
-        debug("HDMI-CEC scan complete.  Found %r" % ds)
+        logging.info("HdmiCecControl: Scan complete. Found %r", ds)
         if len(ds) == 0:
-            raise HdmiCecError(
+            raise HdmiCecFatalError(
                 "Failed to find a device on the CEC bus to talk to.")
-        # Choose the last one, the first one is likely to be a TV if there's
-        # one plugged in
-        destination = ds[-1]
-        debug("HDMI-CEC: Chose to talk to device %i %r" % (
-            destination, self.lib.GetDeviceOSDName(destination)))
-        self.destination = destination
+        if self.configured_destination is not None:
+            if self.configured_destination not in ds:
+                raise HdmiCecFatalError(
+                    "Destination device %i isn't on the CEC bus. "
+                    "Available devices: %r"
+                    % (self.configured_destination,
+                       [(x, self.lib.GetDeviceOSDName(x)) for x in ds]))
+            self.destination = self.configured_destination
+        else:
+            # Choose the last one; the first one is likely to be a TV if
+            # there's one plugged in.
+            destination = ds[-1]
+            logging.info("HdmiCecControl: Chose to talk to device %i %r",
+                         destination, self.lib.GetDeviceOSDName(destination))
+            self.destination = destination
 
     def _list_active_devices(self):
         self.lib.RescanActiveDevices()
@@ -326,6 +341,11 @@ class HdmiCecControl(object):
             # active.primary is us
             if n != active.primary and active[n]:
                 yield n
+
+    def _log_cec_message(self, level, _time, message):
+        logging.log(self.cec_to_log_level[level], "libcec: %s",
+                    to_unicode(message))
+        return 0
 
 
 def test_hdmi_cec_control():
@@ -345,6 +365,8 @@ def test_hdmi_cec_control():
 
     expected = dedent("""\
         Open('test-device')
+        RescanActiveDevices()
+        GetActiveDevices()
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
         Transmit(dest: 0xa, src: 0x7, op: 0x45, data: <>)
         Transmit(dest: 0xa, src: 0x7, op: 0x44, data: <01>)
@@ -377,9 +399,9 @@ def test_hdmi_cec_control_defaults():
         Open('test-device')
         RescanActiveDevices()
         GetActiveDevices()
-        GetDeviceOSDName(4)
-        Transmit(dest: 0x4, src: 0x1, op: 0x44, data: <00>)
-        Transmit(dest: 0x4, src: 0x1, op: 0x45, data: <>)
+        GetDeviceOSDName(10)
+        Transmit(dest: 0xa, src: 0x1, op: 0x44, data: <00>)
+        Transmit(dest: 0xa, src: 0x1, op: 0x45, data: <>)
         """)
 
 
@@ -424,7 +446,8 @@ def _fake_cec():
             def primary(self):
                 return 1
 
-        return _L([False, True, False, False, True] + [False] * 11)
+        return _L([False, True, False, False, True, False, False, False,
+                   False, False, True, False, False, False, False, False])
 
     def GetDeviceOSDName(_, destination):
         io.write(b"GetDeviceOSDName(%r)\n" % destination)
@@ -437,8 +460,9 @@ def _fake_cec():
             patch('cec.ICECAdapter.GetDeviceOSDName', GetDeviceOSDName):
         yield io
 
+
 controls = [
     # pylint: disable=line-too-long
-    (r'hdmi-cec(:(?P<device>[^:]+)(:(?P<source>[^:]+)(:(?P<destination>[^:]+))?)?)?',
+    (r'hdmi-cec(:(?P<device>[^:]+)?(:(?P<source>[^:]+)?(:(?P<destination>[^:]+)?)?)?)?',
      HdmiCecControl),
 ]
