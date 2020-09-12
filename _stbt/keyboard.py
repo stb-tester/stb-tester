@@ -218,6 +218,8 @@ class Keyboard(object):
             raise ValueError("mode %r doesn't match key %r" % (mode, query))
         if len(query) == 0:
             raise ValueError("Empty query %r" % (query,))
+        if mode is not None:
+            query["mode"] = mode
         return [x for x in self.G.nodes()
                 if all(Keyboard.QUERYER[k](x, v) for k, v in query.items())]
 
@@ -236,7 +238,7 @@ class Keyboard(object):
         """
         keys = self._find_keys(query)
         if len(keys) == 0:
-            self._add_key(query)
+            return self._add_key(query)
         elif len(keys) == 1:
             return keys[0]
         else:
@@ -350,7 +352,8 @@ class Keyboard(object):
                     target = " "
                 source = self._find_or_add_key({"name": source, "mode": mode})
                 target = self._find_or_add_key({"name": target, "mode": mode})
-                self.add_transition(source, target, keypress, symmetrical)
+                self.add_transition(source, target, keypress,
+                                    symmetrical=symmetrical)
             else:
                 raise ValueError(
                     "Invalid line %d in keyboard edgelist "
