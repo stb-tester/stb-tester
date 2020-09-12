@@ -20,8 +20,9 @@ if pep8 --version &>/dev/null; then
     # E721: do not compare types, use 'isinstance()' (because pylint does it)
     # E722: do not use bare except (because pylint does it)
     # E731: do not assign a lambda expression, use a def
+    # E741: do not use variables named ‘l’, ‘O’, or ‘I’
     # W291: trailing whitespace (because pylint does it)
-    pep8 --ignore=E124,E203,E241,E305,E402,E501,E721,E722,E731,W291 "$@" || ret=1
+    pep8 --ignore=E124,E203,E241,E305,E402,E501,E721,E722,E731,E741,W291 "$@" || ret=1
 else
     echo "warning: pep8 not installed; skipping pep8 and only running pylint" >&2
 fi
