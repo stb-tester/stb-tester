@@ -191,6 +191,7 @@ class Keyboard(object):
         """
         keys = self._find_keys(query, mode)
         if len(keys) == 0:
+            log.debug("All keys: %r", self.G.nodes())
             raise ValueError("Query %r doesn't match any key in the keyboard"
                              % (_minimal_query(query),))
         elif len(keys) == 1:
@@ -551,7 +552,7 @@ class Keyboard(object):
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G, current, targets))
             log.info("Keyboard: navigating from %s to %s by pressing %r",
-                     current, target, keys)
+                     current, target, [k for k, _ in keys])
             if not verify_every_keypress:
                 for k, _ in keys[:-1]:
                     stbt.press(k)
