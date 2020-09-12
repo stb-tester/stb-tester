@@ -94,6 +94,7 @@ class Keyboard(object):
                 "The `graph` parameter of `stbt.Keyboard` constructor is "
                 "deprecated. See the API documentation for details.")
         self.G = nx.DiGraph()
+        self.modes = set()
 
         self.mask = None
         if isinstance(mask, numpy.ndarray):
@@ -254,6 +255,8 @@ class Keyboard(object):
             spec["text"] = spec["name"]
         node = Key(**spec)
         self.G.add_node(node)
+        if node.mode is not None:
+            self.modes.add(node.mode)
         return node
 
     def add_transition(self, source, target, keypress, mode=None,
