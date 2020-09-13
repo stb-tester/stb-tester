@@ -227,7 +227,8 @@ class Keyboard(object):
     QUERYER = {
         "name": lambda x, v: x.name == v,
         "text": lambda x, v: x.text == v,
-        "region": lambda x, v: x.region.contains(v.center),
+        "region": lambda x, v: (x.region is not None and
+                                x.region.contains(v.center)),
         "mode": lambda x, v: x.mode == v,
     }
 
