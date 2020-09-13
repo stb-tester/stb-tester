@@ -181,7 +181,14 @@ class SearchPage(stbt.FrameObject):
         # In practice this would use image processing to detect the current
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
-        key = self.kb.find_key(name=self.dut.selection, mode=self.mode)
+        query = {}
+        if self.dut.selection == " ":
+            query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
+        else:
+            query = {"name": self.dut.selection}
+        if self.kb.modes:
+            query["mode"] = self.dut.mode
+        key = self.kb.find_key(**query)
         print("SearchPage.selection: %r" % (key,))
         return key
 
@@ -422,6 +429,19 @@ def test_enter_text_twice(dut, kb):
                            "KEY_RIGHT", "KEY_OK"]
 
 
+def test_that_enter_text_finds_keys_by_text(dut):
+    kb = stbt.Keyboard()
+    a, g, m, s, y, five = [kb.add_key(x) for x in "agmsy5"]
+    space = kb.add_key("SPACE", text=" ")
+    for k1, k2 in zip([a, g, m, s, y, five], [g, m, s, y, five, space]):
+        kb.add_transition(k1, k2, "KEY_DOWN")
+
+    page = SearchPage(dut, kb)
+    page = page.enter_text(" ")
+    assert page.selection.name == "SPACE"
+    assert dut.entered == " "
+
+
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
 def test_navigate_to(dut, kb):
     page = SearchPage(dut, kb)
@@ -511,6 +531,43 @@ def test_invalid_edgelist():
         """)
 
     kb.add_transitions_from_edgelist("")  # Doesn't raise
+
+
+def test_that_add_key_infers_text():
+    kb = stbt.Keyboard()
+    a = kb.add_key("a")
+    assert a.name == "a"
+    assert a.text == "a"
+    space = kb.add_key(" ")
+    assert space.name == " "
+    assert space.text == " "
+    clear = kb.add_key("clear")
+    assert clear.name == "clear"
+    assert not clear.text
+
+
+def test_that_keyboard_catches_errors_at_definition_time():
+    kb = stbt.Keyboard()
+
+    # Can't add the same key twice:
+    kb.add_key("a")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key("a")
+    assert_repr_equal(
+        "Key already exists: Key(name='a', text='a', region=None, mode=None)",
+        str(excinfo.value))
+
+    # Can't add transition to key that doesn't exist:
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_transition("a", "b", "KEY_RIGHT")
+    assert_repr_equal("Query 'b' doesn't match any key in the keyboard",
+                      str(excinfo.value))
+
+
+def assert_repr_equal(a, b):
+    a = a.replace("u'", "'")
+    b = b.replace("u'", "'")
+    assert a == b
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
