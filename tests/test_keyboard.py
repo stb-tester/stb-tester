@@ -563,11 +563,72 @@ def test_that_keyboard_catches_errors_at_definition_time():
     assert_repr_equal("Query 'b' doesn't match any key in the keyboard",
                       str(excinfo.value))
 
+    # ...but add_transitions_from_edgelist creates keys as needed:
+    kb.add_transitions_from_edgelist("a b KEY_RIGHT")
+
+    # All keys must have modes or none of them can
+    kb.add_key(" ")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key(" ", mode="uppercase")
+    assert_repr_equal(
+        "Key ...'name': ' '...'mode': 'uppercase'... specifies 'mode', but none of the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # All keys must have regions or none of them can
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_grid(stbt.Grid(
+            region=stbt.Region(x=0, y=0, right=200, bottom=100),
+            data=[["a", "b", "c", "d"]]))
+    assert_repr_equal(
+        "Key ...'a'... specifies 'region', but none of the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # Can't add grid with no data:
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_grid(stbt.Grid(
+            region=stbt.Region(x=0, y=0, right=200, bottom=100),
+            cols=6, rows=6))
+    assert_repr_equal("Grid cell [0,0] doesn't have any data",
+                      str(excinfo.value))
+
+    # Now a keyboard with modes: #############################################
+    kb = stbt.Keyboard()
+    kb.add_key("a", mode="lowercase")
+    kb.add_key("A", mode="uppercase")
+    kb.add_key(" ", mode="lowercase")
+
+    # All keys must have modes or none of them can
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key(" ")
+    assert_repr_equal(
+        "Key already exists: Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
+        str(excinfo.value))
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key("b")
+    assert_repr_equal(
+        "Key ...'name': 'b'... doesn't specify 'mode', but all the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # add_transitions_from_edgelist is happy as long as it can uniquely identify
+    # existing keys:
+    kb.add_transitions_from_edgelist("a SPACE KEY_DOWN")
+
+    # ...but if it's ambiguous, it's an error:
+    kb.add_key(" ", mode="uppercase")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_transitions_from_edgelist("a SPACE KEY_DOWN")
+    assert_repr_equal(
+        "Ambiguous key {'name': ' '}: Could mean Key(name=' ', text=' ', region=None, mode='lowercase') or Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # ...so we need to specify the mode explicitly:
+    kb.add_transitions_from_edgelist("a SPACE KEY_DOWN", mode="lowercase")
+
 
 def assert_repr_equal(a, b):
-    a = a.replace("u'", "'")
+    a = re.escape(a).replace(r"\.\.\.", ".*")
     b = b.replace("u'", "'")
-    assert a == b
+    assert re.match("^" + a + "$", b)
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])

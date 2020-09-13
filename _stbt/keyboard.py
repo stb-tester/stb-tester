@@ -104,6 +104,11 @@ class Keyboard(object):
 
         self.navigate_timeout = navigate_timeout
 
+        self._any_with_region = False
+        self._any_without_region = False
+        self._any_with_mode = False
+        self._any_without_mode = False
+
     def add_key(self, name, text=None, region=None, mode=None):
         """Add a key to the model (specification) of the keyboard.
 
@@ -258,9 +263,28 @@ class Keyboard(object):
         if spec.get("text") is None and len(spec["name"]) == 1:
             spec["text"] = spec["name"]
         node = Key(**spec)
+        if node.region is None and self._any_with_region:
+            raise ValueError("Key %r doesn't specify 'region', but all the "
+                             "other keys in the keyboard do" % (spec,))
+        if node.region is not None and self._any_without_region:
+            raise ValueError("Key %r specifies 'region', but none of the "
+                             "other keys in the keyboard do" % (spec,))
+        if node.mode is None and self._any_with_mode:
+            raise ValueError("Key %r doesn't specify 'mode', but all the "
+                             "other keys in the keyboard do" % (spec,))
+        if node.mode is not None and self._any_without_mode:
+            raise ValueError("Key %r specifies 'mode', but none of the "
+                             "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
-        if node.mode is not None:
+        if node.region is None:  # pylint:disable=simplifiable-if-statement
+            self._any_without_region = True
+        else:
+            self._any_with_region = True
+        if node.mode is None:
+            self._any_without_mode = True
+        else:
             self.modes.add(node.mode)
+            self._any_with_mode = True
         return node
 
     def add_transition(self, source, target, keypress, mode=None,
