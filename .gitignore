@@ -15,6 +15,7 @@ _stbt/libxxhash.so
 _stbt/libstbt.so
 debian-packages
 docs/stbt.1
+dist/
 etc/stbt.conf
 extra/debian/changelog
 extra/fedora/stb-tester.spec
@@ -25,6 +26,7 @@ stb-tester_*.deb
 stbt-control-relay
 stbt-controlc
 stbt-debug
+stbt_core.egg-info/
 TAGS
 tests/stbt-debug-expected-output/*/*/*.png
 tests/test-install
