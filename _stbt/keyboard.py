@@ -544,6 +544,9 @@ class Keyboard(object):
             stbt.press_and_wait("KEY_OK", mask=self.mask, stable_secs=0.5,  # pylint:disable=stbt-unused-return-value
                                 timeout_secs=1)
             page = page.refresh()
+            log.debug("Keyboard: Entered %r; the selection is now on %r",
+                      letter, page.selection)
+        log.info("Keyboard: Entered %r", text)
         return page
 
     def navigate_to(self, target, page, verify_every_keypress=False):
@@ -580,8 +583,8 @@ class Keyboard(object):
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G_, current, targets))
-            log.info("Keyboard: navigating from %s to %s by pressing %r",
-                     current, target, [k for k, _ in keys])
+            log.debug("Keyboard: navigating from %r to %r by pressing %r",
+                      current, target, [k for k, _ in keys])
             if not verify_every_keypress:
                 for k, _ in keys[:-1]:
                     stbt.press(k)
