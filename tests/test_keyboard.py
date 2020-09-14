@@ -80,8 +80,9 @@ class DUT(object):
 
     def handle_press(self, keypress):
         self.pressed.append(keypress)
+        mode = self.mode
         selected = self.selection
-        print("DUT.handle_press: Pressed %s" % keypress)
+        logging.debug("DUT.handle_press: Pressed %s", keypress)
         if keypress == "KEY_OK":
             if selected in self.modes:
                 self.mode = selected
@@ -125,8 +126,8 @@ class DUT(object):
                 self.x += 1
         else:
             assert False, "Unexpected %s on %r" % (keypress, selected)
-        print("DUT.handle_press: Moved from %r to %r"
-              % (selected, self.selection))
+        logging.debug("DUT.handle_press: Moved from %r (%s) to %r (%s)",
+                      selected, mode, self.selection, self.mode)
 
     def handle_press_and_wait(self, key, **_kwargs):
         self.handle_press(key)
@@ -189,12 +190,13 @@ class SearchPage(stbt.FrameObject):
         if self.kb.modes:
             query["mode"] = self.dut.mode
         key = self.kb.find_key(**query)
-        print("SearchPage.selection: %r" % (key,))
+        logging.debug("SearchPage.selection: %r", key)
         return key
 
     def refresh(self, frame=None, **kwargs):
-        print("SearchPage.refresh: Now on %r" % self.dut.selection)
-        return SearchPage(self.dut, self.kb)
+        page = SearchPage(self.dut, self.kb)
+        logging.debug("SearchPage.refresh: Now on %r", page.selection)
+        return page
 
     def enter_text(self, text):
         return self.kb.enter_text(text, page=self)
