@@ -94,6 +94,7 @@ class Keyboard(object):
                 "The `graph` parameter of `stbt.Keyboard` constructor is "
                 "deprecated. See the API documentation for details.")
         self.G = nx.DiGraph()
+        self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
         self.mask = None
@@ -276,6 +277,7 @@ class Keyboard(object):
             raise ValueError("Key %r specifies 'mode', but none of the "
                              "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
+        self.G_ = None
         if node.region is None:  # pylint:disable=simplifiable-if-statement
             self._any_without_region = True
         else:
@@ -337,6 +339,7 @@ class Keyboard(object):
         # type: (Key, Key, str) -> None
         self.G.add_edge(source, target, key=key)
         _add_weight(self.G, source, key)
+        self.G_ = None
 
     def add_transitions_from_edgelist(self, edgelist, mode=None,
                                       symmetrical=True):
@@ -535,15 +538,12 @@ class Keyboard(object):
             if not self._find_keys({"text": letter}):
                 raise ValueError("'%s' isn't in the keyboard" % (letter,))
 
-        prev = None
         for letter in text:
             page = self.navigate_to({"text": letter},
                                     page, verify_every_keypress)
-            if letter == prev:
-                stbt.press("KEY_OK", interpress_delay_secs=1)
-            else:
-                stbt.press("KEY_OK")
-            prev = letter
+            stbt.press_and_wait("KEY_OK", mask=self.mask, stable_secs=0.5,  # pylint:disable=stbt-unused-return-value
+                                timeout_secs=1)
+            page = page.refresh()
         return page
 
     def navigate_to(self, target, page, verify_every_keypress=False):
@@ -568,6 +568,10 @@ class Keyboard(object):
         if not targets:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
 
+        if self.G_ is None:
+            # Re-calculate graph without any shift transitions that type text
+            self.G_ = _strip_shift_transitions(self.G)
+
         assert page, "%s page isn't visible" % type(page).__name__
         deadline = time.time() + self.navigate_timeout
         current = page.selection
@@ -575,7 +579,7 @@ class Keyboard(object):
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
-            keys = list(_keys_to_press(self.G, current, targets))
+            keys = list(_keys_to_press(self.G_, current, targets))
             log.info("Keyboard: navigating from %s to %s by pressing %r",
                      current, target, [k for k, _ in keys])
             if not verify_every_keypress:
@@ -642,6 +646,17 @@ def _add_weight(G, source, key):
     if len(targets) > 1:
         for t in targets:
             G[source][t]["weight"] = 100
+
+
+def _strip_shift_transitions(G):
+    G_ = nx.DiGraph()
+    for node in G.nodes():
+        G_.add_node(node)
+    for u, v, data in G.edges(data=True):
+        if data["key"] == "KEY_OK" and u.text:
+            continue
+        G_.add_edge(u, v, **data)
+    return G_
 
 
 def _join_with_commas(items, last_one=", "):

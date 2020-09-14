@@ -19,7 +19,7 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import _keys_to_press
+from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
 from _stbt.utils import py3
 
@@ -39,6 +39,7 @@ class DUT(object):
         self.y = 1
         self.modes = ["lowercase", "uppercase", "symbols"]
         self.mode = self.modes[0]
+        self.symbols_is_shift = False
         self.keys = {
             "lowercase": [
                 ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
@@ -76,7 +77,11 @@ class DUT(object):
 
     @property
     def selection(self):
-        return self.keys[self.mode][self.y][self.x]
+        k = self.keys[self.mode][self.y][self.x]
+        if self.symbols_is_shift and k == "symbols":
+            return "shift"
+        else:
+            return k
 
     def handle_press(self, keypress):
         self.pressed.append(keypress)
@@ -84,10 +89,17 @@ class DUT(object):
         selected = self.selection
         logging.debug("DUT.handle_press: Pressed %s", keypress)
         if keypress == "KEY_OK":
-            if selected in self.modes:
+            if self.symbols_is_shift and selected == "shift":
+                if self.mode == "lowercase":
+                    self.mode = "uppercase"
+                else:
+                    self.mode = "lowercase"
+            elif (not self.symbols_is_shift) and selected in self.modes:
                 self.mode = selected
             elif len(selected) == 1:  # It's a letter
                 self.entered += selected
+                if self.symbols_is_shift and self.mode == "uppercase":
+                    self.mode = "lowercase"
             else:
                 assert False, "Unexpected %s on %r" % (keypress, selected)
         elif keypress == "KEY_UP":
@@ -381,6 +393,29 @@ if not py3:
     kb3_bytes.add_transitions_from_edgelist(
         edgelists["lowercase"].encode("utf-8"))
 
+# Lowercase + shift (no caps lock).
+# This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
+# key; and the other mode keys have no effect.
+kb4 = stbt.Keyboard()
+kb4.add_transitions_from_edgelist(
+    edgelists["lowercase"].replace("symbols", "shift"),
+    mode="lowercase")
+kb4.add_transitions_from_edgelist(
+    edgelists["uppercase"].replace("symbols", "shift"),
+    mode="uppercase")
+kb4.add_transition({"mode": "lowercase", "name": "shift"},
+                   {"mode": "uppercase", "name": "shift"},
+                   "KEY_OK")
+kb4.add_transition({"mode": "uppercase", "name": "shift"},
+                   {"mode": "lowercase", "name": "shift"},
+                   "KEY_OK")
+# Pressing OK on a letter when shifted goes to lowercase mode (as well as
+# entering that letter).
+for k in "abcdefghijklmnopqrstuvwxzy1234567890":
+    kb4.add_transition({"mode": "uppercase", "name": k.upper()},
+                       {"mode": "lowercase", "name": k},
+                       "KEY_OK")
+
 
 @pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
 def test_enter_text_mixed_case(dut, kb):
@@ -491,6 +526,33 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     with pytest.raises(ValueError):
         page.navigate_to("Ñ")
     assert dut.pressed == []
+
+
+def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
+    page = SearchPage(dut, kb4)
+    dut.symbols_is_shift = True
+    dut.mode = "uppercase"
+    assert page.selection.name == "A"
+    assert page.selection.mode == "uppercase"
+    page = page.navigate_to("a")
+    assert page.selection.name == "a"
+    assert page.selection.mode == "lowercase"
+    assert dut.entered == ""
+
+
+def test_that_enter_text_recalculates_after_shift_transitions(dut):
+    print(edgelists["uppercase"])
+    page = SearchPage(dut, kb4)
+    dut.symbols_is_shift = True
+    assert page.selection.name == "a"
+    assert page.selection.mode == "lowercase"
+    page = page.enter_text("Aa")
+    assert dut.entered == "Aa"
+    assert dut.pressed == [
+        "KEY_UP", "KEY_RIGHT", "KEY_RIGHT", "KEY_OK",  # shift
+        "KEY_LEFT", "KEY_LEFT", "KEY_DOWN", "KEY_OK",  # A
+        "KEY_OK"  # a
+    ]
 
 
 def test_edgelist_with_hash_sign():
@@ -723,3 +785,16 @@ def test_that_we_need_add_weight():
     assert nx.shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
 
     assert [k for k, _ in _keys_to_press(kb.G, W, [Z])] == ["KEY_RIGHT"] * 3
+
+
+def test_strip_shift_transitions():
+    for kb in [kb1, kb2, kb3]:
+        G_ = _strip_shift_transitions(kb.G)
+        assert sorted(G_.nodes()) == sorted(kb.G.nodes())
+        assert sorted(G_.edges(data=True)) == sorted(kb.G.edges(data=True))
+
+    G_ = _strip_shift_transitions(kb4.G)
+    assert sorted(G_.nodes()) == sorted(kb4.G.nodes())
+    assert sorted(G_.edges(data=True)) != sorted(kb4.G.edges(data=True))
+    assert len(G_.edges(data=True)) == len(kb4.G.edges(data=True)) - len(
+        "abcdefghijklmnopqrstuvwxyz1234567890")
