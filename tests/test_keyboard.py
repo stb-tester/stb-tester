@@ -373,8 +373,8 @@ edgelists = {
 }
 edgelists["uppercase"] = re.sub(r"\b[a-z]\b", lambda m: m.group(0).upper(),
                                 edgelists["lowercase"])
-kb2.add_transitions_from_edgelist(edgelists["lowercase"], mode="lowercase")
-kb2.add_transitions_from_edgelist(edgelists["uppercase"], mode="uppercase")
+kb2.add_edgelist(edgelists["lowercase"], mode="lowercase")
+kb2.add_edgelist(edgelists["uppercase"], mode="uppercase")
 # Mode changes: For example when "ABC" is selected and we are in
 # lowercase mode, pressing OK takes us to "ABC" still selected
 # but the keyboard is now in uppercase mode.
@@ -386,23 +386,20 @@ kb2.add_transition({"mode": "uppercase", "name": "lowercase"},
                    "KEY_OK")
 
 kb3 = stbt.Keyboard()  # Simple keyboard, lowercase only
-kb3.add_transitions_from_edgelist(edgelists["lowercase"])
+kb3.add_edgelist(edgelists["lowercase"])
 
-kb3_bytes = stbt.Keyboard()  # To test add_transitions_from_edgelist with bytes
+kb3_bytes = stbt.Keyboard()  # To test add_edgelist with bytes
 if not py3:
-    kb3_bytes.add_transitions_from_edgelist(
-        edgelists["lowercase"].encode("utf-8"))
+    kb3_bytes.add_edgelist(edgelists["lowercase"].encode("utf-8"))
 
 # Lowercase + shift (no caps lock).
 # This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
 # key; and the other mode keys have no effect.
 kb4 = stbt.Keyboard()
-kb4.add_transitions_from_edgelist(
-    edgelists["lowercase"].replace("symbols", "shift"),
-    mode="lowercase")
-kb4.add_transitions_from_edgelist(
-    edgelists["uppercase"].replace("symbols", "shift"),
-    mode="uppercase")
+kb4.add_edgelist(edgelists["lowercase"].replace("symbols", "shift"),
+                 mode="lowercase")
+kb4.add_edgelist(edgelists["uppercase"].replace("symbols", "shift"),
+                 mode="uppercase")
 kb4.add_transition({"mode": "lowercase", "name": "shift"},
                    {"mode": "uppercase", "name": "shift"},
                    "KEY_OK")
@@ -558,7 +555,7 @@ def test_that_enter_text_recalculates_after_shift_transitions(dut):
 def test_edgelist_with_hash_sign():
     """Regression test. `networkx.parse_edgelist` treats "#" as a comment."""
     kb = stbt.Keyboard()
-    kb.add_transitions_from_edgelist("""
+    kb.add_edgelist("""
         ### three hashes for a comment
         @hotmail.com !#$ KEY_DOWN
         @hotmail.com @ KEY_DOWN
@@ -582,7 +579,7 @@ def test_edgelist_with_hash_sign():
 def test_invalid_edgelist():
     kb = stbt.Keyboard()
     with pytest.raises(ValueError) as excinfo:
-        kb.add_transitions_from_edgelist("""
+        kb.add_edgelist("""
             A B KEY_RIGHT
             B A
         """)
@@ -590,11 +587,11 @@ def test_invalid_edgelist():
     assert "'B A'" in str(excinfo.value)
 
     with pytest.raises(ValueError):
-        kb.add_transitions_from_edgelist("""
+        kb.add_edgelist("""
             A B KEY_RIGHT toomanyfields
         """)
 
-    kb.add_transitions_from_edgelist("")  # Doesn't raise
+    kb.add_edgelist("")  # Doesn't raise
 
 
 def test_that_add_key_infers_text():
@@ -627,8 +624,8 @@ def test_that_keyboard_catches_errors_at_definition_time():
     assert_repr_equal("Query 'b' doesn't match any key in the keyboard",
                       str(excinfo.value))
 
-    # ...but add_transitions_from_edgelist creates keys as needed:
-    kb.add_transitions_from_edgelist("a b KEY_RIGHT")
+    # ...but add_edgelist creates keys as needed:
+    kb.add_edgelist("a b KEY_RIGHT")
 
     # All keys must have modes or none of them can
     kb.add_key(" ")
@@ -673,20 +670,19 @@ def test_that_keyboard_catches_errors_at_definition_time():
         "Key ...'name': 'b'... doesn't specify 'mode', but all the other keys in the keyboard do",  # pylint:disable=line-too-long
         str(excinfo.value))
 
-    # add_transitions_from_edgelist is happy as long as it can uniquely identify
-    # existing keys:
-    kb.add_transitions_from_edgelist("a SPACE KEY_DOWN")
+    # add_edgelist is happy as long as it can uniquely identify existing keys:
+    kb.add_edgelist("a SPACE KEY_DOWN")
 
     # ...but if it's ambiguous, it's an error:
     kb.add_key(" ", mode="uppercase")
     with pytest.raises(ValueError) as excinfo:
-        kb.add_transitions_from_edgelist("a SPACE KEY_DOWN")
+        kb.add_edgelist("a SPACE KEY_DOWN")
     assert_repr_equal(
         "Ambiguous key {'name': ' '}: Could mean Key(name=' ', text=' ', region=None, mode='lowercase') or Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
         str(excinfo.value))
 
     # ...so we need to specify the mode explicitly:
-    kb.add_transitions_from_edgelist("a SPACE KEY_DOWN", mode="lowercase")
+    kb.add_edgelist("a SPACE KEY_DOWN", mode="lowercase")
 
 
 def assert_repr_equal(a, b):

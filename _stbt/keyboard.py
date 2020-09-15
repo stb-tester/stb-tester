@@ -67,8 +67,8 @@ class Keyboard(object):
     The constructor takes the following parameters:
 
     :param graph: Deprecated. First create the Keyboard object, then use
-    `add_key`, `add_transition`, `add_transitions_from_edgelist`, and
-    `add_grid` to build the model of the keyboard.
+    `add_key`, `add_transition`, `add_edgelist`, and `add_grid` to build the
+    model of the keyboard.
 
     :type mask: str or `numpy.ndarray`
     :param str mask:
@@ -341,8 +341,7 @@ class Keyboard(object):
         _add_weight(self.G, source, key)
         self.G_ = None
 
-    def add_transitions_from_edgelist(self, edgelist, mode=None,
-                                      symmetrical=True):
+    def add_edgelist(self, edgelist, mode=None, symmetrical=True):
         """Add keys and transitions specified in a string in "edgelist" format.
 
         :param str edgelist: A multi-line string where each line is in the
