@@ -14,6 +14,7 @@ from logging import getLogger
 import networkx as nx
 import numpy
 from attr import attrs, attrib
+from _stbt.grid import Grid
 from _stbt.imgutils import load_image
 from _stbt.types import Region
 from _stbt.utils import basestring, text_type
@@ -409,6 +410,11 @@ class Keyboard(object):
 
         :param str mode: The mode that applies to all the keys specified in
             ``grid``. See `Keyboard.add_key` for more details about modes.
+
+        :returns: A new `stbt.Grid` where each cell's data is a key object
+            that can be used with `add_transition` (for example to define
+            additional transitions from the edges of this grid onto other
+            keys).
         """
 
         # First add the keys. It's an exception if any of them already exist.
@@ -450,6 +456,10 @@ class Keyboard(object):
             if y > 0:
                 target = keys[grid[x, y - 1].index]
                 self.add_transition(source, target, "KEY_UP")
+
+        return Grid(
+            region=grid.region,
+            data=_reshape_array(keys, cols=grid.cols, rows=grid.rows))
 
     def enter_text(self, text, page, verify_every_keypress=False):
         """Enter the specified text using the on-screen keyboard.
@@ -659,6 +669,21 @@ def _strip_shift_transitions(G):
             continue
         G_.add_edge(u, v, **data)
     return G_
+
+
+def _reshape_array(a, cols, rows):
+    """
+    >>> _reshape_array("abcdefghijklmnopqrstuvwxyz1234567890", 7, 5)
+    ['abcdefg',
+     'hijklmn',
+     'opqrstu',
+     'vwxyz12',
+     '3456789']
+    """
+    out = []
+    for y in range(rows):
+        out.append(a[y * cols:(y + 1) * cols])
+    return out
 
 
 def _join_with_commas(items, last_one=", "):

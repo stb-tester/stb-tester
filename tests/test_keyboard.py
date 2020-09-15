@@ -19,7 +19,7 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
+from _stbt.keyboard import Key, _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
 from _stbt.utils import py3
 
@@ -605,6 +605,35 @@ def test_that_add_key_infers_text():
     clear = kb.add_key("clear")
     assert clear.name == "clear"
     assert not clear.text
+
+
+def test_that_add_grid_returns_grid_of_keys():
+    kb = stbt.Keyboard()
+    # The Disney+ search keyboard on Roku has an "accents" mode where some of
+    # the keys are blank. You *can* navigate to them, but pressing OK has no
+    # effect.
+    grid = kb.add_grid(
+        stbt.Grid(stbt.Region(x=265, y=465, right=895, bottom=690),
+                  data=["àáâãäåæýÿš",
+                        list("èéêëìíîžđ") + [""],
+                        list("ïòóôõöøß") + ["", ""],
+                        list("œùúûüçñ") + ["", "", ""]]))
+    assert isinstance(grid[0].data, Key)
+
+    right_neighbours = kb.add_grid(
+        stbt.Grid(stbt.Region(x=915, y=465, right=1040, bottom=690),
+                  data=[["CAPS LOCK"],
+                        ["ABC123"],
+                        ["!?#$%&"],
+                        ["åéåøØ¡"]]))
+
+    for i in range(4):
+        kb.add_transition(grid[9, i].data, right_neighbours[0, i].data,
+                          "KEY_RIGHT")
+
+    assert [k for k, _ in
+            _keys_to_press(kb.G, kb.find_key("ß"), [kb.find_key("!?#$%&")])] \
+        == ["KEY_RIGHT"] * 3
 
 
 def test_that_keyboard_catches_errors_at_definition_time():
