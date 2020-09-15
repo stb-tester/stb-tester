@@ -46,10 +46,11 @@ def press_and_wait(
     :param stbt.Region region: Only look at the specified region of the video
         frame.
 
-    :param str mask: The filename of a black & white image that specifies which
+    :param mask: The filename of a black & white image that specifies which
         part of the video frame to look at. White pixels select the area to
         analyse; black pixels select the area to ignore. You can't specify
         ``region`` and ``mask`` at the same time.
+    :type mask: str or `stbt.Image` or `stbt.Region`
 
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of

@@ -70,8 +70,8 @@ class Keyboard(object):
         `add_transition`, `add_edgelist`, and `add_grid` to build the model of
         the keyboard.
 
-    :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :type mask: str or `numpy.ndarray` or `stbt.Region`
+    :param mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
         current selection has finished moving. If the search page has a
         blinking cursor you need to mask out the region where the cursor can
@@ -203,7 +203,7 @@ class Keyboard(object):
         self.modes = set()
 
         self.mask = None
-        if isinstance(mask, numpy.ndarray):
+        if isinstance(mask, (numpy.ndarray, Region)):
             self.mask = mask
         elif mask:
             self.mask = load_image(mask)
