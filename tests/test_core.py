@@ -50,6 +50,15 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
     assert f4.time == 1234
 
 
+@pytest.mark.parametrize("C", [stbt.Frame, stbt.Image])
+def test_slicing_a_frame_by_region(C):
+    f = C(numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
+    f[5:10, 5:10] = 1
+
+    r = stbt.Region(x=8, y=2, right=12, bottom=15)
+    assert numpy.array_equal(f[r], f[2:15, 8:12])
+
+
 def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in
     # ./subdirectory/test_load_image_from_subdirectory.py

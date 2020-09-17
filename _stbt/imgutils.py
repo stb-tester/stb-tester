@@ -48,6 +48,12 @@ class Frame(numpy.ndarray):
         self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
+    def __getitem__(self, key):
+        if isinstance(key, Region):
+            return crop(self, key)
+        else:
+            return super(Frame, self).__getitem__(key)
+
     def __repr__(self):
         if len(self.shape) == 3:
             dimensions = "%dx%dx%d" % (
@@ -109,6 +115,12 @@ class Image(numpy.ndarray):
         self.filename = getattr(obj, "filename", None)
         self.relative_filename = getattr(obj, "relative_filename", None)
         self.absolute_filename = getattr(obj, "absolute_filename", None)
+
+    def __getitem__(self, key):
+        if isinstance(key, Region):
+            return crop(self, key)
+        else:
+            return super(Image, self).__getitem__(key)
 
     def __repr__(self):
         if len(self.shape) == 3:
