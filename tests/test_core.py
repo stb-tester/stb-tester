@@ -101,16 +101,27 @@ def test_crop():
 
     # It's a view onto the same memory:
     assert cropped[0, 0, 0] == img[672, 1045, 0]
+    assert img[672, 1045, 0] != 0
     cropped[0, 0, 0] = 0
-    assert cropped[0, 0, 0] == img[672, 1045, 0]
+    assert img[672, 1045, 0] == 0
 
     assert img.filename == "action-panel.png"
     assert cropped.filename == img.filename
 
-    # Region must be inside the frame (unfortunately this means that you can't
-    # use stbt.Region.ALL):
+    # Region is clipped to the frame boundaries:
+    assert numpy.array_equal(
+        stbt.crop(img, stbt.Region(x=1045, y=672, right=1280, bottom=720)),
+        stbt.crop(img, stbt.Region(x=1045, y=672, right=1281, bottom=721)))
+    assert numpy.array_equal(
+        stbt.crop(img, stbt.Region(x=0, y=0, right=10, bottom=10)),
+        stbt.crop(img, stbt.Region(x=float("-inf"), y=float("-inf"),
+                                   right=10, bottom=10)))
+
+    # But a region entirely outside the frame is not allowed:
     with pytest.raises(ValueError):
-        stbt.crop(img, stbt.Region(x=1045, y=672, right=1281, bottom=721))
+        stbt.crop(img, None)
+    with pytest.raises(ValueError):
+        stbt.crop(img, stbt.Region(x=-10, y=-10, right=0, bottom=0))
 
 
 def test_region_intersect():

@@ -145,10 +145,11 @@ def crop(frame, region):
       of the source frame. This is a view onto the original data, so if you
       want to modify the cropped image call its ``copy()`` method first.
     """
-    if not _image_region(frame).contains(region):
-        raise ValueError("frame with dimensions %r doesn't contain %r"
-                         % (frame.shape, region))
-    return frame[region.y:region.bottom, region.x:region.right]
+    r = Region.intersect(region, _image_region(frame))
+    if r is None:
+        raise ValueError("%r is outside of frame dimensions %ix%i"
+                         % (region, frame.shape[1], frame.shape[0]))
+    return frame[r.y:r.bottom, r.x:r.right]
 
 
 def _image_region(image):
