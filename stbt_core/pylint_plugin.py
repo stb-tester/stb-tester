@@ -21,8 +21,8 @@ import re
 import subprocess
 
 from astroid import (
-    Assert, BinOp, Call, ClassDef, Const, Expr, FunctionDef, Keyword, MANAGER,
-    Name, Raise, Uninferable)
+    Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
+    Keyword, MANAGER, Name, Raise, Uninferable)
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
@@ -69,6 +69,12 @@ class StbtChecker(BaseChecker):
                   'stbt-assert-true',
                   '"assert True" has no effect; consider replacing it with a '
                   'comment or a call to "logging.info()".'),
+        'E7009': ('FrameObject "refresh()" doesn\'t modify "%s" instance',
+                  'stbt-frame-object-refresh',
+                  "FrameObjects are immutable, so \"refresh()\" doesn't modify "
+                  "the instance you call it on; it returns a new instance. "
+                  'For example, instead of "page.refresh()" you need to use '
+                  '"page = page.refresh()".'),
     }
 
     def visit_const(self, node):
@@ -130,6 +136,13 @@ class StbtChecker(BaseChecker):
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
 
+        if isinstance(node.func, Attribute) and node.func.attrname == "refresh":
+            for c in _infer(node.func.expr):
+                if _is_frameobject(c._proxied):  # pylint:disable=protected-access
+                    if isinstance(node.parent, Expr):  # not an assignment
+                        self.add_message('E7009', node=node,
+                                         args=node.func.expr.as_string())
+
     def visit_assert(self, assertion):
         if isinstance(assertion.test, Const) and assertion.test.value is True:
             if assertion.fail:
@@ -172,12 +185,16 @@ def _is_callable(node):
 
 def _in_frameobject(node):
     while node is not None:
-        if isinstance(node, ClassDef):
-            if "_stbt.frameobject.FrameObject" in [
-                    base.qname() for base in node.ancestors()]:
-                return True
+        if _is_frameobject(node):
+            return True
         node = node.parent
     return False
+
+
+def _is_frameobject(node):
+    return (isinstance(node, ClassDef) and
+            "_stbt.frameobject.FrameObject" in [base.qname()
+                                                for base in node.ancestors()])
 
 
 def _in_property(node):

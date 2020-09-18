@@ -128,7 +128,7 @@ test_that_stbt_lint_checks_uses_of_stbt_return_values() {
     cat > test.py <<-EOF &&
 	import re, stbt_core as stbt
 	from stbt_core import (is_screen_black, match, match_text, ocr, press,
-	                  press_and_wait, wait_until)
+	                       press_and_wait, wait_until)
 	
 	def test_something():
 	    assert wait_until(lambda: True)
@@ -257,8 +257,10 @@ test_that_stbt_lint_checks_frameobjects() {
 	            return stbt.wait_until(
 	                lambda: stbt.match("videotestsrc-redblue.png"))
 	
-	def normal_test():
-	    assert stbt.match("videotestsrc-redblue.png")
+	def my_test():
+	    page = Good()
+	    page.refresh()
+	    page = page.refresh()
 	EOF
     cp "$testdir/videotestsrc-redblue.png" .
     $stbt_lint --errors-only test.py > lint.log
@@ -276,6 +278,7 @@ test_that_stbt_lint_checks_frameobjects() {
 	E: 30,12: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	E: 34,38: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
 	E: 36,32: FrameObject properties must use "self._frame", not "get_frame()" (stbt-frame-object-get-frame)
+	E: 60, 4: FrameObject "refresh()" doesn't modify "page" instance (stbt-frame-object-refresh)
 	EOF
     assert_lint_log < expected.log
 
