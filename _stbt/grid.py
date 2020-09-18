@@ -8,8 +8,6 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 from collections import namedtuple
 
-import networkx as nx
-
 from .types import Position, Region
 from .utils import native_int
 
@@ -224,52 +222,3 @@ class Grid(object):
         else:
             raise IndexError("Index out of range: position %r in %r" %
                              (position, self))
-
-
-def grid_to_navigation_graph(grid):
-    """Generate a Graph that describes navigation between cells in the grid.
-
-    Creates a `networkx.DiGraph` (`Directed Graph`_) that models cells in the
-    grid as nodes in the graph. Each edge in the graph has a ``key`` attribute
-    set to "KEY_LEFT", "KEY_RIGHT", "KEY_UP", or "KEY_DOWN", corresponding to
-    the keypress that will move a selection from one node to another.
-
-    :param Grid grid: The grid to model. If the Grid has data associated
-        with the cells, each node in the graph will be named with the
-        corresponding cell's ``data``; otherwise the nodes are numbered
-        according to the cell's ``index``. This means that the cell's ``data``
-        must be `hashable`_ so that it can be used as a `networkx` node.
-
-    :returns: A `networkx.DiGraph`.
-
-    For example, to create a graph suitable as the ``graph`` parameter of
-    `stbt.Keyboard`::
-
-        grid = stbt.Grid(region, data=["ABCDEFG",
-                                       "HIJKLMN",
-                                       "OPQRSTU",
-                                       "VWXYZ-'"])
-        keyboard = stbt.Keyboard(grid_to_navigation_graph(grid))
-
-    .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
-    .. _hashable: https://docs.python.org/3.6/glossary.html#term-hashable
-    """
-    G = nx.DiGraph()
-
-    def name(c):
-        if c.data is None:
-            return c.index
-        else:
-            return c.data
-
-    for cell in grid:
-        x, y = cell.position
-        if x > 0:
-            G.add_edge(name(cell), name(grid[x - 1, y]), key="KEY_LEFT")
-        if x < grid.cols - 1:
-            G.add_edge(name(cell), name(grid[x + 1, y]), key="KEY_RIGHT")
-        if y > 0:
-            G.add_edge(name(cell), name(grid[x, y - 1]), key="KEY_UP")
-        if y < grid.rows - 1:
-            G.add_edge(name(cell), name(grid[x, y + 1]), key="KEY_DOWN")
-    return G

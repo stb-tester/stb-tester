@@ -12,6 +12,9 @@ UNRELEASED
 
 ##### Major new features
 
+* Keyboard: Support keyboards with multiple modes (for example lowercase,
+  uppercase, and symbols).
+
 * New Python API `last_keypress()`: Returns information about the last
   key-press sent to the device under test.
 
@@ -46,6 +49,15 @@ UNRELEASED
   been deprecated for at least 6 years. This doesn't apply to Stb-tester.com
   customers, who never had this behaviour.
 
+* Keyboard: Changed the internal representation of the Directed Graph.
+  Manipulating the networkx graph directly is no longer supported. Removed
+  `Keyboard.parse_edgelist` and `grid_to_navigation_graph`. Instead, first
+  create the Keyboard object, and then use its `add_key`, `add_transition`,
+  `add_edgelist`, and `add_grid` methods to build the model of the keyboard.
+  Also removed the `Keyboard.Selection` type. Instead, your Page Object's
+  `selection` property should return a Key value obtained from
+  `Keyboard.find_key`.
+
 * is_screen_black: Increase default threshold to 20. This doesn't apply to
   Stb-tester.com customers, who were all already using the new threshold. To
   keep the old default, set `threshold = 10` in the `[is_screen_black]` section
@@ -63,9 +75,10 @@ UNRELEASED
 * get_config: Allow `None` as a default value.
 
 * Keyboard:
-  * The edgelist format now allows key names with "#" in them (previously they
-    were treated as comments).
-  * `enter_text` adds a 1s inter-press delay when entering the same letter
+  * The edgelist format now allows key names with "#" in them. Previously
+    anything starting with "#" was treated as a comment. Now comments are lines
+    starting with "###" (three hashes), optionally preceded by whitespace.
+  * `enter_text` adds a short inter-press delay when entering the same letter
     twice, because some keyboard implementations ignore the second keypress if
     pressed too quickly.
 
@@ -77,8 +90,9 @@ UNRELEASED
     of `numpy.ndarray` with the additional attributes `filename`,
     `absolute_filename`, and `relative_filename`.
 
-* match: Disable pyramid optimisation if too few non-transparent pixels, to
-  avoid false negatives with small, mostly transparent, reference images.
+* match: Disable pyramid optimisation if the reference image has too few
+  non-transparent pixels, to avoid false negatives with small, mostly
+  transparent, reference images.
 
 * Fix `from stbt_core import *` with Python 2.7.
 

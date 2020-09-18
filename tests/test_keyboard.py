@@ -6,7 +6,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
-import sys
+import logging
+import re
 
 import networkx as nx
 import numpy
@@ -18,445 +19,807 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import _add_weights, _keys_to_press
+from _stbt.keyboard import Key, _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
+from _stbt.utils import py3
+
+# pylint:disable=redefined-outer-name
 
 
-GRAPH = """
-    A B KEY_RIGHT
-    A H KEY_DOWN
-    B A KEY_LEFT
-    B C KEY_RIGHT
-    B I KEY_DOWN
-    C B KEY_LEFT
-    C D KEY_RIGHT
-    C J KEY_DOWN
-    D C KEY_LEFT
-    D E KEY_RIGHT
-    D K KEY_DOWN
-    E D KEY_LEFT
-    E F KEY_RIGHT
-    E L KEY_DOWN
-    F E KEY_LEFT
-    F G KEY_RIGHT
-    F M KEY_DOWN
-    G F KEY_LEFT
-    G N KEY_DOWN
-    H I KEY_RIGHT
-    H A KEY_UP
-    H O KEY_DOWN
-    I H KEY_LEFT
-    I J KEY_RIGHT
-    I B KEY_UP
-    I P KEY_DOWN
-    J I KEY_LEFT
-    J K KEY_RIGHT
-    J C KEY_UP
-    J Q KEY_DOWN
-    K J KEY_LEFT
-    K L KEY_RIGHT
-    K D KEY_UP
-    K R KEY_DOWN
-    L K KEY_LEFT
-    L M KEY_RIGHT
-    L E KEY_UP
-    L S KEY_DOWN
-    M L KEY_LEFT
-    M N KEY_RIGHT
-    M F KEY_UP
-    M T KEY_DOWN
-    N M KEY_LEFT
-    N G KEY_UP
-    N U KEY_DOWN
-    O P KEY_RIGHT
-    O H KEY_UP
-    O V KEY_DOWN
-    P O KEY_LEFT
-    P Q KEY_RIGHT
-    P I KEY_UP
-    P W KEY_DOWN
-    Q P KEY_LEFT
-    Q R KEY_RIGHT
-    Q J KEY_UP
-    Q X KEY_DOWN
-    R Q KEY_LEFT
-    R S KEY_RIGHT
-    R K KEY_UP
-    R Y KEY_DOWN
-    S R KEY_LEFT
-    S T KEY_RIGHT
-    S L KEY_UP
-    S Z KEY_DOWN
-    T S KEY_LEFT
-    T U KEY_RIGHT
-    T M KEY_UP
-    T - KEY_DOWN
-    U T KEY_LEFT
-    U N KEY_UP
-    U ' KEY_DOWN
-    V W KEY_RIGHT
-    V O KEY_UP
-    V SPACE KEY_DOWN
-    W V KEY_LEFT
-    W X KEY_RIGHT
-    W P KEY_UP
-    W SPACE KEY_DOWN
-    X W KEY_LEFT
-    X Y KEY_RIGHT
-    X Q KEY_UP
-    X SPACE KEY_DOWN
-    Y X KEY_LEFT
-    Y Z KEY_RIGHT
-    Y R KEY_UP
-    Y SPACE KEY_DOWN
-    Z Y KEY_LEFT
-    Z - KEY_RIGHT
-    Z S KEY_UP
-    Z SPACE KEY_DOWN
-    - Z KEY_LEFT
-    - ' KEY_RIGHT
-    - T KEY_UP
-    - SPACE KEY_DOWN
-    ' - KEY_LEFT
-    ' U KEY_UP
-    ' SPACE KEY_DOWN
-    SPACE CLEAR KEY_RIGHT
-    SPACE V KEY_UP
-    SPACE W KEY_UP
-    SPACE X KEY_UP
-    SPACE Y KEY_UP
-    SPACE Z KEY_UP
-    SPACE - KEY_UP
-    SPACE ' KEY_UP
-    CLEAR SPACE KEY_LEFT
-    CLEAR SEARCH KEY_RIGHT
-    CLEAR V KEY_UP
-    CLEAR W KEY_UP
-    CLEAR X KEY_UP
-    CLEAR Y KEY_UP
-    CLEAR Z KEY_UP
-    CLEAR - KEY_UP
-    CLEAR ' KEY_UP
-    SEARCH CLEAR KEY_LEFT
-    SEARCH V KEY_UP
-    SEARCH W KEY_UP
-    SEARCH X KEY_UP
-    SEARCH Y KEY_UP
-    SEARCH Z KEY_UP
-    SEARCH - KEY_UP
-    SEARCH ' KEY_UP
-"""
-G = stbt.Keyboard.parse_edgelist(GRAPH)
-nx.relabel_nodes(G, {"SPACE": " "}, copy=False)
-
-if sys.version_info.major == 2:
-    G_BYTES = stbt.Keyboard.parse_edgelist(GRAPH.encode('utf-8'))
-    nx.relabel_nodes(G_BYTES, {b"SPACE": b" "}, copy=False)
-    GRAPHS = [G, G_BYTES]
-else:
-    GRAPHS = [G]
+python2_only = pytest.mark.skipif(py3, reason="This test requires Python 2")
 
 
-@pytest.mark.parametrize("g", GRAPHS)
-def test_keys_to_press(g):
-    assert list(_keys_to_press(g, "A", "A")) == []
-    assert list(_keys_to_press(g, "A", "B")) == [("KEY_RIGHT", {"B"})]
-    assert list(_keys_to_press(g, "B", "A")) == [("KEY_LEFT", {"A"})]
-    assert list(_keys_to_press(g, "A", "C")) == [("KEY_RIGHT", {"B"}),
-                                                 ("KEY_RIGHT", {"C"})]
-    assert list(_keys_to_press(g, "C", "A")) == [("KEY_LEFT", {"B"}),
-                                                 ("KEY_LEFT", {"A"})]
-    assert list(_keys_to_press(g, "A", "H")) == [("KEY_DOWN", {"H"})]
-    assert list(_keys_to_press(g, "H", "A")) == [("KEY_UP", {"A"})]
-    assert list(_keys_to_press(g, "A", "I")) in (
-        [("KEY_RIGHT", {"B"}), ("KEY_DOWN", {"I"})],
-        [("KEY_DOWN", {"H"}), ("KEY_RIGHT", {"I"})])
-    assert list(_keys_to_press(g, " ", "A")) == [
-        ("KEY_UP", {"V", "W", "X", "Y", "Z", "-", "'"})]
+class DUT(object):
+    """Fake keyboard implementation ("Device Under Test").
 
-
-def test_add_weights():
-    G = nx.parse_edgelist(  # pylint:disable=redefined-outer-name
-        """ W SPACE KEY_DOWN
-            X SPACE KEY_DOWN
-            Y SPACE KEY_DOWN
-            Z SPACE KEY_DOWN
-            SPACE W KEY_UP
-            SPACE X KEY_UP
-            SPACE Y KEY_UP
-            SPACE Z KEY_UP
-            W X KEY_RIGHT
-            X Y KEY_RIGHT
-            Y Z KEY_RIGHT""".split("\n"),
-        create_using=nx.DiGraph(),
-        data=[("key", str)])
-
-    # This is the bug:
-    assert nx.shortest_path(G, "W", "Z") == ["W", "SPACE", "Z"]
-
-    # And this is how we fix it:
-    _add_weights(G)
-    assert nx.shortest_path(G, "W", "Z", weight="weight") == [
-        "W", "X", "Y", "Z"]
-
-
-class _Keyboard(stbt.FrameObject):
-    """Immutable FrameObject representing the test's view of the Device Under
-    Test (``dut``).
-
-    The keyboard looks like this::
-
-        A  B  C  D  E  F  G
-        H  I  J  K  L  M  N
-        O  P  Q  R  S  T  U
-        V  W  X  Y  Z  -  '
-         SPACE  CLEAR  SEARCH
-
+    Behaves like the YouTube Search keyboard on Apple TV.
     """
-    def __init__(self, dut):
-        super(_Keyboard, self).__init__(
+    def __init__(self):
+        self.x = 0
+        self.y = 1
+        self.modes = ["lowercase", "uppercase", "symbols"]
+        self.mode = self.modes[0]
+        self.symbols_is_shift = False
+        self.keys = {
+            "lowercase": [
+                ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+                "abcdef",
+                "ghijkl",
+                "mnopqr",
+                "stuvwx",
+                "yz1234",
+                "567890",
+                [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+            ],
+            "uppercase": [
+                ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+                "ABCDEF",
+                "GHIJKL",
+                "MNOPQR",
+                "STUVWX",
+                "YZ1234",
+                "567890",
+                [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+            ],
+            "symbols": [
+                ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+                "!@#$%&",
+                "~*\\/?^",
+                "_`;:|=",
+                "éñ[]{}",
+                "çü.,+-",
+                "<>()'\"",
+                [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+            ]
+        }
+        self.pressed = []
+        self.entered = ""
+
+    @property
+    def selection(self):
+        k = self.keys[self.mode][self.y][self.x]
+        if self.symbols_is_shift and k == "symbols":
+            return "shift"
+        else:
+            return k
+
+    def handle_press(self, keypress):
+        self.pressed.append(keypress)
+        mode = self.mode
+        selected = self.selection
+        logging.debug("DUT.handle_press: Pressed %s", keypress)
+        if keypress == "KEY_OK":
+            if self.symbols_is_shift and selected == "shift":
+                if self.mode == "lowercase":
+                    self.mode = "uppercase"
+                else:
+                    self.mode = "lowercase"
+            elif (not self.symbols_is_shift) and selected in self.modes:
+                self.mode = selected
+            elif len(selected) == 1:  # It's a letter
+                self.entered += selected
+                if self.symbols_is_shift and self.mode == "uppercase":
+                    self.mode = "lowercase"
+            else:
+                assert False, "Unexpected %s on %r" % (keypress, selected)
+        elif keypress == "KEY_UP":
+            if self.y == 0:
+                assert False, "Unexpected %s on %r" % (keypress, selected)
+            else:
+                self.y -= 1
+        elif keypress == "KEY_DOWN":
+            if self.y == 7:
+                assert False, "Unexpected %s on %r" % (keypress, selected)
+            else:
+                self.y += 1
+        elif keypress == "KEY_LEFT":
+            if self.x == 0 or (self.x == 1 and self.y in [0, 7]):
+                assert False, "Unexpected %s on %r" % (keypress, selected)
+            elif self.y in [0, 7]:
+                # x:   012345
+                # x%2: 010101
+                if self.x % 2 == 0:
+                    self.x -= 2
+                else:
+                    self.x -= 1
+            else:
+                self.x -= 1
+        elif keypress == "KEY_RIGHT":
+            if self.x == 5 or (self.x == 4 and self.y in [0, 7]):
+                assert False, "Unexpected %s on %r" % (keypress, selected)
+            elif self.y in [0, 7]:
+                # x:   012345
+                # x%2: 010101
+                if self.x % 2 == 0:
+                    self.x += 2
+                else:
+                    self.x += 1
+            else:
+                self.x += 1
+        else:
+            assert False, "Unexpected %s on %r" % (keypress, selected)
+        logging.debug("DUT.handle_press: Moved from %r (%s) to %r (%s)",
+                      selected, mode, self.selection, self.mode)
+
+    def handle_press_and_wait(self, key, **_kwargs):
+        self.handle_press(key)
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+
+class BuggyDUT(DUT):
+    def handle_press(self, keypress):
+        super(BuggyDUT, self).handle_press(keypress)
+        if keypress == "KEY_RIGHT" and self.selection == "b":
+            self.x += 1
+
+
+@pytest.fixture(scope="function")
+def dut():
+    dut = DUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+        yield dut
+
+
+@pytest.fixture(scope="function")
+def buggy_dut():
+    dut = BuggyDUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+        yield dut
+
+
+class SearchPage(stbt.FrameObject):
+    """Immutable Page Object representing the test's view of the DUT."""
+
+    def __init__(self, dut, kb):
+        super(SearchPage, self).__init__(
             frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
-        self._dut = dut  # Device Under Test -- i.e. ``YouTubeKeyboard``
-        self._selection = self._dut.selection
+        self.dut = dut
+        self.kb = kb
 
     @property
     def is_visible(self):
         return True
 
     @property
+    def mode(self):
+        if self.kb.modes:
+            return self.dut.mode
+        else:
+            return None
+
+    @property
     def selection(self):
-        return self._selection
+        # In practice this would use image processing to detect the current
+        # selection & mode, then look up the key by region & mode.
+        # See test_find_key_by_region for an example.
+        query = {}
+        if self.dut.selection == " ":
+            query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
+        else:
+            query = {"name": self.dut.selection}
+        if self.kb.modes:
+            query["mode"] = self.dut.mode
+        key = self.kb.find_key(**query)
+        logging.debug("SearchPage.selection: %r", key)
+        return key
 
     def refresh(self, frame=None, **kwargs):
-        print("_Keyboard.refresh: Now on %r" % self._dut.selection)
-        return _Keyboard(dut=self._dut)
-
-    KEYBOARD = stbt.Keyboard(GRAPH, navigate_timeout=0.1)
+        page = SearchPage(self.dut, self.kb)
+        logging.debug("SearchPage.refresh: Now on %r", page.selection)
+        return page
 
     def enter_text(self, text):
-        return self.KEYBOARD.enter_text(text.upper(), page=self)
+        return self.kb.enter_text(text, page=self)
 
     def navigate_to(self, target, verify_every_keypress=False):
-        return self.KEYBOARD.navigate_to(
-            target, page=self, verify_every_keypress=verify_every_keypress)
+        return self.kb.navigate_to(target, page=self,
+                                   verify_every_keypress=verify_every_keypress)
 
 
-class YouTubeKeyboard(object):
-    """Fake keyboard implementation for testing."""
+kb1 = stbt.Keyboard()  # Full model with modes, defined using Grids
+MODES_GRID = stbt.Grid(
+    region=stbt.Region(x=125, y=95, right=430, bottom=140),
+    data=[["lowercase", "uppercase", "symbols"]])
+MIDDLE_REGION = stbt.Region(x=125, y=140, right=430, bottom=445)
+MIDDLE_GRIDS = {
+    "lowercase": stbt.Grid(region=MIDDLE_REGION,
+                           data=[
+                               "abcdef",
+                               "ghijkl",
+                               "mnopqr",
+                               "stuvwx",
+                               "yz1234",
+                               "567890"]),
+    "uppercase": stbt.Grid(region=MIDDLE_REGION,
+                           data=[
+                               "ABCDEF",
+                               "GHIJKL",
+                               "MNOPQR",
+                               "STUVWX",
+                               "YZ1234",
+                               "567890"]),
+    "symbols": stbt.Grid(region=MIDDLE_REGION,
+                         data=[
+                             "!@#$%&",
+                             "~*\\/?^",
+                             "_`;:|=",
+                             "éñ[]{}",
+                             "çü.,+-",
+                             "<>()'\""])
+}
+BOTTOM_GRID = stbt.Grid(
+    region=stbt.Region(x=125, y=445, right=430, bottom=500),
+    data=[[" ", "BACKSPACE", "CLEAR"]])
+for mode in ["lowercase", "uppercase", "symbols"]:
+    kb1.add_grid(MODES_GRID, mode)
+    kb1.add_grid(MIDDLE_GRIDS[mode], mode)
+    kb1.add_grid(BOTTOM_GRID, mode)
 
-    def __init__(self):
-        self.selection = "A"
-        self.page = _Keyboard(dut=self)
-        self.pressed = []
-        self.entered = ""
-        # Pressing up from SPACE returns to the last letter we were at:
-        self.prev_state = "A"
+    # abc ABC #+-
+    # ↕ ↕ ↕ ↕ ↕ ↕
+    # a b c d e f
+    #
+    # Note that `add_transition` adds the symmetrical transition
+    # (KEY_UP) automatically.
+    g = MIDDLE_GRIDS[mode]
+    kb1.add_transition("lowercase", g[0, 0].data, "KEY_DOWN", mode)
+    kb1.add_transition("lowercase", g[1, 0].data, "KEY_DOWN", mode)
+    kb1.add_transition("uppercase", g[2, 0].data, "KEY_DOWN", mode)
+    kb1.add_transition("uppercase", g[3, 0].data, "KEY_DOWN", mode)
+    kb1.add_transition("symbols", g[4, 0].data, "KEY_DOWN", mode)
+    kb1.add_transition("symbols", g[5, 0].data, "KEY_DOWN", mode)
 
-    def press(self, key):
-        print("Pressed %s" % key)
-        self.pressed.append(key)
-        if key == "KEY_OK":
-            self.entered += self.selection
-        else:
-            next_states = [
-                t for _, t, k in G.edges(self.selection, data="key")
-                if k == key]
-            if self.prev_state in next_states:
-                next_state = self.prev_state
-            else:
-                next_state = next_states[0]
-            if self.selection not in (" ", "CLEAR", "SEARCH"):
-                self.prev_state = self.selection
-            self.selection = next_state
+    # 5 6 7 8 9 0
+    # ↕ ↕ ↕ ↕ ↕ ↕
+    # SPC DEL CLR
+    kb1.add_transition(g[0, 5].data, " ", "KEY_DOWN", mode)
+    kb1.add_transition(g[1, 5].data, " ", "KEY_DOWN", mode)
+    kb1.add_transition(g[2, 5].data, "BACKSPACE", "KEY_DOWN", mode)
+    kb1.add_transition(g[3, 5].data, "BACKSPACE", "KEY_DOWN", mode)
+    kb1.add_transition(g[4, 5].data, "CLEAR", "KEY_DOWN", mode)
+    kb1.add_transition(g[5, 5].data, "CLEAR", "KEY_DOWN", mode)
 
-    def press_and_wait(self, key, **kwargs):  # pylint:disable=unused-argument
-        self.press(key)
-        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+# Mode changes: For example when "ABC" is selected and we are in
+# lowercase mode, pressing OK takes us to "ABC" still selected
+# but the keyboard is now in uppercase mode.
+for source_mode in ["lowercase", "uppercase", "symbols"]:
+    for target_mode in ["lowercase", "uppercase", "symbols"]:
+        kb1.add_transition({"name": target_mode, "mode": source_mode},
+                           {"name": target_mode, "mode": target_mode},
+                           "KEY_OK")
+
+kb2 = stbt.Keyboard()  # uppercase & lowercase modes, defined from edgelist
+edgelists = {
+    "lowercase": """
+        lowercase uppercase KEY_RIGHT
+        uppercase symbols KEY_RIGHT
+        a lowercase KEY_UP
+        b lowercase KEY_UP
+        c uppercase KEY_UP
+        d uppercase KEY_UP
+        e symbols KEY_UP
+        f symbols KEY_UP
+        a b KEY_RIGHT
+        b c KEY_RIGHT
+        c d KEY_RIGHT
+        d e KEY_RIGHT
+        e f KEY_RIGHT
+        g h KEY_RIGHT
+        h i KEY_RIGHT
+        i j KEY_RIGHT
+        j k KEY_RIGHT
+        k l KEY_RIGHT
+        m n KEY_RIGHT
+        n o KEY_RIGHT
+        o p KEY_RIGHT
+        p q KEY_RIGHT
+        q r KEY_RIGHT
+        s t KEY_RIGHT
+        t u KEY_RIGHT
+        u v KEY_RIGHT
+        v w KEY_RIGHT
+        w x KEY_RIGHT
+        y z KEY_RIGHT
+        z 1 KEY_RIGHT
+        1 2 KEY_RIGHT
+        2 3 KEY_RIGHT
+        3 4 KEY_RIGHT
+        5 6 KEY_RIGHT
+        6 7 KEY_RIGHT
+        7 8 KEY_RIGHT
+        8 9 KEY_RIGHT
+        9 0 KEY_RIGHT
+        a g KEY_DOWN
+        b h KEY_DOWN
+        c i KEY_DOWN
+        d j KEY_DOWN
+        e k KEY_DOWN
+        f l KEY_DOWN
+        g m KEY_DOWN
+        h n KEY_DOWN
+        i o KEY_DOWN
+        j p KEY_DOWN
+        k q KEY_DOWN
+        l r KEY_DOWN
+        m s KEY_DOWN
+        n t KEY_DOWN
+        o u KEY_DOWN
+        p v KEY_DOWN
+        q w KEY_DOWN
+        r x KEY_DOWN
+        s y KEY_DOWN
+        t z KEY_DOWN
+        u 1 KEY_DOWN
+        v 2 KEY_DOWN
+        w 3 KEY_DOWN
+        x 4 KEY_DOWN
+        y 5 KEY_DOWN
+        z 6 KEY_DOWN
+        1 7 KEY_DOWN
+        2 8 KEY_DOWN
+        3 9 KEY_DOWN
+        4 0 KEY_DOWN
+        5 SPACE KEY_DOWN
+        6 SPACE KEY_DOWN
+        7 BACKSPACE KEY_DOWN
+        8 BACKSPACE KEY_DOWN
+        9 CLEAR KEY_DOWN
+        0 CLEAR KEY_DOWN
+        SPACE BACKSPACE KEY_RIGHT
+        BACKSPACE CLEAR KEY_RIGHT
+    """,
+}
+edgelists["uppercase"] = re.sub(r"\b[a-z]\b", lambda m: m.group(0).upper(),
+                                edgelists["lowercase"])
+kb2.add_edgelist(edgelists["lowercase"], mode="lowercase")
+kb2.add_edgelist(edgelists["uppercase"], mode="uppercase")
+# Mode changes: For example when "ABC" is selected and we are in
+# lowercase mode, pressing OK takes us to "ABC" still selected
+# but the keyboard is now in uppercase mode.
+kb2.add_transition({"mode": "lowercase", "name": "uppercase"},
+                   {"mode": "uppercase", "name": "uppercase"},
+                   "KEY_OK")
+kb2.add_transition({"mode": "uppercase", "name": "lowercase"},
+                   {"mode": "lowercase", "name": "lowercase"},
+                   "KEY_OK")
+
+kb3 = stbt.Keyboard()  # Simple keyboard, lowercase only
+kb3.add_edgelist(edgelists["lowercase"])
+
+kb3_bytes = stbt.Keyboard()  # To test add_edgelist with bytes
+if not py3:
+    kb3_bytes.add_edgelist(edgelists["lowercase"].encode("utf-8"))
+
+# Lowercase + shift (no caps lock).
+# This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
+# key; and the other mode keys have no effect.
+kb4 = stbt.Keyboard()
+kb4.add_edgelist(edgelists["lowercase"].replace("symbols", "shift"),
+                 mode="lowercase")
+kb4.add_edgelist(edgelists["uppercase"].replace("symbols", "shift"),
+                 mode="uppercase")
+kb4.add_transition({"mode": "lowercase", "name": "shift"},
+                   {"mode": "uppercase", "name": "shift"},
+                   "KEY_OK")
+kb4.add_transition({"mode": "uppercase", "name": "shift"},
+                   {"mode": "lowercase", "name": "shift"},
+                   "KEY_OK")
+# Pressing OK on a letter when shifted goes to lowercase mode (as well as
+# entering that letter).
+for k in "abcdefghijklmnopqrstuvwxzy1234567890":
+    kb4.add_transition({"mode": "uppercase", "name": k.upper()},
+                       {"mode": "lowercase", "name": k},
+                       "KEY_OK")
 
 
-class BuggyKeyboard(YouTubeKeyboard):
-    def press(self, key):
-        super(BuggyKeyboard, self).press(key)
-        if key == "KEY_RIGHT" and self.selection == "B":
-            self.selection = "C"
+@pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
+def test_enter_text_mixed_case(dut, kb):
+    logging.debug("Keys: %r", kb.G.nodes())
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
+    assert page.selection.text == "a"
+    assert page.selection.mode == "lowercase"
+    page = page.enter_text("Hi there")
+    assert page.selection.name == "e"
+    assert dut.entered == "Hi there"
 
 
-@pytest.fixture(scope="function")
-def youtubekeyboard():
-    kb = YouTubeKeyboard()
-    with mock.patch("stbt_core.press", kb.press), \
-            mock.patch("stbt_core.press_and_wait", kb.press_and_wait):
-        yield kb
-
-
-@pytest.fixture(scope="function")
-def buggykeyboard():
-    """Pressing KEY_RIGHT from A skips over B and lands on C.
-
-    Note that the model we specify in our test-scripts still thinks that
-    KEY_RIGHT should land on B. This simulates a bug in the device-under-test,
-    not in the test-scripts.
-    """
-    kb = BuggyKeyboard()
-    with mock.patch("stbt_core.press", kb.press), \
-            mock.patch("stbt_core.press_and_wait", kb.press_and_wait):
-        yield kb
-
-
-def test_enter_text(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    page = youtubekeyboard.page
-    assert page.selection == "A"
+@pytest.mark.parametrize("kb",
+                         [kb1,
+                          kb2,
+                          kb3,
+                          pytest.param(kb3_bytes, marks=python2_only)],
+                         ids=["kb1", "kb2", "kb3", "kb3_bytes"])
+def test_enter_text_single_case(dut, kb):
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
     page = page.enter_text("hi there")
-    assert page.selection == "E"
-    assert youtubekeyboard.entered == "HI THERE"
+    assert page.selection.name == "e"
+    assert dut.entered == "hi there"
 
 
-def test_that_enter_text_uses_minimal_keypresses(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    page = youtubekeyboard.page
-    assert page.selection == "A"
-    page.enter_text("HI")
-    assert youtubekeyboard.pressed == ["KEY_DOWN", "KEY_OK",
-                                       "KEY_RIGHT", "KEY_OK"]
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_that_enter_text_uses_minimal_keypresses(dut, kb):
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
+    page.enter_text("gh")
+    assert dut.pressed == ["KEY_DOWN", "KEY_OK",
+                           "KEY_RIGHT", "KEY_OK"]
 
 
-def test_that_keyboard_validates_the_targets(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    page = youtubekeyboard.page
-    with pytest.raises(ValueError):
-        page.enter_text("ABCÑ")
-    assert youtubekeyboard.pressed == []
-    with pytest.raises(ValueError):
-        page.navigate_to("Ñ")
-    assert youtubekeyboard.pressed == []
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_enter_text_twice(dut, kb):
+    """This is really a test of your Page Object's implementation of enter_text.
+
+    You must return the updated page instance.
+    """
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
+    page = page.enter_text("g")
+    page = page.enter_text("h")
+    assert dut.pressed == ["KEY_DOWN", "KEY_OK",
+                           "KEY_RIGHT", "KEY_OK"]
 
 
-def test_navigate_to(youtubekeyboard):  # pylint:disable=redefined-outer-name
-    page = youtubekeyboard.page
-    assert page.selection == "A"
-    page = page.navigate_to("SEARCH")
-    assert page.selection == "SEARCH"
-    assert youtubekeyboard.pressed == ["KEY_DOWN"] * 4 + ["KEY_RIGHT"] * 2
+def test_that_enter_text_finds_keys_by_text(dut):
+    kb = stbt.Keyboard()
+    a, g, m, s, y, five = [kb.add_key(x) for x in "agmsy5"]
+    space = kb.add_key("SPACE", text=" ")
+    for k1, k2 in zip([a, g, m, s, y, five], [g, m, s, y, five, space]):
+        kb.add_transition(k1, k2, "KEY_DOWN")
+
+    page = SearchPage(dut, kb)
+    page = page.enter_text(" ")
+    assert page.selection.name == "SPACE"
+    assert dut.entered == " "
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_navigate_to(dut, kb):
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
+    page = page.navigate_to("CLEAR")
+    assert page.selection.name == "CLEAR"
+    assert dut.pressed == ["KEY_DOWN"] * 6 + ["KEY_RIGHT"] * 2
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
+def test_navigate_to_other_mode(dut, kb):
+    page = SearchPage(dut, kb)
+    assert page.selection.name == "a"
+    assert page.selection.mode == "lowercase"
+    page = page.navigate_to({"name": "CLEAR", "mode": "uppercase"})
+    assert page.selection.name == "CLEAR"
+    assert page.selection.mode == "uppercase"
+    assert dut.pressed == ["KEY_UP", "KEY_RIGHT", "KEY_OK", "KEY_RIGHT"] + \
+                          ["KEY_DOWN"] * 7
 
 
 @pytest.mark.parametrize("target,verify_every_keypress,num_presses", [
-    ("B", False, 1),
-    ("B", True, 1),
-    ("C", False, 2),
-    ("C", True, 1),
+    ("b", False, 1),
+    ("b", True, 1),
+    ("c", False, 2),
+    ("c", True, 1),
 ])
-def test_that_navigate_to_checks_target(
-        buggykeyboard, target, verify_every_keypress, num_presses):  # pylint:disable=redefined-outer-name
-    """buggykeyboard skips the B when pressing right from A (and lands on C)."""
-    page = buggykeyboard.page
-    assert page.selection == "A"
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_that_navigate_to_checks_target(buggy_dut, kb, target,
+                                        verify_every_keypress, num_presses):
+    """buggy_dut skips the B when pressing right from A (and lands on C)."""
+    page = SearchPage(buggy_dut, kb)
+    assert page.selection.name == "a"
     with pytest.raises(AssertionError):
         page.navigate_to(target, verify_every_keypress)
-    assert buggykeyboard.pressed == ["KEY_RIGHT"] * num_presses
+    assert buggy_dut.pressed == ["KEY_RIGHT"] * num_presses
 
 
-def test_composing_complex_keyboards():
-    """The YouTube keyboard on Roku looks like this::
-
-        A  B  C  D  E  F  G
-        H  I  J  K  L  M  N
-        O  P  Q  R  S  T  U
-        V  W  X  Y  Z  -  '
-         SPACE  CLEAR  SEARCH
-
-    The first 4 rows behave normally within themselves. The bottom row behaves
-    normally within itself. But navigating to or from the bottom row is a bit
-    irregular: No matter what column you're in, when you press KEY_DOWN you
-    always land on SPACE. Then when you press KEY_UP, you go back to the column
-    you were last on -- even if you had pressed KEY_RIGHT/KEY_LEFT to move
-    within the bottom row. It's almost like they're two separate state
-    machines, and we can model them as such, with a few explicit connections
-    between the two.
-    """
-    letters = stbt.Grid(stbt.Region(x=540, y=100, right=840, bottom=280),
-                        data=["ABCDEFG",
-                              "HIJKLMN",
-                              "OPQRSTU",
-                              "VWXYZ-'"])
-    space_row = stbt.Grid(stbt.Region(x=540, y=280, right=840, bottom=330),
-                          data=[[" ", "CLEAR", "SEARCH"]])
-
-    # Technique #0: Write the entire edgelist manually (as per previous tests)
-    K0 = stbt.Keyboard(GRAPH)
-
-    # Technique #1: Manipulate the graph (manually or programmatically) directly
-    G1 = nx.compose(stbt.grid_to_navigation_graph(letters),
-                    stbt.grid_to_navigation_graph(space_row))
-    # Pressing down from the bottom row always goes to SPACE:
-    for k in letters.data[-1]:
-        G1.add_edge(k, " ", key="KEY_DOWN")
-    # Pressing back up from the space/clear/search row can go to any column
-    # in the bottom row:
-    for k in space_row.data[0]:
-        for j in letters.data[-1]:
-            G1.add_edge(k, j, key="KEY_UP")
-    K1 = stbt.Keyboard(G1)
-
-    assert sorted(K0.G.edges(data=True)) == sorted(K1.G.edges(data=True))
-
-    # Technique #2: Use manually-written edgelist only for the irregular edges
-    # Note that Keyboard.__init__ will normalise "SPACE" -> " " so it doesn't
-    # matter if the 3 different graphs have different representations for
-    # "SPACE".
-    connections = stbt.Keyboard.parse_edgelist("""
-        V SPACE KEY_DOWN
-        W SPACE KEY_DOWN
-        X SPACE KEY_DOWN
-        Y SPACE KEY_DOWN
-        Z SPACE KEY_DOWN
-        - SPACE KEY_DOWN
-        ' SPACE KEY_DOWN
-        SPACE V KEY_UP
-        SPACE W KEY_UP
-        SPACE X KEY_UP
-        SPACE Y KEY_UP
-        SPACE Z KEY_UP
-        SPACE - KEY_UP
-        SPACE ' KEY_UP
-        CLEAR V KEY_UP
-        CLEAR W KEY_UP
-        CLEAR X KEY_UP
-        CLEAR Y KEY_UP
-        CLEAR Z KEY_UP
-        CLEAR - KEY_UP
-        CLEAR ' KEY_UP
-        SEARCH V KEY_UP
-        SEARCH W KEY_UP
-        SEARCH X KEY_UP
-        SEARCH Y KEY_UP
-        SEARCH Z KEY_UP
-        SEARCH - KEY_UP
-        SEARCH ' KEY_UP
-    """)
-    G2 = nx.compose_all([stbt.grid_to_navigation_graph(letters),
-                         stbt.grid_to_navigation_graph(space_row),
-                         connections])
-    K2 = stbt.Keyboard(G2)
-
-    assert sorted(K0.G.edges(data=True)) == sorted(K2.G.edges(data=True))
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
+    page = SearchPage(dut, kb)
+    with pytest.raises(ValueError):
+        page.enter_text("abcÑ")
+    assert dut.pressed == []
+    with pytest.raises(ValueError):
+        page.navigate_to("Ñ")
+    assert dut.pressed == []
 
 
-def test_keyboard_with_hash_sign():
+def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
+    page = SearchPage(dut, kb4)
+    dut.symbols_is_shift = True
+    dut.mode = "uppercase"
+    assert page.selection.name == "A"
+    assert page.selection.mode == "uppercase"
+    page = page.navigate_to("a")
+    assert page.selection.name == "a"
+    assert page.selection.mode == "lowercase"
+    assert dut.entered == ""
+
+
+def test_that_enter_text_recalculates_after_shift_transitions(dut):
+    print(edgelists["uppercase"])
+    page = SearchPage(dut, kb4)
+    dut.symbols_is_shift = True
+    assert page.selection.name == "a"
+    assert page.selection.mode == "lowercase"
+    page = page.enter_text("Aa")
+    assert dut.entered == "Aa"
+    assert dut.pressed == [
+        "KEY_UP", "KEY_RIGHT", "KEY_RIGHT", "KEY_OK",  # shift
+        "KEY_LEFT", "KEY_LEFT", "KEY_DOWN", "KEY_OK",  # A
+        "KEY_OK"  # a
+    ]
+
+
+def test_edgelist_with_hash_sign():
     """Regression test. `networkx.parse_edgelist` treats "#" as a comment."""
-    kb = stbt.Keyboard("""
+    kb = stbt.Keyboard()
+    kb.add_edgelist("""
+        ### three hashes for a comment
         @hotmail.com !#$ KEY_DOWN
         @hotmail.com @ KEY_DOWN
         @ # KEY_RIGHT
         # @ KEY_LEFT
-        L K KEY_LEFT
-        K L KEY_RIGHT
     """)
-    keys = list(_keys_to_press(kb.G, "@hotmail.com", "@"))
-    assert keys == [('KEY_DOWN', {'@', '!#$'})]
+    hotmail = kb.find_key("@hotmail.com")
+    symbols = kb.find_key("!#$")
+    at_sign = kb.find_key("@")
+    hash_sign = kb.find_key("#")
+    assert list(_keys_to_press(kb.G, hotmail, [symbols])) == [
+        ("KEY_DOWN", {at_sign, symbols})]
+    assert list(_keys_to_press(kb.G, hotmail, [at_sign])) == [
+        ("KEY_DOWN", {at_sign, symbols})]
+    assert list(_keys_to_press(kb.G, at_sign, [hash_sign])) == [
+        ('KEY_RIGHT', {hash_sign})]
+    assert list(_keys_to_press(kb.G, hash_sign, [at_sign])) == [
+        ('KEY_LEFT', {at_sign})]
 
-    assert list(_keys_to_press(kb.G, "@", "#")) == [('KEY_RIGHT', {'#'})]
-    assert list(_keys_to_press(kb.G, "#", "@")) == [('KEY_LEFT', {'@'})]
 
-    # L is the first character of the random comments delimiter in
-    # `Keyboard.parse_edgelist`. Check that networkx uses the whole string, not
-    # just the first character.
-    assert list(_keys_to_press(kb.G, "K", "L")) == [('KEY_RIGHT', {'L'})]
-    assert list(_keys_to_press(kb.G, "L", "K")) == [('KEY_LEFT', {'K'})]
+def test_invalid_edgelist():
+    kb = stbt.Keyboard()
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_edgelist("""
+            A B KEY_RIGHT
+            B A
+        """)
+    assert "line 2" in str(excinfo.value)
+    assert "'B A'" in str(excinfo.value)
+
+    with pytest.raises(ValueError):
+        kb.add_edgelist("""
+            A B KEY_RIGHT toomanyfields
+        """)
+
+    kb.add_edgelist("")  # Doesn't raise
+
+
+def test_that_add_key_infers_text():
+    kb = stbt.Keyboard()
+    a = kb.add_key("a")
+    assert a.name == "a"
+    assert a.text == "a"
+    space = kb.add_key(" ")
+    assert space.name == " "
+    assert space.text == " "
+    clear = kb.add_key("clear")
+    assert clear.name == "clear"
+    assert not clear.text
+
+
+def test_that_add_grid_returns_grid_of_keys():
+    kb = stbt.Keyboard()
+    # The Disney+ search keyboard on Roku has an "accents" mode where some of
+    # the keys are blank. You *can* navigate to them, but pressing OK has no
+    # effect.
+    grid = kb.add_grid(
+        stbt.Grid(stbt.Region(x=265, y=465, right=895, bottom=690),
+                  data=["àáâãäåæýÿš",
+                        list("èéêëìíîžđ") + [""],
+                        list("ïòóôõöøß") + ["", ""],
+                        list("œùúûüçñ") + ["", "", ""]]))
+    assert isinstance(grid[0].data, Key)
+
+    right_neighbours = kb.add_grid(
+        stbt.Grid(stbt.Region(x=915, y=465, right=1040, bottom=690),
+                  data=[["CAPS LOCK"],
+                        ["ABC123"],
+                        ["!?#$%&"],
+                        ["åéåøØ¡"]]))
+
+    for i in range(4):
+        kb.add_transition(grid[9, i].data, right_neighbours[0, i].data,
+                          "KEY_RIGHT")
+
+    assert [k for k, _ in
+            _keys_to_press(kb.G, kb.find_key("ß"), [kb.find_key("!?#$%&")])] \
+        == ["KEY_RIGHT"] * 3
+
+
+def test_that_keyboard_catches_errors_at_definition_time():
+    kb = stbt.Keyboard()
+
+    # Can't add the same key twice:
+    kb.add_key("a")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key("a")
+    assert_repr_equal(
+        "Key already exists: Key(name='a', text='a', region=None, mode=None)",
+        str(excinfo.value))
+
+    # Can't add transition to key that doesn't exist:
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_transition("a", "b", "KEY_RIGHT")
+    assert_repr_equal("Query 'b' doesn't match any key in the keyboard",
+                      str(excinfo.value))
+
+    # ...but add_edgelist creates keys as needed:
+    kb.add_edgelist("a b KEY_RIGHT")
+
+    # All keys must have modes or none of them can
+    kb.add_key(" ")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key(" ", mode="uppercase")
+    assert_repr_equal(
+        "Key ...'name': ' '...'mode': 'uppercase'... specifies 'mode', but none of the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # All keys must have regions or none of them can
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_grid(stbt.Grid(
+            region=stbt.Region(x=0, y=0, right=200, bottom=100),
+            data=[["a", "b", "c", "d"]]))
+    assert_repr_equal(
+        "Key ...'a'... specifies 'region', but none of the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # Can't add grid with no data:
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_grid(stbt.Grid(
+            region=stbt.Region(x=0, y=0, right=200, bottom=100),
+            cols=6, rows=6))
+    assert_repr_equal("Grid cell [0,0] doesn't have any data",
+                      str(excinfo.value))
+
+    # Now a keyboard with modes: #############################################
+    kb = stbt.Keyboard()
+    kb.add_key("a", mode="lowercase")
+    kb.add_key("A", mode="uppercase")
+    kb.add_key(" ", mode="lowercase")
+
+    # All keys must have modes or none of them can
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key(" ")
+    assert_repr_equal(
+        "Key already exists: Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
+        str(excinfo.value))
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_key("b")
+    assert_repr_equal(
+        "Key ...'name': 'b'... doesn't specify 'mode', but all the other keys in the keyboard do",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # add_edgelist is happy as long as it can uniquely identify existing keys:
+    kb.add_edgelist("a SPACE KEY_DOWN")
+
+    # ...but if it's ambiguous, it's an error:
+    kb.add_key(" ", mode="uppercase")
+    with pytest.raises(ValueError) as excinfo:
+        kb.add_edgelist("a SPACE KEY_DOWN")
+    assert_repr_equal(
+        "Ambiguous key {'name': ' '}: Could mean Key(name=' ', text=' ', region=None, mode='lowercase') or Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
+        str(excinfo.value))
+
+    # ...so we need to specify the mode explicitly:
+    kb.add_edgelist("a SPACE KEY_DOWN", mode="lowercase")
+
+
+def assert_repr_equal(a, b):
+    a = re.escape(a).replace(r"\.\.\.", ".*")
+    b = b.replace("u'", "'")
+    assert re.match("^" + a + "$", b)
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_keys_to_press(kb):
+    a = kb.find_key("a")
+    b = kb.find_key("b")
+    c = kb.find_key("c")
+    g = kb.find_key("g")
+    h = kb.find_key("h")
+    five = kb.find_key("5", mode="lowercase" if kb.modes else None)
+    six = kb.find_key("6", mode="lowercase" if kb.modes else None)
+    space = kb.find_key(" ", mode="lowercase" if kb.modes else None)
+
+    assert list(_keys_to_press(kb.G, a, [a])) == []
+    assert list(_keys_to_press(kb.G, a, [b])) == [("KEY_RIGHT", {b})]
+    assert list(_keys_to_press(kb.G, b, [a])) == [("KEY_LEFT", {a})]
+    assert list(_keys_to_press(kb.G, a, [c])) == [("KEY_RIGHT", {b}),
+                                                  ("KEY_RIGHT", {c})]
+    assert list(_keys_to_press(kb.G, c, [a])) == [("KEY_LEFT", {b}),
+                                                  ("KEY_LEFT", {a})]
+    assert list(_keys_to_press(kb.G, a, [g])) == [("KEY_DOWN", {g})]
+    assert list(_keys_to_press(kb.G, g, [a])) == [("KEY_UP", {a})]
+
+    # I don't know which of these paths it will choose:
+    assert list(_keys_to_press(kb.G, a, [h])) in (
+        [("KEY_RIGHT", {b}), ("KEY_DOWN", {h})],
+        [("KEY_DOWN", {g}), ("KEY_RIGHT", {h})])
+
+    # Pressing UP from SPACE could land on 5 or 6, depending on previous state
+    # (of the device-under-test) that isn't modelled by our Keyboard graph.
+    assert list(_keys_to_press(kb.G, space, [five])) == [("KEY_UP",
+                                                          {five, six})]
+
+    if kb.modes:
+        A = kb.find_key("A")
+        B = kb.find_key("B")
+        FIVE = kb.find_key("5", mode="uppercase")
+        SPACE = kb.find_key(" ", mode="uppercase")
+
+        # Changing modes:
+        lowercase = kb.find_key("lowercase", mode="lowercase")
+        LOWERCASE = kb.find_key("lowercase", mode="uppercase")
+        uppercase = kb.find_key("uppercase", mode="lowercase")
+        UPPERCASE = kb.find_key("uppercase", mode="uppercase")
+        assert list(_keys_to_press(kb.G, a, [A])) == [
+            ("KEY_UP", {lowercase}),
+            ("KEY_RIGHT", {uppercase}),
+            ("KEY_OK", {UPPERCASE}),
+            ("KEY_LEFT", {LOWERCASE}),
+            ("KEY_DOWN", {A, B})]
+
+        # Navigate to nearest key:
+        assert list(_keys_to_press(kb.G, FIVE, [space, SPACE])) == [
+            ("KEY_DOWN", {SPACE})]
+        assert list(_keys_to_press(kb.G, five, [space, SPACE])) == [
+            ("KEY_DOWN", {space})]
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_keyboard_weights(kb):
+    five = kb.find_key("5", mode="lowercase" if kb.modes else None)
+    six = kb.find_key("6", mode="lowercase" if kb.modes else None)
+    space = kb.find_key(" ", mode="lowercase" if kb.modes else None)
+    backspace = kb.find_key("BACKSPACE", mode="lowercase" if kb.modes else None)
+    assert kb.G[five][space].get("weight") is None
+    assert kb.G[six][space].get("weight") is None
+    assert kb.G[space][five]["weight"] == 100
+    assert kb.G[space][six]["weight"] == 100
+    assert kb.G[space][backspace].get("weight") is None
+    assert kb.G[backspace][space].get("weight") is None
+
+
+def test_that_we_need_add_weight():
+    # W X Y Z
+    #  SPACE
+    kb = stbt.Keyboard()
+    W = kb.add_key("W")
+    X = kb.add_key("X")
+    Y = kb.add_key("Y")
+    Z = kb.add_key("Z")
+    SPACE = kb.add_key(" ")
+    for k in [W, X, Y, Z]:
+        kb.add_transition(k, SPACE, "KEY_DOWN")
+    for k1, k2 in zip([W, X, Y], [X, Y, Z]):
+        kb.add_transition(k1, k2, "KEY_RIGHT")
+
+    # This is the bug:
+    assert nx.shortest_path(kb.G, W, Z) == [W, SPACE, Z]
+    # And this is how we fix it:
+    assert nx.shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
+
+    assert [k for k, _ in _keys_to_press(kb.G, W, [Z])] == ["KEY_RIGHT"] * 3
+
+
+def test_strip_shift_transitions():
+    for kb in [kb1, kb2, kb3]:
+        G_ = _strip_shift_transitions(kb.G)
+        assert sorted(G_.nodes()) == sorted(kb.G.nodes())
+        assert sorted(G_.edges(data=True)) == sorted(kb.G.edges(data=True))
+
+    G_ = _strip_shift_transitions(kb4.G)
+    assert sorted(G_.nodes()) == sorted(kb4.G.nodes())
+    assert sorted(G_.edges(data=True)) != sorted(kb4.G.edges(data=True))
+    assert len(G_.edges(data=True)) == len(kb4.G.edges(data=True)) - len(
+        "abcdefghijklmnopqrstuvwxyz1234567890")

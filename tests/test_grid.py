@@ -6,10 +6,9 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 from itertools import combinations
 
-import networkx as nx
 from pytest import raises
 
-from stbt_core import Grid, grid_to_navigation_graph, Position, Region
+from stbt_core import Grid, Position, Region
 
 
 def test_grid():
@@ -81,61 +80,3 @@ def test_grid_with_data():
     for x in ["a", layout[0], layout]:
         with raises(IndexError):
             print(g[x])
-
-
-def test_grid_to_navigation_graph():
-    grid = Grid(region=None, data=["ABC",
-                                   "DEF"])
-    graph = grid_to_navigation_graph(grid)
-    expected = nx.parse_edgelist(
-        """
-        A B KEY_RIGHT
-        A D KEY_DOWN
-        B A KEY_LEFT
-        B C KEY_RIGHT
-        B E KEY_DOWN
-        C B KEY_LEFT
-        C F KEY_DOWN
-        D A KEY_UP
-        D E KEY_RIGHT
-        E B KEY_UP
-        E D KEY_LEFT
-        E F KEY_RIGHT
-        F C KEY_UP
-        F E KEY_LEFT
-        """.split("\n"),
-        create_using=nx.DiGraph(),
-        data=[("key", str)])
-    assert sorted(expected.edges(data=True)) == sorted(graph.edges(data=True))
-    assert graph["A"]["B"] == {"key": "KEY_RIGHT"}
-    assert graph["B"] == {"A": {"key": "KEY_LEFT"},
-                          "C": {"key": "KEY_RIGHT"},
-                          "E": {"key": "KEY_DOWN"}}
-
-
-def test_grid_to_navigation_graph_without_data():
-    # 012
-    # 345
-    grid = Grid(region=None, cols=3, rows=2)
-    graph = grid_to_navigation_graph(grid)
-    expected = nx.parse_edgelist(
-        """
-        0 1 KEY_RIGHT
-        0 3 KEY_DOWN
-        1 0 KEY_LEFT
-        1 2 KEY_RIGHT
-        1 4 KEY_DOWN
-        2 1 KEY_LEFT
-        2 5 KEY_DOWN
-        3 0 KEY_UP
-        3 4 KEY_RIGHT
-        4 1 KEY_UP
-        4 3 KEY_LEFT
-        4 5 KEY_RIGHT
-        5 2 KEY_UP
-        5 4 KEY_LEFT
-        """.split("\n"),
-        create_using=nx.DiGraph(),
-        nodetype=int,
-        data=[("key", str)])
-    assert sorted(expected.edges(data=True)) == sorted(graph.edges(data=True))
