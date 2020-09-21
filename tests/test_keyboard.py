@@ -178,6 +178,10 @@ class SearchPage(stbt.FrameObject):
         self.dut = dut
         self.kb = kb
 
+        # Snapshot state of DUT like grabbing a frame:
+        self._mode = self.dut.mode
+        self._selection = self.dut.selection
+
     @property
     def is_visible(self):
         return True
@@ -185,7 +189,7 @@ class SearchPage(stbt.FrameObject):
     @property
     def mode(self):
         if self.kb.modes:
-            return self.dut.mode
+            return self._mode
         else:
             return None
 
@@ -195,12 +199,12 @@ class SearchPage(stbt.FrameObject):
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
         query = {}
-        if self.dut.selection == " ":
+        if self._selection == " ":
             query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
         else:
-            query = {"name": self.dut.selection}
+            query = {"name": self._selection}
         if self.kb.modes:
-            query["mode"] = self.dut.mode
+            query["mode"] = self._mode
         key = self.kb.find_key(**query)
         logging.debug("SearchPage.selection: %r", key)
         return key
@@ -526,9 +530,9 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
 
 
 def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
-    page = SearchPage(dut, kb4)
     dut.symbols_is_shift = True
     dut.mode = "uppercase"
+    page = SearchPage(dut, kb4)
     assert page.selection.name == "A"
     assert page.selection.mode == "uppercase"
     page = page.navigate_to("a")
@@ -539,8 +543,8 @@ def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
 
 def test_that_enter_text_recalculates_after_shift_transitions(dut):
     print(edgelists["uppercase"])
-    page = SearchPage(dut, kb4)
     dut.symbols_is_shift = True
+    page = SearchPage(dut, kb4)
     assert page.selection.name == "a"
     assert page.selection.mode == "lowercase"
     page = page.enter_text("Aa")
