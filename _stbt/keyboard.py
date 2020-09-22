@@ -42,14 +42,6 @@ class Key(object):
     mode = attrib(default=None, type=text_type)
 
 
-SYMMETRICAL_KEYS = {
-    "KEY_DOWN": "KEY_UP",
-    "KEY_UP": "KEY_DOWN",
-    "KEY_LEFT": "KEY_RIGHT",
-    "KEY_RIGHT": "KEY_LEFT",
-}
-
-
 class Keyboard(object):
     '''Models the behaviour of an on-screen keyboard.
 
@@ -209,6 +201,13 @@ class Keyboard(object):
             self.mask = load_image(mask)
 
         self.navigate_timeout = navigate_timeout
+
+        self.symmetrical_keys = {
+            "KEY_DOWN": "KEY_UP",
+            "KEY_UP": "KEY_DOWN",
+            "KEY_LEFT": "KEY_RIGHT",
+            "KEY_RIGHT": "KEY_LEFT",
+        }
 
         self._any_with_region = False
         self._any_without_region = False
@@ -432,8 +431,8 @@ class Keyboard(object):
         source = self._find_key(source, mode)
         target = self._find_key(target, mode)
         self._add_edge(source, target, keypress)
-        if symmetrical and keypress in SYMMETRICAL_KEYS:
-            self._add_edge(target, source, SYMMETRICAL_KEYS[keypress])
+        if symmetrical and keypress in self.symmetrical_keys:
+            self._add_edge(target, source, self.symmetrical_keys[keypress])
 
     def _add_edge(self, source, target, key):
         # type: (Key, Key, str) -> None
