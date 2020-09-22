@@ -42,14 +42,6 @@ class Key(object):
     mode = attrib(default=None, type=text_type)
 
 
-SYMMETRICAL_KEYS = {
-    "KEY_DOWN": "KEY_UP",
-    "KEY_UP": "KEY_DOWN",
-    "KEY_LEFT": "KEY_RIGHT",
-    "KEY_RIGHT": "KEY_LEFT",
-}
-
-
 class Keyboard(object):
     '''Models the behaviour of an on-screen keyboard.
 
@@ -209,6 +201,13 @@ class Keyboard(object):
             self.mask = load_image(mask)
 
         self.navigate_timeout = navigate_timeout
+
+        self.symmetrical_keys = {
+            "KEY_DOWN": "KEY_UP",
+            "KEY_UP": "KEY_DOWN",
+            "KEY_LEFT": "KEY_RIGHT",
+            "KEY_RIGHT": "KEY_LEFT",
+        }
 
         self._any_with_region = False
         self._any_without_region = False
@@ -432,8 +431,8 @@ class Keyboard(object):
         source = self._find_key(source, mode)
         target = self._find_key(target, mode)
         self._add_edge(source, target, keypress)
-        if symmetrical and keypress in SYMMETRICAL_KEYS:
-            self._add_edge(target, source, SYMMETRICAL_KEYS[keypress])
+        if symmetrical and keypress in self.symmetrical_keys:
+            self._add_edge(target, source, self.symmetrical_keys[keypress])
 
     def _add_edge(self, source, target, key):
         # type: (Key, Key, str) -> None
@@ -543,17 +542,26 @@ class Keyboard(object):
             spec["region"] = cell.region
             keys.append(self._add_key(spec))
 
-        # Now add the transitions. Note that `add_transition` defaults to
-        # `symmetrical=True`, which will add the down & right transitions.
+        # Now add the transitions.
         for cell in grid:
             x, y = cell.position
             source = keys[grid[x, y].index]
             if x > 0:
                 target = keys[grid[x - 1, y].index]
-                self.add_transition(source, target, "KEY_LEFT")
+                self.add_transition(source, target, "KEY_LEFT",
+                                    symmetrical=False)
+            if x < grid.cols - 1:
+                target = keys[grid[x + 1, y].index]
+                self.add_transition(source, target, "KEY_RIGHT",
+                                    symmetrical=False)
             if y > 0:
                 target = keys[grid[x, y - 1].index]
-                self.add_transition(source, target, "KEY_UP")
+                self.add_transition(source, target, "KEY_UP",
+                                    symmetrical=False)
+            if y < grid.rows - 1:
+                target = keys[grid[x, y + 1].index]
+                self.add_transition(source, target, "KEY_DOWN",
+                                    symmetrical=False)
 
         return Grid(
             region=grid.region,
