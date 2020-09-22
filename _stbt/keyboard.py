@@ -542,17 +542,26 @@ class Keyboard(object):
             spec["region"] = cell.region
             keys.append(self._add_key(spec))
 
-        # Now add the transitions. Note that `add_transition` defaults to
-        # `symmetrical=True`, which will add the down & right transitions.
+        # Now add the transitions.
         for cell in grid:
             x, y = cell.position
             source = keys[grid[x, y].index]
             if x > 0:
                 target = keys[grid[x - 1, y].index]
-                self.add_transition(source, target, "KEY_LEFT")
+                self.add_transition(source, target, "KEY_LEFT",
+                                    symmetrical=False)
+            if x < grid.cols - 1:
+                target = keys[grid[x + 1, y].index]
+                self.add_transition(source, target, "KEY_RIGHT",
+                                    symmetrical=False)
             if y > 0:
                 target = keys[grid[x, y - 1].index]
-                self.add_transition(source, target, "KEY_UP")
+                self.add_transition(source, target, "KEY_UP",
+                                    symmetrical=False)
+            if y < grid.rows - 1:
+                target = keys[grid[x, y + 1].index]
+                self.add_transition(source, target, "KEY_DOWN",
+                                    symmetrical=False)
 
         return Grid(
             region=grid.region,
