@@ -35,10 +35,13 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
     :param mask:
         A black & white image that specifies which part of the image to
         analyse. White pixels select the area to analyse; black pixels select
-        the area to ignore. The mask must be the same size as the video frame.
+        the area to ignore.
 
         This can be a string (a filename that will be resolved as per
         `stbt.load_image`) or a single-channel image in OpenCV format.
+
+        If you specify ``region``, the mask must be the same size as the
+        region. Otherwise the mask must be the same size as the frame.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
@@ -51,9 +54,6 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
     :type region: `Region`
     :param region:
         Only analyze the specified region of the video frame.
-
-        If you specify both ``region`` and ``mask``, the mask must be the same
-        size as the region.
 
     :returns:
         An object that will evaluate to true if the frame was black, or false

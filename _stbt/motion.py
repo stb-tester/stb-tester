@@ -53,17 +53,17 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     :param mask:
         A black & white image that specifies which part of the image to search
         for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore. The mask must be the same size as the video frame.
+        the area to ignore.
 
         This can be a string (a filename that will be resolved as per
         `load_image`) or a single-channel image in OpenCV format.
 
+        If you specify ``region``, the mask must be the same size as the
+        region. Otherwise the mask must be the same size as the frame.
+
     :type region: `Region`
     :param region:
         Only analyze the specified region of the video frame.
-
-        If you specify both ``region`` and ``mask``, the mask must be the same
-        size as the region.
 
     :type frames: Iterator[stbt.Frame]
     :param frames: An iterable of video-frames to analyse. Defaults to

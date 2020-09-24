@@ -46,10 +46,17 @@ def press_and_wait(
     :param stbt.Region region: Only look at the specified region of the video
         frame.
 
-    :param str mask: The filename of a black & white image that specifies which
-        part of the video frame to look at. White pixels select the area to
-        analyse; black pixels select the area to ignore. You can't specify
-        ``region`` and ``mask`` at the same time.
+    :type mask: str or `numpy.ndarray`
+    :param str mask:
+        A black & white image that specifies which part of the video frame to
+        look at. White pixels select the area to analyse; black pixels select
+        the area to ignore.
+
+        This can be a string (a filename that will be resolved as per
+        `load_image`) or a single-channel image in OpenCV format.
+
+        If you specify ``region``, the mask must be the same size as the
+        region. Otherwise the mask must be the same size as the frame.
 
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of
@@ -135,10 +142,6 @@ def wait_for_transition_to_end(
 
 class _Transition(object):
     def __init__(self, region, mask, timeout_secs, stable_secs, dut):
-        if region is not Region.ALL and mask is not None:
-            raise ValueError(
-                "You can't specify region and mask at the same time")
-
         self.region = region
         self.mask = None
         if mask is not None:
