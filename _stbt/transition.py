@@ -23,8 +23,8 @@ import enum
 import cv2
 import numpy
 
-from .diff import MotionResult
-from .imgutils import load_image, pixel_bounding_box
+from .diff import FrameDiffer, MotionResult
+from .imgutils import crop, load_image, pixel_bounding_box
 from .logging import ddebug, debug, draw_on
 from .types import Region
 
@@ -134,12 +134,7 @@ def wait_for_transition_to_end(
 
 
 class _Transition(object):
-    def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
-                 stable_secs=1, dut=None):
-        if dut is None:
-            import stbt_core
-            dut = stbt_core
-
+    def __init__(self, region, mask, timeout_secs, stable_secs, dut):
         if region is not Region.ALL and mask is not None:
             raise ValueError(
                 "You can't specify region and mask at the same time")
@@ -154,18 +149,21 @@ class _Transition(object):
         self.dut = dut
 
         self.frames = self.dut.frames()
-        self.diff = strict_diff
         self.expiry_time = None
 
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
+        differ = press_and_wait.differ(initial_frame=press_result.frame_before,
+                                       region=self.region, mask=self.mask)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
-            if self.diff(press_result.frame_before, f, self.region, self.mask):
+            motion_result = differ.diff(f)
+            draw_on(f, motion_result, label="transition")
+            if motion_result:
                 _debug("Animation started", f)
                 animation_start_time = f.time
                 break
@@ -189,11 +187,14 @@ class _Transition(object):
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
-        f = first_stable_frame = initial_frame
+        first_stable_frame = initial_frame
+        differ = press_and_wait.differ(initial_frame=initial_frame,
+                                       region=self.region, mask=self.mask)
         while True:
             f = next(self.frames)
-            motion = self.diff(first_stable_frame, f, self.region, self.mask)
-            if motion:
+            motion_result = differ.diff(f)
+            draw_on(f, motion_result, label="transition")
+            if motion_result:
                 _debug("Animation in progress", f)
                 first_stable_frame = f
             else:
@@ -221,44 +222,48 @@ def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
-def strict_diff(prev, frame, region, mask):
-    if region is not None:
-        full_frame = Region(0, 0, frame.shape[1], frame.shape[0])
-        region = Region.intersect(full_frame, region)
-        f1 = prev[region.y:region.bottom, region.x:region.right]
-        f2 = frame[region.y:region.bottom, region.x:region.right]
+class StrictDiff(FrameDiffer):
+    """The original `press_and_wait` algorithm."""
 
-    absdiff = cv2.absdiff(f1, f2)
-    if mask is not None:
-        absdiff = cv2.bitwise_and(absdiff, mask, absdiff)
+    def diff(self, frame):
+        absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
+                              crop(frame, self.region))
+        if self.mask is not None:
+            absdiff = cv2.bitwise_and(absdiff, self.mask, absdiff)
 
-    diffs_found = False
-    out_region = None
-    maxdiff = numpy.max(absdiff)
-    if maxdiff > 20:
-        diffs_found = True
-        big_diffs = absdiff > 20
-        out_region = pixel_bounding_box(big_diffs)
-        _ddebug("found %s diffs above 20 (max %s) in %r", frame,
-                numpy.count_nonzero(big_diffs), maxdiff, out_region)
-    elif maxdiff > 0:
-        small_diffs = absdiff > 5
-        small_diffs_count = numpy.count_nonzero(small_diffs)
-        if small_diffs_count > 50:
+        diffs_found = False
+        out_region = None
+        maxdiff = numpy.max(absdiff)
+        if maxdiff > 20:
             diffs_found = True
-            out_region = pixel_bounding_box(small_diffs)
-            _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
-                    maxdiff, out_region)
-        else:
-            _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
-                    maxdiff)
-    if out_region:
-        out_region = out_region.translate(region)
+            big_diffs = absdiff > 20
+            out_region = pixel_bounding_box(big_diffs)
+            _ddebug("found %s diffs above 20 (max %s) in %r", frame,
+                    numpy.count_nonzero(big_diffs), maxdiff, out_region)
+        elif maxdiff > 0:
+            small_diffs = absdiff > 5
+            small_diffs_count = numpy.count_nonzero(small_diffs)
+            if small_diffs_count > 50:
+                diffs_found = True
+                out_region = pixel_bounding_box(small_diffs)
+                _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
+                        maxdiff, out_region)
+            else:
+                _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
+                        maxdiff)
+        if diffs_found:
+            # Undo crop:
+            out_region = out_region.translate(self.region)
+            # Only update the reference frame if we found differences. This
+            # makes the algorithm more sensitive to slow motion.
+            self.prev_frame = frame
 
-    result = MotionResult(getattr(frame, "time", None), diffs_found,
-                          out_region, frame)
-    draw_on(frame, result, label="transition")
-    return result
+        result = MotionResult(getattr(frame, "time", None), diffs_found,
+                              out_region, frame)
+        return result
+
+
+press_and_wait.differ = StrictDiff
 
 
 class _TransitionResult(object):
