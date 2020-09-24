@@ -90,36 +90,70 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     except StopIteration:
         return
 
-    region = Region.intersect(_image_region(frame), region)
-
-    previous_frame_gray = cv2.cvtColor(crop(frame, region),
-                                       cv2.COLOR_BGR2GRAY)
-    if (mask is not None and
-            mask.shape[:2] != previous_frame_gray.shape[:2]):
-        raise ValueError(
-            "The dimensions of the mask %s %s don't match the video frame %s"
-            % (repr(mask.relative_filename) or "<Image>",
-               mask.shape, previous_frame_gray.shape))
-
+    differ = MotionDiff(frame, noise_threshold, region, mask)
     for frame in frames:
-        imglog = ImageLogger("detect_motion", region=region)
+        result = differ.diff(frame)
+        draw_on(frame, result, label="detect_motion()")
+        debug("%s found: %s" % (
+            "Motion" if result.motion else "No motion", str(result)))
+        yield result
+
+
+class FrameDiffer(object):
+    """Interface for different algorithms for diffing frames in a sequence.
+
+    Say you have a sequence of frames A, B, C. Typically you will compare frame
+    A against B, and then frame B against C. This is a class (not a function)
+    so that you can remember work you've done on frame B, so that you don't
+    repeat that work when you need to compare against frame C.
+    """
+
+    def __init__(self, initial_frame, region=Region.ALL, mask=None):
+        self.prev_frame = initial_frame
+        self.region = Region.intersect(_image_region(self.prev_frame), region)
+        self.mask = mask
+        if (self.mask is not None and
+                self.mask.shape[:2] != self.prev_frame.shape[:2]):
+            raise ValueError(
+                "The dimensions of the mask %s %s don't match the video frame "
+                "%s"
+                % (repr(self.mask.relative_filename) or "<Image>",
+                   self.mask.shape, self.prev_frame.shape))
+
+    def diff(self, frame):
+        raise NotImplementedError(
+            "%s.diff is not implemented" % self.__class__.__name__)
+
+
+class MotionDiff(FrameDiffer):
+    def __init__(self, initial_frame, noise_threshold, region=Region.ALL,
+                 mask=None):
+        super(MotionDiff, self).__init__(initial_frame, region, mask)
+        self.noise_threshold = noise_threshold
+        self.prev_frame_gray = self.gray(initial_frame)
+
+    def gray(self, frame):
+        return cv2.cvtColor(crop(frame, self.region), cv2.COLOR_BGR2GRAY)
+
+    def diff(self, frame):
+        frame_gray = self.gray(frame)
+
+        imglog = ImageLogger("MotionDiff", region=self.region)
+        imglog.set(roi=self.region, noise_threshold=self.noise_threshold)
         imglog.imwrite("source", frame)
-        imglog.set(roi=region, noise_threshold=noise_threshold)
-
-        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
         imglog.imwrite("gray", frame_gray)
-        imglog.imwrite("previous_frame_gray", previous_frame_gray)
+        imglog.imwrite("previous_frame_gray", self.prev_frame_gray)
 
-        absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
+        absdiff = cv2.absdiff(self.prev_frame_gray, frame_gray)
         imglog.imwrite("absdiff", absdiff)
 
-        if mask is not None:
-            absdiff = cv2.bitwise_and(absdiff, mask)
-            imglog.imwrite("mask", mask)
+        if self.mask is not None:
+            absdiff = cv2.bitwise_and(absdiff, self.mask)
+            imglog.imwrite("mask", self.mask)
             imglog.imwrite("absdiff_masked", absdiff)
 
         _, thresholded = cv2.threshold(
-            absdiff, int((1 - noise_threshold) * 255), 255,
+            absdiff, int((1 - self.noise_threshold) * 255), 255,
             cv2.THRESH_BINARY)
         eroded = cv2.erode(
             thresholded,
@@ -132,7 +166,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
             # Undo cv2.erode above:
             out_region = out_region.extend(x=-1, y=-1)
             # Undo crop:
-            out_region = out_region.translate(region)
+            out_region = out_region.translate(self.region)
 
         motion = bool(out_region)
         if motion:
@@ -141,15 +175,13 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
             # because the differences between frames 1 and 2 might be small and
             # the differences between frames 2 and 3 might be small but we'd see
             # the difference by looking between 1 and 3.
-            previous_frame_gray = frame_gray
+            self.prev_frame = frame
+            self.prev_frame_gray = frame_gray
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
-        draw_on(frame, result, label="detect_motion()")
-        debug("%s found: %s" % (
-            "Motion" if motion else "No motion", str(result)))
         _log_motion_image_debug(imglog, result)
-        yield result
+        return result
 
 
 def wait_for_motion(
