@@ -27,11 +27,12 @@ class FrameDiffer(object):
         self.region = Region.intersect(_image_region(self.prev_frame), region)
         self.mask = mask
         if (self.mask is not None and
-                self.mask.shape[:2] != self.prev_frame.shape[:2]):
+                self.mask.shape[:2] != (self.region.height, self.region.width)):
             raise ValueError(
-                "The dimensions of the mask %s don't match the frame %s"
+                "The dimensions of the mask %s don't match the %s <%ix%i>"
                 % (_frame_repr(self.mask),
-                   _frame_repr(self.prev_frame)))
+                   "frame" if region == Region.ALL else "region",
+                   self.region.width, self.region.height))
 
     def diff(self, frame):
         raise NotImplementedError(
