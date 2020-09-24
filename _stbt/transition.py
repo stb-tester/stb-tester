@@ -142,7 +142,7 @@ class _Transition(object):
         self.region = region
         self.mask = None
         if mask is not None:
-            self.mask = load_image(mask)
+            self.mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -224,6 +224,12 @@ def _ddebug(s, f, *args):
 
 class StrictDiff(FrameDiffer):
     """The original `press_and_wait` algorithm."""
+
+    def __init__(self, initial_frame, region=Region.ALL, mask=None):
+        super(StrictDiff, self).__init__(initial_frame, region, mask)
+        if self.mask is not None:
+            # We need 3 channels to match `frame`.
+            self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)
 
     def diff(self, frame):
         absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
