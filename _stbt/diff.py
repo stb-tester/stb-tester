@@ -1,5 +1,10 @@
 # coding: utf-8
 
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+
 import cv2
 
 from .config import get_config
@@ -123,6 +128,9 @@ class MotionResult(object):
 
     def __bool__(self):
         return self.motion
+
+    def __nonzero__(self):
+        return self.__bool__()
 
     def __repr__(self):
         return (
