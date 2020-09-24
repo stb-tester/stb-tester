@@ -157,4 +157,4 @@ def test_that_strict_diff_ignores_a_few_scattered_small_differences():
     assert not strict_diff(
         stbt.load_image("2px-different-1.png"),
         stbt.load_image("2px-different-2.png"),
-        region=stbt.Region.ALL, mask_image=None)
+        region=stbt.Region.ALL, mask=None)

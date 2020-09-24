@@ -145,11 +145,9 @@ class _Transition(object):
                 "You can't specify region and mask at the same time")
 
         self.region = region
-        self.mask_image = None
-        if isinstance(mask, numpy.ndarray):
-            self.mask_image = mask
-        elif mask:
-            self.mask_image = load_image(mask)
+        self.mask = None
+        if mask is not None:
+            self.mask = load_image(mask)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -167,8 +165,7 @@ class _Transition(object):
             if f.time < press_result.end_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
-            if self.diff(press_result.frame_before, f, self.region,
-                         self.mask_image):
+            if self.diff(press_result.frame_before, f, self.region, self.mask):
                 _debug("Animation started", f)
                 animation_start_time = f.time
                 break
@@ -196,7 +193,7 @@ class _Transition(object):
         while True:
             prev = f
             f = next(self.frames)
-            if self.diff(prev, f, self.region, self.mask_image):
+            if self.diff(prev, f, self.region, self.mask):
                 _debug("Animation in progress", f)
                 first_stable_frame = f
             else:
@@ -224,7 +221,7 @@ def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
-def strict_diff(prev, frame, region, mask_image):
+def strict_diff(prev, frame, region, mask):
     if region is not None:
         full_frame = Region(0, 0, frame.shape[1], frame.shape[0])
         region = Region.intersect(full_frame, region)
@@ -232,8 +229,8 @@ def strict_diff(prev, frame, region, mask_image):
         f2 = frame[region.y:region.bottom, region.x:region.right]
 
     absdiff = cv2.absdiff(f1, f2)
-    if mask_image is not None:
-        absdiff = cv2.bitwise_and(absdiff, mask_image, absdiff)
+    if mask is not None:
+        absdiff = cv2.bitwise_and(absdiff, mask, absdiff)
 
     diffs_found = False
     out_region = None
