@@ -115,10 +115,9 @@ class FrameDiffer(object):
         if (self.mask is not None and
                 self.mask.shape[:2] != self.prev_frame.shape[:2]):
             raise ValueError(
-                "The dimensions of the mask %s %s don't match the video frame "
-                "%s"
-                % (repr(self.mask.relative_filename) or "<Image>",
-                   self.mask.shape, self.prev_frame.shape))
+                "The dimensions of the mask %s don't match the frame %s"
+                % (_frame_repr(self.mask),
+                   _frame_repr(self.prev_frame)))
 
     def diff(self, frame):
         raise NotImplementedError(
