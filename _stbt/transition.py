@@ -191,9 +191,9 @@ class _Transition(object):
 
         f = first_stable_frame = initial_frame
         while True:
-            prev = f
             f = next(self.frames)
-            if self.diff(prev, f, self.region, self.mask):
+            motion = self.diff(first_stable_frame, f, self.region, self.mask)
+            if motion:
                 _debug("Animation in progress", f)
                 first_stable_frame = f
             else:
