@@ -138,8 +138,8 @@ class MotionDiff(FrameDiffer):
     def diff(self, frame):
         frame_gray = self.gray(frame)
 
-        imglog = ImageLogger("MotionDiff", region=self.region)
-        imglog.set(roi=self.region, noise_threshold=self.noise_threshold)
+        imglog = ImageLogger("MotionDiff", region=self.region,
+                             noise_threshold=self.noise_threshold)
         imglog.imwrite("source", frame)
         imglog.imwrite("gray", frame_gray)
         imglog.imwrite("previous_frame_gray", self.prev_frame_gray)
