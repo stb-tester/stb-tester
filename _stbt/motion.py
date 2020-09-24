@@ -75,10 +75,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
 
-    if noise_threshold is None:
-        noise_threshold = get_config(
-            'motion', 'noise_threshold', type_=float)
-
     debug("Searching for motion")
 
     if mask is not None:
@@ -90,7 +86,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     except StopIteration:
         return
 
-    differ = MotionDiff(frame, noise_threshold, region, mask)
+    differ = MotionDiff(frame, region, mask, noise_threshold)
     for frame in frames:
         result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")

@@ -2,6 +2,7 @@
 
 import cv2
 
+from .config import get_config
 from .imgutils import crop, _frame_repr, _image_region, pixel_bounding_box
 from .logging import ImageLogger
 from .types import Region
@@ -35,9 +36,12 @@ class FrameDiffer(object):
 class MotionDiff(FrameDiffer):
     """The `wait_for_motion` diffing algorithm."""
 
-    def __init__(self, initial_frame, noise_threshold, region=Region.ALL,
-                 mask=None):
+    def __init__(self, initial_frame, region=Region.ALL, mask=None,
+                 noise_threshold=None):
         super(MotionDiff, self).__init__(initial_frame, region, mask)
+        if noise_threshold is None:
+            noise_threshold = get_config(
+                'motion', 'noise_threshold', type_=float)
         self.noise_threshold = noise_threshold
         self.prev_frame_gray = self.gray(initial_frame)
 
