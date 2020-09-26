@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
 This file implements caching of expensive image processing operations for the
 purposes of speeding up subsequent runs of stbt auto-selftest.
@@ -43,10 +45,19 @@ except ImportError:
 MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024  # 1GiB
 _cache = None
 _cache_full_warning = None
+_enabled = False
 
 
 @contextmanager
-def cache(filename=None):
+def setup_cache(filename=None):
+    """Set up the cache. Typically called by stbt-run before running your test.
+
+    This is safe to call if lmdb isn't installed; in that case it'll be a
+    no-op.
+
+    :param str filename: Defaults to $XDG_CACHE_HOME/stbt/cache.lmdb (or
+        $HOME/.cache/stbt/cache.lmdb if XDG_CACHE_HOME isn't set).
+    """
     if lmdb is None or os.environ.get('STBT_DISABLE_CACHING'):
         yield
         return
@@ -67,6 +78,19 @@ def cache(filename=None):
             yield
         finally:
             _cache = None
+
+
+@contextmanager
+def enable_caching(enable=True):
+    """Enable caching of expensive image-processing operations."""
+
+    global _enabled
+    previous_value = _enabled
+    try:
+        _enabled = enable
+        yield
+    finally:
+        _enabled = previous_value
 
 
 def memoize(additional_fields=None):
@@ -112,7 +136,7 @@ def memoize(additional_fields=None):
         @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
-                if _cache is None:
+                if _cache is None or not _enabled:
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
@@ -144,7 +168,7 @@ def memoize_iterator(additional_fields=None):
         @functools.wraps(f)
         def inner(*args, **kwargs):
             try:
-                if _cache is None:
+                if _cache is None or not _enabled:
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
@@ -245,7 +269,7 @@ def test_that_cache_is_disabled_when_debug_match():
     # debug logging is a side effect that the cache cannot reproduce
     import stbt_core as stbt
     import _stbt.logging
-    with scoped_curdir() as srcdir, cache('cache.lmdb'):
+    with scoped_curdir() as srcdir, setup_cache('cache.lmdb'), enable_caching():
         stbt.match(srcdir + '/tests/red-black.png',
                    frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         assert not os.path.exists('stbt-debug')
@@ -272,7 +296,8 @@ def _check_cache_behaviour(func):
     uncached_result = func()
     uncached_time = min(timer.repeat(10, number=1))
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
         # Prime the cache
         func()
         cached_time = min(timer.repeat(10, number=1))
@@ -293,7 +318,9 @@ def test_memoize_iterator():
             counter[0] += 1
             yield x
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
+
         uncached = list(itertools.islice(cached_function(1), 5))
         assert uncached == list(range(5))
         assert counter[0] == 5
@@ -328,7 +355,9 @@ def test_memoize_iterator_on_empty_iterator():
         if False:  # pylint:disable=using-constant-test
             yield
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
+
         uncached = list(cached_function())
         assert uncached == []
         assert counter[0] == 1
