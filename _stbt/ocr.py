@@ -528,10 +528,11 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                char_whitelist=char_whitelist,
                tesseract_version=tesseract_version)
 
-    return _tesseract_subprocess(crop(frame, region), mode, lang, _config,
-                                 user_patterns, user_words, upsample,
-                                 text_color, text_color_threshold, engine,
-                                 char_whitelist, imglog, tesseract_version)
+    with imgproc_cache.enable_caching():
+        return _tesseract_subprocess(crop(frame, region), mode, lang, _config,
+                                     user_patterns, user_words, upsample,
+                                     text_color, text_color_threshold, engine,
+                                     char_whitelist, imglog, tesseract_version)
 
 
 @imgproc_cache.memoize({"version": "31"})

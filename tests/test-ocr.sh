@@ -18,3 +18,7 @@ test_ocr_on_live_video() {
                 video/x-raw,format=BGR" \
         test.py
 }
+
+test_that_stbt_run_sets_up_caching() {
+    stbt run -v $testdir/test_ocr.py::_test_that_cache_speeds_up_ocr
+}
