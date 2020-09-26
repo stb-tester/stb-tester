@@ -48,6 +48,11 @@ _cache_full_warning = None
 _enabled = False
 
 
+default_filename = "%s/%s" % (
+    os.environ.get("XDG_CACHE_HOME") or ("%s/.cache" % os.environ["HOME"]),
+    "stbt/cache.lmdb")
+
+
 @contextmanager
 def setup_cache(filename=None):
     """Set up the cache. Typically called by stbt-run before running your test.
@@ -66,10 +71,8 @@ def setup_cache(filename=None):
     global _cache_full_warning
 
     if filename is None:
-        cache_home = os.environ.get('XDG_CACHE_HOME') \
-            or '%s/.cache' % os.environ['HOME']
-        mkdir_p(cache_home + "/stbt")
-        filename = cache_home + "/stbt/cache.lmdb"
+        filename = default_filename
+    mkdir_p(os.path.dirname(filename) or ".")
     with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:  # pylint: disable=no-member
         assert _cache is None
         try:
