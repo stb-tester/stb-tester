@@ -395,9 +395,11 @@ PatternType = type(re.compile(""))
 def apply_ocr_corrections(text, corrections=None):
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
-    This is also available as a separate function, so that you can use it to
-    post-process old test artifacts using new corrections. See also
-    `stbt.set_global_ocr_corrections`.
+    This is available as a separate function so that you can use it to
+    post-process old test artifacts using new corrections.
+
+    :param str text: The text to correct.
+    :param dict corrections: See `stbt.ocr`.
     """
     if corrections:
         text = _apply_ocr_corrections(text, corrections)
@@ -407,17 +409,29 @@ def apply_ocr_corrections(text, corrections=None):
 
 
 def _apply_ocr_corrections(text, corrections):
+
+    def replace_string(matchobj):
+        old = matchobj.group(0)
+        new = corrections[old]
+        debug("ocr corrections: %r -> %r" % (old, new))
+        return new
+
+    def replace_regex(matchobj):
+        new = corrections[matchobj.re]
+        debug("ocr corrections: /%s/ -> %r" % (matchobj.re.pattern, new))
+        return new
+
     # Match plain strings at word boundaries:
     pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
                        for k in corrections
                        if isinstance(k, basestring))
     if pattern:
-        replace = lambda matchobj: corrections[matchobj.group(0)]
-        text = re.sub(pattern, replace, text)
+        text = re.sub(pattern, replace_string, text)
+
     # Match regexes:
-    for k, v in corrections.items():
+    for k in corrections:
         if isinstance(k, PatternType):
-            text = re.sub(k, v, text)
+            text = re.sub(k, replace_regex, text)
     return text
 
 
