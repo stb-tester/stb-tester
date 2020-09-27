@@ -395,9 +395,11 @@ PatternType = type(re.compile(""))
 def apply_ocr_corrections(text, corrections=None):
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
-    This is also available as a separate function, so that you can use it to
-    post-process old test artifacts using new corrections. See also
-    `stbt.set_global_ocr_corrections`.
+    This is available as a separate function so that you can use it to
+    post-process old test artifacts using new corrections.
+
+    :param str text: The text to correct.
+    :param dict corrections: See `stbt.ocr`.
     """
     if corrections:
         text = _apply_ocr_corrections(text, corrections)
