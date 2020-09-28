@@ -602,8 +602,6 @@ class Keyboard(object):
         the :ref:`example above <keyboard-example>`.
         """
 
-        import stbt_core as stbt
-
         for letter in text:
             # Sanity check so we don't fail halfway through typing.
             if not self._find_keys({"text": letter}):
@@ -612,8 +610,7 @@ class Keyboard(object):
         for letter in text:
             page = self.navigate_to({"text": letter},
                                     page, verify_every_keypress)
-            stbt.press_and_wait("KEY_OK", mask=self.mask, stable_secs=0.5,  # pylint:disable=stbt-unused-return-value
-                                timeout_secs=1)
+            self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
             log.debug("Keyboard: Entered %r; the selection is now on %r",
                       letter, page.selection)
@@ -665,7 +662,7 @@ class Keyboard(object):
                     stbt.press(k)
                 keys = keys[-1:]  # only verify the last one
             for key, possible_targets in keys:
-                assert stbt.press_and_wait(key, mask=self.mask, stable_secs=0.5)
+                assert self.press_and_wait(key, stable_secs=0.5)
                 page = page.refresh()
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = page.selection
@@ -677,6 +674,13 @@ class Keyboard(object):
                         key,
                         current)
         return page
+
+    def press_and_wait(self, key, timeout_secs=10, stable_secs=1):
+        import stbt_core as stbt
+
+        return stbt.press_and_wait(key, mask=self.mask,
+                                   timeout_secs=timeout_secs,
+                                   stable_secs=stable_secs)
 
 
 def _minimal_query(query):
