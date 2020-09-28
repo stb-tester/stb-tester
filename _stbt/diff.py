@@ -99,7 +99,7 @@ class MotionDiff(FrameDiffer):
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
-        _log_motion_image_debug(imglog, result)
+        imglog.html(MOTION_HTML, result=result)
         return result
 
 
@@ -140,39 +140,33 @@ class MotionResult(object):
                 self.motion, self.region, _frame_repr(self.frame)))
 
 
-def _log_motion_image_debug(imglog, result):
-    if not imglog.enabled:
-        return
+MOTION_HTML = u"""\
+    <h4>
+      detect_motion:
+      {{ "Found" if result.motion else "Didn't find" }} motion
+    </h4>
 
-    template = u"""\
-        <h4>
-          detect_motion:
-          {{ "Found" if result.motion else "Didn't find" }} motion
-        </h4>
+    {{ annotated_image(result) }}
 
-        {{ annotated_image(result) }}
+    <h5>ROI Gray:</h5>
+    <img src="gray.png" />
 
-        <h5>ROI Gray:</h5>
-        <img src="gray.png" />
+    <h5>Previous frame ROI Gray:</h5>
+    <img src="previous_frame_gray.png" />
 
-        <h5>Previous frame ROI Gray:</h5>
-        <img src="previous_frame_gray.png" />
+    <h5>Absolute difference:</h5>
+    <img src="absdiff.png" />
 
-        <h5>Absolute difference:</h5>
-        <img src="absdiff.png" />
+    {% if "mask" in images %}
+    <h5>Mask:</h5>
+    <img src="mask.png" />
+    <h5>Absolute difference – masked:</h5>
+    <img src="absdiff_masked.png" />
+    {% endif %}
 
-        {% if "mask" in images %}
-        <h5>Mask:</h5>
-        <img src="mask.png" />
-        <h5>Absolute difference – masked:</h5>
-        <img src="absdiff_masked.png" />
-        {% endif %}
+    <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
+    <img src="absdiff_threshold.png" />
 
-        <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
-        <img src="absdiff_threshold.png" />
-
-        <h5>Eroded:</h5>
-        <img src="absdiff_threshold_erode.png" />
-    """
-
-    imglog.html(template, result=result)
+    <h5>Eroded:</h5>
+    <img src="absdiff_threshold_erode.png" />
+"""
