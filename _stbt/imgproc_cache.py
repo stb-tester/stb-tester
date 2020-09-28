@@ -29,6 +29,7 @@ import numpy
 
 try:
     import lmdb
+    from _stbt.xxhash import Xxhash64
 except ImportError:
     lmdb = None
 
@@ -244,7 +245,6 @@ class _ArgsEncoder(json.JSONEncoder):
                 "confirm_threshold": o.confirm_threshold,
                 "erode_passes": o.erode_passes}
         elif isinstance(o, numpy.ndarray):
-            from _stbt.xxhash import Xxhash64
             h = Xxhash64()
             h.update(numpy.ascontiguousarray(o).data)
             return (o.shape, h.hexdigest())
@@ -254,7 +254,6 @@ class _ArgsEncoder(json.JSONEncoder):
 
 def _cache_hash(value):
     # type: (...) -> bytes
-    from _stbt.xxhash import Xxhash64
     h = Xxhash64()
 
     class HashWriter(object):
