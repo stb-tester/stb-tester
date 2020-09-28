@@ -23,9 +23,9 @@ import enum
 import cv2
 import numpy
 
-from .imgutils import load_image, pixel_bounding_box
+from .diff import FrameDiffer, MotionDiff, MotionResult
+from .imgutils import crop, load_image, pixel_bounding_box
 from .logging import ddebug, debug, draw_on
-from .motion import MotionResult
 from .types import Region
 
 
@@ -46,10 +46,17 @@ def press_and_wait(
     :param stbt.Region region: Only look at the specified region of the video
         frame.
 
-    :param str mask: The filename of a black & white image that specifies which
-        part of the video frame to look at. White pixels select the area to
-        analyse; black pixels select the area to ignore. You can't specify
-        ``region`` and ``mask`` at the same time.
+    :type mask: str or `numpy.ndarray`
+    :param str mask:
+        A black & white image that specifies which part of the video frame to
+        look at. White pixels select the area to analyse; black pixels select
+        the area to ignore.
+
+        This can be a string (a filename that will be resolved as per
+        `load_image`) or a single-channel image in OpenCV format.
+
+        If you specify ``region``, the mask must be the same size as the
+        region. Otherwise the mask must be the same size as the frame.
 
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of
@@ -83,6 +90,9 @@ def press_and_wait(
         All times are measured in seconds since 1970-01-01T00:00Z; the
         timestamps can be compared with system time (the output of
         ``time.time()``).
+
+    Changed in v32: Use the same difference-detection algorithm as
+    `wait_for_motion`.
     """
     if _dut is None:
         import stbt_core
@@ -94,6 +104,9 @@ def press_and_wait(
     result = t.wait(press_result)
     debug("press_and_wait(%r) -> %s" % (key, result))
     return result
+
+
+press_and_wait.differ = MotionDiff
 
 
 def wait_for_transition_to_end(
@@ -134,41 +147,32 @@ def wait_for_transition_to_end(
 
 
 class _Transition(object):
-    def __init__(self, region=Region.ALL, mask=None, timeout_secs=10,
-                 stable_secs=1, dut=None):
-        if dut is None:
-            import stbt_core
-            dut = stbt_core
-
-        if region is not Region.ALL and mask is not None:
-            raise ValueError(
-                "You can't specify region and mask at the same time")
-
+    def __init__(self, region, mask, timeout_secs, stable_secs, dut):
         self.region = region
-        self.mask_image = None
-        if isinstance(mask, numpy.ndarray):
-            self.mask_image = mask
-        elif mask:
-            self.mask_image = load_image(mask)
+        self.mask = None
+        if mask is not None:
+            self.mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
         self.dut = dut
 
         self.frames = self.dut.frames()
-        self.diff = strict_diff
         self.expiry_time = None
 
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
+        differ = press_and_wait.differ(initial_frame=press_result.frame_before,
+                                       region=self.region, mask=self.mask)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
-            if self.diff(press_result.frame_before, f, self.region,
-                         self.mask_image):
+            motion_result = differ.diff(f)
+            draw_on(f, motion_result, label="transition")
+            if motion_result:
                 _debug("Animation started", f)
                 animation_start_time = f.time
                 break
@@ -192,11 +196,14 @@ class _Transition(object):
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
-        f = first_stable_frame = initial_frame
+        first_stable_frame = initial_frame
+        differ = press_and_wait.differ(initial_frame=initial_frame,
+                                       region=self.region, mask=self.mask)
         while True:
-            prev = f
             f = next(self.frames)
-            if self.diff(prev, f, self.region, self.mask_image):
+            motion_result = differ.diff(f)
+            draw_on(f, motion_result, label="transition")
+            if motion_result:
                 _debug("Animation in progress", f)
                 first_stable_frame = f
             else:
@@ -224,44 +231,51 @@ def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
-def strict_diff(prev, frame, region, mask_image):
-    if region is not None:
-        full_frame = Region(0, 0, frame.shape[1], frame.shape[0])
-        region = Region.intersect(full_frame, region)
-        f1 = prev[region.y:region.bottom, region.x:region.right]
-        f2 = frame[region.y:region.bottom, region.x:region.right]
+class StrictDiff(FrameDiffer):
+    """The original `press_and_wait` algorithm."""
 
-    absdiff = cv2.absdiff(f1, f2)
-    if mask_image is not None:
-        absdiff = cv2.bitwise_and(absdiff, mask_image, absdiff)
+    def __init__(self, initial_frame, region=Region.ALL, mask=None):
+        super(StrictDiff, self).__init__(initial_frame, region, mask)
+        if self.mask is not None:
+            # We need 3 channels to match `frame`.
+            self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)
 
-    diffs_found = False
-    out_region = None
-    maxdiff = numpy.max(absdiff)
-    if maxdiff > 20:
-        diffs_found = True
-        big_diffs = absdiff > 20
-        out_region = pixel_bounding_box(big_diffs)
-        _ddebug("found %s diffs above 20 (max %s) in %r", frame,
-                numpy.count_nonzero(big_diffs), maxdiff, out_region)
-    elif maxdiff > 0:
-        small_diffs = absdiff > 5
-        small_diffs_count = numpy.count_nonzero(small_diffs)
-        if small_diffs_count > 50:
+    def diff(self, frame):
+        absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
+                              crop(frame, self.region))
+        if self.mask is not None:
+            absdiff = cv2.bitwise_and(absdiff, self.mask, absdiff)
+
+        diffs_found = False
+        out_region = None
+        maxdiff = numpy.max(absdiff)
+        if maxdiff > 20:
             diffs_found = True
-            out_region = pixel_bounding_box(small_diffs)
-            _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
-                    maxdiff, out_region)
-        else:
-            _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
-                    maxdiff)
-    if out_region:
-        out_region = out_region.translate(region)
+            big_diffs = absdiff > 20
+            out_region = pixel_bounding_box(big_diffs)
+            _ddebug("found %s diffs above 20 (max %s) in %r", frame,
+                    numpy.count_nonzero(big_diffs), maxdiff, out_region)
+        elif maxdiff > 0:
+            small_diffs = absdiff > 5
+            small_diffs_count = numpy.count_nonzero(small_diffs)
+            if small_diffs_count > 50:
+                diffs_found = True
+                out_region = pixel_bounding_box(small_diffs)
+                _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
+                        maxdiff, out_region)
+            else:
+                _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
+                        maxdiff)
+        if diffs_found:
+            # Undo crop:
+            out_region = out_region.translate(self.region)
+            # Only update the reference frame if we found differences. This
+            # makes the algorithm more sensitive to slow motion.
+            self.prev_frame = frame
 
-    result = MotionResult(getattr(frame, "time", None), diffs_found,
-                          out_region, frame)
-    draw_on(frame, result, label="transition")
-    return result
+        result = MotionResult(getattr(frame, "time", None), diffs_found,
+                              out_region, frame)
+        return result
 
 
 class _TransitionResult(object):

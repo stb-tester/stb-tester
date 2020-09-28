@@ -11,9 +11,9 @@ from collections import deque
 import cv2
 
 from .config import ConfigurationError, get_config
-from .imgutils import (_frame_repr, _image_region, load_image,
-                       pixel_bounding_box, crop, limit_time)
-from .logging import debug, draw_on, ImageLogger
+from .diff import MotionDiff
+from .imgutils import limit_time, load_image
+from .logging import debug, draw_on
 from .types import Region, UITestFailure
 
 
@@ -53,17 +53,17 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     :param mask:
         A black & white image that specifies which part of the image to search
         for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore. The mask must be the same size as the video frame.
+        the area to ignore.
 
         This can be a string (a filename that will be resolved as per
         `load_image`) or a single-channel image in OpenCV format.
 
+        If you specify ``region``, the mask must be the same size as the
+        region. Otherwise the mask must be the same size as the frame.
+
     :type region: `Region`
     :param region:
         Only analyze the specified region of the video frame.
-
-        If you specify both ``region`` and ``mask``, the mask must be the same
-        size as the region.
 
     :type frames: Iterator[stbt.Frame]
     :param frames: An iterable of video-frames to analyse. Defaults to
@@ -74,10 +74,6 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         frames = stbt_core.frames()
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
-
-    if noise_threshold is None:
-        noise_threshold = get_config(
-            'motion', 'noise_threshold', type_=float)
 
     debug("Searching for motion")
 
@@ -90,65 +86,12 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     except StopIteration:
         return
 
-    region = Region.intersect(_image_region(frame), region)
-
-    previous_frame_gray = cv2.cvtColor(crop(frame, region),
-                                       cv2.COLOR_BGR2GRAY)
-    if (mask is not None and
-            mask.shape[:2] != previous_frame_gray.shape[:2]):
-        raise ValueError(
-            "The dimensions of the mask %s %s don't match the video frame %s"
-            % (repr(mask.relative_filename) or "<Image>",
-               mask.shape, previous_frame_gray.shape))
-
+    differ = MotionDiff(frame, region, mask, noise_threshold)
     for frame in frames:
-        imglog = ImageLogger("detect_motion", region=region)
-        imglog.imwrite("source", frame)
-        imglog.set(roi=region, noise_threshold=noise_threshold)
-
-        frame_gray = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-        imglog.imwrite("gray", frame_gray)
-        imglog.imwrite("previous_frame_gray", previous_frame_gray)
-
-        absdiff = cv2.absdiff(frame_gray, previous_frame_gray)
-        imglog.imwrite("absdiff", absdiff)
-
-        if mask is not None:
-            absdiff = cv2.bitwise_and(absdiff, mask)
-            imglog.imwrite("mask", mask)
-            imglog.imwrite("absdiff_masked", absdiff)
-
-        _, thresholded = cv2.threshold(
-            absdiff, int((1 - noise_threshold) * 255), 255,
-            cv2.THRESH_BINARY)
-        eroded = cv2.erode(
-            thresholded,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-        imglog.imwrite("absdiff_threshold", thresholded)
-        imglog.imwrite("absdiff_threshold_erode", eroded)
-
-        out_region = pixel_bounding_box(eroded)
-        if out_region:
-            # Undo cv2.erode above:
-            out_region = out_region.extend(x=-1, y=-1)
-            # Undo crop:
-            out_region = out_region.translate(region)
-
-        motion = bool(out_region)
-        if motion:
-            # Only update the comparison frame if it's different to the previous
-            # one.  This makes `detect_motion` more sensitive to slow motion
-            # because the differences between frames 1 and 2 might be small and
-            # the differences between frames 2 and 3 might be small but we'd see
-            # the difference by looking between 1 and 3.
-            previous_frame_gray = frame_gray
-
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
+        result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")
         debug("%s found: %s" % (
-            "Motion" if motion else "No motion", str(result)))
-        _log_motion_image_debug(imglog, result)
+            "Motion" if result.motion else "No motion", str(result)))
         yield result
 
 
@@ -242,40 +185,6 @@ def wait_for_motion(
                         timeout_secs)
 
 
-class MotionResult(object):
-    """The result from `detect_motion` and `wait_for_motion`.
-
-    :ivar float time: The time at which the video-frame was captured, in
-        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
-        system time (``time.time()``).
-
-    :ivar bool motion: True if motion was found. This is the same as evaluating
-        ``MotionResult`` as a bool. That is, ``if result:`` will behave the
-        same as ``if result.motion:``.
-
-    :ivar Region region: Bounding box where the motion was found, or ``None``
-        if no motion was found.
-
-    :ivar Frame frame: The video frame in which motion was (or wasn't) found.
-    """
-    _fields = ("time", "motion", "region", "frame")
-
-    def __init__(self, time, motion, region, frame):
-        self.time = time
-        self.motion = motion
-        self.region = region
-        self.frame = frame
-
-    def __bool__(self):
-        return self.motion
-
-    def __repr__(self):
-        return (
-            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
-                "None" if self.time is None else "%.3f" % self.time,
-                self.motion, self.region, _frame_repr(self.frame)))
-
-
 class MotionTimeout(UITestFailure):
     """Exception raised by `wait_for_motion`.
 
@@ -298,41 +207,3 @@ class MotionTimeout(UITestFailure):
         return "Didn't find motion%s within %g seconds." % (
             " (with mask '%s')" % self.mask if self.mask else "",
             self.timeout_secs)
-
-
-def _log_motion_image_debug(imglog, result):
-    if not imglog.enabled:
-        return
-
-    template = u"""\
-        <h4>
-          detect_motion:
-          {{ "Found" if result.motion else "Didn't find" }} motion
-        </h4>
-
-        {{ annotated_image(result) }}
-
-        <h5>ROI Gray:</h5>
-        <img src="gray.png" />
-
-        <h5>Previous frame ROI Gray:</h5>
-        <img src="previous_frame_gray.png" />
-
-        <h5>Absolute difference:</h5>
-        <img src="absdiff.png" />
-
-        {% if "mask" in images %}
-        <h5>Mask:</h5>
-        <img src="mask.png" />
-        <h5>Absolute difference – masked:</h5>
-        <img src="absdiff_masked.png" />
-        {% endif %}
-
-        <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
-        <img src="absdiff_threshold.png" />
-
-        <h5>Eroded:</h5>
-        <img src="absdiff_threshold_erode.png" />
-    """
-
-    imglog.html(template, result=result)

@@ -67,6 +67,23 @@ def test_that_wait_for_motion_detects_a_wipe():
     stbt.wait_for_motion(frames=gradient_wipe())
 
 
+def test_detect_motion_region_and_mask():
+    def dm(**kwargs):
+        return next(stbt.detect_motion(frames=wipe(), **kwargs))
+
+    r = stbt.Region(0, 0, right=640, bottom=1280)
+
+    # Just check no exceptions
+    dm()
+    dm(mask="mask-out-left-half-720p.png")
+    dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+    dm(region=r)
+    dm(region=r, mask=numpy.zeros((720, 640), dtype=numpy.uint8))
+
+    with pytest.raises(ValueError):
+        dm(region=r, mask="mask-out-left-half-720p.png")
+
+
 def fake_frames():
     a = numpy.zeros((2, 2, 3), dtype=numpy.uint8)
     a.flags.writeable = False

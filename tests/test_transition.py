@@ -13,7 +13,7 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
-from _stbt.transition import strict_diff
+from _stbt.transition import StrictDiff
 
 
 class FakeDeviceUnderTest(object):
@@ -57,14 +57,26 @@ def F(state, t):
     elif state in ["fade-to-black", "fade-to-white"]:
         array = numpy.ones((720, 1280, 3), dtype=numpy.uint8) * 127
     elif state == "ball":
-        # black background, white ball that moves by 1 pixel ever 10ms
+        # black background, white ball that moves by 1 pixel every 10ms
         # in the left half of the frame.
         array = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
-        cv2.circle(array, (int(t * 100) % 625, 360), 15, (255, 255, 255))
+        cv2.circle(array, (int(t * 100) % 625, 360), 15, (255, 255, 255), -1)
     return array
 
 
-def test_press_and_wait():
+@pytest.fixture(scope="function", params=[StrictDiff, stbt.MotionDiff])
+def diff_algorithm(request):
+    previous = stbt.press_and_wait.differ
+    try:
+        stbt.press_and_wait.differ = request.param
+        yield stbt.press_and_wait.differ
+    finally:
+        stbt.press_and_wait.differ = previous
+
+
+# pylint:disable=redefined-outer-name,unused-argument
+
+def test_press_and_wait(diff_algorithm):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.press_and_wait("white", stable_secs=0.1, _dut=_stbt)
@@ -85,7 +97,7 @@ def test_press_and_wait():
     assert transition.frame.max() == 0
 
 
-def test_press_and_wait_start_timeout():
+def test_press_and_wait_start_timeout(diff_algorithm):
     transition = stbt.press_and_wait("black", timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
     print(transition)
@@ -93,7 +105,7 @@ def test_press_and_wait_start_timeout():
     assert transition.status == stbt.TransitionStatus.START_TIMEOUT
 
 
-def test_press_and_wait_stable_timeout():
+def test_press_and_wait_stable_timeout(diff_algorithm):
     transition = stbt.press_and_wait("ball", timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
     print(transition)
@@ -111,12 +123,16 @@ def test_press_and_wait_stable_timeout():
     (None, stbt.Region.ALL, stbt.TransitionStatus.STABLE_TIMEOUT),
     ("mask-out-left-half-720p.png", stbt.Region.ALL,
      stbt.TransitionStatus.START_TIMEOUT),
+    (numpy.zeros((720, 640), dtype=numpy.uint8),
+     stbt.Region(x=0, y=0, right=640, bottom=720),
+     stbt.TransitionStatus.START_TIMEOUT),
     (None, stbt.Region(x=640, y=0, right=1280, bottom=720),
      stbt.TransitionStatus.START_TIMEOUT),
     (None, stbt.Region(x=0, y=0, right=1280, bottom=360),
      stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
-def test_press_and_wait_with_mask_or_region(mask, region, expected):
+def test_press_and_wait_with_mask_or_region(mask, region, expected,
+                                            diff_algorithm):
     transition = stbt.press_and_wait(
         "ball", mask=mask, region=region, timeout_secs=0.2, stable_secs=0.1,
         _dut=FakeDeviceUnderTest())
@@ -124,7 +140,7 @@ def test_press_and_wait_with_mask_or_region(mask, region, expected):
     assert transition.status == expected
 
 
-def test_wait_for_transition_to_end():
+def test_wait_for_transition_to_end(diff_algorithm):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.wait_for_transition_to_end(
@@ -138,7 +154,7 @@ def test_wait_for_transition_to_end():
     assert transition.status == stbt.TransitionStatus.STABLE_TIMEOUT
 
 
-def test_press_and_wait_timestamps():
+def test_press_and_wait_timestamps(diff_algorithm):
     _stbt = FakeDeviceUnderTest(
         ["black"] * 10 + ["fade-to-white"] * 2 + ["white"] * 100)
 
@@ -153,8 +169,7 @@ def test_press_and_wait_timestamps():
     assert isclose(transition.animation_duration, 0.08)
 
 
-def test_that_strict_diff_ignores_a_few_scattered_small_differences():
-    assert not strict_diff(
-        stbt.load_image("2px-different-1.png"),
-        stbt.load_image("2px-different-2.png"),
-        region=stbt.Region.ALL, mask_image=None)
+def test_that_strictdiff_ignores_a_few_scattered_small_differences():
+    differ = StrictDiff(initial_frame=stbt.load_image("2px-different-1.png"),
+                        region=stbt.Region.ALL, mask=None)
+    assert not differ.diff(stbt.load_image("2px-different-2.png"))
