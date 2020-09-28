@@ -601,9 +601,6 @@ class Keyboard(object):
         so your test scripts won't call this ``Keyboard`` class directly. See
         the :ref:`example above <keyboard-example>`.
         """
-
-        import stbt_core as stbt
-
         for letter in text:
             # Sanity check so we don't fail halfway through typing.
             if not self._find_keys({"text": letter}):
@@ -612,9 +609,7 @@ class Keyboard(object):
         for letter in text:
             page = self.navigate_to({"text": letter},
                                     page, verify_every_keypress)
-            stbt.press_and_wait("KEY_OK", mask=self.mask, stable_secs=0.5,  # pylint:disable=stbt-unused-return-value
-                                timeout_secs=1)
-            page = page.refresh()
+            page = self._move_one(page, "KEY_OK")
             log.debug("Keyboard: Entered %r; the selection is now on %r",
                       letter, page.selection)
         log.info("Keyboard: Entered %r", text)
@@ -639,9 +634,6 @@ class Keyboard(object):
             reflecting the device-under-test's new state after the navigation
             completed.
         """
-
-        import stbt_core as stbt
-
         targets = self._find_keys(target)
         if not targets:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
@@ -662,11 +654,10 @@ class Keyboard(object):
                       current, target, [k for k, _ in keys])
             if not verify_every_keypress:
                 for k, _ in keys[:-1]:
-                    stbt.press(k)
+                    page = self._move_one(page, k, wait=False)
                 keys = keys[-1:]  # only verify the last one
             for key, possible_targets in keys:
-                assert stbt.press_and_wait(key, mask=self.mask, stable_secs=0.5)
-                page = page.refresh()
+                page = self._move_one(page, key, wait=True)
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = page.selection
                 assert current in possible_targets, \
@@ -677,6 +668,45 @@ class Keyboard(object):
                         key,
                         current)
         return page
+
+    def _move_one(self, page, key, wait=True):
+        if isinstance(page, Movable):
+            page = page.move_one(key=key, wait=wait)
+            assert page is not None
+            return page
+        else:
+            import stbt_core as stbt
+            if wait:
+                assert stbt.press_and_wait(key, mask=self.mask, stable_secs=0.5)
+                page = page.refresh()
+                assert page, "%s page isn't visible" % type(page).__name__
+                return page
+            else:
+                stbt.press(key)
+                return page
+
+
+class Movable(object):
+    """Abstract base class.  Implement this interface to allow Keyboard to use
+    this class for navigation.  This is useful to customise the navigation in
+    the case that ``press_and_wait`` is not suitable with your UI.
+
+    """
+
+    def move_one(self, key, wait=True):
+        """
+        This should press the key given by ``key`` and return a page-object
+        representing the new state that the STB is in.
+
+        If `wait=True` this method should wait for the end of a transition, and
+        the frame object returned should correspond to the state after the
+        transition has completed.
+
+        If `wait=False` you should press and return immediately.  Usually in
+        this case the implementation should just return `self`, but it may
+        return a different frameobject if necessary.
+        """
+        raise NotImplementedError()
 
 
 def _minimal_query(query):

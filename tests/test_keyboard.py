@@ -8,6 +8,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import logging
 import re
+from contextlib import contextmanager
 
 import networkx as nx
 import numpy
@@ -19,7 +20,8 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import Key, _keys_to_press, _strip_shift_transitions
+from _stbt.keyboard import (
+    Key, Movable, _keys_to_press, _strip_shift_transitions)
 from _stbt.transition import _TransitionResult, TransitionStatus
 from _stbt.utils import py3
 
@@ -74,6 +76,23 @@ class DUT(object):
         }
         self.pressed = []
         self.entered = ""
+        self.error_on_press = False
+
+    @contextmanager
+    def patch(self):
+        def press(keypress):
+            assert not self.error_on_press
+            return self.handle_press(keypress)
+
+        def press_and_wait(key, **_kwargs):
+            assert not self.error_on_press
+            self.handle_press(key)
+            return _TransitionResult(
+                key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+        with mock.patch("stbt_core.press", press), \
+                mock.patch("stbt_core.press_and_wait", press_and_wait):
+            yield self
 
     @property
     def selection(self):
@@ -141,10 +160,6 @@ class DUT(object):
         logging.debug("DUT.handle_press: Moved from %r (%s) to %r (%s)",
                       selected, mode, self.selection, self.mode)
 
-    def handle_press_and_wait(self, key, **_kwargs):
-        self.handle_press(key)
-        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
-
 
 class BuggyDUT(DUT):
     def handle_press(self, keypress):
@@ -155,17 +170,13 @@ class BuggyDUT(DUT):
 
 @pytest.fixture(scope="function")
 def dut():
-    dut = DUT()
-    with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+    with DUT().patch() as dut:
         yield dut
 
 
 @pytest.fixture(scope="function")
 def buggy_dut():
-    dut = BuggyDUT()
-    with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+    with BuggyDUT().patch() as dut:
         yield dut
 
 
@@ -178,6 +189,10 @@ class SearchPage(stbt.FrameObject):
         self.dut = dut
         self.kb = kb
 
+        # Snapshot state of DUT like grabbing a frame:
+        self._mode = self.dut.mode
+        self._selection = self.dut.selection
+
     @property
     def is_visible(self):
         return True
@@ -185,7 +200,7 @@ class SearchPage(stbt.FrameObject):
     @property
     def mode(self):
         if self.kb.modes:
-            return self.dut.mode
+            return self._mode
         else:
             return None
 
@@ -195,12 +210,12 @@ class SearchPage(stbt.FrameObject):
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
         query = {}
-        if self.dut.selection == " ":
+        if self._selection == " ":
             query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
         else:
-            query = {"name": self.dut.selection}
+            query = {"name": self._selection}
         if self.kb.modes:
-            query["mode"] = self.dut.mode
+            query["mode"] = self._mode
         key = self.kb.find_key(**query)
         logging.debug("SearchPage.selection: %r", key)
         return key
@@ -216,6 +231,25 @@ class SearchPage(stbt.FrameObject):
     def navigate_to(self, target, verify_every_keypress=False):
         return self.kb.navigate_to(target, page=self,
                                    verify_every_keypress=verify_every_keypress)
+
+
+class SearchPageMovable(SearchPage, Movable):
+    def __init__(self, dut, kb):
+        super(SearchPageMovable, self).__init__(dut, kb)
+        dut.error_on_press = True
+
+    def move_one(self, key, wait=True):
+        if wait:
+            self.dut.handle_press(key)
+            return self.refresh()
+        else:
+            self.dut.handle_press(key)
+            return self
+
+    def refresh(self, frame=None, **kwargs):
+        page = SearchPageMovable(self.dut, self.kb)
+        logging.debug("SearchPageMovable.refresh: Now on %r", page.selection)
+        return page
 
 
 kb1 = stbt.Keyboard()  # Full model with modes, defined using Grids
@@ -414,10 +448,11 @@ for k in "abcdefghijklmnopqrstuvwxzy1234567890":
                        "KEY_OK")
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
-def test_enter_text_mixed_case(dut, kb):
+def test_enter_text_mixed_case(dut, fo_class, kb):
     logging.debug("Keys: %r", kb.G.nodes())
-    page = SearchPage(dut, kb)
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     assert page.selection.text == "a"
     assert page.selection.mode == "lowercase"
@@ -426,36 +461,39 @@ def test_enter_text_mixed_case(dut, kb):
     assert dut.entered == "Hi there"
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb",
                          [kb1,
                           kb2,
                           kb3,
                           pytest.param(kb3_bytes, marks=python2_only)],
                          ids=["kb1", "kb2", "kb3", "kb3_bytes"])
-def test_enter_text_single_case(dut, kb):
-    page = SearchPage(dut, kb)
+def test_enter_text_single_case(dut, kb, fo_class):
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     page = page.enter_text("hi there")
     assert page.selection.name == "e"
     assert dut.entered == "hi there"
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_enter_text_uses_minimal_keypresses(dut, kb):
-    page = SearchPage(dut, kb)
+def test_that_enter_text_uses_minimal_keypresses(dut, kb, fo_class):
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     page.enter_text("gh")
     assert dut.pressed == ["KEY_DOWN", "KEY_OK",
                            "KEY_RIGHT", "KEY_OK"]
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_enter_text_twice(dut, kb):
+def test_enter_text_twice(dut, kb, fo_class):
     """This is really a test of your Page Object's implementation of enter_text.
 
     You must return the updated page instance.
     """
-    page = SearchPage(dut, kb)
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     page = page.enter_text("g")
     page = page.enter_text("h")
@@ -463,31 +501,34 @@ def test_enter_text_twice(dut, kb):
                            "KEY_RIGHT", "KEY_OK"]
 
 
-def test_that_enter_text_finds_keys_by_text(dut):
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
+def test_that_enter_text_finds_keys_by_text(dut, fo_class):
     kb = stbt.Keyboard()
     a, g, m, s, y, five = [kb.add_key(x) for x in "agmsy5"]
     space = kb.add_key("SPACE", text=" ")
     for k1, k2 in zip([a, g, m, s, y, five], [g, m, s, y, five, space]):
         kb.add_transition(k1, k2, "KEY_DOWN")
 
-    page = SearchPage(dut, kb)
+    page = fo_class(dut, kb)
     page = page.enter_text(" ")
     assert page.selection.name == "SPACE"
     assert dut.entered == " "
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_navigate_to(dut, kb):
-    page = SearchPage(dut, kb)
+def test_navigate_to(dut, kb, fo_class):
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     page = page.navigate_to("CLEAR")
     assert page.selection.name == "CLEAR"
     assert dut.pressed == ["KEY_DOWN"] * 6 + ["KEY_RIGHT"] * 2
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
-def test_navigate_to_other_mode(dut, kb):
-    page = SearchPage(dut, kb)
+def test_navigate_to_other_mode(dut, kb, fo_class):
+    page = fo_class(dut, kb)
     assert page.selection.name == "a"
     assert page.selection.mode == "lowercase"
     page = page.navigate_to({"name": "CLEAR", "mode": "uppercase"})
@@ -497,6 +538,7 @@ def test_navigate_to_other_mode(dut, kb):
                           ["KEY_DOWN"] * 7
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("target,verify_every_keypress,num_presses", [
     ("b", False, 1),
     ("b", True, 1),
@@ -504,19 +546,21 @@ def test_navigate_to_other_mode(dut, kb):
     ("c", True, 1),
 ])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_navigate_to_checks_target(buggy_dut, kb, target,
+def test_that_navigate_to_checks_target(buggy_dut, kb, fo_class, target,
                                         verify_every_keypress, num_presses):
     """buggy_dut skips the B when pressing right from A (and lands on C)."""
-    page = SearchPage(buggy_dut, kb)
+    page = fo_class(buggy_dut, kb)
     assert page.selection.name == "a"
     with pytest.raises(AssertionError):
         page.navigate_to(target, verify_every_keypress)
     assert buggy_dut.pressed == ["KEY_RIGHT"] * num_presses
 
 
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
-    page = SearchPage(dut, kb)
+def test_that_keyboard_validates_the_targets_before_navigating(
+        dut, kb, fo_class):
+    page = fo_class(dut, kb)
     with pytest.raises(ValueError):
         page.enter_text("abcÑ")
     assert dut.pressed == []
@@ -525,10 +569,12 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     assert dut.pressed == []
 
 
-def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
-    page = SearchPage(dut, kb4)
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
+def test_that_navigate_to_doesnt_type_text_from_shift_transitions(
+        dut, fo_class):
     dut.symbols_is_shift = True
     dut.mode = "uppercase"
+    page = fo_class(dut, kb4)
     assert page.selection.name == "A"
     assert page.selection.mode == "uppercase"
     page = page.navigate_to("a")
@@ -537,10 +583,11 @@ def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
     assert dut.entered == ""
 
 
-def test_that_enter_text_recalculates_after_shift_transitions(dut):
+@pytest.mark.parametrize("fo_class", [SearchPage, SearchPageMovable])
+def test_that_enter_text_recalculates_after_shift_transitions(dut, fo_class):
     print(edgelists["uppercase"])
-    page = SearchPage(dut, kb4)
     dut.symbols_is_shift = True
+    page = fo_class(dut, kb4)
     assert page.selection.name == "a"
     assert page.selection.mode == "lowercase"
     page = page.enter_text("Aa")
