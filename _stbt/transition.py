@@ -23,7 +23,7 @@ import enum
 import cv2
 import numpy
 
-from .diff import FrameDiffer, MotionResult
+from .diff import FrameDiffer, MotionDiff, MotionResult
 from .imgutils import crop, load_image, pixel_bounding_box
 from .logging import ddebug, debug, draw_on
 from .types import Region
@@ -90,6 +90,9 @@ def press_and_wait(
         All times are measured in seconds since 1970-01-01T00:00Z; the
         timestamps can be compared with system time (the output of
         ``time.time()``).
+
+    Changed in v32: Use the same difference-detection algorithm as
+    `wait_for_motion`.
     """
     if _dut is None:
         import stbt_core
@@ -101,6 +104,9 @@ def press_and_wait(
     result = t.wait(press_result)
     debug("press_and_wait(%r) -> %s" % (key, result))
     return result
+
+
+press_and_wait.differ = MotionDiff
 
 
 def wait_for_transition_to_end(
@@ -270,9 +276,6 @@ class StrictDiff(FrameDiffer):
         result = MotionResult(getattr(frame, "time", None), diffs_found,
                               out_region, frame)
         return result
-
-
-press_and_wait.differ = StrictDiff
 
 
 class _TransitionResult(object):

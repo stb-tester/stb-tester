@@ -67,6 +67,7 @@ from _stbt.precondition import (
     PreconditionError)
 from _stbt.transition import (
     press_and_wait,
+    StrictDiff,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
@@ -125,6 +126,7 @@ __all__ = [to_native_str(x) for x in [
     "Region",
     "save_frame",
     "set_global_ocr_corrections",
+    "StrictDiff",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",

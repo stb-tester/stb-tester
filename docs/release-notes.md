@@ -67,6 +67,12 @@ UNRELEASED
   instance of `Image`. Previously it was a string or a numpy array, depending
   on what you had passed to `match`.
 
+* press_and_wait now uses the same difference-detection algorithm as
+  `wait_for_motion`. This algorithm is more tolerant of small differences
+  caused by noise. To use the previous algorithm, run the following code early
+  in your test script (for example at the top level of `tests/__init__.py`):
+
+        stbt.press_and_wait.differ = stbt.StrictDiff
 
 ##### Minor additions, bugfixes & improvements
 
