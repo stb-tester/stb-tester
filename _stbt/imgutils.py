@@ -54,7 +54,7 @@ class Frame(numpy.ndarray):
                 self.shape[1], self.shape[0], self.shape[2])
         else:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<stbt.Frame(time=%s, dimensions=%s)>" % (
+        return "<Frame(time=%s, dimensions=%s)>" % (
             "None" if self.time is None else "%.3f" % self.time,
             dimensions)
 
@@ -116,7 +116,7 @@ class Image(numpy.ndarray):
                 self.shape[1], self.shape[0], self.shape[2])
         else:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<stbt.Image(filename=%r, dimensions=%s)>" % (
+        return "<Image(filename=%r, dimensions=%s)>" % (
             self.filename, dimensions)
 
 
