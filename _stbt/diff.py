@@ -9,7 +9,7 @@ import cv2
 
 from .config import get_config
 from .imgutils import (crop, _frame_repr, pixel_bounding_box, _validate_region)
-from .logging import ImageLogger
+from .logging import ddebug, ImageLogger
 from .types import Region
 
 
@@ -22,10 +22,12 @@ class FrameDiffer(object):
     repeat that work when you need to compare against frame C.
     """
 
-    def __init__(self, initial_frame, region=Region.ALL, mask=None):
+    def __init__(self, initial_frame, region=Region.ALL, mask=None,
+                 min_size=None):
         self.prev_frame = initial_frame
         self.region = _validate_region(self.prev_frame, region)
         self.mask = mask
+        self.min_size = min_size
         if (self.mask is not None and
                 self.mask.shape[:2] != (self.region.height, self.region.width)):
             raise ValueError(
@@ -43,8 +45,8 @@ class MotionDiff(FrameDiffer):
     """The `wait_for_motion` diffing algorithm."""
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 noise_threshold=None):
-        super(MotionDiff, self).__init__(initial_frame, region, mask)
+                 min_size=None, noise_threshold=None):
+        super(MotionDiff, self).__init__(initial_frame, region, mask, min_size)
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
@@ -58,6 +60,7 @@ class MotionDiff(FrameDiffer):
         frame_gray = self.gray(frame)
 
         imglog = ImageLogger("MotionDiff", region=self.region,
+                             min_size=self.min_size,
                              noise_threshold=self.noise_threshold)
         imglog.imwrite("source", frame)
         imglog.imwrite("gray", frame_gray)
@@ -87,7 +90,11 @@ class MotionDiff(FrameDiffer):
             # Undo crop:
             out_region = out_region.translate(self.region)
 
-        motion = bool(out_region)
+        motion = bool(out_region and (
+            self.min_size is None or
+            (out_region.width >= self.min_size[0] and
+             out_region.height >= self.min_size[1])))
+
         if motion:
             # Only update the comparison frame if it's different to the previous
             # one.  This makes `detect_motion` more sensitive to slow motion
@@ -99,6 +106,7 @@ class MotionDiff(FrameDiffer):
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
+        ddebug(str(result))
         imglog.html(MOTION_HTML, result=result)
         return result
 
@@ -147,6 +155,14 @@ MOTION_HTML = u"""\
     </h4>
 
     {{ annotated_image(result) }}
+
+    <h5>Result:</h5>
+    <pre><code>{{ result | escape }}</code></pre>
+
+    {% if result.region and not result.motion %}
+    <p>Found motion <code>{{ result.region | escape }}</code> smaller than
+    min_size <code>{{ min_size | escape }}</code>.</p>
+    {% endif %}
 
     <h5>ROI Gray:</h5>
     <img src="gray.png" />
