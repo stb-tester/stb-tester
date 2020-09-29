@@ -42,12 +42,12 @@ def test_that_matchresult_image_matches_template_passed_to_match():
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
-    assert re.search(r"image=<stbt.Image\(filename=u?'black.png'",
+    assert re.search(r"image=<Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match_custom():
-    assert "image=<stbt.Image(filename=None, dimensions=30x30x3)>" in str(
+    assert "image=<Image(filename=None, dimensions=30x30x3)>" in str(
         stbt.match(black(30, 30), frame=black()))
 
 

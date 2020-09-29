@@ -6,10 +6,11 @@ from __future__ import division
 from __future__ import absolute_import
 
 import cv2
+import numpy
 
 from .config import get_config
 from .imgutils import (crop, _frame_repr, pixel_bounding_box, _validate_region)
-from .logging import ImageLogger
+from .logging import ddebug, ImageLogger
 from .types import Region
 
 
@@ -22,10 +23,12 @@ class FrameDiffer(object):
     repeat that work when you need to compare against frame C.
     """
 
-    def __init__(self, initial_frame, region=Region.ALL, mask=None):
+    def __init__(self, initial_frame, region=Region.ALL, mask=None,
+                 min_size=None):
         self.prev_frame = initial_frame
         self.region = _validate_region(self.prev_frame, region)
         self.mask = mask
+        self.min_size = min_size
         if (self.mask is not None and
                 self.mask.shape[:2] != (self.region.height, self.region.width)):
             raise ValueError(
@@ -43,12 +46,22 @@ class MotionDiff(FrameDiffer):
     """The `wait_for_motion` diffing algorithm."""
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 noise_threshold=None):
-        super(MotionDiff, self).__init__(initial_frame, region, mask)
+                 min_size=None, noise_threshold=None, erode=True):
+        super(MotionDiff, self).__init__(initial_frame, region, mask, min_size)
+
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
         self.noise_threshold = noise_threshold
+
+        if isinstance(erode, numpy.ndarray):  # For power users
+            kernel = erode
+        elif erode:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        else:
+            kernel = None
+        self.kernel = kernel
+
         self.prev_frame_gray = self.gray(initial_frame)
 
     def gray(self, frame):
@@ -58,6 +71,7 @@ class MotionDiff(FrameDiffer):
         frame_gray = self.gray(frame)
 
         imglog = ImageLogger("MotionDiff", region=self.region,
+                             min_size=self.min_size,
                              noise_threshold=self.noise_threshold)
         imglog.imwrite("source", frame)
         imglog.imwrite("gray", frame_gray)
@@ -74,20 +88,23 @@ class MotionDiff(FrameDiffer):
         _, thresholded = cv2.threshold(
             absdiff, int((1 - self.noise_threshold) * 255), 255,
             cv2.THRESH_BINARY)
-        eroded = cv2.erode(
-            thresholded,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
         imglog.imwrite("absdiff_threshold", thresholded)
-        imglog.imwrite("absdiff_threshold_erode", eroded)
+        if self.kernel is not None:
+            thresholded = cv2.morphologyEx(
+                thresholded, cv2.MORPH_OPEN,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+            imglog.imwrite("absdiff_threshold_erode", thresholded)
 
-        out_region = pixel_bounding_box(eroded)
+        out_region = pixel_bounding_box(thresholded)
         if out_region:
-            # Undo cv2.erode above:
-            out_region = out_region.extend(x=-1, y=-1)
             # Undo crop:
             out_region = out_region.translate(self.region)
 
-        motion = bool(out_region)
+        motion = bool(out_region and (
+            self.min_size is None or
+            (out_region.width >= self.min_size[0] and
+             out_region.height >= self.min_size[1])))
+
         if motion:
             # Only update the comparison frame if it's different to the previous
             # one.  This makes `detect_motion` more sensitive to slow motion
@@ -99,7 +116,8 @@ class MotionDiff(FrameDiffer):
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
-        _log_motion_image_debug(imglog, result)
+        ddebug(str(result))
+        imglog.html(MOTION_HTML, result=result)
         return result
 
 
@@ -140,39 +158,41 @@ class MotionResult(object):
                 self.motion, self.region, _frame_repr(self.frame)))
 
 
-def _log_motion_image_debug(imglog, result):
-    if not imglog.enabled:
-        return
+MOTION_HTML = u"""\
+    <h4>
+      detect_motion:
+      {{ "Found" if result.motion else "Didn't find" }} motion
+    </h4>
 
-    template = u"""\
-        <h4>
-          detect_motion:
-          {{ "Found" if result.motion else "Didn't find" }} motion
-        </h4>
+    {{ annotated_image(result) }}
 
-        {{ annotated_image(result) }}
+    <h5>Result:</h5>
+    <pre><code>{{ result | escape }}</code></pre>
 
-        <h5>ROI Gray:</h5>
-        <img src="gray.png" />
+    {% if result.region and not result.motion %}
+    <p>Found motion <code>{{ result.region | escape }}</code> smaller than
+    min_size <code>{{ min_size | escape }}</code>.</p>
+    {% endif %}
 
-        <h5>Previous frame ROI Gray:</h5>
-        <img src="previous_frame_gray.png" />
+    <h5>ROI Gray:</h5>
+    <img src="gray.png" />
 
-        <h5>Absolute difference:</h5>
-        <img src="absdiff.png" />
+    <h5>Previous frame ROI Gray:</h5>
+    <img src="previous_frame_gray.png" />
 
-        {% if "mask" in images %}
-        <h5>Mask:</h5>
-        <img src="mask.png" />
-        <h5>Absolute difference – masked:</h5>
-        <img src="absdiff_masked.png" />
-        {% endif %}
+    <h5>Absolute difference:</h5>
+    <img src="absdiff.png" />
 
-        <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
-        <img src="absdiff_threshold.png" />
+    {% if "mask" in images %}
+    <h5>Mask:</h5>
+    <img src="mask.png" />
+    <h5>Absolute difference – masked:</h5>
+    <img src="absdiff_masked.png" />
+    {% endif %}
 
-        <h5>Eroded:</h5>
-        <img src="absdiff_threshold_erode.png" />
-    """
+    <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
+    <img src="absdiff_threshold.png" />
 
-    imglog.html(template, result=result)
+    <h5>Eroded:</h5>
+    <img src="absdiff_threshold_erode.png" />
+"""

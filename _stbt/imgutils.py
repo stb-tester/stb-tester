@@ -54,7 +54,7 @@ class Frame(numpy.ndarray):
                 self.shape[1], self.shape[0], self.shape[2])
         else:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<stbt.Frame(time=%s, dimensions=%s)>" % (
+        return "<Frame(time=%s, dimensions=%s)>" % (
             "None" if self.time is None else "%.3f" % self.time,
             dimensions)
 
@@ -116,7 +116,7 @@ class Image(numpy.ndarray):
                 self.shape[1], self.shape[0], self.shape[2])
         else:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<stbt.Image(filename=%r, dimensions=%s)>" % (
+        return "<Image(filename=%r, dimensions=%s)>" % (
             self.filename, dimensions)
 
 
@@ -316,8 +316,8 @@ def pixel_bounding_box(img):
         indices = numpy.where(flat)[0]
         if len(indices) == 0:
             return None
-        out[axis] = indices[0]
-        out[axis + 2] = indices[-1] + 1
+        out[axis] = int(indices[0])
+        out[axis + 2] = int(indices[-1] + 1)
 
     return Region.from_extents(*out)
 

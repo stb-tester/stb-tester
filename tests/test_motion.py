@@ -21,7 +21,7 @@ def test_motionresult_repr():
         == ("MotionResult("
             "time=1466002032.336, motion=True, "
             "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<stbt.Frame(time=1466002032.336, dimensions=1280x720x3)>)")
+            "frame=<Frame(time=1466002032.336, dimensions=1280x720x3)>)")
 
 
 def test_wait_for_motion_half_motion_str_2of4():

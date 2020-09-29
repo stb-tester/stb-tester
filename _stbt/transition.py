@@ -31,7 +31,7 @@ from .types import Region
 
 def press_and_wait(
         key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
-        _dut=None):
+        min_size=None, _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
     changing.
@@ -67,6 +67,11 @@ def press_and_wait(
         (within the specified region or mask) for this long, for the transition
         to be considered "complete".
 
+    :param min_size: A tuple of ``(width, height)``, in pixels, for differences
+        to be considered as "motion". Use this to ignore small differences,
+        such as the blinking text cursor in a search box.
+    :type min_size: Tuple[int, int]
+
     :returns:
         An object that will evaluate to true if the transition completed, false
         otherwise. It has the following attributes:
@@ -92,13 +97,14 @@ def press_and_wait(
         ``time.time()``).
 
     Changed in v32: Use the same difference-detection algorithm as
-    `wait_for_motion`.
+    `wait_for_motion`; ``region`` and ``mask`` can both be specified at the
+    same time.
     """
     if _dut is None:
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
+    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -111,7 +117,7 @@ press_and_wait.differ = MotionDiff
 
 def wait_for_transition_to_end(
         initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
-        stable_secs=1, _dut=None):
+        stable_secs=1, min_size=None, _dut=None):
 
     """Wait for the screen to stop changing.
 
@@ -140,14 +146,14 @@ def wait_for_transition_to_end(
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, _dut)
+    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
 class _Transition(object):
-    def __init__(self, region, mask, timeout_secs, stable_secs, dut):
+    def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
         self.region = region
         self.mask = None
         if mask is not None:
@@ -155,6 +161,7 @@ class _Transition(object):
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
+        self.min_size = min_size
         self.dut = dut
 
         self.frames = self.dut.frames()
@@ -164,7 +171,8 @@ class _Transition(object):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
         differ = press_and_wait.differ(initial_frame=press_result.frame_before,
-                                       region=self.region, mask=self.mask)
+                                       region=self.region, mask=self.mask,
+                                       min_size=self.min_size)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
@@ -198,7 +206,8 @@ class _Transition(object):
 
         first_stable_frame = initial_frame
         differ = press_and_wait.differ(initial_frame=initial_frame,
-                                       region=self.region, mask=self.mask)
+                                       region=self.region, mask=self.mask,
+                                       min_size=self.min_size)
         while True:
             f = next(self.frames)
             motion_result = differ.diff(f)
@@ -234,8 +243,9 @@ def _ddebug(s, f, *args):
 class StrictDiff(FrameDiffer):
     """The original `press_and_wait` algorithm."""
 
-    def __init__(self, initial_frame, region=Region.ALL, mask=None):
-        super(StrictDiff, self).__init__(initial_frame, region, mask)
+    def __init__(self, initial_frame, region=Region.ALL, mask=None,
+                 min_size=None):
+        super(StrictDiff, self).__init__(initial_frame, region, mask, min_size)
         if self.mask is not None:
             # We need 3 channels to match `frame`.
             self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)
@@ -266,14 +276,22 @@ class StrictDiff(FrameDiffer):
             else:
                 _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
                         maxdiff)
+
         if diffs_found:
             # Undo crop:
             out_region = out_region.translate(self.region)
+
+        motion = diffs_found and (
+            self.min_size is None or
+            (out_region.width >= self.min_size[0] and
+             out_region.height >= self.min_size[1]))
+
+        if motion:
             # Only update the reference frame if we found differences. This
             # makes the algorithm more sensitive to slow motion.
             self.prev_frame = frame
 
-        result = MotionResult(getattr(frame, "time", None), diffs_found,
+        result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
         return result
 

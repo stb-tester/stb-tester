@@ -86,7 +86,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     except StopIteration:
         return
 
-    differ = MotionDiff(frame, region, mask, noise_threshold)
+    differ = MotionDiff(frame, region, mask, noise_threshold=noise_threshold)
     for frame in frames:
         result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")
