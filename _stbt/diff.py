@@ -6,6 +6,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 import cv2
+import numpy
 
 from .config import get_config
 from .imgutils import (crop, _frame_repr, pixel_bounding_box, _validate_region)
@@ -45,12 +46,22 @@ class MotionDiff(FrameDiffer):
     """The `wait_for_motion` diffing algorithm."""
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None, noise_threshold=None):
+                 min_size=None, noise_threshold=None, erode=True):
         super(MotionDiff, self).__init__(initial_frame, region, mask, min_size)
+
         if noise_threshold is None:
             noise_threshold = get_config(
                 'motion', 'noise_threshold', type_=float)
         self.noise_threshold = noise_threshold
+
+        if isinstance(erode, numpy.ndarray):  # For power users
+            kernel = erode
+        elif erode:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        else:
+            kernel = None
+        self.kernel = kernel
+
         self.prev_frame_gray = self.gray(initial_frame)
 
     def gray(self, frame):
@@ -77,13 +88,14 @@ class MotionDiff(FrameDiffer):
         _, thresholded = cv2.threshold(
             absdiff, int((1 - self.noise_threshold) * 255), 255,
             cv2.THRESH_BINARY)
-        eroded = cv2.morphologyEx(
-            thresholded, cv2.MORPH_OPEN,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
         imglog.imwrite("absdiff_threshold", thresholded)
-        imglog.imwrite("absdiff_threshold_erode", eroded)
+        if self.kernel is not None:
+            thresholded = cv2.morphologyEx(
+                thresholded, cv2.MORPH_OPEN,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+            imglog.imwrite("absdiff_threshold_erode", thresholded)
 
-        out_region = pixel_bounding_box(eroded)
+        out_region = pixel_bounding_box(thresholded)
         if out_region:
             # Undo crop:
             out_region = out_region.translate(self.region)
