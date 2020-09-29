@@ -316,8 +316,8 @@ def pixel_bounding_box(img):
         indices = numpy.where(flat)[0]
         if len(indices) == 0:
             return None
-        out[axis] = indices[0]
-        out[axis + 2] = indices[-1] + 1
+        out[axis] = int(indices[0])
+        out[axis + 2] = int(indices[-1] + 1)
 
     return Region.from_extents(*out)
 
