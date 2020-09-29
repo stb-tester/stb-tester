@@ -77,16 +77,14 @@ class MotionDiff(FrameDiffer):
         _, thresholded = cv2.threshold(
             absdiff, int((1 - self.noise_threshold) * 255), 255,
             cv2.THRESH_BINARY)
-        eroded = cv2.erode(
-            thresholded,
+        eroded = cv2.morphologyEx(
+            thresholded, cv2.MORPH_OPEN,
             cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
         imglog.imwrite("absdiff_threshold", thresholded)
         imglog.imwrite("absdiff_threshold_erode", eroded)
 
         out_region = pixel_bounding_box(eroded)
         if out_region:
-            # Undo cv2.erode above:
-            out_region = out_region.extend(x=-1, y=-1)
             # Undo crop:
             out_region = out_region.translate(self.region)
 
