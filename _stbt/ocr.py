@@ -528,36 +528,13 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                char_whitelist=char_whitelist,
                tesseract_version=tesseract_version)
 
-    with imgproc_cache.enable_caching():
-        return _tesseract_subprocess(crop(frame, region), mode, lang, _config,
-                                     user_patterns, user_words, upsample,
-                                     text_color, text_color_threshold, engine,
-                                     char_whitelist, imglog, tesseract_version)
-
-
-@imgproc_cache.memoize({"version": "31"})
-def _tesseract_subprocess(
-        frame, mode, lang, _config, user_patterns, user_words, upsample,
-        text_color, text_color_threshold, engine, char_whitelist,
-        imglog, tesseract_version):
-
-    if tesseract_version >= LooseVersion("4.0"):
-        engine_flags = ["--oem", str(int(engine))]
-        tessdata_suffix = ''
-    else:
-        engine_flags = []
-        tessdata_suffix = '/tessdata'
-
-    if upsample:
-        # We scale image up 3x before feeding it to tesseract as this
-        # significantly reduces the error rate by more than 6x in tests.  This
-        # uses bilinear interpolation which produces the best results.  See
-        # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
-        outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
-        frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
-        imglog.imwrite("upsampled", frame)
+    frame = crop(frame, region)
 
     if text_color is not None:
+        if upsample:
+            frame = _upsample(frame, imglog)
+            upsample = False
+
         # Calculate distance of each pixel from `text_color`, then discard
         # everything further than `text_color_threshold` distance away.
         diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
@@ -569,6 +546,28 @@ def _tesseract_subprocess(
         _, frame = cv2.threshold(frame, text_color_threshold, 255,
                                  cv2.THRESH_BINARY)
         imglog.imwrite("text_color_threshold", frame)
+
+    with imgproc_cache.enable_caching():
+        return _tesseract_subprocess(frame, mode, lang, _config,
+                                     user_patterns, user_words, upsample,
+                                     engine, char_whitelist, imglog,
+                                     tesseract_version)
+
+
+@imgproc_cache.memoize({"version": "32"})
+def _tesseract_subprocess(
+        frame, mode, lang, _config, user_patterns, user_words, upsample,
+        engine, char_whitelist, imglog, tesseract_version):
+
+    if tesseract_version >= LooseVersion("4.0"):
+        engine_flags = ["--oem", str(int(engine))]
+        tessdata_suffix = ''
+    else:
+        engine_flags = []
+        tessdata_suffix = '/tessdata'
+
+    if upsample:
+        frame = _upsample(frame, imglog)
 
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
@@ -658,6 +657,17 @@ def _tesseract_subprocess(
             if ext == ".txt" or ext == ".hocr":
                 with open(filename) as f:
                     return f.read()
+
+
+def _upsample(frame, imglog):
+    # We scale image up 3x before feeding it to tesseract as this
+    # significantly reduces the error rate by more than 6x in tests.  This
+    # uses bilinear interpolation which produces the best results.  See
+    # http://stb-tester.com/blog/2014/04/14/improving-ocr-accuracy.html
+    outsize = (frame.shape[1] * 3, frame.shape[0] * 3)
+    frame = cv2.resize(frame, outsize, interpolation=cv2.INTER_LINEAR)
+    imglog.imwrite("upsampled", frame)
+    return frame
 
 
 def _hocr_iterate(hocr):
