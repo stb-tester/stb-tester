@@ -547,11 +547,10 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                                  cv2.THRESH_BINARY)
         imglog.imwrite("text_color_threshold", frame)
 
-    with imgproc_cache.enable_caching():
-        return _tesseract_subprocess(frame, mode, lang, _config,
-                                     user_patterns, user_words, upsample,
-                                     engine, char_whitelist, imglog,
-                                     tesseract_version)
+    return _tesseract_subprocess(frame, mode, lang, _config,  # pylint:disable=unexpected-keyword-arg
+                                 user_patterns, user_words, upsample,
+                                 engine, char_whitelist, imglog,
+                                 tesseract_version, use_cache=True)
 
 
 @imgproc_cache.memoize({"version": "32"})

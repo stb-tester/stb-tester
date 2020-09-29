@@ -86,7 +86,11 @@ def setup_cache(filename=None):
 
 @contextmanager
 def enable_caching(enable=True):
-    """Enable caching of expensive image-processing operations."""
+    """Enable caching of all cachable image-processing operations.
+
+    Note: This is not thread safe. To enable caching on a call-by-call basis
+    pass ``use_cache=True`` when calling the memoized function.
+    """
 
     global _enabled
     previous_value = _enabled
@@ -129,6 +133,9 @@ def memoize(additional_fields=None):
       data (like frames of video) and boil it down to a small amount of data
       (like a MatchResult or OCR text).
 
+    This decorator adds the paramater ``use_cache`` to the decorated function.
+    Set it to True to enable caching on a call-by-call basis.
+
     This function is not a part of the stbt public API and may change without
     warning in future releases.  We hope to stabilise it in the future so users
     can use it with their custom image-processing functions.
@@ -139,8 +146,9 @@ def memoize(additional_fields=None):
 
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            use_cache = kwargs.pop("use_cache", None)
             try:
-                if _cache is None or not _enabled:
+                if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
@@ -171,8 +179,9 @@ def memoize_iterator(additional_fields=None):
 
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            use_cache = kwargs.pop("use_cache", None)
             try:
-                if _cache is None or not _enabled:
+                if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
