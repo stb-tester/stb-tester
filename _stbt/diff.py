@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import cv2
 
 from .config import get_config
-from .imgutils import crop, _frame_repr, _image_region, pixel_bounding_box
+from .imgutils import (crop, _frame_repr, pixel_bounding_box, _validate_region)
 from .logging import ImageLogger
 from .types import Region
 
@@ -24,7 +24,7 @@ class FrameDiffer(object):
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None):
         self.prev_frame = initial_frame
-        self.region = Region.intersect(_image_region(self.prev_frame), region)
+        self.region = _validate_region(self.prev_frame, region)
         self.mask = mask
         if (self.mask is not None and
                 self.mask.shape[:2] != (self.region.height, self.region.width)):

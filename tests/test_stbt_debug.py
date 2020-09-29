@@ -416,19 +416,16 @@ def test_ocr_debug():
     f = stbt.load_image("action-panel.png")
     r = stbt.Region(0, 370, right=1280, bottom=410)
     c = (235, 235, 235)
-    nonoverlapping = stbt.Region(2000, 2000, width=10, height=10)
 
     with scoped_curdir(), scoped_debug_level(2):
 
         stbt.ocr(f)
         stbt.ocr(f, region=r)
         stbt.ocr(f, region=r, text_color=c)
-        stbt.ocr(f, region=nonoverlapping)
 
         stbt.match_text("Summary", f)  # no match
         stbt.match_text("Summary", f, region=r)  # no match
         stbt.match_text("Summary", f, region=r, text_color=c)
-        stbt.match_text("Summary", f, region=nonoverlapping)
 
         files = subprocess.check_output("find stbt-debug | sort", shell=True) \
                           .decode("utf-8")
@@ -454,6 +451,8 @@ def test_ocr_debug():
             stbt-debug/00004
             stbt-debug/00004/index.html
             stbt-debug/00004/source.png
+            stbt-debug/00004/tessinput.png
+            stbt-debug/00004/upsampled.png
             stbt-debug/00005
             stbt-debug/00005/index.html
             stbt-debug/00005/source.png
@@ -463,17 +462,9 @@ def test_ocr_debug():
             stbt-debug/00006/index.html
             stbt-debug/00006/source.png
             stbt-debug/00006/tessinput.png
+            stbt-debug/00006/text_color_difference.png
+            stbt-debug/00006/text_color_threshold.png
             stbt-debug/00006/upsampled.png
-            stbt-debug/00007
-            stbt-debug/00007/index.html
-            stbt-debug/00007/source.png
-            stbt-debug/00007/tessinput.png
-            stbt-debug/00007/text_color_difference.png
-            stbt-debug/00007/text_color_threshold.png
-            stbt-debug/00007/upsampled.png
-            stbt-debug/00008
-            stbt-debug/00008/index.html
-            stbt-debug/00008/source.png
             """)
 
         # To see the generated files in tests/dave-debug/:

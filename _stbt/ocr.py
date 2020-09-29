@@ -19,7 +19,7 @@ import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import _frame_repr, _image_region, crop
+from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import (
@@ -273,12 +273,7 @@ def ocr(frame=None, region=Region.ALL,
         from stbt_core import get_frame
         frame = get_frame()
 
-    if region is None:
-        raise TypeError(
-            "Passing region=None to ocr is deprecated since v0.21. "
-            "In a future version, region=None will mean an empty region "
-            "instead. To OCR an entire video frame, use "
-            "`region=Region.ALL`.")
+    region = _validate_region(frame, region)
 
     if isinstance(tesseract_user_words, (bytes, str)):
         tesseract_user_words = [tesseract_user_words]
@@ -288,7 +283,7 @@ def ocr(frame=None, region=Region.ALL,
 
     imglog = ImageLogger("ocr", result=None)
 
-    text, region = _tesseract(
+    text = _tesseract(
         frame, region, mode, lang, tesseract_config,
         tesseract_user_patterns, tesseract_user_words, upsample, text_color,
         text_color_threshold, engine, char_whitelist, imglog)
@@ -343,6 +338,8 @@ def match_text(text, frame=None, region=Region.ALL,
         from stbt_core import get_frame
         frame = get_frame()
 
+    region = _validate_region(frame, region)
+
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
 
@@ -350,10 +347,10 @@ def match_text(text, frame=None, region=Region.ALL,
 
     imglog = ImageLogger("match_text")
 
-    xml, region = _tesseract(frame, region, mode, lang, _config,
-                             None, text.split(), upsample, text_color,
-                             text_color_threshold, engine, char_whitelist,
-                             imglog)
+    xml = _tesseract(frame, region, mode, lang, _config,
+                     None, text.split(), upsample, text_color,
+                     text_color_threshold, engine, char_whitelist,
+                     imglog)
     if xml == '':
         hocr = None
         result = TextMatchResult(rts, False, None, frame, text)
@@ -523,7 +520,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                          % (mode, tesseract_version))
 
     imglog.imwrite("source", frame)
-    imglog.set(engine=engine, mode=mode, lang=lang,
+    imglog.set(region=region, engine=engine, mode=mode, lang=lang,
                tesseract_config=_config.copy(),
                user_patterns=user_patterns, user_words=user_words,
                upsample=upsample, text_color=text_color,
@@ -531,22 +528,10 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                char_whitelist=char_whitelist,
                tesseract_version=tesseract_version)
 
-    frame_region = _image_region(frame)
-    intersection = Region.intersect(frame_region, region)
-    if intersection is None:
-        warn("Requested OCR in region %s which doesn't overlap with "
-             "the frame %s" % (str(region), frame_region))
-        imglog.set(region=None)
-        return (u'', None)
-    else:
-        region = intersection
-        imglog.set(region=region)
-
-    return (_tesseract_subprocess(crop(frame, region), mode, lang, _config,
-                                  user_patterns, user_words, upsample,
-                                  text_color, text_color_threshold, engine,
-                                  char_whitelist, imglog, tesseract_version),
-            region)
+    return _tesseract_subprocess(crop(frame, region), mode, lang, _config,
+                                 user_patterns, user_words, upsample,
+                                 text_color, text_color_threshold, engine,
+                                 char_whitelist, imglog, tesseract_version)
 
 
 @imgproc_cache.memoize({"version": "31"})
