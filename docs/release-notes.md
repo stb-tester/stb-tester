@@ -8,7 +8,7 @@ https://stb-tester.com/manual/python-api#release-notes instead.
 
 #### v32
 
-UNRELEASED
+1 October 2020.
 
 ##### Major new features
 
@@ -26,6 +26,10 @@ UNRELEASED
   * New function `set_global_ocr_corrections` to specify the default value for
     ocr's `corrections` parameter. Call this early in your tests, for example
     in the top-level of `tests/__init__.py`.
+
+* ocr: Calls to Tesseract are cached if all the ocr parameters (including all
+  the pixels in the frame & region) are identical. This cache is persisted
+  on disk between test-runs.
 
 * Region:
   * New `center` property that returns a `Position` value with `x` and `y`
@@ -49,14 +53,16 @@ UNRELEASED
   been deprecated for at least 6 years. This doesn't apply to Stb-tester.com
   customers, who never had this behaviour.
 
-* Keyboard: Changed the internal representation of the Directed Graph.
-  Manipulating the networkx graph directly is no longer supported. Removed
-  `Keyboard.parse_edgelist` and `grid_to_navigation_graph`. Instead, first
-  create the Keyboard object, and then use its `add_key`, `add_transition`,
-  `add_edgelist`, and `add_grid` methods to build the model of the keyboard.
-  Also removed the `Keyboard.Selection` type. Instead, your Page Object's
-  `selection` property should return a Key value obtained from
-  `Keyboard.find_key`.
+* Keyboard:
+  * Changed the internal representation of the Directed Graph. Manipulating the
+    networkx graph directly is no longer supported.
+  * Removed `Keyboard.parse_edgelist` and `grid_to_navigation_graph`. Instead,
+    first create the Keyboard object, and then use its `add_key`,
+    `add_transition`, `add_edgelist`, and `add_grid` methods to build the
+    model of the keyboard.
+  * Removed the `Keyboard.Selection` type. Instead, your Page Object's
+    `selection` property should return a Key value obtained from
+    `Keyboard.find_key`.
 
 * is_screen_black: Increase default threshold to 20. This doesn't apply to
   Stb-tester.com customers, who were all already using the new threshold. To
@@ -67,10 +73,16 @@ UNRELEASED
   instance of `Image`. Previously it was a string or a numpy array, depending
   on what you had passed to `match`.
 
+* ocr and match_text: If `region` is entirely outside the frame, raise
+  ValueError instead of returning an empty string. (This is likely to be an
+  error in your test-script's logic.) This is now consistent with all the other
+  image-processing APIs such as `match`.
+
 * press_and_wait now uses the same difference-detection algorithm as
-  `wait_for_motion`. This algorithm is more tolerant of small differences
-  caused by noise. To use the previous algorithm, run the following code early
-  in your test script (for example at the top level of `tests/__init__.py`):
+  `wait_for_motion`. This algorithm is more tolerant of small noise-like
+  differences (less than 3 pixels wide). To use the previous algorithm, run the
+  following code early in your test script (for example at the top level of
+  `tests/__init__.py`):
 
         stbt.press_and_wait.differ = stbt.StrictDiff
 
@@ -100,10 +112,21 @@ UNRELEASED
   non-transparent pixels, to avoid false negatives with small, mostly
   transparent, reference images.
 
+* crop: Implicitly clamp at the edges of the frame, if the region extends
+  beyond the frame. Previously, this would have raised an exception. It still
+  raises ValueError if the region is entirely outside of the frame.
+
 * Fix `from stbt_core import *` with Python 2.7.
+
+* HDMI CEC control:
+  * Re-scan CEC bus if transmit fails.
+  * Log debug messages from libcec.
+
+* stbt-control-relay: Add --timeout argument.
 
 * Pylint plugin:
   * Fix false positive for user-defined functions called "wait_until_...".
+  * Verify that FrameObject `refresh()` return value is used.
 
 * Allow utf-8 paths in `$STBT_CONFIG_FILE` environment variable.
 
