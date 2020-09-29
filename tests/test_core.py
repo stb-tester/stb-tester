@@ -118,7 +118,7 @@ def test_crop():
                                    right=10, bottom=10)))
 
     # But a region entirely outside the frame is not allowed:
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         stbt.crop(img, None)
     with pytest.raises(ValueError):
         stbt.crop(img, stbt.Region(x=-10, y=-10, right=0, bottom=0))

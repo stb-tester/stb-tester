@@ -36,7 +36,6 @@ def requires_tesseract(func):
     # pylint: disable=line-too-long
     ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
     ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40), None),
-    # ("Connection-status--white-on-dark-blue.png", "", None, None),  # uncomment when region=None doesn't raise -- see #433
     ("programme--white-on-black.png", "programme", stbt.Region.ALL, None),
     ("UJJM--white-text-on-grey-boxes.png", "", stbt.Region.ALL, None),
     ("UJJM--white-text-on-grey-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
@@ -48,15 +47,28 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
     text = stbt.ocr(load_image("ocr/" + image), **kwargs)
     assert text == expected_text
 
-    # Don't leak python future newtypes
-    assert type(text).__name__ in ["unicode", "str"]
 
-
-# Remove when region=None doesn't raise -- see #433
 @requires_tesseract
-def test_that_ocr_region_none_isnt_allowed():
-    with pytest.raises(TypeError):
-        stbt.ocr(frame=load_image("ocr/small.png"), region=None)
+def test_ocr_doesnt_leak_python_future_newtypes():
+    f = load_image("ocr/small.png")
+    result = stbt.ocr(f)
+    assert type(result).__name__ in ["str", "unicode"]
+
+    result = stbt.match_text("Small", f)
+    assert type(result.text).__name__ in ["str", "unicode"]
+
+
+@requires_tesseract
+@pytest.mark.parametrize("region", [
+    None,
+    stbt.Region(1280, 0, 1280, 720),
+])
+def test_that_ocr_region_none_isnt_allowed(region):
+    f = load_image("ocr/small.png")
+    with pytest.raises((TypeError, ValueError)):
+        stbt.ocr(frame=f, region=region)
+    with pytest.raises((TypeError, ValueError)):
+        stbt.match_text("Small", frame=f, region=region)
 
 
 @requires_tesseract
@@ -295,34 +307,6 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
         text, frame=frame, region=region.extend(right=+12800))
     assert result
     assert region.contains(result.region)
-
-
-@requires_tesseract
-@pytest.mark.parametrize("region", [
-    stbt.Region(1280, 0, 1280, 720),
-    None,
-])
-def test_that_match_text_still_returns_if_region_doesnt_intersect_with_frame(
-        region):
-    frame = load_image("ocr/menu.png")
-    result = stbt.match_text("Onion Bhaji", frame=frame, region=region)
-    assert result.match is False
-    assert result.region is None
-    assert result.text == "Onion Bhaji"
-
-    # Avoid future.types.newtypes in return values
-    assert type(result.text).__name__ in ["str", "unicode"]
-
-
-@requires_tesseract
-@pytest.mark.parametrize("region", [
-    stbt.Region(1280, 0, 1280, 720),
-    # None,  # uncomment when region=None doesn't raise -- see #433
-])
-def test_that_ocr_still_returns_if_region_doesnt_intersect_with_frame(region):
-    frame = load_image("ocr/menu.png")
-    result = stbt.ocr(frame=frame, region=region)
-    assert result == u''
 
 
 @requires_tesseract

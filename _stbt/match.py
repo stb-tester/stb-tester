@@ -23,7 +23,8 @@ import numpy
 from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
-from .imgutils import _frame_repr, _image_region, crop, limit_time, load_image
+from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
+                       _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
@@ -382,10 +383,7 @@ def _match_all(image, frame, match_parameters, region):
                 "(you specified %s)."
                 % (template.relative_filename, match_parameters.match_method))
 
-    input_region = Region.intersect(_image_region(frame), region)
-    if input_region is None:
-        raise ValueError("frame with dimensions %r doesn't contain %r"
-                         % (frame.shape, region))
+    input_region = _validate_region(frame, region)
     if input_region.height < t.shape[0] or input_region.width < t.shape[1]:
         raise ValueError("%r must be larger than reference image %r"
                          % (input_region, t.shape))

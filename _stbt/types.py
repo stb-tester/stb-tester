@@ -237,9 +237,11 @@ class Region(with_metaclass(_RegionClsMethods,
         if bottom is None:
             bottom = y + height
         if right <= x:
-            raise ValueError("'right' must be greater than 'x'")
+            raise ValueError("'right' (%r) must be greater than 'x' (%r)"
+                             % (right, x))
         if bottom <= y:
-            raise ValueError("'bottom' must be greater than 'y'")
+            raise ValueError("'bottom' (%r) must be greater than 'y' (%r)"
+                             % (bottom, y))
         return super(Region, cls).__new__(cls, x, y, right, bottom)
 
     def __repr__(self):

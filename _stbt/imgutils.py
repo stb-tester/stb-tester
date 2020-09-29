@@ -145,11 +145,21 @@ def crop(frame, region):
       of the source frame. This is a view onto the original data, so if you
       want to modify the cropped image call its ``copy()`` method first.
     """
-    r = Region.intersect(region, _image_region(frame))
-    if r is None:
-        raise ValueError("%r is outside of frame dimensions %ix%i"
-                         % (region, frame.shape[1], frame.shape[0]))
+    r = _validate_region(frame, region)
     return frame[r.y:r.bottom, r.x:r.right]
+
+
+def _validate_region(frame, region):
+    if region is None:
+        raise TypeError(
+            "'region=None' means an empty region. To analyse the entire "
+            "frame use 'region=Region.ALL' (which is the default)")
+    f = _image_region(frame)
+    r = Region.intersect(f, region)
+    if r is None:
+        raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
+                         % (region, frame.shape[1], frame.shape[0]))
+    return r
 
 
 def _image_region(image):
