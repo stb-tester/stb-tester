@@ -5,8 +5,10 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import os
 import re
+import timeit
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -17,6 +19,7 @@ import pytest
 
 import _stbt.config
 import stbt_core as stbt
+from _stbt import imgproc_cache
 from _stbt.imgutils import load_image
 from _stbt.ocr import _tesseract_version
 from _stbt.utils import named_temporary_directory
@@ -405,3 +408,52 @@ def test_that_ocr_engine_has_an_effect():
     assert "sillyness" in stbt.ocr(f, engine=stbt.OcrEngine.LSTM)
     with temporary_config({'ocr.engine': 'LSTM'}):
         assert "sillyness" in stbt.ocr(f)
+
+
+@requires_tesseract
+def test_that_cache_speeds_up_ocr():
+    with named_temporary_directory() as tmpdir, \
+            imgproc_cache.setup_cache(tmpdir):
+        _test_that_cache_speeds_up_ocr()
+
+
+# This one is also run from integration tests:
+def _test_that_cache_speeds_up_ocr():
+    frame = load_image('red-black.png')
+
+    def ocr():
+        return stbt.ocr(frame=frame)
+
+    # pylint:disable=protected-access
+    _cache = imgproc_cache._cache
+    imgproc_cache._cache = None
+    uncached_result = ocr()
+    uncached_time = min(timeit.repeat(ocr, repeat=10, number=1))
+    imgproc_cache._cache = _cache
+
+    cached_result = ocr()  # prime the cache
+    cached_time = min(timeit.repeat(ocr, repeat=10, number=1))
+
+    print("ocr with cache: %s" % (cached_time,))
+    print("ocr without cache: %s" % (uncached_time,))
+    assert uncached_time > (cached_time * 10)
+    assert type(cached_result) == type(uncached_result)  # pylint:disable=unidiomatic-typecheck
+    assert cached_result == uncached_result
+
+    r = stbt.Region(x=0, y=32, right=91, bottom=59)
+    frame2 = load_image("red-black-2.png")
+
+    def cached_ocr1():
+        return stbt.ocr(frame=frame, region=r)
+
+    def cached_ocr2():
+        return stbt.ocr(frame=frame2, region=r)
+
+    cached_ocr1()  # prime the cache
+    time1 = timeit.timeit(cached_ocr1, number=1)
+    time2 = timeit.timeit(cached_ocr2, number=1)
+
+    print("ocr with cache (frame 1): %s" % (time1,))
+    print("ocr with cache (frame 2): %s" % (time2,))
+    assert time2 < (time1 * 10)
+    assert cached_ocr1() == cached_ocr2()

@@ -16,6 +16,7 @@ import argparse
 import sys
 
 import _stbt.core
+from _stbt import imgproc_cache
 from _stbt.logging import debug
 from _stbt.stbt_run import (load_test_function,
                             sane_unicode_and_exception_handling, video)
@@ -25,6 +26,9 @@ def main(argv):
     parser = _stbt.core.argparser()
     parser.prog = 'stbt run'
     parser.description = 'Run an stb-tester test script'
+    parser.add_argument(
+        '--cache', default=imgproc_cache.default_filename,
+        help="Path for image-processing cache (default: %(default)s")
     parser.add_argument(
         '--save-screenshot', default='on-failure',
         choices=['always', 'on-failure', 'never'],
@@ -47,7 +51,9 @@ def main(argv):
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
     dut = _stbt.core.new_device_under_test_from_config(args)
-    with sane_unicode_and_exception_handling(args.script), video(args, dut):
+    with sane_unicode_and_exception_handling(args.script), \
+            video(args, dut), \
+            imgproc_cache.setup_cache(filename=args.cache):
         test_function = load_test_function(args.script, args.args)
         test_function.call()
 

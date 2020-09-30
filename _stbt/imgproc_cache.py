@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
 This file implements caching of expensive image processing operations for the
 purposes of speeding up subsequent runs of stbt auto-selftest.
@@ -27,6 +29,7 @@ import numpy
 
 try:
     import lmdb
+    from _stbt.xxhash import Xxhash64
 except ImportError:
     lmdb = None
 
@@ -43,10 +46,24 @@ except ImportError:
 MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024  # 1GiB
 _cache = None
 _cache_full_warning = None
+_enabled = False
+
+
+default_filename = "%s/%s" % (
+    os.environ.get("XDG_CACHE_HOME") or ("%s/.cache" % os.environ["HOME"]),
+    "stbt/cache.lmdb")
 
 
 @contextmanager
-def cache(filename=None):
+def setup_cache(filename=None):
+    """Set up the cache. Typically called by stbt-run before running your test.
+
+    This is safe to call if lmdb isn't installed; in that case it'll be a
+    no-op.
+
+    :param str filename: Defaults to $XDG_CACHE_HOME/stbt/cache.lmdb (or
+        $HOME/.cache/stbt/cache.lmdb if XDG_CACHE_HOME isn't set).
+    """
     if lmdb is None or os.environ.get('STBT_DISABLE_CACHING'):
         yield
         return
@@ -55,10 +72,8 @@ def cache(filename=None):
     global _cache_full_warning
 
     if filename is None:
-        cache_home = os.environ.get('XDG_CACHE_HOME') \
-            or '%s/.cache' % os.environ['HOME']
-        mkdir_p(cache_home + "/stbt")
-        filename = cache_home + "/stbt/cache.lmdb"
+        filename = default_filename
+    mkdir_p(os.path.dirname(filename) or ".")
     with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:  # pylint: disable=no-member
         assert _cache is None
         try:
@@ -67,6 +82,23 @@ def cache(filename=None):
             yield
         finally:
             _cache = None
+
+
+@contextmanager
+def enable_caching(enable=True):
+    """Enable caching of all cachable image-processing operations.
+
+    Note: This is not thread safe. To enable caching on a call-by-call basis
+    pass ``use_cache=True`` when calling the memoized function.
+    """
+
+    global _enabled
+    previous_value = _enabled
+    try:
+        _enabled = enable
+        yield
+    finally:
+        _enabled = previous_value
 
 
 def memoize(additional_fields=None):
@@ -101,6 +133,9 @@ def memoize(additional_fields=None):
       data (like frames of video) and boil it down to a small amount of data
       (like a MatchResult or OCR text).
 
+    This decorator adds the paramater ``use_cache`` to the decorated function.
+    Set it to True to enable caching on a call-by-call basis.
+
     This function is not a part of the stbt public API and may change without
     warning in future releases.  We hope to stabilise it in the future so users
     can use it with their custom image-processing functions.
@@ -111,8 +146,9 @@ def memoize(additional_fields=None):
 
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            use_cache = kwargs.pop("use_cache", None)
             try:
-                if _cache is None:
+                if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
@@ -143,8 +179,9 @@ def memoize_iterator(additional_fields=None):
 
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            use_cache = kwargs.pop("use_cache", None)
             try:
-                if _cache is None:
+                if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
@@ -217,7 +254,6 @@ class _ArgsEncoder(json.JSONEncoder):
                 "confirm_threshold": o.confirm_threshold,
                 "erode_passes": o.erode_passes}
         elif isinstance(o, numpy.ndarray):
-            from _stbt.xxhash import Xxhash64
             h = Xxhash64()
             h.update(numpy.ascontiguousarray(o).data)
             return (o.shape, h.hexdigest())
@@ -227,7 +263,6 @@ class _ArgsEncoder(json.JSONEncoder):
 
 def _cache_hash(value):
     # type: (...) -> bytes
-    from _stbt.xxhash import Xxhash64
     h = Xxhash64()
 
     class HashWriter(object):
@@ -245,7 +280,7 @@ def test_that_cache_is_disabled_when_debug_match():
     # debug logging is a side effect that the cache cannot reproduce
     import stbt_core as stbt
     import _stbt.logging
-    with scoped_curdir() as srcdir, cache('cache.lmdb'):
+    with scoped_curdir() as srcdir, setup_cache('cache.lmdb'), enable_caching():
         stbt.match(srcdir + '/tests/red-black.png',
                    frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         assert not os.path.exists('stbt-debug')
@@ -272,7 +307,8 @@ def _check_cache_behaviour(func):
     uncached_result = func()
     uncached_time = min(timer.repeat(10, number=1))
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
         # Prime the cache
         func()
         cached_time = min(timer.repeat(10, number=1))
@@ -293,7 +329,9 @@ def test_memoize_iterator():
             counter[0] += 1
             yield x
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
+
         uncached = list(itertools.islice(cached_function(1), 5))
         assert uncached == list(range(5))
         assert counter[0] == 5
@@ -328,7 +366,9 @@ def test_memoize_iterator_on_empty_iterator():
         if False:  # pylint:disable=using-constant-test
             yield
 
-    with named_temporary_directory() as tmpdir, cache(tmpdir):
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
+
         uncached = list(cached_function())
         assert uncached == []
         assert counter[0] == 1
