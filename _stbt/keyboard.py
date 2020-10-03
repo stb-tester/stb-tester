@@ -92,7 +92,7 @@ class Keyboard(object):
         kb = stbt.Keyboard()
 
         # The 6x6 grid of letters & numbers:
-        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=140, right=430, bottom=445),
+        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=175, right=425, bottom=475),
                               data=["abcdef",
                                     "ghijkl",
                                     "mnopqr",
@@ -100,8 +100,8 @@ class Keyboard(object):
                                     "yz1234",
                                     "567890"]))
         # The 3x1 grid of special keys:
-        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=445, right=430, bottom=500),
-                              data=[[" ", "BACKSPACE", "CLEAR"]]))
+        kb.add_grid(stbt.Grid(stbt.Region(x=125, y=480, right=425, bottom=520),
+                              data=[[" ", "DELETE", "CLEAR"]]))
 
         # The `add_grid` calls (above) defined the transitions within each grid.
         # Now we need to specify the transitions from the bottom row of numbers
@@ -115,8 +115,8 @@ class Keyboard(object):
         # by default.
         kb.add_transition("5", " ", "KEY_DOWN")
         kb.add_transition("6", " ", "KEY_DOWN")
-        kb.add_transition("7", "BACKSPACE", "KEY_DOWN")
-        kb.add_transition("8", "BACKSPACE", "KEY_DOWN")
+        kb.add_transition("7", "DELETE", "KEY_DOWN")
+        kb.add_transition("8", "DELETE", "KEY_DOWN")
         kb.add_transition("9", "CLEAR", "KEY_DOWN")
         kb.add_transition("0", "CLEAR", "KEY_DOWN")
 
@@ -140,7 +140,7 @@ class Keyboard(object):
 
                 Note: The reference image (selection.png) is carefully cropped
                 so that it will match the normal keys as well as the larger
-                "SPACE", "BACKSPACE" and "CLEAR" keys. The middle of the image
+                "SPACE", "DELETE" and "CLEAR" keys. The middle of the image
                 (where the key's label appears) is transparent so that it will
                 match any key.
                 """
@@ -162,8 +162,9 @@ class Keyboard(object):
                 return page.refresh()
 
     For a detailed tutorial, including an example that handles multiple
-    keyboard modes (lowercase, uppercase, and symbols) see the
-    `Stb-tester.com blog <https://stb-tester.com/blog/>`__.
+    keyboard modes (lowercase, uppercase, and symbols) see our article
+    `Testing on-screen keyboards with Stb-tester
+    <https://stb-tester.com/blog/2020/10/02/testing-onscreen-keyboards>`__.
 
     ``stbt.Keyboard`` was added in v31.
 
