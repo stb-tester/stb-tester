@@ -142,32 +142,34 @@ def test_region_bounding_box():
         r1.bounding_box(r2)  # pylint:disable=no-member
 
 
-def test_region_replace():
-    r = stbt.Region(x=10, y=20, width=20, height=30)
+r = stbt.Region(x=10, y=20, width=20, height=30)
 
-    def t(kwargs, expected):
-        assert r.replace(**kwargs) == expected
 
-    def e(kwargs):
-        with pytest.raises(ValueError):
-            r.replace(**kwargs)
-
+@pytest.mark.parametrize("kwargs,expected", [
     # No change
-    yield t, dict(x=10), r
-    yield t, dict(x=10, width=20), r
-    yield t, dict(x=10, right=30), r
-
-    # Not allowed
-    yield e, dict(x=1, width=2, right=3)
-    yield e, dict(y=1, height=2, bottom=3)
+    (dict(x=10), r),
+    (dict(x=10, width=20), r),
+    (dict(x=10, right=30), r),
 
     # Allowed  # pylint:disable=line-too-long
-    yield t, dict(x=11), stbt.Region(x=11, y=r.y, width=19, height=r.height)
-    yield t, dict(width=19), stbt.Region(x=10, y=r.y, width=19, height=r.height)
-    yield t, dict(right=29), stbt.Region(x=10, y=r.y, width=19, height=r.height)
-    yield t, dict(x=11, width=20), stbt.Region(x=11, y=r.y, width=20, height=r.height)
-    yield t, dict(x=11, right=21), stbt.Region(x=11, y=r.y, width=10, height=r.height)
-    yield t, dict(x=11, right=21, y=0, height=5), stbt.Region(x=11, y=0, width=10, height=5)
+    (dict(x=11), stbt.Region(x=11, y=r.y, width=19, height=r.height)),
+    (dict(width=19), stbt.Region(x=10, y=r.y, width=19, height=r.height)),
+    (dict(right=29), stbt.Region(x=10, y=r.y, width=19, height=r.height)),
+    (dict(x=11, width=20), stbt.Region(x=11, y=r.y, width=20, height=r.height)),
+    (dict(x=11, right=21), stbt.Region(x=11, y=r.y, width=10, height=r.height)),
+    (dict(x=11, right=21, y=0, height=5), stbt.Region(x=11, y=0, width=10, height=5)),
+])
+def test_region_replace(kwargs, expected):
+    assert r.replace(**kwargs) == expected
+
+
+@pytest.mark.parametrize("kwargs", [
+    dict(x=1, width=2, right=3),
+    dict(y=1, height=2, bottom=3),
+])
+def test_region_replace_value_error(kwargs):
+    with pytest.raises(ValueError):
+        r.replace(**kwargs)
 
 
 def test_region_translate():
