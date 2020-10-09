@@ -106,8 +106,14 @@ class Grid(object):
 
         You must specify one (and only one) of ``index``, ``position``,
         ``region``, or ``data``. For the meaning of these parameters see
-        `Grid.Cell`. A negative index counts backwards from the end of the grid
-        (so ``-1`` is the bottom right position).
+        `Grid.Cell`.
+
+        A negative ``index`` counts backwards from the end of the grid (so
+        ``-1`` is the bottom right position).
+
+        ``region`` doesn't have to match the cell's pixel coordinates exactly;
+        instead, this returns the cell that contains the *center* of the given
+        region.
 
         :returns: The `Grid.Cell` that matches the specified query; raises
             `IndexError` if the index/position/region is out of bounds or the
