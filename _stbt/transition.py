@@ -46,8 +46,7 @@ def press_and_wait(
     :param stbt.Region region: Only look at the specified region of the video
         frame.
 
-    :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :param mask:
         A black & white image that specifies which part of the video frame to
         look at. White pixels select the area to analyse; black pixels select
         the area to ignore.
@@ -57,6 +56,7 @@ def press_and_wait(
 
         If you specify ``region``, the mask must be the same size as the
         region. Otherwise the mask must be the same size as the frame.
+    :type mask: str or `numpy.ndarray`
 
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of
@@ -66,6 +66,7 @@ def press_and_wait(
     :param stable_secs: A duration in seconds. The screen must stay unchanged
         (within the specified region or mask) for this long, for the transition
         to be considered "complete".
+    :type timeout_secs: int or float
 
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
         to be considered as "motion". Use this to ignore small differences,
