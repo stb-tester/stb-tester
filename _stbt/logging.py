@@ -26,19 +26,17 @@ _jupyter_logging_enabled = "JPY_PARENT_PID" in os.environ
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if get_debug_level() > 0:
-        sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
+        sys.stderr.write("%s\n" % (msg,))
 
 
 def ddebug(s):
     """Extra verbose debug for stbt developers, not end users"""
     if get_debug_level() > 1:
-        sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), s))
+        sys.stderr.write("%s\n" % (s,))
 
 
 def warn(s):
-    sys.stderr.write("%s: warning: %s\n" % (
-        os.path.basename(sys.argv[0]), s))
+    sys.stderr.write("warning: %s\n" % (s,))
 
 
 def get_debug_level():
