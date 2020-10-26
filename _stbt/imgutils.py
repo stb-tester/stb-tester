@@ -58,6 +58,9 @@ class Frame(numpy.ndarray):
             "None" if self.time is None else "%.3f" % self.time,
             dimensions)
 
+    def __str__(self):
+        return repr(self)
+
 
 class Image(numpy.ndarray):
     """An image, possibly loaded from disk.
@@ -118,6 +121,9 @@ class Image(numpy.ndarray):
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
         return "<Image(filename=%r, dimensions=%s)>" % (
             self.filename, dimensions)
+
+    def __str__(self):
+        return repr(self)
 
 
 def _frame_repr(frame):
