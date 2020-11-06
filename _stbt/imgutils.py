@@ -119,8 +119,12 @@ class Image(numpy.ndarray):
                 self.shape[1], self.shape[0], self.shape[2])
         else:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
-        return "<Image(filename=%r, dimensions=%s)>" % (
-            self.filename, dimensions)
+        if (self.relative_filename is None or
+                self.relative_filename.startswith('../')):
+            filename = self.absolute_filename
+        else:
+            filename = self.relative_filename
+        return "<Image(filename=%r, dimensions=%s)>" % (filename, dimensions)
 
     def __str__(self):
         return repr(self)
