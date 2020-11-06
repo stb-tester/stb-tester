@@ -290,7 +290,7 @@ def ocr(frame=None, region=Region.ALL,
     text = text.strip().translate(_ocr_transtab)
     text = apply_ocr_corrections(text, corrections)
 
-    debug(u"OCR in region %s read '%s'." % (region, text))
+    debug(u"ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     _log_ocr_image_debug(imglog, text)
     return text
 
