@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import logging
+import random
 import re
 import sys
 
@@ -147,11 +148,22 @@ class DUT(object):
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
-class BuggyDUT(DUT):
+class DoubleKeypressDUT(DUT):
     def handle_press(self, keypress):
-        super(BuggyDUT, self).handle_press(keypress)
+        super(DoubleKeypressDUT, self).handle_press(keypress)
         if keypress == "KEY_RIGHT" and self.selection == "b":
+            logging.debug("DoubleKeypressDUT.handle_press: Double KEY_RIGHT "
+                          "press from a to c skipping over b")
             self.x += 1
+
+
+class MissedKeypressDUT(DUT):
+    def handle_press(self, keypress):
+        if random.random() < 0.2:
+            logging.debug("MissedKeypressDUT.handle_press: Ignoring %s",
+                          keypress)
+            return
+        super(MissedKeypressDUT, self).handle_press(keypress)
 
 
 @pytest.fixture(scope="function")
@@ -163,8 +175,16 @@ def dut():
 
 
 @pytest.fixture(scope="function")
-def buggy_dut():
-    dut = BuggyDUT()
+def double_keypress_dut():
+    dut = DoubleKeypressDUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+        yield dut
+
+
+@pytest.fixture(scope="function")
+def missed_keypress_dut():
+    dut = MissedKeypressDUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
             mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
         yield dut
@@ -211,12 +231,13 @@ class SearchPage(stbt.FrameObject):
         logging.debug("SearchPage.refresh: Now on %r", page.selection)
         return page
 
-    def enter_text(self, text):
-        return self.kb.enter_text(text, page=self)
+    def enter_text(self, text, retries=2):
+        return self.kb.enter_text(text, page=self, retries=retries)
 
-    def navigate_to(self, target, verify_every_keypress=False):
+    def navigate_to(self, target, verify_every_keypress=False, retries=2):
         return self.kb.navigate_to(target, page=self,
-                                   verify_every_keypress=verify_every_keypress)
+                                   verify_every_keypress=verify_every_keypress,
+                                   retries=retries)
 
 
 kb1 = stbt.Keyboard()  # Full model with modes, defined using Grids
@@ -505,14 +526,33 @@ def test_navigate_to_other_mode(dut, kb):
     ("c", True, 1),
 ])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_navigate_to_checks_target(buggy_dut, kb, target,
+def test_that_navigate_to_checks_target(double_keypress_dut, kb, target,
                                         verify_every_keypress, num_presses):
-    """buggy_dut skips the B when pressing right from A (and lands on C)."""
-    page = SearchPage(buggy_dut, kb)
+    """DUT skips the B when pressing right from A (and lands on C)."""
+    page = SearchPage(double_keypress_dut, kb)
     assert page.selection.name == "a"
     with pytest.raises(AssertionError):
-        page.navigate_to(target, verify_every_keypress)
-    assert buggy_dut.pressed == ["KEY_RIGHT"] * num_presses
+        page.navigate_to(target, verify_every_keypress, retries=0)
+    assert double_keypress_dut.pressed == ["KEY_RIGHT"] * num_presses
+
+
+def test_that_enter_text_retries_missed_keypresses(missed_keypress_dut):
+    page = SearchPage(missed_keypress_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.enter_text("x", retries=10)
+    assert page.selection.name == "x"
+    downs = [x for x in missed_keypress_dut.pressed if x == "KEY_DOWN"]
+    rights = [x for x in missed_keypress_dut.pressed if x == "KEY_RIGHT"]
+    assert len(downs) >= 3
+    assert len(rights) >= 5
+
+
+def test_that_navigate_to_retries_overshoot(double_keypress_dut):
+    page = SearchPage(double_keypress_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.navigate_to("b")
+    assert page.selection.name == "b"
+    assert double_keypress_dut.pressed == ["KEY_RIGHT", "KEY_LEFT"]
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
