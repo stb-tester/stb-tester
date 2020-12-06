@@ -687,6 +687,14 @@ class Keyboard(object):
                 page = page.refresh()
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = page.selection
+                if (current not in immediate_targets and
+                        not verify_every_keypress):
+                    # Wait a bit longer for selection to reach the target
+                    assert self.wait_for_transition_to_end(
+                        initial_frame=page._frame, stable_secs=2)
+                    page = page.refresh()
+                    assert page, "%s page isn't visible" % type(page).__name__
+                    current = page.selection
                 if current not in immediate_targets:
                     message = (
                         "Expected to see %s after pressing %s, but saw %r."
@@ -706,10 +714,16 @@ class Keyboard(object):
 
     def press_and_wait(self, key, timeout_secs=10, stable_secs=1):
         import stbt_core as stbt
-
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,
                                    stable_secs=stable_secs)
+
+    def wait_for_transition_to_end(self, initial_frame=None, timeout_secs=10,
+                                   stable_secs=1):
+        import stbt_core as stbt
+        return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
+                                               timeout_secs=timeout_secs,
+                                               stable_secs=stable_secs)
 
 
 def _minimal_query(query):

@@ -147,6 +147,9 @@ class DUT(object):
         self.handle_press(key)
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
+    def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
+        return _TransitionResult(None, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
 
 class DoubleKeypressDUT(DUT):
     def handle_press(self, keypress):
@@ -166,11 +169,31 @@ class MissedKeypressDUT(DUT):
         super(MissedKeypressDUT, self).handle_press(keypress)
 
 
+class SlowDUT(DUT):
+    def __init__(self):
+        super(SlowDUT, self).__init__()
+        self._delayed_keypress = None
+
+    def handle_press_and_wait(self, key, **_kwargs):
+        logging.debug("SlowDUT.handle_press: delaying %s", key)
+        self._delayed_keypress = key
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+    def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
+        key = self._delayed_keypress
+        self._delayed_keypress = None
+        assert key is not None
+        super(SlowDUT, self).handle_press(key)
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+
 @pytest.fixture(scope="function")
 def dut():
     dut = DUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
         yield dut
 
 
@@ -178,7 +201,9 @@ def dut():
 def double_keypress_dut():
     dut = DoubleKeypressDUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
         yield dut
 
 
@@ -186,7 +211,19 @@ def double_keypress_dut():
 def missed_keypress_dut():
     dut = MissedKeypressDUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
+        yield dut
+
+
+@pytest.fixture(scope="function")
+def slow_dut():
+    dut = SlowDUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
         yield dut
 
 
@@ -553,6 +590,14 @@ def test_that_navigate_to_retries_overshoot(double_keypress_dut):
     page = page.navigate_to("b")
     assert page.selection.name == "b"
     assert double_keypress_dut.pressed == ["KEY_RIGHT", "KEY_LEFT"]
+
+
+def test_that_navigate_to_waits_for_dut_to_catch_up(slow_dut):
+    page = SearchPage(slow_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.navigate_to("f")
+    assert page.selection.name == "f"
+    assert slow_dut.pressed == ["KEY_RIGHT"] * 5
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
