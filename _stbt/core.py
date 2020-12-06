@@ -678,7 +678,7 @@ class Display(object):
         frame.flags.writeable = False
 
         # See also: logging.draw_on
-        frame._draw_sink = weakref.ref(self._sink_pipeline)  # pylint: disable=protected-access
+        frame._draw_sink = weakref.ref(self._sink_pipeline)
         self.tell_user_thread(frame)
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK

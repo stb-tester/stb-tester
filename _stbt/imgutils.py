@@ -40,7 +40,7 @@ class Frame(numpy.ndarray):
             obj.time = array.time
         else:
             obj.time = time
-        obj._draw_sink = _draw_sink or (i and array._draw_sink) or None  # pylint: disable=protected-access
+        obj._draw_sink = _draw_sink or (i and array._draw_sink) or None
         return obj
 
     def __array_finalize__(self, obj):

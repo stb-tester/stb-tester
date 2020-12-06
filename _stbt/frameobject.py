@@ -55,7 +55,6 @@ def for_object_repository(cls=None):
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         if fn not in self._FrameObject__frame_object_cache:
             self._FrameObject__frame_object_cache[fn] = fn(self)
         return self._FrameObject__frame_object_cache[fn]
@@ -65,7 +64,6 @@ def _memoize_property_fn(fn):
 def _mark_in_is_visible(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         try:
             self._FrameObject__local.in_is_visible += 1
         except AttributeError:
@@ -80,7 +78,6 @@ def _mark_in_is_visible(fn):
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         if (getattr(self._FrameObject__local, "in_is_visible", 0) or
                 self.is_visible):
             return fn(self)
@@ -243,7 +240,6 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         return self.__cmp__(other) >= 0
 
     def __cmp__(self, other):
-        # pylint: disable=protected-access
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
                 v = cmp(s[1], o[1])

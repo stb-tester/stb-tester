@@ -147,7 +147,7 @@ def temporary_config(config):
             yield
         finally:
             os.environ["STBT_CONFIG_FILE"] = original_env
-            _stbt.config._config_init(force=True)  # pylint:disable=protected-access
+            _stbt.config._config_init(force=True)
 
 
 @requires_tesseract
@@ -179,7 +179,6 @@ def test_that_setting_config_options_has_an_effect():
     r'\d\*.\d\*.\d\*.\d\*',
 ])
 def test_tesseract_user_patterns(patterns):
-    # pylint:disable=protected-access
     if _tesseract_version() < LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
@@ -423,7 +422,6 @@ def _test_that_cache_speeds_up_ocr():
     def ocr():
         return stbt.ocr(frame=frame)
 
-    # pylint:disable=protected-access
     _cache = imgproc_cache._cache
     imgproc_cache._cache = None
     uncached_result = ocr()

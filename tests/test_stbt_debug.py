@@ -17,7 +17,7 @@ from stbt_core import MatchParameters as mp
 def test_match_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     with scoped_curdir(), scoped_debug_level(2):
         # First pass gives no matches:
@@ -329,7 +329,7 @@ def test_match_debug():
 def test_motion_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     def fake_frames():
         for i, f in enumerate(["box-00001.png",
@@ -411,7 +411,7 @@ def test_motion_debug():
 def test_ocr_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     f = stbt.load_image("action-panel.png")
     r = stbt.Region(0, 370, right=1280, bottom=410)
@@ -475,7 +475,7 @@ def test_ocr_debug():
 def test_is_screen_black_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     f = stbt.load_image("videotestsrc-full-frame.png")
 

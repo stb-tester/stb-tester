@@ -154,7 +154,7 @@ class AdbDevice(object):
 
         if _config is None:
             import _stbt.config
-            _config = _stbt.config._config_init()  # pylint:disable=protected-access
+            _config = _stbt.config._config_init()
 
         self.adb_server = adb_server or _config.get("android", "adb_server",
                                                     fallback=None)
