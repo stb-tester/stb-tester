@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import logging
-import random
 import re
 import sys
 
@@ -161,12 +160,31 @@ class DoubleKeypressDUT(DUT):
 
 
 class MissedKeypressDUT(DUT):
+    def __init__(self):
+        super(MissedKeypressDUT, self).__init__()
+        self._last_press_ignored = False
+
     def handle_press(self, keypress):
-        if random.random() < 0.2:
+        if keypress == "KEY_OK":
+            super(MissedKeypressDUT, self).handle_press(keypress)
+            return
+
+        # Ignore every other up/down/left/right keypress
+        if self._last_press_ignored:
+            super(MissedKeypressDUT, self).handle_press(keypress)
+            self._last_press_ignored = False
+        else:
             logging.debug("MissedKeypressDUT.handle_press: Ignoring %s",
                           keypress)
-            return
-        super(MissedKeypressDUT, self).handle_press(keypress)
+            self._last_press_ignored = True
+
+    def handle_press_and_wait(self, key, **_kwargs):
+        self.handle_press(key)
+        if self._last_press_ignored:
+            status = TransitionStatus.START_TIMEOUT
+        else:
+            status = TransitionStatus.COMPLETE
+        return _TransitionResult(key, None, status, 0, 0, 0)
 
 
 class SlowDUT(DUT):
@@ -576,12 +594,10 @@ def test_that_navigate_to_checks_target(double_keypress_dut, kb, target,
 def test_that_enter_text_retries_missed_keypresses(missed_keypress_dut):
     page = SearchPage(missed_keypress_dut, kb1)
     assert page.selection.name == "a"
-    page = page.enter_text("x", retries=10)
-    assert page.selection.name == "x"
-    downs = [x for x in missed_keypress_dut.pressed if x == "KEY_DOWN"]
-    rights = [x for x in missed_keypress_dut.pressed if x == "KEY_RIGHT"]
-    assert len(downs) >= 3
-    assert len(rights) >= 5
+    page = page.enter_text("bcecdfdadcfc", retries=100)
+    #                       112212233133
+    assert page.selection.name == "c"
+    assert missed_keypress_dut.entered == "bcecdfdadcfc"
 
 
 def test_that_navigate_to_retries_overshoot(double_keypress_dut):

@@ -15,6 +15,7 @@ import numpy
 from attr import attrs, attrib
 from _stbt.grid import Grid
 from _stbt.imgutils import load_image
+from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 from _stbt.utils import basestring, text_type
 
@@ -683,16 +684,21 @@ class Keyboard(object):
                     stbt.press(k)
                 keys = keys[-1:]  # only verify the last one
             for key, immediate_targets in keys:
-                assert self.press_and_wait(key, stable_secs=0.5)
-                page = page.refresh()
+                transition = self.press_and_wait(key, stable_secs=0.5)
+                assert transition.status != TransitionStatus.STABLE_TIMEOUT, \
+                    "Selection didn't stabilise after pressing %s" % (key,)
+                page = page.refresh(frame=transition.frame)
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = page.selection
                 if (current not in immediate_targets and
                         not verify_every_keypress):
                     # Wait a bit longer for selection to reach the target
-                    assert self.wait_for_transition_to_end(
+                    transition = self.wait_for_transition_to_end(
                         initial_frame=page._frame, stable_secs=2)
-                    page = page.refresh()
+                    assert transition.status != \
+                        TransitionStatus.STABLE_TIMEOUT, \
+                        "Selection didn't stabilise after pressing %s" % (key,)
+                    page = page.refresh(frame=transition.frame)
                     assert page, "%s page isn't visible" % type(page).__name__
                     current = page.selection
                 if current not in immediate_targets:
