@@ -170,6 +170,7 @@ class Keyboard(object):
     * Tries to recover from missed or double keypresses. To disable this
       behaviour specify ``retries=0`` when calling `enter_text` or
       `navigate_to`.
+    * Increased default ``navigate_timeout`` from 20 to 60 seconds.
 
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
@@ -192,7 +193,7 @@ class Keyboard(object):
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=text_type)
 
-    def __init__(self, graph=None, mask=None, navigate_timeout=20):
+    def __init__(self, graph=None, mask=None, navigate_timeout=60):
         from networkx import DiGraph
 
         if graph is not None:
