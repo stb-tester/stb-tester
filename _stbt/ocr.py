@@ -217,9 +217,8 @@ def ocr(frame=None, region=Region.ALL,
         translucent overlay.
 
     :param int text_color_threshold:
-        The threshold to use with ``text_color``, between 0 and 255. Defaults
-        to 25. You can override the global default value by setting
-        ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        The threshold to use with ``text_color``, between 0 and 255. If not
+        specified, let Tesseract do the thresholding.
 
     :param engine:
         The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
@@ -260,6 +259,8 @@ def ocr(frame=None, region=Region.ALL,
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     | Added in v32: The ``corrections`` parameter.
+    | Changed in v33: ``text_color_threshold=None`` lets Tesseract do the
+    | thresholding; changed the default from 25 to None.
     """
     if frame is None:
         from stbt_core import get_frame
@@ -324,6 +325,8 @@ def match_text(text, frame=None, region=Region.ALL,
 
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
+    | Changed in v33: ``text_color_threshold=None`` lets Tesseract do the
+    | thresholding; changed the default from 25 to None.
     """
     if frame is None:
         from stbt_core import get_frame
@@ -487,7 +490,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     if text_color_threshold is None:
         text_color_threshold = get_config(
-            "ocr", "text_color_threshold", type_=int)
+            "ocr", "text_color_threshold", None, type_=int)
 
     if engine is None:
         engine = get_config("ocr", "engine", type_=OcrEngine)
@@ -531,9 +534,10 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                             diff[:, :, 2] ** 2) // 3) \
                      .astype(numpy.uint8)
         imglog.imwrite("text_color_difference", frame)
-        _, frame = cv2.threshold(frame, text_color_threshold, 255,
-                                 cv2.THRESH_BINARY)
-        imglog.imwrite("text_color_threshold", frame)
+        if text_color_threshold is not None:
+            _, frame = cv2.threshold(frame, text_color_threshold, 255,
+                                     cv2.THRESH_BINARY)
+            imglog.imwrite("text_color_threshold", frame)
 
     return _tesseract_subprocess(frame, mode, lang, _config,  # pylint:disable=unexpected-keyword-arg
                                  user_patterns, user_words, upsample,

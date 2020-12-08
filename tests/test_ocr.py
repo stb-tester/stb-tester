@@ -353,11 +353,11 @@ def test_ocr_on_text_next_to_image_match():
 
 
 @requires_tesseract
-@pytest.mark.parametrize("image,color,expected", [
+@pytest.mark.parametrize("image,color,threshold,expected", [
     # This region has a selected "Summary" button (white on light blue) and
     # unselected buttons "Details" and "More Episodes" (light grey on black).
     # Without specifying text_color, OCR only sees the latter two.
-    ("ocr/Summary.png", (235, 235, 235), "Summary"),
+    ("ocr/Summary.png", (235, 235, 235), 25, "Summary"),
 
     # This is a light "8" on a dark background. Without the context of any
     # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
@@ -365,31 +365,37 @@ def test_ocr_on_text_next_to_image_match():
     # it's assuming that it's seeing printed matter (a scanned book with black
     # text on white background). Expanding the region to include other text
     # would solve the problem, but so does specifying the text color.
-    ("ocr/ch8.png", (252, 242, 255), "8"),
+    ("ocr/ch8.png", (252, 242, 255), 25, "8"),
+
+    # This has some very faint pixels around the letters, and Tesseract's
+    # binarisation algorithm thinks they are foreground pixels. Without
+    # text_color tesseract reads "3115051495 HD".
+    ("ocr/Buy 14.99 HD.png", (195, 125, 0), None, "Buy $14.99 HD"),
 ])
-def test_ocr_text_color(image, color, expected):
+def test_ocr_text_color(image, color, threshold, expected):
     frame = load_image(image)
     mode = stbt.OcrMode.SINGLE_LINE
 
     assert expected not in stbt.ocr(frame, mode=mode)
-    assert expected == stbt.ocr(frame, mode=mode, text_color=color)
+    assert expected == stbt.ocr(frame, mode=mode, text_color=color,
+                                text_color_threshold=threshold)
 
     assert not stbt.match_text(expected, frame, mode=mode)
-    assert stbt.match_text(expected, frame, mode=mode, text_color=color)
+    assert stbt.match_text(expected, frame, mode=mode, text_color=color,
+                           text_color_threshold=threshold)
 
 
 @requires_tesseract
 def test_ocr_text_color_threshold():
-    f = load_image("ocr/blue-search-white-guide.png")
-    c = (220, 220, 220)
-    assert stbt.ocr(f) != "Guide"
-    # pylint:disable=fixme
-    # TODO: Find an example where text_color_threshold is necessary. Since
-    # tesseract 4.0.0 the default text_color_threshold actually works.
-    # assert stbt.ocr(f, text_color=c) != "Guide"
-    assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
-    with temporary_config({'ocr.text_color_threshold': '50'}):
-        assert stbt.ocr(f, text_color=c) == "Guide"
+    f = load_image("ocr/Explore Apple Originals.png")
+    c = (255, 255, 255)
+    expected = "Explore Apple Originals"
+    assert stbt.ocr(f, text_color=c, text_color_threshold=25) == \
+        "Explore Apple Originalg"
+    with temporary_config({'ocr.text_color_threshold': '25'}):
+        assert stbt.ocr(f, text_color=c) == "Explore Apple Originalg"
+    assert stbt.ocr(f, text_color=c, text_color_threshold=None) == expected
+    assert stbt.ocr(f, text_color=c) == expected
 
 
 @requires_tesseract
