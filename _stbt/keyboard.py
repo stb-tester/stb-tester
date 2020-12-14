@@ -11,7 +11,6 @@ import re
 import time
 from logging import getLogger
 
-import cv2
 import networkx as nx
 import numpy
 from attr import attrs, attrib
@@ -200,7 +199,7 @@ class Keyboard(object):
         if isinstance(mask, numpy.ndarray):
             self.mask = mask
         elif mask:
-            self.mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
+            self.mask = load_image(mask, color_channels=1)
 
         self.navigate_timeout = navigate_timeout
 

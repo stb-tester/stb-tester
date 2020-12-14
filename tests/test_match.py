@@ -58,17 +58,6 @@ def test_matchresult_region_when_first_pyramid_level_fails_to_match():
     assert r.height == 160
 
 
-@pytest.mark.parametrize("match_method", [
-    stbt.MatchMethod.SQDIFF,
-    stbt.MatchMethod.SQDIFF_NORMED,
-])
-def test_that_match_rejects_greyscale_array(match_method):
-    grey = cv2.cvtColor(stbt.load_image("black.png"), cv2.COLOR_BGR2GRAY)
-    with pytest.raises(ValueError):
-        stbt.match(grey, frame=black(),
-                   match_parameters=mp(match_method=match_method))
-
-
 def test_match_error_message_for_too_small_frame_and_region():
     stbt.match("videotestsrc-redblue.png", frame=black(width=92, height=160))
     stbt.match("videotestsrc-redblue.png", frame=black(),
@@ -514,7 +503,7 @@ def test_that_match_fast_path_is_equivalent():
     ]
     for reference, frame in images:
         if isinstance(frame, string_types):
-            frame = stbt.load_image(frame, cv2.IMREAD_COLOR)
+            frame = stbt.load_image(frame, color_channels=3)
         reference = stbt.load_image(reference)
         orig_m = stbt.match(reference, frame=frame)
         fast_m = stbt.match(reference, frame=frame, region=orig_m.region)

@@ -2,7 +2,7 @@
 
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
-Copyright 2013-2018 stb-tester.com Ltd.
+Copyright 2013-2020 stb-tester.com Ltd.
 
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
@@ -329,31 +329,16 @@ def _match_all(image, frame, match_parameters, region):
         from stbt_core import get_frame
         frame = get_frame()
 
-    template = load_image(image)
-
     # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
-    t = template.view()
-    if len(t.shape) == 2:
-        t.shape = t.shape + (1,)
-
     frame = frame.view()
     if len(frame.shape) == 2:
         frame.shape = frame.shape + (1,)
-
-    if len(t.shape) != 3:
-        raise ValueError(
-            "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
-            (template.shape,))
     if len(frame.shape) != 3:
         raise ValueError(
             "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
             (frame.shape,))
 
-    if t.shape[2] in [1, 3, 4]:
-        pass
-    else:
-        raise ValueError("Expected 3-channel image, got %d channels: %s"
-                         % (t.shape[2], template.relative_filename))
+    t = load_image(image, color_channels={1: 1, 3: (3, 4)}[frame.shape[2]])
 
     if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
         raise ValueError("Frame %r must be larger than reference image %r"
@@ -371,7 +356,7 @@ def _match_all(image, frame, match_parameters, region):
             raise ValueError(
                 "Reference image %s has alpha channel, but transparency "
                 "support requires OpenCV 3.0 or greater (you have %s)."
-                % (template.relative_filename, cv2_compat.version))
+                % (t.relative_filename, cv2_compat.version))
 
         if match_parameters.match_method not in (MatchMethod.SQDIFF,
                                                  MatchMethod.CCORR_NORMED):
@@ -381,7 +366,7 @@ def _match_all(image, frame, match_parameters, region):
                 "Reference image %s has alpha channel, but transparency "
                 "support requires match_method SQDIFF or CCORR_NORMED "
                 "(you specified %s)."
-                % (template.relative_filename, match_parameters.match_method))
+                % (t.relative_filename, match_parameters.match_method))
 
     input_region = _validate_region(frame, region)
     if input_region.height < t.shape[0] or input_region.width < t.shape[1]:
@@ -390,7 +375,7 @@ def _match_all(image, frame, match_parameters, region):
 
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
-        template_name=template.filename or "<Image>",
+        template_name=t.filename or "<Image>",
         input_region=input_region)
 
     # pylint:disable=undefined-loop-variable
@@ -403,13 +388,11 @@ def _match_all(image, frame, match_parameters, region):
                                  .translate(input_region)
             result = MatchResult(
                 getattr(frame, "time", None), matched, match_region,
-                first_pass_certainty, frame,
-                template,
-                first_pass_matched)
+                first_pass_certainty, frame, t, first_pass_matched)
             imglog.append(matches=result)
             draw_on(frame, result, label="match(%s)" % (
-                "<Image>" if template.relative_filename is None else
-                repr(to_native_str(template.relative_filename))))
+                "<Image>" if t.relative_filename is None else
+                repr(to_native_str(t.relative_filename))))
             yield result
 
     finally:
