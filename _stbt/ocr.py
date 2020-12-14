@@ -333,7 +333,6 @@ def match_text(text, frame=None, region=Region.ALL,
     | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     """
-    import lxml.etree
     if frame is None:
         from stbt_core import get_frame
         frame = get_frame()
@@ -355,6 +354,7 @@ def match_text(text, frame=None, region=Region.ALL,
         hocr = None
         result = TextMatchResult(rts, False, None, frame, text)
     else:
+        import lxml.etree
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
         p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
