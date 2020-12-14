@@ -15,26 +15,34 @@ def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
 
 
-_libstbt = ctypes.CDLL(_find_file("libstbt.so"))
+_libstbt = None
 
 
-class _SqdiffResult(ctypes.Structure):
-    _fields_ = [("total", ctypes.c_uint64),
-                ("count", ctypes.c_uint32)]
+def import_libstbt():
+    global _libstbt
+    if _libstbt is not None:
+        return _libstbt
 
+    libstbt = ctypes.CDLL(_find_file("libstbt.so"))
 
-# SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
-#                     const uint8_t *f, uint16_t f_stride,
-#                     uint16_t width_px, uint16_t height_px,
-#                     int color_depth)
+    class _SqdiffResult(ctypes.Structure):
+        _fields_ = [("total", ctypes.c_uint64),
+                    ("count", ctypes.c_uint32)]
 
-_libstbt.sqdiff.restype = _SqdiffResult
-_libstbt.sqdiff.argtypes = [
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.c_uint16, ctypes.c_uint16,
-    ctypes.c_int
-]
+    # SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
+    #                     const uint8_t *f, uint16_t f_stride,
+    #                     uint16_t width_px, uint16_t height_px,
+    #                     int color_depth)
+    libstbt.sqdiff.restype = _SqdiffResult
+    libstbt.sqdiff.argtypes = [
+        ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
+        ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
+        ctypes.c_uint16, ctypes.c_uint16,
+        ctypes.c_int
+    ]
+
+    _libstbt = libstbt
+    return libstbt
 
 
 PIXEL_DEPTH_BGR = 1
@@ -66,14 +74,16 @@ def _sqdiff_c(template, frame):
             frame.strides[1] != 3:
         raise NotImplementedError("Pixel data must be contiguous")
 
+    libstbt = import_libstbt()
+
     color_depth = COLOR_DEPTH_LOOKUP[(template.strides[1], template.shape[2])]
 
     t = template.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
     f = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
 
-    out = _libstbt.sqdiff(t, template.strides[0],
-                          f, frame.strides[0],
-                          template.shape[1], template.shape[0], color_depth)
+    out = libstbt.sqdiff(t, template.strides[0],
+                         f, frame.strides[0],
+                         template.shape[1], template.shape[0], color_depth)
     return out.total, out.count
 
 

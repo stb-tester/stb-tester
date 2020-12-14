@@ -27,13 +27,9 @@ from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
                        _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
+from .sqdiff import sqdiff
 from .types import Position, Region, UITestFailure
 from .utils import native_str, to_native_str
-
-try:
-    from .sqdiff import sqdiff
-except ImportError:
-    sqdiff = None
 
 
 class MatchMethod(enum.Enum):
