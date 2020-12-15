@@ -4,7 +4,8 @@ import cv2
 import numpy
 
 from .config import get_config
-from .imgutils import (crop, _frame_repr, pixel_bounding_box, _validate_region)
+from .imgutils import (crop, _frame_repr, load_mask, pixel_bounding_box,
+                       _validate_region)
 from .logging import ddebug, ImageLogger
 from .types import Region
 
@@ -17,21 +18,6 @@ class FrameDiffer():
     so that you can remember work you've done on frame B, so that you don't
     repeat that work when you need to compare against frame C.
     """
-
-    def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None):
-        self.prev_frame = initial_frame
-        self.region = _validate_region(self.prev_frame, region)
-        self.mask = mask
-        self.min_size = min_size
-        if (self.mask is not None and
-                self.mask.shape[:2] != (self.region.height, self.region.width)):
-            raise ValueError(
-                "The dimensions of the mask %s don't match the %s <%ix%i>"
-                % (_frame_repr(self.mask),
-                   "frame" if region == Region.ALL else "region",
-                   self.region.width, self.region.height))
-
     def diff(self, frame):
         raise NotImplementedError(
             "%s.diff is not implemented" % self.__class__.__name__)
@@ -42,7 +28,14 @@ class MotionDiff(FrameDiffer):
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None, noise_threshold=None, erode=True):
-        super().__init__(initial_frame, region, mask, min_size)
+        self.prev_frame = initial_frame
+        self.region = _validate_region(self.prev_frame, region)
+        self.min_size = min_size
+
+        if mask is not None:
+            mask = load_mask(mask,
+                             shape=(self.region.height, self.region.width, 1))
+        self.mask = mask
 
         if noise_threshold is None:
             noise_threshold = get_config(
