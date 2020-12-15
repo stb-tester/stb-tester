@@ -360,6 +360,58 @@ def load_image(filename, flags=None, color_channels=None):
     return img
 
 
+def preload_mask(mask, color_channels=(1, 3)):
+    """load_mask requires a shape.  We may not know the shape, but still want
+    to load an image from disk to save from doing it later.  This function does
+    this.
+
+    This should be used by our internal functions, rather than test-scripts
+    """
+    if mask is None or isinstance(mask, Region):
+        return mask
+    elif isinstance(mask, (str, unicode, numpy.ndarray)):
+        return load_image(mask, color_channels=color_channels)
+    else:
+        raise TypeError("Don't know how to make mask from %r" % (mask,))
+
+
+def load_mask(mask, shape):
+    """Used to load a mask from disk, or to convert it from a stbt.Region.
+
+    This should be used by image processing functions, not by test-scripts
+    """
+    mask = preload_mask(mask, color_channels=shape[2])
+    if isinstance(mask, numpy.ndarray):
+        if mask.shape != shape:
+            raise ValueError(
+                "Loaded mask %r has wrong shape: %r. Expected: %r" % (
+                    mask.relative_filename, mask.shape, shape))
+        return mask
+    elif isinstance(mask, Region):
+        return _to_ndarray_mask(mask, shape=shape)
+    else:
+        raise TypeError("Don't know how to make mask from %r" % (mask,))
+
+
+def _to_ndarray_mask(x, shape, dtype=numpy.uint8, invert=False):
+    """Creates an ndarray mask from a stbt.Region"""
+    out_val = 0
+    if dtype == numpy.uint8:
+        in_val = 255
+    else:
+        in_val = 1
+
+    if invert:
+        out_val, in_val = in_val, out_val
+
+    out = numpy.full(shape, out_val, dtype=dtype)
+    r = Region.intersect(x, Region(0, 0, shape[1], shape[0]))
+    if r:
+        out[r.y:r.bottom, r.x:r.right] = in_val
+
+    return out
+
+
 def save_frame(image, filename):
     """Saves an OpenCV image to the specified file.
 
