@@ -76,9 +76,18 @@ def press_and_wait(
         * **key** (*str*) – The name of the key that was pressed.
         * **frame** (`stbt.Frame`) – If successful, the first video frame when
           the transition completed; if timed out, the last frame seen.
-        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT``,
-          ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
+        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT`` (the
+          transition didn't start – nothing moved), ``STABLE_TIMEOUT`` (the
+          transition didn't end – movement didn't stop), or ``COMPLETE`` (the
+          transition started and then stopped). If it's ``COMPLETE``, the whole
           object will evaluate as true.
+        * **started** (*bool*) – The transition started (movement was seen
+          after the keypress). Implies that ``status`` is either ``COMPLETE``
+          or ``STABLE_TIMEOUT``.
+        * **complete** (*bool*) – The transition completed (movement started
+          and then stopped). Implies that ``status`` is ``COMPLETE``.
+        * **stable** (*bool*) – The screen is stable (no movement). Implies
+          ``complete or not started``.
         * **press_time** (*float*) – When the key-press completed.
         * **animation_start_time** (*float*) – When animation started after the
           key-press (or ``None`` if timed out).
@@ -353,6 +362,19 @@ class _TransitionResult():
         if self.end_time is None or self.animation_start_time is None:
             return None
         return self.end_time - self.animation_start_time
+
+    @property
+    def started(self):
+        return self.status != TransitionStatus.START_TIMEOUT
+
+    @property
+    def complete(self):
+        return self.status == TransitionStatus.COMPLETE
+
+    @property
+    def stable(self):
+        return self.status in (TransitionStatus.START_TIMEOUT,
+                               TransitionStatus.COMPLETE)
 
 
 class TransitionStatus(enum.Enum):
