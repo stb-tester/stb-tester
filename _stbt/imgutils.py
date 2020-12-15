@@ -3,6 +3,7 @@
 import inspect
 import os
 import warnings
+from collections import namedtuple
 
 import cv2
 import numpy
@@ -360,6 +361,33 @@ def load_image(filename, flags=None, color_channels=None):
     return img
 
 
+class NotRegion(namedtuple("NotRegion", "region")):
+    """This is the inverse of a region.  This can be useful to pass as the mask
+    parameter to our image processing functions.  Create instances of this type
+    with:
+
+    >>> mask_out(stbt.Region(34, 433, right=44, bottom=444))
+    NotRegion(stbt.Region(34, 433, right=44, bottom=444))
+    """
+    pass
+
+
+def mask_out(mask):
+    """Mask out a region (invert a mask).
+
+    Example:
+
+        SPINNER_REGION = stbt.Region(34, 433, right=44, bottom=444)
+        stbt.wait_for_motion(mask=mask_out(SPINNER_REGION))
+    """
+    if isinstance(mask, Region):
+        return NotRegion(mask)
+    elif isinstance(mask, NotRegion):
+        return mask.region
+    else:
+        return ~load_image(mask, color_channels=(1, 3))
+
+
 def preload_mask(mask, color_channels=(1, 3)):
     """load_mask requires a shape.  We may not know the shape, but still want
     to load an image from disk to save from doing it later.  This function does
@@ -367,7 +395,7 @@ def preload_mask(mask, color_channels=(1, 3)):
 
     This should be used by our internal functions, rather than test-scripts
     """
-    if mask is None or isinstance(mask, Region):
+    if mask is None or isinstance(mask, (Region, NotRegion)):
         return mask
     elif isinstance(mask, (str, unicode, numpy.ndarray)):
         return load_image(mask, color_channels=color_channels)
@@ -389,6 +417,8 @@ def load_mask(mask, shape):
         return mask
     elif isinstance(mask, Region):
         return _to_ndarray_mask(mask, shape=shape)
+    elif isinstance(mask, NotRegion):
+        return _to_ndarray_mask(mask, shape=shape, invert=True)
     else:
         raise TypeError("Don't know how to make mask from %r" % (mask,))
 
