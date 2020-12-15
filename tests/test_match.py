@@ -101,12 +101,12 @@ def test_match_error_message_for_too_small_frame_and_region():
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
 def test_matching_greyscale_array_with_greyscale_frame(match_method):
-    assert stbt.match(
-        cv2.cvtColor(stbt.load_image("videotestsrc-redblue.png"),
-                     cv2.COLOR_BGR2GRAY),
-        frame=cv2.cvtColor(stbt.load_image("videotestsrc-full-frame.png"),
-                           cv2.COLOR_BGR2GRAY),
-        match_parameters=mp(match_method=match_method))
+    img = stbt.load_image("videotestsrc-redblue.png", color_channels=1)
+    assert img.shape[2] == 1
+    frame = stbt.load_image("videotestsrc-full-frame.png", color_channels=1)
+    assert frame.shape[2] == 1
+    assert stbt.match(img, frame,
+                      match_parameters=mp(match_method=match_method))
 
 
 @pytest.mark.parametrize("filename", [
