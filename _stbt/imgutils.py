@@ -196,18 +196,22 @@ def load_image(filename, flags=None, color_channels=None):
 
     :param str filename: A relative or absolute filename.
 
-    :param flags: Deprecated: Flags to pass to :ocv:pyfunc:`cv2.imread`.  Use
-      `color_channels` to choose the output format.
+    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`. Deprecated; use
+      ``color_channels`` instead.
 
-    :param flags: Tuple of acceptable numbers of colour channels for the output
-      image.  1 for monochrome, 3 for color and 4 for colour with alpha.  For
-      example, to accept both color images and color images with an alpha
-      channel pass `color_channels=(3, 4)`.  Defaults to `(3, 4)`.
+    :param Tuple[int] color_channels: Tuple of acceptable numbers of color
+      channels for the output image: 1 for grayscale, 3 for color, and 4 for
+      color with an alpha (transparency) channel. For example,
+      ``color_channels=(3, 4)`` will accept color images with or without an
+      alpha channel. Defaults to ``(3, 4)``.
+
+      If the image doesn't match the specified ``color_channels`` it will be
+      converted to the specified format.
 
     :rtype: stbt.Image
     :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
-        values. With the default ``flags`` parameter this will be 3 channels
-        BGR, or 4 channels BGRA if the file has transparent pixels.
+        values. With the default ``color_channels`` parameter this will be 3
+        channels BGR, or 4 channels BGRA if the file has transparent pixels.
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
@@ -218,9 +222,11 @@ def load_image(filename, flags=None, color_channels=None):
       ``relative_filename`` and ``absolute_filename``.
     * Changed in v32: Allows passing an image (`numpy.ndarray` or `stbt.Image`)
       instead of a string, in which case this function returns the given image.
-    * Changed in v33: Deprecated flags argument in favour of color_channels.
-    * Changed in v33: If an image is passed as filename and the number of color
-      channels it contains isn't listed in color_channels it will be converted.
+    * Changed in v33: Added the ``color_channels`` parameter and deprecated
+      ``flags``. The image will always be converted to the format specified by
+      ``color_channels`` (previously it was only converted to the format
+      specified by ``flags`` if it was given as a filename, not as a
+      `stbt.Image` or numpy array).
     """
     if flags is not None:
         # Backwards compatibility
@@ -329,7 +335,7 @@ def load_image(filename, flags=None, color_channels=None):
                 "Can only convert 3 channel image to 1, 3 or 4 channels")
     else:
         raise ValueError(
-            "load_image can only handle images with 1, 3 or 4 colour channels. "
+            "load_image can only handle images with 1, 3 or 4 color channels. "
             "%s has %i channels" % (filename, c))
 
     assert img.shape[2] in color_channels
