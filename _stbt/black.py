@@ -11,7 +11,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import cv2
 
 from .config import get_config
-from .imgutils import (crop, _frame_repr, load_image, pixel_bounding_box,
+from .imgutils import (crop, _frame_repr, load_mask, pixel_bounding_box,
                        _validate_region)
 from .logging import debug, ImageLogger
 from .types import Region
@@ -64,10 +64,9 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         from stbt_core import get_frame
         frame = get_frame()
 
-    if mask is not None:
-        mask = load_image(mask, color_channels=1)
-
     region = _validate_region(frame, region)
+    if mask is not None:
+        mask = load_mask(mask, shape=(region.height, region.width, 1))
 
     imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
