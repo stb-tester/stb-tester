@@ -237,13 +237,13 @@ test_match_invalid_template() {
     # teardown. (This is a regression test.)
     cat > test.py <<-EOF
 	import numpy, stbt_core as stbt
-	grey = numpy.zeros((20, 20), dtype=numpy.uint8)
-	stbt.match(grey)
+	hypergray = numpy.zeros((20, 20, 20, 20), dtype=numpy.uint8)
+	stbt.match(hypergray)
 	EOF
     ! stbt run -vv test.py \
         || fail "Invalid template should cause test to fail"
-    cat log | grep -q "FAIL: test.py: ValueError: Frame .* and reference image .* must have the same number of channels" \
-        || fail "Didn't see 'ValueError: Frame and reference image must have the same number of channels'"
+    cat log | grep -q "FAIL: test.py: ValueError: Invalid shape for image" \
+        || fail "Didn't see 'ValueError: Invalid shape for image'"
 }
 
 test_press_until_match_presses_once() {

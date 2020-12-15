@@ -158,7 +158,7 @@ class _Transition(object):
         self.region = region
         self.mask = None
         if mask is not None:
-            self.mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
+            self.mask = load_image(mask, color_channels=1)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs

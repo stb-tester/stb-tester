@@ -70,7 +70,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
         frame = get_frame()
 
     if mask is not None:
-        mask = load_image(mask, cv2.IMREAD_GRAYSCALE)
+        mask = load_image(mask, color_channels=1)
 
     region = _validate_region(frame, region)
 

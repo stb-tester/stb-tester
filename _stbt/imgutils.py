@@ -8,6 +8,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import inspect
 import os
+import warnings
 
 import cv2
 import numpy
@@ -177,7 +178,7 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-def load_image(filename, flags=None):
+def load_image(filename, flags=None, color_channels=None):
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -195,12 +196,22 @@ def load_image(filename, flags=None):
 
     :param str filename: A relative or absolute filename.
 
-    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`.
+    :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`. Deprecated; use
+      ``color_channels`` instead.
+
+    :param Tuple[int] color_channels: Tuple of acceptable numbers of color
+      channels for the output image: 1 for grayscale, 3 for color, and 4 for
+      color with an alpha (transparency) channel. For example,
+      ``color_channels=(3, 4)`` will accept color images with or without an
+      alpha channel. Defaults to ``(3, 4)``.
+
+      If the image doesn't match the specified ``color_channels`` it will be
+      converted to the specified format.
 
     :rtype: stbt.Image
     :returns: An image in OpenCV format — that is, a `numpy.ndarray` of 8-bit
-        values. With the default ``flags`` parameter this will be 3 channels
-        BGR, or 4 channels BGRA if the file has transparent pixels.
+        values. With the default ``color_channels`` parameter this will be 3
+        channels BGR, or 4 channels BGRA if the file has transparent pixels.
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
@@ -211,43 +222,65 @@ def load_image(filename, flags=None):
       ``relative_filename`` and ``absolute_filename``.
     * Changed in v32: Allows passing an image (`numpy.ndarray` or `stbt.Image`)
       instead of a string, in which case this function returns the given image.
+    * Changed in v33: Added the ``color_channels`` parameter and deprecated
+      ``flags``. The image will always be converted to the format specified by
+      ``color_channels`` (previously it was only converted to the format
+      specified by ``flags`` if it was given as a filename, not as a
+      `stbt.Image` or numpy array).
     """
+    if flags is not None:
+        # Backwards compatibility
+        if color_channels is not None:
+            raise Exception(
+                "flags cannot be specified at the same time as color_channels")
+        if flags == cv2.IMREAD_GRAYSCALE:
+            color_channels = (1,)
+        elif flags == cv2.IMREAD_COLOR:
+            color_channels = (3,)
+        elif flags == cv2.IMREAD_UNCHANGED:
+            color_channels = (1, 3, 4)
+        else:
+            raise Exception("Unsupported imread flags %s" % flags)
+        warnings.warn(
+            "load_image: flags=%s argument is deprecated. Use "
+            "color_channels=%r instead" % (flags, color_channels),
+            DeprecationWarning)
+
+    if color_channels is None:
+        color_channels = (3, 4)
+    elif isinstance(color_channels, int):
+        color_channels = (color_channels,)
 
     obj = filename
     if isinstance(obj, Image):
-        return obj
-    if isinstance(obj, numpy.ndarray):
-        return Image(obj)  # obj.filename etc. will be None
-
-    absolute_filename = find_user_file(filename)
-    if not absolute_filename:
-        raise IOError(to_native_str("No such file: %s" % to_unicode(filename)))
-    image = imread(absolute_filename, flags)
-    if image is None:
-        raise IOError(to_native_str("Failed to load image: %s" %
-                                    to_unicode(absolute_filename)))
-    return Image(image, filename=to_unicode(filename),
-                 absolute_filename=to_unicode(absolute_filename))
-
-
-def save_frame(image, filename):
-    """Saves an OpenCV image to the specified file.
-
-    Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
-    """
-    cv2.imwrite(filename, image)
-
-
-def imread(filename, flags=None):
-    if flags is None:
-        cv2_flags = cv2.IMREAD_UNCHANGED
+        img = obj
+        filename = obj.filename
+        absolute_filename = obj.absolute_filename
+    elif isinstance(obj, numpy.ndarray):
+        img = obj  # obj.filename etc. will be None
+        filename = None
+        absolute_filename = None
     else:
-        cv2_flags = flags
+        filename = to_unicode(filename)
+        absolute_filename = find_user_file(filename)
+        if not absolute_filename:
+            raise IOError(to_native_str("No such file: %s" % filename))
+        absolute_filename = to_unicode(absolute_filename)
+        if color_channels == (3,):
+            flags = cv2.IMREAD_COLOR
+        elif color_channels == (1,):
+            flags = cv2.IMREAD_GRAYSCALE
+        else:
+            flags = cv2.IMREAD_UNCHANGED
+        img = cv2.imread(to_native_str(absolute_filename), flags)
+        if img is None:
+            raise IOError(to_native_str("Failed to load image: %s" %
+                                        absolute_filename))
 
-    img = cv2.imread(to_native_str(filename), cv2_flags)
-    if img is None:
-        return None
+    if len(img.shape) not in [2, 3]:
+        raise ValueError(
+            "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
+            (img.shape,))
 
     if img.dtype == numpy.uint16:
         warn("Image %s has 16 bits per channel. Converting to 8 bits."
@@ -257,26 +290,68 @@ def imread(filename, flags=None):
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
                          % (filename, img.dtype))
 
-    if flags is None:
-        # We want: 3 colours, 8 bits per channel, alpha channel if present.
-        # This differs from cv2.imread's default mode:
-        #
-        #                                     Alpha channel?   Converts from
-        # Mode                                (if present)     grayscale to BGR?
-        # ----------------------------------------------------------------------
-        # IMREAD_COLOR (cv2.imread default)   No               Yes
-        # IMREAD_UNCHANGED                    Yes              No
-        # Our default                         Yes              Yes
-        # ----------------------------------------------------------------------
+    if len(img.shape) == 2:
+        img = img.reshape(img.shape + (1,))
+    c = img.shape[2]
 
-        if len(img.shape) == 2 or img.shape[2] == 1:
+    if c == 1:
+        if 1 in color_channels:
+            pass
+        elif 3 in color_channels:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-        # Remove alpha channel if it's 100% opaque
-        if img.shape[2] == 4 and numpy.all(img[:, :, 3] == 255):
+        elif 4 in color_channels:
+            img = numpy.concatenate(
+                (cv2.cvtColor(img, cv2.COLOR_GRAY2BGR),
+                 numpy.full(img.shape[:2] + (1,), 255, dtype=img.dtype)),
+                axis=2)
+        else:
+            raise ValueError(
+                "Can only convert 1 channel image to 1, 3 or 4 channels")
+    elif c == 3:
+        if 3 in color_channels:
+            pass
+        elif 4 in color_channels:
+            img = numpy.concatenate(
+                (img, numpy.full(img.shape[:2] + (1,), 255, dtype=img.dtype)),
+                axis=2)
+        elif 1 in color_channels:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = img.reshape(img.shape + (1,))
+        else:
+            raise ValueError(
+                "Can only convert 3 channel image to 1, 3 or 4 channels")
+    elif c == 4:
+        if 4 in color_channels:
+            # Remove alpha channel if it's 100% opaque
+            if 3 in color_channels and numpy.all(img[:, :, 3] == 255):
+                img = img[:, :, :3]
+        elif 3 in color_channels:
             img = img[:, :, :3]
+        elif 1 in color_channels:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = img.reshape(img.shape + (1,))
+        else:
+            raise ValueError(
+                "Can only convert 3 channel image to 1, 3 or 4 channels")
+    else:
+        raise ValueError(
+            "load_image can only handle images with 1, 3 or 4 color channels. "
+            "%s has %i channels" % (filename, c))
+
+    assert img.shape[2] in color_channels
+    if not isinstance(img, Image):
+        img = Image(img, filename=filename, absolute_filename=absolute_filename)
 
     return img
+
+
+def save_frame(image, filename):
+    """Saves an OpenCV image to the specified file.
+
+    Takes an image obtained from `get_frame` or from the `screenshot`
+    property of `MatchTimeout` or `MotionTimeout`.
+    """
+    cv2.imwrite(filename, image)
 
 
 def pixel_bounding_box(img):

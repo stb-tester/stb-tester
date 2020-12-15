@@ -14,7 +14,6 @@ from distutils.version import LooseVersion
 from textwrap import dedent
 from unittest import SkipTest
 
-import cv2
 import pytest
 
 import _stbt.config
@@ -330,13 +329,13 @@ def test_that_match_text_gives_tesseract_a_hint():
 
 @requires_tesseract
 def test_match_text_on_single_channel_image():
-    frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    frame = load_image("ocr/menu.png", color_channels=1)
     assert stbt.match_text("Onion Bhaji", frame)
 
 
 @requires_tesseract
 def test_match_text_case_sensitivity():
-    frame = load_image("ocr/menu.png", cv2.IMREAD_GRAYSCALE)
+    frame = load_image("ocr/menu.png", color_channels=1)
     assert stbt.match_text("ONION BHAJI", frame)
     assert stbt.match_text("ONION BHAJI", frame, case_sensitive=False)
     assert not stbt.match_text("ONION BHAJI", frame, case_sensitive=True)

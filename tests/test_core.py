@@ -78,7 +78,7 @@ def test_load_image_with_unicode_filename():
 
 
 def test_load_image_with_numpy_array():
-    a = numpy.zeros((720, 1280), dtype=numpy.uint8)
+    a = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     img = stbt.load_image(a)
     assert (a.__array_interface__["data"][0] ==
             img.__array_interface__["data"][0])
@@ -86,11 +86,45 @@ def test_load_image_with_numpy_array():
     assert img.relative_filename is None
     assert img.absolute_filename is None
 
+    a = numpy.zeros((720, 1280), dtype=numpy.uint8)
+    b = numpy.zeros((720, 1280, 1), dtype=numpy.uint8)
+    c = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
+    d = numpy.zeros((720, 1280, 4), dtype=numpy.uint8)
 
-def test_load_image_with_image():
+    channels = [(1,), (3,), (4,), (1, 3), (1, 4), (3, 4), (1, 3, 4)]
+    for x in [a, b, c, d]:
+        for y in channels:
+            img = stbt.load_image(x, color_channels=y)
+            assert img.shape[2] in y
+            assert isinstance(img, stbt.Image)
+
+
+def test_load_image_with_stbt_image():
     img1 = stbt.load_image("videotestsrc-redblue.png")
     img2 = stbt.load_image(img1)
     assert img1 is img2
+
+
+def test_load_image_from_filename_with_color_channels():
+    files = [
+        "videotestsrc-greyscale.png",
+        "videotestsrc-greyscale-alpha.png",
+        "completely-transparent.png",
+        "with-alpha-but-completely-opaque.png",
+        "uint16.png",
+    ]
+    channels = [(1,), (3,), (4,), (1, 3), (1, 4), (3, 4), (1, 3, 4)]
+    for f in files:
+        for c in channels:
+            print(f, c)
+            img = stbt.load_image(f, color_channels=c)
+            assert img.shape[2] in c
+            assert isinstance(img, stbt.Image)
+
+
+def test_that_load_image_with_nonexistent_image_raises_ioerror():
+    with pytest.raises(IOError, match="No such file: idontexist.png"):
+        stbt.load_image("idontexist.png")
 
 
 def test_crop():
