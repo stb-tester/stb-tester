@@ -86,7 +86,7 @@ test_that_frames_doesnt_time_out() {
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
 
-test_that_frames_raises_NoVideo() {
+test_that_frames_raises_NoVideo_on_underrun() {
     cat > test.py <<-EOF
 	import stbt_core as stbt
 	for _ in stbt.frames():
@@ -94,6 +94,19 @@ test_that_frames_raises_NoVideo() {
 	EOF
     stbt run -v \
         --source-pipeline "videotestsrc ! identity sleep-time=12000000" \
+        test.py &> stbt-run.log
+    grep NoVideo stbt-run.log ||
+        fail "'stbt.frames' didn't raise 'NoVideo' exception"
+}
+
+test_that_frames_raises_NoVideo_on_eos() {
+    cat > test.py <<-EOF
+	import stbt_core as stbt
+	for _ in stbt.frames():
+	    pass
+	EOF
+    stbt run -v \
+        --source-pipeline "videotestsrc num-buffers=1" \
         test.py &> stbt-run.log
     grep NoVideo stbt-run.log ||
         fail "'stbt.frames' didn't raise 'NoVideo' exception"
