@@ -38,7 +38,7 @@ from _stbt.types import NoVideo, Region
 from _stbt.utils import text_type, to_native_str, to_unicode
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GLib, GObject, Gst  # pylint:disable=wrong-import-order
+from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
 
 Gst.init(None)
 
@@ -411,8 +411,8 @@ class SinkPipeline(object):
             Gst.debug_bin_to_dot_file_with_ts(
                 self.sink_pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
-        self._raise_in_user_thread(
-            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
+        self._raise_in_user_thread(RuntimeError(
+            "Error from sink pipeline: %s: %s\n%s" % (err, err.message, dbg)))
 
     def __enter__(self):
         self.received_eos.clear()
@@ -647,6 +647,8 @@ class Display(object):
                         self.last_frame.time > since):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
+                elif isinstance(self.last_frame, NoVideo):
+                    raise NoVideo(text_type(self.last_frame))
                 elif isinstance(self.last_frame, Exception):
                     raise RuntimeError(text_type(self.last_frame))
                 t = time.time()
@@ -658,7 +660,7 @@ class Display(object):
         if pipeline:
             Gst.debug_bin_to_dot_file_with_ts(
                 pipeline, Gst.DebugGraphDetails.ALL, "NoVideo")
-        raise NoVideo("No video")
+        raise NoVideo("No frames received in %ss" % (timeout_secs,))
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
@@ -704,8 +706,8 @@ class Display(object):
             Gst.debug_bin_to_dot_file_with_ts(
                 pipeline, Gst.DebugGraphDetails.ALL, "ERROR")
         err, dbg = message.parse_error()
-        self.tell_user_thread(
-            RuntimeError("%s: %s\n%s\n" % (err, err.message, dbg)))
+        self.tell_user_thread(NoVideo(
+            "Error from source pipeline: %s: %s\n%s" % (err, err.message, dbg)))
 
     def on_warning(self, _bus, message):
         assert message.type == Gst.MessageType.WARNING
@@ -718,25 +720,7 @@ class Display(object):
 
     def on_eos_from_source_pipeline(self, _bus, _message):
         if not self.tearing_down:
-            warn("Got EOS from source pipeline")
-            self.restart_source()
-
-    def restart_source(self, *_args):
-        warn("Attempting to recover from video loss: "
-             "Stopping source pipeline and waiting 5s...")
-        self.source_pipeline.set_state(Gst.State.NULL)
-        self.source_pipeline = None
-        GObjectTimeout(5, self.start_source).start()
-        return False  # stop the timeout from running again
-
-    def start_source(self):
-        if self.tearing_down:
-            return False
-        warn("Restarting source pipeline...")
-        self.create_source_pipeline()
-        self.set_source_pipeline_playing()
-        warn("Restarted source pipeline")
-        return False  # stop the timeout from running again
+            self.tell_user_thread(NoVideo("EOS from source pipeline"))
 
     @staticmethod
     def appsink_await_eos(appsink, timeout=None):
@@ -775,21 +759,3 @@ def _draw_text(numpy_image, text, origin, color, font_scale=1.0):
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_DUPLEX,
         fontScale=font_scale, color=color, lineType=cv2_compat.LINE_AA)
-
-
-class GObjectTimeout(object):
-    """Responsible for setting a timeout in the GTK main loop."""
-    def __init__(self, timeout_secs, handler, *args):
-        self.timeout_secs = timeout_secs
-        self.handler = handler
-        self.args = args
-        self.timeout_id = None
-
-    def start(self):
-        self.timeout_id = GObject.timeout_add(
-            self.timeout_secs * 1000, self.handler, *self.args)
-
-    def cancel(self):
-        if self.timeout_id:
-            GObject.source_remove(self.timeout_id)
-        self.timeout_id = None
