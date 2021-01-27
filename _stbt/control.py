@@ -51,7 +51,7 @@ class UnknownKeyError(Exception):
     pass
 
 
-def uri_to_control(uri, display=None):
+def _lookup_uri_to_control(uri, display=None):
     controls = [
         (r'adb(:(?P<address>.*))?', new_adb_device),
         (r'error(:(?P<message>.*))?', ErrorControl),
@@ -84,8 +84,13 @@ def uri_to_control(uri, display=None):
     for regex, factory in controls:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
-            return factory(**m.groupdict())
+            return (factory, m.groupdict())
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
+
+
+def uri_to_control(uri, display=None):
+    factory, kwargs = _lookup_uri_to_control(uri, display)
+    return factory(**kwargs)
 
 
 def uri_to_control_recorder(uri):
