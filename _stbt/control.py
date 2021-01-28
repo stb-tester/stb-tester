@@ -595,11 +595,10 @@ class RedRatHttpControl(RemoteControl):
                 error_msg = response.json()["error"]
             except Exception:  # pylint:disable=broad-except
                 response.raise_for_status()
+            if re.match("Command '.*' is not known.", error_msg):
+                raise UnknownKeyError(error_msg)
             else:
-                if re.match("Command '.*' is not known.", error_msg):
-                    raise UnknownKeyError(error_msg)
-                else:
-                    raise RedRatHttpControlError(error_msg, response=response)
+                raise RedRatHttpControlError(error_msg, response=response)
         debug("Pressed %s" % key)
 
 
