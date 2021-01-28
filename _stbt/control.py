@@ -14,6 +14,8 @@ import time
 from contextlib import contextmanager
 from distutils.spawn import find_executable
 
+import requests
+
 from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
@@ -49,7 +51,7 @@ class UnknownKeyError(Exception):
     pass
 
 
-def uri_to_control(uri, display=None):
+def _lookup_uri_to_control(uri, display=None):
     controls = [
         (r'adb(:(?P<address>.*))?', new_adb_device),
         (r'error(:(?P<message>.*))?', ErrorControl),
@@ -70,6 +72,11 @@ def uri_to_control(uri, display=None):
         (r'test', lambda: VideoTestSrcControl(display)),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', X11Control),
         (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
+        (r'redrat-bt:(?P<hostname>[^:/]+):((?P<port>\d+))?:'
+         r'(?P<serial_no>[^:/]+):(?P<target_bt_address>[^:/]+)',
+         RedRatHttpControl.new_bt),
+        (r'redrat-ir:(?P<hostname>[^:/]+):((?P<port>\d+))?:'
+         r'(?P<serial_no>[^:/]+):(?P<output>[^:/]+)', RedRatHttpControl.new_ir),
     ]
     if gpl_controls is not None:
         controls += gpl_controls
@@ -77,8 +84,13 @@ def uri_to_control(uri, display=None):
     for regex, factory in controls:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
         if m:
-            return factory(**m.groupdict())
+            return (factory, m.groupdict())
     raise ConfigurationError('Invalid remote control URI: "%s"' % uri)
+
+
+def uri_to_control(uri, display=None):
+    factory, kwargs = _lookup_uri_to_control(uri, display)
+    return factory(**kwargs)
 
 
 def uri_to_control_recorder(uri):
@@ -526,8 +538,6 @@ class RokuHttpControl(RemoteControl):
         self.timeout_secs = timeout_secs
 
     def press(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
         response = requests.post(
             "http://%s:8060/keypress/%s" % (self.hostname, roku_keyname),
@@ -536,8 +546,6 @@ class RokuHttpControl(RemoteControl):
         debug("Pressed %s" % key)
 
     def keydown(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
         response = requests.post(
             "http://%s:8060/keydown/%s" % (self.hostname, roku_keyname),
@@ -546,14 +554,52 @@ class RokuHttpControl(RemoteControl):
         debug("Holding %s" % key)
 
     def keyup(self, key):
-        import requests
-
         roku_keyname = self._KEYNAMES.get(key, key)
         response = requests.post(
             "http://%s:8060/keyup/%s" % (self.hostname, roku_keyname),
             timeout=self.timeout_secs)
         response.raise_for_status()
         debug("Released %s" % key)
+
+
+class RedRatHttpControlError(requests.HTTPError):
+    pass
+
+
+class RedRatHttpControl(RemoteControl):
+    """Send a key-press via RedRat HTTP REST API (see RedRat hub)."""
+    def __init__(self, url, timeout_secs=3):
+        self._session = requests.Session()
+        self._url = url
+        self.timeout_secs = timeout_secs
+
+    @staticmethod
+    def new_ir(hostname, port, serial_no, output, timeout_secs=3):
+        port = int(port or 4254)
+        return RedRatHttpControl(
+            "http://%s:%i/api/redrats/%s/%s" % (
+                hostname, port, serial_no, output), timeout_secs)
+
+    @staticmethod
+    def new_bt(hostname, port, serial_no, target_bt_address, timeout_secs=3):
+        port = int(port or 4254)
+        return RedRatHttpControl(
+            "http://%s:%i/api/bt/modules/%s/targets/%s/send" % (
+                hostname, port, serial_no, target_bt_address), timeout_secs)
+
+    def press(self, key):
+        response = self._session.post(
+            self._url, {"Command": key}, timeout=self.timeout_secs)
+        if not response.ok:
+            try:
+                error_msg = response.json()["error"]
+            except Exception:  # pylint:disable=broad-except
+                response.raise_for_status()
+            if re.match("Command '.*' is not known.", error_msg):
+                raise UnknownKeyError(error_msg)
+            else:
+                raise RedRatHttpControlError(error_msg, response=response)
+        debug("Pressed %s" % key)
 
 
 class SamsungTCPControl(RemoteControl):
@@ -832,7 +878,6 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
 def test_roku_http_control():
     import pytest
     import responses
-    from requests.exceptions import HTTPError
 
     control = uri_to_control('roku:192.168.1.3')
     with responses.RequestsMock() as mock:
@@ -842,11 +887,49 @@ def test_roku_http_control():
     with responses.RequestsMock() as mock:
         mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
         control.press("Home")
-    with pytest.raises(HTTPError):
+    with pytest.raises(requests.HTTPError):
         with responses.RequestsMock() as mock:
             mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Homeopathy',
                      status=400)
             control.press("Homeopathy")
+
+
+def test_redrathttp_control():
+    import pytest
+    import responses
+
+    control = uri_to_control('redrat-ir:192.168.1.3::24462:7')
+    control = uri_to_control('redrat-bt:192.168.1.3::24462:CC-78-AB-79-3C-DF')
+    with responses.RequestsMock() as mock:
+        # This raises if the URL was not accessed.
+        mock.add(mock.POST, 'http://192.168.1.3:4254/api/bt/modules/24462'
+                 '/targets/CC-78-AB-79-3C-DF/send')
+        control.press("KEY_HOME")
+        assert mock.calls[0].request.body == "Command=KEY_HOME"
+
+    bad_control = uri_to_control(
+        'redrat-bt:192.168.1.3::24463:CC-78-AB-79-3C-DF')
+    with responses.RequestsMock() as mock:
+        mock.add(
+            mock.POST, 'http://192.168.1.3:4254/api/bt/modules/24462/targets/'
+            'CC-78-AB-79-3C-DF/send', json={
+                "error": "Command 'KEY_OK2' is not known.",
+                "stackTrace": ""
+            }, status=500)
+        with pytest.raises(
+                UnknownKeyError, message="Command 'KEY_OK2' is not known."):
+            control.press("KEY_OK2")
+
+        mock.add(
+            mock.POST, 'http://192.168.1.3:4254/api/bt/modules/24463/targets/'
+            'CC-78-AB-79-3C-DF/send', json={
+                "error": "No BT module with serial number '24463' found.",
+                "stackTrace": ""
+            }, status=404)
+        with pytest.raises(
+                RedRatHttpControlError,
+                message="No BT module with serial number '24463' found."):
+            bad_control.press("KEY_OK")
 
 
 def test_samsung_tcp_control():
