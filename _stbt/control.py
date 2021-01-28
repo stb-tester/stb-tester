@@ -569,7 +569,6 @@ class RedRatHttpControlError(requests.HTTPError):
 class RedRatHttpControl(RemoteControl):
     """Send a key-press via RedRat HTTP REST API (see RedRat hub)."""
     def __init__(self, url, timeout_secs=3):
-        import requests
         self._session = requests.Session()
         self._url = url
         self.timeout_secs = timeout_secs
@@ -594,7 +593,7 @@ class RedRatHttpControl(RemoteControl):
         if not response.ok:
             try:
                 error_msg = response.json()["error"]
-            except Exception:
+            except Exception:  # pylint:disable=broad-except
                 response.raise_for_status()
             else:
                 if re.match("Command '.*' is not known.", error_msg):
@@ -880,7 +879,6 @@ def test_that_local_lirc_socket_is_correctly_defaulted():
 def test_roku_http_control():
     import pytest
     import responses
-    from requests.exceptions import HTTPError
 
     control = uri_to_control('roku:192.168.1.3')
     with responses.RequestsMock() as mock:
@@ -890,7 +888,7 @@ def test_roku_http_control():
     with responses.RequestsMock() as mock:
         mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Home')
         control.press("Home")
-    with pytest.raises(HTTPError):
+    with pytest.raises(requests.HTTPError):
         with responses.RequestsMock() as mock:
             mock.add(mock.POST, 'http://192.168.1.3:8060/keypress/Homeopathy',
                      status=400)
@@ -900,7 +898,6 @@ def test_roku_http_control():
 def test_redrathttp_control():
     import pytest
     import responses
-    from requests.exceptions import HTTPError
 
     control = uri_to_control('redrat-ir:192.168.1.3::24462:7')
     control = uri_to_control('redrat-bt:192.168.1.3::24462:CC-78-AB-79-3C-DF')
@@ -917,8 +914,8 @@ def test_redrathttp_control():
         mock.add(
             mock.POST, 'http://192.168.1.3:4254/api/bt/modules/24462/targets/'
             'CC-78-AB-79-3C-DF/send', json={
-              "error": "Command 'KEY_OK2' is not known.",
-              "stackTrace": ""
+                "error": "Command 'KEY_OK2' is not known.",
+                "stackTrace": ""
             }, status=500)
         with pytest.raises(
                 UnknownKeyError, message="Command 'KEY_OK2' is not known."):
