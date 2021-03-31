@@ -231,7 +231,6 @@ check-pythonpackage:
 	    tests/test_config.py \
 	    tests/test_core.py \
 	    tests/test_grid.py \
-	    tests/test_keyboard.py \
 	    tests/test_match.py \
 	    tests/test_motion.py \
 	    tests/test_transition.py && \
