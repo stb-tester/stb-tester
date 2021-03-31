@@ -11,7 +11,6 @@ import re
 import time
 from logging import getLogger
 
-import networkx as nx
 import numpy
 from attr import attrs, attrib
 from _stbt.grid import Grid
@@ -187,11 +186,13 @@ class Keyboard(object):
     '''
 
     def __init__(self, graph=None, mask=None, navigate_timeout=20):
+        from networkx import DiGraph
+
         if graph is not None:
             raise ValueError(
                 "The `graph` parameter of `stbt.Keyboard` constructor is "
                 "deprecated. See the API documentation for details.")
-        self.G = nx.DiGraph()
+        self.G = DiGraph()
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
@@ -691,13 +692,15 @@ def _minimal_query(query):
 
 
 def _keys_to_press(G, source, targets):
+    from networkx import shortest_path
+
     paths = sorted(
-        [nx.shortest_path(G, source=source, target=t, weight="weight")
+        [shortest_path(G, source=source, target=t, weight="weight")
          for t in targets],
         key=len)
     path = paths[0]
-    # nx.shortest_path(G, "A", "V") -> ["A", "H", "O", "V"]
-    # nx.shortest_path(G, "A", "A") -> ["A"]
+    # shortest_path(G, "A", "V") -> ["A", "H", "O", "V"]
+    # shortest_path(G, "A", "A") -> ["A"]
     if len(path) == 1:
         return
     for s, t in zip(path[:-1], path[1:]):
@@ -732,7 +735,9 @@ def _add_weight(G, source, key):
 
 
 def _strip_shift_transitions(G):
-    G_ = nx.DiGraph()
+    from networkx import DiGraph
+
+    G_ = DiGraph()
     for node in G.nodes():
         G_.add_node(node)
     for u, v, data in G.edges(data=True):
