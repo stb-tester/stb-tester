@@ -34,7 +34,7 @@ This package doesn't bundle the Tesseract OCR engine, so `ocr()` and
 
 setuptools.setup(
     name="stbt_core",
-    version="32.0.2",
+    version="32.0.3",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
@@ -59,12 +59,12 @@ setuptools.setup(
     extras_require={
         "ocr": ["lxml==4.2"],
         "debug": ["Jinja2==2.10.1"],
+        "keyboard": ["networkx==1.11"],
     },
     install_requires=[
         "astroid==1.6.0",
         "attrs==20.2.0",
         "future==0.15.2",
-        "networkx==1.11",
         "opencv-python~=3.2",
         "pylint==1.8.3",
     ],
