@@ -270,12 +270,23 @@ def press_until_match(
 def frames(timeout_secs=None):
     """Generator that yields video frames captured from the device-under-test.
 
+    For example::
+
+        for frame in stbt.frames():
+            # Do something with each frame here.
+            # Remember to add a termination condition to `break` or `return`
+            # from the loop, or specify `timeout_secs` — otherwise you'll have
+            # an infinite loop!
+            ...
+
+    See also `stbt.get_frame`.
+
     :type timeout_secs: int or float or None
     :param timeout_secs:
       A timeout in seconds. After this timeout the iterator will be exhausted.
-      That is, a ``for`` loop like ``for f in frames(timeout_secs=10)`` will
-      terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the default)
-      then the iterator will yield frames forever. Note that you can stop
+      That is, a ``for`` loop like ``for f in stbt.frames(timeout_secs=10)``
+      will terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the
+      default) then the iterator will yield frames forever but you can stop
       iterating (for example with ``break``) at any time.
 
     :rtype: Iterator[stbt.Frame]
@@ -286,9 +297,21 @@ def frames(timeout_secs=None):
 
 
 def get_frame():
-    """Grabs a video frame captured from the device-under-test.
+    """Grabs a video frame from the device-under-test.
 
-    :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
+    :rtype: stbt.Frame
+    :returns: The most recent video frame in OpenCV format.
+
+    Most Stb-tester APIs (`stbt.match`, `stbt.FrameObject` constructors, etc.)
+    will call ``get_frame`` if a frame isn't specified explicitly.
+
+    If you call ``get_frame`` twice very quickly (faster than the video-capture
+    framerate) you might get the same frame twice. To block until the next
+    frame is available, use `stbt.frames`.
+
+    To save a frame to disk pass it to :ocv:pyfunc:`cv2.imwrite`. Note that any
+    file you write to the current working directory will appear as an artifact
+    in the test-run results.
     """
     return _dut.get_frame()
 
