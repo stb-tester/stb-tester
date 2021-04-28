@@ -85,6 +85,8 @@ def test_load_image_with_numpy_array():
     assert img.filename is None
     assert img.relative_filename is None
     assert img.absolute_filename is None
+    assert img.width == 1280
+    assert img.height == 720
 
     a = numpy.zeros((720, 1280), dtype=numpy.uint8)
     b = numpy.zeros((720, 1280, 1), dtype=numpy.uint8)

@@ -130,6 +130,14 @@ class Image(numpy.ndarray):
     def __str__(self):
         return repr(self)
 
+    @property
+    def width(self):
+        return self.shape[1]
+
+    @property
+    def height(self):
+        return self.shape[0]
+
 
 def _frame_repr(frame):
     if frame is None:
