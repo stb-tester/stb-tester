@@ -22,25 +22,6 @@ from _stbt.utils import basestring, text_type
 log = getLogger("stbt.keyboard")
 
 
-@attrs(frozen=True)
-class Key(object):
-    """A node in the directed graph, representing a key on the keyboard.
-
-    This is an immutable object so that it is hashable (it must be hashable
-    so that we can use it as a node of networkx graphs).
-
-    The user can specify any of the attributes (but at least ``name``). See
-    `Keyboard.add_key`.
-
-    This is an implementation detail, not part of the public API. But we do
-    return these as opaque objects from `Keyboard.add_key`.
-    """
-    name = attrib(default=None, type=text_type)
-    text = attrib(default=None, type=text_type)
-    region = attrib(default=None, type=Region)
-    mode = attrib(default=None, type=text_type)
-
-
 class Keyboard(object):
     '''Models the behaviour of an on-screen keyboard.
 
@@ -178,12 +159,35 @@ class Keyboard(object):
       object, and then use `add_key`, `add_transition`, `add_edgelist`, and
       `add_grid` to build the model of the keyboard.
     * Removed the ``stbt.Keyboard.Selection`` type. Instead, your Page Object's
-      ``selection`` property should return a Key value obtained from
+      ``selection`` property should return a `Key` value obtained from
       `find_key`.
+
+    Changed in v33:
+
+    * Moved private class ``Key`` (the type returned from `find_key`) to be a
+      public API `stbt.Keyboard.Key`, so that you can use it in type
+      annotations for your Page Object's `selection` property.
 
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     '''
+
+    @attrs(frozen=True)
+    class Key(object):
+        """Represents a key on the on-screen keyboard.
+
+        This is returned by `stbt.Keyboard.find_key`. Don't create instances of
+        this class directly.
+
+        It has attributes ``name``, ``text``, ``region``, and ``mode``. See
+        `Keyboard.add_key`.
+        """
+        # This is an immutable object so that it is hashable (it must be
+        # hashable so that we can use it as a node of networkx graphs).
+        name = attrib(default=None, type=text_type)
+        text = attrib(default=None, type=text_type)
+        region = attrib(default=None, type=Region)
+        mode = attrib(default=None, type=text_type)
 
     def __init__(self, graph=None, mask=None, navigate_timeout=20):
         from networkx import DiGraph
@@ -242,8 +246,8 @@ class Keyboard(object):
             ``mode`` is optional if your keyboard doesn't have modes, or if you
             only need to use the default mode.
 
-        :returns: The added key. This is an object that you can use with
-            `add_transition`.
+        :returns: The added key (`stbt.Keyboard.Key`). This is an object that
+            you can use with `add_transition`.
 
         :raises: `ValueError` if the key is already present in the model.
         """
@@ -261,10 +265,10 @@ class Keyboard(object):
         ``find_key`` to identify the current key based on the region of that
         selection.
 
-        :returns: An object that unambiguously identifies the key in the
-            model. It has "name", "text", "region", and "mode" attributes.
-            You can use this object as the ``source`` or ``target`` parameter
-            of `add_transition`.
+        :returns: A `stbt.Keyboard.Key` object that unambiguously identifies
+            the key in the model. It has "name", "text", "region", and "mode"
+            attributes. You can use this object as the ``source`` or ``target``
+            parameter of `add_transition`.
 
         :raises: `ValueError` if the key does not exist in the model, or if it
             can't be identified unambiguously (that is, if two or more keys
@@ -308,7 +312,7 @@ class Keyboard(object):
 
     def _find_keys(self, query, mode=None):
         """Like the public `find_keys`, but takes a "query" (see _find_key)."""
-        if isinstance(query, Key):
+        if isinstance(query, Keyboard.Key):
             if mode is not None and query.mode != mode:
                 raise ValueError("mode %r doesn't match %r" % (mode, query))
             if query in self.G:
@@ -364,7 +368,7 @@ class Keyboard(object):
 
         if spec.get("text") is None and len(spec["name"]) == 1:
             spec["text"] = spec["name"]
-        node = Key(**spec)
+        node = Keyboard.Key(**spec)
         if node.region is None and self._any_with_region:
             raise ValueError("Key %r doesn't specify 'region', but all the "
                              "other keys in the keyboard do" % (spec,))
@@ -397,12 +401,13 @@ class Keyboard(object):
         For example: To go from "A" to "B", press "KEY_RIGHT" on the remote
         control.
 
-        :param source: The starting key. This can be a Key object returned from
-            `add_key` or `find_key`; or it can be a dict that contains one or
-            more of "name", "text", "region", and "mode" (as many as are needed
-            to uniquely identify the key using `find_key`). For convenience, a
-            single string is treated as "name" (but this may not be enough to
-            uniquely identify the key if your keyboard has multiple modes).
+        :param source: The starting key. This can be a `Key` object returned
+            from `add_key` or `find_key`; or it can be a dict that contains one
+            or more of "name", "text", "region", and "mode" (as many as are
+            needed to uniquely identify the key using `find_key`). For
+            convenience, a single string is treated as "name" (but this may not
+            be enough to uniquely identify the key if your keyboard has
+            multiple modes).
 
         :param target: The key you'll land on after pressing the button
             on the remote control. This accepts the same types as ``source``.
@@ -580,7 +585,7 @@ class Keyboard(object):
             sub-class that describes the appearance of the on-screen keyboard.
             It must implement the following:
 
-            * ``selection`` (*Key*) — property that returns a Key object, as
+            * ``selection`` (`Key`) — property that returns a Key object, as
               returned from `find_key`.
 
             When you call *enter_text*, ``page`` must represent the current

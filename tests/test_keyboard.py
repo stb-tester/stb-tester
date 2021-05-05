@@ -8,6 +8,7 @@ from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-impor
 
 import logging
 import re
+import sys
 
 import networkx as nx
 import numpy
@@ -19,7 +20,7 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import Key, _keys_to_press, _strip_shift_transitions
+from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
 from _stbt.utils import py3
 
@@ -618,7 +619,7 @@ def test_that_add_grid_returns_grid_of_keys():
                         list("èéêëìíîžđ") + [""],
                         list("ïòóôõöøß") + ["", ""],
                         list("œùúûüçñ") + ["", "", ""]]))
-    assert isinstance(grid[0].data, Key)
+    assert isinstance(grid[0].data, stbt.Keyboard.Key)
 
     right_neighbours = kb.add_grid(
         stbt.Grid(stbt.Region(x=915, y=465, right=1040, bottom=690),
@@ -644,7 +645,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_key("a")
     assert_repr_equal(
-        "Key already exists: Key(name='a', text='a', region=None, mode=None)",
+        "Key already exists: Keyboard.Key(name='a', text='a', region=None, mode=None)",  # pylint:disable=line-too-long
         str(excinfo.value))
 
     # Can't add transition to key that doesn't exist:
@@ -691,7 +692,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_key(" ")
     assert_repr_equal(
-        "Key already exists: Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
+        "Key already exists: Keyboard.Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
         str(excinfo.value))
     with pytest.raises(ValueError) as excinfo:
         kb.add_key("b")
@@ -707,7 +708,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_edgelist("a SPACE KEY_DOWN")
     assert_repr_equal(
-        "Ambiguous key {'name': ' '}: Could mean Key(name=' ', text=' ', region=None, mode='lowercase') or Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
+        "Ambiguous key {'name': ' '}: Could mean Keyboard.Key(name=' ', text=' ', region=None, mode='lowercase') or Keyboard.Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
         str(excinfo.value))
 
     # ...so we need to specify the mode explicitly:
@@ -715,6 +716,9 @@ def test_that_keyboard_catches_errors_at_definition_time():
 
 
 def assert_repr_equal(a, b):
+    if sys.version_info.major == 2:
+        # In Python 2 the repr of nested classes doesn't show the outer class.
+        a = a.replace("Keyboard.Key", "Key")
     a = re.escape(a).replace(r"\.\.\.", ".*")
     b = b.replace("u'", "'")
     assert re.match("^" + a + "$", b)
