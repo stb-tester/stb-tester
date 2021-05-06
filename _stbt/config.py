@@ -53,6 +53,9 @@ def get_config(section, key, default=NoDefault, type_=str):
     Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
     found, unless ``default`` is specified (in which case ``default`` is
     returned).
+
+    Changed in v32: Allow specifying ``None`` as the default value
+    (previously ``None`` would be treated as "no default").
     """
 
     config = _config_init()
