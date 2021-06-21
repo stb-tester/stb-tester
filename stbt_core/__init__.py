@@ -54,6 +54,8 @@ from _stbt.motion import (
     detect_motion,
     MotionTimeout,
     wait_for_motion)
+from _stbt.multipress import (
+    MultiPress)
 from _stbt.ocr import (
     apply_ocr_corrections,
     match_text,
@@ -113,6 +115,7 @@ __all__ = [to_native_str(x) for x in [
     "MotionDiff",
     "MotionResult",
     "MotionTimeout",
+    "MultiPress",
     "NoVideo",
     "ocr",
     "OcrEngine",
