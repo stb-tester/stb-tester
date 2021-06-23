@@ -31,23 +31,34 @@ from stbt_core import wait_until
 def test_that_slicing_a_Frame_is_still_a_Frame():
     f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8),
                    time=1234)
+    assert f.time == 1234
+    assert f.width == 1280
+    assert f.height == 720
 
     f1 = f[10:20, 10:, 0]
     assert isinstance(f1, stbt.Frame)
     assert f1.time == 1234
+    assert f1.width == 1270
+    assert f1.height == 10
 
     f2 = stbt.crop(f, stbt.Region(10, 10, 20, 20))
     assert isinstance(f2, stbt.Frame)
     assert f2.time == 1234
+    assert f2.width == 20
+    assert f2.height == 20
 
     f3 = f.copy()
     assert isinstance(f3, stbt.Frame)
     assert f3.time == 1234
+    assert f3.width == 1280
+    assert f3.height == 720
     assert (f.__array_interface__["data"][0] !=
             f3.__array_interface__["data"][0])
 
     f4 = stbt.Frame(f)
     assert f4.time == 1234
+    assert f4.width == 1280
+    assert f4.height == 720
 
 
 def test_that_load_image_looks_in_callers_directory():
