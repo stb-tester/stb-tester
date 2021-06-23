@@ -62,6 +62,14 @@ class Frame(numpy.ndarray):
     def __str__(self):
         return repr(self)
 
+    @property
+    def width(self):
+        return self.shape[1]
+
+    @property
+    def height(self):
+        return self.shape[0]
+
 
 class Image(numpy.ndarray):
     """An image, possibly loaded from disk.
