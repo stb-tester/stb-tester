@@ -87,6 +87,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/ocr.py \
     _stbt/precondition.py \
     _stbt/power.py \
+    _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
@@ -234,7 +235,7 @@ check-pythonpackage:
 	    tests/test_match.py \
 	    tests/test_motion.py \
 	    tests/test_transition.py && \
-	stbt_lint="pylint --load-plugins=stbt_core.pylint_plugin" \
+	stbt_lint="pylint --load-plugins=_stbt.pylint_plugin" \
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
