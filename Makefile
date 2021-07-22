@@ -10,7 +10,7 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-python_version?=2.7
+python_version?=3
 pythondir?=$(prefix)/lib/python$(python_version)/site-packages
 sysconfdir?=$(prefix)/etc
 
@@ -28,14 +28,8 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-
-ifeq ($(python_version), 2.7)
-PYLINT ?= pylint
-PYTEST ?= pytest
-else
 PYLINT ?= pylint3
 PYTEST ?= pytest-3
-endif
 
 CFLAGS?=-O2
 
