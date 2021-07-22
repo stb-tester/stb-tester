@@ -1,12 +1,6 @@
 # coding: utf-8
 """Copyright 2019-2020 Stb-tester.com Ltd."""
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import re
 import time
 from logging import getLogger

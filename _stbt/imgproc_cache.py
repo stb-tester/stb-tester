@@ -10,11 +10,6 @@ context manager. For now this is a private API but we intend to make it public
 at some point so that users can add caching to any custom image-processing
 functions in their test-packs.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import functools
 import inspect

@@ -24,11 +24,6 @@ Run some tests against youtube HTML5 TV edition:
     # Tear down the chromium virtual-stb and remove the configuration:
     stbt virtual-stb stop
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import errno

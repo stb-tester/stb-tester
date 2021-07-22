@@ -4,11 +4,7 @@ a non-cryptographic hash that is *fast*.  In my experiments hashing a 720p image
 with xxhash takes ~242us, whereas using hash() builtin or hashlib.sha1 takes
 >3ms.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import binascii
 import ctypes
 import os
