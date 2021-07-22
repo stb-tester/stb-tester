@@ -891,7 +891,7 @@ def _log_match_image_debug(imglog):
     for i, result in enumerate(imglog.data["matches"]):
         imglog.imwrite(
             "match%d-source_with_match" % i, imglog.images["source"],
-            result.region, _Annotation.MATCHED if result._first_pass_matched  # pylint:disable=protected-access
+            result.region, _Annotation.MATCHED if result._first_pass_matched
             else _Annotation.NO_MATCH)
 
     imglog.imwrite(
@@ -1063,6 +1063,6 @@ def _log_match_image_debug(imglog):
         link=link,
         MatchMethod=MatchMethod,
         show_second_pass=any(
-            x._first_pass_matched for x in imglog.data["matches"]),  # pylint:disable=protected-access
+            x._first_pass_matched for x in imglog.data["matches"]),
         title=title,
     )

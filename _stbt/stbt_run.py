@@ -21,10 +21,10 @@ def _save_screenshot(dut, result_dir, exception, save_jpg, save_png):
         return
 
     screenshot = getattr(exception, "screenshot", None)
-    if screenshot is None and dut._display:  # pylint: disable=protected-access
-        screenshot = dut._display.last_used_frame  # pylint: disable=protected-access
+    if screenshot is None and dut._display:
+        screenshot = dut._display.last_used_frame
     if screenshot is None:
-        screenshot = dut.get_frame()  # pylint: disable=protected-access
+        screenshot = dut.get_frame()
 
     if save_png:
         cv2.imwrite(os.path.join(result_dir, "screenshot.png"), screenshot)
@@ -143,7 +143,7 @@ if sys.version_info.major == 2:  # Python 2
             #
             # It's not thread-safe, but will only be called at the end of
             # execution:
-            traceback._some_str = to_bytes  # pylint: disable=protected-access
+            traceback._some_str = to_bytes
             traceback.print_exc(file=sys.stderr)
 
             if isinstance(e, (UITestFailure, AssertionError)):

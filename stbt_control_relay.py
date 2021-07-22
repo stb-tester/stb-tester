@@ -64,7 +64,7 @@ def main(argv):
         level=logging.DEBUG if args.verbose else logging.INFO)
 
     if args.verbose:
-        _stbt.logging._debug_level = 1  # pylint:disable=protected-access
+        _stbt.logging._debug_level = 1
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 

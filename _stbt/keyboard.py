@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Copyright 2019 Stb-tester.com Ltd."""
+"""Copyright 2019-2020 Stb-tester.com Ltd."""
 
 from __future__ import unicode_literals
 from __future__ import print_function
@@ -15,6 +15,7 @@ import numpy
 from attr import attrs, attrib
 from _stbt.grid import Grid
 from _stbt.imgutils import load_image
+from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 from _stbt.utils import basestring, text_type
 
@@ -167,6 +168,10 @@ class Keyboard(object):
     * Moved private class ``Key`` (the type returned from `find_key`) to be a
       public API `stbt.Keyboard.Key`, so that you can use it in type
       annotations for your Page Object's `selection` property.
+    * Tries to recover from missed or double keypresses. To disable this
+      behaviour specify ``retries=0`` when calling `enter_text` or
+      `navigate_to`.
+    * Increased default ``navigate_timeout`` from 20 to 60 seconds.
 
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
@@ -189,7 +194,7 @@ class Keyboard(object):
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=text_type)
 
-    def __init__(self, graph=None, mask=None, navigate_timeout=20):
+    def __init__(self, graph=None, mask=None, navigate_timeout=60):
         from networkx import DiGraph
 
         if graph is not None:
@@ -574,7 +579,7 @@ class Keyboard(object):
             region=grid.region,
             data=_reshape_array(keys, cols=grid.cols, rows=grid.rows))
 
-    def enter_text(self, text, page, verify_every_keypress=False):
+    def enter_text(self, text, page, verify_every_keypress=False, retries=2):
         """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
@@ -604,6 +609,15 @@ class Keyboard(object):
             Set this to True to help debug your model if ``enter_text`` is
             behaving incorrectly.
 
+        :param int retries:
+            Number of recovery attempts if a keypress doesn't have the expected
+            effect according to the model. Allows recovering from missed
+            keypresses and double keypresses.
+
+        :returns: A new FrameObject instance of the same type as ``page``,
+            reflecting the device-under-test's new state after the keyboard
+            navigation completed.
+
         Typically your FrameObject will provide its own ``enter_text`` method,
         so your test scripts won't call this ``Keyboard`` class directly. See
         the :ref:`example above <keyboard-example>`.
@@ -616,7 +630,7 @@ class Keyboard(object):
 
         for letter in text:
             page = self.navigate_to({"text": letter},
-                                    page, verify_every_keypress)
+                                    page, verify_every_keypress, retries)
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
             log.debug("Keyboard: Entered %r; the selection is now on %r",
@@ -624,7 +638,7 @@ class Keyboard(object):
         log.info("Keyboard: Entered %r", text)
         return page
 
-    def navigate_to(self, target, page, verify_every_keypress=False):
+    def navigate_to(self, target, page, verify_every_keypress=False, retries=2):
         """Move the selection to the specified key.
 
         This won't press *KEY_OK* on the target; it only moves the selection
@@ -638,10 +652,11 @@ class Keyboard(object):
             convenience, a single string is treated as "name".
         :param stbt.FrameObject page: See `enter_text`.
         :param bool verify_every_keypress: See `enter_text`.
+        :param int retries: See `enter_text`.
 
         :returns: A new FrameObject instance of the same type as ``page``,
-            reflecting the device-under-test's new state after the navigation
-            completed.
+            reflecting the device-under-test's new state after the keyboard
+            navigation completed.
         """
 
         import stbt_core as stbt
@@ -668,26 +683,53 @@ class Keyboard(object):
                 for k, _ in keys[:-1]:
                     stbt.press(k)
                 keys = keys[-1:]  # only verify the last one
-            for key, possible_targets in keys:
-                assert self.press_and_wait(key, stable_secs=0.5)
-                page = page.refresh()
+            for key, immediate_targets in keys:
+                transition = self.press_and_wait(key, stable_secs=0.5)
+                assert transition.status != TransitionStatus.STABLE_TIMEOUT, \
+                    "Selection didn't stabilise after pressing %s" % (key,)
+                page = page.refresh(frame=transition.frame)
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = page.selection
-                assert current in possible_targets, \
-                    "Expected to see %s after pressing %s, but saw %r" % (
-                        _join_with_commas(
-                            [repr(x) for x in sorted(possible_targets)],
+                if (current not in immediate_targets and
+                        not verify_every_keypress):
+                    # Wait a bit longer for selection to reach the target
+                    transition = self.wait_for_transition_to_end(
+                        initial_frame=page._frame, stable_secs=2)
+                    assert transition.status != \
+                        TransitionStatus.STABLE_TIMEOUT, \
+                        "Selection didn't stabilise after pressing %s" % (key,)
+                    page = page.refresh(frame=transition.frame)
+                    assert page, "%s page isn't visible" % type(page).__name__
+                    current = page.selection
+                if current not in immediate_targets:
+                    message = (
+                        "Expected to see %s after pressing %s, but saw %r."
+                        % (_join_with_commas(
+                            [repr(x) for x in sorted(immediate_targets)],
                             last_one=" or "),
-                        key,
-                        current)
+                           key,
+                           current))
+                    if retries == 0:
+                        assert False, message
+                    else:
+                        log.debug(message +
+                                  (" Retrying %d more times." % (retries,)))
+                        retries -= 1
+                        break  # to outer loop
         return page
 
     def press_and_wait(self, key, timeout_secs=10, stable_secs=1):
         import stbt_core as stbt
-
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,
                                    stable_secs=stable_secs)
+
+    def wait_for_transition_to_end(self, initial_frame=None, timeout_secs=10,
+                                   stable_secs=1):
+        import stbt_core as stbt
+        return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
+                                               timeout_secs=timeout_secs,
+                                               stable_secs=stable_secs)
 
 
 def _minimal_query(query):

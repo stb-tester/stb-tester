@@ -138,7 +138,7 @@ class StbtChecker(BaseChecker):
 
         if isinstance(node.func, Attribute) and node.func.attrname == "refresh":
             for c in _infer(node.func.expr):
-                if _is_frameobject(c._proxied):  # pylint:disable=protected-access
+                if _is_frameobject(c._proxied):
                     if isinstance(node.parent, Expr):  # not an assignment
                         self.add_message('E7009', node=node,
                                          args=node.func.expr.as_string())
