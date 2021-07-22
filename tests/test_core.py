@@ -140,6 +140,16 @@ def test_that_load_image_with_nonexistent_image_raises_ioerror():
         stbt.load_image("idontexist.png")
 
 
+def test_that_image_and_frame_repr_can_print_numpy_scalar():
+    # Operations like `numpy.max` propagate the type of the input, so its
+    # output is still a `stbt.Image`.
+    f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
+    assert repr(numpy.max(f)) == "Frame(0, dtype=uint8)"
+
+    img = stbt.load_image("action-panel.png")
+    assert repr(numpy.max(img)) == "Image(255, dtype=uint8)"
+
+
 def test_crop():
     img = stbt.load_image("action-panel.png")
     cropped = stbt.crop(img, stbt.Region(x=1045, y=672, right=1081, bottom=691))
