@@ -53,8 +53,10 @@ class Frame(numpy.ndarray):
         if len(self.shape) == 3:
             dimensions = "%dx%dx%d" % (
                 self.shape[1], self.shape[0], self.shape[2])
-        else:
+        elif len(self.shape) == 2:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+        else:
+            return super(Frame, self).__repr__()
         return "<Frame(time=%s, dimensions=%s)>" % (
             "None" if self.time is None else "%.3f" % self.time,
             dimensions)
@@ -126,8 +128,10 @@ class Image(numpy.ndarray):
         if len(self.shape) == 3:
             dimensions = "%dx%dx%d" % (
                 self.shape[1], self.shape[0], self.shape[2])
-        else:
+        elif len(self.shape) == 2:
             dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+        else:
+            return super(Image, self).__repr__()
         if (self.relative_filename is None or
                 self.relative_filename.startswith('../')):
             filename = self.absolute_filename
