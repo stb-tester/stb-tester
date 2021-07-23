@@ -204,9 +204,9 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise_(AdbError(e.returncode, e.cmd, e.output.decode("utf-8"),
-                            self),
-                   None, sys.exc_info()[2])
+            raise AdbError(
+                e.returncode, e.cmd, e.output.decode("utf-8"), self) \
+                .with_traceback(sys.exc_info()[2])
         if capture_output:
             return output
         else:
