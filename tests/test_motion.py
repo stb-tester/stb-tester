@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import time
 from contextlib import contextmanager
 
@@ -151,7 +146,7 @@ def write_video(g):
     vw.release()
 
 
-class MockTime(object):
+class MockTime():
     def __init__(self, start_time=1466084600.):
         self._time = start_time
         self._functions = []

@@ -1,11 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import os
 import re
 import timeit
@@ -48,16 +42,6 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
         kwargs["mode"] = mode
     text = stbt.ocr(load_image("ocr/" + image), **kwargs)
     assert text == expected_text
-
-
-@requires_tesseract
-def test_ocr_doesnt_leak_python_future_newtypes():
-    f = load_image("ocr/small.png")
-    result = stbt.ocr(f)
-    assert type(result).__name__ in ["str", "unicode"]
-
-    result = stbt.match_text("Small", f)
-    assert type(result.text).__name__ in ["str", "unicode"]
 
 
 @requires_tesseract

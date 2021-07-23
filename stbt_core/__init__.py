@@ -9,12 +9,6 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 from contextlib import contextmanager
 
 from _stbt.black import (
@@ -78,12 +72,10 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
-from _stbt.utils import (
-    to_native_str)
 from _stbt.wait import (
     wait_until)
 
-__all__ = [to_native_str(x) for x in [
+__all__ = [
     "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
@@ -138,7 +130,7 @@ __all__ = [to_native_str(x) for x in [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
-]]
+]
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -322,7 +314,7 @@ def get_frame():
 # Internal
 # ===========================================================================
 
-class UnconfiguredDeviceUnderTest(object):
+class UnconfiguredDeviceUnderTest():
     # pylint:disable=unused-argument
     def last_keypress(self):
         return None

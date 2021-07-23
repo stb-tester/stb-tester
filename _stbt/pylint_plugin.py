@@ -9,12 +9,6 @@ Documentation on Abstract Syntax Tree traversal with python/pylint:
 * http://docs.python.org/3.6/library/ast.html
 
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import string_types
 
 import os
 import re
@@ -78,7 +72,7 @@ class StbtChecker(BaseChecker):
     }
 
     def visit_const(self, node):
-        if (isinstance(node.value, string_types) and
+        if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
                 "\n" not in node.value and
                 not _is_uri(node.value) and

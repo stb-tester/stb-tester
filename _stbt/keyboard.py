@@ -1,12 +1,6 @@
 # coding: utf-8
 """Copyright 2019-2020 Stb-tester.com Ltd."""
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import re
 import time
 from logging import getLogger
@@ -17,13 +11,12 @@ from _stbt.grid import Grid
 from _stbt.imgutils import load_image
 from _stbt.transition import TransitionStatus
 from _stbt.types import Region
-from _stbt.utils import basestring, text_type
 
 
 log = getLogger("stbt.keyboard")
 
 
-class Keyboard(object):
+class Keyboard():
     '''Models the behaviour of an on-screen keyboard.
 
     You customize for the appearance & behaviour of the keyboard you're testing
@@ -178,7 +171,7 @@ class Keyboard(object):
     '''
 
     @attrs(frozen=True)
-    class Key(object):
+    class Key():
         """Represents a key on the on-screen keyboard.
 
         This is returned by `stbt.Keyboard.find_key`. Don't create instances of
@@ -189,10 +182,10 @@ class Keyboard(object):
         """
         # This is an immutable object so that it is hashable (it must be
         # hashable so that we can use it as a node of networkx graphs).
-        name = attrib(default=None, type=text_type)
-        text = attrib(default=None, type=text_type)
+        name = attrib(default=None, type=str)
+        text = attrib(default=None, type=str)
         region = attrib(default=None, type=Region)
-        mode = attrib(default=None, type=text_type)
+        mode = attrib(default=None, type=str)
 
     def __init__(self, graph=None, mask=None, navigate_timeout=60):
         from networkx import DiGraph
@@ -327,7 +320,7 @@ class Keyboard(object):
                 # weird, so let's raise instead of the usual behaviour of
                 # returning [].
                 raise ValueError("%r isn't in the keyboard" % (query,))
-        elif isinstance(query, basestring):
+        elif isinstance(query, str):
             query = {"name": query}
         else:
             query = _minimal_query(query)
@@ -536,7 +529,7 @@ class Keyboard(object):
             if cell.data is None:
                 raise ValueError("Grid cell [%i,%i] doesn't have any data"
                                  % (x, y))
-            if isinstance(cell.data, basestring):
+            if isinstance(cell.data, str):
                 spec = {"name": cell.data}
             elif isinstance(cell.data, dict):
                 if "mode" in cell.data:

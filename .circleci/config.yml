@@ -1,21 +1,6 @@
 version: 2.1
 
 jobs:
-  ubuntu1804-python2:
-    docker:
-      - image: stbtester/circleci:ubuntu1804-python2
-    environment:
-      python_version: 2.7
-      LANG: en_GB.UTF-8
-      SHELL: /bin/bash
-      TERM: xterm
-      enable_virtual_stb: no
-    steps:
-      - checkout
-      - pylint
-      - pytest
-      - integrationtests
-
   ubuntu1804-python3:
     docker:
       - image: stbtester/circleci:ubuntu1804-python3
@@ -75,5 +60,4 @@ workflows:
   test_all:
     jobs:
       - python-package
-      - ubuntu1804-python2
       - ubuntu1804-python3

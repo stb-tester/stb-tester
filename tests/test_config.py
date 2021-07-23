@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import enum
 import os
 from contextlib import contextmanager
@@ -12,8 +7,7 @@ import pytest
 
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
-from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
-                         to_native_str)
+from _stbt.utils import named_temporary_directory, scoped_curdir, to_unicode
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -156,8 +150,8 @@ def temporary_config(contents, prefix="stbt-test-config"):
     with named_temporary_directory(prefix=prefix) as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         filename = os.path.join(d, "stbt.conf")
-        os.environ["STBT_CONFIG_FILE"] = to_native_str(":".join([filename,
-                                                                 original_env]))
+        os.environ["STBT_CONFIG_FILE"] = to_unicode(":".join([filename,
+                                                              original_env]))
         with open(filename, "w") as f:
             f.write(dedent(contents))
         _config_init(force=True)
@@ -186,9 +180,7 @@ def test_unicode_in_config_file_contents():
         assert get_config("global", "unicodeinkey\xf8") == "hi"
         assert get_config("global", "unicodeinvalue") == "\xf8"
         assert get_config("unicodeinsection\xf8", "key") == "bye"
-
-        # This is `unicode` on python 2 and `str` (i.e. unicode) on python 3.
-        assert isinstance(get_config("global", "unicodeinvalue"), text_type)
+        assert isinstance(get_config("global", "unicodeinvalue"), str)
 
 
 def test_get_config_with_default_value():

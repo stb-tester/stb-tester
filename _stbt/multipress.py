@@ -1,17 +1,11 @@
 # coding: utf-8
 """Copyright 2020 Stb-tester.com Ltd."""
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import re
 import time
 
 
-class MultiPress(object):
+class MultiPress():
     """Helper for entering text using `multi-press`_ on a numeric keypad.
 
     In some apps, the search page allows entering text by pressing the keys on
@@ -127,7 +121,7 @@ def _parse_mapping_from_docstring(s):
             code.append(line)
         if re.match(r"^            }", line):
             break
-    return eval("\n".join(code))
+    return eval("\n".join(code))  # pylint:disable=eval-used
 
 
 def _letters_to_keys(keys_to_letters):

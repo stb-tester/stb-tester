@@ -1,11 +1,5 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import inspect
 import os
 import warnings
@@ -15,7 +9,7 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
-from .utils import to_native_str, to_unicode
+from .utils import to_unicode
 
 
 class Frame(numpy.ndarray):
@@ -284,7 +278,7 @@ def load_image(filename, flags=None, color_channels=None):
         filename = to_unicode(filename)
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
-            raise IOError(to_native_str("No such file: %s" % filename))
+            raise IOError(to_unicode("No such file: %s" % filename))
         absolute_filename = to_unicode(absolute_filename)
         if color_channels == (3,):
             flags = cv2.IMREAD_COLOR
@@ -292,10 +286,10 @@ def load_image(filename, flags=None, color_channels=None):
             flags = cv2.IMREAD_GRAYSCALE
         else:
             flags = cv2.IMREAD_UNCHANGED
-        img = cv2.imread(to_native_str(absolute_filename), flags)
+        img = cv2.imread(to_unicode(absolute_filename), flags)
         if img is None:
-            raise IOError(to_native_str("Failed to load image: %s" %
-                                        absolute_filename))
+            raise IOError(to_unicode("Failed to load image: %s" %
+                                     absolute_filename))
 
     if len(img.shape) not in [2, 3]:
         raise ValueError(
@@ -449,7 +443,7 @@ def find_user_file(filename):
     #   directly from the user script, or indirectly via stbt.match so we still
     #   need to check until we're outside of the _stbt directory.
 
-    filename = to_native_str(filename)
+    filename = to_unicode(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     caller = inspect.currentframe()
     try:

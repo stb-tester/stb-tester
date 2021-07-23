@@ -7,11 +7,6 @@ Copyright 2013-2020 stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import enum
 import itertools
@@ -28,7 +23,7 @@ from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .utils import native_str, to_native_str
+from .utils import to_unicode
 
 try:
     from .sqdiff import sqdiff
@@ -44,7 +39,7 @@ class MatchMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class ConfirmMethod(enum.Enum):
@@ -54,10 +49,10 @@ class ConfirmMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
-class MatchParameters(object):
+class MatchParameters():
     """Parameters to customise the image processing algorithm used by
     `match`, `wait_for_match`, and `press_until_match`.
 
@@ -177,7 +172,7 @@ class MatchParameters(object):
                self.confirm_method, self.confirm_threshold, self.erode_passes))
 
 
-class MatchResult(object):
+class MatchResult():
     """The result from `match`.
 
     :ivar float time: The time at which the video-frame was captured, in
@@ -392,7 +387,7 @@ def _match_all(image, frame, match_parameters, region):
             imglog.append(matches=result)
             draw_on(frame, result, label="match(%s)" % (
                 "<Image>" if t.relative_filename is None else
-                repr(to_native_str(t.relative_filename))))
+                repr(to_unicode(t.relative_filename))))
             yield result
 
     finally:

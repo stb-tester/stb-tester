@@ -3,15 +3,9 @@ Copyright 2016-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from past.builtins import cmp
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import functools
 import threading
-from future.utils import with_metaclass
 
 try:
     from itertools import zip_longest
@@ -31,7 +25,7 @@ def for_object_repository(cls=None):
     Usage:
 
         @for_object_repository
-        class MyClass(object):
+        class MyClass():
             ...
     """
     # These classes are extracted by static analysis, so return the class
@@ -40,7 +34,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #     @for_object_repository()
-        #     class MyClass(object):
+        #     class MyClass():
         def decorator(cls):
             return cls
         return decorator
@@ -48,7 +42,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #    @for_object_repository
-        #    class MyClass(object):
+        #    class MyClass():
         return cls
 
 
@@ -119,7 +113,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
-class FrameObject(with_metaclass(_FrameObjectMeta, object)):
+class FrameObject(metaclass=_FrameObjectMeta):
     # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.
 
@@ -242,9 +236,10 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
     def __cmp__(self, other):
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                v = cmp(s[1], o[1])
-                if v != 0:
-                    return v
+                if s[1] < o[1]:
+                    return -1
+                elif s[1] > o[1]:
+                    return 1
             return 0
         else:
             return NotImplemented

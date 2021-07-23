@@ -1,18 +1,11 @@
 """Copyright 2019 Stb-tester.com Ltd."""
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 from collections import namedtuple
 
 from .types import Position, Region
-from .utils import native_int
 
 
-class Grid(object):
+class Grid():
     """A grid with items arranged left to right, then down.
 
     For example a keyboard, or a grid of posters, arranged like this::
@@ -204,7 +197,7 @@ class Grid(object):
             raise IndexError(
                 "The centre of region %r is outside the grid area %r" % (
                     region, self.region))
-        return Position(native_int(pos[0]), native_int(pos[1]))
+        return Position(int(pos[0]), int(pos[1]))
 
     def _position_to_region(self, position):
         if isinstance(position, int):

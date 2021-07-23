@@ -1,12 +1,6 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
 import socket
 import subprocess
-import sys
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
@@ -95,8 +89,7 @@ def socket_passing_setup(socket):
         os.environ['LISTEN_PID'] = str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
-        if sys.version_info.major > 2:
-            os.set_inheritable(3, True)  # pylint:disable=no-member
+        os.set_inheritable(3, True)  # pylint:disable=no-member
         os.closerange(4, 100)
 
     return preexec_fn

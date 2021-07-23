@@ -1,10 +1,5 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
 import itertools
 import os
@@ -15,7 +10,7 @@ from textwrap import dedent
 
 from .config import get_config
 from .types import Region
-from .utils import basestring, mkdir_p
+from .utils import mkdir_p
 
 _debug_level = None
 
@@ -92,14 +87,14 @@ def imshow(img, regions=None):
             cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
 
     from IPython.core.display import Image, display  # pylint:disable=import-error
-    if isinstance(img, basestring):
+    if isinstance(img, str):
         display(Image(img))
     else:
         _, data = cv2.imencode(".png", img)
         display(Image(data=bytes(data.data), format="png"))
 
 
-class ImageLogger(object):
+class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
     Create a new ImageLogger instance for each frame of video.

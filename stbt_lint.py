@@ -28,11 +28,6 @@
 * E7008: "assert True" has no effect.
 
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import subprocess
@@ -52,10 +47,7 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    if sys.version_info.major == 2:
-        executable_name = "pylint"
-    else:
-        executable_name = "pylint3"
+    executable_name = "pylint3"
 
     try:
         with open("/dev/null", "w") as devnull:

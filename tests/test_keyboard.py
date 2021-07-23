@@ -1,14 +1,7 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import logging
 import re
-import sys
 
 import networkx as nx
 import numpy
@@ -22,15 +15,11 @@ except ImportError:
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
-from _stbt.utils import py3
 
 # pylint:disable=redefined-outer-name
 
 
-python2_only = pytest.mark.skipif(py3, reason="This test requires Python 2")
-
-
-class DUT(object):
+class DUT():
     """Fake keyboard implementation ("Device Under Test").
 
     Behaves like the YouTube Search keyboard on Apple TV.
@@ -465,10 +454,6 @@ kb2.add_transition({"mode": "uppercase", "name": "lowercase"},
 kb3 = stbt.Keyboard()  # Simple keyboard, lowercase only
 kb3.add_edgelist(edgelists["lowercase"])
 
-kb3_bytes = stbt.Keyboard()  # To test add_edgelist with bytes
-if not py3:
-    kb3_bytes.add_edgelist(edgelists["lowercase"].encode("utf-8"))
-
 # Lowercase + shift (no caps lock).
 # This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
 # key; and the other mode keys have no effect.
@@ -504,11 +489,8 @@ def test_enter_text_mixed_case(dut, kb):
 
 
 @pytest.mark.parametrize("kb",
-                         [kb1,
-                          kb2,
-                          kb3,
-                          pytest.param(kb3_bytes, marks=python2_only)],
-                         ids=["kb1", "kb2", "kb3", "kb3_bytes"])
+                         [kb1, kb2, kb3],
+                         ids=["kb1", "kb2", "kb3"])
 def test_enter_text_single_case(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -817,9 +799,6 @@ def test_that_keyboard_catches_errors_at_definition_time():
 
 
 def assert_repr_equal(a, b):
-    if sys.version_info.major == 2:
-        # In Python 2 the repr of nested classes doesn't show the outer class.
-        a = a.replace("Keyboard.Key", "Key")
     a = re.escape(a).replace(r"\.\.\.", ".*")
     b = b.replace("u'", "'")
     assert re.match("^" + a + "$", b)

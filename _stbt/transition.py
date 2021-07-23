@@ -12,11 +12,6 @@ Copyright 2017-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import enum
 
@@ -153,7 +148,7 @@ def wait_for_transition_to_end(
     return result
 
 
-class _Transition(object):
+class _Transition():
     def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
         self.region = region
         self.mask = None
@@ -297,7 +292,7 @@ class StrictDiff(FrameDiffer):
         return result
 
 
-class _TransitionResult(object):
+class _TransitionResult():
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
         self.key = key

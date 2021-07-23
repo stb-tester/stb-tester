@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import pytest
 
 from _stbt.core import DeviceUnderTest, NoSinkPipeline
@@ -29,7 +24,7 @@ def test_that_pressing_context_manager_suppresses_keyup_exceptions():
     assert control.keyup_called == 1
 
 
-class FakeControl(object):
+class FakeControl():
     def __init__(self, raises_on_keydown=False, raises_on_keyup=False):
         self.raises_on_keydown = raises_on_keydown
         self.raises_on_keyup = raises_on_keyup
@@ -49,6 +44,6 @@ class FakeControl(object):
             raise RuntimeError("keyup %s failed" % key)
 
 
-class _FakeDisplay(object):
+class _FakeDisplay():
     def get_frame(self):
         return None

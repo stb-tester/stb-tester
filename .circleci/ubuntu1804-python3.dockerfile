@@ -26,7 +26,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pep8 \
         pylint3 \
         python3-docutils \
-        python3-future \
         python3-gi \
         python3-jinja2 \
         python3-lmdb \

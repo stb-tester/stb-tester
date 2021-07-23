@@ -1,9 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from future.utils import string_types
-
 import logging
 import re
 import sys
@@ -12,7 +6,7 @@ import time
 from contextlib import contextmanager
 from textwrap import dedent
 
-from .utils import to_native_str, to_unicode
+from .utils import to_unicode
 
 
 class HdmiCecError(Exception):
@@ -23,7 +17,7 @@ class HdmiCecFatalError(BaseException):
     pass
 
 
-class HdmiCecControl(object):
+class HdmiCecControl():
     # Map our recommended keynames (from linux input-event-codes.h) to the
     # equivalent CEC commands.
     # The mapping between CEC commands and code can be found at
@@ -150,13 +144,13 @@ class HdmiCecControl(object):
 
         if source is None:
             source = 1
-        if isinstance(source, string_types):
+        if isinstance(source, str):
             source = int(source, 16)
-        if isinstance(destination, string_types):
+        if isinstance(destination, str):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
-        self.cecconfig.strDeviceName = to_native_str("stb-tester")
+        self.cecconfig.strDeviceName = to_unicode("stb-tester")
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
@@ -178,7 +172,7 @@ class HdmiCecControl(object):
             device = self.detect_adapter()
             if device is None:
                 raise HdmiCecFatalError("No adapter found")
-        device = to_native_str(device)
+        device = to_unicode(device)
         if not self.lib.Open(device):
             raise HdmiCecFatalError(
                 "Failed to open a connection to the CEC adapter")
@@ -270,12 +264,12 @@ class HdmiCecControl(object):
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
-        keydown_str = to_native_str("%X%X:44:%02X") % (
+        keydown_str = to_unicode("%X%X:44:%02X") % (
             self.source, self.destination, keycode)
         return self.lib.CommandFromString(keydown_str)
 
     def keyup_command(self):
-        keyup_str = to_native_str("%X%X:45") % (self.source, self.destination)
+        keyup_str = to_unicode("%X%X:45") % (self.source, self.destination)
         return self.lib.CommandFromString(keyup_str)
 
     def get_keycode(self, key):

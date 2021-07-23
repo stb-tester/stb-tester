@@ -8,18 +8,10 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import native, raise_, string_types
-
 import argparse
 import datetime
 import sys
 import threading
-import traceback
 import warnings
 import weakref
 from collections import deque, namedtuple
@@ -35,7 +27,7 @@ from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
 from _stbt.logging import _Annotation, ddebug, debug, warn
 from _stbt.types import NoVideo, Region
-from _stbt.utils import text_type, to_native_str, to_unicode
+from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
@@ -88,7 +80,7 @@ def new_device_under_test_from_config(parsed_args=None):
         sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
-class DeviceUnderTest(object):
+class DeviceUnderTest():
     def __init__(self, display=None, control=None, sink_pipeline=None,
                  mainloop=None, _time=None):
         if _time is None:
@@ -160,7 +152,7 @@ class DeviceUnderTest(object):
                 except Exception:  # pylint:disable=broad-except
                     # Don't mask original exception from the test script.
                     pass
-                raise_(exc_info[0], exc_info[1], exc_info[2])
+                raise exc_info[1].with_traceback(exc_info[2])
             else:
                 self._control.keyup(key)
                 out.end_time = self._time.time()
@@ -253,7 +245,7 @@ class DeviceUnderTest(object):
         return self._display.get_frame()
 
 
-class _Keypress(object):
+class _Keypress():
     def __init__(self, key, start_time, end_time, frame_before):
         self.key = key
         self.start_time = start_time
@@ -337,7 +329,7 @@ class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
         return self.time + self.duration
 
 
-class SinkPipeline(object):
+class SinkPipeline():
     def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
         import time as _time
 
@@ -499,7 +491,7 @@ class SinkPipeline(object):
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
             age = float(now - x.time) / 3
-            color = (native(int(255 * max([1 - age, 0.5]))).__int__(),) * 3
+            color = (int(255 * max([1 - age, 0.5])),) * 3
             _draw_text(img, x.text, origin, color)
 
         # Regions:
@@ -525,7 +517,7 @@ class SinkPipeline(object):
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
-            if isinstance(obj, string_types):
+            if isinstance(obj, str):
                 start_time = self._time.time()
                 text = (
                     to_unicode(
@@ -544,7 +536,7 @@ class SinkPipeline(object):
                     "Can't draw object of type '%s'" % type(obj).__name__)
 
 
-class NoSinkPipeline(object):
+class NoSinkPipeline():
     """
     Used in place of a SinkPipeline when no video output is required.  Is a lot
     faster because it doesn't do anything.  It especially doesn't do any copying
@@ -566,7 +558,7 @@ class NoSinkPipeline(object):
         pass
 
 
-class Display(object):
+class Display():
     def __init__(self, user_source_pipeline, sink_pipeline):
 
         import time
@@ -626,7 +618,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', to_native_str('downstream'))
+                .set_property('leaky', to_unicode('downstream'))
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 
@@ -648,9 +640,9 @@ class Display(object):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, NoVideo):
-                    raise NoVideo(text_type(self.last_frame))
+                    raise NoVideo(str(self.last_frame))
                 elif isinstance(self.last_frame, Exception):
-                    raise RuntimeError(text_type(self.last_frame))
+                    raise RuntimeError(str(self.last_frame))
                 t = time.time()
                 if t > end_time:
                     break

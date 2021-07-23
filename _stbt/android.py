@@ -31,13 +31,6 @@ in your existing Selenium/WebDriver/Appium tests. See
 .. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import raise_
-
 import configparser
 import logging
 import re
@@ -122,7 +115,7 @@ class CoordinateSystem(Enum):
     """
 
 
-class AdbDevice(object):
+class AdbDevice():
     """Control an Android device using `ADB`_.
 
     Default values for each parameter can be specified in your "stbt.conf"
@@ -211,9 +204,9 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise_(AdbError(e.returncode, e.cmd, e.output.decode("utf-8"),
-                            self),
-                   None, sys.exc_info()[2])
+            raise AdbError(
+                e.returncode, e.cmd, e.output.decode("utf-8"), self) \
+                .with_traceback(sys.exc_info()[2])
         if capture_output:
             return output
         else:

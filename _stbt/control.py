@@ -1,9 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import os
 import re
 import socket
@@ -19,7 +13,7 @@ import requests
 from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
-from .utils import named_temporary_directory, to_bytes, to_native_str
+from .utils import named_temporary_directory, to_bytes, to_unicode
 
 __all__ = ['uri_to_control', 'uri_to_control_recorder']
 
@@ -31,7 +25,7 @@ except ImportError:
 
 # pylint: disable=abstract-method
 
-class RemoteControl(object):
+class RemoteControl():
     """Base class for remote-control implementations."""
 
     def press(self, key):
@@ -209,7 +203,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = to_native_str(key)
+        self.videosrc.props.pattern = to_unicode(key)
         debug("Pressed %s" % key)
 
 
@@ -798,7 +792,7 @@ def _connect_tcp_socket(address, port, timeout=3):
         raise
 
 
-class FileToSocket(object):
+class FileToSocket():
     """Makes something File-like behave like a Socket for testing purposes
 
     >>> import io
@@ -936,7 +930,7 @@ def test_samsung_tcp_control():
     # This is more of a regression test than anything.
     sent_data = []
 
-    class TestSocket(object):
+    class TestSocket():
         def send(self, data):
             sent_data.append(data)
 

@@ -1,9 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import time
 from collections import namedtuple
 
@@ -16,7 +10,7 @@ import stbt_core as stbt
 from _stbt.transition import StrictDiff
 
 
-class FakeDeviceUnderTest(object):
+class FakeDeviceUnderTest():
     def __init__(self, frames=None):
         self.state = "black"
         self._frames = frames

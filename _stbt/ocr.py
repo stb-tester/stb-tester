@@ -1,11 +1,5 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import errno
 import glob
 import os
@@ -22,9 +16,7 @@ from .config import get_config
 from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import (
-    basestring, named_temporary_directory, native_int, native_str, text_type,
-    to_unicode)
+from .utils import named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -79,7 +71,7 @@ class OcrMode(IntEnum):
 
     # For nicer formatting of `ocr` signature in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class OcrEngine(IntEnum):
@@ -100,10 +92,10 @@ class OcrEngine(IntEnum):
     DEFAULT = 3
 
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
-class TextMatchResult(object):
+class TextMatchResult():
     """The result from `match_text`.
 
     :ivar float time: The time at which the video-frame was captured, in
@@ -420,7 +412,7 @@ def _apply_ocr_corrections(text, corrections):
     # Match plain strings at word boundaries:
     pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
                        for k in corrections
-                       if isinstance(k, basestring))
+                       if isinstance(k, str))
     if pattern:
         text = re.sub(pattern, replace_string, text)
 
@@ -686,7 +678,7 @@ def _hocr_iterate(hocr):
                     if need_space and started:
                         yield (u' ', None)
                     need_space = False
-                    yield (text_type(t).strip(), e)
+                    yield (str(t).strip(), e)
                     started = True
                 else:
                     need_space = True
@@ -715,7 +707,7 @@ def _hocr_elem_region(elem):
     while elem is not None:
         m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
         if m:
-            extents = [native_int(x) for x in m.groups()]
+            extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
         elem = elem.getparent()
 
