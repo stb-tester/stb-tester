@@ -132,7 +132,7 @@ def _config_init(force=False):
         # with the one at the beginning taking precedence:
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '')
-                     .split(native_str(':'))))
+                     .split(':')))
         config = configparser.ConfigParser()
         config.read(config_files)
         _config = config

@@ -131,10 +131,6 @@ else:
         return text
 
 
-native_str = str
-native_int = int
-
-
 def to_bytes(text):
     text = strip_newtypes(text)
 

@@ -17,7 +17,7 @@ from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import (
-    basestring, named_temporary_directory, native_int, native_str, text_type,
+    basestring, named_temporary_directory, text_type,
     to_unicode)
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
@@ -73,7 +73,7 @@ class OcrMode(IntEnum):
 
     # For nicer formatting of `ocr` signature in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class OcrEngine(IntEnum):
@@ -94,7 +94,7 @@ class OcrEngine(IntEnum):
     DEFAULT = 3
 
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class TextMatchResult(object):
@@ -709,7 +709,7 @@ def _hocr_elem_region(elem):
     while elem is not None:
         m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
         if m:
-            extents = [native_int(x) for x in m.groups()]
+            extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
         elem = elem.getparent()
 

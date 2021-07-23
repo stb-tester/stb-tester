@@ -3,7 +3,6 @@
 from collections import namedtuple
 
 from .types import Position, Region
-from .utils import native_int
 
 
 class Grid(object):
@@ -198,7 +197,7 @@ class Grid(object):
             raise IndexError(
                 "The centre of region %r is outside the grid area %r" % (
                     region, self.region))
-        return Position(native_int(pos[0]), native_int(pos[1]))
+        return Position(int(pos[0]), int(pos[1]))
 
     def _position_to_region(self, position):
         if isinstance(position, int):

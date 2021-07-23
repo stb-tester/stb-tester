@@ -23,7 +23,7 @@ from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .utils import native_str, to_native_str
+from .utils import to_native_str
 
 try:
     from .sqdiff import sqdiff
@@ -39,7 +39,7 @@ class MatchMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class ConfirmMethod(enum.Enum):
@@ -49,7 +49,7 @@ class ConfirmMethod(enum.Enum):
 
     # For nicer formatting in generated API documentation:
     def __repr__(self):
-        return native_str(self)
+        return str(self)
 
 
 class MatchParameters(object):
