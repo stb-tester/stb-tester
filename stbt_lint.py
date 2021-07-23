@@ -47,10 +47,7 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    if sys.version_info.major == 2:
-        executable_name = "pylint"
-    else:
-        executable_name = "pylint3"
+    executable_name = "pylint3"
 
     try:
         with open("/dev/null", "w") as devnull:

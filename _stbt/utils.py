@@ -5,7 +5,6 @@ This file shouldn't depend on anything else in stbt.
 
 import errno
 import os
-import sys
 import tempfile
 from contextlib import contextmanager
 from shutil import rmtree
@@ -87,12 +86,6 @@ def find_import_name(filename):
         import_dir, s = os.path.split(import_dir)
         import_name = "%s.%s" % (s, import_name)
     return import_dir, import_name
-
-
-if sys.version_info.major == 2:  # Python 2
-    py3 = False
-else:
-    py3 = True
 
 
 def to_bytes(text):

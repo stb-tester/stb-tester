@@ -2,7 +2,6 @@
 
 import logging
 import re
-import sys
 
 import networkx as nx
 import numpy
@@ -800,9 +799,6 @@ def test_that_keyboard_catches_errors_at_definition_time():
 
 
 def assert_repr_equal(a, b):
-    if sys.version_info.major == 2:
-        # In Python 2 the repr of nested classes doesn't show the outer class.
-        a = a.replace("Keyboard.Key", "Key")
     a = re.escape(a).replace(r"\.\.\.", ".*")
     b = b.replace("u'", "'")
     assert re.match("^" + a + "$", b)

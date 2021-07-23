@@ -106,60 +106,18 @@ def load_test_function(script, args):
         return _TestFunction(script, script, "", 1, fn)
 
 
-if sys.version_info.major == 2:  # Python 2
-
-    @contextmanager
-    def sane_unicode_and_exception_handling(script):
-        """
-        Exit 1 on failure, and 2 on error.  Print the traceback assuming UTF-8.
-        """
-        # Simulates python3's defaulting to utf-8 output so we don't get
-        # confusing `UnicodeEncodeError`s when printing unicode characters:
-        from kitchen.text.converters import (  # pylint:disable=import-error
-            getwriter, exception_to_bytes, to_bytes)
-        if sys.stdout.encoding is None:
-            sys.stdout = getwriter('utf8')(sys.stdout)
-        if sys.stderr.encoding is None:
-            sys.stderr = getwriter('utf8')(sys.stderr)
-
-        try:
-            yield
-        except Exception as e:  # pylint:disable=broad-except
-            error_message = exception_to_bytes(e)
-            if not error_message and isinstance(e, AssertionError):
-                error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-            sys.stdout.write(b"FAIL: %s: %s: %s\n" % (
-                script, type(e).__name__, error_message))
-
-            # This is a hack to allow printing exceptions that have unicode
-            # messages attached to them. The default behaviour of Python 2.7 is
-            # to replace unicode charactors with \x023-like backslash escapes.
-            # Instead we format them as utf-8 bytes.
-            #
-            # It's not thread-safe, but will only be called at the end of
-            # execution:
-            traceback._some_str = to_bytes
-            traceback.print_exc(file=sys.stderr)
-
-            if isinstance(e, (UITestFailure, AssertionError)):
-                sys.exit(1)  # Failure
-            else:
-                sys.exit(2)  # Error
-
-else:  # Python 3
-
-    @contextmanager
-    def sane_unicode_and_exception_handling(script):
-        try:
-            yield
-        except Exception as e:  # pylint:disable=broad-except
-            error_message = str(e)
-            if not error_message and isinstance(e, AssertionError):
-                error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
-            sys.stdout.write("FAIL: %s: %s: %s\n" % (
-                script, type(e).__name__, error_message))
-            traceback.print_exc(file=sys.stderr)
-            if isinstance(e, (UITestFailure, AssertionError)):
-                sys.exit(1)  # Failure
-            else:
-                sys.exit(2)  # Error
+@contextmanager
+def sane_unicode_and_exception_handling(script):
+    try:
+        yield
+    except Exception as e:  # pylint:disable=broad-except
+        error_message = str(e)
+        if not error_message and isinstance(e, AssertionError):
+            error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
+        sys.stdout.write("FAIL: %s: %s: %s\n" % (
+            script, type(e).__name__, error_message))
+        traceback.print_exc(file=sys.stderr)
+        if isinstance(e, (UITestFailure, AssertionError)):
+            sys.exit(1)  # Failure
+        else:
+            sys.exit(2)  # Error
