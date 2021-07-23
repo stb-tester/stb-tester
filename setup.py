@@ -64,7 +64,6 @@ setuptools.setup(
     install_requires=[
         "astroid==1.6.0",
         "attrs==20.2.0",
-        "future==0.15.2",
         "opencv-python~=3.2",
         "pylint==1.8.3",
     ],
