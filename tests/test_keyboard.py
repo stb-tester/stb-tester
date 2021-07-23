@@ -16,12 +16,8 @@ except ImportError:
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
-from _stbt.utils import py3
 
 # pylint:disable=redefined-outer-name
-
-
-python2_only = pytest.mark.skipif(py3, reason="This test requires Python 2")
 
 
 class DUT(object):
@@ -459,10 +455,6 @@ kb2.add_transition({"mode": "uppercase", "name": "lowercase"},
 kb3 = stbt.Keyboard()  # Simple keyboard, lowercase only
 kb3.add_edgelist(edgelists["lowercase"])
 
-kb3_bytes = stbt.Keyboard()  # To test add_edgelist with bytes
-if not py3:
-    kb3_bytes.add_edgelist(edgelists["lowercase"].encode("utf-8"))
-
 # Lowercase + shift (no caps lock).
 # This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
 # key; and the other mode keys have no effect.
@@ -498,11 +490,8 @@ def test_enter_text_mixed_case(dut, kb):
 
 
 @pytest.mark.parametrize("kb",
-                         [kb1,
-                          kb2,
-                          kb3,
-                          pytest.param(kb3_bytes, marks=python2_only)],
-                         ids=["kb1", "kb2", "kb3", "kb3_bytes"])
+                         [kb1, kb2, kb3],
+                         ids=["kb1", "kb2", "kb3"])
 def test_enter_text_single_case(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
