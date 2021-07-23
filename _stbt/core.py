@@ -12,7 +12,6 @@ import argparse
 import datetime
 import sys
 import threading
-import traceback
 import warnings
 import weakref
 from collections import deque, namedtuple

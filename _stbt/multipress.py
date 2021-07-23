@@ -121,7 +121,7 @@ def _parse_mapping_from_docstring(s):
             code.append(line)
         if re.match(r"^            }", line):
             break
-    return eval("\n".join(code))
+    return eval("\n".join(code))  # pylint:disable=eval-used
 
 
 def _letters_to_keys(keys_to_letters):
