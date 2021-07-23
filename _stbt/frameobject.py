@@ -236,9 +236,10 @@ class FrameObject(metaclass=_FrameObjectMeta):
     def __cmp__(self, other):
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                v = cmp(s[1], o[1])
-                if v != 0:
-                    return v
+                if s[1] < o[1]:
+                    return -1
+                elif s[1] > o[1]:
+                    return 1
             return 0
         else:
             return NotImplemented
