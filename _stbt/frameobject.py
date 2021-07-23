@@ -25,7 +25,7 @@ def for_object_repository(cls=None):
     Usage:
 
         @for_object_repository
-        class MyClass(object):
+        class MyClass():
             ...
     """
     # These classes are extracted by static analysis, so return the class
@@ -34,7 +34,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #     @for_object_repository()
-        #     class MyClass(object):
+        #     class MyClass():
         def decorator(cls):
             return cls
         return decorator
@@ -42,7 +42,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #    @for_object_repository
-        #    class MyClass(object):
+        #    class MyClass():
         return cls
 
 

@@ -5,7 +5,7 @@ from collections import namedtuple
 from .types import Position, Region
 
 
-class Grid(object):
+class Grid():
     """A grid with items arranged left to right, then down.
 
     For example a keyboard, or a grid of posters, arranged like this::

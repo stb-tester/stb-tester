@@ -260,7 +260,7 @@ def _cache_hash(value):
     # type: (...) -> bytes
     h = Xxhash64()
 
-    class HashWriter(object):
+    class HashWriter():
         def write(self, data):
             if isinstance(data, str):
                 data = data.encode("utf-8")

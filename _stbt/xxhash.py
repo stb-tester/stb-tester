@@ -46,7 +46,7 @@ _libxxhash.XXH64_digest.argtypes = [_XXH64_state_t]
 _libxxhash.XXH64_digest.restype = _XXH64_hash_t
 
 
-class Xxhash64(object):
+class Xxhash64():
     __slots__ = ["_state"]
     digest_size = 16
     name = "xxhash64"

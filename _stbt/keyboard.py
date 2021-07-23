@@ -16,7 +16,7 @@ from _stbt.types import Region
 log = getLogger("stbt.keyboard")
 
 
-class Keyboard(object):
+class Keyboard():
     '''Models the behaviour of an on-screen keyboard.
 
     You customize for the appearance & behaviour of the keyboard you're testing
@@ -171,7 +171,7 @@ class Keyboard(object):
     '''
 
     @attrs(frozen=True)
-    class Key(object):
+    class Key():
         """Represents a key on the on-screen keyboard.
 
         This is returned by `stbt.Keyboard.find_key`. Don't create instances of

@@ -115,7 +115,7 @@ class CoordinateSystem(Enum):
     """
 
 
-class AdbDevice(object):
+class AdbDevice():
     """Control an Android device using `ADB`_.
 
     Default values for each parameter can be specified in your "stbt.conf"

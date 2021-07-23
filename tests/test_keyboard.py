@@ -19,7 +19,7 @@ from _stbt.transition import _TransitionResult, TransitionStatus
 # pylint:disable=redefined-outer-name
 
 
-class DUT(object):
+class DUT():
     """Fake keyboard implementation ("Device Under Test").
 
     Behaves like the YouTube Search keyboard on Apple TV.

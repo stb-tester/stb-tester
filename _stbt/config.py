@@ -11,7 +11,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class NoDefault(object):
+class NoDefault():
     pass
 
 

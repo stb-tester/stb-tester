@@ -273,7 +273,7 @@ def test_is_screen_black_with_numpy_mask_and_region():
     assert not stbt.is_screen_black(frame, mask, 20, region)
 
 
-class C(object):
+class C():
     """A class with a single property, used by the tests."""
     def __init__(self, prop):
         self.prop = prop
@@ -288,7 +288,7 @@ class C(object):
         return not self.__eq__(other)
 
 
-class f(object):
+class f():
     """Helper factory for wait_until selftests. Creates a callable object that
     returns the specified values one by one each time it is called.
 
@@ -333,7 +333,7 @@ def mock_time():
         yield
 
 
-class Zero(object):
+class Zero():
     def __bool__(self):
         return False
 
@@ -425,7 +425,7 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
 
 
 def test_that_wait_until_doesnt_compare_return_values(mock_time):
-    class MR(object):
+    class MR():
         def __init__(self, eq_allowed=False):
             time.sleep(1)  # advance the mock time by 1 second
             self.eq_allowed = eq_allowed

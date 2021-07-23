@@ -10,7 +10,7 @@ import stbt_core as stbt
 from _stbt.transition import StrictDiff
 
 
-class FakeDeviceUnderTest(object):
+class FakeDeviceUnderTest():
     def __init__(self, frames=None):
         self.state = "black"
         self._frames = frames

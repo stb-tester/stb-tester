@@ -145,7 +145,7 @@ def _callable_description(callable_):
     ...         functools.partial(eval, globals={}),
     ...         locals={}))
     'eval'
-    >>> class T(object):
+    >>> class T():
     ...     def __call__(self): return True;
     >>> _callable_description(T())
     '<_stbt.wait.T object at 0x...>'

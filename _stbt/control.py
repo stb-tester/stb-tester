@@ -25,7 +25,7 @@ except ImportError:
 
 # pylint: disable=abstract-method
 
-class RemoteControl(object):
+class RemoteControl():
     """Base class for remote-control implementations."""
 
     def press(self, key):
@@ -792,7 +792,7 @@ def _connect_tcp_socket(address, port, timeout=3):
         raise
 
 
-class FileToSocket(object):
+class FileToSocket():
     """Makes something File-like behave like a Socket for testing purposes
 
     >>> import io
@@ -930,7 +930,7 @@ def test_samsung_tcp_control():
     # This is more of a regression test than anything.
     sent_data = []
 
-    class TestSocket(object):
+    class TestSocket():
         def send(self, data):
             sent_data.append(data)
 

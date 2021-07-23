@@ -101,7 +101,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
     return result
 
 
-class _IsScreenBlackResult(object):
+class _IsScreenBlackResult():
     def __init__(self, black, frame):
         self.black = black
         self.frame = frame

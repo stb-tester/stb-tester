@@ -24,7 +24,7 @@ def uri_to_power_outlet(uri):
     raise ConfigurationError('Invalid power outlet URI: "%s"' % uri)
 
 
-class _NoOutlet(object):
+class _NoOutlet():
     def set(self, power):
         if not power:
             raise RuntimeError(
@@ -35,7 +35,7 @@ class _NoOutlet(object):
         return True
 
 
-class _FileOutlet(object):
+class _FileOutlet():
     """Power outlet useful for testing"""
     def __init__(self, filename):
         self.filename = filename
@@ -55,7 +55,7 @@ class _FileOutlet(object):
                 raise
 
 
-class _ShellOutlet(object):
+class _ShellOutlet():
     """
     stbt-power used to be written in bash, supporting three different types of
     hardware.  This is a wrapper to allow the old bash script to continue
@@ -76,7 +76,7 @@ class _ShellOutlet(object):
         return {b'ON': True, b'OFF': False}[power]
 
 
-class _Aviosys8800Pro(object):
+class _Aviosys8800Pro():
     """Documentation of the serial IO protocol found on the Aviosys website:
 
     http://www.aviosys.com/downloads/manuals/power/USB%20Net%20Power%208800%20Pro%20Manual_EN.pdf
@@ -123,7 +123,7 @@ def _new_aviosys_8800_pro(filename='/dev/ttyACM0'):
     return _Aviosys8800Pro(serial.Serial(filename, baudrate=19200))
 
 
-class _FakeAviosys8800ProSerial(object):
+class _FakeAviosys8800ProSerial():
     r"""Used for testing the below _UsbPower8800Pro class.  Behaviour determined
     in interactive ipython shell and reproduced here:
 
@@ -195,7 +195,7 @@ class _FakeAviosys8800ProSerial(object):
         return len(data)
 
 
-class _RittalSnmpPower(object):
+class _RittalSnmpPower():
     """
     Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
     """
@@ -217,7 +217,7 @@ class _RittalSnmpPower(object):
             raise RuntimeError("Setting power failed with unknown error")
 
 
-class _ATEN_PE6108G(object):
+class _ATEN_PE6108G():
     """Class to control the ATEN PDU using pysnmp module. """
 
     def __init__(self, address, outlet):
@@ -246,7 +246,7 @@ class _ATEN_PE6108G(object):
         return {3: False, 2: True, 1: False}[result]
 
 
-class _SnmpInteger(object):
+class _SnmpInteger():
     def __init__(self, address, oid, community):
         from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
         self.oid = oid

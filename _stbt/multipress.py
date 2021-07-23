@@ -5,7 +5,7 @@ import re
 import time
 
 
-class MultiPress(object):
+class MultiPress():
     """Helper for entering text using `multi-press`_ on a numeric keypad.
 
     In some apps, the search page allows entering text by pressing the keys on

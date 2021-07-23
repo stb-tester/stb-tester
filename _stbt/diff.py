@@ -9,7 +9,7 @@ from .logging import ddebug, ImageLogger
 from .types import Region
 
 
-class FrameDiffer(object):
+class FrameDiffer():
     """Interface for different algorithms for diffing frames in a sequence.
 
     Say you have a sequence of frames A, B, C. Typically you will compare frame
@@ -116,7 +116,7 @@ class MotionDiff(FrameDiffer):
         return result
 
 
-class MotionResult(object):
+class MotionResult():
     """The result from `detect_motion` and `wait_for_motion`.
 
     :ivar float time: The time at which the video-frame was captured, in

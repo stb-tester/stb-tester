@@ -80,7 +80,7 @@ def new_device_under_test_from_config(parsed_args=None):
         sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
-class DeviceUnderTest(object):
+class DeviceUnderTest():
     def __init__(self, display=None, control=None, sink_pipeline=None,
                  mainloop=None, _time=None):
         if _time is None:
@@ -245,7 +245,7 @@ class DeviceUnderTest(object):
         return self._display.get_frame()
 
 
-class _Keypress(object):
+class _Keypress():
     def __init__(self, key, start_time, end_time, frame_before):
         self.key = key
         self.start_time = start_time
@@ -329,7 +329,7 @@ class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
         return self.time + self.duration
 
 
-class SinkPipeline(object):
+class SinkPipeline():
     def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
         import time as _time
 
@@ -536,7 +536,7 @@ class SinkPipeline(object):
                     "Can't draw object of type '%s'" % type(obj).__name__)
 
 
-class NoSinkPipeline(object):
+class NoSinkPipeline():
     """
     Used in place of a SinkPipeline when no video output is required.  Is a lot
     faster because it doesn't do anything.  It especially doesn't do any copying
@@ -558,7 +558,7 @@ class NoSinkPipeline(object):
         pass
 
 
-class Display(object):
+class Display():
     def __init__(self, user_source_pipeline, sink_pipeline):
 
         import time

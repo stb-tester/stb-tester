@@ -146,7 +146,7 @@ def write_video(g):
     vw.release()
 
 
-class MockTime(object):
+class MockTime():
     def __init__(self, start_time=1466084600.):
         self._time = start_time
         self._functions = []

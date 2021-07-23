@@ -35,7 +35,7 @@ def sample_shape(sample):
         return (sample_get_size(sample),)
 
 
-class _MappedSample(object):
+class _MappedSample():
     """
     Implements the numpy array interface for a GstSample, taking care to unmap
     in its destructor.  This allows us to create numpy arrays backed by the
@@ -177,7 +177,7 @@ def _appsrc_push_data(appsrc, data, pts=0, duration=0):
     appsrc.emit('push-buffer', buf)
 
 
-class PipelineRunner(object):
+class PipelineRunner():
     """Provides an easy way to run a pre-constructed Gstreamer pipeline much
     like gst-launch"""
     def __init__(self, pipeline, stop_pos=None):

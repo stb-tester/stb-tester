@@ -95,7 +95,7 @@ class OcrEngine(IntEnum):
         return str(self)
 
 
-class TextMatchResult(object):
+class TextMatchResult():
     """The result from `match_text`.
 
     :ivar float time: The time at which the video-frame was captured, in

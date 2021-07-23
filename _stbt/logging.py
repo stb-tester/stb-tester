@@ -94,7 +94,7 @@ def imshow(img, regions=None):
         display(Image(data=bytes(data.data), format="png"))
 
 
-class ImageLogger(object):
+class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
     Create a new ImageLogger instance for each frame of video.

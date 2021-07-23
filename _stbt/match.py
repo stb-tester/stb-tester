@@ -52,7 +52,7 @@ class ConfirmMethod(enum.Enum):
         return str(self)
 
 
-class MatchParameters(object):
+class MatchParameters():
     """Parameters to customise the image processing algorithm used by
     `match`, `wait_for_match`, and `press_until_match`.
 
@@ -172,7 +172,7 @@ class MatchParameters(object):
                self.confirm_method, self.confirm_threshold, self.erode_passes))
 
 
-class MatchResult(object):
+class MatchResult():
     """The result from `match`.
 
     :ivar float time: The time at which the video-frame was captured, in

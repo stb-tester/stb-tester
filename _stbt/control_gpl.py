@@ -17,7 +17,7 @@ class HdmiCecFatalError(BaseException):
     pass
 
 
-class HdmiCecControl(object):
+class HdmiCecControl():
     # Map our recommended keynames (from linux input-event-codes.h) to the
     # equivalent CEC commands.
     # The mapping between CEC commands and code can be found at
