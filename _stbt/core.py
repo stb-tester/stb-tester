@@ -28,7 +28,7 @@ from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
 from _stbt.logging import _Annotation, ddebug, debug, warn
 from _stbt.types import NoVideo, Region
-from _stbt.utils import text_type, to_unicode
+from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
@@ -641,9 +641,9 @@ class Display(object):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, NoVideo):
-                    raise NoVideo(text_type(self.last_frame))
+                    raise NoVideo(str(self.last_frame))
                 elif isinstance(self.last_frame, Exception):
-                    raise RuntimeError(text_type(self.last_frame))
+                    raise RuntimeError(str(self.last_frame))
                 t = time.time()
                 if t > end_time:
                     break

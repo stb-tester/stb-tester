@@ -91,8 +91,6 @@ def find_import_name(filename):
 
 if sys.version_info.major == 2:  # Python 2
     py3 = False
-    text_type = unicode  # pylint: disable=undefined-variable
-    basestring = basestring  # pylint: disable=redefined-builtin,undefined-variable
 
     def strip_newtypes(text):
         """python-future's string newtypes can behave in surprising ways.  We
@@ -123,8 +121,6 @@ if sys.version_info.major == 2:  # Python 2
         check(strip_newtypes(newbytes(b"abc")), b"abc")
 else:
     py3 = True
-    text_type = str
-    basestring = str
 
     def strip_newtypes(text):
         # newtypes won't be used on Python 3
@@ -134,7 +130,7 @@ else:
 def to_bytes(text):
     text = strip_newtypes(text)
 
-    if isinstance(text, text_type):
+    if isinstance(text, str):
         return text.encode("utf-8", errors="backslashreplace")
     elif isinstance(text, bytes):
         return text
@@ -148,4 +144,4 @@ def to_unicode(text):
     if isinstance(text, bytes):
         return text.decode("utf-8", errors="replace")
     else:
-        return text_type(text)
+        return str(text)

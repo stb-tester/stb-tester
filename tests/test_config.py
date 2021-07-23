@@ -7,8 +7,7 @@ import pytest
 
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
-from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
-                         to_unicode)
+from _stbt.utils import named_temporary_directory, scoped_curdir, to_unicode
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -181,9 +180,7 @@ def test_unicode_in_config_file_contents():
         assert get_config("global", "unicodeinkey\xf8") == "hi"
         assert get_config("global", "unicodeinvalue") == "\xf8"
         assert get_config("unicodeinsection\xf8", "key") == "bye"
-
-        # This is `unicode` on python 2 and `str` (i.e. unicode) on python 3.
-        assert isinstance(get_config("global", "unicodeinvalue"), text_type)
+        assert isinstance(get_config("global", "unicodeinvalue"), str)
 
 
 def test_get_config_with_default_value():

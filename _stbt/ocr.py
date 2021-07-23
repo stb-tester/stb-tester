@@ -16,9 +16,7 @@ from .config import get_config
 from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import (
-    basestring, named_temporary_directory, text_type,
-    to_unicode)
+from .utils import named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -414,7 +412,7 @@ def _apply_ocr_corrections(text, corrections):
     # Match plain strings at word boundaries:
     pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
                        for k in corrections
-                       if isinstance(k, basestring))
+                       if isinstance(k, str))
     if pattern:
         text = re.sub(pattern, replace_string, text)
 
@@ -680,7 +678,7 @@ def _hocr_iterate(hocr):
                     if need_space and started:
                         yield (u' ', None)
                     need_space = False
-                    yield (text_type(t).strip(), e)
+                    yield (str(t).strip(), e)
                     started = True
                 else:
                     need_space = True

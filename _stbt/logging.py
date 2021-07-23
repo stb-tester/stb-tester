@@ -10,7 +10,7 @@ from textwrap import dedent
 
 from .config import get_config
 from .types import Region
-from .utils import basestring, mkdir_p
+from .utils import mkdir_p
 
 _debug_level = None
 
@@ -87,7 +87,7 @@ def imshow(img, regions=None):
             cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
 
     from IPython.core.display import Image, display  # pylint:disable=import-error
-    if isinstance(img, basestring):
+    if isinstance(img, str):
         display(Image(img))
     else:
         _, data = cv2.imencode(".png", img)
