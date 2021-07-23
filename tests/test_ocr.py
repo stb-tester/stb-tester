@@ -45,16 +45,6 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
 
 
 @requires_tesseract
-def test_ocr_doesnt_leak_python_future_newtypes():
-    f = load_image("ocr/small.png")
-    result = stbt.ocr(f)
-    assert type(result).__name__ in ["str", "unicode"]
-
-    result = stbt.match_text("Small", f)
-    assert type(result.text).__name__ in ["str", "unicode"]
-
-
-@requires_tesseract
 @pytest.mark.parametrize("region", [
     None,
     stbt.Region(1280, 0, 1280, 720),
