@@ -8,7 +8,7 @@ import pytest
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
 from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
-                         to_native_str)
+                         to_unicode)
 
 
 def test_sponge_that_new_data_end_up_in_file():
@@ -151,8 +151,8 @@ def temporary_config(contents, prefix="stbt-test-config"):
     with named_temporary_directory(prefix=prefix) as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         filename = os.path.join(d, "stbt.conf")
-        os.environ["STBT_CONFIG_FILE"] = to_native_str(":".join([filename,
-                                                                 original_env]))
+        os.environ["STBT_CONFIG_FILE"] = to_unicode(":".join([filename,
+                                                              original_env]))
         with open(filename, "w") as f:
             f.write(dedent(contents))
         _config_init(force=True)

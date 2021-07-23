@@ -13,7 +13,7 @@ import requests
 from . import irnetbox
 from .config import ConfigurationError
 from .logging import debug, scoped_debug_level
-from .utils import named_temporary_directory, to_bytes, to_native_str
+from .utils import named_temporary_directory, to_bytes, to_unicode
 
 __all__ = ['uri_to_control', 'uri_to_control_recorder']
 
@@ -203,7 +203,7 @@ class VideoTestSrcControl(RemoteControl):
                 20, "bar"]:
             raise RuntimeError(
                 'Key "%s" not valid for the "test" control' % key)
-        self.videosrc.props.pattern = to_native_str(key)
+        self.videosrc.props.pattern = to_unicode(key)
         debug("Pressed %s" % key)
 
 

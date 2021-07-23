@@ -149,11 +149,3 @@ def to_unicode(text):
         return text.decode("utf-8", errors="replace")
     else:
         return text_type(text)
-
-
-if sys.version_info.major == 2:  # Python 2
-    def to_native_str(text):
-        return to_bytes(text)
-else:  # Python 3
-    def to_native_str(text):
-        return to_unicode(text)

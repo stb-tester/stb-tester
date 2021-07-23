@@ -72,12 +72,10 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
-from _stbt.utils import (
-    to_native_str)
 from _stbt.wait import (
     wait_until)
 
-__all__ = [to_native_str(x) for x in [
+__all__ = [
     "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
@@ -132,7 +130,7 @@ __all__ = [to_native_str(x) for x in [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
-]]
+]
 
 # Functions available to stbt scripts
 # ===========================================================================

@@ -23,7 +23,7 @@ from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .utils import to_native_str
+from .utils import to_unicode
 
 try:
     from .sqdiff import sqdiff
@@ -387,7 +387,7 @@ def _match_all(image, frame, match_parameters, region):
             imglog.append(matches=result)
             draw_on(frame, result, label="match(%s)" % (
                 "<Image>" if t.relative_filename is None else
-                repr(to_native_str(t.relative_filename))))
+                repr(to_unicode(t.relative_filename))))
             yield result
 
     finally:
