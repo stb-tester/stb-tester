@@ -495,7 +495,7 @@ def test_that_match_fast_path_is_equivalent():
         ("button-transparent.png", "buttons.png"),
     ]
     for reference, frame in images:
-        if isinstance(frame, string_types):
+        if isinstance(frame, str):
             frame = stbt.load_image(frame, color_channels=3)
         reference = stbt.load_image(reference)
         orig_m = stbt.match(reference, frame=frame)

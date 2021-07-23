@@ -72,7 +72,7 @@ class StbtChecker(BaseChecker):
     }
 
     def visit_const(self, node):
-        if (isinstance(node.value, string_types) and
+        if (isinstance(node.value, str) and
                 re.search(r'.+\.png$', node.value) and
                 "\n" not in node.value and
                 not _is_uri(node.value) and

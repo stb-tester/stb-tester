@@ -144,9 +144,9 @@ class HdmiCecControl(object):
 
         if source is None:
             source = 1
-        if isinstance(source, string_types):
+        if isinstance(source, str):
             source = int(source, 16)
-        if isinstance(destination, string_types):
+        if isinstance(destination, str):
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
