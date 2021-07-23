@@ -48,8 +48,8 @@ class _RegionClsMethods(type):
             max(r.bottom for r in args))
 
 
-class Region(with_metaclass(_RegionClsMethods,
-                            namedtuple('Region', 'x y right bottom'))):
+class Region(namedtuple('Region', 'x y right bottom'),
+             metaclass=_RegionClsMethods):
     r"""
     ``Region(x, y, width=width, height=height)`` or
     ``Region(x, y, right=right, bottom=bottom)``

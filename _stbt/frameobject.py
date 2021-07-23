@@ -113,7 +113,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
-class FrameObject(with_metaclass(_FrameObjectMeta, object)):
+class FrameObject(metaclass=_FrameObjectMeta):
     # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.
 
