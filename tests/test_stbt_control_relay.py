@@ -102,7 +102,7 @@ def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # 
         s.bind(('127.0.0.1', 0))
         s.listen(5)
 
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # pylint:disable=subprocess-popen-preexec-fn
             ["stbt-control-relay", "-vv", "file:" + tmpfile.name],
             preexec_fn=socket_passing_setup(s),
             close_fds=False)

@@ -28,7 +28,7 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-PYLINT ?= pylint3
+PYLINT ?= pylint
 PYTEST ?= pytest-3
 
 CFLAGS?=-O2
