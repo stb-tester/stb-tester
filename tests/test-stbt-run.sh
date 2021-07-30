@@ -147,7 +147,7 @@ test_that_stbt_run_exits_on_ctrl_c() {
     exit_status=$?
 
     case $exit_status in
-        1)  cat log | grep -q "No beer left" &&
+        1|130)  cat log | grep -q "No beer left" &&
                 fail "Test script should not have completed" ||
             return 0
             ;;
