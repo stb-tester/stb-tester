@@ -35,6 +35,8 @@ def test_that_matchresult_image_matches_template_passed_to_match():
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
+
     assert re.search(r"image=<Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 
