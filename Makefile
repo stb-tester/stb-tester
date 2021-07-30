@@ -206,7 +206,6 @@ clean:
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
       | grep -v -e ^setup.py \
-                -e ^tests/webminspector/ \
                 -e ^vendor/)
 
 check: check-pylint check-pytest check-integrationtests
