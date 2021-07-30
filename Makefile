@@ -131,11 +131,8 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
-	for filename in $(INSTALL_CORE_SCRIPTS); do \
-	    sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
-	        $$filename > $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	    chmod 0755 $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	done
+	$(INSTALL) -m 0755 $(INSTALL_CORE_SCRIPTS) \
+	    $(DESTDIR)$(libexecdir)/stbt/
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
