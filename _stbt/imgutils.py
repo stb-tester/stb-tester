@@ -46,9 +46,10 @@ class Frame(numpy.ndarray):
     def __repr__(self):
         if len(self.shape) == 3:
             dimensions = "%dx%dx%d" % (
-                self.shape[1], self.shape[0], self.shape[2])
+                self.shape[1], self.shape[0], self.shape[2])  # pylint:disable=unsubscriptable-object
+
         elif len(self.shape) == 2:
-            dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+            dimensions = "%dx%d" % (self.shape[1], self.shape[0])  # pylint:disable=unsubscriptable-object
         else:
             return super(Frame, self).__repr__()
         return "<Frame(time=%s, dimensions=%s)>" % (
@@ -60,11 +61,11 @@ class Frame(numpy.ndarray):
 
     @property
     def width(self):
-        return self.shape[1]
+        return self.shape[1]  # pylint:disable=unsubscriptable-object
 
     @property
     def height(self):
-        return self.shape[0]
+        return self.shape[0]  # pylint:disable=unsubscriptable-object
 
 
 class Image(numpy.ndarray):
@@ -121,9 +122,9 @@ class Image(numpy.ndarray):
     def __repr__(self):
         if len(self.shape) == 3:
             dimensions = "%dx%dx%d" % (
-                self.shape[1], self.shape[0], self.shape[2])
+                self.shape[1], self.shape[0], self.shape[2])  # pylint:disable=unsubscriptable-object
         elif len(self.shape) == 2:
-            dimensions = "%dx%d" % (self.shape[1], self.shape[0])
+            dimensions = "%dx%d" % (self.shape[1], self.shape[0])  # pylint:disable=unsubscriptable-object
         else:
             return super(Image, self).__repr__()
         if (self.relative_filename is None or
@@ -138,11 +139,11 @@ class Image(numpy.ndarray):
 
     @property
     def width(self):
-        return self.shape[1]
+        return self.shape[1]  # pylint:disable=unsubscriptable-object
 
     @property
     def height(self):
-        return self.shape[0]
+        return self.shape[0]  # pylint:disable=unsubscriptable-object
 
 
 def _frame_repr(frame):

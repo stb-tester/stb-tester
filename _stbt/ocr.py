@@ -645,7 +645,7 @@ def _tesseract_subprocess(
 
         for filename in glob.glob(tmp + "/output.*"):
             _, ext = os.path.splitext(filename)
-            if ext == ".txt" or ext == ".hocr":
+            if ext in (".txt", ".hocr"):
                 with open(filename) as f:
                     return f.read()
 

@@ -28,7 +28,7 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-PYLINT ?= pylint3
+PYLINT ?= pylint
 PYTEST ?= pytest-3
 
 CFLAGS?=-O2
@@ -131,11 +131,8 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
-	for filename in $(INSTALL_CORE_SCRIPTS); do \
-	    sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
-	        $$filename > $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	    chmod 0755 $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	done
+	$(INSTALL) -m 0755 $(INSTALL_CORE_SCRIPTS) \
+	    $(DESTDIR)$(libexecdir)/stbt/
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
@@ -209,7 +206,6 @@ clean:
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
       | grep -v -e ^setup.py \
-                -e ^tests/webminspector/ \
                 -e ^vendor/)
 
 check: check-pylint check-pytest check-integrationtests
@@ -349,7 +345,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu1804-python2 ubuntu1804-python3
+CI_DOCKER_IMAGES = ubuntu2004
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

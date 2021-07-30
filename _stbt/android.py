@@ -272,7 +272,7 @@ class AdbDevice():
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
-        if key in _KEYCODE_MAPPINGS:
+        if key in _KEYCODE_MAPPINGS:  # pylint:disable=consider-using-get
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))

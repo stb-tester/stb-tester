@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 u"""
 validate-ocr.py can be run on a corpus of test images reporting how good a job

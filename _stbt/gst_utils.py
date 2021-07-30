@@ -71,7 +71,7 @@ class _MappedSample():
 
     def __del__(self):
         self.__array_interface__ = None
-        if self._ctx:
+        if self._ctx:  # pylint:disable=using-constant-test
             self._ctx.__exit__(None, None, None)
 
 

@@ -31,7 +31,7 @@ def _start_x(*args, **kwargs):
     for x in [signal.SIGUSR1, signal.SIGCHLD]:
         orig_handler[x] = signal.signal(x, on_signal)
 
-    xorg = subprocess.Popen(
+    xorg = subprocess.Popen(  # pylint:disable=subprocess-popen-preexec-fn
         preexec_fn=lambda: signal.signal(signal.SIGUSR1, signal.SIG_IGN),
         *args, **kwargs)
 

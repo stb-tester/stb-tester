@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright 2014-2017 Stb-tester.com Ltd.
 # Copyright 2013 YouView TV Ltd.
@@ -47,7 +47,7 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    executable_name = "pylint3"
+    executable_name = "pylint"
 
     try:
         with open("/dev/null", "w") as devnull:

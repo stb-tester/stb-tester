@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 Allows using any of the stbt remote control backends remotely using the lirc
 protocol.

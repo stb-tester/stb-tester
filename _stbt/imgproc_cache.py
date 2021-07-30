@@ -205,7 +205,7 @@ def memoize_iterator(additional_fields=None):
                         yield output
                 except StopIteration:
                     _cache_put(key + str(i).encode(), [None, "StopIteration"])
-                    raise
+                    return
 
         return inner
     return decorator

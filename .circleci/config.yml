@@ -1,9 +1,9 @@
 version: 2.1
 
 jobs:
-  ubuntu1804-python3:
+  ubuntu2004:
     docker:
-      - image: stbtester/circleci:ubuntu1804-python3
+      - image: stbtester/circleci:ubuntu2004
     environment:
       python_version: 3
       LANG: en_GB.UTF-8
@@ -18,7 +18,7 @@ jobs:
 
   python-package:
     docker:
-      - image: circleci/python:3.6.9
+      - image: circleci/python:3.8.10
     environment:
       python_version: 3
       LANG: C.UTF-8
@@ -52,7 +52,7 @@ commands:
             rm -rf stbt_core _stbt &&
             python3 -m venv build_env &&
             source build_env/bin/activate &&
-            pip3 install pytest==4.6.9 pylint==2.4.4 astroid==2.3.3 &&
+            pip3 install pytest==4.6.9 &&
             pip3 install dist/*.tar.gz &&
             make check-pythonpackage PYTEST=pytest
 
@@ -60,4 +60,4 @@ workflows:
   test_all:
     jobs:
       - python-package
-      - ubuntu1804-python3
+      - ubuntu2004

@@ -53,17 +53,16 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Testing",
     ],
-    # I have only tested Python 3.6
     python_requires=">=3.6",
     extras_require={
-        "ocr": ["lxml==4.2"],
+        "ocr": ["lxml==4.5"],
         "debug": ["Jinja2==2.10.1"],
-        "keyboard": ["networkx==1.11"],
+        "keyboard": ["networkx==2.4"],
     },
     install_requires=[
-        "astroid==1.6.0",
+        "astroid==2.3.3",
         "attrs==20.2.0",
-        "opencv-python~=3.2",
-        "pylint==1.8.3",
+        "opencv-python~=4.2",
+        "pylint==2.4.4",
     ],
 )

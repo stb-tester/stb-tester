@@ -41,6 +41,7 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
     assert f2.width == 20
     assert f2.height == 20
 
+    # pylint:disable=no-member
     f3 = f.copy()
     assert isinstance(f3, stbt.Frame)
     assert f3.time == 1234

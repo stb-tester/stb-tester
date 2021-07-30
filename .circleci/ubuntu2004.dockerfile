@@ -1,6 +1,6 @@
 # If you change this dockerfile, run `make publish-ci-docker-images`.
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
@@ -15,6 +15,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
         gstreamer1.0-tools \
         gstreamer1.0-x \
         gzip \

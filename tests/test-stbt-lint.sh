@@ -192,7 +192,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	************* Module test
 	E: 11,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
 	E: 13,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
-	E: 15,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
+	E: 15,11: "wait_until" argument "(lambda: True)()" isn't callable (stbt-wait-until-callable)
 	E: 17,11: "wait_until" argument "functools.partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	E: 19,11: "wait_until" argument "partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	EOF
