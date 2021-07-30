@@ -47,7 +47,7 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    executable_name = "pylint3"
+    executable_name = "pylint"
 
     try:
         with open("/dev/null", "w") as devnull:
