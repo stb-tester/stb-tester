@@ -114,6 +114,8 @@ class DeviceUnderTest():
         return self._last_keypress
 
     def press(self, key, interpress_delay_secs=None, hold_secs=None):
+        key = str(key)
+
         if hold_secs is not None and hold_secs > 60:
             # You must ensure that lircd's --repeat-max is set high enough.
             raise ValueError("press: hold_secs must be less than 60 seconds")
@@ -137,6 +139,8 @@ class DeviceUnderTest():
 
     @contextmanager
     def pressing(self, key, interpress_delay_secs=None):
+        key = str(key)
+
         with self._interpress_delay(interpress_delay_secs):
             out = _Keypress(key, self._time.time(), None, self.get_frame())
             try:
