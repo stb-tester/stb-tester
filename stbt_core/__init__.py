@@ -193,8 +193,8 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
     * Added in v29: The ``hold_secs`` parameter.
     * Changed in v30: Returns an object with keypress timings, instead of
       ``None``.
-    * Changed in v33: The ``key`` argument will be converted to a string (using
-      `str`) if it isn't one, to support user-defined Enums for the key names.
+    * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
+      value, which must be a string).
     """
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
