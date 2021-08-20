@@ -27,6 +27,27 @@ test_press_with_lirc() {
         fail "fake-lircd didn't receive 2 SEND_ONCE messages"
 }
 
+test_press_with_lirc_using_enum_for_key_name() {
+    start_fake_lircd
+
+    cat > test.py <<-EOF &&
+	from enum import Enum
+	import stbt_core as stbt
+	
+	class Keys(Enum):
+	    KEY_MENU = "KEY_MENU"
+	    KEY_OK = "KEY_OK"
+	
+	stbt.press(Keys.KEY_MENU)
+	stbt.press(Keys.KEY_OK)
+	EOF
+    stbt run -v --control lirc:$lircd_socket:test test.py || return
+    cat fake-lircd.log
+    grep -Eq "fake-lircd: Received: b?'?SEND_ONCE test KEY_MENU" fake-lircd.log &&
+    grep -Eq "fake-lircd: Received: b?'?SEND_ONCE test KEY_OK" fake-lircd.log ||
+        fail "fake-lircd didn't receive 2 SEND_ONCE messages"
+}
+
 test_that_press_fails_on_lircd_error() {
     start_fake_lircd
 
