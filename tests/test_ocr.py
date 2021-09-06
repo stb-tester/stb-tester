@@ -286,8 +286,8 @@ def test_that_text_location_is_recognised():
         if multiline:
             continue
 
-        yield (test, text, region, True)
-        yield (test, text, region, False)
+        test(text, region, True)
+        test(text, region, False)
 
 
 @requires_tesseract
