@@ -182,8 +182,7 @@ def test_char_whitelist():
         char_whitelist="0123456789")
 
 
-@requires_tesseract
-@pytest.mark.parametrize("corrections,expected", [
+corrections_test_cases = [
     # pylint:disable=bad-whitespace
     # Default ocr output:
     (None,                                           'OO'),
@@ -197,7 +196,11 @@ def test_char_whitelist():
     # Make sure it tries all the patterns:
     ({'AA': 'BB', 'OO': '00'},                       '00'),
     ({re.compile('^O'): '1', re.compile('O$'): '2'}, '12'),
-])
+]
+
+
+@requires_tesseract
+@pytest.mark.parametrize("corrections,expected", corrections_test_cases)
 def test_corrections(corrections, expected):
     f = load_image('ocr/00.png')
     print(corrections)
@@ -212,6 +215,21 @@ def test_corrections(corrections, expected):
                                     corrections=corrections)
     finally:
         stbt.set_global_ocr_corrections({})
+
+
+@pytest.mark.parametrize(
+    "text,corrections,expected",
+    # Same test-cases as `test_corrections` above:
+    [('OO', c, e) for (c, e) in corrections_test_cases] +
+    # Plain strings match entire words at word boundaries:
+    [('itv+', {'itv+': 'Apple tv+'}, 'Apple tv+'),
+     ('hitv+', {'itv+': 'Apple tv+'}, 'hitv+'),
+     ('This is itv+ innit', {'itv+': 'Apple tv+'}, 'This is Apple tv+ innit'),
+     # Make sure it tries all the patterns:
+     ('A B C', {'A': '1', 'B': '2', 'C': '3'}, '1 2 3'),
+    ])
+def test_apply_ocr_corrections(text, corrections, expected):
+    assert expected == stbt.apply_ocr_corrections(text, corrections)
 
 
 @requires_tesseract

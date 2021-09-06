@@ -399,26 +399,22 @@ def apply_ocr_corrections(text, corrections=None):
 def _apply_ocr_corrections(text, corrections):
 
     def replace_string(matchobj):
-        old = matchobj.group(0)
+        old = matchobj.group(2)
         new = corrections[old]
         debug("ocr corrections: %r -> %r" % (old, new))
-        return new
+        return matchobj.group(1) + new + matchobj.group(3)
 
     def replace_regex(matchobj):
         new = corrections[matchobj.re]
         debug("ocr corrections: /%s/ -> %r" % (matchobj.re.pattern, new))
         return new
 
-    # Match plain strings at word boundaries:
-    pattern = "|".join(r"\b(" + re.escape(k) + r")\b"
-                       for k in corrections
-                       if isinstance(k, str))
-    if pattern:
-        text = re.sub(pattern, replace_string, text)
-
-    # Match regexes:
     for k in corrections:
-        if isinstance(k, PatternType):
+        if isinstance(k, str):
+            # Match plain strings at word boundaries
+            text = re.sub(r"(^|\s)(" + re.escape(k) + r")(\s|$)",
+                          replace_string, text)
+        elif isinstance(k, PatternType):
             text = re.sub(k, replace_regex, text)
     return text
 
