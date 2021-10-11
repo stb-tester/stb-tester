@@ -330,8 +330,10 @@ class UnconfiguredDeviceUnderTest():
             "stbt.pressing isn't configured to run on your hardware")
 
     def draw_text(self, *args, **kwargs):
-        raise RuntimeError(
-            "stbt.draw_text isn't configured to run on your hardware")
+        # Unlike the others this has no external side-effects on the device
+        # under test. `stbt.draw_text` already logs it before calling
+        # `_dut.draw_text`. Really this shouldn't belong in the DUT at all.
+        pass
 
     def press_until_match(self, *args, **kwargs):
         raise RuntimeError(
