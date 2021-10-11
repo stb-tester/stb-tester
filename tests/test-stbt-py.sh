@@ -395,7 +395,7 @@ test_that_get_frame_time_is_wall_time() {
 
 	# get_frame() gives us the last frame that arrived.  This may arrived a
 	# little time ago and have been waiting in a buffer.
-	assert t - 0.1 < f.time < t
+	assert t - 0.2 < f.time < t
 	EOF
 
     stbt run -vv test.py
