@@ -127,8 +127,9 @@ class DeviceUnderTest():
                 out = _Keypress(key, self._time.time(), None, frame_before)
                 self._control.press(key)
                 out.end_time = self._time.time()
-            self.draw_text(key, duration_secs=3)
             self._last_keypress = out
+            self._display.last_keypress_time = out.end_time
+            self.draw_text(key, duration_secs=3)
             return out
         else:
             with self.pressing(key, interpress_delay_secs) as out:
@@ -143,6 +144,7 @@ class DeviceUnderTest():
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 self._last_keypress = out
+                self._display.last_keypress_time = out.start_time
                 yield out
             except:  # pylint:disable=bare-except
                 exc_info = sys.exc_info()
@@ -156,6 +158,7 @@ class DeviceUnderTest():
             else:
                 self._control.keyup(key)
                 out.end_time = self._time.time()
+                self._display.last_keypress_time = out.end_time
                 self.draw_text("Released %s" % key, duration_secs=3)
 
     @contextmanager
@@ -566,6 +569,7 @@ class Display():
         self._condition = threading.Condition()  # Protects last_frame
         self.last_frame = None
         self.last_used_frame = None
+        self.last_keypress_time = 0
         self.source_pipeline = None
         self.init_time = time.time()
         self.tearing_down = False
@@ -632,6 +636,7 @@ class Display():
             # If you want to wait 10s for a frame you're probably not interested
             # in a frame from 10s ago.
             since = t - timeout_secs
+            since = max(since, self.last_keypress_time)
 
         with self._condition:
             while True:
