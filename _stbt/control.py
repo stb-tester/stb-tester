@@ -11,7 +11,7 @@ from distutils.spawn import find_executable
 import requests
 
 from . import irnetbox
-from .config import ConfigurationError
+from .config import ConfigurationError, get_config
 from .logging import debug, scoped_debug_level
 from .utils import named_temporary_directory, to_bytes, to_unicode
 
@@ -527,9 +527,13 @@ class RokuHttpControl(RemoteControl):
         "KEY_VOLUMEUP": "VolumeUp",
     }
 
-    def __init__(self, hostname, timeout_secs=3):
+    def __init__(self, hostname, timeout_secs=None):
         self.hostname = hostname
-        self.timeout_secs = timeout_secs
+        if timeout_secs:
+            self.timeout_secs = timeout_secs
+        else:
+            self.timeout_secs = get_config("press", "http_timeout_secs",
+                                           type_=float)
 
     def press(self, key):
         roku_keyname = self._KEYNAMES.get(key, key)
@@ -562,20 +566,24 @@ class RedRatHttpControlError(requests.HTTPError):
 
 class RedRatHttpControl(RemoteControl):
     """Send a key-press via RedRat HTTP REST API (see RedRat hub)."""
-    def __init__(self, url, timeout_secs=3):
+    def __init__(self, url, timeout_secs=None):
         self._session = requests.Session()
         self._url = url
-        self.timeout_secs = timeout_secs
+        if timeout_secs:
+            self.timeout_secs = timeout_secs
+        else:
+            self.timeout_secs = get_config("press", "http_timeout_secs",
+                                           type_=float)
 
     @staticmethod
-    def new_ir(hostname, port, serial_no, output, timeout_secs=3):
+    def new_ir(hostname, port, serial_no, output, timeout_secs=None):
         port = int(port or 4254)
         return RedRatHttpControl(
             "http://%s:%i/api/redrats/%s/%s" % (
                 hostname, port, serial_no, output), timeout_secs)
 
     @staticmethod
-    def new_bt(hostname, port, serial_no, target_bt_address, timeout_secs=3):
+    def new_bt(hostname, port, serial_no, target_bt_address, timeout_secs=None):
         port = int(port or 4254)
         return RedRatHttpControl(
             "http://%s:%i/api/bt/modules/%s/targets/%s/send" % (
