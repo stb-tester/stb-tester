@@ -102,20 +102,20 @@ class AdbDevice():
     Default values for each parameter can be specified in your "stbt.conf"
     config file under the "[android]" section.
 
+    :param string address:
+        IP address (if using Network ADB) or serial number (if connected via
+        USB) of the Android device. You can get the serial number by running
+        ``adb devices -l``. If not specified, there must be only one Android
+        device connected by USB.
     :param string adb_server:
         The ADB server (that is, the PC connected to the Android device).
         Defaults to localhost.
-    :param string adb_device:
-        Serial number of the Android device connected to ADB server PC (you can
-        get this by running ``adb devices -l``). If not specified, there must be
-        only one Android device connected. If ``tcpip=True`` this must be the
-        Android device's IP address.
     :param string adb_binary:
         The path to the ADB client executable. Defaults to "adb".
     :param bool tcpip:
         The ADB server communicates with the Android device via TCP/IP, not
         USB. This requires that you have enabled Network ADB access on the
-        device. Defaults to True if ``adb_device`` is an IP address, False
+        device. Defaults to True if ``address`` is an IP address, False
         otherwise.
     :param CoordinateSystem coordinate_system:
         How to convert the coordinates you give to `AdbDevice.tap` and
@@ -126,16 +126,16 @@ class AdbDevice():
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
 
-    def __init__(self, adb_server=None, adb_device=None, adb_binary=None,
+    def __init__(self, address=None, adb_server=None, adb_binary=None,
                  tcpip=None, coordinate_system=None, _config=None):
 
         if _config is None:
             import _stbt.config
             _config = _stbt.config._config_init()
 
+        self.address = address or _config.get("android", "address",
+                                              fallback=None)
         self.adb_server = adb_server or _config.get("android", "adb_server",
-                                                    fallback=None)
-        self.adb_device = adb_device or _config.get("android", "adb_device",
                                                     fallback=None)
         self.adb_binary = adb_binary or _config.get("android", "adb_binary",
                                                     fallback="adb")
@@ -146,15 +146,15 @@ class AdbDevice():
             except configparser.Error:
                 pass
         if tcpip is None:
-            tcpip = _is_ip_address(self.adb_device)
+            tcpip = _is_ip_address(self.address)
         self.tcpip = tcpip
 
-        if self.tcpip and not self.adb_device:
+        if self.tcpip and not self.address:
             raise ConfigurationError('AdbDevice: If "tcpip=True" '
-                                     'you must specify "adb_device"')
+                                     'you must specify "address"')
 
-        if self.tcpip and ":" not in self.adb_device:
-            self.adb_device = self.adb_device + ":5555"
+        if self.tcpip and ":" not in self.address:
+            self.address = self.address + ":5555"
 
         if coordinate_system is None:
             name = _config.get("android", "coordinate_system",
@@ -315,8 +315,8 @@ class AdbDevice():
         _command += [self.adb_binary]
         if self.adb_server:
             _command += ["-H", self.adb_server]
-        if self.adb_device:
-            _command += ["-s", self.adb_device]
+        if self.address:
+            _command += ["-s", self.address]
         _command += command
         logger.debug("AdbDevice.adb: About to run command: %r", _command)
         output = subprocess.check_output(
@@ -325,7 +325,7 @@ class AdbDevice():
 
     def _connect(self, timeout_secs):
         try:
-            if self.adb_device in self._adb(["devices"]):
+            if self.address in self._adb(["devices"]):
                 return
         except subprocess.CalledProcessError:
             pass
@@ -334,10 +334,10 @@ class AdbDevice():
         # which looks like "connected to 192.168.2.163:5555" or
         # "already connected to 192.168.2.163:5555" or
         # "unable to connect to 192.168.2.100:5555".
-        output = self._adb(["connect", self.adb_device], timeout_secs)
-        if ("connected to %s" % self.adb_device) not in output:
+        output = self._adb(["connect", self.address], timeout_secs)
+        if ("connected to %s" % self.address) not in output:
             sys.stderr.write(output)
-            raise AdbError(0, "adb connect %s" % self.adb_device, output, self)
+            raise AdbError(0, "adb connect %s" % self.address, output, self)
         time.sleep(2)
 
     def _to_native_coordinates(self, x, y):

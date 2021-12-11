@@ -170,8 +170,8 @@ def test_adb_tcpip(real_adb_device):  # pylint:disable=redefined-outer-name
     time.sleep(5)
     try:
         adb2 = AdbDevice(
+            address=ip,
             adb_server="localhost",
-            adb_device=ip,
             adb_binary=os.environ.get("ADB_BINARY", "adb"),
             tcpip=True,
             coordinate_system=CoordinateSystem.ADB_NATIVE)
@@ -197,8 +197,8 @@ def real_adb_device():
     match your phone).
     """
     _adb = AdbDevice(
+        address=os.environ.get("ANDROID_SERIAL", None),
         adb_server=os.environ.get("ADB_SERVER", "localhost"),
-        adb_device=os.environ.get("ANDROID_SERIAL", None),
         adb_binary=os.environ.get("ADB_BINARY", "adb"),
         tcpip=os.environ.get("ADB_TCPIP", False),
         coordinate_system=CoordinateSystem.ADB_NATIVE)
