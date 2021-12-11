@@ -1,34 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Python module to control Android phones via `ADB`_ from Stb-tester scripts.
+"""Python module to control Android devices via `ADB`_ from Stb-tester scripts.
 
-Copyright © 2017 Stb-tester.com Ltd.
+Copyright © 2017-2021 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
-Usage::
-
-    from _stbt.android import AdbDevice
-    adb = AdbDevice()
-    adb.tap((100, 50))
-
-For feedback (video from the Android device-under-test) you can use:
-
-* Stb-tester's standard HDMI video-capture if the device-under-test is an
-  Android set-top box.
-* HDMI video-capture from a tablet or phone with an MHL adapter.
-* A camera pointed at the phone's screen with an `Stb-tester CAMERA`_ device.
-* Screenshots captured over USB via ADB.
-
-For more details on the benefits and trade-offs of each method, see
-<https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>.
-
-Note that you can instead use Stb-tester features such as image-matching
-in your existing Selenium/WebDriver/Appium tests. See
-<https://stb-tester.com/blog/2016/09/20/add-visual-verification-to-your-selenium-tests-with-stb-tester>.
-
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
-.. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """
 
 import configparser
@@ -78,6 +56,8 @@ class CoordinateSystem(Enum):
     your video-frame (for example, you can pass in ``stbt.match(...).region``)
     and the CoordinateSystem will ensure that the coordinates are converted to
     physical coordinates in the appropriate way before passing them on to ADB.
+
+    .. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
     """
 
     ADB_NATIVE = 0
@@ -94,9 +74,9 @@ class CoordinateSystem(Enum):
 
     HDMI_720P = 2
     """
-    Frames are captured via HDMI (using an MHL cable) at 720p.
+    Frames are captured via HDMI and scaled to 720p.
 
-    Frames will always be in landscape orientation. If the device is in
+    Frames will always be in landscape orientation. If a mobile device is in
     portrait orientation, you'll get black bars to the left & right. If the
     device is in landscape orientation, the frame will match what you see on
     the device (this assumes that the device's physical aspect ratio matches
@@ -110,12 +90,12 @@ class CoordinateSystem(Enum):
     The camera & device must both be physically in landscape orientation.
 
     Frames will always be in landscape orientation; if the device is in logical
-    portrait orientation the image will be rotated 90° anti-clockwise.
+    portrait orientation the image will appear rotated 90° anti-clockwise.
     """
 
 
 class AdbDevice():
-    """Control an Android device using `ADB`_.
+    """Send commands to an Android device using `ADB`_.
 
     Default values for each parameter can be specified in your "stbt.conf"
     config file under the "[android]" section.
@@ -132,13 +112,15 @@ class AdbDevice():
         The path to the ADB client executable. Defaults to "adb".
     :param bool tcpip:
         The ADB server communicates with the Android device via TCP/IP, not
-        USB. This requires that you have enabled TCP/IP ADB access on the
+        USB. This requires that you have enabled Network ADB access on the
         device. Defaults to False.
     :param CoordinateSystem coordinate_system:
         How to convert the coordinates you give to `AdbDevice.tap` and
         `AdbDevice.swipe` into the coordinates required by ADB. See
         `CoordinateSystem` for details. Defaults to ``CAMERA_720P`` on the
         `Stb-tester CAMERA`_, or ``ADB_NATIVE`` elsewhere.
+
+    .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
 
     def __init__(self, adb_server=None, adb_device=None, adb_binary=None,
@@ -196,7 +178,9 @@ class AdbDevice():
         ``command`` and ``kwargs`` are the same as `subprocess.check_output`,
         except that ``shell``, ``stdout`` and ``stderr`` are not allowed.
 
-        Raises `AdbError` if the command fails.
+        :returns: The output if ``capture_output`` is ``True``; otherwise
+            ``None``.
+        :raises: `AdbError` if the command fails.
         """
         try:
             if self.tcpip:
@@ -367,6 +351,15 @@ class AdbDevice():
 
 
 class AdbError(Exception):
+    """Exception raised by `AdbDevice.adb`.
+
+    :ivar int returncode: Exit status of the adb command.
+    :ivar list cmd: The command that failed, as given to `AdbDevice.adb`.
+    :ivar str output: The output from adb.
+    :ivar str adb_devices: The output from "adb devices -l" (useful for
+        debugging connection errors).
+    """
+
     def __init__(self, returncode, cmd, output=None, adb_control=None):
         super().__init__()
         self.returncode = returncode
