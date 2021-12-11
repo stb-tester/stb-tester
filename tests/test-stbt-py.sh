@@ -538,10 +538,10 @@ test_multithreaded() {
 	result_iter = pool.imap_unordered(
 	    lambda f: f(),
 	    [
-	        lambda: stbt.wait_for_motion(timeout_secs=2),
+	        lambda: stbt.wait_for_motion(timeout_secs=10),
 	        lambda: stbt.wait_for_match(
 	            "$testdir/videotestsrc-checkers-8.png",
-	            timeout_secs=2),
+	            timeout_secs=10),
 	    ],
 	    chunksize=1)
 	
