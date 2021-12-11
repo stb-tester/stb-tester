@@ -133,8 +133,8 @@ class AdbDevice():
 
         self.adb_server = adb_server or _config.get("android", "adb_server",
                                                     fallback=None)
-        self._adb_device = adb_device or _config.get("android", "adb_device",
-                                                     fallback=None)
+        self.adb_device = adb_device or _config.get("android", "adb_device",
+                                                    fallback=None)
         self.adb_binary = adb_binary or _config.get("android", "adb_binary",
                                                     fallback="adb")
 
@@ -144,8 +144,11 @@ class AdbDevice():
             except configparser.Error:
                 pass
         if tcpip is None:
-            tcpip = _is_ip_address(self._adb_device)
+            tcpip = _is_ip_address(self.adb_device)
         self.tcpip = tcpip
+
+        if self.tcpip and self.adb_device and ":" not in self.adb_device:
+            self.adb_device = self.adb_device + ":5555"
 
         if coordinate_system is None:
             name = _config.get("android", "coordinate_system",
@@ -161,13 +164,6 @@ class AdbDevice():
 
         if self.tcpip:
             self._connect(timeout_secs=60)
-
-    @property
-    def adb_device(self):
-        if self.tcpip and self._adb_device and ":" not in self._adb_device:
-            return self._adb_device + ":5555"
-        else:
-            return self._adb_device
 
     def adb(self, command, timeout_secs=5 * 60, capture_output=False, **kwargs):
         """Run any ADB command.
