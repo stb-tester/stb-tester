@@ -9,7 +9,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 """
 
-import configparser
 import re
 import subprocess
 import sys
@@ -19,7 +18,7 @@ from logging import getLogger
 
 from enum import Enum
 
-from _stbt.config import ConfigurationError
+from _stbt.config import ConfigurationError, get_config
 
 
 logger = getLogger("stbt.android")
@@ -126,24 +125,17 @@ class AdbDevice():
     """
 
     def __init__(self, address=None, adb_server=None, adb_binary=None,
-                 tcpip=None, coordinate_system=None, _config=None):
+                 tcpip=None, coordinate_system=None):
 
-        if _config is None:
-            import _stbt.config
-            _config = _stbt.config._config_init()
-
-        self.address = address or _config.get("android", "address",
-                                              fallback=None)
-        self.adb_server = adb_server or _config.get("android", "adb_server",
-                                                    fallback=None)
-        self.adb_binary = adb_binary or _config.get("android", "adb_binary",
-                                                    fallback="adb")
+        self.address = address or get_config("android", "address",
+                                             default=None)
+        self.adb_server = adb_server or get_config("android", "adb_server",
+                                                   default=None)
+        self.adb_binary = adb_binary or get_config("android", "adb_binary",
+                                                   default="adb")
 
         if tcpip is None:
-            try:
-                tcpip = _config.getboolean("android", "tcpip")
-            except configparser.Error:
-                pass
+            tcpip = get_config("android", "tcpip", default=None, type_=bool)
         if tcpip is None:
             tcpip = _is_ip_address(self.address)
         self.tcpip = tcpip
@@ -155,17 +147,9 @@ class AdbDevice():
         if self.tcpip and ":" not in self.address:
             self.address = self.address + ":5555"
 
-        if coordinate_system is None:
-            name = _config.get("android", "coordinate_system",
-                               fallback="HDMI_720P")
-            if name not in CoordinateSystem.__members__:
-                raise ValueError(
-                    "Invalid value '%s' for android.coordinate_system in "
-                    "config file. Valid values are %s."
-                    % (name, ", ".join("'%s'" % k for k in
-                                       CoordinateSystem.__members__)))
-            coordinate_system = CoordinateSystem[name]
-        self.coordinate_system = coordinate_system
+        self.coordinate_system = coordinate_system or get_config(
+            "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
+            type_=CoordinateSystem)
 
         if self.tcpip:
             self._connect(timeout_secs=60)
