@@ -678,7 +678,8 @@ _ANDROID_KEYCODES = [
 
 
 # Map a few standard Stb-tester key names to Android keycodes.
-# So far we just map the buttons on the Amazon Fire TV remote control:
+# So far we just map the buttons on the Amazon Fire TV & NVidia Shield remote
+# controls:
 # https://developer.amazon.com/docs/fire-tv/remote-input.html#input-event-reference
 _KEYCODE_MAPPINGS = {
     "KEY_BACK": "KEYCODE_BACK",
@@ -687,11 +688,17 @@ _KEYCODE_MAPPINGS = {
     "KEY_HOME": "KEYCODE_HOME",
     "KEY_LEFT": "KEYCODE_DPAD_LEFT",
     "KEY_MENU": "KEYCODE_MENU",
+    "KEY_MUTE": "KEYCODE_VOLUME_MUTE",
     "KEY_OK": "KEYCODE_ENTER",
+    "KEY_PAUSE": "KEYCODE_MEDIA_PAUSE",
+    "KEY_PLAY": "KEYCODE_MEDIA_PLAY",
     "KEY_PLAYPAUSE": "KEYCODE_MEDIA_PLAY_PAUSE",
+    "KEY_POWER": "KEYCODE_POWER",
     "KEY_REWIND": "KEYCODE_MEDIA_REWIND",
     "KEY_RIGHT": "KEYCODE_DPAD_RIGHT",
     "KEY_UP": "KEYCODE_DPAD_UP",
+    "KEY_VOLUMEDOWN": "KEYCODE_VOLUME_DOWN",
+    "KEY_VOLUMEUP": "KEYCODE_VOLUME_UP",
 }
 
 
