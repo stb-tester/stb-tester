@@ -113,7 +113,8 @@ class AdbDevice():
     :param bool tcpip:
         The ADB server communicates with the Android device via TCP/IP, not
         USB. This requires that you have enabled Network ADB access on the
-        device. Defaults to False.
+        device. Defaults to True if ``adb_device`` is an IP address, False
+        otherwise.
     :param CoordinateSystem coordinate_system:
         How to convert the coordinates you give to `AdbDevice.tap` and
         `AdbDevice.swipe` into the coordinates required by ADB. See
@@ -136,11 +137,14 @@ class AdbDevice():
                                                      fallback=None)
         self.adb_binary = adb_binary or _config.get("android", "adb_binary",
                                                     fallback="adb")
+
         if tcpip is None:
             try:
                 tcpip = _config.getboolean("android", "tcpip")
             except configparser.Error:
-                tcpip = False
+                pass
+        if tcpip is None:
+            tcpip = _is_ip_address(self._adb_device)
         self.tcpip = tcpip
 
         if coordinate_system is None:
@@ -692,6 +696,24 @@ _KEYCODE_MAPPINGS = {
     "KEY_VOLUMEDOWN": "KEYCODE_VOLUME_DOWN",
     "KEY_VOLUMEUP": "KEYCODE_VOLUME_UP",
 }
+
+
+def _is_ip_address(address):
+    """
+    >>> _is_ip_address("")
+    False
+    >>> _is_ip_address(None)
+    False
+    >>> _is_ip_address("7278681B045C937CEB770FD31542B16")
+    False
+    >>> _is_ip_address("192.168.2.11")
+    True
+    >>> _is_ip_address("192.168.2.11:5555")
+    True
+    >>> _is_ip_address("192.168.2.11:5555")
+    True
+    """
+    return bool(re.match(r"^\d+\.\d+\.\d+\.\d+(:\d+)?$", str(address)))
 
 
 def _resize(img, coordinate_system):
