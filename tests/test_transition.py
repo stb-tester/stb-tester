@@ -1,4 +1,3 @@
-import time
 from collections import namedtuple
 
 import cv2
@@ -13,31 +12,31 @@ from _stbt.transition import StrictDiff
 class FakeDeviceUnderTest():
     def __init__(self, frames=None):
         self.state = "black"
-        self._frames = frames
+        self._frames = iter(frames) if frames else None
+        self._t = 0
 
     def press(self, key):
         frame_before = next(self.frames())
         self.state = key
-        return _Keypress(key, time.time(), time.time(), frame_before)
+        return _Keypress(key, self._t, self._t, frame_before)
 
     def frames(self):
         if self._frames is not None:
             # Ignore self.state, send the specified frames instead.
-            t = time.time()
-            for state in self._frames:
-                array = F(state, t)
-                yield stbt.Frame(array, time=t)
-                t += 0.04  # 25fps
+            for state in self._frames:  # pylint:disable=not-an-iterable
+                self._t += 0.04  # 25fps
+                array = F(state, self._t)
+                yield stbt.Frame(array, time=self._t)
 
         else:
             while True:
-                t = time.time()
-                array = F(self.state, t)
+                self._t += 0.04  # 25fps
+                array = F(self.state, self._t)
                 if self.state == "fade-to-black":
                     self.state = "black"
                 elif self.state == "fade-to-white":
                     self.state = "white"
-                yield stbt.Frame(array, time=t)
+                yield stbt.Frame(array, time=self._t)
 
 
 _Keypress = namedtuple("_Keypress", "key start_time end_time frame_before")
@@ -81,7 +80,7 @@ def test_press_and_wait(diff_algorithm, min_size):
     assert transition.status == stbt.TransitionStatus.COMPLETE
     assert transition.press_time < transition.animation_start_time
     assert transition.animation_start_time == transition.end_time
-    assert transition.duration < 0.01  # excludes stable period
+    assert transition.duration == 0.04  # excludes stable period
     assert transition.frame.min() == 255
 
     transition = stbt.press_and_wait("fade-to-black", min_size=min_size,
@@ -165,9 +164,8 @@ def test_press_and_wait_timestamps(diff_algorithm):
     print(transition)
     assert transition
     assert isclose(transition.animation_start_time,
-                   transition.press_time + 0.40,
-                   rtol=0, atol=0.01)
-    assert isclose(transition.duration, 0.48, rtol=0, atol=0.01)
+                   transition.press_time + 0.40)
+    assert isclose(transition.duration, 0.48)
     assert isclose(transition.end_time, transition.animation_start_time + 0.08)
     assert isclose(transition.animation_duration, 0.08)
 
