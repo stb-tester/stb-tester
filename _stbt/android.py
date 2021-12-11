@@ -19,6 +19,8 @@ from logging import getLogger
 
 from enum import Enum
 
+from _stbt.config import ConfigurationError
+
 
 logger = getLogger("stbt.android")
 
@@ -147,7 +149,11 @@ class AdbDevice():
             tcpip = _is_ip_address(self.adb_device)
         self.tcpip = tcpip
 
-        if self.tcpip and self.adb_device and ":" not in self.adb_device:
+        if self.tcpip and not self.adb_device:
+            raise ConfigurationError('AdbDevice: If "tcpip=True" '
+                                     'you must specify "adb_device"')
+
+        if self.tcpip and ":" not in self.adb_device:
             self.adb_device = self.adb_device + ":5555"
 
         if coordinate_system is None:
@@ -318,9 +324,6 @@ class AdbDevice():
         return output
 
     def _connect(self, timeout_secs):
-        if not self.adb_device:
-            raise RuntimeError('AdbDevice: error: If "tcpip=True" '
-                               'you must specify "adb_device"')
         try:
             if self.adb_device in self._adb(["devices"]):
                 return
