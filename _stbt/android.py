@@ -207,7 +207,7 @@ class AdbDevice():
         except subprocess.CalledProcessError as e:
             return e.output.decode("utf-8")
 
-    def get_frame(self):
+    def get_frame(self, coordinate_system=None):
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
@@ -217,6 +217,9 @@ class AdbDevice():
         main video-capture method as closely as possible, as specified by the
         `CoordinateSystem`.
 
+        :param CoordinateSystem coordinate_system:
+            Override the coordinate_system given to the `AdbDevice` constructor.
+
         :returns: A `stbt.Frame`, that is, an image in OpenCV format. Note that
             the ``time`` attribute won't be very accurate (probably to <0.5s or
             so).
@@ -225,6 +228,9 @@ class AdbDevice():
         import cv2
         import numpy
         from _stbt.imgutils import Frame
+
+        if coordinate_system is None:
+            coordinate_system = self.coordinate_system
 
         for attempt in range(1, 4):
             timestamp = time.time()
@@ -245,7 +251,7 @@ class AdbDevice():
             raise RuntimeError(
                 "Failed to capture screenshot from android device")
 
-        img = _resize(img, self.coordinate_system)
+        img = _resize(img, coordinate_system)
         return Frame(img, time=timestamp)
 
     def press(self, key):
@@ -752,8 +758,7 @@ def _resize(img, coordinate_system):
     else:
         raise NotImplementedError(
             "AdbDevice.get_frame not implemented for %s. "
-            "Use a separate AdbDevice instance with "
-            "coordinate_system=CoordinateSystem.ADB_NATIVE"
+            "Use coordinate_system=CoordinateSystem.ADB_NATIVE"
             % coordinate_system)
 
     return img
