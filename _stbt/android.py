@@ -152,9 +152,10 @@ class AdbDevice():
             type_=CoordinateSystem)
 
         if self.tcpip:
-            self._connect(timeout_secs=60)
+            self._connect(timeout=60)
 
-    def adb(self, command, timeout_secs=5 * 60, capture_output=False, **kwargs):
+    def adb(self, command, *, capture_output=False, timeout=None,
+            **subprocess_kwargs):
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -164,32 +165,25 @@ class AdbDevice():
             d.adb(["shell", "am", "start", "-S",
                    "com.example.myapp/com.example.myapp.MainActivity"])
 
-        ``command`` and ``kwargs`` are the same as `subprocess.check_output`,
-        except that ``shell``, ``stdout`` and ``stderr`` are not allowed.
+        Any keyword arguments are passed on to `subprocess.run`.
 
-        :returns: The output if ``capture_output`` is ``True``; otherwise
-            ``None``.
-        :raises: `AdbError` if the command fails.
+        :returns: `subprocess.CompletedProcess` from `subprocess.run`.
+        :raises: `subprocess.CalledProcessError` if ``check`` is true and
+            the adb process returns a non-zero exit status.
+        :raises: `AdbError` if ``adb connect`` fails.
         """
-        try:
-            if self.tcpip:
-                self._connect(timeout_secs)
-            output = self._adb(command, timeout_secs, **kwargs)
-        except subprocess.CalledProcessError as e:
-            raise AdbError(
-                e.returncode, e.cmd, e.output.decode("utf-8"), self) \
-                .with_traceback(sys.exc_info()[2])
-        if capture_output:
-            return output
-        else:
-            sys.stderr.write(output)
-            return None
+        if self.tcpip:
+            self._connect(timeout)
+        return self._adb(command, timeout=timeout,
+                         capture_output=capture_output, **subprocess_kwargs)
 
     def devices(self):
         try:
-            return self._adb(["devices", "-l"], timeout_secs=5)
+            return self._adb(["devices", "-l"], timeout=5,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT).stdout.decode("utf-8")
         except subprocess.CalledProcessError as e:
-            return e.output.decode("utf-8")
+            return e.stdout.decode("utf-8")
 
     def get_frame(self, coordinate_system=None):
         """Take a screenshot using ADB.
@@ -218,9 +212,9 @@ class AdbDevice():
 
         for attempt in range(1, 4):
             timestamp = time.time()
-            data = (self.adb(["shell", "screencap", "-p"],
-                             timeout_secs=60, capture_output=True)
-                    .replace("\r\n", "\n"))
+            data = self.adb(["shell", "screencap", "-p"],
+                            timeout=60, capture_output=True) \
+                       .stdout.replace("\r\n", "\n")
             img = cv2.imdecode(
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
                 cv2.IMREAD_COLOR)
@@ -232,7 +226,7 @@ class AdbDevice():
             else:
                 break
         else:
-            raise RuntimeError(
+            raise AdbError(
                 "Failed to capture screenshot from android device")
 
         img = _resize(img, coordinate_system)
@@ -255,7 +249,7 @@ class AdbDevice():
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
         logger.debug("AdbDevice.press(%r)", key)
-        self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
+        self.adb(["shell", "input", "keyevent", key], timeout=10)
 
     def swipe(self, start_position, end_position):
         """Swipe from one point to another point.
@@ -278,7 +272,7 @@ class AdbDevice():
         x2, y2 = self._to_native_coordinates(x2, y2)
         command = ["shell", "input", "swipe",
                    str(x1), str(y1), str(x2), str(y2)]
-        self.adb(command, timeout_secs=10)
+        self.adb(command, timeout=10)
 
     def tap(self, position):
         """Tap on a particular location.
@@ -295,12 +289,15 @@ class AdbDevice():
         logger.debug("AdbDevice.tap((%d,%d))", x, y)
 
         x, y = self._to_native_coordinates(x, y)
-        self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
+        self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
-    def _adb(self, command, timeout_secs=None, **kwargs):
+    def _adb(self, command, capture_output=False, **kwargs):
+        if capture_output:
+            # capture_output was added in Python 3.7.
+            kwargs["stdout"] = subprocess.PIPE
+            kwargs["stderr"] = subprocess.PIPE
+
         _command = []
-        if timeout_secs is not None:
-            _command += ["timeout", "%fs" % timeout_secs]
         _command += [self.adb_binary]
         if self.adb_server:
             _command += ["-H", self.adb_server]
@@ -308,25 +305,26 @@ class AdbDevice():
             _command += ["-s", self.address]
         _command += command
         logger.debug("AdbDevice.adb: About to run command: %r", _command)
-        output = subprocess.check_output(
-            _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
-        return output
+        return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
 
-    def _connect(self, timeout_secs):
-        try:
-            if self.address in self._adb(["devices"]):
-                return
-        except subprocess.CalledProcessError:
-            pass
+    def _connect(self, timeout):
+        if self.address in self.devices():
+            return
+
+        if timeout is None:
+            timeout = 60
 
         # "adb connect" always returns success; we have to parse the output
         # which looks like "connected to 192.168.2.163:5555" or
         # "already connected to 192.168.2.163:5555" or
         # "unable to connect to 192.168.2.100:5555".
-        output = self._adb(["connect", self.address], timeout_secs)
+        output = self._adb(["connect", self.address], timeout=timeout,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT) \
+                     .stdout.decode("utf-8")
         if ("connected to %s" % self.address) not in output:
             sys.stderr.write(output)
-            raise AdbError(0, "adb connect %s" % self.address, output, self)
+            raise AdbError("adb connect %s failed" % self.address,
+                           output=output, devices=self.devices())
         time.sleep(2)
 
     def _to_native_coordinates(self, x, y):
@@ -339,7 +337,7 @@ class AdbDevice():
     def _get_display_dimensions(self):
         return _parse_display_dimensions(
             self.adb(["shell", "dumpsys", "window"],
-                     timeout_secs=10, capture_output=True))
+                     timeout=10, capture_output=True).stdout)
 
 
 class AdbError(Exception):
@@ -348,22 +346,21 @@ class AdbError(Exception):
     :ivar int returncode: Exit status of the adb command.
     :ivar list cmd: The command that failed, as given to `AdbDevice.adb`.
     :ivar str output: The output from adb.
-    :ivar str adb_devices: The output from "adb devices -l" (useful for
+    :ivar str devices: The output from "adb devices -l" (useful for
         debugging connection errors).
     """
 
-    def __init__(self, returncode, cmd, output=None, adb_control=None):
+    def __init__(self, message, returncode=None, cmd=None, output=None,
+                 devices=None):
         super().__init__()
+        self.message = message
         self.returncode = returncode
         self.cmd = cmd
         self.output = output
-        self.adb_devices = None
-        if adb_control:
-            self.adb_devices = adb_control.devices()
+        self.devices = devices
 
     def __str__(self):
-        return "Command '%s' failed with exit status %d. Output:\n%s\n%s" % (
-            self.cmd, self.returncode, self.output, self.adb_devices)
+        return self.message
 
 
 # https://developer.android.com/reference/android/view/KeyEvent.html
@@ -830,4 +827,5 @@ def _parse_display_dimensions(dumpsys_output):
         m = re.search(r"cur=(\d+)x(\d+)", line)
         if m:
             return _Dimensions(width=int(m.group(1)), height=int(m.group(2)))
-    raise RuntimeError("AdbDevice: Didn't find display size in dumpsys output")
+    raise AdbError("Didn't find display size in dumpsys output",
+                   output=dumpsys_output)
