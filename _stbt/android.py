@@ -120,8 +120,7 @@ class AdbDevice():
     :param CoordinateSystem coordinate_system:
         How to convert the coordinates you give to `AdbDevice.tap` and
         `AdbDevice.swipe` into the coordinates required by ADB. See
-        `CoordinateSystem` for details. Defaults to ``CAMERA_720P`` on the
-        `Stb-tester CAMERA`_, or ``ADB_NATIVE`` elsewhere.
+        `CoordinateSystem` for details. Defaults to ``HDMI_720P``.
 
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
@@ -158,7 +157,7 @@ class AdbDevice():
 
         if coordinate_system is None:
             name = _config.get("android", "coordinate_system",
-                               fallback="ADB_NATIVE")
+                               fallback="HDMI_720P")
             if name not in CoordinateSystem.__members__:
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "

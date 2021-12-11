@@ -134,7 +134,7 @@ def test_parse_display_dimensions():
 # This is a regression test.
 def test_adbdevice_default_constructor():
     adb = AdbDevice()
-    assert adb.coordinate_system == CoordinateSystem.ADB_NATIVE
+    assert adb.coordinate_system == CoordinateSystem.HDMI_720P
 
 
 def test_get_frame_press_tap_and_swipe(real_adb_device):  # pylint:disable=redefined-outer-name
