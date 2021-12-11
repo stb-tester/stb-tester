@@ -13,7 +13,6 @@
 #/     lint           Static analysis of testcases
 #/     match          Compare two images
 #/     power          Control networked power switch
-#/     record         Record a testcase
 #/     screenshot     Capture a single screenshot
 #/     tv             View live video on screen
 #/     virtual-stb    Configure stbt to use an STB emulator
@@ -47,7 +46,7 @@ case "$cmd" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    config|control|lint|match|power|record|run)
+    config|control|lint|match|power|run)
         exec_stbt stbt_${cmd/-/_}.py "$@";;
     screenshot|tv)
         exec_stbt stbt-"$cmd" "$@";;

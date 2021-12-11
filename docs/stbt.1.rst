@@ -198,29 +198,6 @@ Additional options to stbt run
 --save-video=<file>
   Record a video (in the HTML5-compatible WebM format) to the specified `file`.
 
-Additional options to stbt record
----------------------------------
-
---control-recorder=<uri>
-  The source of remote control presses.  `uri` can be:
-
-  lirc:([<lircd_socket>]|[<hostname>:]<port>):<remote_control_name>
-    A hardware infrared receiver controlled by the lirc (Linux Infrared Remote
-    Control) daemon. Parameters are as for `--control`.
-
-  file://<filename>
-    Reads remote control keypresses from a newline-separated list of key names.
-    For example, `file:///dev/stdin` to use the keyboard as the remote control
-    input.
-
-  stbt-control[:<keymap_file>]
-    Launches **stbt control** to record remote control keypresses using the PC
-    keyboard. See `stbt control --help` for details. Disables `--verbose`
-    parameter.
-
--o <filename>, --output-filename=<filename>
-  The file to write the generated test script to.
-
 
 CONFIGURATION
 =============
@@ -245,9 +222,6 @@ These files are simple ini files with the form::
     verbose = 0
     [run]
     save_video = video.webm
-    [record]
-    output_file = test.py
-    control_recorder = file:///dev/stdin
 
 Each key corresponds to a command line option with hyphens replaced with
 underscores.

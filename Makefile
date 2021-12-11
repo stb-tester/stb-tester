@@ -104,7 +104,6 @@ INSTALL_CORE_SCRIPTS = \
     stbt_lint.py \
     stbt_match.py \
     stbt_power.py \
-    stbt_record.py \
     stbt_run.py \
     stbt-screenshot \
     stbt-tv

@@ -5,17 +5,16 @@ import struct
 import subprocess
 import sys
 import time
-from contextlib import contextmanager
 from distutils.spawn import find_executable
 
 import requests
 
 from . import irnetbox
 from .config import ConfigurationError
-from .logging import debug, scoped_debug_level
+from .logging import debug
 from .utils import named_temporary_directory, to_bytes, to_unicode
 
-__all__ = ['uri_to_control', 'uri_to_control_recorder']
+__all__ = ['uri_to_control']
 
 try:
     from .control_gpl import controls as gpl_controls
@@ -85,23 +84,6 @@ def _lookup_uri_to_control(uri, display=None):
 def uri_to_control(uri, display=None):
     factory, kwargs = _lookup_uri_to_control(uri, display)
     return factory(**kwargs)
-
-
-def uri_to_control_recorder(uri):
-    controls = [
-        ('file://(?P<filename>.+)', file_control_recorder),
-        (r'lirc(:(?P<hostname>[^:/]+))?:(?P<port>\d+):(?P<control_name>.+)',
-         lirc_control_listen_tcp),
-        (r'lirc:(?P<lircd_socket>[^:]+)?:(?P<control_name>.+)',
-         lirc_control_listen),
-        (r'stbt-control(:(?P<keymap_file>.+))?', stbt_control_listen),
-    ]
-
-    for regex, factory in controls:
-        m = re.match(regex, uri)
-        if m:
-            return factory(**m.groupdict())
-    raise ConfigurationError('Invalid remote control recorder URI: "%s"' % uri)
 
 
 def new_adb_device(address):
@@ -674,23 +656,6 @@ class X11Control(RemoteControl):
         debug("Pressed %s" % key)
 
 
-def file_control_recorder(filename):
-    """ A generator that returns lines from the file given by filename.
-
-    Unfortunately treating a file as a iterator doesn't work in the case of
-    interactive input, even when we provide bufsize=1 (line buffered) to the
-    call to open() so we have to have this function to work around it. """
-    f = open(filename, 'r')
-    if filename == '/dev/stdin':
-        sys.stderr.write('Waiting for keypresses from standard input...\n')
-    while True:
-        line = f.readline()
-        if line == '':
-            f.close()
-            return
-        yield line.rstrip()
-
-
 def read_records(stream, sep):
     r"""Generator that splits stream into records given a separator
 
@@ -709,72 +674,6 @@ def read_records(stream, sep):
         buf = cmds[-1]
         for i in cmds[:-1]:
             yield i
-
-
-def lirc_control_listen(lircd_socket, control_name):
-    """Returns an iterator yielding keypresses received from a lircd file
-    socket -- that is, the keypresses that lircd received from a hardware
-    infrared receiver and is now sending on to us.
-
-    See http://www.lirc.org/html/technical.html#applications
-    """
-    if lircd_socket is None:
-        lircd_socket = DEFAULT_LIRCD_SOCKET
-    lircd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    debug("control-recorder connecting to lirc file socket '%s'..." %
-          lircd_socket)
-    lircd.connect(lircd_socket)
-    debug("control-recorder connected to lirc file socket")
-    return lirc_key_reader(lircd.makefile("rb"), control_name)
-
-
-def lirc_control_listen_tcp(address, port, control_name):
-    """Returns an iterator yielding keypresses received from a lircd TCP
-    socket."""
-    address = address or 'localhost'
-    port = int(port)
-    debug("control-recorder connecting to lirc TCP socket %s:%s..." %
-          (address, port))
-    lircd = _connect_tcp_socket(address, port, timeout=None)
-    debug("control-recorder connected to lirc TCP socket")
-    return lirc_key_reader(lircd.makefile("rb"), control_name)
-
-
-def stbt_control_listen(keymap_file):
-    """Returns an iterator yielding keypresses received from `stbt control`.
-    """
-    import imp
-    try:
-        from .vars import libexecdir
-        sc = "%s/stbt/stbt_control.py" % libexecdir
-    except ImportError:
-        sc = _find_file('../stbt_control.py')
-    stbt_control = imp.load_source('stbt_control', sc)
-
-    with scoped_debug_level(0):
-        # Don't mess up printed keymap with debug messages
-        return stbt_control.main_loop(
-            'stbt record', keymap_file or stbt_control.default_keymap_file())
-
-
-def lirc_key_reader(cmd_iter, control_name):
-    r"""Convert lircd messages into list of keypresses
-
-    >>> list(lirc_key_reader([b'0000dead 00 MENU My-IR-remote',
-    ...                       b'0000beef 00 OK My-IR-remote',
-    ...                       b'0000f00b 01 OK My-IR-remote',
-    ...                       b'BEGIN', b'SIGHUP', b'END'],
-    ...                      'My-IR-remote'))
-    ['MENU', 'OK']
-    """
-    for s in cmd_iter:
-        debug("lirc_key_reader received: %s" % s.rstrip())
-        m = re.match(
-            br"\w+ (?P<repeat_count>\d+) (?P<key>\w+) %s" % (
-                to_bytes(control_name)),
-            s)
-        if m and int(m.group('repeat_count')) == 0:
-            yield m.group('key')
 
 
 def _connect_tcp_socket(address, port, timeout=3):
@@ -807,66 +706,6 @@ class FileToSocket():
 
     def recv(self, bufsize, flags=0):  # pylint:disable=unused-argument
         return self.file.read(bufsize)
-
-
-@contextmanager
-def _fake_lircd():
-    import multiprocessing
-    # This needs to accept 2 connections (from LircControl and
-    # lirc_control_listen) and, on receiving input from the LircControl
-    # connection, write to the lirc_control_listen connection.
-    with named_temporary_directory(prefix="stbt-fake-lircd-") as tmp:
-        address = tmp + '/lircd'
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.bind(address)
-        s.listen(6)
-
-        def listen():
-            import signal
-            signal.signal(signal.SIGTERM, lambda _, __: sys.exit(0))
-
-            listener, _ = s.accept()
-            while True:
-                control, _ = s.accept()
-                for cmd in control.makefile("rb"):
-                    m = re.match(br'SEND_ONCE (?P<ctrl>\S+) (?P<key>\S+)', cmd)
-                    if m:
-                        listener.sendall(
-                            b'00000000 0 %(key)s %(ctrl)s\n' %
-                            {b"key": m.group("key"),
-                             b"ctrl": m.group("ctrl")})
-                    control.sendall(b'BEGIN\n%sSUCCESS\nEND\n' % cmd)
-                control.close()
-
-        t = multiprocessing.Process(target=listen)
-        t.daemon = True
-        t.start()
-        try:
-            yield address
-        finally:
-            t.terminate()
-
-
-def test_that_lirc_control_is_symmetric_with_lirc_control_listen():
-    with _fake_lircd() as lircd_socket:
-        listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
-        control = uri_to_control('lirc:%s:test' % (lircd_socket))
-        for key in ['DOWN', 'DOWN', 'UP', 'GOODBYE']:
-            control.press(key)
-            assert next(listener) == to_bytes(key)
-
-
-def test_that_local_lirc_socket_is_correctly_defaulted():
-    global DEFAULT_LIRCD_SOCKET
-    old_default = DEFAULT_LIRCD_SOCKET
-    try:
-        with _fake_lircd() as lircd_socket:
-            DEFAULT_LIRCD_SOCKET = lircd_socket
-            listener = uri_to_control_recorder('lirc:%s:test' % lircd_socket)
-            uri_to_control('lirc::test').press('KEY')
-            assert next(listener) == b'KEY'
-    finally:
-        DEFAULT_LIRCD_SOCKET = old_default
 
 
 def test_roku_http_control():
