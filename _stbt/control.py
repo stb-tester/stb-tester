@@ -121,7 +121,7 @@ def uri_to_control_recorder(uri):
 
 def new_adb_device(address):
     from _stbt.android import AdbDevice
-    return AdbDevice(adb_device=address)
+    return AdbDevice(address)
 
 
 class NullControl(RemoteControl):
