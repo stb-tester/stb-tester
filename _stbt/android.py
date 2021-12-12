@@ -135,7 +135,7 @@ class AdbDevice():
     def __init__(self, address=None, adb_server=None, adb_binary=None,
                  tcpip=None, coordinate_system=None):
 
-        self.address = address or get_config("android", "address",
+        self.address = address or get_config("device_under_test", "ip_address",
                                              default=None)
         self.adb_server = adb_server or get_config("android", "adb_server",
                                                    default=None)
