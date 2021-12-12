@@ -128,10 +128,6 @@ class AdbDevice():
         USB. This requires that you have enabled Network ADB access on the
         device. Defaults to True if ``address`` is an IP address, False
         otherwise.
-    :param CoordinateSystem coordinate_system:
-        How to convert the coordinates you give to `AdbDevice.tap` and
-        `AdbDevice.swipe` into the coordinates required by ADB. See
-        `CoordinateSystem` for details. Defaults to ``HDMI_720P``.
 
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
