@@ -193,7 +193,7 @@ class AdbDevice(object):
 
     def devices(self):
         try:
-            return self._adb(["devices", "-l"], timeout_secs=5)
+            return self._adb(["devices", "-l"], verbose=False, timeout_secs=5)
         except subprocess.CalledProcessError as e:
             return e.output.decode("utf-8")
 
@@ -297,7 +297,7 @@ class AdbDevice(object):
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
 
-    def _adb(self, command, timeout_secs=None, **kwargs):
+    def _adb(self, command, verbose=True, timeout_secs=None, **kwargs):
         _command = []
         if timeout_secs is not None:
             _command += ["timeout", "%fs" % timeout_secs]
@@ -307,7 +307,8 @@ class AdbDevice(object):
         if self.address:
             _command += ["-s", self.address]
         _command += command
-        logger.debug("AdbDevice.adb: About to run command: %r", _command)
+        if verbose:
+            logger.debug("AdbDevice.adb: About to run command: %r", _command)
         output = subprocess.check_output(
             _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
         return output
