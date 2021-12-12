@@ -95,6 +95,18 @@ class CoordinateSystem(Enum):
     """
 
 
+def adb(command, **kwargs):
+    """Send commands to an Android device using `ADB`_.
+
+    This is a convenience function. It will construct an `AdbDevice` with the
+    default parameters (taken from your config files) and call `AdbDevice.adb`
+    with the parameters given here.
+
+    .. _ADB: https://developer.android.com/studio/command-line/adb.html
+    """
+    return AdbDevice().adb(command, **kwargs)
+
+
 class AdbDevice():
     """Send commands to an Android device using `ADB`_.
 
