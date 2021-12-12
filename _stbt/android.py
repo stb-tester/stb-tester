@@ -10,7 +10,9 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import functools
+import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -160,8 +162,25 @@ class AdbDevice():
             "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
             type_=CoordinateSystem)
 
+        self._setup_adb_key()
+
         if self.tcpip:
             self._connect(timeout=60)
+
+    def _setup_adb_key(self):
+        if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
+            return
+        import stbt_core
+        root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+        if root is None:
+            return
+        if not os.path.exists(os.path.join(root, "config/android/adbkey")):
+            raise ConfigurationError(
+                "To run adb on the Stb-tester Node you must generate an ADB "
+                "host key by running 'adb keygen config/android/adbkey' and "
+                "commit the 'config/android' directory to git.")
+        shutil.copytree(os.path.join(root, "config/android"),
+                        os.path.join(os.environ["HOME"], ".android"))
 
     def adb(self, command, *, capture_output=False, timeout=None,
             **subprocess_kwargs):
