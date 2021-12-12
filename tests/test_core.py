@@ -56,11 +56,9 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
     assert f4.height == 720
 
 
-def test_that_load_image_looks_in_callers_directory():
+def test_that_load_image_looks_in_callers_directory(test_pack_root):  # pylint:disable=unused-argument
     # See also the test with the same name in
     # ./subdirectory/test_load_image_from_subdirectory.py
-
-    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
 
     f = stbt.load_image("videotestsrc-redblue.png")
     assert numpy.array_equal(

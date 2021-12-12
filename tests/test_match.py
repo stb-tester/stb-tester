@@ -30,9 +30,8 @@ def test_that_matchresult_image_matches_template_passed_to_match():
     assert stbt.match("black.png", frame=black()).image.filename == "black.png"
 
 
-def test_that_matchresult_str_image_matches_template_passed_to_match():
-    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
-
+def test_that_matchresult_str_image_matches_template_passed_to_match(
+        test_pack_root):  # pylint:disable=unused-argument
     assert re.search(r"image=<Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 

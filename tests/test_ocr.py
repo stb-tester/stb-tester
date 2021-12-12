@@ -294,9 +294,7 @@ def test_that_text_location_is_recognised():
 
 
 @requires_tesseract
-def test_match_text_stringify_result():
-    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
-
+def test_match_text_stringify_result(test_pack_root):  # pylint:disable=unused-argument
     frame = load_image("ocr/menu.png")
     result = stbt.match_text("Onion Bhaji", frame=frame)
 
