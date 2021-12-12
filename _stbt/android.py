@@ -9,9 +9,10 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 """
 
+import functools
 import re
 import subprocess
-import sys
+import threading
 import time
 from collections import namedtuple
 from logging import getLogger
@@ -305,17 +306,30 @@ class AdbDevice():
             kwargs["stdout"] = subprocess.PIPE
             kwargs["stderr"] = subprocess.PIPE
 
+        _command = self._build_adb_command() + command
+        logger.debug("AdbDevice.adb: About to run command: %r", _command)
+        return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
+
+    def _Popen(self, command, **kwargs):
+        """Like `AdbDevice.adb`, but runs `subprocess.Popen` instead of
+        `subprocess.run`.
+        """
+        if self.tcpip:
+            self._connect()
+        _command = self._build_adb_command() + command
+        logger.debug("AdbDevice._Popen: About to run command: %r", _command)
+        return subprocess.Popen(_command, **kwargs)
+
+    def _build_adb_command(self):
         _command = []
         _command += [self.adb_binary]
         if self.adb_server:
             _command += ["-H", self.adb_server]
         if self.address:
             _command += ["-s", self.address]
-        _command += command
-        logger.debug("AdbDevice.adb: About to run command: %r", _command)
-        return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
+        return _command
 
-    def _connect(self, timeout):
+    def _connect(self, timeout=None):
         if self.address in self.devices():
             return
 
@@ -330,7 +344,7 @@ class AdbDevice():
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT) \
                      .stdout.decode("utf-8")
         if ("connected to %s" % self.address) not in output:
-            sys.stderr.write(output)
+            logger.debug("%s", output)
             raise AdbError("adb connect %s failed" % self.address,
                            output=output, devices=self.devices())
         time.sleep(2)
@@ -369,6 +383,72 @@ class AdbError(Exception):
 
     def __str__(self):
         return self.message
+
+
+def logcat(logcat_args=None):
+    """Decorator that will save logs to "logcat.log" while the decorated
+    function is running.
+
+    :param list logcat_args:
+        Optional arguments to pass on to ``adb logcat``, such as filter
+        expressions. See the `logcat documentation
+        <https://developer.android.com/studio/command-line/logcat#options>`__.
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            d = AdbDevice()
+            collector = LogcatCollector("logcat.log", logcat_args, d)
+            d.adb(["logcat", "--clear"])
+            collector.run_in_background()
+            try:
+                return func(*args, **kwargs)
+            finally:
+                collector.stop()
+        return wrapped
+
+    return decorator
+
+
+class LogcatCollector():
+    def __init__(self, filename, logcat_args=None, adb_device=None):
+        self.filename = filename
+        self.logcat_args = logcat_args or []
+        self.adb_device = adb_device or AdbDevice()
+        self.stopping = False
+        self.thread = None
+        self.process = None
+
+    def run_in_background(self):
+        thread = threading.Thread(target=self.run)
+        thread.daemon = True
+        self.thread = thread
+        thread.start()
+
+    def run(self):
+        with open(self.filename, "wb", 0) as f:
+            while True:
+                # Re-run "adb logcat" in case of disconnections. I assume this
+                # means the device-under-test crashed/rebooted so we don't need
+                # to run "logcat --clear" again. If this assumption is wrong
+                # we'll end up with some duplicate log lines. :shrug:
+                self.process = self.adb_device._Popen(
+                    ['logcat'] + self.logcat_args, stdout=f)
+                self.process.wait()
+                if self.stopping:
+                    return
+                logger.warning("LogcatCollector: Lost adb connection")
+                time.sleep(1)
+
+    def stop(self):
+        self.stopping = True
+        if self.process:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
 
 
 # https://developer.android.com/reference/android/view/KeyEvent.html
