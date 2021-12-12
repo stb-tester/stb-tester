@@ -207,7 +207,7 @@ class AdbDevice():
 
     def devices(self):
         try:
-            return self._adb(["devices", "-l"], timeout=5,
+            return self._adb(["devices", "-l"], verbose=False, timeout=5,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT).stdout.decode("utf-8")
         except subprocess.CalledProcessError as e:
@@ -319,14 +319,15 @@ class AdbDevice():
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
-    def _adb(self, command, capture_output=False, **kwargs):
+    def _adb(self, command, verbose=True, capture_output=False, **kwargs):
         if capture_output:
             # capture_output was added in Python 3.7.
             kwargs["stdout"] = subprocess.PIPE
             kwargs["stderr"] = subprocess.PIPE
 
         _command = self._build_adb_command() + command
-        logger.debug("AdbDevice.adb: About to run command: %r", _command)
+        if verbose:
+            logger.debug("AdbDevice.adb: About to run command: %r", _command)
         return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
 
     def _Popen(self, command, **kwargs):
