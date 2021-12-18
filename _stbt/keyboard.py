@@ -663,6 +663,8 @@ class Keyboard():
             self.G_ = _strip_shift_transitions(self.G)
 
         assert page, "%s page isn't visible" % type(page).__name__
+        assert page.selection in self.G_, \
+            "page.selection (%r) isn't in the keyboard" % (page.selection,)
         deadline = time.time() + self.navigate_timeout
         current = page.selection
         while current not in targets:
