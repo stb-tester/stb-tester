@@ -353,14 +353,11 @@ def test_ocr_on_text_next_to_image_match():
 
 
 @requires_tesseract
-@pytest.mark.parametrize("image,color,expected,region", [
+@pytest.mark.parametrize("image,color,expected", [
     # This region has a selected "Summary" button (white on light blue) and
     # unselected buttons "Details" and "More Episodes" (light grey on black).
     # Without specifying text_color, OCR only sees the latter two.
-    # Testing without specifying a region would also work, but with a small
-    # region the test runs much faster (0.1s instead of 3s per ocr call).
-    ("action-panel.png", (235, 235, 235), "Summary",
-     stbt.Region(0, 370, right=1280, bottom=410)),
+    ("ocr/Summary.png", (235, 235, 235), "Summary"),
 
     # This is a light "8" on a dark background. Without the context of any
     # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
@@ -368,17 +365,17 @@ def test_ocr_on_text_next_to_image_match():
     # it's assuming that it's seeing printed matter (a scanned book with black
     # text on white background). Expanding the region to include other text
     # would solve the problem, but so does specifying the text color.
-    ("ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
+    ("ocr/ch8.png", (252, 242, 255), "8"),
 ])
-def test_ocr_text_color(image, color, expected, region):
+def test_ocr_text_color(image, color, expected):
     frame = load_image(image)
     mode = stbt.OcrMode.SINGLE_LINE
 
-    assert expected not in stbt.ocr(frame, region, mode)
-    assert expected == stbt.ocr(frame, region, mode, text_color=color)
+    assert expected not in stbt.ocr(frame, mode=mode)
+    assert expected == stbt.ocr(frame, mode=mode, text_color=color)
 
-    assert not stbt.match_text(expected, frame, region, mode)
-    assert stbt.match_text(expected, frame, region, mode, text_color=color)
+    assert not stbt.match_text(expected, frame, mode=mode)
+    assert stbt.match_text(expected, frame, mode=mode, text_color=color)
 
 
 @requires_tesseract
