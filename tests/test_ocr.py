@@ -358,6 +358,7 @@ def test_ocr_on_text_next_to_image_match():
     # unselected buttons "Details" and "More Episodes" (light grey on black).
     # Without specifying text_color, OCR only sees the latter two.
     ("ocr/Summary.png", (235, 235, 235), 25, "Summary"),
+    ("ocr/Summary.png", (235, 235, 235), None, "Summary"),
 
     # This is a light "8" on a dark background. Without the context of any
     # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
@@ -366,6 +367,7 @@ def test_ocr_on_text_next_to_image_match():
     # text on white background). Expanding the region to include other text
     # would solve the problem, but so does specifying the text color.
     ("ocr/ch8.png", (252, 242, 255), 25, "8"),
+    ("ocr/ch8.png", (252, 242, 255), None, "8"),
 
     # This has some very faint pixels around the letters, and Tesseract's
     # binarisation algorithm thinks they are foreground pixels. Without
