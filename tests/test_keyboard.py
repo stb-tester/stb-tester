@@ -234,18 +234,24 @@ def slow_dut():
         yield dut
 
 
+class _NotSpecified():  # sentinel value
+    pass
+
+
 class SearchPage(stbt.FrameObject):
     """Immutable Page Object representing the test's view of the DUT."""
 
-    def __init__(self, dut, kb):
+    def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
         super(SearchPage, self).__init__(
             frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         self.dut = dut
         self.kb = kb
+        self._is_visible = is_visible
+        self._selection = selection
 
     @property
     def is_visible(self):
-        return True
+        return self._is_visible
 
     @property
     def mode(self):
@@ -259,6 +265,8 @@ class SearchPage(stbt.FrameObject):
         # In practice this would use image processing to detect the current
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
+        if self._selection != _NotSpecified:
+            return self._selection
         query = {}
         if self.dut.selection == " ":
             query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
@@ -607,6 +615,19 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     with pytest.raises(ValueError):
         page.navigate_to("Ñ")
     assert dut.pressed == []
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_that_keyboard_validates_the_page_object_selection(dut, kb):
+    page = SearchPage(dut, kb, is_visible=False)
+    with pytest.raises(AssertionError) as excinfo:
+        page.navigate_to("a", page)
+    assert "SearchPage page isn't visible" in str(excinfo.value)
+
+    page = SearchPage(dut, kb, selection=None)
+    with pytest.raises(AssertionError) as excinfo:
+        page.navigate_to("a", page)
+    assert "page.selection (None) isn't in the keyboard" in str(excinfo.value)
 
 
 def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
