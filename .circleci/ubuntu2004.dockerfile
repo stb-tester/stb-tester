@@ -21,6 +21,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gzip \
         language-pack-en \
         librsvg2-bin \
+        libxxhash0 \
         lirc \
         moreutils \
         parallel \

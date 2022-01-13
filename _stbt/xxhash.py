@@ -7,11 +7,9 @@ with xxhash takes ~242us, whereas using hash() builtin or hashlib.sha1 takes
 
 import binascii
 import ctypes
-import os
 import struct
 
-_libxxhash = ctypes.CDLL(
-    os.path.dirname(os.path.abspath(__file__)) + "/libxxhash.so")
+_libxxhash = ctypes.CDLL("libxxhash.so.0")
 
 _XXH_errorcode = ctypes.c_int
 _XXH64_hash_t = ctypes.c_ulonglong
