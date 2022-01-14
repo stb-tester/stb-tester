@@ -11,7 +11,6 @@
 .stbt-prefix
 .venv
 __pycache__
-_stbt/libxxhash.so
 _stbt/libstbt.so
 debian-packages
 docs/stbt.1
@@ -30,5 +29,4 @@ stbt_core.egg-info/
 TAGS
 tests/stbt-debug-expected-output/*/*/*.png
 tests/test-install
-vendor/.submodules-checked-out
 VERSION

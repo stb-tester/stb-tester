@@ -74,7 +74,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
     _stbt/libstbt.so \
-    _stbt/libxxhash.so \
     _stbt/logging.py \
     _stbt/match.py \
     _stbt/motion.py \
@@ -270,9 +269,7 @@ tests/buttons.png: tests/buttons.svg
 # list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = $(shell git ls-files | grep -v '^vendor/')
-DIST += VERSION
-DIST += vendor/.submodules-checked-out
+DIST = $(shell git ls-files)
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
 	@$(TAR) --version 2>/dev/null | grep -q GNU || { \
@@ -281,10 +278,8 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    exit 1; }
 	# Separate tar and gzip so we can pass "-n" for more deterministic
 	# tarball generation
-	SUBMODULE_DIST=$$( \
-	    git submodule foreach -q 'git ls-files | sed s,^,$$path/,') && \
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
-	         -f stb-tester-$(VERSION).tar $^ $$SUBMODULE_DIST && \
+	         -f stb-tester-$(VERSION).tar $^ && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
@@ -301,27 +296,8 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-### Third-party dependencies #################################################
-
-XXHASH_SOURCES = \
-    vendor/xxHash/xxhash.c \
-    vendor/xxHash/xxhash.h
-
-_stbt/libxxhash.so : $(XXHASH_SOURCES)
-	$(CC) -shared -fPIC -O3 -o $@ $(filter-out %.h,$(XXHASH_SOURCES)) $(CFLAGS)
-
 _stbt/libstbt.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
-
-SUBMODULE_FILES = $(XXHASH_SOURCES)
-
-$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
-
-vendor/.submodules-checked-out : .gitmodules
-	git submodule init && \
-	git submodule sync && \
-	git submodule update && \
-	touch $@
 
 ### Documentation ############################################################
 
