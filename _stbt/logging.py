@@ -190,20 +190,19 @@ class ImageLogger():
 
         index_html = os.path.join(self.outdir, "index.html")
         with open(index_html, "w") as f:
-            f.write(jinja2.Template(_INDEX_HTML_HEADER)
-                    .render(frame_number=self.frame_number,
-                            jupyter=self.jupyter))
+            f.write("<div>")
             f.write(jinja2.Template(dedent(template.lstrip("\n")))
                     .render(annotated_image=self._draw_annotated_image,
                             draw=self._draw,
                             jupyter=self.jupyter,
                             **template_kwargs))
-            f.write(jinja2.Template(_INDEX_HTML_FOOTER)
-                    .render())
+            f.write("</div>")
 
         if self.jupyter:
-            from IPython.display import display, IFrame  # pylint:disable=import-error
-            display(IFrame(src=index_html, width=974, height=600))
+            from IPython.display import display, HTML  # pylint:disable=import-error
+            display(HTML(open(index_html).read()
+                         .replace('src="', 'src="%s/' % (self.outdir))
+                         .replace("src='", "src='%s/" % (self.outdir))))
 
     def _draw(self, region, source_size, css_class, title=None):
         import jinja2
