@@ -29,6 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pylint3 \
         python3-docutils \
         python3-gi \
+        python3-ipython \
         python3-jinja2 \
         python3-lmdb \
         python3-lxml \
