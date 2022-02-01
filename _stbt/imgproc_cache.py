@@ -69,7 +69,7 @@ def setup_cache(filename=None):
     if filename is None:
         filename = default_filename
     mkdir_p(os.path.dirname(filename) or ".")
-    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:  # pylint: disable=no-member
+    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:
         assert _cache is None
         try:
             _cache = db
@@ -215,7 +215,7 @@ def _cache_put(key, value):
     with _cache.begin(write=True) as txn:
         try:
             txn.put(key, json.dumps(value).encode("utf-8"))
-        except lmdb.MapFullError:  # pylint: disable=no-member
+        except lmdb.MapFullError:
             global _cache_full_warning
             if not _cache_full_warning:
                 sys.stderr.write(

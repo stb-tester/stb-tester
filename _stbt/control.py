@@ -109,7 +109,7 @@ class ErrorControl(RemoteControl):
             message = "No remote control configured"
         self.message = message
 
-    def press(self, key):  # pylint:disable=unused-argument
+    def press(self, key):
         raise RuntimeError(self.message)
 
     def keydown(self, key):
@@ -447,7 +447,7 @@ class IRNetBoxControl(RemoteControl):
 
     """
 
-    def __init__(self, hostname, port, output, config):  # pylint:disable=redefined-outer-name
+    def __init__(self, hostname, port, output, config):
         self.hostname = hostname
         self.port = int(port or 10001)
         self.output = int(output)

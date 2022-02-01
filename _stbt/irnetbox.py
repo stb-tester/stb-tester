@@ -330,7 +330,6 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 def test_that_parse_config_understands_redrat_format():
     import io
 
-    # pylint:disable=line-too-long
     f = io.BytesIO(
         re.sub(
             b"^ +", b"", flags=re.MULTILINE,

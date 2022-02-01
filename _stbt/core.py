@@ -151,7 +151,7 @@ class DeviceUnderTest():
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 self._last_keypress = out
                 yield out
-            except:  # pylint:disable=bare-except
+            except:
                 exc_info = sys.exc_info()
                 try:
                     self._control.keyup(key)

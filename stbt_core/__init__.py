@@ -317,7 +317,6 @@ def get_frame():
 # ===========================================================================
 
 class UnconfiguredDeviceUnderTest():
-    # pylint:disable=unused-argument
     def last_keypress(self):
         return None
 

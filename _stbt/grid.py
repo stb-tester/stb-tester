@@ -164,7 +164,7 @@ class Grid():
             return self.get(data=key)
 
     def __iter__(self):
-        for i in range(len(self)):  # pylint:disable=consider-using-enumerate
+        for i in range(len(self)):
             yield self[i]
 
     def __len__(self):

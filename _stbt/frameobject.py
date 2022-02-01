@@ -114,7 +114,6 @@ class _FrameObjectMeta(type):
 
 
 class FrameObject(metaclass=_FrameObjectMeta):
-    # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.
 
     FrameObjects are Stb-tester's implementation of the *Page Object* pattern.

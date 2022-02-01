@@ -35,7 +35,7 @@ def rm_f(filename):
 
 @contextmanager
 def named_temporary_directory(
-        suffix='', prefix='tmp', dir=None):  # pylint:disable=redefined-builtin,redefined-outer-name
+        suffix='', prefix='tmp', dir=None):  # pylint:disable=redefined-builtin
     dirname = tempfile.mkdtemp(suffix, prefix, dir)
     try:
         yield dirname

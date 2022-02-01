@@ -381,7 +381,7 @@ class Keyboard():
                              "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
         self.G_ = None
-        if node.region is None:  # pylint:disable=simplifiable-if-statement
+        if node.region is None:
             self._any_without_region = True
         else:
             self._any_with_region = True

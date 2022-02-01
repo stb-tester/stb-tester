@@ -89,7 +89,7 @@ def socket_passing_setup(socket):
         os.environ['LISTEN_PID'] = str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
-        os.set_inheritable(3, True)  # pylint:disable=no-member
+        os.set_inheritable(3, True)
         os.closerange(4, 100)
 
     return preexec_fn
