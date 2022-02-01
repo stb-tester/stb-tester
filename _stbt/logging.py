@@ -86,7 +86,7 @@ def imshow(img, regions=None):
         for r in regions:
             cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
 
-    from IPython.core.display import Image, display  # pylint:disable=import-error
+    from IPython.core.display import Image, display
     if isinstance(img, str):
         display(Image(img))
     else:
@@ -202,7 +202,7 @@ class ImageLogger():
                     .render())
 
         if self.jupyter:
-            from IPython.display import display, IFrame  # pylint:disable=import-error
+            from IPython.display import display, IFrame
             display(IFrame(src=index_html, width=974, height=600))
 
     def _draw(self, region, source_size, css_class, title=None):

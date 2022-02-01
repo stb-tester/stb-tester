@@ -124,7 +124,6 @@ class TextMatchResult():
         self.frame = frame
         self.text = text
 
-    # pylint:disable=no-member
     def __bool__(self):
         return self.match
 

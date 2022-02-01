@@ -39,7 +39,7 @@ def video(args, dut):
     with _set_dut_singleton(dut), dut:
         try:
             yield
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             try:
                 _save_screenshot(dut, result_dir, exception=e,
                                  save_jpg=(args.save_thumbnail != 'never'),

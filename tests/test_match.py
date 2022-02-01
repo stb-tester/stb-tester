@@ -445,7 +445,7 @@ def test_that_build_pyramid_relaxes_mask():
     downsampled = mask_pyramid[1]
     cv2.imwrite("/tmp/dave2.png", downsampled)
     assert downsampled.shape == (98, 8, 3)
-    print(downsampled[:, :, 0])  # pylint:disable=unsubscriptable-object
+    print(downsampled[:, :, 0])
     # pylint:disable=bad-whitespace
     expected = \
         [[255, 255, 255, 255, 255, 255, 255, 255],
@@ -454,7 +454,7 @@ def test_that_build_pyramid_relaxes_mask():
          [255,   0,   0,   0,   0, 255, 255, 255],
          [255,   0,   0,   0,   0, 255, 255, 255]] + \
         [[255, 255, 255, 255, 255, 255, 255, 255]] * 93
-    assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
+    assert numpy.all(downsampled[:, :, 0] == expected)
 
 
 @requires_opencv_3

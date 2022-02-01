@@ -373,7 +373,6 @@ def _match_all(image, frame, match_parameters, region):
         template_name=t.filename or "<Image>",
         input_region=input_region)
 
-    # pylint:disable=undefined-loop-variable
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
@@ -449,7 +448,7 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
             debug("Matched " + (image.relative_filename or "<Image>"))
             return res
 
-    raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)  # pylint:disable=undefined-loop-variable
+    raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)
 
 
 class MatchTimeout(UITestFailure):
@@ -492,7 +491,6 @@ def _find_matches(image, template, match_parameters, imglog):
         mask = template[:, :, 3]
         mask[mask < 255] = 0
 
-    # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
             _find_candidate_matches(image, template, match_parameters, imglog):
         confirmed = (
@@ -526,7 +524,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    method = {  # pylint:disable=redefined-outer-name
+    method = {
         MatchMethod.SQDIFF: cv2.TM_SQDIFF,
         MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
@@ -637,7 +635,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                         width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, mask, method, roi_mask, level, imwrite):  # pylint:disable=redefined-outer-name
+def _match_template(image, template, mask, method, roi_mask, level, imwrite):
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))

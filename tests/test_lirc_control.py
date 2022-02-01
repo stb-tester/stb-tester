@@ -34,7 +34,7 @@ def lircd():
 def test_press(lircd, key):
     logfile = open(lircd.logfile)
 
-    print("key = %r (%s)" % (key, type(key)))  # pylint: disable=superfluous-parens
+    print("key = %r (%s)" % (key, type(key)))
     control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)
     control.press(key)
     lircd_output = logfile.read()

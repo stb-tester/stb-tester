@@ -279,7 +279,7 @@ def test_that_text_location_is_recognised():
     def test(text, region, upsample):
         result = stbt.match_text(text, frame=frame, upsample=upsample)
         assert result
-        assert region.contains(result.region)  # pylint:disable=no-member
+        assert region.contains(result.region)
 
     for text, region, multiline in iterate_menu():
         # Don't currently support multi-line comments

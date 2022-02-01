@@ -45,8 +45,6 @@ from _stbt.logging import debug
 
 
 class CoordinateSystem(Enum):
-    # pylint:disable=pointless-string-statement
-
     """How to translate coordinates from the video-frames processed by your
     test script, to the coordinates expected by ADB for tap & swipe events.
 
@@ -165,12 +163,12 @@ class AdbDevice():
         if coordinate_system is None:
             name = _config.get("android", "coordinate_system",
                                fallback="ADB_NATIVE")
-            if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
+            if name not in CoordinateSystem.__members__:
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "
                     "config file. Valid values are %s."
                     % (name, ", ".join("'%s'" % k for k in
-                                       CoordinateSystem.__members__)))  # pylint:disable=no-member
+                                       CoordinateSystem.__members__)))
             coordinate_system = CoordinateSystem[name]
         self.coordinate_system = coordinate_system
 

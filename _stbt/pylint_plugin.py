@@ -205,7 +205,7 @@ def _get_argnames(node):
     if isinstance(node, FunctionDef):
         return node.argnames()
     if isinstance(node, ClassDef) and node.newstyle:
-        for method in node.methods():  # pylint:disable=redefined-outer-name
+        for method in node.methods():
             if method.name == "__init__":
                 return method.argnames()[1:]
     return []
