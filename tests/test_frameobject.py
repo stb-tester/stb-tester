@@ -87,41 +87,6 @@ class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
         return 6
 
 
-class OrderedFrameObject(stbt.FrameObject):
-    """
-    FrameObject defines a default sort order based on the values of the
-    public properties (in lexicographical order by property name; that is, in
-    this example the `color` value is compared before `size`):
-
-    >>> import numpy
-    >>> red = OrderedFrameObject(numpy.array([[[0, 0, 255]]]))
-    >>> bigred = OrderedFrameObject(numpy.array([[[0, 0, 255], [0, 0, 255]]]))
-    >>> green = OrderedFrameObject(numpy.array([[[0, 255, 0]]]))
-    >>> blue = OrderedFrameObject(numpy.array([[[255, 0, 0]]]))
-    >>> print(sorted([red, green, blue, bigred]))
-    [...'blue'..., ...'green'..., ...'red', size=1..., ...'red', size=2)]
-    """
-
-    @property
-    def is_visible(self):
-        return True
-
-    @property
-    def size(self):
-        return self._frame.shape[0] * self._frame.shape[1]
-
-    @property
-    def color(self):
-        if self._frame[0, 0, 0] == 255:
-            return "blue"
-        elif self._frame[0, 0, 1] == 255:
-            return "green"
-        elif self._frame[0, 0, 2] == 255:
-            return "red"
-        else:
-            return "grey?"
-
-
 class PrintingFrameObject(stbt.FrameObject):
     """
     This is a very naughty FrameObject.  It's properties cause side-effects so
@@ -491,19 +456,11 @@ class G(stbt.FrameObject):
 ])
 def test_frameobject_comparison_equal(f1, f2):
     # pylint:disable=comparison-with-itself,unneeded-not
-    assert not f1 < f2
-    assert not f2 < f1
-    assert f1 <= f2
-    assert f2 <= f1
     assert f1 == f1
     assert f1 == f2
     assert f2 == f1
     assert not f1 != f2
     assert not f2 != f1
-    assert not f1 > f2
-    assert not f2 > f1
-    assert f1 >= f2
-    assert f2 >= f1
 
 
 @pytest.mark.parametrize("f1,f2", [
@@ -517,62 +474,13 @@ def test_frameobject_comparison_equal(f1, f2):
 
     # Subclass with additional property.
     (F(frame1, True, a=1, b=2), FFF(frame1, True, a=1, b=2)),
+
+    # Different (unrelated) types.
+    (F(frame1, True, a=1, b=2), G(frame2, True, a=1, b=2)),
 ])
-def test_frameobject_comparison_not_equal_same_type(f1, f2):
+def test_frameobject_comparison_not_equal(f1, f2):
     # pylint:disable=unneeded-not
     assert not f1 == f2
     assert not f2 == f1
     assert f1 != f2
     assert f2 != f1
-
-
-def test_frameobject_comparison_not_equal_different_type():
-    # pylint:disable=unneeded-not
-
-    f1 = F(frame1, True, a=1, b=2)
-    f2 = G(frame2, True, a=1, b=2)
-
-    with pytest.raises(TypeError):
-        assert not f1 < f2
-    with pytest.raises(TypeError):
-        assert not f2 < f1
-    with pytest.raises(TypeError):
-        assert not f1 <= f2
-    with pytest.raises(TypeError):
-        assert not f2 <= f1
-    assert not f1 == f2
-    assert not f2 == f1
-    assert f1 != f2
-    assert f2 != f1
-    with pytest.raises(TypeError):
-        assert not f1 > f2
-    with pytest.raises(TypeError):
-        assert not f2 > f1
-    with pytest.raises(TypeError):
-        assert not f1 >= f2
-    with pytest.raises(TypeError):
-        assert not f2 >= f1
-
-
-@pytest.mark.parametrize("f1,f2", [
-    # FrameObject defines a default sort order based on the values of the
-    # public properties (in lexicographical order by property name).
-    (F(frame1, True, a=1, b=2), F(frame1, True, a=1, b=3)),
-
-    # Regression test: `None` properties don't raise TypeError.
-    (F(frame1, True, a=None, b=2), F(frame1, True, a=None, b=3)),
-])
-def test_frameobject_comparison_less_and_greater(f1, f2):
-    # pylint:disable=unneeded-not
-    assert f1 < f2
-    assert not f2 < f1
-    assert f1 <= f2
-    assert not f2 <= f1
-    assert not f1 == f2
-    assert not f2 == f1
-    assert f1 != f2
-    assert f2 != f1
-    assert not f1 > f2
-    assert f2 > f1
-    assert not f1 >= f2
-    assert f2 >= f1

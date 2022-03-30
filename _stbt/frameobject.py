@@ -215,31 +215,11 @@ class FrameObject(metaclass=_FrameObjectMeta):
         the values of all the public properties match, even if the underlying
         frame is different. All falsey FrameObjects of the same type are equal.
         """
-        return self.__cmp__(other) == 0
-
-    def __ne__(self, other):
-        return self.__cmp__(other) != 0
-
-    def __lt__(self, other):
-        return self.__cmp__(other) < 0
-
-    def __le__(self, other):
-        return self.__cmp__(other) <= 0
-
-    def __gt__(self, other):
-        return self.__cmp__(other) > 0
-
-    def __ge__(self, other):
-        return self.__cmp__(other) >= 0
-
-    def __cmp__(self, other):
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                if s[1] < o[1]:
-                    return -1
-                elif s[1] > o[1]:
-                    return 1
-            return 0
+                if s != o:
+                    return False
+            return True
         else:
             return NotImplemented
 
