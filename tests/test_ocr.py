@@ -221,10 +221,13 @@ def test_corrections(corrections, expected):
     "text,corrections,expected",
     # Same test-cases as `test_corrections` above:
     [('OO', c, e) for (c, e) in corrections_test_cases] +
-    # Plain strings match entire words at word boundaries:
+    # Plain strings match entire words at word boundaries, regexes don't:
     [('itv+', {'itv+': 'Apple tv+'}, 'Apple tv+'),
      ('hitv+', {'itv+': 'Apple tv+'}, 'hitv+'),
      ('This is itv+ innit', {'itv+': 'Apple tv+'}, 'This is Apple tv+ innit'),
+     ('the saw said he saws, he saw.',
+      {'he saw': 'HE SAW', re.compile("he", re.IGNORECASE): "ħé"},
+      'tħé saw said ħé saws, ħé SAW.'),
      # Make sure it tries all the patterns:
      ('A B C', {'A': '1', 'B': '2', 'C': '3'}, '1 2 3'),
     ])
