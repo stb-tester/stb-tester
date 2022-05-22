@@ -313,7 +313,7 @@ def _mainloop():
         mainloop.quit()
         thread.join(10)
         debug("teardown: Exiting (GLib mainloop %s)" % (
-              "is still alive!" if thread.isAlive() else "ok"))
+              "is still alive!" if thread.is_alive() else "ok"))
 
 
 def _draw_annotation(img, annotation):
