@@ -1,11 +1,11 @@
 import os
 import re
+import shutil
 import socket
 import struct
 import subprocess
 import sys
 import time
-from distutils.spawn import find_executable
 
 import requests
 
@@ -641,7 +641,7 @@ class X11Control(RemoteControl):
     """
     def __init__(self, display=None, mapping=None):
         self.display = display
-        if find_executable('xdotool') is None:
+        if shutil.which('xdotool') is None:
             raise Exception("x11 control: xdotool not installed")
         self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
         if mapping is not None:
@@ -794,7 +794,7 @@ def test_x11_control():
     from unittest import SkipTest
     if os.environ.get('enable_virtual_stb') != 'yes':
         raise SkipTest('Set $enable_virtual_stb=yes to run this test')
-    if not find_executable('Xorg') or not find_executable('xterm'):
+    if not shutil.which('Xorg') or not shutil.which('xterm'):
         raise SkipTest("Testing X11Control requires X11 and xterm")
 
     from .x11 import x_server

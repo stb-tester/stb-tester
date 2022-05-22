@@ -4,6 +4,7 @@ import errno
 import glob
 import os
 import re
+import shutil
 import subprocess
 from distutils.version import LooseVersion
 from enum import IntEnum
@@ -708,8 +709,6 @@ def _hocr_elem_region(elem):
 
 
 def _find_tessdata_dir(tessdata_suffix):
-    from distutils.spawn import find_executable
-
     tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
     if tessdata_prefix:
         tessdata = tessdata_prefix + tessdata_suffix
@@ -720,7 +719,7 @@ def _find_tessdata_dir(tessdata_suffix):
             raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
 
     tess_prefix_share = os.path.normpath(
-        find_executable('tesseract') + '/../../share/')
+        shutil.which('tesseract') + '/../../share/')
     for suffix in [
             '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
             '/tesseract-ocr/4.00/tessdata']:
