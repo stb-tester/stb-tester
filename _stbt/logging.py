@@ -317,16 +317,6 @@ _INDEX_HTML_FOOTER = dedent("""\
 """)
 
 
-def test_that_debug_can_write_unicode_strings():
-    def test(level):
-        with scoped_debug_level(level):
-            warn('Prüfungs Debug-Unicode')
-            debug('Prüfungs Debug-Unicode')
-            ddebug('Prüfungs Debug-Unicode')
-    for level in [0, 1, 2]:
-        yield (test, level)
-
-
 def draw_on(frame, *args, **kwargs):
     draw_sink_ref = getattr(frame, '_draw_sink', None)
     if not draw_sink_ref:
