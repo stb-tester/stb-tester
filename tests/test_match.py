@@ -343,7 +343,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
         for m in stbt.match_all('button-transparent.png', frame=frame)]
     text = sorted([t for t in text if t not in ['', '\\s']])
     print(text)
-    assert text == [u'Button 1', u'Button 2', u'Buttons']
+    assert text == ['Button 1', 'Button 2', 'Buttons']
 
 
 @pytest.mark.parametrize("match_method", [

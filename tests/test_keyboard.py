@@ -141,7 +141,7 @@ class DUT():
 
 class DoubleKeypressDUT(DUT):
     def handle_press(self, keypress):
-        super(DoubleKeypressDUT, self).handle_press(keypress)
+        super().handle_press(keypress)
         if keypress == "KEY_RIGHT" and self.selection == "b":
             logging.debug("DoubleKeypressDUT.handle_press: Double KEY_RIGHT "
                           "press from a to c skipping over b")
@@ -150,17 +150,17 @@ class DoubleKeypressDUT(DUT):
 
 class MissedKeypressDUT(DUT):
     def __init__(self):
-        super(MissedKeypressDUT, self).__init__()
+        super().__init__()
         self._last_press_ignored = False
 
     def handle_press(self, keypress):
         if keypress == "KEY_OK":
-            super(MissedKeypressDUT, self).handle_press(keypress)
+            super().handle_press(keypress)
             return
 
         # Ignore every other up/down/left/right keypress
         if self._last_press_ignored:
-            super(MissedKeypressDUT, self).handle_press(keypress)
+            super().handle_press(keypress)
             self._last_press_ignored = False
         else:
             logging.debug("MissedKeypressDUT.handle_press: Ignoring %s",
@@ -178,7 +178,7 @@ class MissedKeypressDUT(DUT):
 
 class SlowDUT(DUT):
     def __init__(self):
-        super(SlowDUT, self).__init__()
+        super().__init__()
         self._delayed_keypress = None
 
     def handle_press_and_wait(self, key, **_kwargs):
@@ -190,7 +190,7 @@ class SlowDUT(DUT):
         key = self._delayed_keypress
         self._delayed_keypress = None
         assert key is not None
-        super(SlowDUT, self).handle_press(key)
+        super().handle_press(key)
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
@@ -242,7 +242,7 @@ class SearchPage(stbt.FrameObject):
     """Immutable Page Object representing the test's view of the DUT."""
 
     def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
-        super(SearchPage, self).__init__(
+        super().__init__(
             frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         self.dut = dut
         self.kb = kb

@@ -190,7 +190,7 @@ class MotionTimeout(UITestFailure):
     :ivar timeout_secs: Number of seconds that motion was searched for.
     """
     def __init__(self, screenshot, mask, timeout_secs):
-        super(MotionTimeout, self).__init__()
+        super().__init__()
         self.screenshot = screenshot
         self.mask = mask
         self.timeout_secs = timeout_secs

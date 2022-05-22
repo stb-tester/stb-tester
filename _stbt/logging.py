@@ -271,7 +271,7 @@ class ImageLogger():
         )
 
 
-_INDEX_HTML_HEADER = dedent(u"""\
+_INDEX_HTML_HEADER = dedent("""\
     <!DOCTYPE html>
     <html lang='en'>
     <head>
@@ -309,7 +309,7 @@ _INDEX_HTML_HEADER = dedent(u"""\
     {% endif %}
     """)
 
-_INDEX_HTML_FOOTER = dedent(u"""\
+_INDEX_HTML_FOOTER = dedent("""\
 
     </div>
     </body>
@@ -320,9 +320,9 @@ _INDEX_HTML_FOOTER = dedent(u"""\
 def test_that_debug_can_write_unicode_strings():
     def test(level):
         with scoped_debug_level(level):
-            warn(u'Prüfungs Debug-Unicode')
-            debug(u'Prüfungs Debug-Unicode')
-            ddebug(u'Prüfungs Debug-Unicode')
+            warn('Prüfungs Debug-Unicode')
+            debug('Prüfungs Debug-Unicode')
+            ddebug('Prüfungs Debug-Unicode')
     for level in [0, 1, 2]:
         yield (test, level)
 

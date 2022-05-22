@@ -14,7 +14,7 @@ from .types import UITestError, UITestFailure
 class PreconditionError(UITestError):
     """Exception raised by `as_precondition`."""
     def __init__(self, message, original_exception):
-        super(PreconditionError, self).__init__()
+        super().__init__()
         self.message = message
         self.original_exception = original_exception
         self.screenshot = None

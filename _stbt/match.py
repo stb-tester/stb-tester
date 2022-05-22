@@ -463,7 +463,7 @@ class MatchTimeout(UITestFailure):
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
     def __init__(self, screenshot, expected, timeout_secs):
-        super(MatchTimeout, self).__init__()
+        super().__init__()
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
@@ -893,7 +893,7 @@ def _log_match_image_debug(imglog):
         [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
          for x in imglog.data["matches"]])
 
-    template = u"""\
+    template = """\
         <h4>{{title}}</h4>
 
         <img src="source_with_matches.png" />

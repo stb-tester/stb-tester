@@ -367,7 +367,7 @@ class AdbDevice():
 
 class AdbError(Exception):
     def __init__(self, returncode, cmd, output=None, adb_control=None):
-        super(AdbError, self).__init__()
+        super().__init__()
         self.returncode = returncode
         self.cmd = cmd
         self.output = output

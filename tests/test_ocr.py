@@ -61,17 +61,17 @@ def test_that_ocr_region_none_isnt_allowed(region):
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=load_image('ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, str)
-    assert u'£500\nDavid Röthlisberger' == text
+    assert '£500\nDavid Röthlisberger' == text
 
 
 @requires_tesseract
 def test_that_ocr_can_read_small_text():
     text = stbt.ocr(frame=load_image('ocr/small.png'))
-    assert u'Small anti-aliased text is hard to read\nunless you magnify' == \
+    assert 'Small anti-aliased text is hard to read\nunless you magnify' == \
         text
 
 
-ligature_text = dedent(u"""\
+ligature_text = dedent("""\
     All the similar "quotes" and "quotes",
     'quotes' and 'quotes' should be recognised.
 
@@ -98,7 +98,7 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
         text = text.replace(bad, good)
     assert ligature_text == text
     assert stbt.match_text("em-dash,", frame)
-    assert stbt.match_text(u"em\u2014dash,", frame)
+    assert stbt.match_text("em\u2014dash,", frame)
 
 
 @requires_tesseract
@@ -113,10 +113,10 @@ def test_that_match_text_accepts_unicode():
 @requires_tesseract
 def test_that_default_language_is_configurable():
     f = load_image("ocr/unicode.png")
-    assert not stbt.match_text(u"Röthlisberger", f)  # reads Réthlisberger
+    assert not stbt.match_text("Röthlisberger", f)  # reads Réthlisberger
     with temporary_config({"ocr.lang": "deu"}):
-        assert stbt.match_text(u"Röthlisberger", f)
-        assert u"Röthlisberger" in stbt.ocr(f)
+        assert stbt.match_text("Röthlisberger", f)
+        assert "Röthlisberger" in stbt.ocr(f)
 
 
 @contextmanager
@@ -167,7 +167,7 @@ def test_tesseract_user_patterns(patterns):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
-    assert u'192.168.10.1' == stbt.ocr(
+    assert '192.168.10.1' == stbt.ocr(
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=patterns)
@@ -176,7 +176,7 @@ def test_tesseract_user_patterns(patterns):
 @requires_tesseract
 def test_char_whitelist():
     # Without char_whitelist tesseract reads "OO" (the letter oh).
-    assert u'00' == stbt.ocr(
+    assert '00' == stbt.ocr(
         frame=load_image('ocr/00.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         char_whitelist="0123456789")
@@ -240,10 +240,10 @@ def test_apply_ocr_corrections(text, corrections, expected):
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],
     b'192.168.10.1',
-    u'192.168.10.1',
+    '192.168.10.1',
 ])
 def test_user_dictionary_with_non_english_language(words):
-    assert u'192.168.10.1' == stbt.ocr(
+    assert '192.168.10.1' == stbt.ocr(
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
@@ -252,15 +252,15 @@ def test_user_dictionary_with_non_english_language(words):
 # Menu as listed in menu.svg:
 menu = [
     [
-        u"Onion Bhaji",
-        u"Mozzarella Pasta\nBake",
-        u"Lamb and Date\nCasserole",
-        u"Jerk Chicken"
+        "Onion Bhaji",
+        "Mozzarella Pasta\nBake",
+        "Lamb and Date\nCasserole",
+        "Jerk Chicken"
     ], [
-        u"Beef Wellington",
-        u"Kerala Prawn Curry",
-        u"Chocolate Fudge Cake",
-        u"Halloumi Stuffed\nPeppers"
+        "Beef Wellington",
+        "Kerala Prawn Curry",
+        "Chocolate Fudge Cake",
+        "Halloumi Stuffed\nPeppers"
     ]
 ]
 
@@ -298,7 +298,7 @@ def test_match_text_stringify_result():
     stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
 
     frame = load_image("ocr/menu.png")
-    result = stbt.match_text(u"Onion Bhaji", frame=frame)
+    result = stbt.match_text("Onion Bhaji", frame=frame)
 
     assert re.match(
         r"TextMatchResult\(time=None, match=True, region=Region\(.*\), "
@@ -320,7 +320,7 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
 @requires_tesseract
 def test_that_match_text_returns_no_match_for_non_matching_text():
     frame = load_image("ocr/menu.png")
-    assert not stbt.match_text(u"Noodle Soup", frame=frame)
+    assert not stbt.match_text("Noodle Soup", frame=frame)
 
 
 @requires_tesseract

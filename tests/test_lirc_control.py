@@ -30,7 +30,7 @@ def lircd():
             yield namedtuple("Lircd", "socket logfile")(socket, logfile)
 
 
-@pytest.mark.parametrize("key", [b'KEY_OK', u'KEY_OK'])
+@pytest.mark.parametrize("key", [b'KEY_OK', 'KEY_OK'])
 def test_press(lircd, key):
     logfile = open(lircd.logfile)
 

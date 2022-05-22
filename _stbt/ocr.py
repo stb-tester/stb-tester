@@ -24,25 +24,25 @@ from .utils import named_temporary_directory, to_unicode
 # meaning.  This means that stbt.ocr give much more consistent results.
 _ocr_replacements = {
     # Ligatures
-    u'ﬀ': u'ff',
-    u'ﬁ': u'fi',
-    u'ﬂ': u'fl',
-    u'ﬃ': u'ffi',
-    u'ﬄ': u'ffl',
-    u'ﬅ': u'ft',
-    u'ﬆ': u'st',
+    'ﬀ': 'ff',
+    'ﬁ': 'fi',
+    'ﬂ': 'fl',
+    'ﬃ': 'ffi',
+    'ﬄ': 'ffl',
+    'ﬅ': 'ft',
+    'ﬆ': 'st',
     # Punctuation
-    u'“': u'"',
-    u'”': u'"',
-    u'‘': u'\'',
-    u'’': u'\'',
+    '“': '"',
+    '”': '"',
+    '‘': '\'',
+    '’': '\'',
     # These are actually different glyphs!:
-    u'‐': u'-',
-    u'‑': u'-',
-    u'‒': u'-',
-    u'–': u'-',
-    u'—': u'-',
-    u'―': u'-',
+    '‐': '-',
+    '‑': '-',
+    '‒': '-',
+    '–': '-',
+    '—': '-',
+    '―': '-',
 }
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
@@ -281,7 +281,7 @@ def ocr(frame=None, region=Region.ALL,
     text = text.strip().translate(_ocr_transtab)
     text = apply_ocr_corrections(text, corrections)
 
-    debug(u"ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
+    debug("ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     _log_ocr_image_debug(imglog, text)
     return text
 
@@ -661,17 +661,17 @@ def _hocr_iterate(hocr):
     need_space = False
     for elem in hocr.iterdescendants():
         if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
-            yield (u'\n', elem)
+            yield ('\n', elem)
             need_space = False
         if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
                 'ocr_line' in elem.get('class').split() and started:
-            yield (u'\n', elem)
+            yield ('\n', elem)
             need_space = False
         for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
             if t:
                 if t.strip():
                     if need_space and started:
-                        yield (u' ', None)
+                        yield (' ', None)
                     need_space = False
                     yield (str(t).strip(), e)
                     started = True
@@ -686,7 +686,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
         lower = lambda s: s.lower()
 
     words_only = [(lower(w).translate(_ocr_transtab), elem)
-                  for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
+                  for w, elem in _hocr_iterate(hocr) if w.strip() != '']
     phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
@@ -700,7 +700,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
 
 def _hocr_elem_region(elem):
     while elem is not None:
-        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
+        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or '')
         if m:
             extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
@@ -743,11 +743,11 @@ def _log_ocr_image_debug(imglog, output=None):
             "Matched" if imglog.data["result"] else "Didn't match")
         hocr = imglog.data["hocr"]
         if hocr is None:
-            output = u""
+            output = ""
         else:
-            output = u"".join(x for x, _ in _hocr_iterate(hocr))
+            output = "".join(x for x, _ in _hocr_iterate(hocr))
 
-    template = u"""\
+    template = """\
         <h4>{{title}}</h4>
 
         {{ annotated_image(result) }}
