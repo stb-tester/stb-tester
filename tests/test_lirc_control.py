@@ -12,7 +12,7 @@ from _stbt.utils import named_temporary_directory, scoped_process
 # pylint:disable=redefined-outer-name
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def lircd():
     with named_temporary_directory("stbt-lirc-test") as tmpdir:
         socket = os.path.join(tmpdir, "lircd.socket")

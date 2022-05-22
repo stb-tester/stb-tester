@@ -30,7 +30,7 @@ def srcdir(filename="", here=os.path.abspath(__file__)):
     return os.path.join(os.path.dirname(here), "..", filename)
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def installed_stbt_control_relay():
     with named_temporary_directory("stbt-control-relay-install.XXXXXX") as tmp:
         try:
@@ -49,7 +49,7 @@ def installed_stbt_control_relay():
         yield "%s/bin/stbt-control-relay" % tmp
 
 
-@pytest.yield_fixture(scope='function')
+@pytest.fixture(scope='function')
 def stbt_control_relay_on_path(installed_stbt_control_relay):
     with scoped_path_addition(os.path.dirname(installed_stbt_control_relay)):
         yield installed_stbt_control_relay
