@@ -750,7 +750,7 @@ def test_redrathttp_control():
                 "stackTrace": ""
             }, status=500)
         with pytest.raises(
-                UnknownKeyError, message="Command 'KEY_OK2' is not known."):
+                UnknownKeyError, match="Command 'KEY_OK2' is not known."):
             control.press("KEY_OK2")
 
         mock.add(
@@ -761,7 +761,7 @@ def test_redrathttp_control():
             }, status=404)
         with pytest.raises(
                 RedRatHttpControlError,
-                message="No BT module with serial number '24463' found."):
+                match="No BT module with serial number '24463' found."):
             bad_control.press("KEY_OK")
 
 
