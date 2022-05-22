@@ -320,7 +320,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu2004
+CI_DOCKER_IMAGES = ubuntu2004 ubuntu2204
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

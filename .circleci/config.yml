@@ -16,6 +16,21 @@ jobs:
       - pytest
       - integrationtests
 
+  ubuntu2204:
+    docker:
+      - image: stbtester/circleci:ubuntu2204
+    environment:
+      python_version: 3
+      LANG: en_GB.UTF-8
+      SHELL: /bin/bash
+      TERM: xterm
+      enable_virtual_stb: no
+    steps:
+      - checkout
+      - pylint
+      - pytest
+      - integrationtests
+
   python-package:
     docker:
       - image: circleci/python:3.8.10
@@ -61,3 +76,4 @@ workflows:
     jobs:
       - python-package
       - ubuntu2004
+      - ubuntu2204
