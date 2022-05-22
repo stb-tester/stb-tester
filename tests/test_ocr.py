@@ -4,7 +4,6 @@ import os
 import re
 import timeit
 from contextlib import contextmanager
-from distutils.version import LooseVersion
 from textwrap import dedent
 from unittest import SkipTest
 
@@ -143,7 +142,7 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
-    if _tesseract_version() >= LooseVersion('3.04'):
+    if _tesseract_version() >= [3, 4]:
         hocr_mode_config = {
             "tessedit_create_txt": 0,
             "tessedit_create_hocr": 1}
@@ -163,7 +162,7 @@ def test_that_setting_config_options_has_an_effect():
     r'\d\*.\d\*.\d\*.\d\*',
 ])
 def test_tesseract_user_patterns(patterns):
-    if _tesseract_version() < LooseVersion('3.03'):
+    if _tesseract_version() < [3, 3]:
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
@@ -397,7 +396,7 @@ def test_ocr_text_color_threshold():
 
 @requires_tesseract
 def test_that_ocr_engine_has_an_effect():
-    if _tesseract_version() < LooseVersion("4.0"):
+    if _tesseract_version() < [4, 0]:
         raise SkipTest('tesseract is too old')
 
     f = load_image("ocr/ambig.png")

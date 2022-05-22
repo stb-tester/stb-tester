@@ -2,11 +2,12 @@
 Compatibility so stb-tester will work with both OpenCV 2, 3, and 4.
 """
 
-from distutils.version import LooseVersion
-
 import cv2
 
-version = LooseVersion(cv2.__version__).version
+from .utils import LooseVersion
+
+
+version = LooseVersion(cv2.__version__)
 
 if version >= [3, 2, 0]:
     def find_contour_boxes(image, mode, method):

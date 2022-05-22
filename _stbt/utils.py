@@ -5,6 +5,7 @@ This file shouldn't depend on anything else in stbt.
 
 import errno
 import os
+import re
 import tempfile
 from contextlib import contextmanager
 from shutil import rmtree
@@ -86,6 +87,32 @@ def find_import_name(filename):
         import_dir, s = os.path.split(import_dir)
         import_name = "%s.%s" % (s, import_name)
     return import_dir, import_name
+
+
+_component_re = re.compile(r'(\d+ | [a-z]+ | \.)', re.VERBOSE)
+
+
+def LooseVersion(vstring):
+    """Copied from `distutils.version.LooseVersion`.
+
+    Note that (like distutils.version.LooseVersion) this simply sorts
+    lexicographically according to the "." or "-" separated components in the
+    version string:
+
+    >>> LooseVersion("4.0.0-beta.1")
+    [4, 0, 0, '-', 'beta', 1]
+    >>> (LooseVersion('4.0.0-beta.1') > LooseVersion('4.0.0'))
+    True
+    """
+
+    components = [x for x in _component_re.split(vstring)
+                  if x and x != '.']
+    for i, obj in enumerate(components):
+        try:
+            components[i] = int(obj)
+        except ValueError:
+            pass
+    return components
 
 
 def to_bytes(text):

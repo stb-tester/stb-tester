@@ -6,7 +6,6 @@ import os
 import re
 import shutil
 import subprocess
-from distutils.version import LooseVersion
 from enum import IntEnum
 
 import cv2
@@ -17,7 +16,7 @@ from .config import get_config
 from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import named_temporary_directory, to_unicode
+from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -450,7 +449,7 @@ def _tesseract_version(output=None):
     Note that LooseVersion.__cmp__ simply sorts lexicographically according
     to the "." or "-" separated components in the version string:
 
-    >>> _tesseract_version("tesseract 4.0.0-beta.1").version
+    >>> _tesseract_version("tesseract 4.0.0-beta.1")
     [4, 0, 0, '-', 'beta', 1]
     >>> (_tesseract_version('tesseract 4.0.0-beta.1') >
     ...  _tesseract_version('tesseract 4.0.0'))
@@ -494,7 +493,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     tesseract_version = _tesseract_version()
 
-    if tesseract_version < LooseVersion("4.0"):
+    if tesseract_version < [4, 0]:
         if engine == OcrEngine.DEFAULT:
             engine = OcrEngine.TESSERACT
         if engine != OcrEngine.TESSERACT:
@@ -502,7 +501,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             raise ValueError("%s isn't available in tesseract %s"
                              % (engine, tesseract_version))
 
-    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
+    if mode >= OcrMode.RAW_LINE and tesseract_version < [3, 4]:
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
         raise ValueError("%s isn't available in tesseract %s"
                          % (mode, tesseract_version))
@@ -546,7 +545,7 @@ def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
         engine, char_whitelist, imglog, tesseract_version):
 
-    if tesseract_version >= LooseVersion("4.0"):
+    if tesseract_version >= [4, 0]:
         engine_flags = ["--oem", str(int(engine))]
         tessdata_suffix = ''
     else:
@@ -561,7 +560,7 @@ def _tesseract_subprocess(
 
     with named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
 
-        if tesseract_version >= LooseVersion("3.05"):
+        if tesseract_version >= [3, 5]:
             psm_flag = "--psm"
         else:
             psm_flag = "-psm"
@@ -579,11 +578,11 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(tessdata_suffix), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
-            if tesseract_version >= LooseVersion("4.0.0"):
+            if tesseract_version >= [4, 0, 0]:
                 tessenv['TESSDATA_PREFIX'] += "tessdata"
 
         if ('tessedit_create_hocr' in _config and
-                tesseract_version >= LooseVersion('3.04')):
+                tesseract_version >= [3, 4]):
             _config['tessedit_create_txt'] = 0
 
         if user_words:

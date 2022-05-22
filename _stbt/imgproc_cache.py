@@ -18,7 +18,6 @@ import json
 import os
 import sys
 from contextlib import contextmanager
-from distutils.version import LooseVersion
 
 import numpy
 
@@ -237,8 +236,6 @@ class _ArgsEncoder(json.JSONEncoder):
             if o.enabled:
                 raise NotCachable()
             return None
-        elif isinstance(o, LooseVersion):
-            return str(o)
         elif isinstance(o, set):
             return sorted(o)
         elif isinstance(o, MatchParameters):
