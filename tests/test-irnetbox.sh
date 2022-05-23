@@ -106,5 +106,5 @@ test_that_press_times_out_when_irnetbox_doesnt_reply() {
     ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || fail "Expected 'press' to raise exception"
-    cat log | grep -q timeout || fail "Didn't raise timeout"
+    cat log | grep -q TimeoutError || fail "Didn't raise TimeoutError"
 }
