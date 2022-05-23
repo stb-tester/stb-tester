@@ -173,6 +173,15 @@ def test_completely_transparent_reference_image():
         "completely-transparent.png", frame=f))) == 18
 
 
+def test_that_partly_opaque_alpha_is_treated_as_fully_transparent():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    m1 = stbt.match("button-partly-transparent.png", frame=f)
+    m2 = stbt.match("button-transparent.png", frame=f)
+    assert m1
+    assert m2
+    assert numpy.isclose(m1.first_pass_result, m2.first_pass_result)
+
+
 @pytest.mark.parametrize("frame,image,expected_region", [
     # pylint:disable=bad-whitespace,line-too-long
     ("images/regression/roku-tile-frame.png", "images/regression/roku-tile-selection.png", stbt.Region(x=325, y=145, right=545, bottom=325)),
