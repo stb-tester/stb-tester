@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    timeout 10 stbt run -v --control asdf test.py
+    timeout 20 stbt run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
@@ -160,7 +160,7 @@ test_that_frames_doesnt_deadlock() {
 	frames3 = stbt.frames()
 	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
-    timeout 10 stbt run -v test.py &&
+    timeout 20 stbt run -v test.py &&
 
     cat > test2.py <<-EOF
 EOF
@@ -216,7 +216,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    timeout 10 stbt run -v --control none \
+    timeout 20 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
