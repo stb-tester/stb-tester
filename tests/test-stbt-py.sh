@@ -383,7 +383,7 @@ test_that_frames_are_read_only() {
 
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
-	import stbt_core as stbt, time
+	import stbt_core as stbt, os, time
 
 	f = stbt.get_frame()
 	t = time.time()
@@ -394,7 +394,8 @@ test_that_get_frame_time_is_wall_time() {
 
 	# get_frame() gives us the last frame that arrived.  This may arrived a
 	# little time ago and have been waiting in a buffer.
-	assert t - 0.2 < f.time < t
+	threshold = 0.5 if "CIRCLECI" in os.environ else 0.1
+	assert t - threshold < f.time < t
 	EOF
 
     stbt run -vv test.py
