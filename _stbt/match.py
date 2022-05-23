@@ -353,8 +353,9 @@ def _match_all(image, frame, match_parameters, region):
                 "support requires OpenCV 3.0 or greater (you have %s)."
                 % (t.relative_filename, cv2_compat.version))
 
-        if match_parameters.match_method not in (MatchMethod.SQDIFF,
-                                                 MatchMethod.CCORR_NORMED):
+        if (cv2_compat.version < [4, 4, 0] and
+                match_parameters.match_method not in (
+                    MatchMethod.SQDIFF, MatchMethod.CCORR_NORMED)):
             # See `matchTemplateMask`:
             # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
             raise ValueError(
