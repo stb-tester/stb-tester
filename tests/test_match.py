@@ -422,6 +422,8 @@ def test_that_sqdiff_matches_black_images():
     assert stbt.match(almost_black_reference, almost_black_frame, sqdiff)
 
 
+@pytest.mark.skipif(cv2_compat.version >= [4, 4],
+                    reason="sqdiff-normed has implemented mask support")
 def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
     f = stbt.load_image("buttons-on-blue-background.png")
     with pytest.raises(ValueError):
