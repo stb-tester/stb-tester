@@ -86,7 +86,7 @@ def test_load_image_with_unicode_filename():
 def test_load_image_with_numpy_array():
     a = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     img = stbt.load_image(a)
-    assert (a.__array_interface__["data"][0] ==
+    assert (a.__array_interface__["data"][0] ==  # pylint:disable=no-member
             img.__array_interface__["data"][0])
     assert img.filename is None
     assert img.relative_filename is None
