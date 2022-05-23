@@ -32,7 +32,7 @@ def lircd():
 
 @pytest.mark.parametrize("key", [b'KEY_OK', 'KEY_OK'])
 def test_press(lircd, key):
-    logfile = open(lircd.logfile)
+    logfile = open(lircd.logfile, encoding="utf-8")
 
     print("key = %r (%s)" % (key, type(key)))
     control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)

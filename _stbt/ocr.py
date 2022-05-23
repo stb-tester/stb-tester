@@ -591,7 +591,8 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'tesseract_config[\"user_words_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
+            with open('%s/%s.user-words' % (tessdata_dir, lang),
+                      'w', encoding='utf-8') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
@@ -601,7 +602,8 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'tesseract_config[\"user_patterns_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang),
+                      'w', encoding='utf-8') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
@@ -617,7 +619,8 @@ def _tesseract_subprocess(
             _config['tessedit_write_images'] = True
 
         if _config:
-            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
+            with open(tessdata_dir + '/configs/stbtester',
+                      'w', encoding='utf-8') as cfg:
                 for k, v in _config.items():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
@@ -641,7 +644,7 @@ def _tesseract_subprocess(
         for filename in glob.glob(tmp + "/output.*"):
             _, ext = os.path.splitext(filename)
             if ext in (".txt", ".hocr"):
-                with open(filename) as f:
+                with open(filename, encoding='utf-8') as f:
                     return f.read()
 
 

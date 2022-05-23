@@ -34,14 +34,14 @@ def srcdir(filename="", here=os.path.abspath(__file__)):
 def installed_stbt_control_relay():
     with named_temporary_directory("stbt-control-relay-install.XXXXXX") as tmp:
         try:
-            oldprefix = open(srcdir(".stbt-prefix")).read()
+            oldprefix = open(srcdir(".stbt-prefix"), encoding="utf-8").read()
         except IOError:
             oldprefix = None
         subprocess.check_call(
             ["make", "prefix=%s" % tmp, "install-stbt-control-relay"],
             cwd=srcdir())
         if oldprefix is not None:
-            open(srcdir(".stbt-prefix"), 'w').write(oldprefix)
+            open(srcdir(".stbt-prefix"), "w", encoding="utf-8").write(oldprefix)
         else:
             os.unlink(srcdir(".stbt-prefix"))
 
@@ -79,7 +79,7 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
                 Released KEY_MENU
                 """)
 
-            assert expected == open(t("one-file")).read()
+            assert expected == open(t("one-file"), encoding="utf-8").read()
 
 
 def socket_passing_setup(socket):

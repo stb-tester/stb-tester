@@ -189,7 +189,7 @@ class ImageLogger():
         template_kwargs.update(kwargs)
 
         index_html = os.path.join(self.outdir, "index.html")
-        with open(index_html, "w") as f:
+        with open(index_html, "w", encoding="utf-8") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
                     .render(frame_number=self.frame_number,
                             jupyter=self.jupyter))

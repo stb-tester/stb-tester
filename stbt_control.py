@@ -123,7 +123,7 @@ def show_help_keymap():
 
 def main_loop(control_uri, keymap_file):
     try:
-        keymap = load_keymap(open(keymap_file, "r"))
+        keymap = load_keymap(open(keymap_file, "r", encoding="utf-8"))
     except IOError:
         error("Failed to load keymap file '%s'\n"
               "(see 'stbt control --help' for details of the keymap file)."

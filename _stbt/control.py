@@ -127,7 +127,7 @@ class FileControl(RemoteControl):
         if filename is None:
             self.outfile = sys.stdout
         else:
-            self.outfile = open(filename, 'w+')
+            self.outfile = open(filename, 'w+', encoding='utf-8')
 
     def press(self, key):
         self.outfile.write(key + '\n')
@@ -628,7 +628,7 @@ def _new_samsung_tcp_control(hostname, port):
 
 def _load_key_mapping(filename):
     out = {}
-    with open(filename, 'r') as mapfile:
+    with open(filename, 'r', encoding='utf-8') as mapfile:
         for line in mapfile:
             s = line.strip().split()
             if len(s) == 2 and not s[0].startswith('#'):
@@ -805,7 +805,7 @@ def test_x11_control():
         subprocess.Popen(
             ['xterm', '-l', '-lf', 'xterm.log'],
             env={'DISPLAY': display, 'PATH': os.environ['PATH']},
-            cwd=tmp, stderr=open('/dev/null', 'w'))
+            cwd=tmp, stderr=subprocess.DEVNULL)
 
         # Can't be sure how long xterm will take to get ready:
         for _ in range(0, 20):
@@ -817,7 +817,7 @@ def test_x11_control():
             if os.path.exists(tmp + '/good'):
                 break
             time.sleep(0.5)
-        with open(tmp + '/xterm.log', 'r') as log:
+        with open(tmp + '/xterm.log', 'r', encoding='utf-8') as log:
             for line in log:
                 print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')
