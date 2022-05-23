@@ -3,7 +3,6 @@
 import logging
 import re
 
-import networkx as nx
 import numpy
 import pytest
 
@@ -896,6 +895,8 @@ def test_keyboard_weights(kb):
 
 
 def test_that_we_need_add_weight():
+    from networkx.algorithms.shortest_paths.generic import shortest_path
+
     # W X Y Z
     #  SPACE
     kb = stbt.Keyboard()
@@ -910,9 +911,9 @@ def test_that_we_need_add_weight():
         kb.add_transition(k1, k2, "KEY_RIGHT")
 
     # This is the bug:
-    assert nx.shortest_path(kb.G, W, Z) == [W, SPACE, Z]
+    assert shortest_path(kb.G, W, Z) == [W, SPACE, Z]
     # And this is how we fix it:
-    assert nx.shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
+    assert shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
 
     assert [k for k, _ in _keys_to_press(kb.G, W, [Z])] == ["KEY_RIGHT"] * 3
 
