@@ -244,17 +244,21 @@ class ImageLogger():
             _regions.append((Region.intersect(self.data["region"], source_size),
                              "source_region", None))
 
-        if isinstance(regions, Region):
-            _regions.append((regions, True, None))
-        elif hasattr(regions, "region"):  # e.g. MotionResult
-            _regions.append((regions.region, bool(regions), None))
-        elif regions is not None:
-            for r in regions:
-                if not isinstance(r, tuple) or len(r) != 3:
-                    raise ValueError(
-                        "_draw_annotated_image expected 3-tuple "
-                        "(region, css_class, title); got %r" % (r,))
+        if regions is None:
+            regions = []
+        elif not isinstance(regions, list):
+            regions = [regions]
+        for r in regions:
+            if isinstance(r, Region):
+                _regions.append((r, True, None))
+            elif hasattr(r, "region"):  # e.g. MotionResult
+                _regions.append((r.region, bool(r), None))
+            elif isinstance(r, tuple) and len(r) == 3:
                 _regions.append(r)
+            else:
+                warn("ImageLogger._draw_annotated_image: Expected Region, "
+                     "Match/MotionResult, or 3-tuple (region, css_class, title)"
+                     "; got %r" % (r,))
 
         return jinja2.Template(dedent("""\
             <div class="annotated_image">

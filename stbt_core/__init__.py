@@ -70,6 +70,7 @@ from _stbt.types import (
     NoVideo,
     Position,
     Region,
+    Size,
     UITestError,
     UITestFailure)
 from _stbt.wait import (
@@ -121,6 +122,7 @@ __all__ = [
     "Region",
     "save_frame",
     "set_global_ocr_corrections",
+    "Size",
     "StrictDiff",
     "TextMatchResult",
     "TransitionStatus",

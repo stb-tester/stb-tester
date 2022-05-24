@@ -9,6 +9,10 @@ class Position(namedtuple('Position', 'x y')):
     pass
 
 
+class Size(namedtuple('Size', 'width height')):
+    """Size of a rectangle with ``width`` and ``height``."""
+
+
 class _RegionClsMethods(type):
     """Metaclass for `Region`.
 
