@@ -228,6 +228,7 @@ def test_corrections(corrections, expected):
      ('the saw said he saws, he saw.',
       {'he saw': 'HE SAW', re.compile("he", re.IGNORECASE): "ħé"},
       'tħé saw said ħé saws, ħé SAW.'),
+     (r'T\/ & REPLAY', {r'T\/': 'TV'}, 'TV & REPLAY'),
      # Make sure it tries all the patterns:
      ('A B C', {'A': '1', 'B': '2', 'C': '3'}, '1 2 3'),
     ])
