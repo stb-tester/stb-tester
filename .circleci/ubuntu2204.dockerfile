@@ -1,6 +1,6 @@
 # If you change this dockerfile, run `make publish-ci-docker-images`.
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
@@ -26,7 +26,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         moreutils \
         parallel \
         pep8 \
-        pylint3 \
+        pylint \
         python3-docutils \
         python3-gi \
         python3-ipython \

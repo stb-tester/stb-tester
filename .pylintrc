@@ -12,9 +12,12 @@ disable=
   bad-continuation,
   bad-option-value,
   blacklisted-name,
+  consider-using-f-string,
+  consider-using-with,
   cyclic-import,
   duplicate-code,
   empty-docstring,
+  fixme,
   global-statement,
   import-outside-toplevel,
   inconsistent-return-statements,
@@ -32,6 +35,7 @@ disable=
   no-init,
   no-self-use,
   protected-access,
+  raise-missing-from,
   singleton-comparison,
   too-few-public-methods,
   too-many-ancestors,
@@ -46,6 +50,7 @@ disable=
   too-many-statements,
   ungrouped-imports,
   unnecessary-pass,
+  use-implicit-booleaness-not-comparison,
   wrong-import-position,
 
 [CLASSES]

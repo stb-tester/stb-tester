@@ -189,7 +189,7 @@ class ImageLogger():
         template_kwargs.update(kwargs)
 
         index_html = os.path.join(self.outdir, "index.html")
-        with open(index_html, "w") as f:
+        with open(index_html, "w", encoding="utf-8") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
                     .render(frame_number=self.frame_number,
                             jupyter=self.jupyter))
@@ -275,7 +275,7 @@ class ImageLogger():
         )
 
 
-_INDEX_HTML_HEADER = dedent(u"""\
+_INDEX_HTML_HEADER = dedent("""\
     <!DOCTYPE html>
     <html lang='en'>
     <head>
@@ -313,22 +313,12 @@ _INDEX_HTML_HEADER = dedent(u"""\
     {% endif %}
     """)
 
-_INDEX_HTML_FOOTER = dedent(u"""\
+_INDEX_HTML_FOOTER = dedent("""\
 
     </div>
     </body>
     </html>
 """)
-
-
-def test_that_debug_can_write_unicode_strings():
-    def test(level):
-        with scoped_debug_level(level):
-            warn(u'Prüfungs Debug-Unicode')
-            debug(u'Prüfungs Debug-Unicode')
-            ddebug(u'Prüfungs Debug-Unicode')
-    for level in [0, 1, 2]:
-        yield (test, level)
 
 
 def draw_on(frame, *args, **kwargs):

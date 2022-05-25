@@ -212,7 +212,7 @@ check-pytest: all
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
-	       grep -v tests/vstb-example-html5/)
+	       grep -v -e __init__.py -e tests/vstb-example-html5/)
 check-pythonpackage:
 	export STBT_CONFIG_FILE=$$PWD/tests/stbt.conf && \
 	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
@@ -320,7 +320,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu2004
+CI_DOCKER_IMAGES = ubuntu2204
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

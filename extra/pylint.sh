@@ -30,7 +30,7 @@ fi
 
 $PYLINT --version
 
-out=$($PYLINT --rcfile="$(dirname "$0")/pylint.conf" "$@" 2>&1) || ret=1
+out=$($PYLINT "$@" 2>&1) || ret=1
 printf "%s" "$out" |
     grep -v \
         -e 'libdc1394 error: Failed to initialize libdc1394' \

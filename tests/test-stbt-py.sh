@@ -271,9 +271,8 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, distutils, sys; \
-        sys.exit(0 if (_stbt.ocr._tesseract_version() \
-                       >= distutils.version.LooseVersion('3.03')) else 77)"
+    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, sys; \
+        sys.exit(0 if _stbt.ocr._tesseract_version() >= [3, 3] else 77)"
     case $? in
         0) true;;
         77) skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'";;

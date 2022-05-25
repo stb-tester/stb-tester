@@ -1,11 +1,11 @@
 import os
 import re
+import shutil
 import socket
 import struct
 import subprocess
 import sys
 import time
-from distutils.spawn import find_executable
 
 import requests
 
@@ -127,7 +127,7 @@ class FileControl(RemoteControl):
         if filename is None:
             self.outfile = sys.stdout
         else:
-            self.outfile = open(filename, 'w+')
+            self.outfile = open(filename, 'w+', encoding='utf-8')
 
     def press(self, key):
         self.outfile.write(key + '\n')
@@ -628,7 +628,7 @@ def _new_samsung_tcp_control(hostname, port):
 
 def _load_key_mapping(filename):
     out = {}
-    with open(filename, 'r') as mapfile:
+    with open(filename, 'r', encoding='utf-8') as mapfile:
         for line in mapfile:
             s = line.strip().split()
             if len(s) == 2 and not s[0].startswith('#'):
@@ -641,7 +641,7 @@ class X11Control(RemoteControl):
     """
     def __init__(self, display=None, mapping=None):
         self.display = display
-        if find_executable('xdotool') is None:
+        if shutil.which('xdotool') is None:
             raise Exception("x11 control: xdotool not installed")
         self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
         if mapping is not None:
@@ -750,7 +750,7 @@ def test_redrathttp_control():
                 "stackTrace": ""
             }, status=500)
         with pytest.raises(
-                UnknownKeyError, message="Command 'KEY_OK2' is not known."):
+                UnknownKeyError, match="Command 'KEY_OK2' is not known."):
             control.press("KEY_OK2")
 
         mock.add(
@@ -761,7 +761,7 @@ def test_redrathttp_control():
             }, status=404)
         with pytest.raises(
                 RedRatHttpControlError,
-                message="No BT module with serial number '24463' found."):
+                match="No BT module with serial number '24463' found."):
             bad_control.press("KEY_OK")
 
 
@@ -794,7 +794,7 @@ def test_x11_control():
     from unittest import SkipTest
     if os.environ.get('enable_virtual_stb') != 'yes':
         raise SkipTest('Set $enable_virtual_stb=yes to run this test')
-    if not find_executable('Xorg') or not find_executable('xterm'):
+    if not shutil.which('Xorg') or not shutil.which('xterm'):
         raise SkipTest("Testing X11Control requires X11 and xterm")
 
     from .x11 import x_server
@@ -805,7 +805,7 @@ def test_x11_control():
         subprocess.Popen(
             ['xterm', '-l', '-lf', 'xterm.log'],
             env={'DISPLAY': display, 'PATH': os.environ['PATH']},
-            cwd=tmp, stderr=open('/dev/null', 'w'))
+            cwd=tmp, stderr=subprocess.DEVNULL)
 
         # Can't be sure how long xterm will take to get ready:
         for _ in range(0, 20):
@@ -817,7 +817,7 @@ def test_x11_control():
             if os.path.exists(tmp + '/good'):
                 break
             time.sleep(0.5)
-        with open(tmp + '/xterm.log', 'r') as log:
+        with open(tmp + '/xterm.log', 'r', encoding='utf-8') as log:
             for line in log:
                 print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')

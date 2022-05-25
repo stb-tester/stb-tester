@@ -50,9 +50,9 @@ def main(argv):
     executable_name = "pylint"
 
     try:
-        with open("/dev/null", "w") as devnull:
-            subprocess.check_call([executable_name, "--help"],
-                                  stdout=devnull, stderr=devnull)
+        subprocess.check_call([executable_name, "--help"],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
     except OSError as e:
         if e.errno == 2:
             sys.stderr.write(

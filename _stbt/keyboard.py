@@ -734,7 +734,7 @@ def _minimal_query(query):
 
 
 def _keys_to_press(G, source, targets):
-    from networkx import shortest_path
+    from networkx.algorithms.shortest_paths.generic import shortest_path
 
     paths = sorted(
         [shortest_path(G, source=source, target=t, weight="weight")

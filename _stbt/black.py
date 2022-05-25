@@ -119,7 +119,7 @@ def _log_image_debug(imglog, result):
     if not imglog.enabled:
         return
 
-    template = u"""\
+    template = """\
         <h4>is_screen_black: {{result.black}}</h4>
 
         {{ annotated_image(non_black_region) }}

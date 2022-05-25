@@ -42,7 +42,7 @@ class MotionDiff(FrameDiffer):
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None, noise_threshold=None, erode=True):
-        super(MotionDiff, self).__init__(initial_frame, region, mask, min_size)
+        super().__init__(initial_frame, region, mask, min_size)
 
         if noise_threshold is None:
             noise_threshold = get_config(
@@ -153,7 +153,7 @@ class MotionResult():
                 self.motion, self.region, _frame_repr(self.frame)))
 
 
-MOTION_HTML = u"""\
+MOTION_HTML = """\
     <h4>
       detect_motion:
       {{ "Found" if result.motion else "Didn't find" }} motion

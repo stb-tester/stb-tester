@@ -241,7 +241,7 @@ class StrictDiff(FrameDiffer):
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None):
-        super(StrictDiff, self).__init__(initial_frame, region, mask, min_size)
+        super().__init__(initial_frame, region, mask, min_size)
         if self.mask is not None:
             # We need 3 channels to match `frame`.
             self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)

@@ -12,7 +12,7 @@ from _stbt.utils import named_temporary_directory, scoped_process
 # pylint:disable=redefined-outer-name
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def lircd():
     with named_temporary_directory("stbt-lirc-test") as tmpdir:
         socket = os.path.join(tmpdir, "lircd.socket")
@@ -30,9 +30,9 @@ def lircd():
             yield namedtuple("Lircd", "socket logfile")(socket, logfile)
 
 
-@pytest.mark.parametrize("key", [b'KEY_OK', u'KEY_OK'])
+@pytest.mark.parametrize("key", [b'KEY_OK', 'KEY_OK'])
 def test_press(lircd, key):
-    logfile = open(lircd.logfile)
+    logfile = open(lircd.logfile, encoding="utf-8")
 
     print("key = %r (%s)" % (key, type(key)))
     control = uri_to_control("lirc:%s:Apple_TV" % lircd.socket)

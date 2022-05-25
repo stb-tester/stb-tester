@@ -353,8 +353,9 @@ def _match_all(image, frame, match_parameters, region):
                 "support requires OpenCV 3.0 or greater (you have %s)."
                 % (t.relative_filename, cv2_compat.version))
 
-        if match_parameters.match_method not in (MatchMethod.SQDIFF,
-                                                 MatchMethod.CCORR_NORMED):
+        if (cv2_compat.version < [4, 4, 0] and
+                match_parameters.match_method not in (
+                    MatchMethod.SQDIFF, MatchMethod.CCORR_NORMED)):
             # See `matchTemplateMask`:
             # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
             raise ValueError(
@@ -463,7 +464,7 @@ class MatchTimeout(UITestFailure):
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
     def __init__(self, screenshot, expected, timeout_secs):
-        super(MatchTimeout, self).__init__()
+        super().__init__()
         self.screenshot = screenshot
         self.expected = expected
         self.timeout_secs = timeout_secs
@@ -709,9 +710,12 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         # We still get a number between 0 - 1.
 
         if mask is not None:
-            # matchTemplateMask normalises the source & template image to [0,1].
-            # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
-            scale = max(1, numpy.count_nonzero(mask))
+            if cv2_compat.version < [4, 4, 0]:
+                # matchTemplateMask normalises source & template image to [0,1].
+                # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
+                scale = max(1, numpy.count_nonzero(mask))
+            else:
+                scale = max(1, numpy.count_nonzero(mask)) * (255 ** 2)
         else:
             scale = template.size * (255 ** 2)
     else:
@@ -893,7 +897,7 @@ def _log_match_image_debug(imglog):
         [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
          for x in imglog.data["matches"]])
 
-    template = u"""\
+    template = """\
         <h4>{{title}}</h4>
 
         <img src="source_with_matches.png" />

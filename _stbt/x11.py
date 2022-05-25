@@ -50,7 +50,8 @@ def _start_x(*args, **kwargs):
 
 @contextmanager
 def x_server(width, height, verbose=False):
-    with open(os.path.dirname(__file__) + '/xorg.conf.in') as f:
+    with open(os.path.dirname(__file__) + '/xorg.conf.in',
+              encoding='utf-8') as f:
         xorg_conf_template = f.read()
 
     # This is a racy way of finding a free X display but is a lot simpler than
@@ -63,16 +64,15 @@ def x_server(width, height, verbose=False):
         raise XFailedToStartError(
             "No available X display numbers (tried displays 10 to 99)")
 
-    with named_temporary_directory(prefix='stbt-xorg-') as tmp, \
-            open('/dev/null', 'r') as dev_null:
+    with named_temporary_directory(prefix='stbt-xorg-') as tmp:
 
-        with open('%s/xorg.conf' % tmp, 'w') as xorg_conf:
+        with open('%s/xorg.conf' % tmp, 'w', encoding='utf-8') as xorg_conf:
             xorg_conf.write(xorg_conf_template.format(
                 width=width, height=height))
 
         if verbose:
-            DEVNULL_W = open('/dev/null', 'w')
-            kwargs = {'stdout': DEVNULL_W, 'stderr': subprocess.STDOUT}
+            kwargs = {'stdout': subprocess.DEVNULL,
+                      'stderr': subprocess.DEVNULL}
         else:
             kwargs = {}
         xorg = _start_x(
@@ -80,7 +80,7 @@ def x_server(width, height, verbose=False):
              '+extension', 'RANDR', '+extension', 'RENDER',
              '-config', 'xorg.conf', '-logfile', './xorg.log',
              '-nolisten', 'tcp', ':%i' % display_no],
-            cwd=tmp, stdin=dev_null, close_fds=True, **kwargs)
+            cwd=tmp, stdin=subprocess.DEVNULL, close_fds=True, **kwargs)
         try:
             if xorg.poll() is not None:
                 raise XFailedToStartError(
@@ -93,5 +93,5 @@ def x_server(width, height, verbose=False):
                 xorg.wait()
             if verbose:
                 sys.stderr.write("\nxorg.log:\n")
-                with open("%s/xorg.log" % tmp, "r") as log:
+                with open("%s/xorg.log" % tmp, "r", encoding="utf-8") as log:
                     sys.stderr.write("".join(log.readlines()))

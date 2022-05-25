@@ -16,10 +16,6 @@ from tests.test_core import _find_file
 from tests.test_ocr import requires_tesseract
 
 
-requires_opencv_3 = pytest.mark.skipif(cv2_compat.version < [3, 0, 0],
-                                       reason="Requires OpenCV 3")
-
-
 def mp(match_method=stbt.MatchMethod.SQDIFF, match_threshold=None, **kwargs):
     if match_threshold is None and match_method != stbt.MatchMethod.SQDIFF:
         match_threshold = 0.8
@@ -161,7 +157,6 @@ def test_that_match_all_can_find_labelled_matches(match_method):
         sorted(matches)
 
 
-@requires_opencv_3
 def test_match_all_with_transparent_reference_image():
     frame = stbt.load_image("buttons-on-blue-background.png")
     matches = list(m.region for m in stbt.match_all(
@@ -172,14 +167,21 @@ def test_match_all_with_transparent_reference_image():
             sorted(matches))
 
 
-@requires_opencv_3
 def test_completely_transparent_reference_image():
     f = stbt.load_image("buttons-on-blue-background.png")
     assert len(list(stbt.match_all(
         "completely-transparent.png", frame=f))) == 18
 
 
-@requires_opencv_3
+def test_that_partly_opaque_alpha_is_treated_as_fully_transparent():
+    f = stbt.load_image("buttons-on-blue-background.png")
+    m1 = stbt.match("button-partly-transparent.png", frame=f)
+    m2 = stbt.match("button-transparent.png", frame=f)
+    assert m1
+    assert m2
+    assert numpy.isclose(m1.first_pass_result, m2.first_pass_result)
+
+
 @pytest.mark.parametrize("frame,image,expected_region", [
     # pylint:disable=bad-whitespace,line-too-long
     ("images/regression/roku-tile-frame.png", "images/regression/roku-tile-selection.png", stbt.Region(x=325, y=145, right=545, bottom=325)),
@@ -226,7 +228,6 @@ def test_pyramid_roi_too_small(frame, image, match_method, match_threshold):
                 match_threshold=match_threshold))
 
 
-@requires_opencv_3
 @pytest.mark.parametrize("image,expected", [
     # pylint:disable=bad-whitespace,line-too-long
     ("red-blue-columns",             stbt.Region(x=0, y=0, width=40, height=40)),
@@ -329,7 +330,6 @@ def test_match_region2(x, y, offset_x, offset_y, width, height,
         assert m.region == region
 
 
-@requires_opencv_3
 @requires_tesseract
 def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
     # Demonstrates how match_all can be used with ocr for UIs consisting of text
@@ -343,7 +343,7 @@ def test_that_match_all_can_be_used_with_ocr_to_read_buttons():
         for m in stbt.match_all('button-transparent.png', frame=frame)]
     text = sorted([t for t in text if t not in ['', '\\s']])
     print(text)
-    assert text == [u'Button 1', u'Button 2', u'Buttons']
+    assert text == ['Button 1', 'Button 2', 'Buttons']
 
 
 @pytest.mark.parametrize("match_method", [
@@ -422,6 +422,8 @@ def test_that_sqdiff_matches_black_images():
     assert stbt.match(almost_black_reference, almost_black_frame, sqdiff)
 
 
+@pytest.mark.skipif(cv2_compat.version >= [4, 4],
+                    reason="sqdiff-normed has implemented mask support")
 def test_transparent_reference_image_with_sqdiff_normed_raises_valueerror():
     f = stbt.load_image("buttons-on-blue-background.png")
     with pytest.raises(ValueError):
@@ -457,7 +459,6 @@ def test_that_build_pyramid_relaxes_mask():
     assert numpy.all(downsampled[:, :, 0] == expected)
 
 
-@requires_opencv_3
 def test_png_with_16_bits_per_channel():
     assert cv2.imread(_find_file("uint16.png"), cv2.IMREAD_UNCHANGED).dtype == \
         numpy.uint16  # Sanity check (that this test is valid)
@@ -467,14 +468,12 @@ def test_png_with_16_bits_per_channel():
         frame=cv2.imread(_find_file("uint8.png")))
 
 
-@requires_opencv_3
 def test_match_fast_path():
     # This is just an example of typical use
     assert stbt.match("action-panel-prototype.png",
                       frame=stbt.load_image("action-panel.png"))
 
 
-@requires_opencv_3
 def test_that_match_fast_path_is_equivalent():
     black_reference = black(10, 10)
     almost_black_reference = black(10, 10, value=1)

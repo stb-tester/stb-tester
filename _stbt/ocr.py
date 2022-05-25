@@ -4,8 +4,8 @@ import errno
 import glob
 import os
 import re
+import shutil
 import subprocess
-from distutils.version import LooseVersion
 from enum import IntEnum
 
 import cv2
@@ -16,7 +16,7 @@ from .config import get_config
 from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import named_temporary_directory, to_unicode
+from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -24,25 +24,25 @@ from .utils import named_temporary_directory, to_unicode
 # meaning.  This means that stbt.ocr give much more consistent results.
 _ocr_replacements = {
     # Ligatures
-    u'ﬀ': u'ff',
-    u'ﬁ': u'fi',
-    u'ﬂ': u'fl',
-    u'ﬃ': u'ffi',
-    u'ﬄ': u'ffl',
-    u'ﬅ': u'ft',
-    u'ﬆ': u'st',
+    'ﬀ': 'ff',
+    'ﬁ': 'fi',
+    'ﬂ': 'fl',
+    'ﬃ': 'ffi',
+    'ﬄ': 'ffl',
+    'ﬅ': 'ft',
+    'ﬆ': 'st',
     # Punctuation
-    u'“': u'"',
-    u'”': u'"',
-    u'‘': u'\'',
-    u'’': u'\'',
+    '“': '"',
+    '”': '"',
+    '‘': '\'',
+    '’': '\'',
     # These are actually different glyphs!:
-    u'‐': u'-',
-    u'‑': u'-',
-    u'‒': u'-',
-    u'–': u'-',
-    u'—': u'-',
-    u'―': u'-',
+    '‐': '-',
+    '‑': '-',
+    '‒': '-',
+    '–': '-',
+    '—': '-',
+    '―': '-',
 }
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
@@ -281,7 +281,7 @@ def ocr(frame=None, region=Region.ALL,
     text = text.strip().translate(_ocr_transtab)
     text = apply_ocr_corrections(text, corrections)
 
-    debug(u"ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
+    debug("ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     _log_ocr_image_debug(imglog, text)
     return text
 
@@ -449,7 +449,7 @@ def _tesseract_version(output=None):
     Note that LooseVersion.__cmp__ simply sorts lexicographically according
     to the "." or "-" separated components in the version string:
 
-    >>> _tesseract_version("tesseract 4.0.0-beta.1").version
+    >>> _tesseract_version("tesseract 4.0.0-beta.1")
     [4, 0, 0, '-', 'beta', 1]
     >>> (_tesseract_version('tesseract 4.0.0-beta.1') >
     ...  _tesseract_version('tesseract 4.0.0'))
@@ -493,7 +493,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     tesseract_version = _tesseract_version()
 
-    if tesseract_version < LooseVersion("4.0"):
+    if tesseract_version < [4, 0]:
         if engine == OcrEngine.DEFAULT:
             engine = OcrEngine.TESSERACT
         if engine != OcrEngine.TESSERACT:
@@ -501,7 +501,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             raise ValueError("%s isn't available in tesseract %s"
                              % (engine, tesseract_version))
 
-    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
+    if mode >= OcrMode.RAW_LINE and tesseract_version < [3, 4]:
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
         raise ValueError("%s isn't available in tesseract %s"
                          % (mode, tesseract_version))
@@ -545,7 +545,7 @@ def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
         engine, char_whitelist, imglog, tesseract_version):
 
-    if tesseract_version >= LooseVersion("4.0"):
+    if tesseract_version >= [4, 0]:
         engine_flags = ["--oem", str(int(engine))]
         tessdata_suffix = ''
     else:
@@ -560,7 +560,7 @@ def _tesseract_subprocess(
 
     with named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
 
-        if tesseract_version >= LooseVersion("3.05"):
+        if tesseract_version >= [3, 5]:
             psm_flag = "--psm"
         else:
             psm_flag = "-psm"
@@ -578,11 +578,11 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(tessdata_suffix), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
-            if tesseract_version >= LooseVersion("4.0.0"):
+            if tesseract_version >= [4, 0, 0]:
                 tessenv['TESSDATA_PREFIX'] += "tessdata"
 
         if ('tessedit_create_hocr' in _config and
-                tesseract_version >= LooseVersion('3.04')):
+                tesseract_version >= [3, 4]):
             _config['tessedit_create_txt'] = 0
 
         if user_words:
@@ -591,7 +591,8 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'tesseract_config[\"user_words_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
+            with open('%s/%s.user-words' % (tessdata_dir, lang),
+                      'w', encoding='utf-8') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
@@ -601,7 +602,8 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'tesseract_config[\"user_patterns_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang),
+                      'w', encoding='utf-8') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
@@ -617,7 +619,8 @@ def _tesseract_subprocess(
             _config['tessedit_write_images'] = True
 
         if _config:
-            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
+            with open(tessdata_dir + '/configs/stbtester',
+                      'w', encoding='utf-8') as cfg:
                 for k, v in _config.items():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
@@ -641,7 +644,7 @@ def _tesseract_subprocess(
         for filename in glob.glob(tmp + "/output.*"):
             _, ext = os.path.splitext(filename)
             if ext in (".txt", ".hocr"):
-                with open(filename) as f:
+                with open(filename, encoding='utf-8') as f:
                     return f.read()
 
 
@@ -661,17 +664,17 @@ def _hocr_iterate(hocr):
     need_space = False
     for elem in hocr.iterdescendants():
         if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
-            yield (u'\n', elem)
+            yield ('\n', elem)
             need_space = False
         if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
                 'ocr_line' in elem.get('class').split() and started:
-            yield (u'\n', elem)
+            yield ('\n', elem)
             need_space = False
         for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
             if t:
                 if t.strip():
                     if need_space and started:
-                        yield (u' ', None)
+                        yield (' ', None)
                     need_space = False
                     yield (str(t).strip(), e)
                     started = True
@@ -686,7 +689,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
         lower = lambda s: s.lower()
 
     words_only = [(lower(w).translate(_ocr_transtab), elem)
-                  for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
+                  for w, elem in _hocr_iterate(hocr) if w.strip() != '']
     phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
@@ -700,7 +703,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
 
 def _hocr_elem_region(elem):
     while elem is not None:
-        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
+        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or '')
         if m:
             extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
@@ -708,8 +711,6 @@ def _hocr_elem_region(elem):
 
 
 def _find_tessdata_dir(tessdata_suffix):
-    from distutils.spawn import find_executable
-
     tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
     if tessdata_prefix:
         tessdata = tessdata_prefix + tessdata_suffix
@@ -720,7 +721,7 @@ def _find_tessdata_dir(tessdata_suffix):
             raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
 
     tess_prefix_share = os.path.normpath(
-        find_executable('tesseract') + '/../../share/')
+        shutil.which('tesseract') + '/../../share/')
     for suffix in [
             '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
             '/tesseract-ocr/4.00/tessdata']:
@@ -743,11 +744,11 @@ def _log_ocr_image_debug(imglog, output=None):
             "Matched" if imglog.data["result"] else "Didn't match")
         hocr = imglog.data["hocr"]
         if hocr is None:
-            output = u""
+            output = ""
         else:
-            output = u"".join(x for x, _ in _hocr_iterate(hocr))
+            output = "".join(x for x, _ in _hocr_iterate(hocr))
 
-    template = u"""\
+    template = """\
         <h4>{{title}}</h4>
 
         {{ annotated_image(result) }}

@@ -184,8 +184,8 @@ class FrameObject(metaclass=_FrameObjectMeta):
         if frame is None:
             from stbt_core import get_frame
             frame = get_frame()
-        self.__frame_object_cache = {}
-        self.__local = threading.local()
+        self.__frame_object_cache = {}  # pylint:disable=unused-private-member
+        self.__local = threading.local()  # pylint:disable=unused-private-member
         self._frame = frame
 
     def __repr__(self):
