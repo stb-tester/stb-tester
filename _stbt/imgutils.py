@@ -177,7 +177,7 @@ class Color:
     way OpenCV stores colors.
     """
     def __init__(self, *args):
-        self.array = None
+        self.array: numpy.ndarray = None  # BGR with shape (1, 1, 3) or BGRA
         if len(args) == 1:
             if isinstance(args[0], Color):
                 self.array = args[0].array
@@ -192,8 +192,9 @@ class Color:
                             "string, or 3 integers in Blue-Green-Red order. ")
         self.hexstring = (
             "#{0:02x}{1:02x}{2:02x}{3}".format(
-                self.array[2], self.array[1], self.array[0],
-                "" if len(self.array) == 3 else f"{self.array[3]:02x}"))
+                self.array[0][0][2], self.array[0][0][1], self.array[0][0][0],
+                ("" if self.array.shape[2] == 3
+                 else f"{self.array[0][0][3]:02x}")))
 
     @staticmethod
     def _from_string(s):
@@ -225,11 +226,11 @@ class Color:
 
     @staticmethod
     def _from_sequence(b, g, r, a=None):
-        elements = [b, g, r]
+        channels = [b, g, r]
         if a is not None:
-            elements.append(a)
+            channels.append(a)
         out = []
-        for x in elements:
+        for x in channels:
             if isinstance(x, str):
                 x = int(x, 16)
             else:
@@ -238,7 +239,8 @@ class Color:
                 raise ValueError(f"Color: __init__ expected a value between 0 "
                                  f"and 255: Got {x}")
             out.append(x)
-        return out
+        return (numpy.asarray(out, dtype=numpy.uint8)
+                     .reshape((1, 1, len(channels))))
 
     def __repr__(self):
         return f"Color('{self.hexstring}')"
