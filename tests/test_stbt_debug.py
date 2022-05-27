@@ -437,11 +437,11 @@ def test_ocr_debug():
             stbt-debug/00002/tessinput.png
             stbt-debug/00002/upsampled.png
             stbt-debug/00003
+            stbt-debug/00003/binarized.png
+            stbt-debug/00003/diff.png
             stbt-debug/00003/index.html
             stbt-debug/00003/source.png
             stbt-debug/00003/tessinput.png
-            stbt-debug/00003/text_color_difference.png
-            stbt-debug/00003/text_color_threshold.png
             stbt-debug/00003/upsampled.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -454,11 +454,11 @@ def test_ocr_debug():
             stbt-debug/00005/tessinput.png
             stbt-debug/00005/upsampled.png
             stbt-debug/00006
+            stbt-debug/00006/binarized.png
+            stbt-debug/00006/diff.png
             stbt-debug/00006/index.html
             stbt-debug/00006/source.png
             stbt-debug/00006/tessinput.png
-            stbt-debug/00006/text_color_difference.png
-            stbt-debug/00006/text_color_threshold.png
             stbt-debug/00006/upsampled.png
             """)
 

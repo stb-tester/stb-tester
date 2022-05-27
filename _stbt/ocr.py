@@ -516,23 +516,30 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
         if upsample:
             frame = _upsample(frame, imglog)
             upsample = False
-
-        # Calculate distance of each pixel from `text_color`, then discard
-        # everything further than `text_color_threshold` distance away.
-        diff = numpy.subtract(frame, Color(text_color).array, dtype=numpy.int32)
-        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
-                            diff[:, :, 1] ** 2 +
-                            diff[:, :, 2] ** 2) // 3) \
-                     .astype(numpy.uint8)
-        imglog.imwrite("text_color_difference", frame)
-        _, frame = cv2.threshold(frame, text_color_threshold, 255,
-                                 cv2.THRESH_BINARY)
-        imglog.imwrite("text_color_threshold", frame)
+        frame = ocr.text_color_differ(frame, text_color, text_color_threshold,
+                                      imglog)
 
     return _tesseract_subprocess(frame, mode, lang, _config,  # pylint:disable=unexpected-keyword-arg
                                  user_patterns, user_words, upsample,
                                  engine, char_whitelist, imglog,
                                  tesseract_version, use_cache=True)
+
+
+def bgr_diff(frame, color, threshold, imglog):
+    # Calculate distance of each pixel from `text_color`, then discard
+    # everything further than `text_color_threshold` distance away.
+    diff = numpy.subtract(frame, Color(color).array, dtype=numpy.int32)
+    frame = numpy.sqrt((diff[:, :, 0] ** 2 +
+                        diff[:, :, 1] ** 2 +
+                        diff[:, :, 2] ** 2) // 3) \
+                 .astype(numpy.uint8)
+    imglog.imwrite("diff", frame)
+    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+    imglog.imwrite("binarized", frame)
+    return frame
+
+
+ocr.text_color_differ = bgr_diff
 
 
 @imgproc_cache.memoize({"version": "32"})
@@ -782,17 +789,17 @@ def _log_ocr_image_debug(imglog, output=None):
         <img src="upsampled.png" />
         {% endif %}
 
-        {% if "text_color_difference" in images %}
+        {% if "diff" in images %}
         <h5>Color difference {{ text_color }}:</h5>
-        <img src="text_color_difference.png" />
+        <img src="diff.png" />
         {% endif %}
 
-        {% if "text_color_threshold" in images %}
+        {% if "binarized" in images %}
         <h5>
           Color difference – binarised
           (threshold={{ text_color_threshold }}):
         </h5>
-        <img src="text_color_threshold.png" />
+        <img src="binarized.png" />
         {% endif %}
 
         {% if "tessinput" in images %}
