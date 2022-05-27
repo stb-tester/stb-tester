@@ -13,7 +13,7 @@ import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import crop, _frame_repr, _validate_region
+from .imgutils import Color, crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
@@ -206,12 +206,11 @@ def ocr(frame=None, region=Region.ALL,
         you should only disable it if you are doing your own pre-processing on
         the image.
 
-    :type text_color: 3-element tuple of integers between 0 and 255, BGR order
-    :param text_color:
+    :param Color text_color:
         Color of the text. Specifying this can improve OCR results when
         tesseract's default thresholding algorithm doesn't detect the text,
         for example white text on a light-colored background or text on a
-        translucent overlay.
+        translucent overlay with dynamic content underneath.
 
     :param int text_color_threshold:
         The threshold to use with ``text_color``, between 0 and 255. Defaults
@@ -520,7 +519,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
         # Calculate distance of each pixel from `text_color`, then discard
         # everything further than `text_color_threshold` distance away.
-        diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
+        diff = numpy.subtract(frame, Color(text_color).array, dtype=numpy.int32)
         frame = numpy.sqrt((diff[:, :, 0] ** 2 +
                             diff[:, :, 1] ** 2 +
                             diff[:, :, 2] ** 2) // 3) \

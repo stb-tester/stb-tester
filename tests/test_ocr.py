@@ -361,6 +361,7 @@ def test_ocr_on_text_next_to_image_match():
     # unselected buttons "Details" and "More Episodes" (light grey on black).
     # Without specifying text_color, OCR only sees the latter two.
     ("ocr/Summary.png", (235, 235, 235), "Summary"),
+    ("ocr/Summary.png", "#ebebeb", "Summary"),
 
     # This is a light "8" on a dark background. Without the context of any
     # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
