@@ -465,8 +465,9 @@ test_draw_text() {
 	sleep(60)
 	EOF
     cat > verify-draw-text.py <<-EOF &&
-	import stbt_core as stbt
-	stbt.wait_for_match("$testdir/draw-text.png")
+	import os, stbt_core as stbt
+	stbt.wait_for_match("$testdir/draw-text.png",
+	    timeout_secs=60 if "CIRCLECI" in os.environ else 10)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
