@@ -26,7 +26,7 @@ from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
-from _stbt.logging import _Annotation, ddebug, debug, warn
+from _stbt.logging import _Annotation, debug, warn
 from _stbt.types import NoVideo, Region
 from _stbt.utils import to_unicode
 
@@ -232,10 +232,8 @@ class DeviceUnderTest():
         first = True
 
         while True:
-            ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
                 max(10, timeout_secs or 0), since=timestamp)
-            ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
             if not first and timeout_secs is not None and timestamp > end_time:
@@ -686,13 +684,6 @@ class Display():
         # `self.last_frame` is how we communicate from this thread (the GLib
         # main loop) to the main application thread running the user's script.
         # Note that only this thread writes to self.last_frame.
-
-        if isinstance(frame_or_exception, Exception):
-            ddebug("glib thread: reporting exception to user thread: %s" %
-                   frame_or_exception)
-        else:
-            ddebug("glib thread: new sample (time=%s)." %
-                   frame_or_exception.time)
 
         with self._condition:
             self.last_frame = frame_or_exception
