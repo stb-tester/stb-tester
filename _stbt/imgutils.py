@@ -5,6 +5,7 @@ import os
 import re
 import warnings
 from collections import namedtuple
+from typing import overload, Tuple
 
 import cv2
 import numpy
@@ -176,6 +177,15 @@ class Color:
     opposite of the HTML-style RGB order. This is for compatibility with the
     way OpenCV stores colors.
     """
+    @overload
+    def __init__(self, hexstring: str) -> None:
+        ...
+    @overload
+    def __init__(self, blue: int, green: int, red: int) -> None:
+        ...
+    @overload
+    def __init__(self, bgr: Tuple[int, int, int]) -> None:
+        ...
     def __init__(self, *args):
         self.array: numpy.ndarray = None  # BGR with shape (1, 1, 3) or BGRA
         if len(args) == 1:
