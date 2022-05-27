@@ -149,16 +149,14 @@ def ocr(frame=None, region=Region.ALL,
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine.
 
-    :param frame:
+    :param Frame frame:
       If this is specified it is used as the video frame to process; otherwise
-      a new frame is grabbed from the device-under-test. This is an image in
-      OpenCV format (for example as returned by `frames` and `get_frame`).
+      a new frame is grabbed from the device-under-test.
 
-    :param region: Only search within the specified region of the video frame.
-    :type region: `Region`
+    :param Region region:
+      Only search within the specified region of the video frame.
 
-    :param mode: Tesseract's layout analysis mode.
-    :type mode: `OcrMode`
+    :param OcrMode mode: Tesseract's layout analysis mode.
 
     :param str lang:
         The three-letter
@@ -220,14 +218,12 @@ def ocr(frame=None, region=Region.ALL,
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
-    :param engine:
+    :param OcrEngine engine:
         The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
         override the global default value by setting ``engine`` in the ``[ocr]``
         section of :ref:`.stbt.conf`.
-    :type engine: `OcrEngine`
 
-    :type char_whitelist: unicode string
-    :param char_whitelist:
+    :param str char_whitelist:
         String of characters that are allowed. Useful when you know that the
         text is only going to contain numbers or IP addresses, for example so
         that tesseract won't think that a zero is the letter o.
