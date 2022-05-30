@@ -366,8 +366,8 @@ class NotRegion(namedtuple("NotRegion", "region")):
     parameter to our image processing functions.  Create instances of this type
     with:
 
-    >>> mask_out(stbt.Region(34, 433, right=44, bottom=444))
-    NotRegion(stbt.Region(34, 433, right=44, bottom=444))
+    >>> mask_out(Region(34, 433, right=44, bottom=444))
+    NotRegion(region=Region(x=34, y=433, right=44, bottom=444))
     """
     pass
 
