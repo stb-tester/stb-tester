@@ -194,7 +194,7 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-def load_image(filename, flags=None, color_channels=None):
+def load_image(filename, flags=None, color_channels=None) -> Image:
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -385,7 +385,7 @@ def mask_out(mask):
     elif isinstance(mask, NotRegion):
         return mask.region
     else:
-        return ~load_image(mask, color_channels=(1, 3))
+        return ~load_image(mask, color_channels=(1, 3))  # pylint:disable=invalid-unary-operand-type
 
 
 def preload_mask(mask, color_channels=(1, 3)):
