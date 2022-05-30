@@ -5,10 +5,9 @@ import re
 import time
 from logging import getLogger
 
-import numpy
 from attr import attrs, attrib
 from _stbt.grid import Grid
-from _stbt.imgutils import load_image
+from _stbt.imgutils import load_mask
 from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 
@@ -198,12 +197,7 @@ class Keyboard():
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
-        self.mask = None
-        if isinstance(mask, numpy.ndarray):
-            self.mask = mask
-        elif mask:
-            self.mask = load_image(mask, color_channels=1)
-
+        self.mask = load_mask(mask, shape=None)
         self.navigate_timeout = navigate_timeout
 
         self.symmetrical_keys = {

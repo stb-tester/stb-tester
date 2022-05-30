@@ -10,7 +10,7 @@
 
 ret=0
 
-if pep8 --version &>/dev/null; then
+if pycodestyle --version &>/dev/null; then
     # E124: closing bracket does not match visual indentation
     # E203: whitespace before ':'
     # E241: multiple spaces after ',' (because pylint does it)
@@ -23,9 +23,9 @@ if pep8 --version &>/dev/null; then
     # E741: do not use variables named ‘l’, ‘O’, or ‘I’
     # W291: trailing whitespace (because pylint does it)
     # W504: line break after binary operator
-    pep8 --ignore=E124,E203,E241,E305,E402,E501,E721,E722,E731,E741,W291,W504 "$@" || ret=1
+    pycodestyle --ignore=E124,E203,E241,E305,E402,E501,E721,E722,E731,E741,W291,W504 "$@" || ret=1
 else
-    echo "warning: pep8 not installed; skipping pep8 and only running pylint" >&2
+    echo "warning: pycodestyle not installed; skipping pycodestyle and only running pylint" >&2
 fi
 
 $PYLINT --version

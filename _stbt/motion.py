@@ -4,7 +4,7 @@ from collections import deque
 
 from .config import ConfigurationError, get_config
 from .diff import MotionDiff
-from .imgutils import limit_time, load_image
+from .imgutils import limit_time, load_mask
 from .logging import debug, draw_on
 from .types import Region, UITestFailure
 
@@ -70,7 +70,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     debug("Searching for motion")
 
     if mask is not None:
-        mask = load_image(mask, color_channels=1)
+        mask = load_mask(mask, shape=None)
         debug("Using mask %s" % (mask.relative_filename or "<Image>"))
 
     try:
@@ -149,7 +149,7 @@ def wait_for_motion(
         motion_frames, considered_frames))
 
     if mask is not None:
-        mask = load_image(mask, color_channels=1)
+        mask = load_mask(mask, shape=None)
         debug("Using mask %s" % (mask.relative_filename or "<Image>"))
 
     matches = deque(maxlen=considered_frames)
@@ -172,9 +172,7 @@ def wait_for_motion(
                            "should never be reached")
         last_frame = res.frame
 
-    raise MotionTimeout(last_frame,
-                        None if mask is None else mask.relative_filename,
-                        timeout_secs)
+    raise MotionTimeout(last_frame, mask, timeout_secs)
 
 
 class MotionTimeout(UITestFailure):

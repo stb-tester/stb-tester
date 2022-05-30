@@ -3,6 +3,7 @@
 import inspect
 import os
 import warnings
+from collections import namedtuple
 
 import cv2
 import numpy
@@ -193,7 +194,7 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-def load_image(filename, flags=None, color_channels=None):
+def load_image(filename, flags=None, color_channels=None) -> Image:
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -358,6 +359,78 @@ def load_image(filename, flags=None, color_channels=None):
         img = Image(img, filename=filename, absolute_filename=absolute_filename)
 
     return img
+
+
+class NotRegion(namedtuple("NotRegion", "region")):
+    """This is the inverse of a region.  This can be useful to pass as the mask
+    parameter to our image processing functions.  Create instances of this type
+    with:
+
+    >>> mask_out(Region(34, 433, right=44, bottom=444))
+    NotRegion(region=Region(x=34, y=433, right=44, bottom=444))
+    """
+    pass
+
+
+def mask_out(mask):
+    """Mask out a region (invert a mask).
+
+    Example:
+
+        SPINNER_REGION = stbt.Region(34, 433, right=44, bottom=444)
+        stbt.wait_for_motion(mask=mask_out(SPINNER_REGION))
+    """
+    if isinstance(mask, Region):
+        return NotRegion(mask)
+    elif isinstance(mask, NotRegion):
+        return mask.region
+    else:
+        return ~load_image(mask, color_channels=(1, 3))  # pylint:disable=invalid-unary-operand-type
+
+
+def load_mask(mask, shape):
+    """Used to load a mask from disk, or to convert it from a stbt.Region.
+
+    This should be used by image processing functions, not by test-scripts
+    """
+    if mask is None:
+        return None
+    if isinstance(mask, Region):
+        return _to_ndarray_mask(mask, shape=shape)
+    elif isinstance(mask, NotRegion):
+        return _to_ndarray_mask(mask, shape=shape, invert=True)
+    elif isinstance(mask, (str, numpy.ndarray)):
+        if shape is None:
+            color_channels = (1, 3)
+        else:
+            color_channels = shape[2]
+        mask = load_image(mask, color_channels=color_channels)
+        if shape is not None and mask.shape != shape:
+            raise ValueError(
+                "Mask %r has wrong shape %r. Expected %r" % (
+                    mask.relative_filename, mask.shape, shape))
+        return mask
+    else:
+        raise TypeError("Don't know how to make mask from %r" % (mask,))
+
+
+def _to_ndarray_mask(x, shape, dtype=numpy.uint8, invert=False):
+    """Creates an ndarray mask from a stbt.Region"""
+    out_val = 0
+    if dtype == numpy.uint8:
+        in_val = 255
+    else:
+        in_val = 1
+
+    if invert:
+        out_val, in_val = in_val, out_val
+
+    out = numpy.full(shape, out_val, dtype=dtype)
+    r = Region.intersect(x, Region(0, 0, shape[1], shape[0]))
+    if r:
+        out[r.y:r.bottom, r.x:r.right] = in_val
+
+    return out
 
 
 def save_frame(image, filename):
