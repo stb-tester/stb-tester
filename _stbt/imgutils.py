@@ -393,6 +393,8 @@ def load_mask(mask, shape):
 
     This should be used by image processing functions, not by test-scripts
     """
+    if mask is None:
+        return None
     if isinstance(mask, Region):
         return _to_ndarray_mask(mask, shape=shape)
     elif isinstance(mask, NotRegion):
