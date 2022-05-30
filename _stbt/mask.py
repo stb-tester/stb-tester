@@ -39,8 +39,40 @@ class Mask:
             raise TypeError("Expected filename, Image, Mask, or Region. "
                             f"Got {m!r}")
 
+        # for memoisation:
+        self._array = None
+
     def to_array(self, shape):
-        TODO
+        if self._array is not None and self._array.shape == shape:
+            return self._array
+
+        if self._image is not None:
+            array = self._image
+            if array.shape[:2] != shape[:2]:
+                raise ValueError(f"Mask shape {array.shape} and required shape "
+                                 f"{shape} don't match")
+            if array.shape[2] != shape[2]:
+                from .imgutils import load_image
+                array = load_image(array, color_channels=shape[2])
+        elif self._binop is not None:
+            n = self._binop
+            if n.op == "+":
+                array = n.left.to_array(shape) | n.right.to_array(shape)
+            elif n.op == "-":
+                array = n.left.to_array(shape) & ~n.right.to_array(shape)
+            else:
+                assert False, f"Unreachable: Unknown op {n.op}"
+        else:  # Region (including None)
+            array = numpy.full(shape, 0, dtype=numpy.uint8)
+            r = Region.intersect(self._region, Region(0, 0, shape[1], shape[0]))
+            if r:
+                array[r.y:r.bottom, r.x:r.right] = 255
+
+        if self._invert:
+            array = ~array  # pylint:disable=invalid-unary-operand-type
+
+        self._array = array
+        return self._array
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
