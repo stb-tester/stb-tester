@@ -75,6 +75,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/keyboard.py \
     _stbt/libstbt.so \
     _stbt/logging.py \
+    _stbt/mask.py \
     _stbt/match.py \
     _stbt/motion.py \
     _stbt/multipress.py \
