@@ -397,7 +397,7 @@ def preload_mask(mask, color_channels=(1, 3)):
     """
     if mask is None or isinstance(mask, (Region, NotRegion)):
         return mask
-    elif isinstance(mask, (str, unicode, numpy.ndarray)):
+    elif isinstance(mask, (str, numpy.ndarray)):
         return load_image(mask, color_channels=color_channels)
     else:
         raise TypeError("Don't know how to make mask from %r" % (mask,))
