@@ -400,18 +400,16 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         filename = to_unicode(filename)
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
-            raise IOError(to_unicode("No such file: %s" % filename))
-        absolute_filename = to_unicode(absolute_filename)
+            raise IOError("No such file: %s" % filename)
         if color_channels == (3,):
             flags = cv2.IMREAD_COLOR
         elif color_channels == (1,):
             flags = cv2.IMREAD_GRAYSCALE
         else:
             flags = cv2.IMREAD_UNCHANGED
-        img = cv2.imread(to_unicode(absolute_filename), flags)
+        img = cv2.imread(absolute_filename, flags)
         if img is None:
-            raise IOError(to_unicode("Failed to load image: %s" %
-                                     absolute_filename))
+            raise IOError("Failed to load image: %s" % absolute_filename)
 
     if len(img.shape) not in [2, 3]:
         raise ValueError(
@@ -637,7 +635,6 @@ def find_user_file(filename):
     #   directly from the user script, or indirectly via stbt.match so we still
     #   need to check until we're outside of the _stbt directory.
 
-    filename = to_unicode(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     caller = inspect.currentframe()
     try:
