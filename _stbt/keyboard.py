@@ -7,7 +7,7 @@ from logging import getLogger
 
 from attr import attrs, attrib
 from _stbt.grid import Grid
-from _stbt.imgutils import preload_mask
+from _stbt.imgutils import load_mask
 from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 
@@ -197,7 +197,7 @@ class Keyboard():
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
-        self.mask = preload_mask(mask)
+        self.mask = load_mask(mask, shape=None)
         self.navigate_timeout = navigate_timeout
 
         self.symmetrical_keys = {

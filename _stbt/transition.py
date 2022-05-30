@@ -23,7 +23,6 @@ from .imgutils import (
     crop,
     load_mask,
     pixel_bounding_box,
-    preload_mask,
     _validate_region)
 from .logging import ddebug, debug, draw_on
 from .types import Region
@@ -156,7 +155,7 @@ def wait_for_transition_to_end(
 class _Transition():
     def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
         self.region = region
-        self.mask = preload_mask(mask)
+        self.mask = load_mask(mask, shape=None)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
