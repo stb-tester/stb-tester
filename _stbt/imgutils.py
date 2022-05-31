@@ -193,7 +193,8 @@ class Color:
                 self.array = args[0].array
             elif isinstance(args[0], str):
                 self.array = Color._from_string(args[0])
-            elif isinstance(args[0], (list, tuple)) and len(args[0]) in (3, 4):
+            elif (isinstance(args[0], (list, tuple, numpy.ndarray)) and
+                    len(args[0]) in (3, 4)):
                 self.array = Color._from_sequence(*args[0])
         elif len(args) in (3, 4):
             self.array = Color._from_sequence(*args)  # pylint:disable=no-value-for-parameter

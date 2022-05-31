@@ -196,6 +196,8 @@ def test_crop():
     ([0, -127, 247], ValueError),  # range 0-255
     ([0, 127], TypeError),
     ([stbt.Color("#000")], "#000000"),  # constructing from another Color
+    ([stbt.load_image("button.png")[3, 65]], "#ff1443"),  # from a pixel
+    ([stbt.load_image("button.png", color_channels=4)[3, 65]], "#ff1443ff"),
 ])
 def test_color_constructor(args, expected):
     if isinstance(expected, type):
