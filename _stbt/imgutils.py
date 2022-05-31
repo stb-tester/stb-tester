@@ -186,21 +186,36 @@ class Color:
     @overload
     def __init__(self, bgr: Tuple[int, int, int]) -> None:
         ...
-    def __init__(self, *args):
-        self.array: numpy.ndarray = None  # BGR with shape (1, 1, 3) or BGRA
-        if len(args) == 1:
-            if isinstance(args[0], Color):
-                self.array = args[0].array
-            elif isinstance(args[0], str):
-                self.array = Color._from_string(args[0])
-            elif (isinstance(args[0], (list, tuple, numpy.ndarray)) and
-                    len(args[0]) in (3, 4)):
-                self.array = Color._from_sequence(*args[0])
+    def __init__(self, *args,
+                 hexstring: str = None,
+                 blue: int = None, green: int = None, red: int = None,
+                 bgr: Tuple[int, int, int] = None):
+
+        self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA
+
+        if len(args) == 1 and isinstance(args[0], Color):
+            self.array = args[0].array
+
+        elif len(args) == 1 and isinstance(args[0], str):
+            self.array = Color._from_string(args[0])
+        elif not args and hexstring is not None:
+            self.array = Color._from_string(hexstring)
+
+        elif (len(args) == 1 and
+                isinstance(args[0], (list, tuple, numpy.ndarray)) and
+                len(args[0]) in (3, 4)):
+            self.array = Color._from_sequence(*args[0])
         elif len(args) in (3, 4):
             self.array = Color._from_sequence(*args)  # pylint:disable=no-value-for-parameter
-        if self.array is None:
+        elif not args and bgr is not None:
+            self.array = Color._from_sequence(*bgr)
+        elif not args and all(x is not None for x in (blue, green, red)):
+            self.array = Color._from_sequence(blue, green, red)
+
+        else:
             raise TypeError("Color: __init__() expected a Color, '#rrggbb' "
                             "string, or 3 integers in Blue-Green-Red order. ")
+
         self.hexstring = (
             "#{0:02x}{1:02x}{2:02x}{3}".format(
                 self.array[0][0][2], self.array[0][0][1], self.array[0][0][0],

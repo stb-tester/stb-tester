@@ -176,35 +176,41 @@ def test_crop():
         stbt.crop(img, stbt.Region(x=-10, y=-10, right=0, bottom=0))
 
 
-@pytest.mark.parametrize("args,expected", [
-    (["#f77f00"], "#f77f00"),
-    (["#F77F00"], "#f77f00"),
-    (["f77f00"], "#f77f00"),
-    (["f77f00"], "#f77f00"),
-    (["f77f00ff"], "#f77f00ff"),
-    (["#0a3"], "#00aa33"),
-    (["#0A3"], "#00aa33"),
-    (["#111"], "#111111"),
-    (["#12345"], ValueError),
-    (["#1234567"], ValueError),
-    (["#12345g"], ValueError),
-    ([(0, 127, 247)], "#f77f00"),  # a 3-tuple, BGR
-    ([(0, 127, 247, 255)], "#f77f00ff"),  # a 4-tuple, BGRA
-    ([0, 127, 247], "#f77f00"),  # 3 separate arguments, BGR
-    ([0, 127, 247, 255], "#f77f00ff"),  # 4 separate arguments, BGRA
-    ([0, 127, 256], ValueError),  # range 0-255
-    ([0, -127, 247], ValueError),  # range 0-255
-    ([0, 127], TypeError),
-    ([stbt.Color("#000")], "#000000"),  # constructing from another Color
-    ([stbt.load_image("button.png")[3, 65]], "#ff1443"),  # from a pixel
-    ([stbt.load_image("button.png", color_channels=4)[3, 65]], "#ff1443ff"),
+@pytest.mark.parametrize("args,kwargs,expected", [
+    (["#f77f00"], {}, "#f77f00"),
+    (["#F77F00"], {}, "#f77f00"),
+    (["f77f00"], {}, "#f77f00"),
+    (["f77f00"], {}, "#f77f00"),
+    (["f77f00ff"], {}, "#f77f00ff"),
+    (["#0a3"], {}, "#00aa33"),
+    (["#0A3"], {}, "#00aa33"),
+    (["#111"], {}, "#111111"),
+    (["#12345"], {}, ValueError),
+    (["#1234567"], {}, ValueError),
+    (["#12345g"], {}, ValueError),
+    ([], {"hexstring": "#f77f00"}, "#f77f00"),
+    ([(0, 127, 247)], {}, "#f77f00"),  # a 3-tuple, BGR
+    ([], {"bgr": (0, 127, 247)}, "#f77f00"),
+    ([], {"bgr": (0, 127, 247, 255)}, "#f77f00ff"),  # a 4-tuple, BGRA
+    ([0, 127, 247], {}, "#f77f00"),  # 3 separate arguments, BGR
+    ([], {"blue": 0, "green": 127, "red": 247}, "#f77f00"),
+    ([0, 127, 247, 255], {}, "#f77f00ff"),  # 4 separate arguments, BGRA
+    ([0, 127, 256], {}, ValueError),  # range 0-255
+    ([0, -127, 247], {}, ValueError),  # range 0-255
+    ([0, 127], {}, TypeError),
+    ([], {}, TypeError),
+    ([], {"blue": 0, "green": 127}, TypeError),
+    ([stbt.Color("#000")], {}, "#000000"),  # constructing from another Color
+    ([stbt.load_image("button.png")[3, 65]], {}, "#ff1443"),  # from a pixel
+    ([stbt.load_image("button.png", color_channels=4)[3, 65]], {}, "#ff1443ff"),
+    ([], {"bgr": stbt.load_image("button.png")[3, 65]}, "#ff1443"),
 ])
-def test_color_constructor(args, expected):
+def test_color_constructor(args, kwargs, expected):
     if isinstance(expected, type):
         with pytest.raises(expected):
-            print(stbt.Color(*args))
+            print(stbt.Color(*args, **kwargs))
     else:
-        assert expected == stbt.Color(*args).hexstring
+        assert expected == stbt.Color(*args, **kwargs).hexstring
 
 
 def test_color_equality_and_hash():
