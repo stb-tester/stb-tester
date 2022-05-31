@@ -13,7 +13,7 @@ import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import crop, _frame_repr, _validate_region
+from .imgutils import Color, crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
@@ -149,16 +149,14 @@ def ocr(frame=None, region=Region.ALL,
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine.
 
-    :param frame:
+    :param Frame frame:
       If this is specified it is used as the video frame to process; otherwise
-      a new frame is grabbed from the device-under-test. This is an image in
-      OpenCV format (for example as returned by `frames` and `get_frame`).
+      a new frame is grabbed from the device-under-test.
 
-    :param region: Only search within the specified region of the video frame.
-    :type region: `Region`
+    :param Region region:
+      Only search within the specified region of the video frame.
 
-    :param mode: Tesseract's layout analysis mode.
-    :type mode: `OcrMode`
+    :param OcrMode mode: Tesseract's layout analysis mode.
 
     :param str lang:
         The three-letter
@@ -208,26 +206,23 @@ def ocr(frame=None, region=Region.ALL,
         you should only disable it if you are doing your own pre-processing on
         the image.
 
-    :type text_color: 3-element tuple of integers between 0 and 255, BGR order
-    :param text_color:
+    :param Color text_color:
         Color of the text. Specifying this can improve OCR results when
         tesseract's default thresholding algorithm doesn't detect the text,
         for example white text on a light-colored background or text on a
-        translucent overlay.
+        translucent overlay with dynamic content underneath.
 
     :param int text_color_threshold:
         The threshold to use with ``text_color``, between 0 and 255. Defaults
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
-    :param engine:
+    :param OcrEngine engine:
         The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
         override the global default value by setting ``engine`` in the ``[ocr]``
         section of :ref:`.stbt.conf`.
-    :type engine: `OcrEngine`
 
-    :type char_whitelist: unicode string
-    :param char_whitelist:
+    :param str char_whitelist:
         String of characters that are allowed. Useful when you know that the
         text is only going to contain numbers or IP addresses, for example so
         that tesseract won't think that a zero is the letter o.
@@ -521,23 +516,30 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
         if upsample:
             frame = _upsample(frame, imglog)
             upsample = False
-
-        # Calculate distance of each pixel from `text_color`, then discard
-        # everything further than `text_color_threshold` distance away.
-        diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
-        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
-                            diff[:, :, 1] ** 2 +
-                            diff[:, :, 2] ** 2) // 3) \
-                     .astype(numpy.uint8)
-        imglog.imwrite("text_color_difference", frame)
-        _, frame = cv2.threshold(frame, text_color_threshold, 255,
-                                 cv2.THRESH_BINARY)
-        imglog.imwrite("text_color_threshold", frame)
+        frame = ocr.text_color_differ(frame, text_color, text_color_threshold,
+                                      imglog)
 
     return _tesseract_subprocess(frame, mode, lang, _config,  # pylint:disable=unexpected-keyword-arg
                                  user_patterns, user_words, upsample,
                                  engine, char_whitelist, imglog,
                                  tesseract_version, use_cache=True)
+
+
+def bgr_diff(frame, color, threshold, imglog):
+    # Calculate distance of each pixel from `text_color`, then discard
+    # everything further than `text_color_threshold` distance away.
+    diff = numpy.subtract(frame, Color(color).array, dtype=numpy.int32)
+    frame = numpy.sqrt((diff[:, :, 0] ** 2 +
+                        diff[:, :, 1] ** 2 +
+                        diff[:, :, 2] ** 2) // 3) \
+                 .astype(numpy.uint8)
+    imglog.imwrite("diff", frame)
+    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+    imglog.imwrite("binarized", frame)
+    return frame
+
+
+ocr.text_color_differ = bgr_diff
 
 
 @imgproc_cache.memoize({"version": "32"})
@@ -787,17 +789,17 @@ def _log_ocr_image_debug(imglog, output=None):
         <img src="upsampled.png" />
         {% endif %}
 
-        {% if "text_color_difference" in images %}
+        {% if "diff" in images %}
         <h5>Color difference {{ text_color }}:</h5>
-        <img src="text_color_difference.png" />
+        <img src="diff.png" />
         {% endif %}
 
-        {% if "text_color_threshold" in images %}
+        {% if "binarized" in images %}
         <h5>
           Color difference – binarised
           (threshold={{ text_color_threshold }}):
         </h5>
-        <img src="text_color_threshold.png" />
+        <img src="binarized.png" />
         {% endif %}
 
         {% if "tessinput" in images %}

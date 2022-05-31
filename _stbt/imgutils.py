@@ -2,8 +2,10 @@
 
 import inspect
 import os
+import re
 import warnings
 from collections import namedtuple
+from typing import overload, Tuple
 
 import cv2
 import numpy
@@ -156,6 +158,124 @@ def _frame_repr(frame):
         return "<%dx%dx%d>" % (frame.shape[1], frame.shape[0], frame.shape[2])
     else:
         return "<%dx%d>" % (frame.shape[1], frame.shape[0])
+
+
+class Color:
+    """A BGR color, optionally with an alpha (transparency) value.
+
+    A Color can be created from an HTML-style hex string:
+
+    >>> Color('#f77f00')
+    Color('#f77f00')
+
+    Or from Blue, Green, Red values in the range 0-255:
+
+    >>> Color(0, 127, 247)
+    Color('#f77f00')
+
+    Note: When you specify the colors in this way, the BGR order is the
+    opposite of the HTML-style RGB order. This is for compatibility with the
+    way OpenCV stores colors.
+    """
+    @overload
+    def __init__(self, hexstring: str) -> None:
+        ...
+    @overload
+    def __init__(self, blue: int, green: int, red: int) -> None:
+        ...
+    @overload
+    def __init__(self, bgr: Tuple[int, int, int]) -> None:
+        ...
+    def __init__(self, *args,
+                 hexstring: str = None,
+                 blue: int = None, green: int = None, red: int = None,
+                 bgr: Tuple[int, int, int] = None):
+
+        self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA
+
+        if len(args) == 1 and isinstance(args[0], Color):
+            self.array = args[0].array
+
+        elif len(args) == 1 and isinstance(args[0], str):
+            self.array = Color._from_string(args[0])
+        elif not args and hexstring is not None:
+            self.array = Color._from_string(hexstring)
+
+        elif (len(args) == 1 and
+                isinstance(args[0], (list, tuple, numpy.ndarray)) and
+                len(args[0]) in (3, 4)):
+            self.array = Color._from_sequence(*args[0])
+        elif len(args) in (3, 4):
+            self.array = Color._from_sequence(*args)  # pylint:disable=no-value-for-parameter
+        elif not args and bgr is not None:
+            self.array = Color._from_sequence(*bgr)
+        elif not args and all(x is not None for x in (blue, green, red)):
+            self.array = Color._from_sequence(blue, green, red)
+
+        else:
+            raise TypeError("Color: __init__() expected a Color, '#rrggbb' "
+                            "string, or 3 integers in Blue-Green-Red order. ")
+
+        self.hexstring = (
+            "#{0:02x}{1:02x}{2:02x}{3}".format(
+                self.array[0][0][2], self.array[0][0][1], self.array[0][0][0],
+                ("" if self.array.shape[2] == 3
+                 else f"{self.array[0][0][3]:02x}")))
+
+    @staticmethod
+    def _from_string(s):
+        m = re.match(r"^#?([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$", s)
+        if m:
+            s = m.group(1)
+            if len(s) == 8:
+                r = s[0:2]
+                g = s[2:4]
+                b = s[4:6]
+                a = s[6:8]
+            elif len(s) == 6:
+                r = s[0:2]
+                g = s[2:4]
+                b = s[4:6]
+                a = None
+            elif len(s) == 3:
+                r = s[0] * 2
+                g = s[1] * 2
+                b = s[2] * 2
+                a = None
+            else:
+                assert False, f"unreachable: {s}"
+        else:
+            raise ValueError(
+                f"Invalid color string. Expected hexadesimal digits in the "
+                f"format '#rrggbb'; got {s!r}")
+        return Color._from_sequence(b, g, r, a)
+
+    @staticmethod
+    def _from_sequence(b, g, r, a=None):
+        channels = [b, g, r]
+        if a is not None:
+            channels.append(a)
+        out = []
+        for x in channels:
+            if isinstance(x, str):
+                x = int(x, 16)
+            else:
+                x = int(x)
+            if not 0 <= x <= 255:
+                raise ValueError(f"Color: __init__ expected a value between 0 "
+                                 f"and 255: Got {x}")
+            out.append(x)
+        return (numpy.asarray(out, dtype=numpy.uint8)
+                     .reshape((1, 1, len(channels))))
+
+    def __repr__(self):
+        return f"Color('{self.hexstring}')"
+
+    def __eq__(self, other):
+        return isinstance(other, Color) and self.hexstring == other.hexstring
+
+    def __hash__(self):
+        return hash(self.hexstring)
 
 
 def crop(frame, region):

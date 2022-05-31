@@ -145,7 +145,7 @@ test_using_frames_to_measure_black_screen() {
 }
 
 test_that_frames_doesnt_deadlock() {
-    cat > test.py <<-EOF &&
+    cat > test.py <<-EOF
 	import stbt_core as stbt
 	for frame in stbt.frames():
 	    print(frame.time)
@@ -160,10 +160,9 @@ test_that_frames_doesnt_deadlock() {
 	frames3 = stbt.frames()
 	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
-    timeout 20 stbt run -v test.py &&
-
-    cat > test2.py <<-EOF
-EOF
+    local t
+    [[ -v CIRCLECI ]] && t=60 || t=5
+    timeout $t stbt run -v test.py
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
@@ -465,8 +464,9 @@ test_draw_text() {
 	sleep(60)
 	EOF
     cat > verify-draw-text.py <<-EOF &&
-	import stbt_core as stbt
-	stbt.wait_for_match("$testdir/draw-text.png")
+	import os, stbt_core as stbt
+	stbt.wait_for_match("$testdir/draw-text.png",
+	    timeout_secs=60 if "CIRCLECI" in os.environ else 10)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 

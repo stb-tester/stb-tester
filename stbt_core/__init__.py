@@ -26,6 +26,7 @@ from _stbt.frameobject import (
 from _stbt.grid import (
     Grid)
 from _stbt.imgutils import (
+    Color,
     crop,
     Frame,
     Image,
@@ -80,6 +81,7 @@ from _stbt.wait import (
 __all__ = [
     "apply_ocr_corrections",
     "as_precondition",
+    "Color",
     "ConfigurationError",
     "ConfirmMethod",
     "crop",
