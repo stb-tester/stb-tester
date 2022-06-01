@@ -66,15 +66,16 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
 
     region = _validate_region(frame, region)
     if mask is not None:
-        mask = load_mask(mask, shape=(region.height, region.width, 1))
+        mask = load_mask(mask)
 
     imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
     if mask is not None:
-        imglog.imwrite("mask", mask)
-        cv2.bitwise_and(greyframe, mask, dst=greyframe)
+        mask_ = mask.to_array(shape=(region.height, region.width, 1))
+        imglog.imwrite("mask", mask_)
+        cv2.bitwise_and(greyframe, mask_, dst=greyframe)
     maxVal = greyframe.max()
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)

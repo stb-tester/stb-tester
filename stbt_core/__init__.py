@@ -31,7 +31,7 @@ from _stbt.imgutils import (
     Frame,
     Image,
     load_image,
-    mask_out,
+    load_mask,
     save_frame)
 from _stbt.keyboard import (
     Keyboard)
@@ -101,7 +101,7 @@ __all__ = [
     "Keyboard",
     "last_keypress",
     "load_image",
-    "mask_out",
+    "load_mask",
     "match",
     "match_all",
     "match_text",

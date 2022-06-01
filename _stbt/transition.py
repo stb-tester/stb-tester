@@ -155,7 +155,7 @@ def wait_for_transition_to_end(
 class _Transition():
     def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
         self.region = region
-        self.mask = load_mask(mask, shape=None)
+        self.mask = load_mask(mask)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -248,15 +248,16 @@ class StrictDiff(FrameDiffer):
         self.min_size = min_size
 
         if mask is not None:
-            mask = load_mask(mask,
-                             shape=(self.region.height, self.region.width, 3))
+            mask = load_mask(mask)
         self.mask = mask
 
     def diff(self, frame):
         absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
                               crop(frame, self.region))
         if self.mask is not None:
-            absdiff = cv2.bitwise_and(absdiff, self.mask, absdiff)
+            mask_ = self.mask.to_array(
+                shape=(self.region.height, self.region.width, 3))
+            absdiff = cv2.bitwise_and(absdiff, mask_, absdiff)
 
         diffs_found = False
         out_region = None

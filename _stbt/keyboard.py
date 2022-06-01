@@ -197,7 +197,7 @@ class Keyboard():
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
-        self.mask = load_mask(mask, shape=None)
+        self.mask = load_mask(mask)
         self.navigate_timeout = navigate_timeout
 
         self.symmetrical_keys = {
