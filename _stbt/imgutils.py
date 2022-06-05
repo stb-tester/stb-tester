@@ -12,7 +12,6 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
-from .utils import to_unicode
 
 
 class Frame(numpy.ndarray):
@@ -402,14 +401,15 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         img = obj  # obj.filename etc. will be None
         filename = None
         absolute_filename = None
-    else:
-        filename = to_unicode(filename)
+    elif isinstance(filename, str):
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
             raise IOError("No such file: %s" % filename)
         img = _imread(absolute_filename, color_channels)
         if img is None:
             raise IOError("Failed to load image: %s" % absolute_filename)
+    else:
+        raise TypeError("load_image requires a filename or Image")
 
     if len(img.shape) not in [2, 3]:
         raise ValueError(
