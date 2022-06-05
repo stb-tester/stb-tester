@@ -4,9 +4,9 @@ import cv2
 import numpy
 
 from .config import get_config
-from .imgutils import (crop, _frame_repr, load_mask, pixel_bounding_box,
-                       _validate_region)
+from .imgutils import crop, _frame_repr, pixel_bounding_box, _validate_region
 from .logging import ddebug, ImageLogger
+from .mask import load_mask
 from .types import Region
 
 

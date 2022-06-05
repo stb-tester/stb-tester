@@ -19,12 +19,9 @@ import cv2
 import numpy
 
 from .diff import FrameDiffer, MotionDiff, MotionResult
-from .imgutils import (
-    crop,
-    load_mask,
-    pixel_bounding_box,
-    _validate_region)
+from .imgutils import crop, pixel_bounding_box, _validate_region
 from .logging import ddebug, debug, draw_on
+from .mask import load_mask
 from .types import Region
 
 

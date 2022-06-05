@@ -5,6 +5,47 @@ import numpy
 from .types import Region
 
 
+def load_mask(mask):
+    """Used to load a mask from disk, or to create a mask from a `Region`.
+
+    A mask is a black & white image (the same size as the video-frame) that
+    specifies which parts of the frame to process: White pixels select the area
+    to process, black pixels the area to ignore.
+
+    In most cases you don't need to call ``load_mask`` directly; Stb-tester's
+    image-processing functions such as `is_screen_black`, `press_and_wait`, and
+    `wait_for_motion` will call ``load_mask`` with their ``mask`` parameter.
+    This function is a public API so that you can use it if you are
+    implementing your own image-processing functions.
+
+    Note that you can pass a `Region` directly to the ``mask`` parameter of
+    stbt functions, and you can create more complex masks by adding,
+    subtracting, or inverting Regions (see `Region`).
+
+    :param str|Region mask: A relative or absolute filename of a mask PNG
+      image. If given a relative filename, this uses the algorithm from
+      `load_image` to find the file.
+
+      Or, a `Region` that specifies the area to process.
+
+    :returns: A mask as used by `is_screen_black`, `press_and_wait`,
+      `wait_for_motion`, and similar image-processing functions.
+
+    Added in v33.
+    """
+    if mask is None:
+        return None
+    elif isinstance(mask, Mask):
+        return mask
+    if isinstance(mask, Region):
+        return Mask(mask)
+    elif isinstance(mask, (str, numpy.ndarray)):
+        from .imgutils import load_image
+        return Mask(load_image(mask, color_channels=(1, 3)))
+    else:
+        raise TypeError("Don't know how to make mask from %r" % (mask,))
+
+
 class Mask:
     def __init__(self, m, *, invert=False):
         """Private constructor; for public use see `load_mask`."""

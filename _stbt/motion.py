@@ -4,8 +4,9 @@ from collections import deque
 
 from .config import ConfigurationError, get_config
 from .diff import MotionDiff
-from .imgutils import limit_time, load_mask
+from .imgutils import limit_time
 from .logging import debug, draw_on
+from .mask import load_mask
 from .types import Region, UITestFailure
 
 

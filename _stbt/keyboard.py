@@ -7,7 +7,7 @@ from logging import getLogger
 
 from attr import attrs, attrib
 from _stbt.grid import Grid
-from _stbt.imgutils import load_mask
+from _stbt.mask import load_mask
 from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 

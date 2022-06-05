@@ -11,9 +11,9 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import cv2
 
 from .config import get_config
-from .imgutils import (crop, _frame_repr, load_mask, pixel_bounding_box,
-                       _validate_region)
+from .imgutils import crop, _frame_repr, pixel_bounding_box, _validate_region
 from .logging import debug, ImageLogger
+from .mask import load_mask
 from .types import Region
 
 
