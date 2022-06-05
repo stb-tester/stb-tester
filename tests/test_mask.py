@@ -1,4 +1,8 @@
+import tempfile
 from textwrap import dedent
+
+import cv2
+import pytest
 
 from _stbt.mask import Mask
 from _stbt.types import Region
@@ -89,6 +93,22 @@ def test_mask_arithmetic():
     m = ~r1
     assert repr(Mask(r1)) == repr(~m)
     assert pretty(Mask(r1)) == pretty(~m)
+
+    assert repr(Region.ALL - r1) == f"Region.ALL - {r1!r}"
+    assert pretty(Region.ALL - r1) == pretty(~r1)
+
+    with tempfile.NamedTemporaryFile(prefix="test_mask", suffix=".png") as f:
+        cv2.imwrite(f.name, Mask(r1).to_array(shape=(4, 6, 1)))
+        m1 = Mask(f.name)
+        assert repr(m1) == f"Mask({f.name!r})"
+        assert pretty(m1) == pretty(Mask(r1))
+        assert repr(m1 + r2) == \
+            f"Mask({f.name!r}) + Region(x=4, y=2, right=6, bottom=6)"
+        assert pretty(m1 + r2) == pretty(r1 + r2)
+
+        m1.to_array(shape=(4, 6, 3))
+        with pytest.raises(ValueError):
+            m1.to_array(shape=(2, 2, 1))
 
 
 def pretty(mask):
