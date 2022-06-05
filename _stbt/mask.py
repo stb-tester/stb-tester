@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy
 
+from .imgutils import _convert_color, load_image
 from .types import Region
 
 
@@ -40,7 +41,6 @@ def load_mask(mask):
     if isinstance(mask, Region):
         return Mask(mask)
     elif isinstance(mask, (str, numpy.ndarray)):
-        from .imgutils import load_image
         return Mask(load_image(mask, color_channels=(1, 3)))
     else:
         raise TypeError("Don't know how to make mask from %r" % (mask,))
@@ -54,7 +54,6 @@ class Mask:
         self._binop = None
         self._region = None
         if isinstance(m, (str, numpy.ndarray)):
-            from .imgutils import load_image
             self._image = load_image(m, color_channels=(1, 3))
             self._invert = invert
         elif isinstance(m, BinOp):
@@ -93,8 +92,9 @@ class Mask:
                 raise ValueError(f"Mask shape {array.shape} and required shape "
                                  f"{shape} don't match")
             if array.shape[2] != shape[2]:
-                from .imgutils import load_image
-                array = load_image(array, color_channels=shape[2])
+                array = _convert_color(
+                    array, color_channels=(shape[2],),
+                    absolute_filename=array.absolute_filename)
         elif self._binop is not None:
             n = self._binop
             if n.op == "+":
