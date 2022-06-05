@@ -100,17 +100,7 @@ class Image(numpy.ndarray):
         obj.absolute_filename = (absolute_filename or
                                  (i and array.absolute_filename) or
                                  None)
-        obj.relative_filename = None
-
-        if obj.absolute_filename is not None:
-            import stbt_core
-            root = getattr(stbt_core, "TEST_PACK_ROOT", None)
-            if root is not None:
-                obj.relative_filename = os.path.relpath(obj.absolute_filename,
-                                                        root)
-            else:
-                obj.relative_filename = obj.absolute_filename
-
+        obj.relative_filename = _relative_filename(obj.absolute_filename)
         return obj
 
     def __array_finalize__(self, obj):
@@ -146,6 +136,22 @@ class Image(numpy.ndarray):
     @property
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
+
+
+def _relative_filename(absolute_filename):
+    """Returns filename relative to the test-pack root if inside the test-pack,
+    or absolute path if outside the test-pack.
+    """
+    if absolute_filename is None:
+        return None
+    import stbt_core
+    root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+    if root is None:
+        return absolute_filename
+    relpath = os.path.relpath(absolute_filename, root)
+    if relpath.startswith(".."):
+        return absolute_filename
+    return relpath
 
 
 def _frame_repr(frame):
