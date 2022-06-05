@@ -4,6 +4,7 @@ import inspect
 import os
 import re
 import warnings
+from functools import lru_cache
 from typing import overload, Tuple
 
 import cv2
@@ -406,13 +407,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
             raise IOError("No such file: %s" % filename)
-        if color_channels == (3,):
-            flags = cv2.IMREAD_COLOR
-        elif color_channels == (1,):
-            flags = cv2.IMREAD_GRAYSCALE
-        else:
-            flags = cv2.IMREAD_UNCHANGED
-        img = cv2.imread(absolute_filename, flags)
+        img = _imread(absolute_filename, color_channels)
         if img is None:
             raise IOError("Failed to load image: %s" % absolute_filename)
 
@@ -482,6 +477,17 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         img = Image(img, filename=filename, absolute_filename=absolute_filename)
 
     return img
+
+
+@lru_cache(maxsize=5)
+def _imread(absolute_filename, color_channels):
+    if color_channels == (3,):
+        flags = cv2.IMREAD_COLOR
+    elif color_channels == (1,):
+        flags = cv2.IMREAD_GRAYSCALE
+    else:
+        flags = cv2.IMREAD_UNCHANGED
+    return cv2.imread(absolute_filename, flags)
 
 
 def save_frame(image, filename):
