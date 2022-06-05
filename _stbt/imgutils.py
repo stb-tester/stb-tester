@@ -394,23 +394,41 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
     obj = filename
     if isinstance(obj, Image):
-        img = obj
         filename = obj.filename
         absolute_filename = obj.absolute_filename
+        img = _convert_color(obj, color_channels, absolute_filename)
     elif isinstance(obj, numpy.ndarray):
-        img = obj  # obj.filename etc. will be None
         filename = None
         absolute_filename = None
+        img = _convert_color(obj, color_channels, absolute_filename)
     elif isinstance(filename, str):
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
             raise IOError("No such file: %s" % filename)
         img = _imread(absolute_filename, color_channels)
-        if img is None:
-            raise IOError("Failed to load image: %s" % absolute_filename)
     else:
         raise TypeError("load_image requires a filename or Image")
 
+    if not isinstance(img, Image):
+        img = Image(img, filename=filename, absolute_filename=absolute_filename)
+    return img
+
+
+@lru_cache(maxsize=5)
+def _imread(absolute_filename, color_channels):
+    if color_channels == (3,):
+        flags = cv2.IMREAD_COLOR
+    elif color_channels == (1,):
+        flags = cv2.IMREAD_GRAYSCALE
+    else:
+        flags = cv2.IMREAD_UNCHANGED
+    img = cv2.imread(absolute_filename, flags)
+    if img is None:
+        raise IOError("Failed to load image: %s" % absolute_filename)
+    return _convert_color(img, color_channels, absolute_filename)
+
+
+def _convert_color(img, color_channels, absolute_filename):
     if len(img.shape) not in [2, 3]:
         raise ValueError(
             "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
@@ -418,11 +436,11 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
     if img.dtype == numpy.uint16:
         warn("Image %s has 16 bits per channel. Converting to 8 bits."
-             % filename)
+             % _filename_repr(absolute_filename))
         img = cv2.convertScaleAbs(img, alpha=1.0 / 256)
     elif img.dtype != numpy.uint8:
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
-                         % (filename, img.dtype))
+                         % (_filename_repr(absolute_filename), img.dtype))
 
     if len(img.shape) == 2:
         img = img.reshape(img.shape + (1,))
@@ -470,24 +488,17 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     else:
         raise ValueError(
             "load_image can only handle images with 1, 3 or 4 color channels. "
-            "%s has %i channels" % (filename, c))
+            "%s has %i channels" % (_filename_repr(absolute_filename), c))
 
     assert img.shape[2] in color_channels
-    if not isinstance(img, Image):
-        img = Image(img, filename=filename, absolute_filename=absolute_filename)
-
     return img
 
 
-@lru_cache(maxsize=5)
-def _imread(absolute_filename, color_channels):
-    if color_channels == (3,):
-        flags = cv2.IMREAD_COLOR
-    elif color_channels == (1,):
-        flags = cv2.IMREAD_GRAYSCALE
+def _filename_repr(absolute_filename):
+    if absolute_filename is None:
+        return "<Image>"
     else:
-        flags = cv2.IMREAD_UNCHANGED
-    return cv2.imread(absolute_filename, flags)
+        return repr(_relative_filename(absolute_filename))
 
 
 def save_frame(image, filename):
