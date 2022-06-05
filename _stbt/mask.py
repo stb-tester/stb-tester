@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy
 
-from .imgutils import _convert_color, load_image
+from .imgutils import (
+    _convert_color, find_user_file, Image, load_image, _relative_filename)
 from .types import Region
 
 
@@ -38,29 +40,34 @@ def load_mask(mask):
         return None
     elif isinstance(mask, Mask):
         return mask
-    if isinstance(mask, Region):
-        return Mask(mask)
-    elif isinstance(mask, (str, numpy.ndarray)):
-        return Mask(load_image(mask, color_channels=(1, 3)))
     else:
-        raise TypeError("Don't know how to make mask from %r" % (mask,))
+        return Mask(mask)
 
 
 class Mask:
     def __init__(self, m, *, invert=False):
         """Private constructor; for public use see `load_mask`."""
-        # One (and only one) of these will be set: image, binop, region.
-        self._image = None
+        # One (and only one) of these will be set: filename, array, binop,
+        # region.
+        self._filename = None
+        self._array = None
         self._binop = None
         self._region = None
-        if isinstance(m, (str, numpy.ndarray)):
-            self._image = load_image(m, color_channels=(1, 3))
+        if isinstance(m, str):
+            absolute_filename = find_user_file(m)
+            if not absolute_filename:
+                raise IOError(f"No such file: {m}")
+            self._filename = absolute_filename
+            self._invert = invert
+        elif isinstance(m, numpy.ndarray):
+            self._array = load_image(m, color_channels=(1, 3))
             self._invert = invert
         elif isinstance(m, BinOp):
             self._binop = m
             self._invert = invert
         elif isinstance(m, Mask):
-            self._image = m._image
+            self._filename = m._filename
+            self._array = m._array
             self._binop = m._binop
             self._region = m._region
             self._invert = m._invert
@@ -79,24 +86,45 @@ class Mask:
             raise TypeError("Expected filename, Image, Mask, or Region. "
                             f"Got {m!r}")
 
-        # for memoisation:
-        self._array = None
+    def __eq__(self, o):
+        if not isinstance(o, Mask):
+            return False
+        if self._array is not None:
+            return numpy.array_equal(self._array, o._array)
+        else:
+            return ((self._filename, self._binop, self._region, self._invert) ==
+                    (o._filename, o._binop, o._region, o._invert))
+
+    def __hash__(self):
+        if self._array is not None:
+            from _stbt.xxhash import Xxhash64
+            h = Xxhash64()
+            h.update(numpy.ascontiguousarray(self._array).data)
+            return hash((self._array.shape, h.hexdigest(), self._invert))
+        else:
+            return hash((self._filename, self._binop, self._region,
+                         self._invert))
 
     def to_array(self, shape):
-        if self._array is not None and self._array.shape == shape:
-            return self._array
+        return Mask._to_array(self, shape)
 
-        if self._image is not None:
-            array = self._image
-            if array.shape[:2] != shape[:2]:
+    @staticmethod
+    @lru_cache(maxsize=5)
+    def _to_array(mask, shape):
+        if mask._filename is not None:
+            array = load_image(mask._filename, color_channels=(shape[2],))
+            if array.shape != shape:
                 raise ValueError(f"Mask shape {array.shape} and required shape "
                                  f"{shape} don't match")
-            if array.shape[2] != shape[2]:
-                array = _convert_color(
-                    array, color_channels=(shape[2],),
-                    absolute_filename=array.absolute_filename)
-        elif self._binop is not None:
-            n = self._binop
+        elif mask._array is not None:
+            array = mask._array
+            array = _convert_color(array, color_channels=(shape[2],),
+                                   absolute_filename=array.absolute_filename)
+            if array.shape != shape:
+                raise ValueError(f"Mask shape {array.shape} and required shape "
+                                 f"{shape} don't match")
+        elif mask._binop is not None:
+            n = mask._binop
             if n.op == "+":
                 array = n.left.to_array(shape) | n.right.to_array(shape)
             elif n.op == "-":
@@ -105,22 +133,23 @@ class Mask:
                 assert False, f"Unreachable: Unknown op {n.op}"
         else:  # Region (including None)
             array = numpy.full(shape, 0, dtype=numpy.uint8)
-            r = Region.intersect(self._region, Region(0, 0, shape[1], shape[0]))
+            r = Region.intersect(mask._region, Region(0, 0, shape[1], shape[0]))
             if r:
                 array[r.y:r.bottom, r.x:r.right] = 255
 
-        if self._invert:
+        if mask._invert:
             array = ~array  # pylint:disable=invalid-unary-operand-type
 
-        self._array = array
-        return self._array
+        return array
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
         prefix = "~" if self._invert else ""
-        if self._image is not None:
-            if self._image.relative_filename:
-                return f"{prefix}Mask({self._image.relative_filename!r})"
+        if self._filename is not None:
+            return f"{prefix}Mask({_relative_filename(self._filename)!r})"
+        elif self._array is not None:
+            if isinstance(self._array, Image) and self._array.relative_filename:
+                return f"{prefix}Mask({self._array.relative_filename!r})"
             else:
                 return f"{prefix}Mask(<Image>)"
         elif self._binop is not None:
@@ -134,10 +163,8 @@ class Mask:
                 open_paren, close_paren = "", ""
             return (f"{prefix}{open_paren}{left_repr} {self._binop.op} "
                     f"{right_repr}{close_paren}")
-        elif self._region is not None:
+        else:  # self._region is a Region or None
             return f"{prefix}{self._region!r}"
-        else:
-            assert False, "Unreachable: Logic error in recursion"
 
     def __add__(self, other):
         if isinstance(other, (Region, Mask)):
@@ -155,7 +182,7 @@ class Mask:
         return Mask(self, invert=True)
 
 
-@dataclass
+@dataclass(frozen=True)
 class BinOp:
     op: str  # "+" or "-"
     left: Mask
