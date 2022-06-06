@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Union, Tuple
 
 import numpy
 
@@ -13,7 +14,10 @@ except ImportError:
     Xxhash64 = None
 
 
-def load_mask(mask):
+MaskTypes = Union[str, numpy.ndarray, "Mask", Region, None]
+
+
+def load_mask(mask: MaskTypes) -> "Mask":
     """Used to load a mask from disk, or to create a mask from a `Region`.
 
     A mask is a black & white image (the same size as the video-frame) that
@@ -50,7 +54,7 @@ def load_mask(mask):
 
 
 class Mask:
-    def __init__(self, m, *, invert=False):
+    def __init__(self, m: MaskTypes, *, invert: bool = False) -> None:
         """Private constructor; for public use see `load_mask`."""
         # One (and only one) of these will be set: filename, array, binop,
         # region.
@@ -113,12 +117,13 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
-    def to_array(self, shape):
+    def to_array(self, shape: Tuple[int, int, int]) -> numpy.ndarray:
         return Mask._to_array(self, shape)
 
     @staticmethod
     @lru_cache(maxsize=5)
-    def _to_array(mask, shape):
+    def _to_array(mask: "Mask", shape: Tuple[int, int, int]) -> numpy.ndarray:
+        array: numpy.ndarray
         if mask._filename is not None:
             array = load_image(mask._filename, color_channels=(shape[2],))
             if array.shape != shape:
@@ -174,19 +179,19 @@ class Mask:
         else:  # self._region is a Region or None
             return f"{prefix}{self._region!r}"
 
-    def __add__(self, other):
+    def __add__(self, other: MaskTypes) -> "Mask":
         if isinstance(other, (Region, Mask)):
             return Mask(BinOp("+", self, Mask(other)))
         else:
             return NotImplemented
 
-    def __sub__(self, other):
+    def __sub__(self, other: MaskTypes) -> "Mask":
         if isinstance(other, (Region, Mask)):
             return Mask(BinOp("-", self, Mask(other)))
         else:
             return NotImplemented
 
-    def __invert__(self):
+    def __invert__(self) -> "Mask":
         return Mask(self, invert=True)
 
 
