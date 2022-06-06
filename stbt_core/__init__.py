@@ -37,7 +37,8 @@ from _stbt.keyboard import (
 from _stbt.logging import (
     debug)
 from _stbt.mask import (
-    load_mask)
+    load_mask,
+    Mask)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -103,6 +104,7 @@ __all__ = [
     "last_keypress",
     "load_image",
     "load_mask",
+    "Mask",
     "match",
     "match_all",
     "match_text",
