@@ -7,6 +7,11 @@ from .imgutils import (
     _convert_color, find_user_file, Image, load_image, _relative_filename)
 from .types import Region
 
+try:
+    from _stbt.xxhash import Xxhash64
+except ImportError:
+    Xxhash64 = None
+
 
 def load_mask(mask):
     """Used to load a mask from disk, or to create a mask from a `Region`.
@@ -97,10 +102,13 @@ class Mask:
 
     def __hash__(self):
         if self._array is not None:
-            from _stbt.xxhash import Xxhash64
-            h = Xxhash64()
-            h.update(numpy.ascontiguousarray(self._array).data)
-            return hash((self._array.shape, h.hexdigest(), self._invert))
+            if Xxhash64:
+                h = Xxhash64()
+                h.update(numpy.ascontiguousarray(self._array).data)
+                digest = h.hexdigest()
+            else:
+                digest = hash(self._array.data.tobytes())
+            return hash((self._array.shape, digest, self._invert))
         else:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
