@@ -254,11 +254,23 @@ class Region(namedtuple('Region', 'x y right bottom'),
         from .mask import Mask
         return Mask(self).__add__(other)
 
+    def __radd__(self, other):
+        """Adding 2 or more Regions together creates a mask with the pixels
+        inside those Regions selected; all other pixels ignored."""
+        from .mask import Mask
+        return Mask(self).__radd__(other)
+
     def __sub__(self, other):
         """Subtracting a Region removes that Region's pixels from the mask
         (so those pixels will be ignored)."""
         from .mask import Mask
         return Mask(self).__sub__(other)
+
+    def __rsub__(self, other):
+        """Subtracting a Region removes that Region's pixels from the mask
+        (so those pixels will be ignored)."""
+        from .mask import Mask
+        return Mask(self).__rsub__(other)
 
     def __invert__(self):
         """Inverting a Region creates a mask with the Region's pixels ignored,

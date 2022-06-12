@@ -180,14 +180,26 @@ class Mask:
             return f"{prefix}{self._region!r}"
 
     def __add__(self, other: MaskTypes) -> "Mask":
-        if isinstance(other, (Region, Mask)):
+        if isinstance(other, (Region, Mask, type(None))):
             return Mask(BinOp("+", self, Mask(other)))
         else:
             return NotImplemented
 
+    def __radd__(self, other: MaskTypes) -> "Mask":
+        if isinstance(other, (Region, Mask, type(None))):
+            return Mask(other).__add__(self)
+        else:
+            return NotImplemented
+
     def __sub__(self, other: MaskTypes) -> "Mask":
-        if isinstance(other, (Region, Mask)):
+        if isinstance(other, (Region, Mask, type(None))):
             return Mask(BinOp("-", self, Mask(other)))
+        else:
+            return NotImplemented
+
+    def __rsub__(self, other: MaskTypes) -> "Mask":
+        if isinstance(other, (Region, Mask, type(None))):
+            return Mask(other).__sub__(self)
         else:
             return NotImplemented
 

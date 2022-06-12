@@ -91,11 +91,46 @@ def test_mask_arithmetic():
     assert pretty(r1 - ~(r2 - r3)) == pretty(Mask(None))
 
     m = ~r1
-    assert repr(Mask(r1)) == repr(~m)
+    assert repr(r1) == repr(~m)
     assert pretty(Mask(r1)) == pretty(~m)
 
     assert repr(Region.ALL - r1) == f"Region.ALL - {r1!r}"
     assert pretty(Region.ALL - r1) == pretty(~r1)
+
+    # `None` means an empty region, for example the result of `Region.intersect`
+    # if the input regions don't overlap.
+    # See also https://github.com/stb-tester/stb-tester/pull/624
+    empty = Region.intersect(r1, r2)
+    assert empty is None
+    assert pretty(r1 + empty) == pretty(Mask(r1))
+    assert pretty(empty + r1) == pretty(Mask(r1))
+    assert pretty(Mask(r1) + empty) == pretty(Mask(r1))
+    assert pretty(empty + Mask(r1)) == pretty(Mask(r1))
+    assert pretty(r1 - empty) == pretty(Mask(r1))
+    assert pretty(empty - r1) == pretty(Mask(empty))
+    assert pretty(Mask(r1) - empty) == pretty(Mask(r1))
+    assert pretty(empty - Mask(r1)) == pretty(Mask(empty))
+    assert pretty(~Region.ALL) == pretty(Mask(empty))
+    # But we still can't support `None + None`:
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(empty + empty)
+
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(r1 + 5)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(m + 5)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(5 + r1)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(5 + m)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(r1 - 5)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(m - 5)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(5 - r1)
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        print(5 - m)
 
     with tempfile.NamedTemporaryFile(prefix="test_mask", suffix=".png") as f:
         cv2.imwrite(f.name, Mask(r1).to_array(shape=(4, 6, 1)))
