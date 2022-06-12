@@ -49,6 +49,7 @@ def main(argv):
     with sane_unicode_and_exception_handling(args.script), \
             video(args, dut), \
             imgproc_cache.setup_cache(filename=args.cache):
+        dut.get_frame()  # wait until pipeline is rolling
         test_function = load_test_function(args.script, args.args)
         test_function.call()
 
