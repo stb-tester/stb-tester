@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    timeout 20 stbt run -v --control asdf test.py
+    $timeout 20 stbt run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
@@ -81,7 +81,7 @@ test_that_frames_doesnt_time_out() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    timeout 12 stbt run -v test.py
+    $timeout 12 stbt run -v test.py
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
@@ -162,7 +162,7 @@ test_that_frames_doesnt_deadlock() {
 	EOF
     local t
     [[ -v CIRCLECI ]] && t=60 || t=5
-    timeout $t stbt run -v test.py
+    $timeout $t stbt run -v test.py
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
@@ -215,7 +215,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    timeout 20 stbt run -v --control none \
+    $timeout 20 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
