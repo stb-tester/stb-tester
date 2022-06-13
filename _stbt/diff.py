@@ -24,7 +24,12 @@ class FrameDiffer():
 
 
 class MotionDiff(FrameDiffer):
-    """The `wait_for_motion` diffing algorithm."""
+    """Compares 2 frames by converting them to grayscale, calculating
+    pixel-wise absolute differences, and ignoring differences below a
+    threshold.
+
+    This is the default `wait_for_motion` diffing algorithm.
+    """
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None, noise_threshold=None, erode=True):
