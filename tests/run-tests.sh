@@ -64,8 +64,10 @@ run() {
     export XDG_CONFIG_HOME="$scratchdir/config"
     unset STBT_CONFIG_FILE
     cp "$testdir/stbt.conf" "$scratchdir/config/stbt"
+    mkfifo "$scratchdir/rawlog"
+    ts '[%Y-%m-%d %H:%M:%.S %z]' < "$scratchdir/rawlog" > "$scratchdir/log" &
     printf "$(bold $1...) "
-    ( cd "$scratchdir" && $1 ) > "$scratchdir/log" 2>&1 &
+    ( cd "$scratchdir" && $1 ) > "$scratchdir/rawlog" 2>&1 &
     wait $!
     local status=$?
     case $status in
