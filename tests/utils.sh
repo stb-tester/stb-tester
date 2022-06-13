@@ -1,3 +1,4 @@
+timeout="/usr/bin/timeout --verbose --signal=INT --kill-after=10"
 timedout=124
 
 fail() { echo "error: $*"; exit 1; }

@@ -189,6 +189,7 @@ test_detect_motion_times_out_during_yield() {
 	    import time
 	    time.sleep(2)
 	    i += 1
+	print(i)
 	assert i == 1
 	EOF
     stbt run -v test.py

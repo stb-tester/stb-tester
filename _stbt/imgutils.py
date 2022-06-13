@@ -4,7 +4,7 @@ import inspect
 import os
 import re
 import warnings
-from collections import namedtuple
+from functools import lru_cache
 from typing import overload, Tuple
 
 import cv2
@@ -12,7 +12,6 @@ import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
-from .utils import to_unicode
 
 
 class Frame(numpy.ndarray):
@@ -101,17 +100,7 @@ class Image(numpy.ndarray):
         obj.absolute_filename = (absolute_filename or
                                  (i and array.absolute_filename) or
                                  None)
-        obj.relative_filename = None
-
-        if obj.absolute_filename is not None:
-            import stbt_core
-            root = getattr(stbt_core, "TEST_PACK_ROOT", None)
-            if root is not None:
-                obj.relative_filename = os.path.relpath(obj.absolute_filename,
-                                                        root)
-            else:
-                obj.relative_filename = obj.absolute_filename
-
+        obj.relative_filename = _relative_filename(obj.absolute_filename)
         return obj
 
     def __array_finalize__(self, obj):
@@ -147,6 +136,22 @@ class Image(numpy.ndarray):
     @property
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
+
+
+def _relative_filename(absolute_filename):
+    """Returns filename relative to the test-pack root if inside the test-pack,
+    or absolute path if outside the test-pack.
+    """
+    if absolute_filename is None:
+        return None
+    import stbt_core
+    root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+    if root is None:
+        return absolute_filename
+    relpath = os.path.relpath(absolute_filename, root)
+    if relpath.startswith(".."):
+        return absolute_filename
+    return relpath
 
 
 def _frame_repr(frame):
@@ -389,30 +394,41 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
     obj = filename
     if isinstance(obj, Image):
-        img = obj
         filename = obj.filename
         absolute_filename = obj.absolute_filename
+        img = _convert_color(obj, color_channels, absolute_filename)
     elif isinstance(obj, numpy.ndarray):
-        img = obj  # obj.filename etc. will be None
         filename = None
         absolute_filename = None
-    else:
-        filename = to_unicode(filename)
+        img = _convert_color(obj, color_channels, absolute_filename)
+    elif isinstance(filename, str):
         absolute_filename = find_user_file(filename)
         if not absolute_filename:
-            raise IOError(to_unicode("No such file: %s" % filename))
-        absolute_filename = to_unicode(absolute_filename)
-        if color_channels == (3,):
-            flags = cv2.IMREAD_COLOR
-        elif color_channels == (1,):
-            flags = cv2.IMREAD_GRAYSCALE
-        else:
-            flags = cv2.IMREAD_UNCHANGED
-        img = cv2.imread(to_unicode(absolute_filename), flags)
-        if img is None:
-            raise IOError(to_unicode("Failed to load image: %s" %
-                                     absolute_filename))
+            raise IOError("No such file: %s" % filename)
+        img = _imread(absolute_filename, color_channels)
+    else:
+        raise TypeError("load_image requires a filename or Image")
 
+    if not isinstance(img, Image):
+        img = Image(img, filename=filename, absolute_filename=absolute_filename)
+    return img
+
+
+@lru_cache(maxsize=5)
+def _imread(absolute_filename, color_channels):
+    if color_channels == (3,):
+        flags = cv2.IMREAD_COLOR
+    elif color_channels == (1,):
+        flags = cv2.IMREAD_GRAYSCALE
+    else:
+        flags = cv2.IMREAD_UNCHANGED
+    img = cv2.imread(absolute_filename, flags)
+    if img is None:
+        raise IOError("Failed to load image: %s" % absolute_filename)
+    return _convert_color(img, color_channels, absolute_filename)
+
+
+def _convert_color(img, color_channels, absolute_filename):
     if len(img.shape) not in [2, 3]:
         raise ValueError(
             "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
@@ -420,11 +436,11 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
     if img.dtype == numpy.uint16:
         warn("Image %s has 16 bits per channel. Converting to 8 bits."
-             % filename)
+             % _filename_repr(absolute_filename))
         img = cv2.convertScaleAbs(img, alpha=1.0 / 256)
     elif img.dtype != numpy.uint8:
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
-                         % (filename, img.dtype))
+                         % (_filename_repr(absolute_filename), img.dtype))
 
     if len(img.shape) == 2:
         img = img.reshape(img.shape + (1,))
@@ -472,85 +488,17 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     else:
         raise ValueError(
             "load_image can only handle images with 1, 3 or 4 color channels. "
-            "%s has %i channels" % (filename, c))
+            "%s has %i channels" % (_filename_repr(absolute_filename), c))
 
     assert img.shape[2] in color_channels
-    if not isinstance(img, Image):
-        img = Image(img, filename=filename, absolute_filename=absolute_filename)
-
     return img
 
 
-class NotRegion(namedtuple("NotRegion", "region")):
-    """This is the inverse of a region.  This can be useful to pass as the mask
-    parameter to our image processing functions.  Create instances of this type
-    with:
-
-    >>> mask_out(Region(34, 433, right=44, bottom=444))
-    NotRegion(region=Region(x=34, y=433, right=44, bottom=444))
-    """
-    pass
-
-
-def mask_out(mask):
-    """Mask out a region (invert a mask).
-
-    Example:
-
-        SPINNER_REGION = stbt.Region(34, 433, right=44, bottom=444)
-        stbt.wait_for_motion(mask=mask_out(SPINNER_REGION))
-    """
-    if isinstance(mask, Region):
-        return NotRegion(mask)
-    elif isinstance(mask, NotRegion):
-        return mask.region
+def _filename_repr(absolute_filename):
+    if absolute_filename is None:
+        return "<Image>"
     else:
-        return ~load_image(mask, color_channels=(1, 3))  # pylint:disable=invalid-unary-operand-type
-
-
-def load_mask(mask, shape):
-    """Used to load a mask from disk, or to convert it from a stbt.Region.
-
-    This should be used by image processing functions, not by test-scripts
-    """
-    if mask is None:
-        return None
-    if isinstance(mask, Region):
-        return _to_ndarray_mask(mask, shape=shape)
-    elif isinstance(mask, NotRegion):
-        return _to_ndarray_mask(mask, shape=shape, invert=True)
-    elif isinstance(mask, (str, numpy.ndarray)):
-        if shape is None:
-            color_channels = (1, 3)
-        else:
-            color_channels = shape[2]
-        mask = load_image(mask, color_channels=color_channels)
-        if shape is not None and mask.shape != shape:
-            raise ValueError(
-                "Mask %r has wrong shape %r. Expected %r" % (
-                    mask.relative_filename, mask.shape, shape))
-        return mask
-    else:
-        raise TypeError("Don't know how to make mask from %r" % (mask,))
-
-
-def _to_ndarray_mask(x, shape, dtype=numpy.uint8, invert=False):
-    """Creates an ndarray mask from a stbt.Region"""
-    out_val = 0
-    if dtype == numpy.uint8:
-        in_val = 255
-    else:
-        in_val = 1
-
-    if invert:
-        out_val, in_val = in_val, out_val
-
-    out = numpy.full(shape, out_val, dtype=dtype)
-    r = Region.intersect(x, Region(0, 0, shape[1], shape[0]))
-    if r:
-        out[r.y:r.bottom, r.x:r.right] = in_val
-
-    return out
+        return repr(_relative_filename(absolute_filename))
 
 
 def save_frame(image, filename):
@@ -637,7 +585,6 @@ def find_user_file(filename):
     #   directly from the user script, or indirectly via stbt.match so we still
     #   need to check until we're outside of the _stbt directory.
 
-    filename = to_unicode(filename)
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     caller = inspect.currentframe()
     try:

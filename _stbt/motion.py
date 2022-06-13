@@ -4,8 +4,9 @@ from collections import deque
 
 from .config import ConfigurationError, get_config
 from .diff import MotionDiff
-from .imgutils import limit_time, load_mask
+from .imgutils import limit_time
 from .logging import debug, draw_on
+from .mask import load_mask
 from .types import Region, UITestFailure
 
 
@@ -67,11 +68,10 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
 
-    debug("Searching for motion")
-
     if mask is not None:
-        mask = load_mask(mask, shape=None)
-        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
+        mask = load_mask(mask)
+
+    debug(f"Searching for motion, using mask={mask}")
 
     try:
         frame = next(frames)
@@ -145,12 +145,11 @@ def wait_for_motion(
         raise ConfigurationError(
             "`motion_frames` exceeds `considered_frames`")
 
-    debug("Waiting for %d out of %d frames with motion" % (
-        motion_frames, considered_frames))
-
     if mask is not None:
-        mask = load_mask(mask, shape=None)
-        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
+        mask = load_mask(mask)
+
+    debug("Waiting for %d out of %d frames with motion, using mask=%r" % (
+        motion_frames, considered_frames, mask))
 
     matches = deque(maxlen=considered_frames)
     motion_count = 0
@@ -181,8 +180,8 @@ class MotionTimeout(UITestFailure):
     :ivar Frame screenshot: The last video frame that `wait_for_motion` checked
         before timing out.
 
-    :vartype mask: str or None
-    :ivar mask: Filename of the mask that was used, if any.
+    :vartype mask: Mask or None
+    :ivar mask: The mask that was used, if any.
 
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that motion was searched for.
@@ -194,6 +193,5 @@ class MotionTimeout(UITestFailure):
         self.timeout_secs = timeout_secs
 
     def __str__(self):
-        return "Didn't find motion%s within %g seconds." % (
-            " (with mask '%s')" % self.mask if self.mask else "",
-            self.timeout_secs)
+        return "Didn't find motion within %g seconds, using mask=%r" % (
+            self.timeout_secs, self.mask)

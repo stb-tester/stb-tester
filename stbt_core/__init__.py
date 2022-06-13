@@ -31,12 +31,14 @@ from _stbt.imgutils import (
     Frame,
     Image,
     load_image,
-    mask_out,
     save_frame)
 from _stbt.keyboard import (
     Keyboard)
 from _stbt.logging import (
     debug)
+from _stbt.mask import (
+    load_mask,
+    Mask)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -101,7 +103,8 @@ __all__ = [
     "Keyboard",
     "last_keypress",
     "load_image",
-    "mask_out",
+    "load_mask",
+    "Mask",
     "match",
     "match_all",
     "match_text",

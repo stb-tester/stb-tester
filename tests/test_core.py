@@ -79,7 +79,6 @@ def test_load_image_with_unicode_filename():
     shutil.copyfile(_find_file("Rothlisberger.png"),
                     _find_file("Röthlisberger.png"))
     assert stbt.load_image("Röthlisberger.png") is not None
-    assert stbt.load_image("Röthlisberger.png".encode("utf-8")) is not None
     assert stbt.load_image("R\xf6thlisberger.png") is not None
 
 
