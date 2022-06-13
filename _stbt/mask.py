@@ -64,8 +64,6 @@ class Mask:
         self._region = None
         if isinstance(m, str):
             absolute_filename = find_user_file(m)
-            if not absolute_filename:
-                raise IOError(f"No such file: {m}")
             self._filename = absolute_filename
             self._invert = invert
         elif isinstance(m, numpy.ndarray):
