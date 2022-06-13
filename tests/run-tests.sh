@@ -72,6 +72,7 @@ run() {
         local log="$scratchdir/log"
     fi
     printf "$(bold $1...) "
+    echo "Starting $1" > "$log"
     ( cd "$scratchdir" && $1 ) > "$log" 2>&1 &
     wait $!
     local status=$?
