@@ -17,6 +17,12 @@ assert() {
     esac
 }
 
+assert_log() {
+    if ! grep -qF "$1" "$scratchdir/log"; then
+        fail "log doesn't contain text: $1"
+    fi
+}
+
 killtree() {
     local parent=$1 child
     for child in $(ps -o ppid= -o pid= | awk "\$1==$parent {print \$2}"); do

@@ -324,6 +324,20 @@ check_unicode_error() {
     done
 }
 
+test_that_stbt_run_can_print_ioerror() {
+    cat > test.py <<-EOF
+	open("nonexistent")
+	EOF
+    ! stbt run test.py &&
+    assert_log "FileNotFoundError: [Errno 2] No such file or directory: 'nonexistent'"
+
+    cat > test.py <<-EOF
+	open("nönexistent")
+	EOF
+    ! env LANG=C.UTF-8 stbt run test.py &&
+    assert_log "FileNotFoundError: [Errno 2] No such file or directory: 'nönexistent'"
+}
+
 test_that_error_control_raises_exception() {
     cat > test.py <<-EOF
 	import stbt_core as stbt
