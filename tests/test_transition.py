@@ -6,7 +6,7 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
-from _stbt.transition import StrictDiff
+from _stbt.transition import StrictDiff, _TransitionResult
 
 
 class FakeDeviceUnderTest():
@@ -174,3 +174,17 @@ def test_that_strictdiff_ignores_a_few_scattered_small_differences():
     differ = StrictDiff(initial_frame=stbt.load_image("2px-different-1.png"),
                         region=stbt.Region.ALL, mask=None)
     assert not differ.diff(stbt.load_image("2px-different-2.png"))
+
+
+@pytest.mark.parametrize("status,          started,complete,stable", [
+    # pylint:disable=bad-whitespace
+    (stbt.TransitionStatus.START_TIMEOUT,  False,  False,   True),
+    (stbt.TransitionStatus.STABLE_TIMEOUT, True,   False,   False),
+    (stbt.TransitionStatus.COMPLETE,       True,   True,    True),
+])
+def test_transitionresult_properties(status, started, complete, stable):
+    t = _TransitionResult(key="KEY_OK", frame=None, status=status,
+                          press_time=0, animation_start_time=0, end_time=0)
+    assert t.started == started
+    assert t.complete == complete
+    assert t.stable == stable
