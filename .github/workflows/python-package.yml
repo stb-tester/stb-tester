@@ -1,0 +1,28 @@
+name: python-package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  make_check-pythonpackage:
+    runs-on: ubuntu-22.04
+    env:
+      python_version: 3
+      LANG: C.UTF-8
+      SHELL: /bin/bash
+      TERM: xterm
+      enable_virtual_stb: no
+    steps:
+    - uses: actions/checkout@v3
+    - run: python3 setup.py sdist
+    - name: install & test
+      run: |
+        rm -rf stbt_core _stbt &&
+        python3 -m venv build_env &&
+        source build_env/bin/activate &&
+        pip3 install pytest==6.2.5 &&
+        pip3 install dist/*.tar.gz &&
+        make check-pythonpackage PYTEST=pytest

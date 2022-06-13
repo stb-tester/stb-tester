@@ -4,8 +4,8 @@
 *_orc.c
 *_orc.h
 .cache
-.circleci/.*.built
 .DS_Store
+.github/workflows/.*.built
 .stbt-cflags
 .stbt-ldflags
 .stbt-prefix

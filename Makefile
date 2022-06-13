@@ -323,16 +323,16 @@ install-docs: docs/stbt.1
 
 CI_DOCKER_IMAGES = ubuntu2204
 
-$(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
-	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \
-	    .circleci/ && \
+$(CI_DOCKER_IMAGES:%=.github/workflows/.%.built): .github/workflows/.%.built: .github/workflows/%.dockerfile
+	docker build -t stbtester/ci:$* -f .github/workflows/$*.dockerfile \
+	    .github/workflows/ && \
 	touch $@
 
-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
-publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
+ci-docker-images: $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built)
+publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built)
 	set -x && \
 	for x in $(CI_DOCKER_IMAGES); do \
-	    docker push stbtester/circleci:$$x; \
+	    docker push stbtester/ci:$$x; \
 	done
 
 ### PyPI Packaging ###########################################################
