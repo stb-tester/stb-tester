@@ -290,11 +290,13 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
     @property
     def width(self):
-        return self.right - self.x
+        out = self.right - self.x
+        return 0 if math.isnan(out) else out
 
     @property
     def height(self):
-        return self.bottom - self.y
+        out = self.bottom - self.y
+        return 0 if math.isnan(out) else out
 
     @property
     def center(self):
