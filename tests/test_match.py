@@ -360,8 +360,7 @@ def test_that_results_dont_overlap(match_method):
         print(m)
         assert m.region not in all_matches, "Match %s already seen:\n    %s" % (
             m, "\n    ".join(str(x) for x in all_matches))
-        assert all(stbt.Region.intersect(m.region, x) is None
-                   for x in all_matches)
+        assert all(not stbt.Region.intersect(m.region, x) for x in all_matches)
         all_matches.add(m.region)
 
     assert all_matches == set([

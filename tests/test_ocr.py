@@ -46,6 +46,7 @@ def test_ocr_on_static_images(image, expected_text, region, mode):
 @requires_tesseract
 @pytest.mark.parametrize("region", [
     None,
+    stbt.Region.EMPTY
     stbt.Region(1280, 0, 1280, 720),
 ])
 def test_that_ocr_region_none_isnt_allowed(region):

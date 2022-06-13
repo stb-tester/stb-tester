@@ -1,6 +1,7 @@
 # coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
+import math
 from collections import namedtuple
 
 
@@ -29,27 +30,31 @@ class _RegionClsMethods(type):
         except StopIteration:
             # No arguments passed:
             return Region.ALL
-        if out is None:
-            return None
+        if not out:
+            return Region.EMPTY
 
         for r in args:
             if not r:
-                return None
+                return Region.EMPTY
             out = (max(out[0], r[0]), max(out[1], r[1]),
                    min(out[2], r[2]), min(out[3], r[3]))
             if out[0] >= out[2] or out[1] >= out[3]:
-                return None
+                return Region.EMPTY
         return Region.from_extents(*out)
 
     def bounding_box(cls, *args):
         args = [_f for _f in args if _f]
         if not args:
-            return None
+            return Region.EMPTY
         return Region.from_extents(
             min(r.x for r in args),
             min(r.y for r in args),
             max(r.right for r in args),
             max(r.bottom for r in args))
+
+
+INF = float('inf')
+NAN = float('nan')
 
 
 class Region(namedtuple('Region', 'x y right bottom'),
@@ -102,14 +107,14 @@ class Region(namedtuple('Region', 'x y right bottom'),
     >>> Region.intersect(c, b) == c
     True
     >>> print(Region.intersect(a, c))
-    None
-    >>> print(Region.intersect(None, a))
-    None
+    Region.EMPTY
+    >>> print(Region.intersect(Region.EMPTY, a))
+    Region.EMPTY
     >>> Region.intersect(a)
     Region(x=0, y=0, right=8, bottom=8)
     >>> Region.intersect()
     Region.ALL
-    >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
+    >>> quadrant = Region(x=-INF, y=-INF, right=0, bottom=0)
     >>> quadrant.translate(2, 2)
     Region(x=-inf, y=-inf, right=2, bottom=2)
     >>> c.translate(x=-9, y=-3)
@@ -193,16 +198,16 @@ class Region(namedtuple('Region', 'x y right bottom'),
         Region(x=20, y=20, right=60, bottom=50)
         >>> Region.bounding_box(b, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, b)
+        >>> Region.bounding_box(Region.EMPTY, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, None)
+        >>> Region.bounding_box(b, Region.EMPTY)
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
-        >>> print(Region.bounding_box(None, None))
-        None
+        >>> print(Region.bounding_box(Region.EMPTY, Region.EMPTY))
+        Region.EMPTY
         >>> print(Region.bounding_box())
-        None
+        Region.EMPTY
         >>> Region.bounding_box(b)
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(a, b, c) == \
@@ -214,10 +219,10 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
     .. py:staticmethod:: intersect(*args)
 
-        :returns: The intersection of the passed regions, or ``None`` if the
-            regions don't intersect.
+        :returns: The intersection of the passed regions, or ``Region.EMPTY`` if
+            the regions don't intersect.
 
-        Any parameter can be ``None`` (an empty Region) so intersect is
+        Any parameter can be ``Region.EMPTY`` (an empty Region) so intersect is
         commutative and associative.
 
         Changed in v30: ``intersect`` can take an arbitrary number of region
@@ -244,6 +249,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
     def __repr__(self):
         if self == Region.ALL:
             return 'Region.ALL'
+        elif all(math.isnan(x) for x in self):
+            return 'Region.EMPTY'
         else:
             return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
                 % (self.x, self.y, self.right, self.bottom)
@@ -278,13 +285,18 @@ class Region(namedtuple('Region', 'x y right bottom'),
         from .mask import Mask
         return Mask(self, invert=True)
 
+    def __nonzero__(self):
+        return all(not math.isnan(x) for x in self)
+
     @property
     def width(self):
-        return self.right - self.x
+        out = self.right - self.x
+        return 0 if math.isnan(out) else out
 
     @property
     def height(self):
-        return self.bottom - self.y
+        out = self.bottom - self.y
+        return 0 if math.isnan(out) else out
 
     @property
     def center(self):
@@ -420,35 +432,35 @@ class Region(namedtuple('Region', 'x y right bottom'),
         >>> Region(20, 30, right=30, bottom=50).erode(3)
         Region(x=23, y=33, right=27, bottom=47)
         >>> print(Region(20, 30, 10, 20).erode(5))
-        None
+        Region.EMPTY
         """
         if self.width > n * 2 and self.height > n * 2:
             return self.dilate(-n)
         else:
-            return None
+            return Region.EMPTY
 
-    def above(self, height=float('inf')):
+    def above(self, height=INF):
         """
         :returns: A new region above the current region, extending to the top
             of the frame (or to the specified height).
         """
         return self.replace(y=self.y - height, bottom=self.y)
 
-    def below(self, height=float('inf')):
+    def below(self, height=INF):
         """
         :returns: A new region below the current region, extending to the bottom
             of the frame (or to the specified height).
         """
         return self.replace(y=self.bottom, bottom=self.bottom + height)
 
-    def right_of(self, width=float('inf')):
+    def right_of(self, width=INF):
         """
         :returns: A new region to the right of the current region, extending to
             the right edge of the frame (or to the specified width).
         """
         return self.replace(x=self.right, right=self.right + width)
 
-    def left_of(self, width=float('inf')):
+    def left_of(self, width=INF):
         """
         :returns: A new region to the left of the current region, extending to
             the left edge of the frame (or to the specified width).
@@ -456,8 +468,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return self.replace(x=self.x - width, right=self.x)
 
 
-Region.ALL = Region(x=-float('inf'), y=-float('inf'),
-                    right=float('inf'), bottom=float('inf'))
+Region.ALL = Region(x=-INF, y=-INF, right=INF, bottom=INF)
+Region.EMPTY = Region(x=NAN, y=NAN, right=NAN, bottom=NAN)
 
 
 class UITestError(Exception):

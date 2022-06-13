@@ -50,7 +50,7 @@ def test_grid():
     assert r == g.get(region=r.extend(right=5, bottom=5)).region
 
     for r1, r2 in combinations(g.cells, 2):
-        assert Region.intersect(r1.region, r2.region) is None
+        assert not Region.intersect(r1.region, r2.region)
 
     for i, c in enumerate(g):
         assert i == c.index
