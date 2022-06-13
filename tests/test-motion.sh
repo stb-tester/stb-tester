@@ -56,10 +56,8 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    ! stbt run -v test.py &> test.log || fail "Expected script to fail"
-    grep -q "No such file: idontexist.png" test.log ||
-        fail "Expected 'No such file: idontexist.png' but saw '$(
-            grep 'No such file' test.log | head -n1)'"
+    ! stbt run -v test.py || fail "Expected script to fail"
+    assert_log "FileNotFoundError: [Errno 2] No such file: 'idontexist.png'"
 }
 
 test_wait_for_motion_with_region_reports_motion() {

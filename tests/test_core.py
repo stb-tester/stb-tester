@@ -130,7 +130,8 @@ def test_load_image_from_filename_with_color_channels():
 
 
 def test_that_load_image_with_nonexistent_image_raises_ioerror():
-    with pytest.raises(IOError, match="No such file: idontexist.png"):
+    with pytest.raises(FileNotFoundError,
+                       match=r"\[Errno 2\] No such file: 'idontexist.png'"):
         stbt.load_image("idontexist.png")
 
 

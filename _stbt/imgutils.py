@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import errno
 import inspect
 import os
 import re
@@ -569,7 +570,7 @@ def find_user_file(filename):
     Falls back to searching the current working directory.
 
     :returns: Absolute filename.
-    :raises: `IOError` if the file can't be found.
+    :raises: `FileNotFoundError` if the file can't be found.
     """
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
@@ -614,7 +615,7 @@ def find_user_file(filename):
         ddebug("Resolved relative path %r to %r" % (filename, abspath))
         return abspath
 
-    raise IOError("No such file: %s" % filename)
+    raise FileNotFoundError(errno.ENOENT, "No such file", filename)
 
 
 def limit_time(frames, duration_secs):
