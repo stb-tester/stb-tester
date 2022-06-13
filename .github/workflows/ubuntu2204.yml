@@ -1,0 +1,25 @@
+name: ubuntu2204
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  make_check:
+    runs-on: ubuntu-latest
+    container:
+      image: stbtester/ci:ubuntu2204
+      env:
+        python_version: 3
+        LANG: en_GB.UTF-8
+        SHELL: /bin/bash
+        TERM: xterm
+        enable_virtual_stb: no
+    steps:
+    - uses: actions/checkout@v3
+    - run: tesseract --version
+    - run: make check-pylint
+    - run: make check-pytest
+    - run: make check-integrationtests
