@@ -528,15 +528,19 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 def bgr_diff(frame, color, threshold, imglog):
     # Calculate distance of each pixel from `text_color`, then discard
     # everything further than `text_color_threshold` distance away.
-    diff = numpy.subtract(frame, Color(color).array, dtype=numpy.int32)
-    frame = numpy.sqrt((diff[:, :, 0] ** 2 +
-                        diff[:, :, 1] ** 2 +
-                        diff[:, :, 2] ** 2) // 3) \
-                 .astype(numpy.uint8)
-    imglog.imwrite("diff", frame)
-    _, frame = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
-    imglog.imwrite("binarized", frame)
-    return frame
+    sqd = numpy.subtract(frame, Color(color).array, dtype=numpy.int32)
+    sqd = (sqd[:, :, 0] ** 2 +
+           sqd[:, :, 1] ** 2 +
+           sqd[:, :, 2] ** 2)
+
+    if imglog.enabled:
+        normalised = numpy.sqrt(sqd / 3)
+        imglog.imwrite("diff", normalised)
+
+    d = sqd >= (threshold ** 2) * 3
+    d = d.astype(numpy.uint8) * 255
+    imglog.imwrite("binarized", d)
+    return d
 
 
 ocr.text_color_differ = bgr_diff
