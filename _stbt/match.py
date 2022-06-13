@@ -32,6 +32,8 @@ except ImportError:
 
 
 class MatchMethod(enum.Enum):
+    """An enum. See `MatchParameters` for documentation of these values."""
+
     SQDIFF = "sqdiff"
     SQDIFF_NORMED = "sqdiff-normed"
     CCORR_NORMED = "ccorr-normed"
@@ -43,6 +45,8 @@ class MatchMethod(enum.Enum):
 
 
 class ConfirmMethod(enum.Enum):
+    """An enum. See `MatchParameters` for documentation of these values."""
+
     NONE = "none"
     ABSDIFF = "absdiff"
     NORMED_ABSDIFF = "normed-absdiff"

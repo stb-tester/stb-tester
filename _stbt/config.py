@@ -42,6 +42,9 @@ def get_config(section, key, default=NoDefault, type_=str):
     Test scripts can use ``get_config`` to read tags that you specify at
     run-time: see `Automatic configuration keys
     <https://stb-tester.com/manual/advanced-configuration#automatic-configuration-keys>`__.
+    For example::
+
+        my_tag_value = stbt.get_config("result.tags", "my tag name")
 
     Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
     found, unless ``default`` is specified (in which case ``default`` is

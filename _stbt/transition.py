@@ -236,7 +236,16 @@ def _ddebug(s, f, *args):
 
 
 class StrictDiff(FrameDiffer):
-    """The original `press_and_wait` algorithm."""
+    """Compares 2 frames by calculating pixel-wise absolute differences,
+    comparing each color channel separately.
+
+    Compared to `MotionDiff`: this has a much stricter threshold, the threshold
+    is not configurable, and there is no "erode" step to remove single-pixel
+    differences.
+
+    This was the default `press_and_wait` diffing algorithm before v32,
+    but it was too sensitive to "noise" or single-pixel differences.
+    """
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None):

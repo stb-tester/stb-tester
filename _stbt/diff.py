@@ -24,10 +24,15 @@ class FrameDiffer():
 
 
 class MotionDiff(FrameDiffer):
-    """The `wait_for_motion` diffing algorithm."""
+    """Compares 2 frames by converting them to grayscale, calculating
+    pixel-wise absolute differences, and ignoring differences below a
+    threshold.
+
+    This is the default `wait_for_motion` diffing algorithm.
+    """
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None, noise_threshold=None, erode=True):
+                 min_size=None, threshold=None, erode=True):
         self.prev_frame = initial_frame
         self.region = _validate_region(self.prev_frame, region)
         self.min_size = min_size
@@ -36,10 +41,9 @@ class MotionDiff(FrameDiffer):
             mask = load_mask(mask)
         self.mask = mask
 
-        if noise_threshold is None:
-            noise_threshold = get_config(
-                'motion', 'noise_threshold', type_=float)
-        self.noise_threshold = noise_threshold
+        if threshold is None:
+            threshold = get_config('motion', 'noise_threshold', type_=float)
+        self.threshold = threshold
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
@@ -59,7 +63,7 @@ class MotionDiff(FrameDiffer):
 
         imglog = ImageLogger("MotionDiff", region=self.region,
                              min_size=self.min_size,
-                             noise_threshold=self.noise_threshold)
+                             threshold=self.threshold)
         imglog.imwrite("source", frame)
         imglog.imwrite("gray", frame_gray)
         imglog.imwrite("previous_frame_gray", self.prev_frame_gray)
@@ -75,7 +79,7 @@ class MotionDiff(FrameDiffer):
             imglog.imwrite("absdiff_masked", absdiff)
 
         _, thresholded = cv2.threshold(
-            absdiff, int((1 - self.noise_threshold) * 255), 255,
+            absdiff, int((1 - self.threshold) * 255), 255,
             cv2.THRESH_BINARY)
         imglog.imwrite("absdiff_threshold", thresholded)
         if self.kernel is not None:
@@ -179,7 +183,7 @@ MOTION_HTML = """\
     <img src="absdiff_masked.png" />
     {% endif %}
 
-    <h5>Threshold (noise_threshold={{noise_threshold}}):</h5>
+    <h5>Binarized (threshold={{threshold}}):</h5>
     <img src="absdiff_threshold.png" />
 
     <h5>Eroded:</h5>
