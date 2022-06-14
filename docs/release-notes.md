@@ -5,6 +5,109 @@ These release notes apply to the Stb-tester open-source version. Customers of
 Stb-tester.com Ltd. should refer to the release notes at
 https://stb-tester.com/manual/python-api#release-notes instead.
 
+#### v33
+
+Unreleased.
+
+##### Major new features
+
+* Target Ubuntu 22.04 / Python 3.10 / OpenCV 4. Dropped support for Python 2.
+
+* Add support for [RedRat-X](https://www.redrat.co.uk/products/redrat-x/)
+  Bluetooth/RF4CE remote control via RedRat Hub HTTP REST API.
+
+* New `Mask` API to construct masks from Regions. You can add, subtract or
+  invert regions to construct a mask. This is often much more convenient than
+  creating a mask PNG in an image editor. For example, this will create a mask
+  that processes the whole screen but ignores the region where a spinner can
+  appear and the region where picture-in-picture video is shown:
+
+        spinner_region = stbt.Region(...)
+        pip_region = stbt.Region(...)
+        mask = stbt.Region.ALL - spinner_region - pip_region
+
+  You can pass a single Region, or a Mask constructed from regions, to the
+  `mask` parameter of any API that previously accepted a filename.
+
+  If you are implementing your own image-processing function that accepts a
+  `mask` parameter, call `load_mask` on the caller-supplied value to convert it
+  to a `Mask`.
+
+* MultiPress: New API to enter text using a numeric keypad.
+
+* ocr: `text_color` can accept an HTML-style color as a string ("#rrggbb").
+
+* press: The `key` argument can be an Enum (`press` will use the Enum's value,
+  which must be a string).
+
+##### Breaking changes since v32
+
+* Dropped support for Python 2. In CI we're only testing Ubuntu 22.04 / Python
+  3.10.
+
+* Removed `stbt record` command line tool. It was extremely basic and we've
+  never used it in practice.
+
+* Move `stbt_core.pylint_plugin` to `_stbt.pylint_plugin` so that pylint can
+  import it without having to import the whole of `stbt_core` (including
+  OpenCV, numpy, etc).
+
+##### Minor additions, bugfixes & improvements
+
+* Frame and Image:
+  * Add `width` and `height` properties.
+  * Fix IndexError in `__repr__` when the Frame or Image has undergone numpy
+    operations that change its shape (such as `numpy.max`, which will preserve
+    the `stbt.Image` or `stbt.Frame` type of its argument).
+
+* FrameObject:
+  * Fix comparison operators (`==` and `!=`). Previously they would raise
+    `TypeError` if either operand had a property that returned None; or they
+    could return the wrong result if comparing an instance of a class F against
+    an instance of F's subclass.
+  * Remove ordering operators (`<`, etc). They were buggy and there's no
+    use-case for ordering Page Object instances.
+
+* Keyboard:
+  * Added type `Keyboard.Key`: This is the type returned from
+    `Keyboard.find_key`. Previously it was an opaque, private type; now it is a
+    public, documented API.
+  * Better support for slow/laggy keyboards:
+    * Recover from missed or double keypresses by re-calculating the path from
+      the current state of the device-under-test. To disable this behaviour
+      specify `retries=0` when calling `enter_text` or `navigate_to` (`retries`
+      defaults to 2).
+    * Increased default `navigate_timeout` from 20 to 60.
+    * Wait longer for the selection to reach the final target when we're not
+      verifying every keypress.
+  * Better error message when user's Page Object's `selection` property returns
+    None (it's a bug in your Page Object if it says `is_visible==True` but
+    `selection==None`).
+
+* load_image:
+  * New `color_channels` parameter, replacing `flags` which is now deprecated.
+  * Raise `FileNotFoundError` with the correct errno, instead of `IOError`
+    without an errno. Note that `FileNotFoundError` is a subclass of `IOError`.
+
+* ocr: `corrections` parameter: Fix matching non-word characters at word
+  boundaries.
+
+* press_and_wait: The return value has new `started`, `complete`, and `stable`
+  properties. This is often clearer than checking the value of the `status`
+  attribute:
+
+        transition = stbt.press_and_wait("KEY_OK")
+        if not transition.started:
+            ...
+        # versus:
+        # if transition.status == stbt.TransitionStatus.START_TIMEOUT:
+
+* Size: New helper type. It's a tuple with `width` and `height`.
+
+* core: Raise `NoVideo` instead of restarting the source pipeline when we
+  receive EOS on the source pipeline. This behaviour was originally introduced
+  to support VidiU video-capture hardware, but we believe it isn't used and the
+  implementation had several disadvantages. See #715 for details.
 
 #### v32
 
