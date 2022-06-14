@@ -57,7 +57,6 @@ def test_match_debug():
             stbt-debug/00001/match0-heatmap.png
             stbt-debug/00001/match0-source_with_match.png
             stbt-debug/00001/source.png
-            stbt-debug/00001/source_with_matches.png
             stbt-debug/00001/template.png
             stbt-debug/00002
             stbt-debug/00002/index.html
@@ -142,7 +141,6 @@ def test_match_debug():
             stbt-debug/00002/match6-heatmap.png
             stbt-debug/00002/match6-source_with_match.png
             stbt-debug/00002/source.png
-            stbt-debug/00002/source_with_matches.png
             stbt-debug/00002/template.png
             stbt-debug/00003
             stbt-debug/00003/index.html
@@ -235,7 +233,6 @@ def test_match_debug():
             stbt-debug/00003/match6-heatmap.png
             stbt-debug/00003/match6-source_with_match.png
             stbt-debug/00003/source.png
-            stbt-debug/00003/source_with_matches.png
             stbt-debug/00003/template.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -314,7 +311,6 @@ def test_match_debug():
             stbt-debug/00004/match6-heatmap.png
             stbt-debug/00004/match6-source_with_match.png
             stbt-debug/00004/source.png
-            stbt-debug/00004/source_with_matches.png
             stbt-debug/00004/template.png
             """)
 
