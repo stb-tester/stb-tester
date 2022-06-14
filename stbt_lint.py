@@ -25,7 +25,11 @@
 * E7007: FrameObject properties must not have side-effects that change
   the state of the device-under-test by calling "stbt.press()" or
   "stbt.press_and_wait()".
-* E7008: "assert True" has no effect.
+* E7008: "assert True" has no effect; consider replacing it with a
+  comment or a call to "logging.info()".
+* E7009: FrameObjects are immutable, so \"refresh()\" doesn't modify the
+  instance you call it on; it returns a new instance. For example,
+  instead of "page.refresh()" you need to use "page = page.refresh()".
 
 """
 
