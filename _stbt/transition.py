@@ -105,6 +105,9 @@ def press_and_wait(
     Changed in v32: Use the same difference-detection algorithm as
     `wait_for_motion`; ``region`` and ``mask`` can both be specified at the
     same time.
+
+    Added in v33: The ``started``, ``complete`` and ``stable`` attributes of
+    the returned value.
     """
     if _dut is None:
         import stbt_core
