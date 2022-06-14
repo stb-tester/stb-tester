@@ -89,6 +89,9 @@ Unreleased.
   * Raise `FileNotFoundError` with the correct errno, instead of `IOError`
     without an errno. Note that `FileNotFoundError` is a subclass of `IOError`.
 
+* match: Fixed position of the match (output) region drawn on the debug html
+  output, when the caller specified the input `region` parameter.
+
 * ocr: `corrections` parameter: Fix matching non-word characters at word
   boundaries.
 
