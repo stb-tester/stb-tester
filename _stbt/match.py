@@ -376,7 +376,8 @@ def _match_all(image, frame, match_parameters, region):
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
         template_name=t.filename or "<Image>",
-        input_region=input_region)
+        region=input_region)
+    imglog.imwrite("source", frame)
 
     try:
         for (matched, match_region, first_pass_matched,
@@ -521,7 +522,6 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
-    imglog.imwrite("source", image)
     imglog.imwrite("template", template)
     imglog.set(template_shape=template.shape)
     if template.shape[2] == 4:
@@ -895,16 +895,10 @@ def _log_match_image_debug(imglog):
             result.region, _Annotation.MATCHED if result._first_pass_matched
             else _Annotation.NO_MATCH)
 
-    imglog.imwrite(
-        "source_with_matches", imglog.images["source"],
-        [x.region for x in imglog.data["matches"]],
-        [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
-         for x in imglog.data["matches"]])
-
     template = """\
         <h4>{{title}}</h4>
 
-        <img src="source_with_matches.png" />
+        {{ annotated_image(matches) }}
 
         <h5>First pass (find candidate matches):</h5>
 
@@ -916,7 +910,7 @@ def _log_match_image_debug(imglog):
 
         {% if fast_path %}
         <p>Taking fast path - template shape <code>{{ template_shape }}</code>
-        matches size of target region <code>{{ input_region }}</code></p>
+        matches size of target region <code>{{ region }}</code></p>
 
         <table class="table">
         <tr>
