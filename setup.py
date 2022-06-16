@@ -8,7 +8,7 @@ long_description = """\
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
 
-* Copyright © 2013-2021 Stb-tester.com Ltd,
+* Copyright © 2013-2022 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
 
@@ -50,19 +50,20 @@ setuptools.setup(
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Software Development :: Testing",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.10",
     extras_require={
-        "ocr": ["lxml==4.5"],
-        "debug": ["Jinja2==2.10.1"],
+        "ocr": ["lxml==4.8.0"],
+        "debug": ["Jinja2==3.0.3"],
         "keyboard": ["networkx==2.4"],
     },
     install_requires=[
-        "astroid==2.3.3",
-        "attrs==20.2.0",
-        "opencv-python~=4.2",
-        "pylint==2.4.4",
+        "astroid==2.9.3",
+        "attrs==21.2.0",
+        "isort==5.6.4",
+        "opencv-python~=4.5",
+        "pylint==2.12.2",
     ],
 )
