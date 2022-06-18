@@ -325,15 +325,14 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
     If given a relative filename, this will search in the directory of the
     Python file that called ``load_image``, then in the directory of that
-    file's caller, etc. This allows you to use ``load_image`` in a helper
-    function, and then call that helper function from a different Python file
-    passing in a filename relative to the caller.
+    file's caller, and so on, until it finds the file. This allows you to use
+    ``load_image`` in a helper function that takes a filename from its caller.
 
     Finally this will search in the current working directory. This allows
     loading an image that you had previously saved to disk during the same
     test run.
 
-    This is the same lookup algorithm used by `stbt.match` and similar
+    This is the same search algorithm used by `stbt.match` and similar
     functions.
 
     :param str filename: A relative or absolute filename.
@@ -403,7 +402,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         absolute_filename = None
         img = _convert_color(obj, color_channels, absolute_filename)
     elif isinstance(filename, str):
-        absolute_filename = find_user_file(filename)
+        absolute_filename = find_file(filename)
         img = _imread(absolute_filename, color_channels)
     else:
         raise TypeError("load_image requires a filename or Image")
@@ -562,35 +561,41 @@ def pixel_bounding_box(img):
     return Region.from_extents(*out)
 
 
-def find_user_file(filename):
-    """Searches for the given filename and returns the full path.
+def find_file(filename: str) -> str:
+    """Searches for the given filename relative to the directory of the caller.
 
-    Searches in the directory of the script that called `load_image` (or
-    `match`, etc), then in the directory of that script's caller, etc.
-    Falls back to searching the current working directory.
+    When Stb-tester runs a test, the "current working directory" is not the
+    same as the directory of the test-pack git checkout. If you want to read
+    a file that's committed to git (for example a CSV file with data that your
+    test needs) you can use this function to find it. For example::
 
+        f = open(stbt.find_file("my_data.csv"))
+
+    If the file is not found in the directory of the Python file that called
+    ``find_file``, this will continue searching in the directory of that
+    function's caller, and so on, until it finds the file. This allows you to
+    use ``find_file`` in a helper function that takes a filename from its
+    caller.
+
+    This is the same algorithm used by `load_image`.
+
+    :param str filename: A relative filename.
+
+    :rtype: str
     :returns: Absolute filename.
     :raises: `FileNotFoundError` if the file can't be found.
+
+    Added in v33.
     """
     if os.path.isabs(filename) and os.path.isfile(filename):
         return filename
 
     # Start searching from the first parent stack-frame that is outside of
-    # the _stbt installation directory (this file's directory). We can ignore
-    # the first 2 stack-frames:
-    #
-    # * stack()[0] is find_user_file;
-    # * stack()[1] is find_user_file's caller: load_image
-    # * stack()[2] is load_image's caller -- load_image can be called
-    #   directly from the user script, or indirectly via stbt.match so we still
-    #   need to check until we're outside of the _stbt directory.
-
+    # the _stbt installation directory (this file's directory).
     _stbt_dir = os.path.abspath(os.path.dirname(__file__))
     caller = inspect.currentframe()
     try:
-        # Skip this frame and the parent:
-        caller = caller.f_back
-        caller = caller.f_back
+        caller = caller.f_back  # skip this frame (find_file)
         while caller:
             caller_dir = os.path.abspath(
                 os.path.dirname(inspect.getframeinfo(caller).filename))
