@@ -28,6 +28,7 @@ from _stbt.grid import (
 from _stbt.imgutils import (
     Color,
     crop,
+    find_file,
     Frame,
     Image,
     load_image,
@@ -90,6 +91,7 @@ __all__ = [
     "debug",
     "detect_motion",
     "draw_text",
+    "find_file",
     "for_object_repository",
     "Frame",
     "FrameDiffer",

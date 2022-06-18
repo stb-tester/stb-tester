@@ -5,7 +5,7 @@ from typing import Union, Tuple
 import numpy
 
 from .imgutils import (
-    _convert_color, find_user_file, Image, load_image, _relative_filename)
+    _convert_color, find_file, Image, load_image, _relative_filename)
 from .types import Region
 
 try:
@@ -63,7 +63,7 @@ class Mask:
         self._binop = None
         self._region = None
         if isinstance(m, str):
-            absolute_filename = find_user_file(m)
+            absolute_filename = find_file(m)
             self._filename = absolute_filename
             self._invert = invert
         elif isinstance(m, numpy.ndarray):
