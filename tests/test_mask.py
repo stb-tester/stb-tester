@@ -2,6 +2,7 @@ import tempfile
 from textwrap import dedent
 
 import cv2
+import numpy
 import pytest
 
 from _stbt.mask import Mask
@@ -157,3 +158,35 @@ def pretty(mask):
                 out += "."
         out += "\n"
     return out
+
+
+def test_mask_memoization():
+    r = Region(x=0, y=0, right=2, bottom=2)
+    a1 = Mask(r).to_array(shape=(4, 6, 1))
+    a2 = Mask(r).to_array(shape=(4, 6, 1))
+    assert a1 is a2
+
+    a3 = Mask(r).to_array(shape=(4, 6, 3))
+    assert a3 is not a1
+
+    a4 = Mask(r).to_array(shape=(4, 6, 1))
+    assert a4 is a1
+
+    a5 = Mask("mask-out-left-half-720p.png").to_array((720, 1280, 1))
+    a6 = Mask("mask-out-left-half-720p.png").to_array((720, 1280, 1))
+    assert a5 is a6
+
+
+def test_mask_with_3_channels():
+    m = Mask(Region(x=0, y=0, right=2, bottom=2))
+    a1 = m.to_array(shape=(4, 6, 1))
+    a3 = m.to_array(shape=(4, 6, 3))
+    for c in range(3):
+        assert numpy.array_equal(a1[:, :, 0], a3[:, :, c])
+
+
+def test_mask_shape_mismatch():
+    with pytest.raises(ValueError,
+                       match=(r"Mask shape \(720, 1280, 1\) and required shape "
+                              r"\(1280, 720, 1\) don't match")):
+        Mask("mask-out-left-half-720p.png").to_array((1280, 720, 1))
