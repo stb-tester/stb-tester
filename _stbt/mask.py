@@ -122,6 +122,8 @@ class Mask:
     @lru_cache(maxsize=5)
     def _to_array(mask: "Mask", shape: Tuple[int, int, int]) -> numpy.ndarray:
         array: numpy.ndarray
+        if len(shape) == 2:
+            shape = shape + (1,)
         if mask._filename is not None:
             array = load_image(mask._filename, color_channels=(shape[2],))
             if array.shape != shape:

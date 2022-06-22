@@ -190,6 +190,14 @@ def test_mask_with_3_channels():
         assert numpy.array_equal(a1[:, :, 0], a3[:, :, c])
 
 
+def test_mask_to_array_with_2ary_shape():
+    m1 = Mask(Region(x=0, y=0, right=2, bottom=2))
+    assert m1.to_array(shape=(4, 6)).shape == (4, 6, 1)
+
+    m2 = Mask("mask-out-left-half-720p.png")
+    assert m2.to_array(shape=(720, 1280)).shape == (720, 1280, 1)
+
+
 def test_mask_shape_mismatch():
     with pytest.raises(ValueError,
                        match=(r"Mask shape \(720, 1280, 1\) and required shape "
