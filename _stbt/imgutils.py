@@ -196,7 +196,7 @@ class Color:
                  blue: int = None, green: int = None, red: int = None,
                  bgr: Tuple[int, int, int] = None):
 
-        self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA
+        self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
         if len(args) == 1 and isinstance(args[0], Color):
             self.array = args[0].array
@@ -220,6 +220,8 @@ class Color:
         else:
             raise TypeError("Color: __init__() expected a Color, '#rrggbb' "
                             "string, or 3 integers in Blue-Green-Red order. ")
+
+        self.array.flags.writeable = False
 
         self.hexstring = (
             "#{0:02x}{1:02x}{2:02x}{3}".format(
