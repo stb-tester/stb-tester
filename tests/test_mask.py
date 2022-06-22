@@ -176,6 +176,11 @@ def test_mask_memoization():
     a6 = Mask("mask-out-left-half-720p.png").to_array((720, 1280, 1))
     assert a5 is a6
 
+    # the mask is read-only
+    with pytest.raises(ValueError):
+        a1[2, 2] = 22
+    assert a1[2, 2, 0] == 0
+
 
 def test_mask_with_3_channels():
     m = Mask(Region(x=0, y=0, right=2, bottom=2))

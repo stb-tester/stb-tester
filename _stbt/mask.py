@@ -151,6 +151,7 @@ class Mask:
         if mask._invert:
             array = ~array  # pylint:disable=invalid-unary-operand-type
 
+        array.flags.writeable = False
         return array
 
     def __repr__(self):
