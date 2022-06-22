@@ -5,7 +5,6 @@ import inspect
 import os
 import re
 import warnings
-from functools import lru_cache
 from typing import overload, Tuple
 
 import cv2
@@ -412,7 +411,6 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     return img
 
 
-@lru_cache(maxsize=5)
 def _imread(absolute_filename, color_channels):
     if color_channels == (3,):
         flags = cv2.IMREAD_COLOR
