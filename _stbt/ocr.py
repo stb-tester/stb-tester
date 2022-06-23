@@ -546,7 +546,7 @@ def bgr_diff(frame, color, threshold, imglog):
 ocr.text_color_differ = bgr_diff
 
 
-@imgproc_cache.memoize({"version": "32"})
+@imgproc_cache.memoize({"version": "33"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
         engine, char_whitelist, imglog, tesseract_version):
