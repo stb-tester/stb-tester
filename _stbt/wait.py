@@ -1,13 +1,20 @@
-"""Copyright 2015-2019 Stb-tester.com Ltd."""
+"""Copyright © 2015-2022 Stb-tester.com Ltd."""
 
 import functools
 import inspect
+from typing import Callable, TypeVar
 
 from .logging import debug
 
 
-def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
-               stable_secs=0):
+T = TypeVar("T")
+
+
+def wait_until(callable_: Callable[[], T],
+               timeout_secs: float = 10,
+               interval_secs: float = 0,
+               predicate: Callable[[T], bool] = None,
+               stable_secs: float = 0) -> T | None:
     """Wait until a condition becomes true, or until a timeout.
 
     Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
