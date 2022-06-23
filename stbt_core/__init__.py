@@ -72,6 +72,7 @@ from _stbt.transition import (
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    Direction,
     NoVideo,
     Position,
     Region,
@@ -90,6 +91,7 @@ __all__ = [
     "crop",
     "debug",
     "detect_motion",
+    "Direction",
     "draw_text",
     "find_file",
     "for_object_repository",
