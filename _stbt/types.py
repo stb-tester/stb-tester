@@ -2,6 +2,7 @@
 # Don't import anything not in the Python standard library from this file
 
 from collections import namedtuple
+from enum import Enum
 
 
 class Position(namedtuple('Position', 'x y')):
@@ -11,6 +12,19 @@ class Position(namedtuple('Position', 'x y')):
 
 class Size(namedtuple('Size', 'width height')):
     """Size of a rectangle with ``width`` and ``height``."""
+
+
+class Direction(Enum):
+
+    #: Process the image from left to right
+    HORIZONTAL = "horizontal"
+
+    #: Process the image from top to bottom
+    VERTICAL = "vertical"
+
+    # For nicer formatting in generated API documentation:
+    def __repr__(self):
+        return str(self)
 
 
 class _RegionClsMethods(type):
