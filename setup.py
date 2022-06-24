@@ -60,10 +60,10 @@ setuptools.setup(
         "keyboard": ["networkx==2.4"],
     },
     install_requires=[
-        "astroid==2.9.3",
+        "astroid==2.11.6",
         "attrs==21.2.0",
         "isort==5.6.4",
         "opencv-python~=4.5",
-        "pylint==2.12.2",
+        "pylint==2.14.3",
     ],
 )
