@@ -17,6 +17,7 @@ import subprocess
 from astroid import (
     Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
     Keyword, MANAGER, Name, Raise, Uninferable)
+from astroid.context import InferenceContext
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
@@ -303,4 +304,5 @@ def _infer(node):
 
 
 def register(linter):
+    InferenceContext.max_inferred = 1000
     linter.register_checker(StbtChecker(linter))
