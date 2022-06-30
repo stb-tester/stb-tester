@@ -65,7 +65,7 @@ def argparser_add_verbose_argument(argparser):
     argparser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         default=get_debug_level(),  # for stbt-run arguments dump
-        help='Enable debug output (specify twice to enable GStreamer element '
+        help='Enable debug output (specify twice to enable detailed '
              'dumps to ./stbt-debug directory)')
 
 
