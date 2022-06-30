@@ -12,7 +12,7 @@ from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 
 
-log = getLogger("stbt.keyboard")
+log = getLogger("stbt.Keyboard")
 
 
 class Keyboard():
@@ -610,6 +610,8 @@ class Keyboard():
         the :ref:`example above <keyboard-example>`.
         """
 
+        log.info("enter_text %r", text)
+
         for letter in text:
             # Sanity check so we don't fail halfway through typing.
             if not self._find_keys({"text": letter}):
@@ -620,9 +622,9 @@ class Keyboard():
                                     page, verify_every_keypress, retries)
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
-            log.debug("Keyboard: Entered %r; the selection is now on %r",
+            log.debug("Entered %r; the selection is now on %r",
                       letter, page.selection)
-        log.info("Keyboard: Entered %r", text)
+        log.info("Entered %r", text)
         return page
 
     def navigate_to(self, target, page, verify_every_keypress=False, retries=2):
@@ -648,6 +650,8 @@ class Keyboard():
 
         import stbt_core as stbt
 
+        log.info("navigate_to: %r", target)
+
         targets = self._find_keys(target)
         if not targets:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
@@ -666,7 +670,7 @@ class Keyboard():
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G_, current, targets))
-            log.debug("Keyboard: navigating from %r to %r by pressing %r",
+            log.debug("navigating from %r to %r by pressing %r",
                       current, target, [k for k, _ in keys])
             if not verify_every_keypress:
                 for k, _ in keys[:-1]:
