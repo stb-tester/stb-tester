@@ -2,6 +2,7 @@
 
 import argparse
 import itertools
+import logging
 import os
 import sys
 from collections import namedtuple, OrderedDict
@@ -12,26 +13,40 @@ from .config import get_config
 from .types import Region
 from .utils import mkdir_p
 
+
 _debug_level = None
 
 # Running in a Jupyter Notebook:
 _jupyter_logging_enabled = "JPY_PARENT_PID" in os.environ
 
+logger = logging.getLogger("stbt")
+trace_logger = logging.getLogger("stbt.trace")
+
+
+def init_logger():
+    assert not logger.handlers, "stbt logger already initialised"
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter("%(name)s:%(levelname)s: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
 
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if get_debug_level() > 0:
-        sys.stderr.write("%s\n" % (msg,))
+        logger.debug(msg)
 
 
 def ddebug(s):
     """Extra verbose debug for stbt developers, not end users"""
     if get_debug_level() > 1:
-        sys.stderr.write("%s\n" % (s,))
+        trace_logger.debug(s)
 
 
 def warn(s):
-    sys.stderr.write("warning: %s\n" % (s,))
+    logger.warning(s)
 
 
 def get_debug_level():
@@ -65,7 +80,7 @@ def argparser_add_verbose_argument(argparser):
     argparser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         default=get_debug_level(),  # for stbt-run arguments dump
-        help='Enable debug output (specify twice to enable GStreamer element '
+        help='Enable debug output (specify twice to enable detailed '
              'dumps to ./stbt-debug directory)')
 
 
