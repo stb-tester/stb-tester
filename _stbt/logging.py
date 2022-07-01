@@ -27,7 +27,7 @@ def init_logger():
     assert not logger.handlers, "stbt logger already initialised"
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
-        logging.Formatter("%(name)s:%(levelname)s: %(message)s"))
+        logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
