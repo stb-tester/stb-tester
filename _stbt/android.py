@@ -352,8 +352,9 @@ class AdbDevice():
         # "already connected to 192.168.2.163:5555" or
         # "unable to connect to 192.168.2.100:5555".
         output = self._adb(["connect", self.address], timeout=timeout,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT) \
-                     .stdout.decode("utf-8")
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           encoding="utf-8") \
+                     .stdout
         if ("connected to %s" % self.address) not in output:
             logger.debug("%s", output)
             raise AdbError("adb connect %s failed" % self.address,
