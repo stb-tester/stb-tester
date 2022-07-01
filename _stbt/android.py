@@ -25,6 +25,14 @@ from enum import Enum
 from _stbt.config import ConfigurationError, get_config
 
 
+__all__ = [
+    "adb",
+    "AdbDevice",
+    "AdbError",
+    "CoordinateSystem",
+]
+
+
 logger = getLogger("stbt.android")
 
 

@@ -11,6 +11,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 from contextlib import contextmanager
 
+from _stbt import android
 from _stbt.black import (
     is_screen_black)
 from _stbt.config import (
@@ -83,6 +84,7 @@ from _stbt.wait import (
     wait_until)
 
 __all__ = [
+    "android",
     "apply_ocr_corrections",
     "as_precondition",
     "Color",
