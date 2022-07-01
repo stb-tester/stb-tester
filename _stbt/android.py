@@ -238,7 +238,7 @@ class AdbDevice():
             timestamp = time.time()
             data = self.adb(["shell", "screencap", "-p"],
                             timeout=60, capture_output=True) \
-                       .stdout.replace("\r\n", "\n")
+                       .stdout.replace(b"\r\n", b"\n")
             img = cv2.imdecode(
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
                 cv2.IMREAD_COLOR)
