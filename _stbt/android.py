@@ -410,7 +410,7 @@ def logcat(logcat_args=None):
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             d = AdbDevice()
-            collector = LogcatCollector("logcat.log", logcat_args, d)
+            collector = LogcatCollector("logcat.log", d, logcat_args)
             d.adb(["logcat", "--clear"])
             collector.run_in_background()
             try:
@@ -423,10 +423,10 @@ def logcat(logcat_args=None):
 
 
 class LogcatCollector():
-    def __init__(self, filename, logcat_args=None, adb_device=None):
+    def __init__(self, filename, adb_device, logcat_args=None):
         self.filename = filename
+        self.adb_device = adb_device
         self.logcat_args = logcat_args or []
-        self.adb_device = adb_device or AdbDevice()
         self.stopping = False
         self.thread = None
         self.process = None
