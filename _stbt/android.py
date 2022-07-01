@@ -9,7 +9,6 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 """
 
-import functools
 import os
 import re
 import shutil
@@ -17,7 +16,9 @@ import subprocess
 import threading
 import time
 from collections import namedtuple
+from contextlib import contextmanager
 from logging import getLogger
+from typing import Generator
 
 from enum import Enum
 
@@ -317,6 +318,37 @@ class AdbDevice():
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
+    @contextmanager
+    def logcat(self, filename="logcat.log", logcat_args=None) \
+            -> Generator[None, None, None]:
+        """Run ``adb logcat`` and stream the logs to ``filename``.
+
+        This is a context manager. You can use it as a decorator on your
+        test-case functions, and ``adb logcat`` will run for the duration
+        of the decorated function::
+
+            adb = stbt.android.AdbDevice()
+
+            @adb.logcat()
+            def test_launching_my_androidtv_app():
+                ...
+
+        :param str filename:
+            Where the logs are written.
+
+        :param list logcat_args:
+            Optional arguments to pass on to ``adb logcat``, such as filter
+            expressions. See the `logcat documentation
+            <https://developer.android.com/studio/command-line/logcat#options>`__.
+        """
+        collector = LogcatCollector(filename, self, logcat_args)
+        self.adb(["logcat", "--clear"])
+        collector.run_in_background()
+        try:
+            yield
+        finally:
+            collector.stop()
+
     def _adb(self, args, verbose=True, **kwargs):
         _command = self._build_adb_command() + args
         if verbose:
@@ -397,32 +429,6 @@ class AdbError(Exception):
 
     def __str__(self):
         return self.message
-
-
-def logcat(logcat_args=None):
-    """Decorator that will save logs to "logcat.log" while the decorated
-    function is running.
-
-    :param list logcat_args:
-        Optional arguments to pass on to ``adb logcat``, such as filter
-        expressions. See the `logcat documentation
-        <https://developer.android.com/studio/command-line/logcat#options>`__.
-    """
-
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            d = AdbDevice()
-            collector = LogcatCollector("logcat.log", d, logcat_args)
-            d.adb(["logcat", "--clear"])
-            collector.run_in_background()
-            try:
-                return func(*args, **kwargs)
-            finally:
-                collector.stop()
-        return wrapped
-
-    return decorator
 
 
 class LogcatCollector():
