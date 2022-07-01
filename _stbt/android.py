@@ -272,7 +272,7 @@ class AdbDevice():
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
-        logger.debug("AdbDevice.press(%r)", key)
+        logger.info("AdbDevice.press(%r)", key)
         self.adb(["shell", "input", "keyevent", key], timeout=10)
 
     def swipe(self, start_position, end_position):
@@ -290,7 +290,7 @@ class AdbDevice():
         """
         x1, y1 = _centre_point(start_position)
         x2, y2 = _centre_point(end_position)
-        logger.debug("AdbDevice.swipe((%d,%d), (%d,%d))", x1, y1, x2, y2)
+        logger.info("AdbDevice.swipe((%d,%d), (%d,%d))", x1, y1, x2, y2)
 
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
@@ -310,7 +310,7 @@ class AdbDevice():
 
         """
         x, y = _centre_point(position)
-        logger.debug("AdbDevice.tap((%d,%d))", x, y)
+        logger.info("AdbDevice.tap((%d,%d))", x, y)
 
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
