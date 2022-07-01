@@ -2,7 +2,7 @@
 
 """Python module to control Android devices via `ADB`_ from Stb-tester scripts.
 
-Copyright © 2017-2021 Stb-tester.com Ltd.
+Copyright © 2017-2022 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
@@ -98,7 +98,7 @@ class CoordinateSystem(Enum):
     """
 
 
-def adb(args, **subprocess_kwargs):
+def adb(args, **subprocess_kwargs) -> subprocess.CompletedProcess:
     """Send commands to an Android device using `ADB`_.
 
     This is a convenience function. It will construct an `AdbDevice` with the
@@ -182,7 +182,8 @@ class AdbDevice():
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
 
-    def adb(self, args, *, timeout=None, **subprocess_kwargs):
+    def adb(self, args, *, timeout=None, **subprocess_kwargs) \
+            -> subprocess.CompletedProcess:
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -203,13 +204,14 @@ class AdbDevice():
             self._connect(timeout)
         return self._adb(args, timeout=timeout, **subprocess_kwargs)
 
-    def devices(self):
+    def devices(self) -> str:
+        """Output of ``adb devices -l``."""
         return self._adb(["devices", "-l"], verbose=False, timeout=5,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT,
                          encoding="utf-8").stdout
 
-    def get_frame(self, coordinate_system=None):
+    def get_frame(self, coordinate_system=None) -> "stbt.Frame":
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
@@ -256,7 +258,7 @@ class AdbDevice():
         img = _resize(img, coordinate_system)
         return Frame(img, time=timestamp)
 
-    def press(self, key):
+    def press(self, key) -> None:
         """Send a keypress.
 
         :param str key: An Android keycode as listed in
@@ -275,7 +277,7 @@ class AdbDevice():
         logger.info("AdbDevice.press(%r)", key)
         self.adb(["shell", "input", "keyevent", key], timeout=10)
 
-    def swipe(self, start_position, end_position):
+    def swipe(self, start_position, end_position) -> None:
         """Swipe from one point to another point.
 
         :param start_position:
@@ -298,7 +300,7 @@ class AdbDevice():
                    str(x1), str(y1), str(x2), str(y2)]
         self.adb(command, timeout=10)
 
-    def tap(self, position):
+    def tap(self, position) -> None:
         """Tap on a particular location.
 
         :param position: A `stbt.Region`, or an (x,y) tuple.
