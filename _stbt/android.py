@@ -204,12 +204,10 @@ class AdbDevice():
         return self._adb(args, timeout=timeout, **subprocess_kwargs)
 
     def devices(self):
-        try:
-            return self._adb(["devices", "-l"], verbose=False, timeout=5,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT).stdout.decode("utf-8")
-        except subprocess.CalledProcessError as e:
-            return e.stdout.decode("utf-8")
+        return self._adb(["devices", "-l"], verbose=False, timeout=5,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         encoding="utf-8").stdout
 
     def get_frame(self, coordinate_system=None):
         """Take a screenshot using ADB.
