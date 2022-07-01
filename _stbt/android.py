@@ -1,45 +1,36 @@
 # -*- coding: utf-8 -*-
 
-"""Python module to control Android phones via `ADB`_ from Stb-tester scripts.
+"""Python module to control Android devices via `ADB`_ from Stb-tester scripts.
 
-Copyright © 2017 Stb-tester.com Ltd.
+Copyright © 2017-2022 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
-Usage::
-
-    from _stbt.android import AdbDevice
-    adb = AdbDevice()
-    adb.tap((100, 50))
-
-For feedback (video from the Android device-under-test) you can use:
-
-* Stb-tester's standard HDMI video-capture if the device-under-test is an
-  Android set-top box.
-* HDMI video-capture from a tablet or phone with an MHL adapter.
-* A camera pointed at the phone's screen with an `Stb-tester CAMERA`_ device.
-* Screenshots captured over USB via ADB.
-
-For more details on the benefits and trade-offs of each method, see
-<https://stb-tester.com/blog/2017/02/21/testing-video-playback-on-mobile-devices>.
-
-Note that you can instead use Stb-tester features such as image-matching
-in your existing Selenium/WebDriver/Appium tests. See
-<https://stb-tester.com/blog/2016/09/20/add-visual-verification-to-your-selenium-tests-with-stb-tester>.
-
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
-.. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """
 
-import configparser
+import os
 import re
+import shutil
 import subprocess
-import sys
+import threading
 import time
 from collections import namedtuple
+from contextlib import contextmanager
 from logging import getLogger
+from typing import Generator
 
 from enum import Enum
+
+from _stbt.config import ConfigurationError, get_config
+
+
+__all__ = [
+    "adb",
+    "AdbDevice",
+    "AdbError",
+    "CoordinateSystem",
+]
 
 
 logger = getLogger("stbt.android")
@@ -78,6 +69,8 @@ class CoordinateSystem(Enum):
     your video-frame (for example, you can pass in ``stbt.match(...).region``)
     and the CoordinateSystem will ensure that the coordinates are converted to
     physical coordinates in the appropriate way before passing them on to ADB.
+
+    .. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
     """
 
     ADB_NATIVE = 0
@@ -94,9 +87,9 @@ class CoordinateSystem(Enum):
 
     HDMI_720P = 2
     """
-    Frames are captured via HDMI (using an MHL cable) at 720p.
+    Frames are captured via HDMI and scaled to 720p.
 
-    Frames will always be in landscape orientation. If the device is in
+    Frames will always be in landscape orientation. If a mobile device is in
     portrait orientation, you'll get black bars to the left & right. If the
     device is in landscape orientation, the frame will match what you see on
     the device (this assumes that the device's physical aspect ratio matches
@@ -110,80 +103,96 @@ class CoordinateSystem(Enum):
     The camera & device must both be physically in landscape orientation.
 
     Frames will always be in landscape orientation; if the device is in logical
-    portrait orientation the image will be rotated 90° anti-clockwise.
+    portrait orientation the image will appear rotated 90° anti-clockwise.
     """
 
 
+def adb(args, **subprocess_kwargs) -> subprocess.CompletedProcess:
+    """Send commands to an Android device using `ADB`_.
+
+    This is a convenience function. It will construct an `AdbDevice` with the
+    default parameters (taken from your config files) and call `AdbDevice.adb`
+    with the parameters given here.
+
+    .. _ADB: https://developer.android.com/studio/command-line/adb.html
+    """
+    return AdbDevice().adb(args, **subprocess_kwargs)
+
+
 class AdbDevice():
-    """Control an Android device using `ADB`_.
+    """Send commands to an Android device using `ADB`_.
 
     Default values for each parameter can be specified in your "stbt.conf"
     config file under the "[android]" section.
 
+    :param string address:
+        IP address (if using Network ADB) or serial number (if connected via
+        USB) of the Android device. You can get the serial number by running
+        ``adb devices -l``. If not specified, there must be only one Android
+        device connected by USB.
     :param string adb_server:
         The ADB server (that is, the PC connected to the Android device).
         Defaults to localhost.
-    :param string adb_device:
-        Serial number of the Android device connected to ADB server PC (you can
-        get this by running ``adb devices -l``). If not specified, there must be
-        only one Android device connected. If ``tcpip=True`` this must be the
-        Android device's IP address.
     :param string adb_binary:
         The path to the ADB client executable. Defaults to "adb".
     :param bool tcpip:
         The ADB server communicates with the Android device via TCP/IP, not
-        USB. This requires that you have enabled TCP/IP ADB access on the
-        device. Defaults to False.
-    :param CoordinateSystem coordinate_system:
-        How to convert the coordinates you give to `AdbDevice.tap` and
-        `AdbDevice.swipe` into the coordinates required by ADB. See
-        `CoordinateSystem` for details. Defaults to ``CAMERA_720P`` on the
-        `Stb-tester CAMERA`_, or ``ADB_NATIVE`` elsewhere.
+        USB. This requires that you have enabled Network ADB access on the
+        device. Defaults to True if ``address`` is an IP address, False
+        otherwise.
+
+    .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
 
-    def __init__(self, adb_server=None, adb_device=None, adb_binary=None,
-                 tcpip=None, coordinate_system=None, _config=None):
+    def __init__(self, address=None, adb_server=None, adb_binary=None,
+                 tcpip=None, coordinate_system=None):
 
-        if _config is None:
-            import _stbt.config
-            _config = _stbt.config._config_init()
+        self.address = address or get_config("device_under_test", "ip_address",
+                                             default=None)
+        self.adb_server = adb_server or get_config("android", "adb_server",
+                                                   default=None)
+        self.adb_binary = adb_binary or get_config("android", "adb_binary",
+                                                   default="adb")
 
-        self.adb_server = adb_server or _config.get("android", "adb_server",
-                                                    fallback=None)
-        self._adb_device = adb_device or _config.get("android", "adb_device",
-                                                     fallback=None)
-        self.adb_binary = adb_binary or _config.get("android", "adb_binary",
-                                                    fallback="adb")
         if tcpip is None:
-            try:
-                tcpip = _config.getboolean("android", "tcpip")
-            except configparser.Error:
-                tcpip = False
+            tcpip = get_config("android", "tcpip", default=None, type_=bool)
+        if tcpip is None:
+            tcpip = _is_ip_address(self.address)
         self.tcpip = tcpip
 
-        if coordinate_system is None:
-            name = _config.get("android", "coordinate_system",
-                               fallback="ADB_NATIVE")
-            if name not in CoordinateSystem.__members__:
-                raise ValueError(
-                    "Invalid value '%s' for android.coordinate_system in "
-                    "config file. Valid values are %s."
-                    % (name, ", ".join("'%s'" % k for k in
-                                       CoordinateSystem.__members__)))
-            coordinate_system = CoordinateSystem[name]
-        self.coordinate_system = coordinate_system
+        if self.tcpip and not self.address:
+            raise ConfigurationError('AdbDevice: If "tcpip=True" '
+                                     'you must specify "address"')
+
+        if self.tcpip and ":" not in self.address:
+            self.address = self.address + ":5555"
+
+        self.coordinate_system = coordinate_system or get_config(
+            "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
+            type_=CoordinateSystem)
+
+        self._setup_adb_key()
 
         if self.tcpip:
-            self._connect(timeout_secs=60)
+            self._connect(timeout=60)
 
-    @property
-    def adb_device(self):
-        if self.tcpip and self._adb_device and ":" not in self._adb_device:
-            return self._adb_device + ":5555"
-        else:
-            return self._adb_device
+    def _setup_adb_key(self):
+        if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
+            return
+        import stbt_core
+        root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+        if root is None:
+            return
+        if not os.path.exists(os.path.join(root, "config/android/adbkey")):
+            raise ConfigurationError(
+                "To run adb on the Stb-tester Node you must generate an ADB "
+                "host key by running 'adb keygen config/android/adbkey' and "
+                "commit the 'config/android' directory to git.")
+        shutil.copytree(os.path.join(root, "config/android"),
+                        os.path.join(os.environ["HOME"], ".android"))
 
-    def adb(self, command, timeout_secs=5 * 60, capture_output=False, **kwargs):
+    def adb(self, args, *, timeout=None, **subprocess_kwargs) \
+            -> subprocess.CompletedProcess:
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -193,32 +202,25 @@ class AdbDevice():
             d.adb(["shell", "am", "start", "-S",
                    "com.example.myapp/com.example.myapp.MainActivity"])
 
-        ``command`` and ``kwargs`` are the same as `subprocess.check_output`,
-        except that ``shell``, ``stdout`` and ``stderr`` are not allowed.
+        Any keyword arguments are passed on to `subprocess.run`.
 
-        Raises `AdbError` if the command fails.
+        :returns: `subprocess.CompletedProcess` from `subprocess.run`.
+        :raises: `subprocess.CalledProcessError` if ``check`` is true and
+            the adb process returns a non-zero exit status.
+        :raises: `AdbError` if ``adb connect`` fails.
         """
-        try:
-            if self.tcpip:
-                self._connect(timeout_secs)
-            output = self._adb(command, timeout_secs, **kwargs)
-        except subprocess.CalledProcessError as e:
-            raise AdbError(
-                e.returncode, e.cmd, e.output.decode("utf-8"), self) \
-                .with_traceback(sys.exc_info()[2])
-        if capture_output:
-            return output
-        else:
-            sys.stderr.write(output)
-            return None
+        if self.tcpip:
+            self._connect(timeout)
+        return self._adb(args, timeout=timeout, **subprocess_kwargs)
 
-    def devices(self):
-        try:
-            return self._adb(["devices", "-l"], timeout_secs=5)
-        except subprocess.CalledProcessError as e:
-            return e.output.decode("utf-8")
+    def devices(self) -> str:
+        """Output of ``adb devices -l``."""
+        return self._adb(["devices", "-l"], verbose=False, timeout=5,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         encoding="utf-8").stdout
 
-    def get_frame(self):
+    def get_frame(self, coordinate_system=None) -> "stbt.Frame":
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
@@ -227,6 +229,9 @@ class AdbDevice():
         screenshot (scale and/or rotate it) to match the screenshots from your
         main video-capture method as closely as possible, as specified by the
         `CoordinateSystem`.
+
+        :param CoordinateSystem coordinate_system:
+            Override the coordinate_system given to the `AdbDevice` constructor.
 
         :returns: A `stbt.Frame`, that is, an image in OpenCV format. Note that
             the ``time`` attribute won't be very accurate (probably to <0.5s or
@@ -237,11 +242,14 @@ class AdbDevice():
         import numpy
         from _stbt.imgutils import Frame
 
+        if coordinate_system is None:
+            coordinate_system = self.coordinate_system
+
         for attempt in range(1, 4):
             timestamp = time.time()
-            data = (self.adb(["shell", "screencap", "-p"],
-                             timeout_secs=60, capture_output=True)
-                    .replace("\r\n", "\n"))
+            data = self.adb(["shell", "screencap", "-p"],
+                            timeout=60, capture_output=True) \
+                       .stdout.replace(b"\r\n", b"\n")
             img = cv2.imdecode(
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
                 cv2.IMREAD_COLOR)
@@ -253,13 +261,13 @@ class AdbDevice():
             else:
                 break
         else:
-            raise RuntimeError(
+            raise AdbError(
                 "Failed to capture screenshot from android device")
 
-        img = _resize(img, self.coordinate_system)
+        img = _resize(img, coordinate_system)
         return Frame(img, time=timestamp)
 
-    def press(self, key):
+    def press(self, key) -> None:
         """Send a keypress.
 
         :param str key: An Android keycode as listed in
@@ -275,10 +283,10 @@ class AdbDevice():
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
-        logger.debug("AdbDevice.press(%r)", key)
-        self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
+        logger.info("AdbDevice.press(%r)", key)
+        self.adb(["shell", "input", "keyevent", key], timeout=10)
 
-    def swipe(self, start_position, end_position):
+    def swipe(self, start_position, end_position) -> None:
         """Swipe from one point to another point.
 
         :param start_position:
@@ -293,15 +301,15 @@ class AdbDevice():
         """
         x1, y1 = _centre_point(start_position)
         x2, y2 = _centre_point(end_position)
-        logger.debug("AdbDevice.swipe((%d,%d), (%d,%d))", x1, y1, x2, y2)
+        logger.info("AdbDevice.swipe((%d,%d), (%d,%d))", x1, y1, x2, y2)
 
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
         command = ["shell", "input", "swipe",
                    str(x1), str(y1), str(x2), str(y2)]
-        self.adb(command, timeout_secs=10)
+        self.adb(command, timeout=10)
 
-    def tap(self, position):
+    def tap(self, position) -> None:
         """Tap on a particular location.
 
         :param position: A `stbt.Region`, or an (x,y) tuple.
@@ -313,44 +321,86 @@ class AdbDevice():
 
         """
         x, y = _centre_point(position)
-        logger.debug("AdbDevice.tap((%d,%d))", x, y)
+        logger.info("AdbDevice.tap((%d,%d))", x, y)
 
         x, y = self._to_native_coordinates(x, y)
-        self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
+        self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
-    def _adb(self, command, timeout_secs=None, **kwargs):
+    @contextmanager
+    def logcat(self, filename="logcat.log", logcat_args=None) \
+            -> Generator[None, None, None]:
+        """Run ``adb logcat`` and stream the logs to ``filename``.
+
+        This is a context manager. You can use it as a decorator on your
+        test-case functions, and ``adb logcat`` will run for the duration
+        of the decorated function::
+
+            adb = stbt.android.AdbDevice()
+
+            @adb.logcat()
+            def test_launching_my_androidtv_app():
+                ...
+
+        :param str filename:
+            Where the logs are written.
+
+        :param list logcat_args:
+            Optional arguments to pass on to ``adb logcat``, such as filter
+            expressions. See the `logcat documentation
+            <https://developer.android.com/studio/command-line/logcat#options>`__.
+        """
+        collector = _LogcatCollector(filename, self, logcat_args)
+        self.adb(["logcat", "--clear"])
+        collector.run_in_background()
+        try:
+            yield
+        finally:
+            collector.stop()
+
+    def _adb(self, args, verbose=True, **kwargs):
+        _command = self._build_adb_command() + args
+        if verbose:
+            logger.debug("AdbDevice.adb: About to run command: %r", _command)
+        return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
+
+    def _Popen(self, args, **kwargs):
+        """Like `AdbDevice.adb`, but runs `subprocess.Popen` instead of
+        `subprocess.run`.
+        """
+        if self.tcpip:
+            self._connect()
+        _command = self._build_adb_command() + args
+        logger.debug("AdbDevice._Popen: About to run command: %r", _command)
+        return subprocess.Popen(_command, **kwargs)
+
+    def _build_adb_command(self):
         _command = []
-        if timeout_secs is not None:
-            _command += ["timeout", "%fs" % timeout_secs]
         _command += [self.adb_binary]
         if self.adb_server:
             _command += ["-H", self.adb_server]
-        if self.adb_device:
-            _command += ["-s", self.adb_device]
-        _command += command
-        logger.debug("AdbDevice.adb: About to run command: %r", _command)
-        output = subprocess.check_output(
-            _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
-        return output
+        if self.address:
+            _command += ["-s", self.address]
+        return _command
 
-    def _connect(self, timeout_secs):
-        if not self.adb_device:
-            raise RuntimeError('AdbDevice: error: If "tcpip=True" '
-                               'you must specify "adb_device"')
-        try:
-            if self.adb_device in self._adb(["devices"]):
-                return
-        except subprocess.CalledProcessError:
-            pass
+    def _connect(self, timeout=None):
+        if self.address in self.devices():
+            return
+
+        if timeout is None:
+            timeout = 60
 
         # "adb connect" always returns success; we have to parse the output
         # which looks like "connected to 192.168.2.163:5555" or
         # "already connected to 192.168.2.163:5555" or
         # "unable to connect to 192.168.2.100:5555".
-        output = self._adb(["connect", self.adb_device], timeout_secs)
-        if ("connected to %s" % self.adb_device) not in output:
-            sys.stderr.write(output)
-            raise AdbError(0, "adb connect %s" % self.adb_device, output, self)
+        output = self._adb(["connect", self.address], timeout=timeout,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           encoding="utf-8") \
+                     .stdout
+        if ("connected to %s" % self.address) not in output:
+            logger.debug("%s", output)
+            raise AdbError("adb connect %s failed" % self.address,
+                           output=output, devices=self.devices())
         time.sleep(2)
 
     def _to_native_coordinates(self, x, y):
@@ -363,22 +413,70 @@ class AdbDevice():
     def _get_display_dimensions(self):
         return _parse_display_dimensions(
             self.adb(["shell", "dumpsys", "window"],
-                     timeout_secs=10, capture_output=True))
+                     timeout=10, capture_output=True).stdout)
 
 
 class AdbError(Exception):
-    def __init__(self, returncode, cmd, output=None, adb_control=None):
+    """Exception raised by `AdbDevice.adb`.
+
+    :ivar int returncode: Exit status of the adb command.
+    :ivar list cmd: The command that failed, as given to `AdbDevice.adb`.
+    :ivar str output: The output from adb.
+    :ivar str devices: The output from "adb devices -l" (useful for
+        debugging connection errors).
+    """
+
+    def __init__(self, message, returncode=None, cmd=None, output=None,
+                 devices=None):
         super().__init__()
+        self.message = message
         self.returncode = returncode
         self.cmd = cmd
         self.output = output
-        self.adb_devices = None
-        if adb_control:
-            self.adb_devices = adb_control.devices()
+        self.devices = devices
 
     def __str__(self):
-        return "Command '%s' failed with exit status %d. Output:\n%s\n%s" % (
-            self.cmd, self.returncode, self.output, self.adb_devices)
+        return self.message
+
+
+class _LogcatCollector():
+    def __init__(self, filename, adb_device, logcat_args=None):
+        self.filename = filename
+        self.adb_device = adb_device
+        self.logcat_args = logcat_args or []
+        self.stopping = False
+        self.thread = None
+        self.process = None
+
+    def run_in_background(self):
+        thread = threading.Thread(target=self.run)
+        thread.daemon = True
+        self.thread = thread
+        thread.start()
+
+    def run(self):
+        with open(self.filename, "wb", 0) as f:
+            while True:
+                # Re-run "adb logcat" in case of disconnections. I assume this
+                # means the device-under-test crashed/rebooted so we don't need
+                # to run "logcat --clear" again. If this assumption is wrong
+                # we'll end up with some duplicate log lines. :shrug:
+                self.process = self.adb_device._Popen(
+                    ['logcat'] + self.logcat_args, stdout=f)
+                self.process.wait()
+                if self.stopping:
+                    return
+                logger.warning("logcat: Lost adb connection")
+                time.sleep(1)
+
+    def stop(self):
+        self.stopping = True
+        if self.process:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
 
 
 # https://developer.android.com/reference/android/view/KeyEvent.html
@@ -701,6 +799,24 @@ _KEYCODE_MAPPINGS = {
 }
 
 
+def _is_ip_address(address):
+    """
+    >>> _is_ip_address("")
+    False
+    >>> _is_ip_address(None)
+    False
+    >>> _is_ip_address("7278681B045C937CEB770FD31542B16")
+    False
+    >>> _is_ip_address("192.168.2.11")
+    True
+    >>> _is_ip_address("192.168.2.11:5555")
+    True
+    >>> _is_ip_address("192.168.2.11:5555")
+    True
+    """
+    return bool(re.match(r"^\d+\.\d+\.\d+\.\d+(:\d+)?$", str(address)))
+
+
 def _resize(img, coordinate_system):
     import cv2
     import numpy
@@ -739,8 +855,7 @@ def _resize(img, coordinate_system):
     else:
         raise NotImplementedError(
             "AdbDevice.get_frame not implemented for %s. "
-            "Use a separate AdbDevice instance with "
-            "coordinate_system=CoordinateSystem.ADB_NATIVE"
+            "Use coordinate_system=CoordinateSystem.ADB_NATIVE"
             % coordinate_system)
 
     return img
@@ -828,4 +943,5 @@ def _parse_display_dimensions(dumpsys_output):
         m = re.search(r"cur=(\d+)x(\d+)", line)
         if m:
             return _Dimensions(width=int(m.group(1)), height=int(m.group(2)))
-    raise RuntimeError("AdbDevice: Didn't find display size in dumpsys output")
+    raise AdbError("Didn't find display size in dumpsys output",
+                   output=dumpsys_output)

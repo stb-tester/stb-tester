@@ -88,8 +88,7 @@ def uri_to_control(uri, display=None):
 
 def new_adb_device(address):
     from _stbt.android import AdbDevice
-    tcpip = bool(re.match(r"\d+\.\d+\.\d+\.\d+", address))
-    return AdbDevice(adb_device=address, tcpip=tcpip)
+    return AdbDevice(address)
 
 
 class NullControl(RemoteControl):
