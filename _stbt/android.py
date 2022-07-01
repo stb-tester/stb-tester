@@ -98,7 +98,7 @@ class CoordinateSystem(Enum):
     """
 
 
-def adb(command, **kwargs):
+def adb(args, **subprocess_kwargs):
     """Send commands to an Android device using `ADB`_.
 
     This is a convenience function. It will construct an `AdbDevice` with the
@@ -107,7 +107,7 @@ def adb(command, **kwargs):
 
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
-    return AdbDevice().adb(command, **kwargs)
+    return AdbDevice().adb(args, **subprocess_kwargs)
 
 
 class AdbDevice():
@@ -182,7 +182,7 @@ class AdbDevice():
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
 
-    def adb(self, command, *, timeout=None, **subprocess_kwargs):
+    def adb(self, args, *, timeout=None, **subprocess_kwargs):
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -201,7 +201,7 @@ class AdbDevice():
         """
         if self.tcpip:
             self._connect(timeout)
-        return self._adb(command, timeout=timeout, **subprocess_kwargs)
+        return self._adb(args, timeout=timeout, **subprocess_kwargs)
 
     def devices(self):
         try:
@@ -317,19 +317,19 @@ class AdbDevice():
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
-    def _adb(self, command, verbose=True, **kwargs):
-        _command = self._build_adb_command() + command
+    def _adb(self, args, verbose=True, **kwargs):
+        _command = self._build_adb_command() + args
         if verbose:
             logger.debug("AdbDevice.adb: About to run command: %r", _command)
         return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
 
-    def _Popen(self, command, **kwargs):
+    def _Popen(self, args, **kwargs):
         """Like `AdbDevice.adb`, but runs `subprocess.Popen` instead of
         `subprocess.run`.
         """
         if self.tcpip:
             self._connect()
-        _command = self._build_adb_command() + command
+        _command = self._build_adb_command() + args
         logger.debug("AdbDevice._Popen: About to run command: %r", _command)
         return subprocess.Popen(_command, **kwargs)
 
