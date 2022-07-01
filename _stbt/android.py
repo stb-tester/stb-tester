@@ -349,7 +349,7 @@ class AdbDevice():
             expressions. See the `logcat documentation
             <https://developer.android.com/studio/command-line/logcat#options>`__.
         """
-        collector = LogcatCollector(filename, self, logcat_args)
+        collector = _LogcatCollector(filename, self, logcat_args)
         self.adb(["logcat", "--clear"])
         collector.run_in_background()
         try:
@@ -439,7 +439,7 @@ class AdbError(Exception):
         return self.message
 
 
-class LogcatCollector():
+class _LogcatCollector():
     def __init__(self, filename, adb_device, logcat_args=None):
         self.filename = filename
         self.adb_device = adb_device
@@ -466,7 +466,7 @@ class LogcatCollector():
                 self.process.wait()
                 if self.stopping:
                     return
-                logger.warning("LogcatCollector: Lost adb connection")
+                logger.warning("logcat: Lost adb connection")
                 time.sleep(1)
 
     def stop(self):
