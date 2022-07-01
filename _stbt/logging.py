@@ -24,7 +24,9 @@ trace_logger = logging.getLogger("stbt.trace")
 
 
 def init_logger():
-    assert not logger.handlers, "stbt logger already initialised"
+    if logger.handlers:
+        logger.warning("stbt logger already initialised", stack_info=True)
+        return
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
         logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
