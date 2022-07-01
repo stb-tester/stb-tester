@@ -32,16 +32,17 @@ in your existing Selenium/WebDriver/Appium tests. See
 """
 
 import configparser
-import logging
 import re
 import subprocess
 import sys
 import time
 from collections import namedtuple
+from logging import getLogger
 
 from enum import Enum
 
-from _stbt.logging import debug
+
+logger = getLogger("stbt.android")
 
 
 class CoordinateSystem(Enum):
@@ -245,7 +246,7 @@ class AdbDevice():
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
                 cv2.IMREAD_COLOR)
             if img is None:
-                logging.warning(
+                logger.warning(
                     "AdbDevice.get_frame: Failed to get screenshot "
                     "via ADB (attempt %d/3)\n"
                     "Length of data: %d", attempt, len(data))
@@ -274,7 +275,7 @@ class AdbDevice():
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
-        debug("AdbDevice.press(%r)" % key)
+        logger.debug("AdbDevice.press(%r)", key)
         self.adb(["shell", "input", "keyevent", key], timeout_secs=10)
 
     def swipe(self, start_position, end_position):
@@ -292,7 +293,7 @@ class AdbDevice():
         """
         x1, y1 = _centre_point(start_position)
         x2, y2 = _centre_point(end_position)
-        debug("AdbDevice.swipe((%d,%d), (%d,%d))" % (x1, y1, x2, y2))
+        logger.debug("AdbDevice.swipe((%d,%d), (%d,%d))", x1, y1, x2, y2)
 
         x1, y1 = self._to_native_coordinates(x1, y1)
         x2, y2 = self._to_native_coordinates(x2, y2)
@@ -312,7 +313,7 @@ class AdbDevice():
 
         """
         x, y = _centre_point(position)
-        debug("AdbDevice.tap((%d,%d))" % (x, y))
+        logger.debug("AdbDevice.tap((%d,%d))", x, y)
 
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout_secs=10)
@@ -327,7 +328,7 @@ class AdbDevice():
         if self.adb_device:
             _command += ["-s", self.adb_device]
         _command += command
-        debug("AdbDevice.adb: About to run command: %r\n" % _command)
+        logger.debug("AdbDevice.adb: About to run command: %r", _command)
         output = subprocess.check_output(
             _command, stderr=subprocess.STDOUT, **kwargs).decode("utf-8")
         return output
