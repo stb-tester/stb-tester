@@ -182,8 +182,7 @@ class AdbDevice():
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
 
-    def adb(self, command, *, capture_output=False, timeout=None,
-            **subprocess_kwargs):
+    def adb(self, command, *, timeout=None, **subprocess_kwargs):
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -202,8 +201,7 @@ class AdbDevice():
         """
         if self.tcpip:
             self._connect(timeout)
-        return self._adb(command, timeout=timeout,
-                         capture_output=capture_output, **subprocess_kwargs)
+        return self._adb(command, timeout=timeout, **subprocess_kwargs)
 
     def devices(self):
         try:
@@ -319,12 +317,7 @@ class AdbDevice():
         x, y = self._to_native_coordinates(x, y)
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
-    def _adb(self, command, verbose=True, capture_output=False, **kwargs):
-        if capture_output:
-            # capture_output was added in Python 3.7.
-            kwargs["stdout"] = subprocess.PIPE
-            kwargs["stderr"] = subprocess.PIPE
-
+    def _adb(self, command, verbose=True, **kwargs):
         _command = self._build_adb_command() + command
         if verbose:
             logger.debug("AdbDevice.adb: About to run command: %r", _command)
