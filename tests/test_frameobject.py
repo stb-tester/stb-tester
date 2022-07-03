@@ -51,7 +51,12 @@ class FrameObjectWithProperties(stbt.FrameObject):
     """Only public properties are listed in repr.
 
     >>> frame = _load_frame("with-dialog")
-    >>> FrameObjectWithProperties(frame)
+    >>> page = FrameObjectWithProperties(frame)
+    >>> page
+    <FrameObjectWithProperties(is_visible=True, public=...)>
+    >>> page.public
+    5
+    >>> page
     <FrameObjectWithProperties(is_visible=True, public=5)>
     """
     @property
@@ -241,9 +246,9 @@ class Dialog(stbt.FrameObject):
     like this:
 
     >>> dialog
-    <Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')>
+    <Dialog(is_visible=True, message=u'This set-top box is great', title=...)>
     >>> dialog_fab
-    <Dialog(is_visible=True, message=u'This set-top box is fabulous', title=u'Information')>
+    <Dialog(is_visible=True, message=u'This set-top box is fabulous', title=...)>
     >>> no_dialog
     <Dialog(is_visible=False)>
 

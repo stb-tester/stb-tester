@@ -49,9 +49,9 @@ def for_object_repository(cls=None):
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if fn not in self._FrameObject__frame_object_cache:
-            self._FrameObject__frame_object_cache[fn] = fn(self)
-        return self._FrameObject__frame_object_cache[fn]
+        if fn.__name__ not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn.__name__] = fn(self)
+        return self._FrameObject__frame_object_cache[fn.__name__]
     return inner
 
 
@@ -189,11 +189,23 @@ class FrameObject(metaclass=_FrameObjectMeta):
         self._frame = frame
 
     def __repr__(self):
+        """The object's string representation shows all its public properties.
+
+        We only print properties we have already calculated, to avoid
+        triggering expensive calculations.
         """
-        The object's string representation includes all its public properties.
-        """
-        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
-        return "<%s(%s)>" % (self.__class__.__name__, args)
+        if self:
+            args = []
+            for x in self._fields:  # pylint:disable=no-member
+                name = getattr(self.__class__, x).fget.__name__
+                if name in self._FrameObject__frame_object_cache:
+                    args.append("%s=%r" % (
+                        name, self._FrameObject__frame_object_cache[name]))
+                else:
+                    args.append("%s=..." % (name,))
+        else:
+            args = ["is_visible=False"]
+        return "<%s(%s)>" % (self.__class__.__name__, ", ".join(args))
 
     def _iter_fields(self):
         if self:
