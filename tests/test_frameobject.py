@@ -13,7 +13,7 @@ class TruthyFrameObject(stbt.FrameObject):
     >>> bool(TruthyFrameObject(frame))
     True
     >>> TruthyFrameObject(frame)
-    TruthyFrameObject(is_visible=True)
+    <TruthyFrameObject(is_visible=True)>
     """
     @property
     def is_visible(self):
@@ -28,7 +28,7 @@ class FalseyFrameObject(stbt.FrameObject):
     >>> bool(fo)
     False
     >>> fo
-    FalseyFrameObject(is_visible=False)
+    <FalseyFrameObject(is_visible=False)>
     >>> print(fo.public)
     None
     >>> fo._private
@@ -52,7 +52,7 @@ class FrameObjectWithProperties(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectWithProperties(frame)
-    FrameObjectWithProperties(is_visible=True, public=5)
+    <FrameObjectWithProperties(is_visible=True, public=5)>
     """
     @property
     def is_visible(self):
@@ -72,7 +72,7 @@ class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectThatCallsItsOwnProperties(frame)
-    FrameObjectThatCallsItsOwnProperties(is_visible=True, public=5)
+    <FrameObjectThatCallsItsOwnProperties(is_visible=True, public=5)>
     """
     @property
     def is_visible(self):
@@ -106,7 +106,7 @@ class PrintingFrameObject(stbt.FrameObject):
     >>> m.another
     10
     >>> m
-    PrintingFrameObject(is_visible=True, another=10)
+    <PrintingFrameObject(is_visible=True, another=10)>
     """
     @property
     def is_visible(self):
@@ -149,7 +149,7 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     >>> m._another
     11
     >>> m
-    FalseyPrintingFrameObject(is_visible=False)
+    <FalseyPrintingFrameObject(is_visible=False)>
     """
     @property
     def is_visible(self):
@@ -241,11 +241,11 @@ class Dialog(stbt.FrameObject):
     like this:
 
     >>> dialog
-    Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')
+    <Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')>
     >>> dialog_fab
-    Dialog(is_visible=True, message=u'This set-top box is fabulous', title=u'Information')
+    <Dialog(is_visible=True, message=u'This set-top box is fabulous', title=u'Information')>
     >>> no_dialog
-    Dialog(is_visible=False)
+    <Dialog(is_visible=False)>
 
     This makes it convenient to use doctests for unit-testing your Frame
     Objects.
@@ -271,7 +271,7 @@ class Dialog(stbt.FrameObject):
     in a dict:
 
     >>> {dialog: 1}
-    {Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information'): 1}
+    {<Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')>: 1}
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
 

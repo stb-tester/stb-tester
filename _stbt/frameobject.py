@@ -193,7 +193,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
         The object's string representation includes all its public properties.
         """
         args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
-        return "%s(%s)" % (self.__class__.__name__, args)
+        return "<%s(%s)>" % (self.__class__.__name__, args)
 
     def _iter_fields(self):
         if self:
