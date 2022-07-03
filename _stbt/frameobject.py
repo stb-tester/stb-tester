@@ -55,6 +55,13 @@ def _memoize_property_fn(fn):
     return inner
 
 
+def _convert_is_visible_to_bool(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        return bool(fn(self))
+    return inner
+
+
 def _mark_in_is_visible(fn):
     @functools.wraps(fn)
     def inner(self):
@@ -63,7 +70,7 @@ def _mark_in_is_visible(fn):
         except AttributeError:
             self._FrameObject__local.in_is_visible = 1
         try:
-            return bool(fn(self))
+            return fn(self)
         finally:
             self._FrameObject__local.in_is_visible -= 1
     return inner
@@ -90,6 +97,8 @@ class _FrameObjectMeta(type):
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                if k == 'is_visible':
+                    f = _convert_is_visible_to_bool(f)
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
