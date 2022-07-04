@@ -116,45 +116,7 @@ class Mask:
                          self._invert))
 
     def to_array(self, shape: Tuple[int, int, int]) -> numpy.ndarray:
-        return Mask._to_array(self, shape)
-
-    @staticmethod
-    @lru_cache(maxsize=5)
-    def _to_array(mask: "Mask", shape: Tuple[int, int, int]) -> numpy.ndarray:
-        array: numpy.ndarray
-        if len(shape) == 2:
-            shape = shape + (1,)
-        if mask._filename is not None:
-            array = load_image(mask._filename, color_channels=(shape[2],))
-            if array.shape != shape:
-                raise ValueError(f"Mask shape {array.shape} and required shape "
-                                 f"{shape} don't match")
-        elif mask._array is not None:
-            array = mask._array
-            array = _convert_color(array, color_channels=(shape[2],),
-                                   absolute_filename=array.absolute_filename)
-            if array.shape != shape:
-                raise ValueError(f"Mask shape {array.shape} and required shape "
-                                 f"{shape} don't match")
-        elif mask._binop is not None:
-            n = mask._binop
-            if n.op == "+":
-                array = n.left.to_array(shape) | n.right.to_array(shape)
-            elif n.op == "-":
-                array = n.left.to_array(shape) & ~n.right.to_array(shape)
-            else:
-                assert False, f"Unreachable: Unknown op {n.op}"
-        else:  # Region (including None)
-            array = numpy.full(shape, 0, dtype=numpy.uint8)
-            r = Region.intersect(mask._region, Region(0, 0, shape[1], shape[0]))
-            if r:
-                array[r.y:r.bottom, r.x:r.right] = 255
-
-        if mask._invert:
-            array = ~array  # pylint:disable=invalid-unary-operand-type
-
-        array.flags.writeable = False
-        return array
+        return _to_array(self, shape)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -213,3 +175,41 @@ class BinOp:
     op: str  # "+" or "-"
     left: Mask
     right: Mask
+
+
+@lru_cache(maxsize=5)
+def _to_array(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
+    array: numpy.ndarray
+    if len(shape) == 2:
+        shape = shape + (1,)
+    if mask._filename is not None:
+        array = load_image(mask._filename, color_channels=(shape[2],))
+        if array.shape != shape:
+            raise ValueError(f"Mask shape {array.shape} and required shape "
+                             f"{shape} don't match")
+    elif mask._array is not None:
+        array = mask._array
+        array = _convert_color(array, color_channels=(shape[2],),
+                               absolute_filename=array.absolute_filename)
+        if array.shape != shape:
+            raise ValueError(f"Mask shape {array.shape} and required shape "
+                             f"{shape} don't match")
+    elif mask._binop is not None:
+        n = mask._binop
+        if n.op == "+":
+            array = n.left.to_array(shape) | n.right.to_array(shape)
+        elif n.op == "-":
+            array = n.left.to_array(shape) & ~n.right.to_array(shape)
+        else:
+            assert False, f"Unreachable: Unknown op {n.op}"
+    else:  # Region (including None)
+        array = numpy.full(shape, 0, dtype=numpy.uint8)
+        r = Region.intersect(mask._region, Region(0, 0, shape[1], shape[0]))
+        if r:
+            array[r.y:r.bottom, r.x:r.right] = 255
+
+    if mask._invert:
+        array = ~array  # pylint:disable=invalid-unary-operand-type
+
+    array.flags.writeable = False
+    return array
