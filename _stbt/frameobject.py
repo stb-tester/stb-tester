@@ -49,9 +49,16 @@ def for_object_repository(cls=None):
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if fn not in self._FrameObject__frame_object_cache:
-            self._FrameObject__frame_object_cache[fn] = fn(self)
-        return self._FrameObject__frame_object_cache[fn]
+        if fn.__name__ not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn.__name__] = fn(self)
+        return self._FrameObject__frame_object_cache[fn.__name__]
+    return inner
+
+
+def _convert_is_visible_to_bool(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        return bool(fn(self))
     return inner
 
 
@@ -63,7 +70,7 @@ def _mark_in_is_visible(fn):
         except AttributeError:
             self._FrameObject__local.in_is_visible = 1
         try:
-            return bool(fn(self))
+            return fn(self)
         finally:
             self._FrameObject__local.in_is_visible -= 1
     return inner
@@ -90,6 +97,8 @@ class _FrameObjectMeta(type):
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                if k == 'is_visible':
+                    f = _convert_is_visible_to_bool(f)
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
@@ -189,11 +198,23 @@ class FrameObject(metaclass=_FrameObjectMeta):
         self._frame = frame
 
     def __repr__(self):
+        """The object's string representation shows all its public properties.
+
+        We only print properties we have already calculated, to avoid
+        triggering expensive calculations.
         """
-        The object's string representation includes all its public properties.
-        """
-        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
-        return "%s(%s)" % (self.__class__.__name__, args)
+        if self:
+            args = []
+            for x in self._fields:  # pylint:disable=no-member
+                name = getattr(self.__class__, x).fget.__name__
+                if name in self._FrameObject__frame_object_cache:
+                    args.append("%s=%r" % (
+                        name, self._FrameObject__frame_object_cache[name]))
+                else:
+                    args.append("%s=..." % (name,))
+        else:
+            args = ["is_visible=False"]
+        return "<%s(%s)>" % (self.__class__.__name__, ", ".join(args))
 
     def _iter_fields(self):
         if self:
