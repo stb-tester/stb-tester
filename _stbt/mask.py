@@ -116,7 +116,7 @@ class Mask:
                          self._invert))
 
     def to_array(self, shape: Tuple[int, int, int]) -> numpy.ndarray:
-        return _to_array(self, shape)
+        return _to_array_cached(self, shape)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -178,10 +178,14 @@ class BinOp:
 
 
 @lru_cache(maxsize=5)
-def _to_array(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
-    array: numpy.ndarray
+def _to_array_cached(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
     if len(shape) == 2:
         shape = shape + (1,)
+    return _to_array(mask, shape)
+
+
+def _to_array(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
+    array: numpy.ndarray
     if mask._filename is not None:
         array = load_image(mask._filename, color_channels=(shape[2],))
         if array.shape != shape:
@@ -197,9 +201,9 @@ def _to_array(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
     elif mask._binop is not None:
         n = mask._binop
         if n.op == "+":
-            array = n.left.to_array(shape) | n.right.to_array(shape)
+            array = _to_array(n.left, shape) | _to_array(n.right, shape)
         elif n.op == "-":
-            array = n.left.to_array(shape) & ~n.right.to_array(shape)
+            array = _to_array(n.left, shape) & ~_to_array(n.right, shape)
         else:
             assert False, f"Unreachable: Unknown op {n.op}"
     else:  # Region (including None)
