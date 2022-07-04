@@ -149,12 +149,6 @@ def test_crop():
     reference = stbt.load_image("action-panel-blue-button.png")
     assert numpy.array_equal(reference, cropped)
 
-    # It's a view onto the same memory:
-    assert cropped[0, 0, 0] == img[672, 1045, 0]
-    assert img[672, 1045, 0] != 0
-    cropped[0, 0, 0] = 0
-    assert img[672, 1045, 0] == 0
-
     assert img.filename == "action-panel.png"
     assert cropped.filename == img.filename
 
@@ -172,6 +166,14 @@ def test_crop():
         stbt.crop(img, None)
     with pytest.raises(ValueError):
         stbt.crop(img, stbt.Region(x=-10, y=-10, right=0, bottom=0))
+
+    # It's a view onto the same memory:
+    img = cv2.imread(_find_file("action-panel.png"))
+    cropped = stbt.crop(img, stbt.Region(x=1045, y=672, right=1081, bottom=691))
+    assert cropped[0, 0, 0] == img[672, 1045, 0]
+    assert img[672, 1045, 0] != 0
+    cropped[0, 0, 0] = 0
+    assert img[672, 1045, 0] == 0
 
 
 @pytest.mark.parametrize("args,kwargs,expected", [

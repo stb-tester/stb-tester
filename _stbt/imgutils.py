@@ -369,7 +369,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
       ``flags``. The image will always be converted to the format specified by
       ``color_channels`` (previously it was only converted to the format
       specified by ``flags`` if it was given as a filename, not as a
-      `stbt.Image` or numpy array).
+      `stbt.Image` or numpy array). The returned numpy array is read-only.
     """
     if flags is not None:
         # Backwards compatibility
@@ -425,7 +425,9 @@ def _imread(absolute_filename, color_channels):
     img = cv2.imread(absolute_filename, flags)
     if img is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
-    return _convert_color(img, color_channels, absolute_filename)
+    img = _convert_color(img, color_channels, absolute_filename)
+    img.flags.writeable = False
+    return img
 
 
 def _convert_color(img, color_channels, absolute_filename):
