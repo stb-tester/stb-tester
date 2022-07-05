@@ -5,6 +5,7 @@ from typing import Union
 import cv2
 import numpy
 
+from .cv2_compat import find_contour_boxes
 from .imgutils import (
     _convert_color, find_file, Image, load_image, _relative_filename)
 from .types import Region
@@ -137,6 +138,24 @@ class Mask:
         """
         return _to_array_cached(self, region, color_channels)
 
+    def bounding_box(self, region: Region) -> Region:
+        """Calculate a bounding box around the masked-in area.
+
+        If most of the frame is masked out, you can limit your image-processing
+        operations to the area inside this bounding box to make it faster.
+
+        Most users will never need to call this method; it's for people who
+        are implementing their own image-processing functions.
+
+        :param stbt.Region region: A Region matching the size of the frame that
+          you are processing.
+
+        :rtype: stbt.Region
+        :returns: A Region that includes all of the masked-in (white) pixels
+          in the mask.
+        """
+        return _bounding_box_cached(self, region)
+
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
         prefix = "~" if self._invert else ""
@@ -244,3 +263,11 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
         array = ~array  # pylint:disable=invalid-unary-operand-type
 
     return array
+
+
+@lru_cache()
+def _bounding_box_cached(mask: Mask, region: Region) -> Region:
+    array = mask.to_array(region)
+    return Region.bounding_box(
+        *[Region(*x) for x in
+          find_contour_boxes(array, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)])

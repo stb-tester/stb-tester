@@ -16,19 +16,23 @@ frame_region = Region(0, 0, 6, 4)
 def test_mask_arithmetic():
     r1 = Region(x=0, y=0, right=2, bottom=2)
     assert repr(Mask(r1)) == "Region(x=0, y=0, right=2, bottom=2)"
-    assert repr(~r1) == "~Region(x=0, y=0, right=2, bottom=2)"
     assert pretty(Mask(r1)) == dedent("""\
         xx....
         xx....
         ......
         ......
         """)
+    assert Mask(r1).bounding_box(frame_region) == r1
+
+    assert repr(~r1) == "~Region(x=0, y=0, right=2, bottom=2)"
     assert pretty(~r1) == dedent("""\
         ..xxxx
         ..xxxx
         xxxxxx
         xxxxxx
         """)
+    assert (~r1).bounding_box(frame_region) == frame_region
+
     r2 = Region(x=4, y=2, right=6, bottom=6)
     assert repr(r1 + r2) == \
         "Region(x=0, y=0, right=2, bottom=2) + " \
@@ -39,11 +43,13 @@ def test_mask_arithmetic():
         ....xx
         ....xx
         """)
+    assert (r1 + r2).bounding_box(frame_region) == frame_region
 
     assert repr(r1 - r2) == \
         "Region(x=0, y=0, right=2, bottom=2) - " \
         "Region(x=4, y=2, right=6, bottom=6)"
     assert pretty(r1 - r2) == pretty(Mask(r1))
+    assert (r1 - r2).bounding_box(frame_region) == r1
 
     r3 = Region(x=1, y=1, right=3, bottom=3)
     assert repr(~r1 - r3) == \
@@ -55,6 +61,7 @@ def test_mask_arithmetic():
         x..xxx
         xxxxxx
         """)
+    assert (~r1 - r3).bounding_box(frame_region) == frame_region
 
     assert repr(r1 + r2 + r3) == f"{r1!r} + {r2!r} + {r3!r}"
     assert repr(r1 + r2 - r3) == f"{r1!r} + {r2!r} - {r3!r}"
@@ -85,6 +92,7 @@ def test_mask_arithmetic():
         ......
         ......
         """)
+    assert (r1 - r2 - r3).bounding_box(frame_region) == r1
     assert pretty(r1 - (r2 - r3)) == pretty(Mask(r1))
     assert pretty(r1 - ~r2 + r3) == pretty(Mask(r3))
     assert pretty(r1 - ~(r2 - r3)) == dedent("""\
@@ -94,6 +102,7 @@ def test_mask_arithmetic():
         ......
         """)
     assert pretty(r1 - ~(r2 - r3)) == pretty(Mask(None))
+    assert (r1 - ~(r2 - r3)).bounding_box(frame_region) is None
 
     m = ~r1
     assert repr(r1) == repr(~m)
@@ -220,6 +229,26 @@ def test_mask_to_array(m, region, color_channels, invert):
         array = m.to_array(region, color_channels)
     expected = (region.height, region.width, color_channels)
     assert array.shape == expected
+
+
+@pytest.mark.parametrize("m,frame_region,expected_region", [
+    # pylint:disable=bad-whitespace,line-too-long
+    (Mask("mask-out-left-half-720p.png"),                 Region(0, 0, 1280, 720), Region(640, 0, right=1280, bottom=720)),
+    (Mask(load_image("mask-out-left-half-720p.png")),     Region(0, 0, 1280, 720), Region(640, 0, right=1280, bottom=720)),
+    (~Mask("mask-out-left-half-720p.png"),                Region(0, 0, 1280, 720), Region(0, 0, 640, 720)),
+    (~Mask(load_image("mask-out-left-half-720p.png")),    Region(0, 0, 1280, 720), Region(0, 0, 640, 720)),
+    (Mask(numpy.full((4, 6, 1), 255, dtype=numpy.uint8)), frame_region,            frame_region),
+    (Mask(numpy.full((4, 6, 3), 255, dtype=numpy.uint8)), frame_region,            frame_region),
+    (Mask(numpy.full((4, 6), 255, dtype=numpy.uint8)),    frame_region,            frame_region),
+    (Mask(Region(2, 2, 2, 2)),                            frame_region,            Region(2, 2, 2, 2)),
+    (Mask(Region(2, 2, 20, 20)),                          frame_region,            Region(2, 2, right=frame_region.right, bottom=frame_region.bottom)),
+    (Mask(Region.ALL),                                    frame_region,            frame_region),
+    (Mask(None),                                          frame_region,            None),
+    (~Region(2, 2, 2, 2),                                 frame_region,            frame_region),
+    (Region(0, 0, 2, 2) + Region(2, 2, 2, 2),             frame_region,            Region(0, 0, 4, 4)),
+])
+def test_mask_bounding_box(m, frame_region, expected_region):  # pylint:disable=redefined-outer-name
+    assert m.bounding_box(frame_region) == expected_region
 
 
 def test_mask_shape_mismatch():
