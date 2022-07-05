@@ -72,8 +72,7 @@ class MotionDiff(FrameDiffer):
         imglog.imwrite("absdiff", absdiff)
 
         if self.mask is not None:
-            mask_ = self.mask.to_array(
-                shape=(self.region.height, self.region.width, 1))
+            mask_ = self.mask.to_array(self.region)
             absdiff = cv2.bitwise_and(absdiff, mask_)
             imglog.imwrite("mask", mask_)
             imglog.imwrite("absdiff_masked", absdiff)

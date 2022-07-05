@@ -73,7 +73,7 @@ def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
     if mask is not None:
-        mask_ = mask.to_array(shape=(region.height, region.width, 1))
+        mask_ = mask.to_array(region)
         imglog.imwrite("mask", mask_)
         cv2.bitwise_and(greyframe, mask_, dst=greyframe)
     maxVal = greyframe.max()

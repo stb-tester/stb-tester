@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Union, Tuple
+from typing import Union
 
+import cv2
 import numpy
 
 from .imgutils import (
@@ -115,8 +116,9 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
-    def to_array(self, shape: Tuple[int, int, int]) -> numpy.ndarray:
-        return _to_array_cached(self, shape)
+    def to_array(self, region: Region, color_channels: int = 1) \
+            -> numpy.ndarray:
+        return _to_array_cached(self, region, color_channels)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -178,42 +180,50 @@ class BinOp:
 
 
 @lru_cache(maxsize=5)
-def _to_array_cached(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
-    if len(shape) == 2:
-        shape = shape + (1,)
-    return _to_array(mask, shape)
+def _to_array_cached(mask: Mask, region: Region, color_channels: int) \
+        -> numpy.ndarray:
+    if color_channels == 1:
+        array = _to_array(mask, region)
+    elif color_channels == 3:
+        array = _to_array_cached(mask, region, color_channels=1)
+        array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+    else:
+        raise ValueError(
+            f"Invalid color_channels={color_channels!r} (expected 1 or 3)")
+    array.flags.writeable = False
+    return array
 
 
-def _to_array(mask: Mask, shape: Tuple[int, int, int]) -> numpy.ndarray:
+def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
     array: numpy.ndarray
+    shape = (region.height, region.width, 1)
     if mask._filename is not None:
-        array = load_image(mask._filename, color_channels=(shape[2],))
+        array = load_image(mask._filename, color_channels=(1,))
         if array.shape != shape:
-            raise ValueError(f"Mask shape {array.shape} and required shape "
-                             f"{shape} don't match")
+            raise ValueError(f"{mask}: shape {array.shape} doesn't match "
+                             f"required shape {shape}")
     elif mask._array is not None:
         array = mask._array
-        array = _convert_color(array, color_channels=(shape[2],),
+        array = _convert_color(array, color_channels=(1,),
                                absolute_filename=array.absolute_filename)
         if array.shape != shape:
-            raise ValueError(f"Mask shape {array.shape} and required shape "
-                             f"{shape} don't match")
+            raise ValueError(f"{mask}: shape {array.shape} doesn't match "
+                             f"required shape {shape}")
     elif mask._binop is not None:
         n = mask._binop
         if n.op == "+":
-            array = _to_array(n.left, shape) | _to_array(n.right, shape)
+            array = _to_array(n.left, region) | _to_array(n.right, region)
         elif n.op == "-":
-            array = _to_array(n.left, shape) & ~_to_array(n.right, shape)
+            array = _to_array(n.left, region) & ~_to_array(n.right, region)
         else:
             assert False, f"Unreachable: Unknown op {n.op}"
     else:  # Region (including None)
         array = numpy.full(shape, 0, dtype=numpy.uint8)
-        r = Region.intersect(mask._region, Region(0, 0, shape[1], shape[0]))
+        r = Region.intersect(mask._region, region)
         if r:
             array[r.y:r.bottom, r.x:r.right] = 255
 
     if mask._invert:
         array = ~array  # pylint:disable=invalid-unary-operand-type
 
-    array.flags.writeable = False
     return array

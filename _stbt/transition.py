@@ -273,8 +273,7 @@ class StrictDiff(FrameDiffer):
         absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
                               crop(frame, self.region))
         if self.mask is not None:
-            mask_ = self.mask.to_array(
-                shape=(self.region.height, self.region.width, 3))
+            mask_ = self.mask.to_array(self.region, color_channels=3)
             absdiff = cv2.bitwise_and(absdiff, mask_, absdiff)
 
         diffs_found = False
