@@ -136,6 +136,9 @@ class Mask:
         :returns: An image the same size as ``region``, where masked-in pixels
           are white (255) and masked-out pixels are black (0).
         """
+        if region.x != 0 or region.y != 0:
+            raise ValueError(
+                f"{region} must be a full-frame region starting at x=0, y=0")
         return _to_array_cached(self, region, color_channels)
 
     def bounding_box(self, region: Region) -> Region:
@@ -154,6 +157,9 @@ class Mask:
         :returns: A Region that includes all of the masked-in (white) pixels
           in the mask.
         """
+        if region.x != 0 or region.y != 0:
+            raise ValueError(
+                f"{region} must be a full-frame region starting at x=0, y=0")
         return _bounding_box_cached(self, region)
 
     def __repr__(self):
