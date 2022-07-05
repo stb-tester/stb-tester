@@ -426,6 +426,10 @@ def _imread(absolute_filename, color_channels):
     if img is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
     img = _convert_color(img, color_channels, absolute_filename)
+    if img.shape[2] == 4:
+        # Normalise transparency channel to either 0 or 255, for stbt.match
+        chan = img[:, :, 3]
+        chan[chan < 255] = 0
     img.flags.writeable = False
     return img
 

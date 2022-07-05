@@ -492,11 +492,6 @@ def _find_matches(image, template, match_parameters, imglog):
     matching locations.
     """
 
-    if template.shape[2] == 4:
-        # Normalise transparency channel to either 0 or 255
-        mask = template[:, :, 3]
-        mask[mask < 255] = 0
-
     for i, first_pass_matched, region, first_pass_certainty in \
             _find_candidate_matches(image, template, match_parameters, imglog):
         confirmed = (
