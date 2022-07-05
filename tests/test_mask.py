@@ -180,6 +180,22 @@ def pretty(mask):
     return out
 
 
+def test_mask_comparison():
+    r = Region(x=0, y=0, right=2, bottom=2)
+    assert Mask(r) == Mask(r)
+    assert Mask(r) == r
+    assert r == Mask(r)
+    assert Mask(r) == ~Mask(~r)
+
+    assert Mask(r) != ~r
+    assert Mask(r) != r.translate(1)
+
+    assert Mask(Region.ALL) == Region.ALL
+    assert Region.ALL == Mask(Region.ALL)
+    assert ~Mask(Region.ALL) == Mask(None)
+    assert ~Mask(Region.ALL) != None  # that'd be going too far
+
+
 def test_mask_memoization():
     r = Region(x=0, y=0, right=2, bottom=2)
     a1 = Mask(r).to_array(Region(0, 0, 6, 4))

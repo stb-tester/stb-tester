@@ -93,6 +93,8 @@ class Mask:
                             f"Got {m!r}")
 
     def __eq__(self, o):
+        if isinstance(o, Region):
+            return self.__eq__(Mask(o))
         if not isinstance(o, Mask):
             return False
         if self._array is not None:
@@ -102,7 +104,9 @@ class Mask:
                     (o._filename, o._binop, o._region, o._invert))
 
     def __hash__(self):
-        if self._array is not None:
+        if self._region is not None and not self._invert:
+            return hash(self._region)
+        elif self._array is not None:
             if Xxhash64:
                 h = Xxhash64()
                 h.update(numpy.ascontiguousarray(self._array).data)
