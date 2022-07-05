@@ -358,8 +358,6 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    * Changed in v30: Include alpha (transparency) channel if the file has
-      transparent pixels.
     * Changed in v32: Return type is now `stbt.Image`, which is a
       `numpy.ndarray` sub-class with additional attributes ``filename``,
       ``relative_filename`` and ``absolute_filename``.

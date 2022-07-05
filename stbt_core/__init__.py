@@ -205,9 +205,6 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
           `stbt.press_and_wait` to detect when the device-under-test reacted to
           the keypress.
 
-    * Added in v29: The ``hold_secs`` parameter.
-    * Changed in v30: Returns an object with keypress timings, instead of
-      ``None``.
     * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
       value, which must be a string).
     """
