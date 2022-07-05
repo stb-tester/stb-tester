@@ -273,6 +273,10 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
 
 @lru_cache()
 def _bounding_box_cached(mask: Mask, region: Region) -> Region:
+    if (mask._filename is None and mask._array is None and
+            mask._binop is None and not mask._invert):
+        return Region.intersect(region, mask._region)
+
     array = mask.to_array(region)
     return Region.bounding_box(
         *[Region(*x) for x in
