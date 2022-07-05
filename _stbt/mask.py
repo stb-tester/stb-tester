@@ -86,11 +86,8 @@ class Mask:
             self._region = m
             self._invert = invert
         elif m is None:  # Region.intersect can return None for "no region"
-            if invert:
-                self._region = Region.ALL
-            else:
-                self._region = None
-            self._invert = False
+            self._region = Region.ALL
+            self._invert = not invert
         else:
             raise TypeError("Expected filename, Image, Mask, or Region. "
                             f"Got {m!r}")
@@ -183,8 +180,10 @@ class Mask:
                 open_paren, close_paren = "", ""
             return (f"{prefix}{open_paren}{left_repr} {self._binop.op} "
                     f"{right_repr}{close_paren}")
-        else:  # self._region is a Region or None
+        elif self._region is not None:
             return f"{prefix}{self._region!r}"
+        else:
+            assert False, "Internal logic error"
 
     def __add__(self, other: MaskTypes) -> "Mask":
         if isinstance(other, (Region, Mask, type(None))):
@@ -259,11 +258,13 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
             array = _to_array(n.left, region) & ~_to_array(n.right, region)
         else:
             assert False, f"Unreachable: Unknown op {n.op}"
-    else:  # Region (including None)
+    elif mask._region is not None:
         array = numpy.full(shape, 0, dtype=numpy.uint8)
         r = Region.intersect(mask._region, region)
         if r:
             array[r.y:r.bottom, r.x:r.right] = 255
+    else:
+        assert False, "Internal logic error"
 
     if mask._invert:
         array = ~array  # pylint:disable=invalid-unary-operand-type
@@ -273,10 +274,13 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
 
 @lru_cache()
 def _bounding_box_cached(mask: Mask, region: Region) -> Region:
-    if (mask._filename is None and mask._array is None and
-            mask._binop is None and not mask._invert):
+    if mask._region is Region.ALL:
+        if mask._invert:
+            return None
+        else:
+            return region
+    if mask._region is not None and not mask._invert:
         return Region.intersect(region, mask._region)
-
     array = mask.to_array(region)
     return Region.bounding_box(
         *[Region(*x) for x in

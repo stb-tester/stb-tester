@@ -108,6 +108,9 @@ def test_mask_arithmetic():
     assert repr(r1) == repr(~m)
     assert pretty(Mask(r1)) == pretty(~m)
 
+    assert repr(Mask(Region.ALL)) == "Region.ALL"
+    assert repr(Mask(None)) == "~Region.ALL"
+
     assert repr(Region.ALL - r1) == f"Region.ALL - {r1!r}"
     assert pretty(Region.ALL - r1) == pretty(~r1)
 
@@ -155,9 +158,13 @@ def test_mask_arithmetic():
             f"Mask({f.name!r}) + Region(x=4, y=2, right=6, bottom=6)"
         assert pretty(m1 + r2) == pretty(r1 + r2)
 
-        m1.to_array(frame_region, color_channels=3)
         with pytest.raises(ValueError):
             m1.to_array(Region(0, 0, 2, 2))
+
+        array = m1.to_array(frame_region, color_channels=3)
+        m2 = Mask(array)
+        assert repr(m2) == "Mask(<Image>)"
+        assert pretty(m2) == pretty(m1)
 
 
 def pretty(mask):
