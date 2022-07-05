@@ -278,22 +278,21 @@ def test_region_translate():
         stbt.Region(2, 3, 2, 1).translate(stbt.Region(0, 0, 1, 1), 5)
 
 
-@pytest.mark.parametrize("frame,mask,threshold,region,expected", [
+@pytest.mark.parametrize("frame,mask,threshold,expected", [
     # pylint:disable=line-too-long
-    ("black-full-frame.png", None, None, stbt.Region.ALL, True),
-    ("videotestsrc-full-frame.png", None, None, stbt.Region.ALL, False),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-non-black.png", None, stbt.Region.ALL, True),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, stbt.Region.ALL, False),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, stbt.Region.ALL, False),
-    ("videotestsrc-full-frame.png", None, 20, stbt.Region(x=160, y=180, right=240, bottom=240), True),
+    ("black-full-frame.png", stbt.Region.ALL, None, True),
+    ("videotestsrc-full-frame.png", stbt.Region.ALL, None, False),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-non-black.png", None, True),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, False),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, False),
+    ("videotestsrc-full-frame.png", stbt.Region(x=160, y=180, right=240, bottom=240), 20, True),
     # Threshold bounds for almost-black frame:
-    ("almost-black.png", None, 3, stbt.Region.ALL, True),
-    ("almost-black.png", None, 2, stbt.Region.ALL, False),
+    ("almost-black.png", stbt.Region.ALL, 3, True),
+    ("almost-black.png", stbt.Region.ALL, 2, False),
 ])
-def test_is_screen_black(frame, mask, threshold, region, expected):
+def test_is_screen_black(frame, mask, threshold, expected):
     frame = stbt.load_image(frame)
-    assert expected == bool(
-        stbt.is_screen_black(frame, mask, threshold, region))
+    assert expected == bool(stbt.is_screen_black(frame, mask, threshold))
 
 
 def test_is_screen_black_result():
@@ -310,16 +309,19 @@ def test_is_screen_black_with_numpy_mask():
     mask[180:240, 160:213] = 255
     assert stbt.is_screen_black(frame, mask)
 
-
-def test_is_screen_black_with_numpy_mask_and_region():
-    frame = stbt.load_image("videotestsrc-full-frame.png")
-    region = stbt.Region(x=160, y=180, right=320, bottom=240)
-    mask = numpy.zeros((60, 160), dtype=numpy.uint8)
-    mask[:, :80] = 255
-    assert stbt.is_screen_black(frame, mask, 20, region)
-
     mask[:, :] = 255
-    assert not stbt.is_screen_black(frame, mask, 20, region)
+    assert not stbt.is_screen_black(frame, mask)
+
+
+def test_is_screen_black_region_parameter():
+    # region is a synonym of mask, for backwards compatibility
+    frame = stbt.load_image("videotestsrc-full-frame.png")
+    region = stbt.Region(x=160, y=180, right=240, bottom=240)
+    assert stbt.is_screen_black(frame, mask=region)
+    assert stbt.is_screen_black(frame, region=region)
+
+    with pytest.raises(ValueError):
+        stbt.is_screen_black(frame, mask=region, region=region)
 
 
 class C():

@@ -1,8 +1,8 @@
 # coding: utf-8
 
 """
-Copyright 2014 YouView TV Ltd.
-Copyright 2014-2018 stb-tester.com Ltd.
+Copyright © 2014-2022 Stb-tester.com Ltd.
+Copyright © 2014 YouView TV Ltd.
 
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
@@ -14,35 +14,27 @@ import cv2
 
 from .config import get_config
 from .imgutils import (
-    crop, Frame, _frame_repr, pixel_bounding_box, _validate_region)
+    crop, Frame, _frame_repr, pixel_bounding_box, _validate_mask)
 from .logging import debug, ImageLogger
-from .mask import load_mask, MaskTypes
+from .mask import MaskTypes
 from .types import Region
 
 
 def is_screen_black(frame: Optional[Frame] = None,
-                    mask: MaskTypes = None,
+                    mask: MaskTypes = Region.ALL,
                     threshold: int = None,
                     region: Region = Region.ALL) -> "_IsScreenBlackResult":
     """Check for the presence of a black screen in a video frame.
 
-    :type frame: `stbt.Frame` or `numpy.ndarray`
-    :param frame:
+    :param Frame frame:
       If this is specified it is used as the video frame to check; otherwise a
       new frame is grabbed from the device-under-test. This is an image in
       OpenCV format (for example as returned by `frames` and `get_frame`).
 
-    :type mask: str or `numpy.ndarray`
-    :param mask:
-        A black & white image that specifies which part of the image to
-        analyse. White pixels select the area to analyse; black pixels select
-        the area to ignore.
-
-        This can be a string (a filename that will be resolved as per
-        `stbt.load_image`) or a single-channel image in OpenCV format.
-
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :ref:`Masks`.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
@@ -52,16 +44,17 @@ def is_screen_black(frame: Optional[Frame] = None,
       changed by setting ``threshold`` in the ``[is_screen_black]`` section of
       :ref:`.stbt.conf`.
 
-    :type region: `Region`
-    :param region:
-        Only analyze the specified region of the video frame.
-
     :returns:
         An object that will evaluate to true if the frame was black, or false
         if not black. The object has the following attributes:
 
         * **black** (*bool*) – True if the frame was black.
         * **frame** (`stbt.Frame`) – The video frame that was analysed.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if threshold is None:
         threshold = get_config('is_screen_black', 'threshold', type_=int)
@@ -70,28 +63,24 @@ def is_screen_black(frame: Optional[Frame] = None,
         from stbt_core import get_frame
         frame = get_frame()
 
-    region = _validate_region(frame, region)
-    if mask is not None:
-        mask = load_mask(mask)
+    mask, region, frame_region = _validate_mask(frame, mask, region)
 
-    imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
+    imglog = ImageLogger("is_screen_black", mask=mask, threshold=threshold)
     imglog.imwrite("source", frame)
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-    if mask is not None:
-        mask_ = mask.to_array(region)
+    if mask != Region.ALL:
+        mask_ = mask.to_array(frame_region)
         imglog.imwrite("mask", mask_)
-        cv2.bitwise_and(greyframe, mask_, dst=greyframe)
+        cv2.bitwise_and(greyframe, crop(mask_, region), dst=greyframe)
     maxVal = greyframe.max()
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
     debug("is_screen_black: {found} black screen using mask={mask}, "
-          "threshold={threshold}, region={region}: "
-          "{result}, maximum_intensity={maxVal}".format(
+          "threshold={threshold}: {result}, maximum_intensity={maxVal}".format(
               found="Found" if result.black else "Didn't find",
               mask=mask,
               threshold=threshold,
-              region=region,
               result=result,
               maxVal=maxVal))
 
