@@ -5,9 +5,9 @@ from typing import Union
 import cv2
 import numpy
 
-from .cv2_compat import find_contour_boxes
 from .imgutils import (
-    _convert_color, find_file, Image, load_image, _relative_filename)
+    _convert_color, find_file, Image, load_image, pixel_bounding_box,
+    _relative_filename)
 from .types import Region
 
 try:
@@ -286,6 +286,4 @@ def _bounding_box_cached(mask: Mask, region: Region) -> Region:
     if mask._region is not None and not mask._invert:
         return Region.intersect(region, mask._region)
     array = mask.to_array(region)
-    return Region.bounding_box(
-        *[Region(*x) for x in
-          find_contour_boxes(array, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)])
+    return pixel_bounding_box(array)

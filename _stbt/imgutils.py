@@ -548,6 +548,8 @@ def pixel_bounding_box(img):
     """
     if len(img.shape) == 2:
         pass
+    elif len(img.shape) == 3 and img.shape[2] == 1:
+        img = img.reshape(img.shape[:2])
     elif len(img.shape) == 3 and img.shape[2] == 3:
         img = img.max(axis=2)
     else:
