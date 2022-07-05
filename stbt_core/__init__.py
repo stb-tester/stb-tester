@@ -40,7 +40,8 @@ from _stbt.logging import (
     debug)
 from _stbt.mask import (
     load_mask,
-    Mask)
+    Mask,
+    MaskTypes)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -111,6 +112,7 @@ __all__ = [
     "load_image",
     "load_mask",
     "Mask",
+    "MaskTypes",
     "match",
     "match_all",
     "match_text",
