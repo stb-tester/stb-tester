@@ -8,16 +8,22 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from typing import Optional
+
 import cv2
 
 from .config import get_config
-from .imgutils import crop, _frame_repr, pixel_bounding_box, _validate_region
+from .imgutils import (
+    crop, Frame, _frame_repr, pixel_bounding_box, _validate_region)
 from .logging import debug, ImageLogger
-from .mask import load_mask
+from .mask import load_mask, MaskTypes
 from .types import Region
 
 
-def is_screen_black(frame=None, mask=None, threshold=None, region=Region.ALL):
+def is_screen_black(frame: Optional[Frame] = None,
+                    mask: MaskTypes = None,
+                    threshold: int = None,
+                    region: Region = Region.ALL) -> "_IsScreenBlackResult":
     """Check for the presence of a black screen in a video frame.
 
     :type frame: `stbt.Frame` or `numpy.ndarray`
