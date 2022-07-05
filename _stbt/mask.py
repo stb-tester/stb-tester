@@ -118,6 +118,23 @@ class Mask:
 
     def to_array(self, region: Region, color_channels: int = 1) \
             -> numpy.ndarray:
+        """Materialize the mask to a numpy array of the specified size.
+
+        Most users will never need to call this method; it's for people who
+        are implementing their own image-processing functions.
+
+        :param stbt.Region region: A Region matching the size of the frame that
+          you are processing.
+
+        :param int color_channels: The number of channels required (1 or 3),
+          according to your image-processing algorithm's needs. All channels
+          will be identical — for example with 3 channels, pixels will be
+          either [0, 0, 0] or [255, 255, 255].
+
+        :rtype: numpy.ndarray
+        :returns: An image the same size as ``region``, where masked-in pixels
+          are white (255) and masked-out pixels are black (0).
+        """
         return _to_array_cached(self, region, color_channels)
 
     def __repr__(self):
