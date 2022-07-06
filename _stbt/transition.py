@@ -17,12 +17,11 @@ import enum
 
 from .diff import MotionDiff
 from .logging import ddebug, debug, draw_on
-from .mask import load_mask
 from .types import Region
 
 
 def press_and_wait(
-        key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
+        key, mask=Region.ALL, region=Region.ALL, timeout_secs=10, stable_secs=1,
         min_size=None, _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -35,20 +34,10 @@ def press_and_wait(
 
     :param str key: The name of the key to press (passed to `stbt.press`).
 
-    :param stbt.Region region: Only look at the specified region of the video
-        frame.
-
-    :param mask:
-        A black & white image that specifies which part of the video frame to
-        look at. White pixels select the area to analyse; black pixels select
-        the area to ignore.
-
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
-
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
-    :type mask: str or `numpy.ndarray`
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :ref:`Masks`.
 
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of
@@ -99,17 +88,26 @@ def press_and_wait(
         ``time.time()``).
 
     Changed in v32: Use the same difference-detection algorithm as
-    `wait_for_motion`; ``region`` and ``mask`` can both be specified at the
-    same time.
+    `wait_for_motion`.
 
     Added in v33: The ``started``, ``complete`` and ``stable`` attributes of
     the returned value.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if _dut is None:
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -121,7 +119,7 @@ press_and_wait.differ = MotionDiff
 
 
 def wait_for_transition_to_end(
-        initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
+        initial_frame=None, mask=Region.ALL, region=Region.ALL, timeout_secs=10,
         stable_secs=1, min_size=None, _dut=None):
 
     """Wait for the screen to stop changing.
@@ -140,7 +138,6 @@ def wait_for_transition_to_end(
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
 
-    :param region: See `press_and_wait`.
     :param mask: See `press_and_wait`.
     :param timeout_secs: See `press_and_wait`.
     :param stable_secs: See `press_and_wait`.
@@ -151,17 +148,20 @@ def wait_for_transition_to_end(
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
 class _Transition():
-    def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
-        self.region = region
-        self.mask = load_mask(mask)
-
+    def __init__(self, mask, timeout_secs, stable_secs, min_size, dut):
+        self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
         self.min_size = min_size
@@ -174,8 +174,7 @@ class _Transition():
         self.expiry_time = press_result.end_time + self.timeout_secs
 
         differ = press_and_wait.differ(initial_frame=press_result.frame_before,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
@@ -209,8 +208,7 @@ class _Transition():
 
         first_stable_frame = initial_frame
         differ = press_and_wait.differ(initial_frame=initial_frame,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         while True:
             f = next(self.frames)
             motion_result = differ.diff(f)
