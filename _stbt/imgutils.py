@@ -541,6 +541,10 @@ def pixel_bounding_box(img):
     >>> pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
     >>> pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
     Region(x=0, y=0, right=1, bottom=1)
+    >>> pixel_bounding_box(numpy.array([[[1]]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
+    >>> pixel_bounding_box(numpy.array([[[1, 1, 1]]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
     >>> a = numpy.array([
     ...     [0, 0, 0, 0],
     ...     [0, 1, 1, 1],
@@ -566,27 +570,18 @@ def pixel_bounding_box(img):
     ... ], dtype=numpy.uint8))
     Region(x=1, y=1, right=5, bottom=6)
     """
-    if len(img.shape) == 2:
+    if len(img.shape) == 2 or len(img.shape) == 3 and img.shape[2] == 1:
         pass
-    elif len(img.shape) == 3 and img.shape[2] == 1:
-        img = img.reshape(img.shape[:2])
     elif len(img.shape) == 3 and img.shape[2] == 3:
         img = img.max(axis=2)
     else:
         raise ValueError("Single-channel or 3-channel (BGR) image required. "
                          "Provided image has shape %r" % (img.shape,))
-
-    out = [None, None, None, None]
-
-    for axis in (0, 1):
-        flat = numpy.any(img, axis=axis)
-        indices = numpy.where(flat)[0]
-        if len(indices) == 0:
-            return None
-        out[axis] = int(indices[0])
-        out[axis + 2] = int(indices[-1] + 1)
-
-    return Region.from_extents(*out)
+    rect = cv2.boundingRect(img)
+    if rect[2] == 0 or rect[3] == 0:
+        return None
+    else:
+        return Region(*rect)
 
 
 def find_file(filename: str) -> str:
