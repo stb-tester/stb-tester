@@ -6,7 +6,7 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
-from _stbt.transition import StrictDiff, _TransitionResult
+from _stbt.transition import _TransitionResult
 
 
 class FakeDeviceUnderTest():
@@ -57,7 +57,7 @@ def F(state, t):
     return array
 
 
-@pytest.fixture(scope="function", params=[StrictDiff, stbt.MotionDiff])
+@pytest.fixture(scope="function", params=[stbt.MotionDiff])
 def diff_algorithm(request):
     previous = stbt.press_and_wait.differ
     try:
@@ -168,12 +168,6 @@ def test_press_and_wait_timestamps(diff_algorithm):
     assert isclose(transition.duration, 0.48)
     assert isclose(transition.end_time, transition.animation_start_time + 0.08)
     assert isclose(transition.animation_duration, 0.08)
-
-
-def test_that_strictdiff_ignores_a_few_scattered_small_differences():
-    differ = StrictDiff(initial_frame=stbt.load_image("2px-different-1.png"),
-                        region=stbt.Region.ALL, mask=None)
-    assert not differ.diff(stbt.load_image("2px-different-2.png"))
 
 
 @pytest.mark.parametrize("status,          started,complete,stable", [

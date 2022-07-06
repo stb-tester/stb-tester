@@ -15,11 +15,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 import enum
 
-import cv2
-import numpy
-
-from .diff import FrameDiffer, MotionDiff, MotionResult
-from .imgutils import crop, pixel_bounding_box, _validate_region
+from .diff import MotionDiff
 from .logging import ddebug, debug, draw_on
 from .mask import load_mask
 from .types import Region
@@ -245,75 +241,6 @@ def _debug(s, f, *args):
 
 def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
-
-
-class StrictDiff(FrameDiffer):
-    """Compares 2 frames by calculating pixel-wise absolute differences,
-    comparing each color channel separately.
-
-    Compared to `MotionDiff`: this has a much stricter threshold, the threshold
-    is not configurable, and there is no "erode" step to remove single-pixel
-    differences.
-
-    This was the default `press_and_wait` diffing algorithm before v32,
-    but it was too sensitive to "noise" or single-pixel differences.
-    """
-
-    def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None):
-        self.prev_frame = initial_frame
-        self.region = _validate_region(self.prev_frame, region)
-        self.min_size = min_size
-
-        if mask is not None:
-            mask = load_mask(mask)
-        self.mask = mask
-
-    def diff(self, frame):
-        absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
-                              crop(frame, self.region))
-        if self.mask is not None:
-            mask_ = self.mask.to_array(self.region, color_channels=3)
-            absdiff = cv2.bitwise_and(absdiff, mask_, absdiff)
-
-        diffs_found = False
-        out_region = None
-        maxdiff = numpy.max(absdiff)
-        if maxdiff > 20:
-            diffs_found = True
-            big_diffs = absdiff > 20
-            out_region = pixel_bounding_box(big_diffs)
-            _ddebug("found %s diffs above 20 (max %s) in %r", frame,
-                    numpy.count_nonzero(big_diffs), maxdiff, out_region)
-        elif maxdiff > 0:
-            small_diffs = absdiff > 5
-            small_diffs_count = numpy.count_nonzero(small_diffs)
-            if small_diffs_count > 50:
-                diffs_found = True
-                out_region = pixel_bounding_box(small_diffs)
-                _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
-                        maxdiff, out_region)
-            else:
-                _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
-                        maxdiff)
-
-        if diffs_found:
-            # Undo crop:
-            out_region = out_region.translate(self.region)
-
-        motion = diffs_found and (
-            self.min_size is None or
-            (out_region.width >= self.min_size[0] and
-             out_region.height >= self.min_size[1]))
-
-        if motion:
-            # Only update the reference frame if we found differences. This
-            # makes the algorithm more sensitive to slow motion.
-            self.prev_frame = frame
-
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
-        return result
 
 
 class _TransitionResult():
