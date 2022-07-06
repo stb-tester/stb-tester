@@ -284,15 +284,25 @@ def test_region_translate():
     ("videotestsrc-full-frame.png", stbt.Region.ALL, None, False),
     ("videotestsrc-full-frame.png", "videotestsrc-mask-non-black.png", None, True),
     ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, False),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, False),
+    ("videotestsrc-full-frame.png", stbt.load_image("videotestsrc-mask-no-video.png"), None, False),
     ("videotestsrc-full-frame.png", stbt.Region(x=160, y=180, right=240, bottom=240), 20, True),
+    ("videotestsrc-full-frame.png", stbt.Region(x=159, y=180, right=240, bottom=240), 20, False),
+    ("videotestsrc-full-frame.png", ~stbt.Region(x=160, y=180, right=240, bottom=240), 20, False),
+    ("videotestsrc-full-frame.png", stbt.Region(46, 160, 44, 20) + stbt.Region(138, 160, 44, 20) + stbt.Region(228, 160, 44, 20), None, True),
+    ("videotestsrc-full-frame.png", ~(stbt.Region(46, 160, 44, 20) + stbt.Region(138, 160, 44, 20) + stbt.Region(228, 160, 44, 20)), None, False),
     # Threshold bounds for almost-black frame:
     ("almost-black.png", stbt.Region.ALL, 3, True),
     ("almost-black.png", stbt.Region.ALL, 2, False),
 ])
 def test_is_screen_black(frame, mask, threshold, expected):
+    from _stbt.mask import _to_array_cached
+
     frame = stbt.load_image(frame)
+    _to_array_cached.cache_clear()
     assert expected == bool(stbt.is_screen_black(frame, mask, threshold))
+    # Check that we don't call `to_array` if the mask is a simple Region.
+    simple = isinstance(mask, stbt.Region)
+    assert _to_array_cached.cache_info().currsize == int(not simple)  # pylint:disable=no-value-for-parameter
 
 
 def test_is_screen_black_result():

@@ -118,6 +118,16 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
+    @property
+    def simple(self):
+        """A "simple" mask is just a Region.
+
+        If you're implementing your own image-processing algorithm: With a
+        simple mask you don't need to apply pixel-wise masking, just a bounding
+        box.
+        """
+        return self._region is not None and not self._invert
+
     def to_array(self, region: Region, color_channels: int = 1) \
             -> numpy.ndarray:
         """Materialize the mask to a numpy array of the specified size.
