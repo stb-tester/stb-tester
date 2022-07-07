@@ -42,14 +42,13 @@ def press_and_wait(
     :param Region region:
       Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-    :param timeout_secs: A timeout in seconds. This function will return a
-        falsey value if the transition didn't complete within this number of
-        seconds from the key-press.
-    :type timeout_secs: int or float
+    :param int|float timeout_secs: A timeout in seconds. This function will
+        return a falsey value if the transition didn't complete within this
+        number of seconds from the key-press.
 
-    :param stable_secs: A duration in seconds. The screen must stay unchanged
-        (within the specified region or mask) for this long, for the transition
-        to be considered "complete".
+    :param int|float stable_secs: A duration in seconds. The screen must stay
+        unchanged (within the specified region or mask) for this long, for the
+        transition to be considered "complete".
     :type timeout_secs: int or float
 
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
@@ -141,10 +140,10 @@ def wait_for_transition_to_end(
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
 
-    :param mask: See `press_and_wait`.
-    :param region: See `press_and_wait`.
-    :param timeout_secs: See `press_and_wait`.
-    :param stable_secs: See `press_and_wait`.
+    :param str|numpy.ndarray|Mask|Region mask: See `press_and_wait`.
+    :param Region region: See `press_and_wait`.
+    :param int|float timeout_secs: See `press_and_wait`.
+    :param int|float stable_secs: See `press_and_wait`.
 
     :returns: See `press_and_wait`.
     """

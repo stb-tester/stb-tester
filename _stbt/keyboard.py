@@ -35,8 +35,7 @@ class Keyboard():
         `add_transition`, `add_edgelist`, and `add_grid` to build the model of
         the keyboard.
 
-    :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :param str|numpy.ndarray|Mask|Region mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
         current selection has finished moving. If the search page has a
         blinking cursor you need to mask out the region where the cursor can

@@ -49,9 +49,8 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
     :param Region region:
       Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-    :type frames: Iterator[stbt.Frame]
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        ``stbt.frames()``.
+    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
+        Defaults to ``stbt.frames()``.
 
     Changed in v33: ``mask`` accepts anything that can be converted to a Mask
     using `load_mask`. The ``region`` parameter is deprecated; pass your
@@ -114,9 +113,9 @@ def wait_for_motion(
         :ref:`.stbt.conf`.
 
     :param float noise_threshold: See `detect_motion`.
-    :param mask: See `detect_motion`.
-    :param region: See `detect_motion`.
-    :param frames: See `detect_motion`.
+    :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
+    :param Region region: See `detect_motion`.
+    :param Iterator[stbt.Frame] frames: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
