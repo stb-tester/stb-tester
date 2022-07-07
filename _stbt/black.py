@@ -72,7 +72,7 @@ def is_screen_black(frame: Optional[Frame] = None,
     imglog.imwrite("source", frame)
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-    if not mask.simple:
+    if not mask.is_region():
         mask_ = mask.to_array(frame_region)
         imglog.imwrite("mask", mask_)
         cv2.bitwise_and(greyframe, crop(mask_, region), dst=greyframe)

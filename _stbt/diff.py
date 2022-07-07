@@ -36,7 +36,7 @@ class MotionDiff(FrameDiffer):
         self.min_size = min_size
 
         mask, region, frame_region = _validate_mask(initial_frame, mask)
-        if mask.simple:
+        if mask.is_region():
             self.mask_ = None
         else:
             self.mask_ = crop(mask.to_array(frame_region), region)

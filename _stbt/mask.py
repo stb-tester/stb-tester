@@ -118,8 +118,7 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
-    @property
-    def simple(self):
+    def is_region(self):
         """A "simple" mask is just a Region.
 
         If you're implementing your own image-processing algorithm: With a

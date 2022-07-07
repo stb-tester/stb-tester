@@ -301,8 +301,8 @@ def test_is_screen_black(frame, mask, threshold, expected):
     _to_array_cached.cache_clear()
     assert expected == bool(stbt.is_screen_black(frame, mask, threshold))
     # Check that we don't call `to_array` if the mask is a simple Region.
-    simple = isinstance(mask, stbt.Region)
-    assert _to_array_cached.cache_info().currsize == int(not simple)  # pylint:disable=no-value-for-parameter
+    is_region = isinstance(mask, stbt.Region)
+    assert _to_array_cached.cache_info().currsize == int(not is_region)  # pylint:disable=no-value-for-parameter
 
 
 def test_is_screen_black_result():
