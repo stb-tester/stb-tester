@@ -61,6 +61,10 @@ class Frame(numpy.ndarray):
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
 
+    @property
+    def region(self):
+        return Region(0, 0, self.shape[1], self.shape[0])
+
 
 class Image(numpy.ndarray):
     """An image, possibly loaded from disk.
@@ -128,6 +132,10 @@ class Image(numpy.ndarray):
     @property
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
+
+    @property
+    def region(self):
+        return Region(0, 0, self.shape[1], self.shape[0])
 
 
 def _relative_filename(absolute_filename):
