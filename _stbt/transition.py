@@ -39,6 +39,9 @@ def press_and_wait(
         analyse. This accepts anything that can be converted to a Mask using
         `stbt.load_mask`. See :ref:`Masks`.
 
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
+
     :param timeout_secs: A timeout in seconds. This function will return a
         falsey value if the transition didn't complete within this number of
         seconds from the key-press.
@@ -139,6 +142,7 @@ def wait_for_transition_to_end(
         started. If `None`, we'll pull a new frame from the device under test.
 
     :param mask: See `press_and_wait`.
+    :param region: See `press_and_wait`.
     :param timeout_secs: See `press_and_wait`.
     :param stable_secs: See `press_and_wait`.
 

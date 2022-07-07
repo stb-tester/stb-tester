@@ -44,6 +44,9 @@ def is_screen_black(frame: Optional[Frame] = None,
       changed by setting ``threshold`` in the ``[is_screen_black]`` section of
       :ref:`.stbt.conf`.
 
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
+
     :returns:
         An object that will evaluate to true if the frame was black, or false
         if not black. The object has the following attributes:

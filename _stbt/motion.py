@@ -46,6 +46,9 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
         analyse. This accepts anything that can be converted to a Mask using
         `stbt.load_mask`. See :ref:`Masks`.
 
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
+
     :type frames: Iterator[stbt.Frame]
     :param frames: An iterable of video-frames to analyse. Defaults to
         ``stbt.frames()``.
@@ -111,9 +114,8 @@ def wait_for_motion(
         :ref:`.stbt.conf`.
 
     :param float noise_threshold: See `detect_motion`.
-
     :param mask: See `detect_motion`.
-
+    :param region: See `detect_motion`.
     :param frames: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
