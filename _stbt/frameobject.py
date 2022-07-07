@@ -178,8 +178,6 @@ class FrameObject(metaclass=_FrameObjectMeta):
     .. _@property: https://docs.python.org/3.6/library/functions.html#property
     .. _fowler: https://martinfowler.com/bliki/PageObject.html
     .. _Object Repository: https://stb-tester.com/manual/object-repository
-
-    Added in v30: ``_fields`` and ``refresh``.
     '''
 
     def __init__(self, frame=None):

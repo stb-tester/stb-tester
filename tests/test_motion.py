@@ -71,12 +71,21 @@ def test_detect_motion_region_and_mask():
     # Just check no exceptions
     dm()
     dm(mask="mask-out-left-half-720p.png")
-    dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+    dm(mask=numpy.full((720, 1280), 255, dtype=numpy.uint8))
+    dm(mask=r)
     dm(region=r)
-    dm(region=r, mask=numpy.zeros((720, 640), dtype=numpy.uint8))
 
-    with pytest.raises(ValueError):
-        dm(region=r, mask="mask-out-left-half-720p.png")
+    with pytest.raises(ValueError,
+                       match="Cannot specify mask and region at the same time"):
+        dm(region=r, mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+
+    with pytest.raises(ValueError,
+                       match=r"Mask\(<Image>\) doesn't overlap with the frame"):
+        dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+
+    with pytest.raises(ValueError,
+                       match=r"~Region.ALL doesn't overlap with the frame"):
+        dm(mask=~stbt.Region.ALL)
 
 
 def fake_frames():

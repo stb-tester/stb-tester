@@ -35,8 +35,7 @@ class Keyboard():
         `add_transition`, `add_edgelist`, and `add_grid` to build the model of
         the keyboard.
 
-    :type mask: str or `numpy.ndarray`
-    :param str mask:
+    :param str|numpy.ndarray|Mask|Region mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
         current selection has finished moving. If the search page has a
         blinking cursor you need to mask out the region where the cursor can
@@ -231,12 +230,12 @@ class Keyboard():
             "uppercase", "shift", or "symbols") if your keyboard supports
             different modes. Note that the same key, if visible in different
             modes, needs to be modelled as separate keys (for example
-            ``(name="space", mode="lowercase")`` and ``(name="space",
-            mode="uppercase")``) because their navigation connections are
-            totally different: pressing up from the former goes to lowercase
-            "c", but pressing up from the latter goes to uppercase "C".
-            ``mode`` is optional if your keyboard doesn't have modes, or if you
-            only need to use the default mode.
+            ``(name=" ", mode="lowercase")`` and
+            ``(name=" ", mode="uppercase")``) because their navigation
+            connections are totally different: pressing up from the former goes
+            to lowercase "c", but pressing up from the latter goes to uppercase
+            "C". ``mode`` is optional if your keyboard doesn't have modes, or
+            if you only need to use the default mode.
 
         :returns: The added key (`stbt.Keyboard.Key`). This is an object that
             you can use with `add_transition`.
@@ -275,8 +274,8 @@ class Keyboard():
         This is like `find_key`, but it returns a list containing any
         keys that match the given parameters. For example, if there is a space
         key in both the lowercase and uppercase modes of the keyboard, calling
-        ``find_keys(text=" ")`` will return a list of 2 objects
-        ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
+        ``find_keys(text=" ")`` will return a list of 2 objects
+        ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
 
         This method doesn't raise an exception; the list will be empty if no
         keys matched.

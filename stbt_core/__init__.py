@@ -40,7 +40,8 @@ from _stbt.logging import (
     debug)
 from _stbt.mask import (
     load_mask,
-    Mask)
+    Mask,
+    MaskTypes)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -69,7 +70,6 @@ from _stbt.precondition import (
     PreconditionError)
 from _stbt.transition import (
     press_and_wait,
-    StrictDiff,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
@@ -111,6 +111,7 @@ __all__ = [
     "load_image",
     "load_mask",
     "Mask",
+    "MaskTypes",
     "match",
     "match_all",
     "match_text",
@@ -136,7 +137,6 @@ __all__ = [
     "save_frame",
     "set_global_ocr_corrections",
     "Size",
-    "StrictDiff",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",
@@ -205,9 +205,6 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
           `stbt.press_and_wait` to detect when the device-under-test reacted to
           the keypress.
 
-    * Added in v29: The ``hold_secs`` parameter.
-    * Changed in v30: Returns an object with keypress timings, instead of
-      ``None``.
     * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
       value, which must be a string).
     """

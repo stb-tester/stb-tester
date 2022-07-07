@@ -6,11 +6,10 @@ from .config import ConfigurationError, get_config
 from .diff import MotionDiff
 from .imgutils import limit_time
 from .logging import debug, draw_on
-from .mask import load_mask
 from .types import Region, UITestFailure
 
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
+def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
                   region=Region.ALL, frames=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
@@ -42,25 +41,21 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         setting ``noise_threshold`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
-    :type mask: str or `numpy.ndarray`
-    :param mask:
-        A black & white image that specifies which part of the image to search
-        for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore.
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :ref:`Masks`.
 
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
+    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
+        Defaults to ``stbt.frames()``.
 
-    :type region: `Region`
-    :param region:
-        Only analyze the specified region of the video frame.
-
-    :type frames: Iterator[stbt.Frame]
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        ``stbt.frames()``.
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if frames is None:
         import stbt_core
@@ -68,8 +63,10 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
 
-    if mask is not None:
-        mask = load_mask(mask)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
 
     debug(f"Searching for motion, using mask={mask}")
 
@@ -78,8 +75,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
     except StopIteration:
         return
 
-    differ = detect_motion.differ(frame, region, mask,
-                                  threshold=noise_threshold)
+    differ = detect_motion.differ(frame, mask, threshold=noise_threshold)
     for frame in frames:
         result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")
@@ -93,7 +89,7 @@ detect_motion.differ = MotionDiff
 
 def wait_for_motion(
         timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=None, region=Region.ALL, frames=None):
+        noise_threshold=None, mask=Region.ALL, region=Region.ALL, frames=None):
     """Search for motion in the device-under-test's video stream.
 
     "Motion" is difference in pixel values between two frames.
@@ -117,18 +113,20 @@ def wait_for_motion(
         :ref:`.stbt.conf`.
 
     :param float noise_threshold: See `detect_motion`.
-
-    :param mask: See `detect_motion`.
-
-    :param region: See `detect_motion`.
-
-    :param frames: See `detect_motion`.
+    :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
+    :param Region region: See `detect_motion`.
+    :param Iterator[stbt.Frame] frames: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
         which motion was detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if frames is None:
         import stbt_core
@@ -148,9 +146,6 @@ def wait_for_motion(
     if motion_frames > considered_frames:
         raise ConfigurationError(
             "`motion_frames` exceeds `considered_frames`")
-
-    if mask is not None:
-        mask = load_mask(mask)
 
     debug("Waiting for %d out of %d frames with motion, using mask=%r" % (
         motion_frames, considered_frames, mask))

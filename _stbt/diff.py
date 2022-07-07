@@ -4,9 +4,8 @@ import cv2
 import numpy
 
 from .config import get_config
-from .imgutils import crop, _frame_repr, pixel_bounding_box, _validate_region
+from .imgutils import crop, _frame_repr, pixel_bounding_box, _validate_mask
 from .logging import ddebug, ImageLogger
-from .mask import load_mask
 from .types import Region
 
 
@@ -31,15 +30,17 @@ class MotionDiff(FrameDiffer):
     This is the default `wait_for_motion` diffing algorithm.
     """
 
-    def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None, threshold=None, erode=True):
+    def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
+                 threshold=None, erode=True):
         self.prev_frame = initial_frame
-        self.region = _validate_region(self.prev_frame, region)
         self.min_size = min_size
 
-        if mask is not None:
-            mask = load_mask(mask)
-        self.mask = mask
+        mask, region, frame_region = _validate_mask(initial_frame, mask)
+        if mask.is_region():
+            self.mask_ = None
+        else:
+            self.mask_ = crop(mask.to_array(frame_region), region)
+        self.region = region
 
         if threshold is None:
             threshold = get_config('motion', 'noise_threshold', type_=float)
@@ -71,11 +72,9 @@ class MotionDiff(FrameDiffer):
         absdiff = cv2.absdiff(self.prev_frame_gray, frame_gray)
         imglog.imwrite("absdiff", absdiff)
 
-        if self.mask is not None:
-            mask_ = self.mask.to_array(
-                shape=(self.region.height, self.region.width, 1))
-            absdiff = cv2.bitwise_and(absdiff, mask_)
-            imglog.imwrite("mask", mask_)
+        if self.mask_ is not None:
+            absdiff = cv2.bitwise_and(absdiff, self.mask_)
+            imglog.imwrite("mask", self.mask_)
             imglog.imwrite("absdiff_masked", absdiff)
 
         _, thresholded = cv2.threshold(

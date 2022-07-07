@@ -15,18 +15,13 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 import enum
 
-import cv2
-import numpy
-
-from .diff import FrameDiffer, MotionDiff, MotionResult
-from .imgutils import crop, pixel_bounding_box, _validate_region
+from .diff import MotionDiff
 from .logging import ddebug, debug, draw_on
-from .mask import load_mask
 from .types import Region
 
 
 def press_and_wait(
-        key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
+        key, mask=Region.ALL, region=Region.ALL, timeout_secs=10, stable_secs=1,
         min_size=None, _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -39,29 +34,21 @@ def press_and_wait(
 
     :param str key: The name of the key to press (passed to `stbt.press`).
 
-    :param stbt.Region region: Only look at the specified region of the video
-        frame.
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :ref:`Masks`.
 
-    :param mask:
-        A black & white image that specifies which part of the video frame to
-        look at. White pixels select the area to analyse; black pixels select
-        the area to ignore.
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
+    :param int|float timeout_secs: A timeout in seconds. This function will
+        return a falsey value if the transition didn't complete within this
+        number of seconds from the key-press.
 
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
-    :type mask: str or `numpy.ndarray`
-
-    :param timeout_secs: A timeout in seconds. This function will return a
-        falsey value if the transition didn't complete within this number of
-        seconds from the key-press.
-    :type timeout_secs: int or float
-
-    :param stable_secs: A duration in seconds. The screen must stay unchanged
-        (within the specified region or mask) for this long, for the transition
-        to be considered "complete".
+    :param int|float stable_secs: A duration in seconds. The screen must stay
+        unchanged (within the specified region or mask) for this long, for the
+        transition to be considered "complete".
     :type timeout_secs: int or float
 
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
@@ -103,17 +90,26 @@ def press_and_wait(
         ``time.time()``).
 
     Changed in v32: Use the same difference-detection algorithm as
-    `wait_for_motion`; ``region`` and ``mask`` can both be specified at the
-    same time.
+    `wait_for_motion`.
 
     Added in v33: The ``started``, ``complete`` and ``stable`` attributes of
     the returned value.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if _dut is None:
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -125,7 +121,7 @@ press_and_wait.differ = MotionDiff
 
 
 def wait_for_transition_to_end(
-        initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
+        initial_frame=None, mask=Region.ALL, region=Region.ALL, timeout_secs=10,
         stable_secs=1, min_size=None, _dut=None):
 
     """Wait for the screen to stop changing.
@@ -144,10 +140,10 @@ def wait_for_transition_to_end(
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
 
-    :param region: See `press_and_wait`.
-    :param mask: See `press_and_wait`.
-    :param timeout_secs: See `press_and_wait`.
-    :param stable_secs: See `press_and_wait`.
+    :param str|numpy.ndarray|Mask|Region mask: See `press_and_wait`.
+    :param Region region: See `press_and_wait`.
+    :param int|float timeout_secs: See `press_and_wait`.
+    :param int|float stable_secs: See `press_and_wait`.
 
     :returns: See `press_and_wait`.
     """
@@ -155,17 +151,20 @@ def wait_for_transition_to_end(
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
 class _Transition():
-    def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
-        self.region = region
-        self.mask = load_mask(mask)
-
+    def __init__(self, mask, timeout_secs, stable_secs, min_size, dut):
+        self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
         self.min_size = min_size
@@ -178,8 +177,7 @@ class _Transition():
         self.expiry_time = press_result.end_time + self.timeout_secs
 
         differ = press_and_wait.differ(initial_frame=press_result.frame_before,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
@@ -213,8 +211,7 @@ class _Transition():
 
         first_stable_frame = initial_frame
         differ = press_and_wait.differ(initial_frame=initial_frame,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         while True:
             f = next(self.frames)
             motion_result = differ.diff(f)
@@ -245,76 +242,6 @@ def _debug(s, f, *args):
 
 def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
-
-
-class StrictDiff(FrameDiffer):
-    """Compares 2 frames by calculating pixel-wise absolute differences,
-    comparing each color channel separately.
-
-    Compared to `MotionDiff`: this has a much stricter threshold, the threshold
-    is not configurable, and there is no "erode" step to remove single-pixel
-    differences.
-
-    This was the default `press_and_wait` diffing algorithm before v32,
-    but it was too sensitive to "noise" or single-pixel differences.
-    """
-
-    def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None):
-        self.prev_frame = initial_frame
-        self.region = _validate_region(self.prev_frame, region)
-        self.min_size = min_size
-
-        if mask is not None:
-            mask = load_mask(mask)
-        self.mask = mask
-
-    def diff(self, frame):
-        absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
-                              crop(frame, self.region))
-        if self.mask is not None:
-            mask_ = self.mask.to_array(
-                shape=(self.region.height, self.region.width, 3))
-            absdiff = cv2.bitwise_and(absdiff, mask_, absdiff)
-
-        diffs_found = False
-        out_region = None
-        maxdiff = numpy.max(absdiff)
-        if maxdiff > 20:
-            diffs_found = True
-            big_diffs = absdiff > 20
-            out_region = pixel_bounding_box(big_diffs)
-            _ddebug("found %s diffs above 20 (max %s) in %r", frame,
-                    numpy.count_nonzero(big_diffs), maxdiff, out_region)
-        elif maxdiff > 0:
-            small_diffs = absdiff > 5
-            small_diffs_count = numpy.count_nonzero(small_diffs)
-            if small_diffs_count > 50:
-                diffs_found = True
-                out_region = pixel_bounding_box(small_diffs)
-                _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
-                        maxdiff, out_region)
-            else:
-                _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
-                        maxdiff)
-
-        if diffs_found:
-            # Undo crop:
-            out_region = out_region.translate(self.region)
-
-        motion = diffs_found and (
-            self.min_size is None or
-            (out_region.width >= self.min_size[0] and
-             out_region.height >= self.min_size[1]))
-
-        if motion:
-            # Only update the reference frame if we found differences. This
-            # makes the algorithm more sensitive to slow motion.
-            self.prev_frame = frame
-
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
-        return result
 
 
 class _TransitionResult():

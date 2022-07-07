@@ -223,9 +223,6 @@ class Region(namedtuple('Region', 'x y right bottom'),
         ...     Region.bounding_box(a, Region.bounding_box(b, c))
         True
 
-        Changed in v30: ``bounding_box`` can take an arbitrary number of region
-        arguments, rather than exactly two.
-
     .. py:staticmethod:: intersect(*args)
 
         :returns: The intersection of the passed regions, or ``None`` if the
@@ -233,10 +230,6 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
         Any parameter can be ``None`` (an empty Region) so intersect is
         commutative and associative.
-
-        Changed in v30: ``intersect`` can take an arbitrary number of region
-        arguments, rather than exactly two.
-
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         if (width is None) == (right is None):

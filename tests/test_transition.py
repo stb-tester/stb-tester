@@ -6,7 +6,7 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
-from _stbt.transition import StrictDiff, _TransitionResult
+from _stbt.transition import _TransitionResult
 
 
 class FakeDeviceUnderTest():
@@ -57,7 +57,7 @@ def F(state, t):
     return array
 
 
-@pytest.fixture(scope="function", params=[StrictDiff, stbt.MotionDiff])
+@pytest.fixture(scope="function", params=[stbt.MotionDiff])
 def diff_algorithm(request):
     previous = stbt.press_and_wait.differ
     try:
@@ -118,28 +118,42 @@ def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
     assert transition.status == stbt.TransitionStatus.COMPLETE
 
 
-@pytest.mark.parametrize("mask,region,min_size,expected", [
-    (None, stbt.Region.ALL, None, stbt.TransitionStatus.STABLE_TIMEOUT),
-    ("mask-out-left-half-720p.png", stbt.Region.ALL, None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (numpy.zeros((720, 640), dtype=numpy.uint8),
-     stbt.Region(x=0, y=0, right=640, bottom=720), None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region(x=640, y=0, right=1280, bottom=720), None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region(x=0, y=0, right=1280, bottom=360), None,
+@pytest.mark.parametrize("mask,min_size,expected", [
+    (stbt.Region.ALL, None, stbt.TransitionStatus.STABLE_TIMEOUT),
+    ("mask-out-left-half-720p.png", None, stbt.TransitionStatus.START_TIMEOUT),
+    (numpy.full((720, 1280), 255, dtype=numpy.uint8), None,
      stbt.TransitionStatus.STABLE_TIMEOUT),
-    (None, stbt.Region.ALL, (0, 32), stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region.ALL, (0, 10), stbt.TransitionStatus.STABLE_TIMEOUT),
+    (stbt.Region(x=640, y=0, right=1280, bottom=720), None,
+     stbt.TransitionStatus.START_TIMEOUT),
+    (stbt.Region(x=0, y=0, right=1280, bottom=360), None,
+     stbt.TransitionStatus.STABLE_TIMEOUT),
+    (stbt.Region.ALL, (0, 32), stbt.TransitionStatus.START_TIMEOUT),
+    (stbt.Region.ALL, (0, 10), stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
-def test_press_and_wait_with_mask_or_region(mask, region, min_size, expected,
+def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
                                             diff_algorithm):
     transition = stbt.press_and_wait(
-        "ball", mask=mask, region=region, min_size=min_size,
-        timeout_secs=0.2, stable_secs=0.1,
+        "ball", mask=mask, min_size=min_size, timeout_secs=0.2, stable_secs=0.1,
         _dut=FakeDeviceUnderTest())
     print(transition)
     assert transition.status == expected
+
+
+def test_press_and_wait_region_parameter():
+    # region is a synonym of mask, for backwards compatibility
+    transition = stbt.press_and_wait(
+        "ball", region=stbt.Region(x=640, y=0, right=1280, bottom=720),
+        timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
+    print(transition)
+    assert transition.status == stbt.TransitionStatus.START_TIMEOUT
+
+    with pytest.raises(ValueError,
+                       match="Cannot specify mask and region at the same time"):
+        stbt.press_and_wait(
+            "ball",
+            region=stbt.Region(x=640, y=0, right=1280, bottom=720),
+            mask=stbt.Region(x=640, y=0, right=1280, bottom=720),
+            timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
 
 
 def test_wait_for_transition_to_end(diff_algorithm):
@@ -168,12 +182,6 @@ def test_press_and_wait_timestamps(diff_algorithm):
     assert isclose(transition.duration, 0.48)
     assert isclose(transition.end_time, transition.animation_start_time + 0.08)
     assert isclose(transition.animation_duration, 0.08)
-
-
-def test_that_strictdiff_ignores_a_few_scattered_small_differences():
-    differ = StrictDiff(initial_frame=stbt.load_image("2px-different-1.png"),
-                        region=stbt.Region.ALL, mask=None)
-    assert not differ.diff(stbt.load_image("2px-different-2.png"))
 
 
 @pytest.mark.parametrize("status,          started,complete,stable", [

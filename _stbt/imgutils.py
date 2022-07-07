@@ -5,6 +5,7 @@ import inspect
 import os
 import re
 import warnings
+from functools import lru_cache
 from typing import overload, Tuple
 
 import cv2
@@ -316,6 +317,26 @@ def _validate_region(frame, region):
     return r
 
 
+def _validate_mask(frame, mask, region=Region.ALL):
+    from .mask import load_mask
+
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+    if mask is None:
+        raise TypeError(
+            "'mask=None' means an empty region. To analyse the entire "
+            "frame use 'mask=Region.ALL' (which is the default)")
+    frame_region = _image_region(frame)
+    mask = load_mask(mask)
+    region = mask.bounding_box(frame_region)
+    if region is None:
+        raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
+                         % (mask, frame.shape[1], frame.shape[0]))
+    return mask, region, frame_region
+
+
 def _image_region(image):
     s = image.shape
     return Region(0, 0, s[1], s[0])
@@ -357,8 +378,6 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    * Changed in v30: Include alpha (transparency) channel if the file has
-      transparent pixels.
     * Changed in v32: Return type is now `stbt.Image`, which is a
       `numpy.ndarray` sub-class with additional attributes ``filename``,
       ``relative_filename`` and ``absolute_filename``.
@@ -368,7 +387,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
       ``flags``. The image will always be converted to the format specified by
       ``color_channels`` (previously it was only converted to the format
       specified by ``flags`` if it was given as a filename, not as a
-      `stbt.Image` or numpy array).
+      `stbt.Image` or numpy array). The returned numpy array is read-only.
     """
     if flags is not None:
         # Backwards compatibility
@@ -413,6 +432,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     return img
 
 
+@lru_cache(maxsize=5)
 def _imread(absolute_filename, color_channels):
     if color_channels == (3,):
         flags = cv2.IMREAD_COLOR
@@ -423,7 +443,13 @@ def _imread(absolute_filename, color_channels):
     img = cv2.imread(absolute_filename, flags)
     if img is None:
         raise IOError("Failed to load image: %s" % absolute_filename)
-    return _convert_color(img, color_channels, absolute_filename)
+    img = _convert_color(img, color_channels, absolute_filename)
+    if img.shape[2] == 4:
+        # Normalise transparency channel to either 0 or 255, for stbt.match
+        chan = img[:, :, 3]
+        chan[chan < 255] = 0
+    img.flags.writeable = False
+    return img
 
 
 def _convert_color(img, color_channels, absolute_filename):
@@ -515,6 +541,10 @@ def pixel_bounding_box(img):
     >>> pixel_bounding_box(numpy.array([[0]], dtype=numpy.uint8))
     >>> pixel_bounding_box(numpy.array([[1]], dtype=numpy.uint8))
     Region(x=0, y=0, right=1, bottom=1)
+    >>> pixel_bounding_box(numpy.array([[[1]]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
+    >>> pixel_bounding_box(numpy.array([[[1, 1, 1]]], dtype=numpy.uint8))
+    Region(x=0, y=0, right=1, bottom=1)
     >>> a = numpy.array([
     ...     [0, 0, 0, 0],
     ...     [0, 1, 1, 1],
@@ -540,25 +570,18 @@ def pixel_bounding_box(img):
     ... ], dtype=numpy.uint8))
     Region(x=1, y=1, right=5, bottom=6)
     """
-    if len(img.shape) == 2:
+    if len(img.shape) == 2 or len(img.shape) == 3 and img.shape[2] == 1:
         pass
     elif len(img.shape) == 3 and img.shape[2] == 3:
         img = img.max(axis=2)
     else:
         raise ValueError("Single-channel or 3-channel (BGR) image required. "
                          "Provided image has shape %r" % (img.shape,))
-
-    out = [None, None, None, None]
-
-    for axis in (0, 1):
-        flat = numpy.any(img, axis=axis)
-        indices = numpy.where(flat)[0]
-        if len(indices) == 0:
-            return None
-        out[axis] = int(indices[0])
-        out[axis + 2] = int(indices[-1] + 1)
-
-    return Region.from_extents(*out)
+    rect = cv2.boundingRect(img)
+    if rect[2] == 0 or rect[3] == 0:
+        return None
+    else:
+        return Region(*rect)
 
 
 def find_file(filename: str) -> str:

@@ -270,9 +270,6 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     :returns:
       A `MatchResult`, which will evaluate to true if a match was found,
       false otherwise.
-
-    Added in v30: Support transparency in the reference image, and new match
-    method ``MatchMethod.SQDIFF``.
     """
     result = next(_match_all(image, frame, match_parameters, region))
     if result.match:
@@ -491,11 +488,6 @@ def _find_matches(image, template, match_parameters, imglog):
     by a single `(False, position, certainty)` tuple when there are no further
     matching locations.
     """
-
-    if template.shape[2] == 4:
-        # Normalise transparency channel to either 0 or 255
-        mask = template[:, :, 3]
-        mask[mask < 255] = 0
 
     for i, first_pass_matched, region, first_pass_certainty in \
             _find_candidate_matches(image, template, match_parameters, imglog):

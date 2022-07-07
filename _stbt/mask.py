@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Union, Tuple
+from typing import Union
 
+import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, find_file, Image, load_image, _relative_filename)
+    _convert_color, find_file, Image, load_image, pixel_bounding_box,
+    _relative_filename)
 from .types import Region
 
 try:
@@ -84,16 +86,15 @@ class Mask:
             self._region = m
             self._invert = invert
         elif m is None:  # Region.intersect can return None for "no region"
-            if invert:
-                self._region = Region.ALL
-            else:
-                self._region = None
-            self._invert = False
+            self._region = Region.ALL
+            self._invert = not invert
         else:
             raise TypeError("Expected filename, Image, Mask, or Region. "
                             f"Got {m!r}")
 
     def __eq__(self, o):
+        if isinstance(o, Region):
+            return self.__eq__(Mask(o))
         if not isinstance(o, Mask):
             return False
         if self._array is not None:
@@ -103,7 +104,9 @@ class Mask:
                     (o._filename, o._binop, o._region, o._invert))
 
     def __hash__(self):
-        if self._array is not None:
+        if self._region is not None and not self._invert:
+            return hash(self._region)
+        elif self._array is not None:
             if Xxhash64:
                 h = Xxhash64()
                 h.update(numpy.ascontiguousarray(self._array).data)
@@ -115,46 +118,59 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
-    def to_array(self, shape: Tuple[int, int, int]) -> numpy.ndarray:
-        return Mask._to_array(self, shape)
+    def is_region(self):
+        """A "simple" mask is just a Region.
 
-    @staticmethod
-    @lru_cache(maxsize=5)
-    def _to_array(mask: "Mask", shape: Tuple[int, int, int]) -> numpy.ndarray:
-        array: numpy.ndarray
-        if len(shape) == 2:
-            shape = shape + (1,)
-        if mask._filename is not None:
-            array = load_image(mask._filename, color_channels=(shape[2],))
-            if array.shape != shape:
-                raise ValueError(f"Mask shape {array.shape} and required shape "
-                                 f"{shape} don't match")
-        elif mask._array is not None:
-            array = mask._array
-            array = _convert_color(array, color_channels=(shape[2],),
-                                   absolute_filename=array.absolute_filename)
-            if array.shape != shape:
-                raise ValueError(f"Mask shape {array.shape} and required shape "
-                                 f"{shape} don't match")
-        elif mask._binop is not None:
-            n = mask._binop
-            if n.op == "+":
-                array = n.left.to_array(shape) | n.right.to_array(shape)
-            elif n.op == "-":
-                array = n.left.to_array(shape) & ~n.right.to_array(shape)
-            else:
-                assert False, f"Unreachable: Unknown op {n.op}"
-        else:  # Region (including None)
-            array = numpy.full(shape, 0, dtype=numpy.uint8)
-            r = Region.intersect(mask._region, Region(0, 0, shape[1], shape[0]))
-            if r:
-                array[r.y:r.bottom, r.x:r.right] = 255
+        If you're implementing your own image-processing algorithm: With a
+        simple mask you don't need to apply pixel-wise masking, just a bounding
+        box.
+        """
+        return self._region is not None and not self._invert
 
-        if mask._invert:
-            array = ~array  # pylint:disable=invalid-unary-operand-type
+    def to_array(self, region: Region, color_channels: int = 1) \
+            -> numpy.ndarray:
+        """Materialize the mask to a numpy array of the specified size.
 
-        array.flags.writeable = False
-        return array
+        Most users will never need to call this method; it's for people who
+        are implementing their own image-processing functions.
+
+        :param stbt.Region region: A Region matching the size of the frame that
+          you are processing.
+
+        :param int color_channels: The number of channels required (1 or 3),
+          according to your image-processing algorithm's needs. All channels
+          will be identical — for example with 3 channels, pixels will be
+          either [0, 0, 0] or [255, 255, 255].
+
+        :rtype: numpy.ndarray
+        :returns: An image the same size as ``region``, where masked-in pixels
+          are white (255) and masked-out pixels are black (0).
+        """
+        if region.x != 0 or region.y != 0:
+            raise ValueError(
+                f"{region} must be a full-frame region starting at x=0, y=0")
+        return _to_array_cached(self, region, color_channels)
+
+    def bounding_box(self, region: Region) -> Region:
+        """Calculate a bounding box around the masked-in area.
+
+        If most of the frame is masked out, you can limit your image-processing
+        operations to the area inside this bounding box to make it faster.
+
+        Most users will never need to call this method; it's for people who
+        are implementing their own image-processing functions.
+
+        :param stbt.Region region: A Region matching the size of the frame that
+          you are processing.
+
+        :rtype: stbt.Region
+        :returns: A Region that includes all of the masked-in (white) pixels
+          in the mask.
+        """
+        if region.x != 0 or region.y != 0:
+            raise ValueError(
+                f"{region} must be a full-frame region starting at x=0, y=0")
+        return _bounding_box_cached(self, region)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -177,8 +193,10 @@ class Mask:
                 open_paren, close_paren = "", ""
             return (f"{prefix}{open_paren}{left_repr} {self._binop.op} "
                     f"{right_repr}{close_paren}")
-        else:  # self._region is a Region or None
+        elif self._region is not None:
             return f"{prefix}{self._region!r}"
+        else:
+            assert False, "Internal logic error"
 
     def __add__(self, other: MaskTypes) -> "Mask":
         if isinstance(other, (Region, Mask, type(None))):
@@ -213,3 +231,68 @@ class BinOp:
     op: str  # "+" or "-"
     left: Mask
     right: Mask
+
+
+@lru_cache(maxsize=5)
+def _to_array_cached(mask: Mask, region: Region, color_channels: int) \
+        -> numpy.ndarray:
+    if color_channels == 1:
+        array = _to_array(mask, region)
+    elif color_channels == 3:
+        array = _to_array_cached(mask, region, color_channels=1)
+        array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+    else:
+        raise ValueError(
+            f"Invalid color_channels={color_channels!r} (expected 1 or 3)")
+    array.flags.writeable = False
+    return array
+
+
+def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
+    array: numpy.ndarray
+    shape = (region.height, region.width, 1)
+    if mask._filename is not None:
+        array = load_image(mask._filename, color_channels=(1,))
+        if array.shape != shape:
+            raise ValueError(f"{mask}: shape {array.shape} doesn't match "
+                             f"required shape {shape}")
+    elif mask._array is not None:
+        array = mask._array
+        array = _convert_color(array, color_channels=(1,),
+                               absolute_filename=array.absolute_filename)
+        if array.shape != shape:
+            raise ValueError(f"{mask}: shape {array.shape} doesn't match "
+                             f"required shape {shape}")
+    elif mask._binop is not None:
+        n = mask._binop
+        if n.op == "+":
+            array = _to_array(n.left, region) | _to_array(n.right, region)
+        elif n.op == "-":
+            array = _to_array(n.left, region) & ~_to_array(n.right, region)
+        else:
+            assert False, f"Unreachable: Unknown op {n.op}"
+    elif mask._region is not None:
+        array = numpy.full(shape, 0, dtype=numpy.uint8)
+        r = Region.intersect(mask._region, region)
+        if r:
+            array[r.y:r.bottom, r.x:r.right] = 255
+    else:
+        assert False, "Internal logic error"
+
+    if mask._invert:
+        array = ~array  # pylint:disable=invalid-unary-operand-type
+
+    return array
+
+
+@lru_cache()
+def _bounding_box_cached(mask: Mask, region: Region) -> Region:
+    if mask._region is Region.ALL:
+        if mask._invert:
+            return None
+        else:
+            return region
+    if mask._region is not None and not mask._invert:
+        return Region.intersect(region, mask._region)
+    array = mask.to_array(region)
+    return pixel_bounding_box(array)
