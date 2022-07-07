@@ -13,7 +13,7 @@ class TruthyFrameObject(stbt.FrameObject):
     >>> bool(TruthyFrameObject(frame))
     True
     >>> TruthyFrameObject(frame)
-    <TruthyFrameObject(is_visible=True)>
+    <TruthyFrameObject(_frame=<Frame(time=None)>, is_visible=True)>
     """
     @property
     def is_visible(self):
@@ -28,7 +28,7 @@ class FalseyFrameObject(stbt.FrameObject):
     >>> bool(fo)
     False
     >>> fo
-    <FalseyFrameObject(is_visible=False)>
+    <FalseyFrameObject(_frame=<Frame(time=None)>, is_visible=False)>
     >>> print(fo.public)
     None
     >>> fo._private
@@ -48,16 +48,17 @@ class FalseyFrameObject(stbt.FrameObject):
 
 
 class FrameObjectWithProperties(stbt.FrameObject):
+    # pylint:disable=line-too-long
     """Only public properties are listed in repr.
 
     >>> frame = _load_frame("with-dialog")
     >>> page = FrameObjectWithProperties(frame)
     >>> page
-    <FrameObjectWithProperties(is_visible=True, public=...)>
+    <FrameObjectWithProperties(_frame=<Frame(time=None)>, is_visible=True, public=...)>
     >>> page.public
     5
     >>> page
-    <FrameObjectWithProperties(is_visible=True, public=5)>
+    <FrameObjectWithProperties(_frame=<Frame(time=None)>, is_visible=True, public=5)>
     """
     @property
     def is_visible(self):
@@ -73,11 +74,12 @@ class FrameObjectWithProperties(stbt.FrameObject):
 
 
 class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
+    # pylint:disable=line-too-long
     """Properties can be called from is_visible.
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectThatCallsItsOwnProperties(frame)
-    <FrameObjectThatCallsItsOwnProperties(is_visible=True, public=5)>
+    <FrameObjectThatCallsItsOwnProperties(_frame=<Frame(time=None)>, is_visible=True, public=5)>
     """
     @property
     def is_visible(self):
@@ -93,6 +95,7 @@ class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
 
 
 class PrintingFrameObject(stbt.FrameObject):
+    # pylint:disable=line-too-long
     """
     This is a very naughty FrameObject.  It's properties cause side-effects so
     we can check that the caching is working:
@@ -111,7 +114,7 @@ class PrintingFrameObject(stbt.FrameObject):
     >>> m.another
     10
     >>> m
-    <PrintingFrameObject(is_visible=True, another=10)>
+    <PrintingFrameObject(_frame=<Frame(time=None)>, is_visible=True, another=10)>
     """
     @property
     def is_visible(self):
@@ -154,7 +157,7 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     >>> m._another
     11
     >>> m
-    <FalseyPrintingFrameObject(is_visible=False)>
+    <FalseyPrintingFrameObject(_frame=<Frame(time=None)>, is_visible=False)>
     """
     @property
     def is_visible(self):
@@ -205,7 +208,7 @@ def test_that_is_visible_and_properties_arent_racy():
 
 
 def _load_frame(name):
-    return stbt.load_image("images/frameobject/%s.png" % name)
+    return stbt.Frame(stbt.load_image("images/frameobject/%s.png" % name))
 
 
 class Dialog(stbt.FrameObject):
@@ -246,11 +249,11 @@ class Dialog(stbt.FrameObject):
     like this:
 
     >>> dialog
-    <Dialog(is_visible=True, message=u'This set-top box is great', title=...)>
+    <Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is great', title=...)>
     >>> dialog_fab
-    <Dialog(is_visible=True, message=u'This set-top box is fabulous', title=...)>
+    <Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is fabulous', title=...)>
     >>> no_dialog
-    <Dialog(is_visible=False)>
+    <Dialog(_frame=<Frame(time=None)>, is_visible=False)>
 
     This makes it convenient to use doctests for unit-testing your Frame
     Objects.
@@ -276,7 +279,7 @@ class Dialog(stbt.FrameObject):
     in a dict:
 
     >>> {dialog: 1}
-    {<Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')>: 1}
+    {<Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is great', title=u'Information')>: 1}
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
 

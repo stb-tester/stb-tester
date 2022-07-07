@@ -212,7 +212,9 @@ class FrameObject(metaclass=_FrameObjectMeta):
                     args.append("%s=..." % (name,))
         else:
             args = ["is_visible=False"]
-        return "<%s(%s)>" % (self.__class__.__name__, ", ".join(args))
+        return "<%s(_frame=%r, %s)>" % (self.__class__.__name__,
+                                        self._frame,
+                                        ", ".join(args))
 
     def _iter_fields(self):
         if self:

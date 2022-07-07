@@ -47,17 +47,8 @@ class Frame(numpy.ndarray):
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
     def __repr__(self):
-        if len(self.shape) == 3:
-            dimensions = "%dx%dx%d" % (
-                self.shape[1], self.shape[0], self.shape[2])  # pylint:disable=unsubscriptable-object
-
-        elif len(self.shape) == 2:
-            dimensions = "%dx%d" % (self.shape[1], self.shape[0])  # pylint:disable=unsubscriptable-object
-        else:
-            return super().__repr__()
-        return "<Frame(time=%s, dimensions=%s)>" % (
-            "None" if self.time is None else "%.3f" % self.time,
-            dimensions)
+        return "<Frame(time=%s)>" % (
+            "None" if self.time is None else "%.3f" % self.time,)
 
     def __str__(self):
         return repr(self)
