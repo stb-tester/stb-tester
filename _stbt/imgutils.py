@@ -316,26 +316,6 @@ def _validate_region(frame, region):
     return r
 
 
-def _validate_mask(frame, mask, region=Region.ALL):
-    from .mask import load_mask
-
-    if region is not Region.ALL:
-        if mask is not Region.ALL:
-            raise ValueError("Cannot specify mask and region at the same time")
-        mask = region
-    if mask is None:
-        raise TypeError(
-            "'mask=None' means an empty region. To analyse the entire "
-            "frame use 'mask=Region.ALL' (which is the default)")
-    frame_region = _image_region(frame)
-    mask = load_mask(mask)
-    region = mask.bounding_box(frame_region)
-    if region is None:
-        raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
-                         % (mask, frame.shape[1], frame.shape[0]))
-    return mask, region, frame_region
-
-
 def _image_region(image):
     s = image.shape
     return Region(0, 0, s[1], s[0])

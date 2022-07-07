@@ -13,10 +13,9 @@ from typing import Optional
 import cv2
 
 from .config import get_config
-from .imgutils import (
-    crop, Frame, _frame_repr, pixel_bounding_box, _validate_mask)
+from .imgutils import crop, Frame, _frame_repr, pixel_bounding_box
 from .logging import debug, ImageLogger
-from .mask import MaskTypes
+from .mask import load_mask, MaskTypes
 from .types import Region
 
 
@@ -66,14 +65,18 @@ def is_screen_black(frame: Optional[Frame] = None,
         from stbt_core import get_frame
         frame = get_frame()
 
-    mask, region, frame_region = _validate_mask(frame, mask, region)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        mask = region
+
+    mask_, region = load_mask(mask).to_array(frame.region)
 
     imglog = ImageLogger("is_screen_black", mask=mask, threshold=threshold)
     imglog.imwrite("source", frame)
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
-    if not mask.is_region():
-        mask_ = mask.to_array(frame_region)
+    if mask_ is not None:
         imglog.imwrite("mask", mask_)
         cv2.bitwise_and(greyframe, crop(mask_, region), dst=greyframe)
     maxVal = greyframe.max()
