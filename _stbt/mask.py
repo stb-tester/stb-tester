@@ -6,7 +6,7 @@ import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, find_file, Image, load_image, pixel_bounding_box,
+    _convert_color, crop, find_file, Image, load_image, pixel_bounding_box,
     _relative_filename)
 from .types import Region
 
@@ -159,6 +159,8 @@ class Mask:
         if bounding_box is None:
             raise ValueError("%r doesn't overlap with the frame's %r"
                              % (self, region))
+        if mask is not None:
+            mask = crop(mask, bounding_box)
         return mask, bounding_box
 
     def __repr__(self):

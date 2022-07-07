@@ -240,8 +240,8 @@ def test_mask_with_3_channels():
     m = Region(0, 0, 2, 2) + Region(2, 2, 2, 2)
     a1, _ = m.to_array(Region(0, 0, 6, 4))
     a3, _ = m.to_array(Region(0, 0, 6, 4), color_channels=3)
-    assert a1.shape == (4, 6, 1)
-    assert a3.shape == (4, 6, 3)
+    assert a1.shape == (4, 4, 1)
+    assert a3.shape == (4, 4, 3)
     for c in range(3):
         assert numpy.array_equal(a1[:, :, 0], a3[:, :, c])
 
@@ -269,8 +269,7 @@ def test_mask_to_array_basic_check(m, frame_region, color_channels, invert):  # 
     try:
         array, _ = m.to_array(frame_region, color_channels)
         if array is not None:
-            expected = (frame_region.height, frame_region.width, color_channels)
-            assert array.shape == expected
+            assert array.shape[2] == color_channels
     except ValueError as e:
         assert re.match(r".* doesn't overlap with the frame's Region", str(e))
 
@@ -301,7 +300,8 @@ def test_mask_to_array(m, frame_region, expect_array, expected_region):  # pylin
         array, bounding_box = m.to_array(frame_region)  # pylint:disable=redefined-outer-name
         if expect_array:
             assert array is not None
-            assert array.shape == (frame_region.height, frame_region.width, 1)
+            assert array.shape == (expected_region.height,
+                                   expected_region.width, 1)
         else:
             assert array is None
         assert bounding_box == expected_region

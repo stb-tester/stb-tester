@@ -78,7 +78,7 @@ def is_screen_black(frame: Optional[Frame] = None,
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
     if mask_ is not None:
         imglog.imwrite("mask", mask_)
-        cv2.bitwise_and(greyframe, crop(mask_, region), dst=greyframe)
+        cv2.bitwise_and(greyframe, mask_, dst=greyframe)
     maxVal = greyframe.max()
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)

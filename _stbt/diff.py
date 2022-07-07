@@ -37,8 +37,6 @@ class MotionDiff(FrameDiffer):
         self.min_size = min_size
 
         self.mask_, self.region = load_mask(mask).to_array(initial_frame.region)
-        if self.mask_ is not None:
-            self.mask_ = crop(self.mask_, self.region)
 
         if threshold is None:
             threshold = get_config('motion', 'noise_threshold', type_=float)
