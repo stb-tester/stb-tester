@@ -243,6 +243,11 @@ def _to_array_and_bounding_box_cached(
 
     if array is not None:
         array = crop(array, bounding_box)
+        nonzeros = numpy.count_nonzero(array)
+        if nonzeros == array.size:
+            # Every pixel is masked in so the pixel-mask is redundant.
+            array = None
+    if array is not None:
         if color_channels == 3:
             array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
         array.flags.writeable = False

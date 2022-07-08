@@ -163,20 +163,21 @@ def test_mask_from_png_and_from_array():
         assert pretty(m1 + r2) == pretty(r1 + r2)
 
         with pytest.raises(ValueError):
+            # Requested frame_region doesn't match file's size
             m1.to_array(Region(0, 0, 2, 2))
 
         array = numpy.array([[1, 1, 0, 0, 0, 0],
                              [1, 1, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0]], dtype=numpy.uint8) * 255
+                             [0, 0, 0, 0, 1, 1],
+                             [0, 0, 0, 0, 1, 1]], dtype=numpy.uint8) * 255
         m2 = Mask(array)
         assert repr(m2) == "Mask(<Image>)"
-        assert pretty(m2) == pretty(m1)
+        assert pretty(m2) == pretty(r1 + r2)
 
         array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
         m3 = Mask(array)
         assert repr(m3) == "Mask(<Image>)"
-        assert pretty(m3) == pretty(m1)
+        assert pretty(m3) == pretty(r1 + r2)
 
 
 def pretty(mask):
@@ -276,13 +277,13 @@ def test_mask_to_array_basic_check(m, frame_region, color_channels, invert):  # 
 
 @pytest.mark.parametrize("m,frame_region,expect_array,expected_region", [
     # pylint:disable=bad-whitespace,line-too-long
-    (Mask("mask-out-left-half-720p.png"),                 Region(0, 0, 1280, 720), True,  Region(640, 0, right=1280, bottom=720)),
-    (Mask(load_image("mask-out-left-half-720p.png")),     Region(0, 0, 1280, 720), True,  Region(640, 0, right=1280, bottom=720)),
-    (~Mask("mask-out-left-half-720p.png"),                Region(0, 0, 1280, 720), True,  Region(0, 0, 640, 720)),
-    (~Mask(load_image("mask-out-left-half-720p.png")),    Region(0, 0, 1280, 720), True,  Region(0, 0, 640, 720)),
-    (Mask(numpy.full((4, 6, 1), 255, dtype=numpy.uint8)), frame_region,            True,  frame_region),
-    (Mask(numpy.full((4, 6, 3), 255, dtype=numpy.uint8)), frame_region,            True,  frame_region),
-    (Mask(numpy.full((4, 6), 255, dtype=numpy.uint8)),    frame_region,            True,  frame_region),
+    (Mask("mask-out-left-half-720p.png"),                 Region(0, 0, 1280, 720), False, Region(640, 0, right=1280, bottom=720)),
+    (Mask(load_image("mask-out-left-half-720p.png")),     Region(0, 0, 1280, 720), False, Region(640, 0, right=1280, bottom=720)),
+    (~Mask("mask-out-left-half-720p.png"),                Region(0, 0, 1280, 720), False, Region(0, 0, 640, 720)),
+    (~Mask(load_image("mask-out-left-half-720p.png")),    Region(0, 0, 1280, 720), False, Region(0, 0, 640, 720)),
+    (Mask(numpy.full((4, 6, 1), 255, dtype=numpy.uint8)), frame_region,            False, frame_region),
+    (Mask(numpy.full((4, 6, 3), 255, dtype=numpy.uint8)), frame_region,            False, frame_region),
+    (Mask(numpy.full((4, 6), 255, dtype=numpy.uint8)),    frame_region,            False, frame_region),
     (Mask(Region(2, 2, 2, 2)),                            frame_region,            False, Region(2, 2, 2, 2)),
     (Mask(Region(2, 2, 20, 20)),                          frame_region,            False, Region(2, 2, right=frame_region.right, bottom=frame_region.bottom)),
     (Mask(Region.ALL),                                    frame_region,            False, frame_region),
