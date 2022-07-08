@@ -72,7 +72,7 @@ def is_screen_black(frame: Optional[Frame] = None,
 
     mask_, region = load_mask(mask).to_array(frame.region)
 
-    imglog = ImageLogger("is_screen_black", mask=mask, threshold=threshold)
+    imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
 
     greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
@@ -95,8 +95,11 @@ def is_screen_black(frame: Optional[Frame] = None,
         _, thresholded = cv2.threshold(greyframe, threshold, 255,
                                        cv2.THRESH_BINARY)
         imglog.imwrite("non_black", thresholded)
-        imglog.set(maxVal=maxVal,
-                   non_black_region=pixel_bounding_box(thresholded))
+        if result.black:
+            bounding_box = None
+        else:
+            bounding_box = pixel_bounding_box(thresholded).translate(region)
+        imglog.set(maxVal=maxVal, non_black_region=bounding_box)
     _log_image_debug(imglog, result)
 
     return result
