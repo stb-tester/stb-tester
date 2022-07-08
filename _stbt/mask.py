@@ -151,17 +151,9 @@ class Mask:
         if region.x != 0 or region.y != 0:
             raise ValueError(
                 f"{region} must be a full-frame region starting at x=0, y=0")
-        if self._region is not None and not self._invert:
-            mask = None
-        else:
-            mask = _to_array_cached(self, region, color_channels)
-        bounding_box = _bounding_box_cached(self, region)
-        if bounding_box is None:
-            raise ValueError("%r doesn't overlap with the frame's %r"
-                             % (self, region))
-        if mask is not None:
-            mask = crop(mask, bounding_box)
-        return mask, bounding_box
+        if color_channels not in (1, 3):
+            raise ValueError(f"Invalid {color_channels=} (expected 1 or 3)")
+        return _to_array_and_bounding_box_cached(self, region, color_channels)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -224,19 +216,38 @@ class BinOp:
     right: Mask
 
 
-@lru_cache(maxsize=5)
-def _to_array_cached(mask: Mask, region: Region, color_channels: int) \
-        -> numpy.ndarray:
-    if color_channels == 1:
-        array = _to_array(mask, region)
-    elif color_channels == 3:
-        array = _to_array_cached(mask, region, color_channels=1)
-        array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+@lru_cache(maxsize=10)
+def _to_array_and_bounding_box_cached(
+        mask: Mask,
+        region: Region,
+        color_channels: int) -> Tuple[numpy.ndarray, Region]:
+
+    if mask._region is not None and not mask._invert:
+        array = None
     else:
-        raise ValueError(
-            f"Invalid color_channels={color_channels!r} (expected 1 or 3)")
-    array.flags.writeable = False
-    return array
+        array = _to_array(mask, region)
+
+    if mask._region is Region.ALL:
+        if mask._invert:
+            bounding_box = None
+        else:
+            bounding_box = region
+    elif mask._region is not None and not mask._invert:
+        bounding_box = Region.intersect(region, mask._region)
+    else:
+        bounding_box = pixel_bounding_box(array)
+
+    if bounding_box is None:
+        raise ValueError("%r doesn't overlap with the frame's %r"
+                         % (mask, region))
+
+    if array is not None:
+        array = crop(array, bounding_box)
+        if color_channels == 3:
+            array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+        array.flags.writeable = False
+
+    return array, bounding_box
 
 
 def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
@@ -274,16 +285,3 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
         array = ~array  # pylint:disable=invalid-unary-operand-type
 
     return array
-
-
-@lru_cache()
-def _bounding_box_cached(mask: Mask, region: Region) -> Region:
-    if mask._region is Region.ALL:
-        if mask._invert:
-            return None
-        else:
-            return region
-    if mask._region is not None and not mask._invert:
-        return Region.intersect(region, mask._region)
-    array = _to_array_cached(mask, region, 1)
-    return pixel_bounding_box(array)
