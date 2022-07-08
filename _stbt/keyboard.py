@@ -156,9 +156,9 @@ class Keyboard():
 
     Changed in v33:
 
-    * Moved private class ``Key`` (the type returned from `find_key`) to be a
-      public API `stbt.Keyboard.Key`, so that you can use it in type
-      annotations for your Page Object's `selection` property.
+    * Added class `stbt.Keyboard.Key` (the type returned from `find_key`). This
+      used to be a private API, but now it is public so that you can use it in
+      type annotations for your Page Object's ``selection`` property.
     * Tries to recover from missed or double keypresses. To disable this
       behaviour specify ``retries=0`` when calling `enter_text` or
       `navigate_to`.
