@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Union
+from typing import Tuple, Union
 
 import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, find_file, Image, load_image, pixel_bounding_box,
+    _convert_color, crop, find_file, Image, load_image, pixel_bounding_box,
     _relative_filename)
 from .types import Region
 
@@ -48,7 +48,9 @@ def load_mask(mask: MaskTypes) -> "Mask":
     Added in v33.
     """
     if mask is None:
-        return None
+        raise TypeError(
+            "'mask=None' means an empty region. To analyse the entire "
+            "frame use 'mask=Region.ALL' (which is the default)")
     elif isinstance(mask, Mask):
         return mask
     else:
@@ -118,21 +120,12 @@ class Mask:
             return hash((self._filename, self._binop, self._region,
                          self._invert))
 
-    def is_region(self):
-        """A "simple" mask is just a Region.
-
-        If you're implementing your own image-processing algorithm: With a
-        simple mask you don't need to apply pixel-wise masking, just a bounding
-        box.
-        """
-        return self._region is not None and not self._invert
-
     def to_array(self, region: Region, color_channels: int = 1) \
-            -> numpy.ndarray:
+            -> Tuple[numpy.ndarray, Region]:
         """Materialize the mask to a numpy array of the specified size.
 
         Most users will never need to call this method; it's for people who
-        are implementing their own image-processing functions.
+        are implementing their own image-processing algorithms.
 
         :param stbt.Region region: A Region matching the size of the frame that
           you are processing.
@@ -142,35 +135,25 @@ class Mask:
           will be identical — for example with 3 channels, pixels will be
           either [0, 0, 0] or [255, 255, 255].
 
-        :rtype: numpy.ndarray
-        :returns: An image the same size as ``region``, where masked-in pixels
-          are white (255) and masked-out pixels are black (0).
+        :rtype: Tuple[numpy.ndarray, Region]
+        :returns:
+          A tuple of:
+
+          * An image the same size as ``region``, where masked-in pixels are
+            white (255) and masked-out pixels are black (0).
+          * A bounding box (`stbt.Region`) around the masked-in area. If most
+            of the frame is masked out, limiting your image-processing
+            operations to this region will be faster.
+
+          If the mask is just a Region, the first member of the tuple (the
+          image) will be `None` because the bounding-box is sufficient.
         """
         if region.x != 0 or region.y != 0:
             raise ValueError(
                 f"{region} must be a full-frame region starting at x=0, y=0")
-        return _to_array_cached(self, region, color_channels)
-
-    def bounding_box(self, region: Region) -> Region:
-        """Calculate a bounding box around the masked-in area.
-
-        If most of the frame is masked out, you can limit your image-processing
-        operations to the area inside this bounding box to make it faster.
-
-        Most users will never need to call this method; it's for people who
-        are implementing their own image-processing functions.
-
-        :param stbt.Region region: A Region matching the size of the frame that
-          you are processing.
-
-        :rtype: stbt.Region
-        :returns: A Region that includes all of the masked-in (white) pixels
-          in the mask.
-        """
-        if region.x != 0 or region.y != 0:
-            raise ValueError(
-                f"{region} must be a full-frame region starting at x=0, y=0")
-        return _bounding_box_cached(self, region)
+        if color_channels not in (1, 3):
+            raise ValueError(f"Invalid {color_channels=} (expected 1 or 3)")
+        return _to_array_and_bounding_box_cached(self, region, color_channels)
 
     def __repr__(self):
         # In-order traversal, removing unnecessary parentheses.
@@ -233,19 +216,43 @@ class BinOp:
     right: Mask
 
 
-@lru_cache(maxsize=5)
-def _to_array_cached(mask: Mask, region: Region, color_channels: int) \
-        -> numpy.ndarray:
-    if color_channels == 1:
-        array = _to_array(mask, region)
-    elif color_channels == 3:
-        array = _to_array_cached(mask, region, color_channels=1)
-        array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+@lru_cache(maxsize=10)
+def _to_array_and_bounding_box_cached(
+        mask: Mask,
+        region: Region,
+        color_channels: int) -> Tuple[numpy.ndarray, Region]:
+
+    if mask._region is not None and not mask._invert:
+        array = None
     else:
-        raise ValueError(
-            f"Invalid color_channels={color_channels!r} (expected 1 or 3)")
-    array.flags.writeable = False
-    return array
+        array = _to_array(mask, region)
+
+    if mask._region is Region.ALL:
+        if mask._invert:
+            bounding_box = None
+        else:
+            bounding_box = region
+    elif mask._region is not None and not mask._invert:
+        bounding_box = Region.intersect(region, mask._region)
+    else:
+        bounding_box = pixel_bounding_box(array)
+
+    if bounding_box is None:
+        raise ValueError("%r doesn't overlap with the frame's %r"
+                         % (mask, region))
+
+    if array is not None:
+        array = crop(array, bounding_box)
+        nonzeros = numpy.count_nonzero(array)
+        if nonzeros == array.size:
+            # Every pixel is masked in so the pixel-mask is redundant.
+            array = None
+    if array is not None:
+        if color_channels == 3:
+            array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+        array.flags.writeable = False
+
+    return array, bounding_box
 
 
 def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
@@ -283,16 +290,3 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
         array = ~array  # pylint:disable=invalid-unary-operand-type
 
     return array
-
-
-@lru_cache()
-def _bounding_box_cached(mask: Mask, region: Region) -> Region:
-    if mask._region is Region.ALL:
-        if mask._invert:
-            return None
-        else:
-            return region
-    if mask._region is not None and not mask._invert:
-        return Region.intersect(region, mask._region)
-    array = mask.to_array(region)
-    return pixel_bounding_box(array)

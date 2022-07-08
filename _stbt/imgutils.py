@@ -61,6 +61,10 @@ class Frame(numpy.ndarray):
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
 
+    @property
+    def region(self):
+        return Region(0, 0, self.shape[1], self.shape[0])
+
 
 class Image(numpy.ndarray):
     """An image, possibly loaded from disk.
@@ -128,6 +132,10 @@ class Image(numpy.ndarray):
     @property
     def height(self):
         return self.shape[0]  # pylint:disable=unsubscriptable-object
+
+    @property
+    def region(self):
+        return Region(0, 0, self.shape[1], self.shape[0])
 
 
 def _relative_filename(absolute_filename):
@@ -306,26 +314,6 @@ def _validate_region(frame, region):
         raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
                          % (region, frame.shape[1], frame.shape[0]))
     return r
-
-
-def _validate_mask(frame, mask, region=Region.ALL):
-    from .mask import load_mask
-
-    if region is not Region.ALL:
-        if mask is not Region.ALL:
-            raise ValueError("Cannot specify mask and region at the same time")
-        mask = region
-    if mask is None:
-        raise TypeError(
-            "'mask=None' means an empty region. To analyse the entire "
-            "frame use 'mask=Region.ALL' (which is the default)")
-    frame_region = _image_region(frame)
-    mask = load_mask(mask)
-    region = mask.bounding_box(frame_region)
-    if region is None:
-        raise ValueError("%r doesn't overlap with the frame dimensions %ix%i"
-                         % (mask, frame.shape[1], frame.shape[0]))
-    return mask, region, frame_region
 
 
 def _image_region(image):

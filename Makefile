@@ -213,7 +213,7 @@ check-pytest: all
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
-	       grep -v -e __init__.py -e tests/vstb-example-html5/)
+	       grep -v -e __init__.py -e tests/vstb-example-html5/ -e ^extra/)
 check-pythonpackage:
 	export STBT_CONFIG_FILE=$$PWD/tests/stbt.conf && \
 	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
