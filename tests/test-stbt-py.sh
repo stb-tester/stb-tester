@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    $timeout 20 stbt run -v --control asdf test.py
+    $timeout 10 stbt run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
@@ -161,8 +161,7 @@ test_that_frames_doesnt_deadlock() {
 	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
     local t
-    [[ -v CIRCLECI ]] && t=60 || t=5
-    $timeout $t stbt run -v test.py
+    $timeout 10 stbt run -v test.py
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
@@ -215,7 +214,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    $timeout 20 stbt run -v --control none \
+    $timeout 10 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
@@ -393,8 +392,7 @@ test_that_get_frame_time_is_wall_time() {
 
 	# get_frame() gives us the last frame that arrived.  This may arrived a
 	# little time ago and have been waiting in a buffer.
-	threshold = 0.5 if "CIRCLECI" in os.environ else 0.1
-	assert t - threshold < f.time < t
+	assert t - 0.1 < f.time < t
 	EOF
 
     stbt run -vv test.py
@@ -477,10 +475,6 @@ test_draw_text() {
     #     $ ./stbt_run.py -v --source-pipeline 'videotestsrc pattern=white' test.py
     #     first_pass_result=0.2816
     #
-    if [ -v PATH ]; then
-        skip "Unreliable on CircleCI; needs investigating"
-    fi
-
     cat > draw-text.py <<-EOF &&
 	import stbt_core as stbt
 	from time import sleep
@@ -489,8 +483,7 @@ test_draw_text() {
 	EOF
     cat > verify-draw-text.py <<-EOF &&
 	import os, stbt_core as stbt
-	stbt.wait_for_match("$testdir/draw-text.png",
-	    timeout_secs=60 if "CIRCLECI" in os.environ else 10)
+	stbt.wait_for_match("$testdir/draw-text.png", timeout_secs=10)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 
@@ -562,10 +555,10 @@ test_multithreaded() {
 	result_iter = pool.imap_unordered(
 	    lambda f: f(),
 	    [
-	        lambda: stbt.wait_for_motion(timeout_secs=10),
+	        lambda: stbt.wait_for_motion(timeout_secs=2),
 	        lambda: stbt.wait_for_match(
 	            "$testdir/videotestsrc-checkers-8.png",
-	            timeout_secs=10),
+	            timeout_secs=2),
 	    ],
 	    chunksize=1)
 	
