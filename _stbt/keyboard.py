@@ -185,7 +185,7 @@ class Keyboard():
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=str)
 
-    def __init__(self, graph=None, mask=None, navigate_timeout=60):
+    def __init__(self, graph=None, mask=Region.ALL, navigate_timeout=60):
         from networkx import DiGraph
 
         if graph is not None:
