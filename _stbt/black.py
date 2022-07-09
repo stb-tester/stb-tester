@@ -8,6 +8,7 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+import warnings
 from typing import Optional
 
 import cv2
@@ -68,6 +69,10 @@ def is_screen_black(frame: Optional[Frame] = None,
     if region is not Region.ALL:
         if mask is not Region.ALL:
             raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.is_screen_black: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
         mask = region
 
     mask_, region = load_mask(mask).to_array(frame.region)

@@ -14,6 +14,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import enum
+import warnings
 
 from .diff import MotionDiff
 from .logging import ddebug, debug, draw_on
@@ -107,6 +108,10 @@ def press_and_wait(
     if region is not Region.ALL:
         if mask is not Region.ALL:
             raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.press_and_wait: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
         mask = region
 
     t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
@@ -154,6 +159,10 @@ def wait_for_transition_to_end(
     if region is not Region.ALL:
         if mask is not Region.ALL:
             raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.wait_for_transition_to_end: The 'region' parameter is "
+            "deprecated; pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
         mask = region
 
     t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)

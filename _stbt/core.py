@@ -36,8 +36,7 @@ from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
 Gst.init(None)
 
 warnings.filterwarnings(
-    action="always", category=DeprecationWarning, message='.*stb-tester')
-
+    action="default", category=DeprecationWarning, module=r"_stbt")
 
 # Functions available to stbt scripts
 # ===========================================================================
