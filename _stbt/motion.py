@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import warnings
 from collections import deque
 
 from .config import ConfigurationError, get_config
@@ -66,6 +67,10 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
     if region is not Region.ALL:
         if mask is not Region.ALL:
             raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.detect_motion: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
         mask = region
 
     debug(f"Searching for motion, using mask={mask}")
@@ -147,6 +152,15 @@ def wait_for_motion(
         raise ConfigurationError(
             "`motion_frames` exceeds `considered_frames`")
 
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.wait_for_motion: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
+        mask = region
+
     debug("Waiting for %d out of %d frames with motion, using mask=%r" % (
         motion_frames, considered_frames, mask))
 
@@ -154,7 +168,7 @@ def wait_for_motion(
     motion_count = 0
     last_frame = None
     for res in detect_motion(
-            timeout_secs, noise_threshold, mask, region, frames):
+            timeout_secs, noise_threshold, mask, frames=frames):
         motion_count += bool(res)
         if len(matches) == matches.maxlen:
             motion_count -= bool(matches.popleft())

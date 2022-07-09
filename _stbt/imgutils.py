@@ -384,7 +384,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         warnings.warn(
             "load_image: flags=%s argument is deprecated. Use "
             "color_channels=%r instead" % (flags, color_channels),
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
 
     if color_channels is None:
         color_channels = (3, 4)
