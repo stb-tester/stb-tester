@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import cv2
 import numpy
@@ -121,7 +121,7 @@ class Mask:
                          self._invert))
 
     def to_array(self, region: Region, color_channels: int = 1) \
-            -> Tuple[numpy.ndarray, Region]:
+            -> Tuple[Optional[numpy.ndarray], Region]:
         """Materialize the mask to a numpy array of the specified size.
 
         Most users will never need to call this method; it's for people who
@@ -135,7 +135,7 @@ class Mask:
           will be identical — for example with 3 channels, pixels will be
           either [0, 0, 0] or [255, 255, 255].
 
-        :rtype: Tuple[numpy.ndarray, Region]
+        :rtype: Tuple[Optional[numpy.ndarray], Region]
         :returns:
           A tuple of:
 
@@ -220,7 +220,7 @@ class BinOp:
 def _to_array_and_bounding_box_cached(
         mask: Mask,
         region: Region,
-        color_channels: int) -> Tuple[numpy.ndarray, Region]:
+        color_channels: int) -> Tuple[Optional[numpy.ndarray], Region]:
 
     if mask._region is not None and not mask._invert:
         array = None
