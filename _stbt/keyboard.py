@@ -30,11 +30,6 @@ class Keyboard():
 
     The constructor takes the following parameters:
 
-    :param graph: Deprecated; will be removed in the next release. Instead,
-        first create the Keyboard object, and then use `add_key`,
-        `add_transition`, `add_edgelist`, and `add_grid` to build the model of
-        the keyboard.
-
     :param str|numpy.ndarray|Mask|Region mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
         current selection has finished moving. If the search page has a
@@ -185,13 +180,9 @@ class Keyboard():
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=str)
 
-    def __init__(self, graph=None, mask=Region.ALL, navigate_timeout=60):
+    def __init__(self, *, mask=Region.ALL, navigate_timeout=60):
         from networkx import DiGraph
 
-        if graph is not None:
-            raise ValueError(
-                "The `graph` parameter of `stbt.Keyboard` constructor is "
-                "deprecated. See the API documentation for details.")
         self.G = DiGraph()
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
