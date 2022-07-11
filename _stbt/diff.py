@@ -4,7 +4,7 @@ import cv2
 import numpy
 
 from .config import get_config
-from .imgutils import crop, _frame_repr, pixel_bounding_box
+from .imgutils import crop, _frame_repr, _image_region, pixel_bounding_box
 from .logging import ddebug, ImageLogger
 from .mask import load_mask
 from .types import Region
@@ -36,7 +36,8 @@ class MotionDiff(FrameDiffer):
         self.prev_frame = initial_frame
         self.min_size = min_size
 
-        self.mask_, self.region = load_mask(mask).to_array(initial_frame.region)
+        self.mask_, self.region = load_mask(mask).to_array(
+            _image_region(initial_frame))
 
         if threshold is None:
             threshold = get_config('motion', 'noise_threshold', type_=float)
