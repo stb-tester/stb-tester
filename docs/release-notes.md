@@ -11,10 +11,13 @@ Unreleased.
 
 ##### Major new features
 
-* Target Ubuntu 22.04 / Python 3.10 / OpenCV 4. Dropped support for Python 2.
+* Target Ubuntu 22.04 / Python 3.10 / OpenCV 4 / pylint2. Dropped support for
+  Python 2.
 
 * Add support for [RedRat-X](https://www.redrat.co.uk/products/redrat-x/)
   Bluetooth/RF4CE remote control via RedRat Hub HTTP REST API.
+
+* Reworked `stbt.android` API for interacting with Android TV devices over ADB.
 
 * New `Mask` API to construct masks from Regions. You can add, subtract or
   invert regions to construct a mask. This is often much more convenient than
@@ -33,9 +36,14 @@ Unreleased.
   `mask` parameter, call `load_mask` on the caller-supplied value to convert it
   to a `Mask`.
 
-* MultiPress: New API to enter text using a numeric keypad.
+* Color: New class to convert between OpenCV-style (blue, green, red) tuples
+  and web-style "#rrggbb" strings. APIs that previously accepted the former
+  (namely ocr's `text_color` parameter) can now accept either format.
 
-* ocr: `text_color` can accept an HTML-style color as a string ("#rrggbb").
+* find_file: New API to find files relative to the test-script (similar to
+  `load_image` but for any type of file).
+
+* MultiPress: New API to enter text using a numeric keypad.
 
 * press: The `key` argument can be an Enum (`press` will use the Enum's value,
   which must be a string).
@@ -52,15 +60,57 @@ Unreleased.
   import it without having to import the whole of `stbt_core` (including
   OpenCV, numpy, etc).
 
+* Reworked `stbt.android` API:
+
+  * Changed order & defaults of `AdbDevice` constructor arguments to make it
+    more suitable for Android TV devices (as opposed to mobile devices).
+  * Made `AdbDevice.adb` more like [subprocess.run](
+    https://docs.python.org/3.10/library/subprocess.html#subprocess.run).
+  * Support standard location for ADB host key to support stateless
+    test-runners.
+
+  See https://github.com/stb-tester/stb-tester/pull/736 for details.
+
+* Keyboard: Removed the first parameter of the constructor. Since v32 it would
+  raise an exception if you passed this parameter, so nobody should be using it
+  by now. All the remaining parameters must be specified by keyword.
+
+* load_image: The returned image is read only; call its [copy()](
+  https://numpy.org/doc/stable/reference/generated/numpy.ndarray.copy.html)
+  method to make a writeable copy if you need to modify it.
+
+##### Deprecated APIs
+
+* The `region` parameter of `is_screen_black`, `detect_motion`,
+  `wait_for_motion`, `press_and_wait`, and `wait_for_transition_to_end` is
+  deprecated. Pass your region to the `mask` parameter instead. For now, the
+  `region` parameter is an alias of `mask`. Conceptually masks are a superset
+  of regions.
+
+  Note that functions that don't accept an arbitrary mask (only a `Region`)
+  still take a `region` parameter — namely `match` and associated APIs, `ocr`
+  and `match_text`, `Keyboard.add_key` and `Keyboard.find_key`.
+
 ##### Minor additions, bugfixes & improvements
 
+* stbt.debug: Use Python's logging framework. Each debug line now starts with
+  the logger name and logging level (namely "DEBUG:stbt:").
+
+* stbt.Direction: New helper type. It's an enum with values `HORIZONTAL` and
+  `VERTICAL`. Not yet used by any APIs.
+
 * Frame and Image:
-  * Add `width` and `height` properties.
+  * Add `width`, `height`, and `region` properties.
   * Fix IndexError in `__repr__` when the Frame or Image has undergone numpy
     operations that change its shape (such as `numpy.max`, which will preserve
     the `stbt.Image` or `stbt.Frame` type of its argument).
 
 * FrameObject:
+  * The `__repr__` only prints the values of properties that have already been
+    calculated. That is, it doesn't trigger evaluation of all public
+    properties.
+  * The `__repr__` shows the frame (`self._frame`) so you can see the timestamp
+    of the frame associated with each FrameObject instance.
   * Fix comparison operators (`==` and `!=`). Previously they would raise
     `TypeError` if either operand had a property that returned None; or they
     could return the wrong result if comparing an instance of a class F against
@@ -85,9 +135,15 @@ Unreleased.
     `selection==None`).
 
 * load_image:
+  * Cache the last 5 loaded images. This will avoid repeating the same PNG
+    decoding for every frame when you do something like
+    `stbt.wait_until(lambda: stbt.match("reference.png"))`.
   * New `color_channels` parameter, replacing `flags` which is now deprecated.
   * Raise `FileNotFoundError` with the correct errno, instead of `IOError`
     without an errno. Note that `FileNotFoundError` is a subclass of `IOError`.
+  * Normalize the alpha channel (if any) so that each pixel is either fully
+    transparent (0) or fully opaque (255). Previously this normalization was
+    done in `match`.
 
 * match: Fixed position of the match (output) region drawn on the debug html
   output, when the caller specified the input `region` parameter.
@@ -111,6 +167,9 @@ Unreleased.
   receive EOS on the source pipeline. This behaviour was originally introduced
   to support VidiU video-capture hardware, but we believe it isn't used and the
   implementation had several disadvantages. See #715 for details.
+
+* pylint plugin: Increase Astroid's inference limit to fix various false
+  positives.
 
 #### v32
 
