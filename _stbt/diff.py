@@ -117,8 +117,7 @@ class GrayscaleDiff(FrameDiffer):
         imglog.imwrite("absdiff_threshold", thresholded)
         if self.kernel is not None:
             thresholded = cv2.morphologyEx(
-                thresholded, cv2.MORPH_OPEN,
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+                thresholded, cv2.MORPH_OPEN, self.kernel)
             imglog.imwrite("absdiff_threshold_erode", thresholded)
 
         out_region = pixel_bounding_box(thresholded)
