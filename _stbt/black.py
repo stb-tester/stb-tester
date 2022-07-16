@@ -81,11 +81,11 @@ def is_screen_black(frame: Optional[Frame] = None,
     imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
 
-    greyframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
+    grayframe = cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
     if mask_ is not None:
         imglog.imwrite("mask", mask_)
-        cv2.bitwise_and(greyframe, mask_, dst=greyframe)
-    maxVal = greyframe.max()
+        cv2.bitwise_and(grayframe, mask_, dst=grayframe)
+    maxVal = grayframe.max()
 
     result = _IsScreenBlackResult(bool(maxVal <= threshold), frame)
     debug("is_screen_black: {found} black screen using mask={mask}, "
@@ -97,8 +97,8 @@ def is_screen_black(frame: Optional[Frame] = None,
               maxVal=maxVal))
 
     if imglog.enabled:
-        imglog.imwrite("grey", greyframe)
-        _, thresholded = cv2.threshold(greyframe, threshold, 255,
+        imglog.imwrite("gray", grayframe)
+        _, thresholded = cv2.threshold(grayframe, threshold, 255,
                                        cv2.THRESH_BINARY)
         imglog.imwrite("non_black", thresholded)
         if result.black:
@@ -139,8 +139,8 @@ def _log_image_debug(imglog, result):
         <img src="mask.png" />
         {% endif %}
 
-        <h5>Greyscale, masked:</h5>
-        <img src="grey.png">
+        <h5>Grayscale, masked:</h5>
+        <img src="gray.png">
         <ul>
           <li>Maximum pixel intensity: {{maxVal}}
           <li>threshold={{threshold}}

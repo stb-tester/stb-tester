@@ -229,7 +229,7 @@ test_match_nonexistent_template() {
 }
 
 test_match_invalid_template() {
-    # Like test_match.py:test_that_match_rejects_greyscale_template, but checks
+    # Like test_match.py:test_that_match_rejects_grayscale_template, but checks
     # that "stbt run -vv" doesn't report a later exception from the _match_all
     # teardown. (This is a regression test.)
     cat > test.py <<-EOF

@@ -90,7 +90,7 @@ def test_match_error_message_for_too_small_frame_and_region():
     stbt.MatchMethod.SQDIFF,
     stbt.MatchMethod.SQDIFF_NORMED,
 ])
-def test_matching_greyscale_array_with_greyscale_frame(match_method):
+def test_matching_grayscale_array_with_grayscale_frame(match_method):
     img = stbt.load_image("videotestsrc-redblue.png", color_channels=1)
     assert img.shape[2] == 1
     frame = stbt.load_image("videotestsrc-full-frame.png", color_channels=1)
@@ -100,10 +100,10 @@ def test_matching_greyscale_array_with_greyscale_frame(match_method):
 
 
 @pytest.mark.parametrize("filename", [
-    "videotestsrc-greyscale.png",
-    "videotestsrc-greyscale-alpha.png",
+    "videotestsrc-grayscale.png",
+    "videotestsrc-grayscale-alpha.png",
 ])
-def test_that_match_converts_greyscale_reference_image(filename):
+def test_that_match_converts_grayscale_reference_image(filename):
     stbt.match(filename, frame=black())  # Doesn't raise
     stbt.match(stbt.load_image(filename), frame=black())
 
