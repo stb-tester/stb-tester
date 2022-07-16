@@ -111,6 +111,7 @@ class ImageLogger(object):
         try:
             outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
             mkdir_p(outdir)
+            mkdir_p("stbt-debug/images")
             self.outdir = outdir
         except OSError:
             warn("Failed to create directory '%s'; won't save debug images."
@@ -119,6 +120,7 @@ class ImageLogger(object):
             return
 
         self.images = OrderedDict()
+        self._image_rewrite = {}
         self.data = {}
         for k, v in kwargs.items():
             self.data[k] = v
@@ -138,10 +140,12 @@ class ImageLogger(object):
             self.data[k].append(v)
 
     def imwrite(self, name, image, regions=None, colours=None, scale=1):
-        import cv2
-        import numpy
         if not self.enabled:
             return
+
+        import cv2
+        import numpy
+        from _stbt.xxhash import Xxhash64
         if image is None:
             return
         if name in self.images:
@@ -168,7 +172,23 @@ class ImageLogger(object):
                 image, (region.x, region.y), (region.right, region.bottom),
                 colour, thickness=1)
 
-        cv2.imwrite(os.path.join(self.outdir, name + ".png"), image)
+        # We store the image by hash so as not to duplicate the same images
+        # over and over:
+        h = Xxhash64()
+        h.update(str(image.shape).encode("utf-8"))
+        h.update(numpy.ascontiguousarray(image).data)
+        digest = h.hexdigest()
+        self._image_rewrite[name + ".png"] = "../images/" + digest + ".png"
+        filename = os.path.join(self.outdir, "../images", digest + ".png")
+        if not os.path.exists(filename):
+            cv2.imwrite(filename, image)
+
+    def _rewrite_imgs(self, html):
+        for src, dest in self._image_rewrite.items():
+            html = html \
+                .replace('"%s"' % src, '"%s"' % dest) \
+                .replace("'%s'" % src, '"%s"' % dest)
+        return html
 
     def html(self, template, **kwargs):
         if not self.enabled:
@@ -188,16 +208,18 @@ class ImageLogger(object):
 
         index_html = os.path.join(self.outdir, "index.html")
         with open(index_html, "w") as f:
-            f.write(jinja2.Template(_INDEX_HTML_HEADER)
-                    .render(frame_number=self.frame_number,
-                            jupyter=self.jupyter))
-            f.write(jinja2.Template(dedent(template.lstrip("\n")))
-                    .render(annotated_image=self._draw_annotated_image,
-                            draw=self._draw,
-                            jupyter=self.jupyter,
-                            **template_kwargs))
-            f.write(jinja2.Template(_INDEX_HTML_FOOTER)
-                    .render())
+            f.write(self._rewrite_imgs(
+                jinja2.Template(_INDEX_HTML_HEADER)
+                .render(frame_number=self.frame_number,
+                        jupyter=self.jupyter)))
+            f.write(self._rewrite_imgs(
+                jinja2.Template(dedent(template.lstrip("\n")))
+                .render(annotated_image=self._draw_annotated_image,
+                        draw=self._draw,
+                        jupyter=self.jupyter,
+                        **template_kwargs)))
+            f.write(self._rewrite_imgs(
+                jinja2.Template(_INDEX_HTML_FOOTER).render()))
 
         if self.jupyter:
             from IPython.display import display, IFrame  # pylint:disable=import-error
