@@ -4,7 +4,7 @@ import warnings
 from collections import deque
 
 from .config import ConfigurationError, get_config
-from .diff import MotionDiff
+from .diff import GrayscaleDiff
 from .imgutils import limit_time
 from .logging import debug, draw_on
 from .types import Region, UITestFailure
@@ -89,7 +89,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
         yield result
 
 
-detect_motion.differ = MotionDiff
+detect_motion.differ = GrayscaleDiff
 
 
 def wait_for_motion(

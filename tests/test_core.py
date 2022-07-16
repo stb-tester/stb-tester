@@ -112,8 +112,8 @@ def test_load_image_with_stbt_image():
 
 def test_load_image_from_filename_with_color_channels():
     files = [
-        "videotestsrc-greyscale.png",
-        "videotestsrc-greyscale-alpha.png",
+        "videotestsrc-grayscale.png",
+        "videotestsrc-grayscale-alpha.png",
         "completely-transparent.png",
         "with-alpha-but-completely-opaque.png",
         "uint16.png",

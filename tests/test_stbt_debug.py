@@ -482,24 +482,24 @@ def test_is_screen_black_debug():
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
-            stbt-debug/00001/grey.png
+            stbt-debug/00001/gray.png
             stbt-debug/00001/index.html
             stbt-debug/00001/non_black.png
             stbt-debug/00001/source.png
             stbt-debug/00002
-            stbt-debug/00002/grey.png
+            stbt-debug/00002/gray.png
             stbt-debug/00002/index.html
             stbt-debug/00002/mask.png
             stbt-debug/00002/non_black.png
             stbt-debug/00002/source.png
             stbt-debug/00003
-            stbt-debug/00003/grey.png
+            stbt-debug/00003/gray.png
             stbt-debug/00003/index.html
             stbt-debug/00003/mask.png
             stbt-debug/00003/non_black.png
             stbt-debug/00003/source.png
             stbt-debug/00004
-            stbt-debug/00004/grey.png
+            stbt-debug/00004/gray.png
             stbt-debug/00004/index.html
             stbt-debug/00004/non_black.png
             stbt-debug/00004/source.png

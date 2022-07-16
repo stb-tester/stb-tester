@@ -19,7 +19,7 @@ from _stbt.config import (
     get_config)
 from _stbt.diff import (
     FrameDiffer,
-    MotionDiff,
+    GrayscaleDiff,
     MotionResult)
 from _stbt.frameobject import (
     for_object_repository,
@@ -103,6 +103,7 @@ __all__ = [
     "frames",
     "get_config",
     "get_frame",
+    "GrayscaleDiff",
     "Grid",
     "Image",
     "is_screen_black",
@@ -119,7 +120,6 @@ __all__ = [
     "MatchParameters",
     "MatchResult",
     "MatchTimeout",
-    "MotionDiff",
     "MotionResult",
     "MotionTimeout",
     "MultiPress",

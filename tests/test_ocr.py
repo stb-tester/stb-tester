@@ -32,8 +32,8 @@ def requires_tesseract(func):
     ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
     ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40), None),
     ("programme--white-on-black.png", "programme", stbt.Region.ALL, None),
-    ("UJJM--white-text-on-grey-boxes.png", "", stbt.Region.ALL, None),
-    ("UJJM--white-text-on-grey-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
+    ("UJJM--white-text-on-gray-boxes.png", "", stbt.Region.ALL, None),
+    ("UJJM--white-text-on-gray-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
 ])
 def test_ocr_on_static_images(image, expected_text, region, mode):
     kwargs = {"region": region}
@@ -356,7 +356,7 @@ def test_ocr_on_text_next_to_image_match():
 @requires_tesseract
 @pytest.mark.parametrize("image,color,expected", [
     # This region has a selected "Summary" button (white on light blue) and
-    # unselected buttons "Details" and "More Episodes" (light grey on black).
+    # unselected buttons "Details" and "More Episodes" (light gray on black).
     # Without specifying text_color, OCR only sees the latter two.
     ("ocr/Summary.png", (235, 235, 235), "Summary"),
     ("ocr/Summary.png", "#ebebeb", "Summary"),

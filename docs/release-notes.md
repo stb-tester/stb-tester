@@ -492,7 +492,7 @@ Unreleased.
 * `stbt.FrameObject`: Add `refresh` method, used by navigation functions that
   modify the state of the device-under-test.
 
-* `stbt.match` allows matching a greyscale reference image against a greyscale
+* `stbt.match` allows matching a grayscale reference image against a grayscale
   frame (for example if you've applied some custom pre-processing, such as edge
   detection, to both the frame & reference images).
 
@@ -888,7 +888,7 @@ Added HDMI CEC control; various API improvements.
 ##### Minor fixes and packaging fixes
 
 * Python API: `stbt.match_text` can take single-channel images (black-and-white
-  or greyscale).
+  or grayscale).
 
 * Python API: `stbt.match_text` normalises punctuation such as em-dash and
   en-dash, just like `stbt.ocr` already does.
