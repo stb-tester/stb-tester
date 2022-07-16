@@ -60,7 +60,7 @@ class FrameDiffer():
             "%s.diff is not implemented" % self.__class__.__name__)
 
 
-class MotionDiff(FrameDiffer):
+class GrayscaleDiff(FrameDiffer):
     """Compares 2 frames by converting them to grayscale, calculating
     pixel-wise absolute differences, and ignoring differences below a
     threshold.
@@ -96,7 +96,7 @@ class MotionDiff(FrameDiffer):
     def diff(self, frame):
         frame_gray = self.gray(frame)
 
-        imglog = ImageLogger("MotionDiff", region=self.region,
+        imglog = ImageLogger("GrayscaleDiff", region=self.region,
                              min_size=self.min_size,
                              threshold=self.threshold)
         imglog.imwrite("source", frame)
@@ -143,14 +143,14 @@ class MotionDiff(FrameDiffer):
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)
         ddebug(str(result))
-        imglog.html(MOTION_HTML, result=result)
+        imglog.html(GRAYSCALEDIFF_HTML, result=result)
         return result
 
 
-MOTION_HTML = """\
+GRAYSCALEDIFF_HTML = """\
     <h4>
-      detect_motion:
-      {{ "Found" if result.motion else "Didn't find" }} motion
+      GrayscaleDiff:
+      {{ "Found" if result.motion else "Didn't find" }} differences
     </h4>
 
     {{ annotated_image(result) }}

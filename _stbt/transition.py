@@ -16,7 +16,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import enum
 import warnings
 
-from .diff import MotionDiff
+from .diff import GrayscaleDiff
 from .logging import ddebug, debug, draw_on
 from .types import Region
 
@@ -122,7 +122,7 @@ def press_and_wait(
     return result
 
 
-press_and_wait.differ = MotionDiff
+press_and_wait.differ = GrayscaleDiff
 
 
 def wait_for_transition_to_end(
