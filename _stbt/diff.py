@@ -10,6 +10,43 @@ from .mask import load_mask
 from .types import Region
 
 
+class MotionResult():
+    """The result from `detect_motion` and `wait_for_motion`.
+
+    :ivar float time: The time at which the video-frame was captured, in
+        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
+        system time (``time.time()``).
+
+    :ivar bool motion: True if motion was found. This is the same as evaluating
+        ``MotionResult`` as a bool. That is, ``if result:`` will behave the
+        same as ``if result.motion:``.
+
+    :ivar Region region: Bounding box where the motion was found, or ``None``
+        if no motion was found.
+
+    :ivar Frame frame: The video frame in which motion was (or wasn't) found.
+    """
+    _fields = ("time", "motion", "region", "frame")
+
+    def __init__(self, time, motion, region, frame):
+        self.time = time
+        self.motion = motion
+        self.region = region
+        self.frame = frame
+
+    def __bool__(self):
+        return self.motion
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __repr__(self):
+        return (
+            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
+                "None" if self.time is None else "%.3f" % self.time,
+                self.motion, self.region, _frame_repr(self.frame)))
+
+
 class FrameDiffer():
     """Interface for different algorithms for diffing frames in a sequence.
 
@@ -108,43 +145,6 @@ class MotionDiff(FrameDiffer):
         ddebug(str(result))
         imglog.html(MOTION_HTML, result=result)
         return result
-
-
-class MotionResult():
-    """The result from `detect_motion` and `wait_for_motion`.
-
-    :ivar float time: The time at which the video-frame was captured, in
-        seconds since 1970-01-01T00:00Z. This timestamp can be compared with
-        system time (``time.time()``).
-
-    :ivar bool motion: True if motion was found. This is the same as evaluating
-        ``MotionResult`` as a bool. That is, ``if result:`` will behave the
-        same as ``if result.motion:``.
-
-    :ivar Region region: Bounding box where the motion was found, or ``None``
-        if no motion was found.
-
-    :ivar Frame frame: The video frame in which motion was (or wasn't) found.
-    """
-    _fields = ("time", "motion", "region", "frame")
-
-    def __init__(self, time, motion, region, frame):
-        self.time = time
-        self.motion = motion
-        self.region = region
-        self.frame = frame
-
-    def __bool__(self):
-        return self.motion
-
-    def __nonzero__(self):
-        return self.__bool__()
-
-    def __repr__(self):
-        return (
-            "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
-                "None" if self.time is None else "%.3f" % self.time,
-                self.motion, self.region, _frame_repr(self.frame)))
 
 
 MOTION_HTML = """\
