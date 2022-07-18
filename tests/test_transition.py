@@ -57,7 +57,7 @@ def F(state, t):
     return array
 
 
-@pytest.fixture(scope="function", params=[stbt.GrayscaleDiff])
+@pytest.fixture(scope="function", params=[stbt.BGRDiff, stbt.GrayscaleDiff])
 def diff_algorithm(request):
     previous = stbt.press_and_wait.differ
     try:
