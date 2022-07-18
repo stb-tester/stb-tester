@@ -18,6 +18,7 @@ from _stbt.config import (
     ConfigurationError,
     get_config)
 from _stbt.diff import (
+    BGRDiff,
     FrameDiffer,
     GrayscaleDiff,
     MotionResult)
@@ -87,6 +88,7 @@ __all__ = [
     "android",
     "apply_ocr_corrections",
     "as_precondition",
+    "BGRDiff",
     "Color",
     "ConfigurationError",
     "ConfirmMethod",

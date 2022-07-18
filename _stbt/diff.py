@@ -60,12 +60,142 @@ class FrameDiffer():
             "%s.diff is not implemented" % self.__class__.__name__)
 
 
+class BGRDiff(FrameDiffer):
+    """Compares 2 frames by calculating the color distance between them.
+
+    The algorithm is a simple euclidean distance between each pair of
+    corresponding pixels in the 2 frames. The color difference is then
+    binarized using the specified threshold: Values greater than the threshold
+    are counted as differences (that is, motion). Then, an "erode" operation
+    removes differences that are only 1 pixel wide or high. If any differences
+    remain, the 2 frames are considered different.
+
+    This is the default diffing algorithm for `find_selection_from_background`
+    and `ocr`'s `text_color`.
+    """
+
+    def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
+                 threshold=25, erode=True):
+        self.prev_frame = initial_frame
+        self.min_size = min_size
+        self.threshold = threshold
+
+        self.mask_, self.region = load_mask(mask).to_array(
+            _image_region(initial_frame), color_channels=3)
+
+        if isinstance(erode, numpy.ndarray):  # For power users
+            kernel = erode
+        elif erode:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        else:
+            kernel = None
+        self.kernel = kernel
+
+    def diff(self, frame):
+        imglog = ImageLogger("BGRDiff", region=self.region,
+                             min_size=self.min_size, threshold=self.threshold)
+        imglog.imwrite("source", frame)
+        imglog.imwrite("previous_frame", self.prev_frame)
+
+        mask_pixels = self.mask_
+        cframe = crop(frame, self.region)
+        cprev = crop(self.prev_frame, self.region)
+
+        sqd = numpy.subtract(cframe, cprev, dtype=numpy.int32)
+        sqd = (sqd[:, :, 0] ** 2 +
+               sqd[:, :, 1] ** 2 +
+               sqd[:, :, 2] ** 2)
+
+        if imglog.enabled:
+            normalised = numpy.sqrt(sqd / 3)
+            if mask_pixels is None:
+                imglog.imwrite("sqd", normalised)
+            else:
+                imglog.imwrite("sqd",
+                               normalised.astype(numpy.uint8) & mask_pixels)
+
+        d = sqd >= (self.threshold ** 2) * 3
+        if mask_pixels is not None:
+            d = numpy.logical_and(d, mask_pixels)  # pylint:disable=assignment-from-no-return
+            imglog.imwrite("mask", mask_pixels)
+        d = d.astype(numpy.uint8)
+        if imglog.enabled:
+            imglog.imwrite("thresholded", d * 255)
+
+        if self.kernel is not None:
+            d = cv2.morphologyEx(d, cv2.MORPH_OPEN, self.kernel)
+            if imglog.enabled:
+                imglog.imwrite("eroded", d * 255)
+
+        out_region = pixel_bounding_box(d)
+        if out_region:
+            # Undo crop:
+            out_region = out_region.translate(self.region)
+
+        motion = bool(out_region and (
+            self.min_size is None or
+            (out_region.width >= self.min_size[0] and
+             out_region.height >= self.min_size[1])))
+
+        if motion:
+            # Only update the comparison frame if it's different to the previous
+            # one.  This makes `detect_motion` more sensitive to slow motion
+            # because the differences between frames 1 and 2 might be small and
+            # the differences between frames 2 and 3 might be small but we'd see
+            # the difference by looking between 1 and 3.
+            self.prev_frame = frame
+
+        result = MotionResult(getattr(frame, "time", None), motion,
+                              out_region, frame)
+        ddebug(str(result))
+        imglog.html(BGRDIFF_HTML, result=result)
+        return result
+
+
+BGRDIFF_HTML = """\
+    <h4>
+      BGRDiff:
+      {{ "Found" if result.motion else "Didn't find" }} differences
+    </h4>
+
+    {{ annotated_image(result) }}
+
+    <h5>Result:</h5>
+    <pre><code>{{ result | escape }}</code></pre>
+
+    {% if result.region and not result.motion %}
+    <p>Found motion <code>{{ result.region | escape }}</code> smaller than
+    min_size <code>{{ min_size | escape }}</code>.</p>
+    {% endif %}
+
+    <h5>Previous frame:</h5>
+    <img src="previous_frame.png" />
+
+    <h5>Differences:</h5>
+    <img src="sqd.png" />
+
+    {% if "mask" in images %}
+    <h5>Mask:</h5>
+    <img src="mask.png" />
+    {% endif %}
+
+    <h5>Differences above threshold ({{threshold}}):</h5>
+    <img src="thresholded.png" />
+
+    {% if "eroded" in images %}
+    <h5>Eroded:</h5>
+    <img src="eroded.png" />
+    {% endif %}
+"""
+
+
 class GrayscaleDiff(FrameDiffer):
     """Compares 2 frames by converting them to grayscale, calculating
     pixel-wise absolute differences, and ignoring differences below a
     threshold.
 
-    This is the default `wait_for_motion` diffing algorithm.
+    This is the default diffing algorithm for `wait_for_motion` and
+    `press_and_wait`.
     """
 
     def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
@@ -181,6 +311,8 @@ GRAYSCALEDIFF_HTML = """\
     <h5>Binarized (threshold={{threshold}}):</h5>
     <img src="absdiff_threshold.png" />
 
+    {% if "eroded" in images %}
     <h5>Eroded:</h5>
     <img src="absdiff_threshold_erode.png" />
+    {% endif %}
 """
