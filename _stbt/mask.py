@@ -36,7 +36,7 @@ def load_mask(mask: MaskTypes) -> "Mask":
 
     Note that you can pass a `Region` directly to the ``mask`` parameter of
     stbt functions, and you can create more complex masks by adding,
-    subtracting, or inverting Regions (see `Region`).
+    subtracting, or inverting Regions (see :doc:`masks`).
 
     :param str|Region mask: A relative or absolute filename of a mask PNG
       image. If given a relative filename, this uses the algorithm from
@@ -60,6 +60,12 @@ def load_mask(mask: MaskTypes) -> "Mask":
 
 
 class Mask:
+    """Internal representation of a mask.
+
+    Most users will never need to use this type directly; instead, pass a
+    filename or a `Region` to the ``mask`` parameter of APIs like
+    `stbt.wait_for_motion`. See :doc:`masks`.
+    """
     def __init__(self, m: MaskTypes, *, invert: bool = False) -> None:
         """Private constructor; for public use see `load_mask`."""
         # One (and only one) of these will be set: filename, array, binop,
@@ -141,8 +147,9 @@ class Mask:
         :returns:
           A tuple of:
 
-          * An image the same size as ``region``, where masked-in pixels are
-            white (255) and masked-out pixels are black (0).
+          * An image (numpy array), where masked-in pixels are white (255) and
+            masked-out pixels are black (0). The array is the same size as
+            the region in the second member of this tuple.
           * A bounding box (`stbt.Region`) around the masked-in area. If most
             of the frame is masked out, limiting your image-processing
             operations to this region will be faster.
