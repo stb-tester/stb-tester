@@ -8,6 +8,8 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import warnings
 from typing import Optional
 
