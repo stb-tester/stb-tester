@@ -346,7 +346,9 @@ class AdbDevice():
 
         :param list logcat_args:
             Optional arguments to pass on to ``adb logcat``, such as filter
-            expressions. See the `logcat documentation
+            expressions. For example:
+            ``logcat_args=["ActivityManager:I", "MyApp:D", "*:S"]``.
+            See the `logcat documentation
             <https://developer.android.com/studio/command-line/logcat#options>`__.
         """
         collector = _LogcatCollector(filename, self, logcat_args)
