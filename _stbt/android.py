@@ -321,8 +321,7 @@ class AdbDevice():
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
     @contextmanager
-    def logcat(self, filename="logcat.log", logcat_args=None) \
-            -> Generator[None, None, None]:
+    def logcat(self, filename="logcat.log", logcat_args=None):
         """Run ``adb logcat`` and stream the logs to ``filename``.
 
         This is a context manager. You can use it as a decorator on your
