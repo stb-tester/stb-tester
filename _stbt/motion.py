@@ -45,7 +45,7 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
     :param str|numpy.ndarray|Mask|Region mask:
         A `Region` or a mask that specifies which parts of the image to
         analyse. This accepts anything that can be converted to a Mask using
-        `stbt.load_mask`. See :ref:`Masks`.
+        `stbt.load_mask`. See :doc:`masks`.
 
     :param Region region:
       Deprecated synonym for ``mask``. Use ``mask`` instead.

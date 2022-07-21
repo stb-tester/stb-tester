@@ -35,7 +35,7 @@ def is_screen_black(frame: Optional[Frame] = None,
     :param str|numpy.ndarray|Mask|Region mask:
         A `Region` or a mask that specifies which parts of the image to
         analyse. This accepts anything that can be converted to a Mask using
-        `stbt.load_mask`. See :ref:`Masks`.
+        `stbt.load_mask`. See :doc:`masks`.
 
     :param int threshold:
       Even when a video frame appears to be black, the intensity of its pixels
