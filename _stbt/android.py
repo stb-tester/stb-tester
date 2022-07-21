@@ -18,7 +18,6 @@ import time
 from collections import namedtuple
 from contextlib import contextmanager
 from logging import getLogger
-from typing import Generator
 
 from enum import Enum
 
