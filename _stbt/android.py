@@ -224,14 +224,10 @@ class AdbDevice():
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
-        (HDMI or `Stb-tester CAMERA`_) sometimes it can be useful to capture a
-        frame via ADB for debugging. This function will manipulate the ADB
-        screenshot (scale and/or rotate it) to match the screenshots from your
-        main video-capture method as closely as possible, as specified by the
-        `CoordinateSystem`.
-
-        :param CoordinateSystem coordinate_system:
-            Override the coordinate_system given to the `AdbDevice` constructor.
+        (namely, HDMI capture) sometimes it can be useful to capture a frame
+        via ADB for debugging. This function will manipulate the ADB screenshot
+        (scale and/or rotate it) to match the screenshots from your main
+        video-capture method as closely as possible.
 
         :returns: A `stbt.Frame`, that is, an image in OpenCV format. Note that
             the ``time`` attribute won't be very accurate (probably to <0.5s or
@@ -271,11 +267,9 @@ class AdbDevice():
         """Send a keypress.
 
         :param str key: An Android keycode as listed in
-            <https://developer.android.com/reference/android/view/KeyEvent.html>.
-            Particularly useful key codes are "KEYCODE_HOME" and
-            "KEYCODE_BACK", which are physical buttons on some phones so you
-            can't hit them with `AdbDevice.tap`. Also accepts standard
-            Stb-tester key names like "KEY_HOME" and "KEY_BACK".
+          <https://developer.android.com/reference/android/view/KeyEvent.html>.
+          Also accepts standard Stb-tester key names like "KEY_HOME" and
+          "KEY_BACK".
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
