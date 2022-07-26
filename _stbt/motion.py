@@ -73,6 +73,9 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
             DeprecationWarning, stacklevel=2)
         mask = region
 
+    if noise_threshold is None:
+        noise_threshold = get_config('motion', 'noise_threshold', type_=float)
+
     debug(f"Searching for motion, using mask={mask}")
 
     try:
