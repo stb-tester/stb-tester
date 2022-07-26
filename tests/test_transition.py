@@ -129,6 +129,8 @@ def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
      stbt.TransitionStatus.STABLE_TIMEOUT),
     (stbt.Region.ALL, (0, 32), stbt.TransitionStatus.START_TIMEOUT),
     (stbt.Region.ALL, (0, 10), stbt.TransitionStatus.STABLE_TIMEOUT),
+    (~stbt.Region(x=10, y=340, right=640, bottom=380), None,
+     stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
 def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
                                             diff_algorithm):

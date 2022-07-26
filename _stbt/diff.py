@@ -3,7 +3,6 @@
 import cv2
 import numpy
 
-from .config import get_config
 from .imgutils import crop, _frame_repr, _image_region, pixel_bounding_box
 from .logging import ddebug, ImageLogger
 from .mask import load_mask
@@ -81,7 +80,7 @@ class BGRDiff(FrameDiffer):
         self.threshold = threshold
 
         self.mask_, self.region = load_mask(mask).to_array(
-            _image_region(initial_frame), color_channels=3)
+            _image_region(initial_frame))
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
@@ -105,6 +104,7 @@ class BGRDiff(FrameDiffer):
         sqd = (sqd[:, :, 0] ** 2 +
                sqd[:, :, 1] ** 2 +
                sqd[:, :, 2] ** 2)
+        sqd = sqd.reshape(sqd.shape + (1,))
 
         if imglog.enabled:
             normalised = numpy.sqrt(sqd / 3)
@@ -199,16 +199,13 @@ class GrayscaleDiff(FrameDiffer):
     """
 
     def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
-                 threshold=None, erode=True):
+                 threshold=0.84, erode=True):
         self.prev_frame = initial_frame
         self.min_size = min_size
+        self.threshold = threshold
 
         self.mask_, self.region = load_mask(mask).to_array(
             _image_region(initial_frame))
-
-        if threshold is None:
-            threshold = get_config('motion', 'noise_threshold', type_=float)
-        self.threshold = threshold
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
