@@ -81,7 +81,7 @@ class BGRDiff(FrameDiffer):
         self.threshold = threshold
 
         self.mask_, self.region = load_mask(mask).to_array(
-            _image_region(initial_frame), color_channels=3)
+            _image_region(initial_frame))
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
@@ -105,6 +105,7 @@ class BGRDiff(FrameDiffer):
         sqd = (sqd[:, :, 0] ** 2 +
                sqd[:, :, 1] ** 2 +
                sqd[:, :, 2] ** 2)
+        sqd = sqd.reshape(sqd.shape + (1,))
 
         if imglog.enabled:
             normalised = numpy.sqrt(sqd / 3)
