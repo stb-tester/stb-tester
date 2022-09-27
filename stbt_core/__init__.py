@@ -9,22 +9,18 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 from contextlib import contextmanager
 
+from _stbt import android
 from _stbt.black import (
     is_screen_black)
 from _stbt.config import (
     ConfigurationError,
     get_config)
 from _stbt.diff import (
+    BGRDiff,
     FrameDiffer,
-    MotionDiff,
+    GrayscaleDiff,
     MotionResult)
 from _stbt.frameobject import (
     for_object_repository,
@@ -32,7 +28,9 @@ from _stbt.frameobject import (
 from _stbt.grid import (
     Grid)
 from _stbt.imgutils import (
+    Color,
     crop,
+    find_file,
     Frame,
     Image,
     load_image,
@@ -41,6 +39,10 @@ from _stbt.keyboard import (
     Keyboard)
 from _stbt.logging import (
     debug)
+from _stbt.mask import (
+    load_mask,
+    Mask,
+    MaskTypes)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -54,6 +56,8 @@ from _stbt.motion import (
     detect_motion,
     MotionTimeout,
     wait_for_motion)
+from _stbt.multipress import (
+    MultiPress)
 from _stbt.ocr import (
     apply_ocr_corrections,
     match_text,
@@ -67,29 +71,33 @@ from _stbt.precondition import (
     PreconditionError)
 from _stbt.transition import (
     press_and_wait,
-    StrictDiff,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
+    Direction,
     NoVideo,
     Position,
     Region,
+    Size,
     UITestError,
     UITestFailure)
-from _stbt.utils import (
-    to_native_str)
 from _stbt.wait import (
     wait_until)
 
-__all__ = [to_native_str(x) for x in [
+__all__ = [
+    "android",
     "apply_ocr_corrections",
     "as_precondition",
+    "BGRDiff",
+    "Color",
     "ConfigurationError",
     "ConfirmMethod",
     "crop",
     "debug",
     "detect_motion",
+    "Direction",
     "draw_text",
+    "find_file",
     "for_object_repository",
     "Frame",
     "FrameDiffer",
@@ -97,12 +105,16 @@ __all__ = [to_native_str(x) for x in [
     "frames",
     "get_config",
     "get_frame",
+    "GrayscaleDiff",
     "Grid",
     "Image",
     "is_screen_black",
     "Keyboard",
     "last_keypress",
     "load_image",
+    "load_mask",
+    "Mask",
+    "MaskTypes",
     "match",
     "match_all",
     "match_text",
@@ -110,9 +122,9 @@ __all__ = [to_native_str(x) for x in [
     "MatchParameters",
     "MatchResult",
     "MatchTimeout",
-    "MotionDiff",
     "MotionResult",
     "MotionTimeout",
+    "MultiPress",
     "NoVideo",
     "ocr",
     "OcrEngine",
@@ -126,7 +138,7 @@ __all__ = [to_native_str(x) for x in [
     "Region",
     "save_frame",
     "set_global_ocr_corrections",
-    "StrictDiff",
+    "Size",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",
@@ -135,7 +147,7 @@ __all__ = [to_native_str(x) for x in [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
-]]
+]
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -195,9 +207,8 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
           `stbt.press_and_wait` to detect when the device-under-test reacted to
           the keypress.
 
-    * Added in v29: The ``hold_secs`` parameter.
-    * Added in v30: Returns an object with keypress timings, instead of
-      ``None``.
+    * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
+      value, which must be a string).
     """
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
@@ -270,12 +281,23 @@ def press_until_match(
 def frames(timeout_secs=None):
     """Generator that yields video frames captured from the device-under-test.
 
+    For example::
+
+        for frame in stbt.frames():
+            # Do something with each frame here.
+            # Remember to add a termination condition to `break` or `return`
+            # from the loop, or specify `timeout_secs` — otherwise you'll have
+            # an infinite loop!
+            ...
+
+    See also `stbt.get_frame`.
+
     :type timeout_secs: int or float or None
     :param timeout_secs:
       A timeout in seconds. After this timeout the iterator will be exhausted.
-      That is, a ``for`` loop like ``for f in frames(timeout_secs=10)`` will
-      terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the default)
-      then the iterator will yield frames forever. Note that you can stop
+      That is, a ``for`` loop like ``for f in stbt.frames(timeout_secs=10)``
+      will terminate after 10 seconds. If ``timeout_secs`` is ``None`` (the
+      default) then the iterator will yield frames forever but you can stop
       iterating (for example with ``break``) at any time.
 
     :rtype: Iterator[stbt.Frame]
@@ -286,9 +308,21 @@ def frames(timeout_secs=None):
 
 
 def get_frame():
-    """Grabs a video frame captured from the device-under-test.
+    """Grabs a video frame from the device-under-test.
 
-    :returns: The latest video frame in OpenCV format (a `stbt.Frame`).
+    :rtype: stbt.Frame
+    :returns: The most recent video frame in OpenCV format.
+
+    Most Stb-tester APIs (`stbt.match`, `stbt.FrameObject` constructors, etc.)
+    will call ``get_frame`` if a frame isn't specified explicitly.
+
+    If you call ``get_frame`` twice very quickly (faster than the video-capture
+    framerate) you might get the same frame twice. To block until the next
+    frame is available, use `stbt.frames`.
+
+    To save a frame to disk pass it to :ocv:pyfunc:`cv2.imwrite`. Note that any
+    file you write to the current working directory will appear as an artifact
+    in the test-run results.
     """
     return _dut.get_frame()
 
@@ -296,8 +330,7 @@ def get_frame():
 # Internal
 # ===========================================================================
 
-class UnconfiguredDeviceUnderTest(object):
-    # pylint:disable=unused-argument
+class UnconfiguredDeviceUnderTest():
     def last_keypress(self):
         return None
 
@@ -310,8 +343,10 @@ class UnconfiguredDeviceUnderTest(object):
             "stbt.pressing isn't configured to run on your hardware")
 
     def draw_text(self, *args, **kwargs):
-        raise RuntimeError(
-            "stbt.draw_text isn't configured to run on your hardware")
+        # Unlike the others this has no external side-effects on the device
+        # under test. `stbt.draw_text` already logs it before calling
+        # `_dut.draw_text`. Really this shouldn't belong in the DUT at all.
+        pass
 
     def press_until_match(self, *args, **kwargs):
         raise RuntimeError(

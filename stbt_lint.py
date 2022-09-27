@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright 2014-2017 Stb-tester.com Ltd.
 # Copyright 2013 YouView TV Ltd.
@@ -25,14 +25,13 @@
 * E7007: FrameObject properties must not have side-effects that change
   the state of the device-under-test by calling "stbt.press()" or
   "stbt.press_and_wait()".
-* E7008: "assert True" has no effect.
+* E7008: "assert True" has no effect; consider replacing it with a
+  comment or a call to "logging.info()".
+* E7009: FrameObjects are immutable, so \"refresh()\" doesn't modify the
+  instance you call it on; it returns a new instance. For example,
+  instead of "page.refresh()" you need to use "page = page.refresh()".
 
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import subprocess
@@ -52,15 +51,12 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    if sys.version_info.major == 2:
-        executable_name = "pylint"
-    else:
-        executable_name = "pylint3"
+    executable_name = "pylint"
 
     try:
-        with open("/dev/null", "w") as devnull:
-            subprocess.check_call([executable_name, "--help"],
-                                  stdout=devnull, stderr=devnull)
+        subprocess.check_call([executable_name, "--help"],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
     except OSError as e:
         if e.errno == 2:
             sys.stderr.write(
@@ -69,7 +65,7 @@ def main(argv):
             return 1
 
     return subprocess.call(
-        [executable_name, "--load-plugins=stbt_core.pylint_plugin"] +
+        [executable_name, "--load-plugins=_stbt.pylint_plugin"] +
         pylint_args)
 
 

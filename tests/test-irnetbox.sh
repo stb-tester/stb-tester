@@ -82,18 +82,16 @@ test_that_press_waits_for_irnetbox_async_complete() {
 
     cat > test.py <<-EOF
 	import time, stbt_core as stbt
-	print("Before press: %d" % time.time())
+	before = time.time()
+	print("Before press: %d" % before)
 	stbt.press("MENU")
-	print("After press: %d" % time.time())
+	after = time.time()
+	print("After press: %d" % after)
+	assert after - before > 1, "'press' returned too quickly"
 	EOF
     stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
-        test.py || return
-
-    before=$(cat log | awk '/Before press/ {print $3}')
-    after=$(cat log | awk '/After press/ {print $3}')
-    [[ $((after - before)) -gt 1 ]] ||
-        fail "'press' returned too quickly (before: $before; after: $after)"
+        test.py
 }
 
 test_that_press_times_out_when_irnetbox_doesnt_reply() {
@@ -106,5 +104,6 @@ test_that_press_times_out_when_irnetbox_doesnt_reply() {
     ! stbt run -v \
         --control irnetbox:localhost:$irnetbox_port:1:"$testdir"/irnetbox.conf \
         test.py || fail "Expected 'press' to raise exception"
-    cat log | grep -q timeout || fail "Didn't raise timeout"
+    cat log | grep -Eq 'socket.timeout|TimeoutError' ||
+        fail "Didn't raise TimeoutError"
 }

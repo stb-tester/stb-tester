@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    timeout 10 stbt run -v --control asdf test.py
+    $timeout 10 stbt run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
@@ -81,7 +81,7 @@ test_that_frames_doesnt_time_out() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    timeout 12 stbt run -v test.py
+    $timeout 12 stbt run -v test.py
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
@@ -145,7 +145,7 @@ test_using_frames_to_measure_black_screen() {
 }
 
 test_that_frames_doesnt_deadlock() {
-    cat > test.py <<-EOF &&
+    cat > test.py <<-EOF
 	import stbt_core as stbt
 	for frame in stbt.frames():
 	    print(frame.time)
@@ -160,10 +160,8 @@ test_that_frames_doesnt_deadlock() {
 	frames3 = stbt.frames()
 	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
-    timeout 10 stbt run -v test.py &&
-
-    cat > test2.py <<-EOF
-EOF
+    local t
+    $timeout 10 stbt run -v test.py
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
@@ -193,28 +191,15 @@ test_that_is_screen_black_threshold_parameter_overrides_default() {
 }
 
 test_that_video_index_is_written_on_eos() {
-    which python2 || skip "Requires Python 2"
-
-    _test_that_video_index_is_written_on_eos 5 && return
-    echo "Failed with 5s video; trying again with 20s video"
-    _test_that_video_index_is_written_on_eos 20
-}
-_test_that_video_index_is_written_on_eos() {
     cat > test.py <<-EOF &&
 	import time
-	time.sleep($1)
+	time.sleep(1)
 	EOF
     stbt run -v \
         --sink-pipeline \
-            "queue ! vp8enc cpu-used=6 ! webmmux ! filesink location=video.webm" \
+            "queue ! x264enc ! mp4mux ! filesink location=video.mp4" \
         test.py &&
-    python2 "$testdir"/webminspector/webminspector.py video.webm \
-        &> webminspector.log &&
-    grep "Cue Point" webminspector.log || {
-      cat webminspector.log
-      echo "error: Didn't find 'Cue Point' in $scratchdir/webminspector.log"
-      return 1
-    }
+    gst-launch-1.0 filesrc location=video.mp4 ! qtdemux ! fakesink
 }
 
 test_save_video() {
@@ -229,7 +214,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    timeout 10 stbt run -v --control none \
+    $timeout 10 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
@@ -284,9 +269,8 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, distutils, sys; \
-        sys.exit(0 if (_stbt.ocr._tesseract_version() \
-                       >= distutils.version.LooseVersion('3.03')) else 77)"
+    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, sys; \
+        sys.exit(0 if _stbt.ocr._tesseract_version() >= [3, 3] else 77)"
     case $? in
         0) true;;
         77) skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'";;
@@ -397,7 +381,7 @@ test_that_frames_are_read_only() {
 
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
-	import stbt_core as stbt, time
+	import stbt_core as stbt, os, time
 
 	f = stbt.get_frame()
 	t = time.time()
@@ -471,6 +455,26 @@ test_template_annotation_with_ndarray_template() {
 }
 
 test_draw_text() {
+    # On CircleCI this is failing often (always?) with first_pass_result=0.9519.
+    #
+    # For comparison:
+    #
+    #     $ ./stbt_match.py -v tests/white-full-frame.png tests/draw-text.png
+    #     first_pass_result=0.2688
+    #
+    #     $ ./stbt_match.py -v tests/black-full-frame.png tests/draw-text.png
+    #     first_pass_result=0.9138
+    #
+    # This is slightly higher than white-full-frame.png because it matches part
+    # of the black background behind the time that we draw on the video; but
+    # it's still less than 0.95:
+    #
+    #     $ cat test.py
+    #     import stbt_core as stbt
+    #     stbt.wait_for_match("tests/draw-text.png")
+    #     $ ./stbt_run.py -v --source-pipeline 'videotestsrc pattern=white' test.py
+    #     first_pass_result=0.2816
+    #
     cat > draw-text.py <<-EOF &&
 	import stbt_core as stbt
 	from time import sleep
@@ -478,8 +482,8 @@ test_draw_text() {
 	sleep(60)
 	EOF
     cat > verify-draw-text.py <<-EOF &&
-	import stbt_core as stbt
-	stbt.wait_for_match("$testdir/draw-text.png")
+	import os, stbt_core as stbt
+	stbt.wait_for_match("$testdir/draw-text.png", timeout_secs=10)
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 

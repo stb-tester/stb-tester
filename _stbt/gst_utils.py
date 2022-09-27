@@ -1,11 +1,6 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import ctypes
 import sys
-from functools import reduce  # pylint:disable=redefined-builtin
+from functools import reduce
 
 import gi
 
@@ -40,7 +35,7 @@ def sample_shape(sample):
         return (sample_get_size(sample),)
 
 
-class _MappedSample(object):
+class _MappedSample():
     """
     Implements the numpy array interface for a GstSample, taking care to unmap
     in its destructor.  This allows us to create numpy arrays backed by the
@@ -76,7 +71,7 @@ class _MappedSample(object):
 
     def __del__(self):
         self.__array_interface__ = None
-        if self._ctx:
+        if self._ctx:  # pylint:disable=using-constant-test
             self._ctx.__exit__(None, None, None)
 
 
@@ -182,7 +177,7 @@ def _appsrc_push_data(appsrc, data, pts=0, duration=0):
     appsrc.emit('push-buffer', buf)
 
 
-class PipelineRunner(object):
+class PipelineRunner():
     """Provides an easy way to run a pre-constructed Gstreamer pipeline much
     like gst-launch"""
     def __init__(self, pipeline, stop_pos=None):

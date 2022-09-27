@@ -8,34 +8,27 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import native, raise_, string_types
-
 import argparse
 import datetime
 import sys
 import threading
-import traceback
 import warnings
 import weakref
 from collections import deque, namedtuple
 from contextlib import contextmanager
+from enum import Enum
 
 import cv2
 import gi
 
-import _stbt.cv2_compat as cv2_compat
+from _stbt import cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
 from _stbt.imgutils import _frame_repr, Frame
-from _stbt.logging import _Annotation, ddebug, debug, warn
+from _stbt.logging import _Annotation, debug, warn
 from _stbt.types import NoVideo, Region
-from _stbt.utils import text_type, to_native_str, to_unicode
+from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
@@ -43,8 +36,7 @@ from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
 Gst.init(None)
 
 warnings.filterwarnings(
-    action="always", category=DeprecationWarning, message='.*stb-tester')
-
+    action="default", category=DeprecationWarning, module=r"_stbt")
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -88,12 +80,12 @@ def new_device_under_test_from_config(parsed_args=None):
         sink_pipeline=sink_pipeline, mainloop=mainloop)
 
 
-class DeviceUnderTest(object):
+class DeviceUnderTest():
     def __init__(self, display=None, control=None, sink_pipeline=None,
                  mainloop=None, _time=None):
         if _time is None:
             import time as _time
-        self._time_of_last_press = None
+        self._time_of_last_press = 0
         self._display = display
         self._control = control
         self._sink_pipeline = sink_pipeline
@@ -122,6 +114,9 @@ class DeviceUnderTest(object):
         return self._last_keypress
 
     def press(self, key, interpress_delay_secs=None, hold_secs=None):
+        if isinstance(key, Enum):
+            key = key.value
+
         if hold_secs is not None and hold_secs > 60:
             # You must ensure that lircd's --repeat-max is set high enough.
             raise ValueError("press: hold_secs must be less than 60 seconds")
@@ -145,6 +140,9 @@ class DeviceUnderTest(object):
 
     @contextmanager
     def pressing(self, key, interpress_delay_secs=None):
+        if isinstance(key, Enum):
+            key = key.value
+
         with self._interpress_delay(interpress_delay_secs):
             out = _Keypress(key, self._time.time(), None, self.get_frame())
             try:
@@ -152,7 +150,7 @@ class DeviceUnderTest(object):
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 self._last_keypress = out
                 yield out
-            except:  # pylint:disable=bare-except
+            except:
                 exc_info = sys.exc_info()
                 try:
                     self._control.keyup(key)
@@ -160,7 +158,7 @@ class DeviceUnderTest(object):
                 except Exception:  # pylint:disable=broad-except
                     # Don't mask original exception from the test script.
                     pass
-                raise_(exc_info[0], exc_info[1], exc_info[2])
+                raise exc_info[1].with_traceback(exc_info[2])
             else:
                 self._control.keyup(key)
                 out.end_time = self._time.time()
@@ -171,23 +169,21 @@ class DeviceUnderTest(object):
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
-        if self._time_of_last_press is not None:
-            # `sleep` is inside a `while` loop because the actual suspension
-            # time of `sleep` may be less than that requested.
-            while True:
-                seconds_to_wait = (
-                    self._time_of_last_press - datetime.datetime.now() +
-                    datetime.timedelta(seconds=interpress_delay_secs)
-                ).total_seconds()
-                if seconds_to_wait > 0:
-                    self._time.sleep(seconds_to_wait)
-                else:
-                    break
+        # `sleep` is inside a `while` loop because the actual suspension
+        # time of `sleep` may be less than that requested.
+        while True:
+            seconds_to_wait = (
+                self._time_of_last_press - self._time.time() +
+                interpress_delay_secs)
+            if seconds_to_wait > 0:
+                self._time.sleep(seconds_to_wait)
+            else:
+                break
 
         try:
             yield
         finally:
-            self._time_of_last_press = datetime.datetime.now()
+            self._time_of_last_press = self._time.time()
 
     def draw_text(self, text, duration_secs=3):
         self._sink_pipeline.draw(text, duration_secs)
@@ -233,10 +229,8 @@ class DeviceUnderTest(object):
         first = True
 
         while True:
-            ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
                 max(10, timeout_secs or 0), since=timestamp)
-            ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
             if not first and timeout_secs is not None and timestamp > end_time:
@@ -253,7 +247,7 @@ class DeviceUnderTest(object):
         return self._display.get_frame()
 
 
-class _Keypress(object):
+class _Keypress():
     def __init__(self, key, start_time, end_time, frame_before):
         self.key = key
         self.start_time = start_time
@@ -314,7 +308,7 @@ def _mainloop():
         mainloop.quit()
         thread.join(10)
         debug("teardown: Exiting (GLib mainloop %s)" % (
-              "is still alive!" if thread.isAlive() else "ok"))
+              "is still alive!" if thread.is_alive() else "ok"))
 
 
 def _draw_annotation(img, annotation):
@@ -337,7 +331,7 @@ class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
         return self.time + self.duration
 
 
-class SinkPipeline(object):
+class SinkPipeline():
     def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
         import time as _time
 
@@ -499,7 +493,7 @@ class SinkPipeline(object):
         for i, x in enumerate(reversed(current_texts)):
             origin = (10, (i + 2) * 30)
             age = float(now - x.time) / 3
-            color = (native(int(255 * max([1 - age, 0.5]))).__int__(),) * 3
+            color = (int(255 * max([1 - age, 0.5])),) * 3
             _draw_text(img, x.text, origin, color)
 
         # Regions:
@@ -525,7 +519,7 @@ class SinkPipeline(object):
 
     def draw(self, obj, duration_secs=None, label=""):
         with self.annotations_lock:
-            if isinstance(obj, string_types):
+            if isinstance(obj, str):
                 start_time = self._time.time()
                 text = (
                     to_unicode(
@@ -544,7 +538,7 @@ class SinkPipeline(object):
                     "Can't draw object of type '%s'" % type(obj).__name__)
 
 
-class NoSinkPipeline(object):
+class NoSinkPipeline():
     """
     Used in place of a SinkPipeline when no video output is required.  Is a lot
     faster because it doesn't do anything.  It especially doesn't do any copying
@@ -566,7 +560,7 @@ class NoSinkPipeline(object):
         pass
 
 
-class Display(object):
+class Display():
     def __init__(self, user_source_pipeline, sink_pipeline):
 
         import time
@@ -626,7 +620,7 @@ class Display(object):
                 Gst.StateChangeReturn.NO_PREROLL):
             # This is a live source, drop frames if we get behind
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', to_native_str('downstream'))
+                .set_property('leaky', to_unicode('downstream'))
             self.source_pipeline.get_by_name('appsink') \
                 .set_property('sync', False)
 
@@ -648,9 +642,9 @@ class Display(object):
                     self.last_used_frame = self.last_frame
                     return self.last_frame
                 elif isinstance(self.last_frame, NoVideo):
-                    raise NoVideo(text_type(self.last_frame))
+                    raise NoVideo(str(self.last_frame))
                 elif isinstance(self.last_frame, Exception):
-                    raise RuntimeError(text_type(self.last_frame))
+                    raise RuntimeError(str(self.last_frame))
                 t = time.time()
                 if t > end_time:
                     break
@@ -678,7 +672,7 @@ class Display(object):
         frame.flags.writeable = False
 
         # See also: logging.draw_on
-        frame._draw_sink = weakref.ref(self._sink_pipeline)  # pylint: disable=protected-access
+        frame._draw_sink = weakref.ref(self._sink_pipeline)
         self.tell_user_thread(frame)
         self._sink_pipeline.on_sample(sample)
         return Gst.FlowReturn.OK
@@ -687,13 +681,6 @@ class Display(object):
         # `self.last_frame` is how we communicate from this thread (the GLib
         # main loop) to the main application thread running the user's script.
         # Note that only this thread writes to self.last_frame.
-
-        if isinstance(frame_or_exception, Exception):
-            ddebug("glib thread: reporting exception to user thread: %s" %
-                   frame_or_exception)
-        else:
-            ddebug("glib thread: new sample (time=%s)." %
-                   frame_or_exception.time)
 
         with self._condition:
             self.last_frame = frame_or_exception

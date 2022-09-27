@@ -1,21 +1,16 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
+import warnings
 from collections import deque
 
 from .config import ConfigurationError, get_config
-from .diff import MotionDiff
-from .imgutils import limit_time, load_image
+from .diff import GrayscaleDiff
+from .imgutils import limit_time
 from .logging import debug, draw_on
 from .types import Region, UITestFailure
 
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
+def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
                   region=Region.ALL, frames=None):
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
@@ -47,25 +42,21 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         setting ``noise_threshold`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
-    :type mask: str or `numpy.ndarray`
-    :param mask:
-        A black & white image that specifies which part of the image to search
-        for motion. White pixels select the area to analyse; black pixels select
-        the area to ignore.
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :doc:`masks`.
 
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
+    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
+        Defaults to ``stbt.frames()``.
 
-    :type region: `Region`
-    :param region:
-        Only analyze the specified region of the video frame.
-
-    :type frames: Iterator[stbt.Frame]
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        ``stbt.frames()``.
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if frames is None:
         import stbt_core
@@ -73,18 +64,26 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
 
     frames = limit_time(frames, timeout_secs)  # pylint: disable=redefined-variable-type
 
-    debug("Searching for motion")
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.detect_motion: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
+        mask = region
 
-    if mask is not None:
-        mask = load_image(mask, color_channels=1)
-        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
+    if noise_threshold is None:
+        noise_threshold = get_config('motion', 'noise_threshold', type_=float)
+
+    debug(f"Searching for motion, using mask={mask}")
 
     try:
         frame = next(frames)
     except StopIteration:
         return
 
-    differ = MotionDiff(frame, region, mask, noise_threshold=noise_threshold)
+    differ = detect_motion.differ(frame, mask, threshold=noise_threshold)
     for frame in frames:
         result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")
@@ -93,9 +92,12 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=None,
         yield result
 
 
+detect_motion.differ = GrayscaleDiff
+
+
 def wait_for_motion(
         timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=None, region=Region.ALL, frames=None):
+        noise_threshold=None, mask=Region.ALL, region=Region.ALL, frames=None):
     """Search for motion in the device-under-test's video stream.
 
     "Motion" is difference in pixel values between two frames.
@@ -119,18 +121,20 @@ def wait_for_motion(
         :ref:`.stbt.conf`.
 
     :param float noise_threshold: See `detect_motion`.
-
-    :param mask: See `detect_motion`.
-
-    :param region: See `detect_motion`.
-
-    :param frames: See `detect_motion`.
+    :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
+    :param Region region: See `detect_motion`.
+    :param Iterator[stbt.Frame] frames: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
         which motion was detected.
     :raises: `MotionTimeout` if no motion is detected after ``timeout_secs``
         seconds.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if frames is None:
         import stbt_core
@@ -151,18 +155,23 @@ def wait_for_motion(
         raise ConfigurationError(
             "`motion_frames` exceeds `considered_frames`")
 
-    debug("Waiting for %d out of %d frames with motion" % (
-        motion_frames, considered_frames))
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.wait_for_motion: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
+        mask = region
 
-    if mask is not None:
-        mask = load_image(mask, color_channels=1)
-        debug("Using mask %s" % (mask.relative_filename or "<Image>"))
+    debug("Waiting for %d out of %d frames with motion, using mask=%r" % (
+        motion_frames, considered_frames, mask))
 
     matches = deque(maxlen=considered_frames)
     motion_count = 0
     last_frame = None
     for res in detect_motion(
-            timeout_secs, noise_threshold, mask, region, frames):
+            timeout_secs, noise_threshold, mask, frames=frames):
         motion_count += bool(res)
         if len(matches) == matches.maxlen:
             motion_count -= bool(matches.popleft())
@@ -178,9 +187,7 @@ def wait_for_motion(
                            "should never be reached")
         last_frame = res.frame
 
-    raise MotionTimeout(last_frame,
-                        None if mask is None else mask.relative_filename,
-                        timeout_secs)
+    raise MotionTimeout(last_frame, mask, timeout_secs)
 
 
 class MotionTimeout(UITestFailure):
@@ -189,19 +196,18 @@ class MotionTimeout(UITestFailure):
     :ivar Frame screenshot: The last video frame that `wait_for_motion` checked
         before timing out.
 
-    :vartype mask: str or None
-    :ivar mask: Filename of the mask that was used, if any.
+    :vartype mask: Mask or None
+    :ivar mask: The mask that was used, if any.
 
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that motion was searched for.
     """
     def __init__(self, screenshot, mask, timeout_secs):
-        super(MotionTimeout, self).__init__()
+        super().__init__()
         self.screenshot = screenshot
         self.mask = mask
         self.timeout_secs = timeout_secs
 
     def __str__(self):
-        return "Didn't find motion%s within %g seconds." % (
-            " (with mask '%s')" % self.mask if self.mask else "",
-            self.timeout_secs)
+        return "Didn't find motion within %g seconds, using mask=%r" % (
+            self.timeout_secs, self.mask)

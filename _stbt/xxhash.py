@@ -4,19 +4,12 @@ a non-cryptographic hash that is *fast*.  In my experiments hashing a 720p image
 with xxhash takes ~242us, whereas using hash() builtin or hashlib.sha1 takes
 >3ms.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import binascii
 import ctypes
-import os
 import struct
-import sys
 
-_libxxhash = ctypes.CDLL(
-    os.path.dirname(os.path.abspath(__file__)) + "/libxxhash.so")
+_libxxhash = ctypes.CDLL("libxxhash.so.0")
 
 _XXH_errorcode = ctypes.c_int
 _XXH64_hash_t = ctypes.c_ulonglong
@@ -51,7 +44,7 @@ _libxxhash.XXH64_digest.argtypes = [_XXH64_state_t]
 _libxxhash.XXH64_digest.restype = _XXH64_hash_t
 
 
-class Xxhash64(object):
+class Xxhash64():
     __slots__ = ["_state"]
     digest_size = 16
     name = "xxhash64"
@@ -66,10 +59,7 @@ class Xxhash64(object):
     def update(self, data):
         # Passing a buffer/memoryview object via ctypes is inconvenient.  See
         # http://thread.gmane.org/gmane.comp.python.devel/134936/focus=134941
-        if sys.version_info.major == 2:  # Python 2
-            buf = buffer(data)  # pylint:disable=undefined-variable
-        else:  # Python 3
-            buf = memoryview(data)
+        buf = memoryview(data)
         address = ctypes.c_void_p()
         length = ctypes.c_ssize_t()
         ctypes.pythonapi.PyObject_AsReadBuffer(

@@ -43,11 +43,6 @@ RemoteControlConfig
     ir.irsend_raw(port=1, power=100, data=rcu["POWER"])
 
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import binascii
 import errno
@@ -59,7 +54,7 @@ import sys
 import time
 
 
-class IRNetBox(object):
+class IRNetBox():
     def __init__(self, hostname, port=10001):  # §5
         for i in range(6):
             try:
@@ -214,7 +209,7 @@ def RemoteControlConfig(filename):
     return _parse_config(open(filename, "rb"))
 
 
-class MessageTypes(object):
+class MessageTypes():
     """§5.2"""
     ERROR = 0x01
     POWER_ON = 0x05
@@ -228,7 +223,7 @@ class MessageTypes(object):
     IR_ASYNC_COMPLETE = 0x31
 
 
-class NetBoxTypes(object):
+class NetBoxTypes():
     """§5.2.6"""
     MK1 = 2
     MK2 = 7
@@ -335,7 +330,6 @@ def test_that_read_responses_doesnt_hang_on_incomplete_data():
 def test_that_parse_config_understands_redrat_format():
     import io
 
-    # pylint:disable=line-too-long
     f = io.BytesIO(
         re.sub(
             b"^ +", b"", flags=re.MULTILINE,
@@ -356,7 +350,7 @@ def test_that_parse_config_understands_redrat_format():
     assert config["RED"].startswith(b"\x00\x02\xBC\xAF")
 
 
-class _FileToSocket(object):
+class _FileToSocket():
     """Makes something File-like behave like a Socket for testing purposes.
 
     >>> import io

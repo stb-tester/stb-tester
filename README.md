@@ -5,9 +5,7 @@
 * Copyright © 2013-2019 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
-* <a href="https://circleci.com/gh/stb-tester/stb-tester/tree/master">
-    <img src="https://circleci.com/gh/stb-tester/stb-tester/tree/master.svg?style=svg">
-  </a>
+* <img src="https://github.com/stb-tester/stb-tester/actions/workflows/ubuntu2204.yml/badge.svg">
 
 Stb-tester issues commands to the device-under-test in the same way a real user
 does (typically using an infrared remote control).

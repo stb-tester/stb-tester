@@ -147,7 +147,7 @@ test_that_stbt_run_exits_on_ctrl_c() {
     exit_status=$?
 
     case $exit_status in
-        1)  cat log | grep -q "No beer left" &&
+        1|130)  cat log | grep -q "No beer left" &&
                 fail "Test script should not have completed" ||
             return 0
             ;;
@@ -322,6 +322,20 @@ check_unicode_error() {
             fail "Didn't find line: «$line»";
         }
     done
+}
+
+test_that_stbt_run_can_print_ioerror() {
+    cat > test.py <<-EOF
+	open("nonexistent")
+	EOF
+    ! stbt run test.py &&
+    assert_log "FileNotFoundError: [Errno 2] No such file or directory: 'nonexistent'"
+
+    cat > test.py <<-EOF
+	open("nönexistent")
+	EOF
+    ! env LANG=C.UTF-8 stbt run test.py &&
+    assert_log "FileNotFoundError: [Errno 2] No such file or directory: 'nönexistent'"
 }
 
 test_that_error_control_raises_exception() {

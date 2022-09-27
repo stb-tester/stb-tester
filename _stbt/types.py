@@ -1,19 +1,30 @@
 # coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import with_metaclass
-
 from collections import namedtuple
+from enum import Enum
 
 
 class Position(namedtuple('Position', 'x y')):
     """A point with ``x`` and ``y`` coordinates."""
     pass
+
+
+class Size(namedtuple('Size', 'width height')):
+    """Size of a rectangle with ``width`` and ``height``."""
+
+
+class Direction(Enum):
+
+    #: Process the image from left to right
+    HORIZONTAL = "horizontal"
+
+    #: Process the image from top to bottom
+    VERTICAL = "vertical"
+
+    # For nicer formatting in generated API documentation:
+    def __repr__(self):
+        return str(self)
 
 
 class _RegionClsMethods(type):
@@ -55,8 +66,8 @@ class _RegionClsMethods(type):
             max(r.bottom for r in args))
 
 
-class Region(with_metaclass(_RegionClsMethods,
-                            namedtuple('Region', 'x y right bottom'))):
+class Region(namedtuple('Region', 'x y right bottom'),
+             metaclass=_RegionClsMethods):
     r"""
     ``Region(x, y, width=width, height=height)`` or
     ``Region(x, y, right=right, bottom=bottom)``
@@ -212,9 +223,6 @@ class Region(with_metaclass(_RegionClsMethods,
         ...     Region.bounding_box(a, Region.bounding_box(b, c))
         True
 
-        Changed in v30: ``bounding_box`` can take an arbitrary number of region
-        arguments, rather than exactly two.
-
     .. py:staticmethod:: intersect(*args)
 
         :returns: The intersection of the passed regions, or ``None`` if the
@@ -222,10 +230,6 @@ class Region(with_metaclass(_RegionClsMethods,
 
         Any parameter can be ``None`` (an empty Region) so intersect is
         commutative and associative.
-
-        Changed in v30: ``intersect`` can take an arbitrary number of region
-        arguments, rather than exactly two.
-
     """
     def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         if (width is None) == (right is None):
@@ -250,6 +254,36 @@ class Region(with_metaclass(_RegionClsMethods,
         else:
             return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
                 % (self.x, self.y, self.right, self.bottom)
+
+    def __add__(self, other):
+        """Adding 2 or more Regions together creates a mask with the pixels
+        inside those Regions selected; all other pixels ignored."""
+        from .mask import Mask
+        return Mask(self).__add__(other)
+
+    def __radd__(self, other):
+        """Adding 2 or more Regions together creates a mask with the pixels
+        inside those Regions selected; all other pixels ignored."""
+        from .mask import Mask
+        return Mask(self).__radd__(other)
+
+    def __sub__(self, other):
+        """Subtracting a Region removes that Region's pixels from the mask
+        (so those pixels will be ignored)."""
+        from .mask import Mask
+        return Mask(self).__sub__(other)
+
+    def __rsub__(self, other):
+        """Subtracting a Region removes that Region's pixels from the mask
+        (so those pixels will be ignored)."""
+        from .mask import Mask
+        return Mask(self).__rsub__(other)
+
+    def __invert__(self):
+        """Inverting a Region creates a mask with the Region's pixels ignored,
+        and the pixels outside the Region selected."""
+        from .mask import Mask
+        return Mask(self, invert=True)
 
     @property
     def width(self):

@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import enum
 import os
 from contextlib import contextmanager
@@ -12,27 +7,26 @@ import pytest
 
 from _stbt.config import (_config_init, _sponge, ConfigurationError,
                           get_config, set_config)
-from _stbt.utils import (named_temporary_directory, scoped_curdir, text_type,
-                         to_native_str)
+from _stbt.utils import named_temporary_directory, scoped_curdir, to_unicode
 
 
 def test_sponge_that_new_data_end_up_in_file():
     with scoped_curdir():
         with _sponge('hello') as f:
             f.write('hello')
-        assert open('hello').read() == 'hello'
+        assert open('hello', encoding='utf-8').read() == 'hello'
 
 
 def test_sponge_that_on_exception_file_isnt_modified():
     with scoped_curdir():
-        open('foo', 'w').write('bar')
+        open('foo', 'w', encoding='utf-8').write('bar')
         try:
             with _sponge('foo') as f:
                 f.write('hello')
                 raise RuntimeError()
         except RuntimeError:
             pass
-        assert open('foo').read() == 'bar'
+        assert open('foo', encoding='utf-8').read() == 'bar'
 
 test_config = dedent("""\
     [global]
@@ -46,7 +40,7 @@ def set_config_test():
     with scoped_curdir() as d:
         test_cfg = d + '/test.cfg'
         os.environ['STBT_CONFIG_FILE'] = test_cfg
-        with open(test_cfg, 'w') as f:
+        with open(test_cfg, 'w', encoding='utf-8') as f:
             f.write(test_config)
         yield
 
@@ -77,8 +71,8 @@ def test_that_set_config_preserves_file_comments_and_formatting():
     raise SkipTest("set_config doesn't currently preserve formatting")
     with set_config_test():
         set_config('global', 'test', 'goodbye')
-        assert open('test.cfg', 'r').read() == test_config.replace(
-            'hello', 'goodbye')
+        assert open('test.cfg', 'r', encoding='utf-8').read() == \
+            test_config.replace('hello', 'goodbye')
 
 
 def test_that_set_config_creates_directories_if_required():
@@ -97,11 +91,11 @@ def test_that_set_config_writes_to_the_first_stbt_config_file():
         filled_cfg = d + '/test.cfg'
         empty_cfg = d + '/empty.cfg'
         os.environ['STBT_CONFIG_FILE'] = '%s:%s' % (filled_cfg, empty_cfg)
-        open(filled_cfg, 'w')
-        open(empty_cfg, 'w')
+        open(filled_cfg, 'w', encoding='utf-8')
+        open(empty_cfg, 'w', encoding='utf-8')
         set_config('global', 'test', 'goodbye')
-        assert open(filled_cfg).read().startswith('[global]')
-        assert open(empty_cfg).read() == ''
+        assert open(filled_cfg, encoding='utf-8').read().startswith('[global]')
+        assert open(empty_cfg, encoding='utf-8').read() == ''
 
 
 class MyEnum(enum.Enum):
@@ -156,9 +150,9 @@ def temporary_config(contents, prefix="stbt-test-config"):
     with named_temporary_directory(prefix=prefix) as d:
         original_env = os.environ.get("STBT_CONFIG_FILE", "")
         filename = os.path.join(d, "stbt.conf")
-        os.environ["STBT_CONFIG_FILE"] = to_native_str(":".join([filename,
-                                                                 original_env]))
-        with open(filename, "w") as f:
+        os.environ["STBT_CONFIG_FILE"] = to_unicode(":".join([filename,
+                                                              original_env]))
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(dedent(contents))
         _config_init(force=True)
         try:
@@ -186,9 +180,7 @@ def test_unicode_in_config_file_contents():
         assert get_config("global", "unicodeinkey\xf8") == "hi"
         assert get_config("global", "unicodeinvalue") == "\xf8"
         assert get_config("unicodeinsection\xf8", "key") == "bye"
-
-        # This is `unicode` on python 2 and `str` (i.e. unicode) on python 3.
-        assert isinstance(get_config("global", "unicodeinvalue"), text_type)
+        assert isinstance(get_config("global", "unicodeinvalue"), str)
 
 
 def test_get_config_with_default_value():

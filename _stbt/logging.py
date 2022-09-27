@@ -1,12 +1,8 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
 import itertools
+import logging
 import os
 import sys
 from collections import namedtuple, OrderedDict
@@ -15,28 +11,44 @@ from textwrap import dedent
 
 from .config import get_config
 from .types import Region
-from .utils import basestring, mkdir_p
+from .utils import mkdir_p
+
 
 _debug_level = None
 
 # Running in a Jupyter Notebook:
 _jupyter_logging_enabled = "JPY_PARENT_PID" in os.environ
 
+logger = logging.getLogger("stbt")
+trace_logger = logging.getLogger("stbt.trace")
+
+
+def init_logger():
+    if logger.handlers:
+        logger.warning("stbt logger already initialised", stack_info=True)
+        return
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
 
 def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if get_debug_level() > 0:
-        sys.stderr.write("%s\n" % (msg,))
+        logger.debug(msg)
 
 
 def ddebug(s):
     """Extra verbose debug for stbt developers, not end users"""
     if get_debug_level() > 1:
-        sys.stderr.write("%s\n" % (s,))
+        trace_logger.debug(s)
 
 
 def warn(s):
-    sys.stderr.write("warning: %s\n" % (s,))
+    logger.warning(s)
 
 
 def get_debug_level():
@@ -70,11 +82,11 @@ def argparser_add_verbose_argument(argparser):
     argparser.add_argument(
         '-v', '--verbose', action=IncreaseDebugLevel, nargs=0,
         default=get_debug_level(),  # for stbt-run arguments dump
-        help='Enable debug output (specify twice to enable GStreamer element '
+        help='Enable debug output (specify twice to enable detailed '
              'dumps to ./stbt-debug directory)')
 
 
-def imshow(img):
+def imshow(img, regions=None):
     """Displays the image in a Jupyter Notebook Notebook.
 
     You can only call this if you're already inside a Jupyter Notebook.
@@ -83,16 +95,23 @@ def imshow(img):
         raise RuntimeError(
             "_stbt.logging.imshow can only be run inside a Jupyter Notebook")
 
-    from IPython.core.display import Image, display  # pylint:disable=import-error
-    if isinstance(img, basestring):
+    import cv2
+
+    if regions:
+        from _stbt.imgutils import load_image
+        img = load_image(img)
+        for r in regions:
+            cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
+
+    from IPython.core.display import Image, display
+    if isinstance(img, str):
         display(Image(img))
     else:
-        import cv2
         _, data = cv2.imencode(".png", img)
         display(Image(data=bytes(data.data), format="png"))
 
 
-class ImageLogger(object):
+class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
     Create a new ImageLogger instance for each frame of video.
@@ -187,7 +206,7 @@ class ImageLogger(object):
         template_kwargs.update(kwargs)
 
         index_html = os.path.join(self.outdir, "index.html")
-        with open(index_html, "w") as f:
+        with open(index_html, "w", encoding="utf-8") as f:
             f.write(jinja2.Template(_INDEX_HTML_HEADER)
                     .render(frame_number=self.frame_number,
                             jupyter=self.jupyter))
@@ -200,7 +219,7 @@ class ImageLogger(object):
                     .render())
 
         if self.jupyter:
-            from IPython.display import display, IFrame  # pylint:disable=import-error
+            from IPython.display import display, IFrame
             display(IFrame(src=index_html, width=974, height=600))
 
     def _draw(self, region, source_size, css_class, title=None):
@@ -242,17 +261,21 @@ class ImageLogger(object):
             _regions.append((Region.intersect(self.data["region"], source_size),
                              "source_region", None))
 
-        if isinstance(regions, Region):
-            _regions.append((regions, True, None))
-        elif hasattr(regions, "region"):  # e.g. MotionResult
-            _regions.append((regions.region, bool(regions), None))
-        elif regions is not None:
-            for r in regions:
-                if not isinstance(r, tuple) or len(r) != 3:
-                    raise ValueError(
-                        "_draw_annotated_image expected 3-tuple "
-                        "(region, css_class, title); got %r" % (r,))
+        if regions is None:
+            regions = []
+        elif not isinstance(regions, list):
+            regions = [regions]
+        for r in regions:
+            if isinstance(r, Region):
+                _regions.append((r, True, None))
+            elif hasattr(r, "region"):  # e.g. MotionResult
+                _regions.append((r.region, bool(r), None))
+            elif isinstance(r, tuple) and len(r) == 3:
                 _regions.append(r)
+            else:
+                warn("ImageLogger._draw_annotated_image: Expected Region, "
+                     "Match/MotionResult, or 3-tuple (region, css_class, title)"
+                     "; got %r" % (r,))
 
         return jinja2.Template(dedent("""\
             <div class="annotated_image">
@@ -269,7 +292,7 @@ class ImageLogger(object):
         )
 
 
-_INDEX_HTML_HEADER = dedent(u"""\
+_INDEX_HTML_HEADER = dedent("""\
     <!DOCTYPE html>
     <html lang='en'>
     <head>
@@ -307,22 +330,12 @@ _INDEX_HTML_HEADER = dedent(u"""\
     {% endif %}
     """)
 
-_INDEX_HTML_FOOTER = dedent(u"""\
+_INDEX_HTML_FOOTER = dedent("""\
 
     </div>
     </body>
     </html>
 """)
-
-
-def test_that_debug_can_write_unicode_strings():
-    def test(level):
-        with scoped_debug_level(level):
-            warn(u'Prüfungs Debug-Unicode')
-            debug(u'Prüfungs Debug-Unicode')
-            ddebug(u'Prüfungs Debug-Unicode')
-    for level in [0, 1, 2]:
-        yield (test, level)
 
 
 def draw_on(frame, *args, **kwargs):

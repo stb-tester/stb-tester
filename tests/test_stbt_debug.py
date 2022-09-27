@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import itertools
 import os
 import subprocess
@@ -17,7 +12,7 @@ from stbt_core import MatchParameters as mp
 def test_match_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     with scoped_curdir(), scoped_debug_level(2):
         # First pass gives no matches:
@@ -62,7 +57,6 @@ def test_match_debug():
             stbt-debug/00001/match0-heatmap.png
             stbt-debug/00001/match0-source_with_match.png
             stbt-debug/00001/source.png
-            stbt-debug/00001/source_with_matches.png
             stbt-debug/00001/template.png
             stbt-debug/00002
             stbt-debug/00002/index.html
@@ -147,7 +141,6 @@ def test_match_debug():
             stbt-debug/00002/match6-heatmap.png
             stbt-debug/00002/match6-source_with_match.png
             stbt-debug/00002/source.png
-            stbt-debug/00002/source_with_matches.png
             stbt-debug/00002/template.png
             stbt-debug/00003
             stbt-debug/00003/index.html
@@ -240,7 +233,6 @@ def test_match_debug():
             stbt-debug/00003/match6-heatmap.png
             stbt-debug/00003/match6-source_with_match.png
             stbt-debug/00003/source.png
-            stbt-debug/00003/source_with_matches.png
             stbt-debug/00003/template.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -319,7 +311,6 @@ def test_match_debug():
             stbt-debug/00004/match6-heatmap.png
             stbt-debug/00004/match6-source_with_match.png
             stbt-debug/00004/source.png
-            stbt-debug/00004/source_with_matches.png
             stbt-debug/00004/template.png
             """)
 
@@ -329,7 +320,7 @@ def test_match_debug():
 def test_motion_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     def fake_frames():
         for i, f in enumerate(["box-00001.png",
@@ -411,7 +402,7 @@ def test_motion_debug():
 def test_ocr_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     f = stbt.load_image("action-panel.png")
     r = stbt.Region(0, 370, right=1280, bottom=410)
@@ -442,11 +433,11 @@ def test_ocr_debug():
             stbt-debug/00002/tessinput.png
             stbt-debug/00002/upsampled.png
             stbt-debug/00003
+            stbt-debug/00003/binarized.png
+            stbt-debug/00003/diff.png
             stbt-debug/00003/index.html
             stbt-debug/00003/source.png
             stbt-debug/00003/tessinput.png
-            stbt-debug/00003/text_color_difference.png
-            stbt-debug/00003/text_color_threshold.png
             stbt-debug/00003/upsampled.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -459,11 +450,11 @@ def test_ocr_debug():
             stbt-debug/00005/tessinput.png
             stbt-debug/00005/upsampled.png
             stbt-debug/00006
+            stbt-debug/00006/binarized.png
+            stbt-debug/00006/diff.png
             stbt-debug/00006/index.html
             stbt-debug/00006/source.png
             stbt-debug/00006/tessinput.png
-            stbt-debug/00006/text_color_difference.png
-            stbt-debug/00006/text_color_threshold.png
             stbt-debug/00006/upsampled.png
             """)
 
@@ -475,7 +466,7 @@ def test_ocr_debug():
 def test_is_screen_black_debug():
     # So that the output directory name doesn't depend on how many tests
     # were run before this one.
-    ImageLogger._frame_number = itertools.count(1)  # pylint:disable=protected-access
+    ImageLogger._frame_number = itertools.count(1)
 
     f = stbt.load_image("videotestsrc-full-frame.png")
 
@@ -491,24 +482,24 @@ def test_is_screen_black_debug():
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
-            stbt-debug/00001/grey.png
+            stbt-debug/00001/gray.png
             stbt-debug/00001/index.html
             stbt-debug/00001/non_black.png
             stbt-debug/00001/source.png
             stbt-debug/00002
-            stbt-debug/00002/grey.png
+            stbt-debug/00002/gray.png
             stbt-debug/00002/index.html
             stbt-debug/00002/mask.png
             stbt-debug/00002/non_black.png
             stbt-debug/00002/source.png
             stbt-debug/00003
-            stbt-debug/00003/grey.png
+            stbt-debug/00003/gray.png
             stbt-debug/00003/index.html
             stbt-debug/00003/mask.png
             stbt-debug/00003/non_black.png
             stbt-debug/00003/source.png
             stbt-debug/00004
-            stbt-debug/00004/grey.png
+            stbt-debug/00004/gray.png
             stbt-debug/00004/index.html
             stbt-debug/00004/non_black.png
             stbt-debug/00004/source.png

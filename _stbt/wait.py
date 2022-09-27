@@ -1,10 +1,5 @@
 """Copyright 2015-2019 Stb-tester.com Ltd."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import functools
 import inspect
 
@@ -150,7 +145,7 @@ def _callable_description(callable_):
     ...         functools.partial(eval, globals={}),
     ...         locals={}))
     'eval'
-    >>> class T(object):
+    >>> class T():
     ...     def __call__(self): return True;
     >>> _callable_description(T())
     '<_stbt.wait.T object at 0x...>'

@@ -57,9 +57,9 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     cat > test.py <<-EOF &&
 	import cv2, stbt_core as stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
-	cv2.imwrite('neither-do-i.png', stbt.get_frame())
+	cv2.imwrite('neither-do-i.png', stbt.get_frame())  # pylint:disable=no-member
 	
-	from cv2 import imwrite
+	from cv2 import imwrite  # pylint:disable=no-name-in-module
 	from stbt_core import save_frame
 	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	imwrite('neither-do-i.png', stbt.get_frame())
@@ -192,7 +192,7 @@ test_that_stbt_lint_checks_that_wait_until_argument_is_callable() {
 	************* Module test
 	E: 11,11: "wait_until" argument "is_screen_black()" isn't callable (stbt-wait-until-callable)
 	E: 13,11: "wait_until" argument "return_a_function()()" isn't callable (stbt-wait-until-callable)
-	E: 15,11: "wait_until" argument "lambda : True()" isn't callable (stbt-wait-until-callable)
+	E: 15,11: "wait_until" argument "(lambda: True)()" isn't callable (stbt-wait-until-callable)
 	E: 17,11: "wait_until" argument "functools.partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	E: 19,11: "wait_until" argument "partial(lambda x: True, x=3)()" isn't callable (stbt-wait-until-callable)
 	EOF

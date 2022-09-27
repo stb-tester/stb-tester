@@ -12,25 +12,17 @@ Copyright 2017-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import enum
+import warnings
 
-import cv2
-import numpy
-
-from .diff import FrameDiffer, MotionDiff, MotionResult
-from .imgutils import crop, load_image, pixel_bounding_box
+from .diff import GrayscaleDiff
 from .logging import ddebug, debug, draw_on
 from .types import Region
 
 
 def press_and_wait(
-        key, region=Region.ALL, mask=None, timeout_secs=10, stable_secs=1,
+        key, mask=Region.ALL, region=Region.ALL, timeout_secs=10, stable_secs=1,
         min_size=None, _dut=None):
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -43,29 +35,21 @@ def press_and_wait(
 
     :param str key: The name of the key to press (passed to `stbt.press`).
 
-    :param stbt.Region region: Only look at the specified region of the video
-        frame.
+    :param str|numpy.ndarray|Mask|Region mask:
+        A `Region` or a mask that specifies which parts of the image to
+        analyse. This accepts anything that can be converted to a Mask using
+        `stbt.load_mask`. See :doc:`masks`.
 
-    :param mask:
-        A black & white image that specifies which part of the video frame to
-        look at. White pixels select the area to analyse; black pixels select
-        the area to ignore.
+    :param Region region:
+      Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-        This can be a string (a filename that will be resolved as per
-        `load_image`) or a single-channel image in OpenCV format.
+    :param int|float timeout_secs: A timeout in seconds. This function will
+        return a falsey value if the transition didn't complete within this
+        number of seconds from the key-press.
 
-        If you specify ``region``, the mask must be the same size as the
-        region. Otherwise the mask must be the same size as the frame.
-    :type mask: str or `numpy.ndarray`
-
-    :param timeout_secs: A timeout in seconds. This function will return a
-        falsey value if the transition didn't complete within this number of
-        seconds from the key-press.
-    :type timeout_secs: int or float
-
-    :param stable_secs: A duration in seconds. The screen must stay unchanged
-        (within the specified region or mask) for this long, for the transition
-        to be considered "complete".
+    :param int|float stable_secs: A duration in seconds. The screen must stay
+        unchanged (within the specified region or mask) for this long, for the
+        transition to be considered "complete".
     :type timeout_secs: int or float
 
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
@@ -80,9 +64,18 @@ def press_and_wait(
         * **key** (*str*) – The name of the key that was pressed.
         * **frame** (`stbt.Frame`) – If successful, the first video frame when
           the transition completed; if timed out, the last frame seen.
-        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT``,
-          ``STABLE_TIMEOUT``, or ``COMPLETE``. If it's ``COMPLETE``, the whole
+        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT`` (the
+          transition didn't start – nothing moved), ``STABLE_TIMEOUT`` (the
+          transition didn't end – movement didn't stop), or ``COMPLETE`` (the
+          transition started and then stopped). If it's ``COMPLETE``, the whole
           object will evaluate as true.
+        * **started** (*bool*) – The transition started (movement was seen
+          after the keypress). Implies that ``status`` is either ``COMPLETE``
+          or ``STABLE_TIMEOUT``.
+        * **complete** (*bool*) – The transition completed (movement started
+          and then stopped). Implies that ``status`` is ``COMPLETE``.
+        * **stable** (*bool*) – The screen is stable (no movement). Implies
+          ``complete or not started``.
         * **press_time** (*float*) – When the key-press completed.
         * **animation_start_time** (*float*) – When animation started after the
           key-press (or ``None`` if timed out).
@@ -98,14 +91,30 @@ def press_and_wait(
         ``time.time()``).
 
     Changed in v32: Use the same difference-detection algorithm as
-    `wait_for_motion`; ``region`` and ``mask`` can both be specified at the
-    same time.
+    `wait_for_motion`.
+
+    Added in v33: The ``started``, ``complete`` and ``stable`` attributes of
+    the returned value.
+
+    Changed in v33: ``mask`` accepts anything that can be converted to a Mask
+    using `load_mask`. The ``region`` parameter is deprecated; pass your
+    `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
+    at the same time.
     """
     if _dut is None:
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.press_and_wait: The 'region' parameter is deprecated; "
+            "pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -113,11 +122,11 @@ def press_and_wait(
     return result
 
 
-press_and_wait.differ = MotionDiff
+press_and_wait.differ = GrayscaleDiff
 
 
 def wait_for_transition_to_end(
-        initial_frame=None, region=Region.ALL, mask=None, timeout_secs=10,
+        initial_frame=None, mask=Region.ALL, region=Region.ALL, timeout_secs=10,
         stable_secs=1, min_size=None, _dut=None):
 
     """Wait for the screen to stop changing.
@@ -136,10 +145,10 @@ def wait_for_transition_to_end(
     :param stbt.Frame initial_frame: The frame of video when the transition
         started. If `None`, we'll pull a new frame from the device under test.
 
-    :param region: See `press_and_wait`.
-    :param mask: See `press_and_wait`.
-    :param timeout_secs: See `press_and_wait`.
-    :param stable_secs: See `press_and_wait`.
+    :param str|numpy.ndarray|Mask|Region mask: See `press_and_wait`.
+    :param Region region: See `press_and_wait`.
+    :param int|float timeout_secs: See `press_and_wait`.
+    :param int|float stable_secs: See `press_and_wait`.
 
     :returns: See `press_and_wait`.
     """
@@ -147,19 +156,24 @@ def wait_for_transition_to_end(
         import stbt_core
         _dut = stbt_core
 
-    t = _Transition(region, mask, timeout_secs, stable_secs, min_size, _dut)
+    if region is not Region.ALL:
+        if mask is not Region.ALL:
+            raise ValueError("Cannot specify mask and region at the same time")
+        warnings.warn(
+            "stbt.wait_for_transition_to_end: The 'region' parameter is "
+            "deprecated; pass your Region to 'mask' instead",
+            DeprecationWarning, stacklevel=2)
+        mask = region
+
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
 
 
-class _Transition(object):
-    def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
-        self.region = region
-        self.mask = None
-        if mask is not None:
-            self.mask = load_image(mask, color_channels=1)
-
+class _Transition():
+    def __init__(self, mask, timeout_secs, stable_secs, min_size, dut):
+        self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
         self.min_size = min_size
@@ -172,8 +186,7 @@ class _Transition(object):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
         differ = press_and_wait.differ(initial_frame=press_result.frame_before,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
@@ -207,8 +220,7 @@ class _Transition(object):
 
         first_stable_frame = initial_frame
         differ = press_and_wait.differ(initial_frame=initial_frame,
-                                       region=self.region, mask=self.mask,
-                                       min_size=self.min_size)
+                                       mask=self.mask, min_size=self.min_size)
         while True:
             f = next(self.frames)
             motion_result = differ.diff(f)
@@ -241,63 +253,7 @@ def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
-class StrictDiff(FrameDiffer):
-    """The original `press_and_wait` algorithm."""
-
-    def __init__(self, initial_frame, region=Region.ALL, mask=None,
-                 min_size=None):
-        super(StrictDiff, self).__init__(initial_frame, region, mask, min_size)
-        if self.mask is not None:
-            # We need 3 channels to match `frame`.
-            self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)
-
-    def diff(self, frame):
-        absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
-                              crop(frame, self.region))
-        if self.mask is not None:
-            absdiff = cv2.bitwise_and(absdiff, self.mask, absdiff)
-
-        diffs_found = False
-        out_region = None
-        maxdiff = numpy.max(absdiff)
-        if maxdiff > 20:
-            diffs_found = True
-            big_diffs = absdiff > 20
-            out_region = pixel_bounding_box(big_diffs)
-            _ddebug("found %s diffs above 20 (max %s) in %r", frame,
-                    numpy.count_nonzero(big_diffs), maxdiff, out_region)
-        elif maxdiff > 0:
-            small_diffs = absdiff > 5
-            small_diffs_count = numpy.count_nonzero(small_diffs)
-            if small_diffs_count > 50:
-                diffs_found = True
-                out_region = pixel_bounding_box(small_diffs)
-                _ddebug("found %s diffs <= %s in %r", frame, small_diffs_count,
-                        maxdiff, out_region)
-            else:
-                _ddebug("only found %s diffs <= %s", frame, small_diffs_count,
-                        maxdiff)
-
-        if diffs_found:
-            # Undo crop:
-            out_region = out_region.translate(self.region)
-
-        motion = diffs_found and (
-            self.min_size is None or
-            (out_region.width >= self.min_size[0] and
-             out_region.height >= self.min_size[1]))
-
-        if motion:
-            # Only update the reference frame if we found differences. This
-            # makes the algorithm more sensitive to slow motion.
-            self.prev_frame = frame
-
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
-        return result
-
-
-class _TransitionResult(object):
+class _TransitionResult():
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
         self.key = key
@@ -345,6 +301,19 @@ class _TransitionResult(object):
         if self.end_time is None or self.animation_start_time is None:
             return None
         return self.end_time - self.animation_start_time
+
+    @property
+    def started(self):
+        return self.status != TransitionStatus.START_TIMEOUT
+
+    @property
+    def complete(self):
+        return self.status == TransitionStatus.COMPLETE
+
+    @property
+    def stable(self):
+        return self.status in (TransitionStatus.START_TIMEOUT,
+                               TransitionStatus.COMPLETE)
 
 
 class TransitionStatus(enum.Enum):

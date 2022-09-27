@@ -56,17 +56,15 @@ test_wait_for_motion_nonexistent_mask() {
 	press("OK")
 	wait_for_motion(mask="idontexist.png")
 	EOF
-    ! stbt run -v test.py &> test.log || fail "Expected script to fail"
-    grep -q "No such file: idontexist.png" test.log ||
-        fail "Expected 'No such file: idontexist.png' but saw '$(
-            grep 'No such file' test.log | head -n1)'"
+    ! stbt run -v test.py || fail "Expected script to fail"
+    assert_log "FileNotFoundError: [Errno 2] No such file: 'idontexist.png'"
 }
 
 test_wait_for_motion_with_region_reports_motion() {
     cat > test.py <<-EOF
 	import stbt_core as stbt
 	region = stbt.Region(x=230, y=170, right=320, bottom=240)
-	result = stbt.wait_for_motion(region=region)
+	result = stbt.wait_for_motion(mask=region)
 	assert result.region.x >= 240
 	assert result.region.y >= 180
 	EOF
@@ -77,22 +75,9 @@ test_wait_for_motion_with_region_does_not_report_motion() {
     cat > test.py <<-EOF
 	import stbt_core as stbt
 	region = stbt.Region(x=0, y=0, right=240, bottom=240)
-	stbt.wait_for_motion(region=region, timeout_secs=1)
+	stbt.wait_for_motion(mask=region, timeout_secs=1)
 	EOF
     ! stbt run -v test.py
-}
-
-test_wait_for_motion_with_region_and_mask() {
-    cat > test.py <<-EOF
-	import stbt_core as stbt, numpy
-	region = stbt.Region(x=240, y=180, right=320, bottom=240)
-	mask = numpy.zeros((60, 80), dtype=numpy.uint8)
-	mask[30:, 40:] = 255
-	result = stbt.wait_for_motion(region=region, mask=mask)
-	assert result.region.x >= 280
-	assert result.region.y >= 210
-	EOF
-    stbt run -v test.py
 }
 
 test_wait_for_motion_with_high_noisethreshold_reports_motion() {
@@ -189,6 +174,7 @@ test_detect_motion_times_out_during_yield() {
 	    import time
 	    time.sleep(2)
 	    i += 1
+	print(i)
 	assert i == 1
 	EOF
     stbt run -v test.py

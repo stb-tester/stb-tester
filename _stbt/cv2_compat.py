@@ -1,20 +1,16 @@
 """
 Compatibility so stb-tester will work with both OpenCV 2, 3, and 4.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
-from distutils.version import LooseVersion
 
 import cv2
 
-version = LooseVersion(cv2.__version__).version
+from .utils import LooseVersion
+
+
+version = LooseVersion(cv2.__version__)
 
 if version >= [3, 2, 0]:
-    def find_contour_boxes(image, mode, method):  # pylint:disable=redefined-outer-name
+    def find_contour_boxes(image, mode, method):
         contours = cv2.findContours(image=image, mode=mode, method=method)
 
         # In OpenCV 4, the behavior of find findContours changes from returning
@@ -31,7 +27,7 @@ else:
         x, y, w, h = r
         return (x - 1, y - 1, w + 2, h + 2)
 
-    def find_contour_boxes(image, mode, method):  # pylint:disable=redefined-outer-name
+    def find_contour_boxes(image, mode, method):
         # In v3.0.0 cv2.findContours started returning
         # (img, contours, hierarchy) rather than (contours, hierarchy).
         # Index -2 selects contours on both versions:
@@ -40,8 +36,8 @@ else:
 
 # We prefer the v3 names here rather than the v2.4 names:
 if version >= [3, 0, 0]:
-    FILLED = cv2.FILLED  # pylint: disable=c-extension-no-member
-    LINE_AA = cv2.LINE_AA  # pylint: disable=c-extension-no-member
+    FILLED = cv2.FILLED
+    LINE_AA = cv2.LINE_AA
 else:
-    FILLED = cv2.cv.CV_FILLED  # pylint: disable=c-extension-no-member,no-member
+    FILLED = cv2.cv.CV_FILLED  # pylint: disable=c-extension-no-member
     LINE_AA = cv2.CV_AA  # pylint: disable=c-extension-no-member

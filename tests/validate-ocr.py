@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 u"""
 validate-ocr.py can be run on a corpus of test images reporting how good a job
@@ -29,11 +29,6 @@ This tool is designed such that it can be run on corpuses outside the
 stb-tester git tree to allow corpuses containing screen captures from many
 set-top boxes without bloating the main stb-tester repo or risking upsetting
 the owners of the various set-top box UIs. """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import os
@@ -85,7 +80,7 @@ def main(argv):
         sys.stderr.write("%i / %i Complete\r" % (n, len(files)))
 
         imgname = f[:-len('.txt')]
-        with open(f) as of:
+        with open(f, encoding='utf-8') as of:
             text = of.read()
 
         sections = text.split('---', 1)
@@ -105,8 +100,9 @@ def main(argv):
 
     if args.report_filename:
         template = os.path.dirname(__file__) + '/validate-ocr.html.jinja'
-        with open(args.report_filename, 'w') as f:
-            f.write(jinja2.Template(open(template).read()).render(
+        with open(args.report_filename, 'w', encoding='utf-8') as f:
+            f.write(jinja2.Template(open(template, encoding='utf-8').read())
+                    .render(
                 images=results,
                 total=total,
                 total_matched=total_matched,

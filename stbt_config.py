@@ -1,15 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Copyright 2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import sys
@@ -33,7 +28,7 @@ def main():
         "--bash-completion", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "name", metavar="section.key",
-        help="e.g. 'global.source_pipeline' or 'record.control_recorder'")
+        help="e.g. 'global.source_pipeline'")
     args = parser.parse_args(sys.argv[1:])
 
     if args.bash_completion:

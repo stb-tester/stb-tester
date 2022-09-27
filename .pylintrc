@@ -1,6 +1,6 @@
 [MASTER]
 persistent=no
-extension-pkg-whitelist=cv2,lxml,numpy,zbar
+extension-pkg-whitelist=cv2,lxml,numpy
 
 [REPORTS]
 msg-template={path}:{line}:{column}: [{msg_id}({symbol}), {obj}] {msg}
@@ -10,13 +10,16 @@ reports=no
 disable=
   bad-classmethod-argument,
   bad-continuation,
-  bad-mcs-method-argument,
   bad-option-value,
   blacklisted-name,
+  consider-using-f-string,
+  consider-using-with,
   cyclic-import,
   duplicate-code,
   empty-docstring,
+  fixme,
   global-statement,
+  import-outside-toplevel,
   inconsistent-return-statements,
   invalid-name,
   len-as-condition,
@@ -25,9 +28,14 @@ disable=
   misplaced-comparison-constant,
   missing-docstring,
   multiple-statements,
+  no-else-break,
+  no-else-continue,
+  no-else-raise,
   no-else-return,
   no-init,
   no-self-use,
+  protected-access,
+  raise-missing-from,
   singleton-comparison,
   too-few-public-methods,
   too-many-ancestors,
@@ -41,11 +49,16 @@ disable=
   too-many-return-statements,
   too-many-statements,
   ungrouped-imports,
+  unnecessary-lambda-assignment,
+  unnecessary-pass,
+  use-implicit-booleaness-not-comparison,
   wrong-import-position,
+
+[CLASSES]
+valid-metaclass-classmethod-first-arg=mcs
 
 [IMPORTS]
 analyse-fallback-blocks=no
-known-standard-library=builtins,future,past
 
 [TYPECHECK]
 ignored-classes=

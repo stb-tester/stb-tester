@@ -1,12 +1,6 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
 import socket
 import subprocess
-import sys
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
@@ -36,18 +30,18 @@ def srcdir(filename="", here=os.path.abspath(__file__)):
     return os.path.join(os.path.dirname(here), "..", filename)
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def installed_stbt_control_relay():
     with named_temporary_directory("stbt-control-relay-install.XXXXXX") as tmp:
         try:
-            oldprefix = open(srcdir(".stbt-prefix")).read()
+            oldprefix = open(srcdir(".stbt-prefix"), encoding="utf-8").read()
         except IOError:
             oldprefix = None
         subprocess.check_call(
             ["make", "prefix=%s" % tmp, "install-stbt-control-relay"],
             cwd=srcdir())
         if oldprefix is not None:
-            open(srcdir(".stbt-prefix"), 'w').write(oldprefix)
+            open(srcdir(".stbt-prefix"), "w", encoding="utf-8").write(oldprefix)
         else:
             os.unlink(srcdir(".stbt-prefix"))
 
@@ -55,7 +49,7 @@ def installed_stbt_control_relay():
         yield "%s/bin/stbt-control-relay" % tmp
 
 
-@pytest.yield_fixture(scope='function')
+@pytest.fixture(scope='function')
 def stbt_control_relay_on_path(installed_stbt_control_relay):
     with scoped_path_addition(os.path.dirname(installed_stbt_control_relay)):
         yield installed_stbt_control_relay
@@ -85,7 +79,7 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
                 Released KEY_MENU
                 """)
 
-            assert expected == open(t("one-file")).read()
+            assert expected == open(t("one-file"), encoding="utf-8").read()
 
 
 def socket_passing_setup(socket):
@@ -95,8 +89,7 @@ def socket_passing_setup(socket):
         os.environ['LISTEN_PID'] = str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
-        if sys.version_info.major > 2:
-            os.set_inheritable(3, True)  # pylint:disable=no-member
+        os.set_inheritable(3, True)
         os.closerange(4, 100)
 
     return preexec_fn
@@ -109,7 +102,7 @@ def test_stbt_control_relay_with_socket_passing(stbt_control_relay_on_path):  # 
         s.bind(('127.0.0.1', 0))
         s.listen(5)
 
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # pylint:disable=subprocess-popen-preexec-fn
             ["stbt-control-relay", "-vv", "file:" + tmpfile.name],
             preexec_fn=socket_passing_setup(s),
             close_fds=False)

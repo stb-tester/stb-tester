@@ -1,15 +1,8 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import logging
 import re
 
-import networkx as nx
 import numpy
 import pytest
 
@@ -19,17 +12,13 @@ except ImportError:
     import mock  # Python 2 backport
 
 import stbt_core as stbt
-from _stbt.keyboard import Key, _keys_to_press, _strip_shift_transitions
+from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
 from _stbt.transition import _TransitionResult, TransitionStatus
-from _stbt.utils import py3
 
 # pylint:disable=redefined-outer-name
 
 
-python2_only = pytest.mark.skipif(py3, reason="This test requires Python 2")
-
-
-class DUT(object):
+class DUT():
     """Fake keyboard implementation ("Device Under Test").
 
     Behaves like the YouTube Search keyboard on Apple TV.
@@ -145,42 +134,123 @@ class DUT(object):
         self.handle_press(key)
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
+    def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
+        return _TransitionResult(None, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
-class BuggyDUT(DUT):
+
+class DoubleKeypressDUT(DUT):
     def handle_press(self, keypress):
-        super(BuggyDUT, self).handle_press(keypress)
+        super().handle_press(keypress)
         if keypress == "KEY_RIGHT" and self.selection == "b":
+            logging.debug("DoubleKeypressDUT.handle_press: Double KEY_RIGHT "
+                          "press from a to c skipping over b")
             self.x += 1
+
+
+class MissedKeypressDUT(DUT):
+    def __init__(self):
+        super().__init__()
+        self._last_press_ignored = False
+
+    def handle_press(self, keypress):
+        if keypress == "KEY_OK":
+            super().handle_press(keypress)
+            return
+
+        # Ignore every other up/down/left/right keypress
+        if self._last_press_ignored:
+            super().handle_press(keypress)
+            self._last_press_ignored = False
+        else:
+            logging.debug("MissedKeypressDUT.handle_press: Ignoring %s",
+                          keypress)
+            self._last_press_ignored = True
+
+    def handle_press_and_wait(self, key, **_kwargs):
+        self.handle_press(key)
+        if self._last_press_ignored:
+            status = TransitionStatus.START_TIMEOUT
+        else:
+            status = TransitionStatus.COMPLETE
+        return _TransitionResult(key, None, status, 0, 0, 0)
+
+
+class SlowDUT(DUT):
+    def __init__(self):
+        super().__init__()
+        self._delayed_keypress = None
+
+    def handle_press_and_wait(self, key, **_kwargs):
+        logging.debug("SlowDUT.handle_press: delaying %s", key)
+        self._delayed_keypress = key
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+
+    def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
+        key = self._delayed_keypress
+        self._delayed_keypress = None
+        assert key is not None
+        super().handle_press(key)
+        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
 @pytest.fixture(scope="function")
 def dut():
     dut = DUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
         yield dut
 
 
 @pytest.fixture(scope="function")
-def buggy_dut():
-    dut = BuggyDUT()
+def double_keypress_dut():
+    dut = DoubleKeypressDUT()
     with mock.patch("stbt_core.press", dut.handle_press), \
-            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait):
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
         yield dut
+
+
+@pytest.fixture(scope="function")
+def missed_keypress_dut():
+    dut = MissedKeypressDUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
+        yield dut
+
+
+@pytest.fixture(scope="function")
+def slow_dut():
+    dut = SlowDUT()
+    with mock.patch("stbt_core.press", dut.handle_press), \
+            mock.patch("stbt_core.press_and_wait", dut.handle_press_and_wait), \
+            mock.patch("stbt_core.wait_for_transition_to_end",
+                       dut.handle_wait_for_transition_to_end):
+        yield dut
+
+
+class _NotSpecified():  # sentinel value
+    pass
 
 
 class SearchPage(stbt.FrameObject):
     """Immutable Page Object representing the test's view of the DUT."""
 
-    def __init__(self, dut, kb):
-        super(SearchPage, self).__init__(
+    def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
+        super().__init__(
             frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         self.dut = dut
         self.kb = kb
+        self._is_visible = is_visible
+        self._selection = selection
 
     @property
     def is_visible(self):
-        return True
+        return self._is_visible
 
     @property
     def mode(self):
@@ -194,6 +264,8 @@ class SearchPage(stbt.FrameObject):
         # In practice this would use image processing to detect the current
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
+        if self._selection != _NotSpecified:
+            return self._selection
         query = {}
         if self.dut.selection == " ":
             query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
@@ -210,12 +282,13 @@ class SearchPage(stbt.FrameObject):
         logging.debug("SearchPage.refresh: Now on %r", page.selection)
         return page
 
-    def enter_text(self, text):
-        return self.kb.enter_text(text, page=self)
+    def enter_text(self, text, retries=2):
+        return self.kb.enter_text(text, page=self, retries=retries)
 
-    def navigate_to(self, target, verify_every_keypress=False):
+    def navigate_to(self, target, verify_every_keypress=False, retries=2):
         return self.kb.navigate_to(target, page=self,
-                                   verify_every_keypress=verify_every_keypress)
+                                   verify_every_keypress=verify_every_keypress,
+                                   retries=retries)
 
 
 kb1 = stbt.Keyboard()  # Full model with modes, defined using Grids
@@ -388,10 +461,6 @@ kb2.add_transition({"mode": "uppercase", "name": "lowercase"},
 kb3 = stbt.Keyboard()  # Simple keyboard, lowercase only
 kb3.add_edgelist(edgelists["lowercase"])
 
-kb3_bytes = stbt.Keyboard()  # To test add_edgelist with bytes
-if not py3:
-    kb3_bytes.add_edgelist(edgelists["lowercase"].encode("utf-8"))
-
 # Lowercase + shift (no caps lock).
 # This keyboard looks like kb1 but it has a "shift" key instead of the "symbols"
 # key; and the other mode keys have no effect.
@@ -427,11 +496,8 @@ def test_enter_text_mixed_case(dut, kb):
 
 
 @pytest.mark.parametrize("kb",
-                         [kb1,
-                          kb2,
-                          kb3,
-                          pytest.param(kb3_bytes, marks=python2_only)],
-                         ids=["kb1", "kb2", "kb3", "kb3_bytes"])
+                         [kb1, kb2, kb3],
+                         ids=["kb1", "kb2", "kb3"])
 def test_enter_text_single_case(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -504,14 +570,39 @@ def test_navigate_to_other_mode(dut, kb):
     ("c", True, 1),
 ])
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_navigate_to_checks_target(buggy_dut, kb, target,
+def test_that_navigate_to_checks_target(double_keypress_dut, kb, target,
                                         verify_every_keypress, num_presses):
-    """buggy_dut skips the B when pressing right from A (and lands on C)."""
-    page = SearchPage(buggy_dut, kb)
+    """DUT skips the B when pressing right from A (and lands on C)."""
+    page = SearchPage(double_keypress_dut, kb)
     assert page.selection.name == "a"
     with pytest.raises(AssertionError):
-        page.navigate_to(target, verify_every_keypress)
-    assert buggy_dut.pressed == ["KEY_RIGHT"] * num_presses
+        page.navigate_to(target, verify_every_keypress, retries=0)
+    assert double_keypress_dut.pressed == ["KEY_RIGHT"] * num_presses
+
+
+def test_that_enter_text_retries_missed_keypresses(missed_keypress_dut):
+    page = SearchPage(missed_keypress_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.enter_text("bcecdfdadcfc", retries=100)
+    #                       112212233133
+    assert page.selection.name == "c"
+    assert missed_keypress_dut.entered == "bcecdfdadcfc"
+
+
+def test_that_navigate_to_retries_overshoot(double_keypress_dut):
+    page = SearchPage(double_keypress_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.navigate_to("b")
+    assert page.selection.name == "b"
+    assert double_keypress_dut.pressed == ["KEY_RIGHT", "KEY_LEFT"]
+
+
+def test_that_navigate_to_waits_for_dut_to_catch_up(slow_dut):
+    page = SearchPage(slow_dut, kb1)
+    assert page.selection.name == "a"
+    page = page.navigate_to("f")
+    assert page.selection.name == "f"
+    assert slow_dut.pressed == ["KEY_RIGHT"] * 5
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
@@ -523,6 +614,19 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     with pytest.raises(ValueError):
         page.navigate_to("Ñ")
     assert dut.pressed == []
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+def test_that_keyboard_validates_the_page_object_selection(dut, kb):
+    page = SearchPage(dut, kb, is_visible=False)
+    with pytest.raises(AssertionError) as excinfo:
+        page.navigate_to("a", page)
+    assert "SearchPage page isn't visible" in str(excinfo.value)
+
+    page = SearchPage(dut, kb, selection=None)
+    with pytest.raises(AssertionError) as excinfo:
+        page.navigate_to("a", page)
+    assert "page.selection (None) isn't in the keyboard" in str(excinfo.value)
 
 
 def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
@@ -618,7 +722,7 @@ def test_that_add_grid_returns_grid_of_keys():
                         list("èéêëìíîžđ") + [""],
                         list("ïòóôõöøß") + ["", ""],
                         list("œùúûüçñ") + ["", "", ""]]))
-    assert isinstance(grid[0].data, Key)
+    assert isinstance(grid[0].data, stbt.Keyboard.Key)
 
     right_neighbours = kb.add_grid(
         stbt.Grid(stbt.Region(x=915, y=465, right=1040, bottom=690),
@@ -644,7 +748,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_key("a")
     assert_repr_equal(
-        "Key already exists: Key(name='a', text='a', region=None, mode=None)",
+        "Key already exists: Keyboard.Key(name='a', text='a', region=None, mode=None)",  # pylint:disable=line-too-long
         str(excinfo.value))
 
     # Can't add transition to key that doesn't exist:
@@ -691,7 +795,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_key(" ")
     assert_repr_equal(
-        "Key already exists: Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
+        "Key already exists: Keyboard.Key(name=' ', text=' ', region=None, mode='lowercase')",  # pylint:disable=line-too-long
         str(excinfo.value))
     with pytest.raises(ValueError) as excinfo:
         kb.add_key("b")
@@ -707,7 +811,7 @@ def test_that_keyboard_catches_errors_at_definition_time():
     with pytest.raises(ValueError) as excinfo:
         kb.add_edgelist("a SPACE KEY_DOWN")
     assert_repr_equal(
-        "Ambiguous key {'name': ' '}: Could mean Key(name=' ', text=' ', region=None, mode='lowercase') or Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
+        "Ambiguous key {'name': ' '}: Could mean Keyboard.Key(name=' ', text=' ', region=None, mode='lowercase') or Keyboard.Key(name=' ', text=' ', region=None, mode='uppercase')",  # pylint:disable=line-too-long
         str(excinfo.value))
 
     # ...so we need to specify the mode explicitly:
@@ -791,6 +895,8 @@ def test_keyboard_weights(kb):
 
 
 def test_that_we_need_add_weight():
+    from networkx.algorithms.shortest_paths.generic import shortest_path
+
     # W X Y Z
     #  SPACE
     kb = stbt.Keyboard()
@@ -805,9 +911,9 @@ def test_that_we_need_add_weight():
         kb.add_transition(k1, k2, "KEY_RIGHT")
 
     # This is the bug:
-    assert nx.shortest_path(kb.G, W, Z) == [W, SPACE, Z]
+    assert shortest_path(kb.G, W, Z) == [W, SPACE, Z]
     # And this is how we fix it:
-    assert nx.shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
+    assert shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
 
     assert [k for k, _ in _keys_to_press(kb.G, W, [Z])] == ["KEY_RIGHT"] * 3
 

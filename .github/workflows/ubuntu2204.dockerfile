@@ -1,6 +1,6 @@
 # If you change this dockerfile, run `make publish-ci-docker-images`.
 
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
@@ -15,35 +15,35 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
         gstreamer1.0-tools \
         gstreamer1.0-x \
         gzip \
         language-pack-en \
         librsvg2-bin \
+        libxxhash0 \
         lirc \
         moreutils \
         parallel \
+        pep8 \
         pylint \
-        python-docutils \
-        python-future \
-        python-gi \
-        python-jinja2 \
-        python-kitchen \
-        python-libcec \
-        python-lmdb \
-        python-lxml \
-        python-mock \
-        python-networkx \
-        python-nose \
-        python-numpy \
-        python-opencv \
-        python-pip \
-        python-pysnmp4 \
-        python-pytest \
-        python-requests \
-        python-responses \
-        python-serial \
-        python-yaml \
+        python3-docutils \
+        python3-gi \
+        python3-ipython \
+        python3-jinja2 \
+        python3-lmdb \
+        python3-lxml \
+        python3-networkx \
+        python3-nose \
+        python3-numpy \
+        python3-opencv \
+        python3-pip \
+        python3-pysnmp4 \
+        python3-pytest \
+        python3-requests \
+        python3-responses \
+        python3-serial \
+        python3-yaml \
         ssh \
         sudo \
         tar \
@@ -62,7 +62,3 @@ ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     /usr/share/tesseract-ocr/4.00/tessdata/
-
-# Work around python-libcec packaging bug
-# https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1822066
-RUN mv /usr/lib/python2.7.15rc1/dist-packages/cec /usr/lib/python2.7/dist-packages/

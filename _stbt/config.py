@@ -1,10 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import native_str
-
 import configparser
 import enum
 import os
@@ -18,7 +11,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class NoDefault(object):
+class NoDefault():
     pass
 
 
@@ -49,10 +42,16 @@ def get_config(section, key, default=NoDefault, type_=str):
     Test scripts can use ``get_config`` to read tags that you specify at
     run-time: see `Automatic configuration keys
     <https://stb-tester.com/manual/advanced-configuration#automatic-configuration-keys>`__.
+    For example::
+
+        my_tag_value = stbt.get_config("result.tags", "my tag name")
 
     Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
     found, unless ``default`` is specified (in which case ``default`` is
     returned).
+
+    Changed in v32: Allow specifying ``None`` as the default value (previously
+    ``None`` would be treated as if you hadn't specified any default value).
     """
 
     config = _config_init()
@@ -136,7 +135,7 @@ def _config_init(force=False):
         # with the one at the beginning taking precedence:
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '')
-                     .split(native_str(':'))))
+                     .split(':')))
         config = configparser.ConfigParser()
         config.read(config_files)
         _config = config

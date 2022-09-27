@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Copyright 2012-2013 YouView TV Ltd.
@@ -6,18 +6,13 @@ Copyright 2012-2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import sys
 
 import _stbt.core
 from _stbt import imgproc_cache
-from _stbt.logging import debug
+from _stbt.logging import debug, init_logger
 from _stbt.stbt_run import (load_test_function,
                             sane_unicode_and_exception_handling, video)
 
@@ -47,6 +42,7 @@ def main(argv):
         help='Additional arguments passed on to the test script (in sys.argv)')
 
     args = parser.parse_args(argv[1:])
+    init_logger()
     debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
@@ -54,6 +50,7 @@ def main(argv):
     with sane_unicode_and_exception_handling(args.script), \
             video(args, dut), \
             imgproc_cache.setup_cache(filename=args.cache):
+        dut.get_frame()  # wait until pipeline is rolling
         test_function = load_test_function(args.script, args.args)
         test_function.call()
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 stbt virtual-stb enables stb-tester to test set-top box software without
 hardware.  This can be useful as a first stage in a continuous integration
@@ -24,11 +24,6 @@ Run some tests against youtube HTML5 TV edition:
     # Tear down the chromium virtual-stb and remove the configuration:
     stbt virtual-stb stop
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import errno
@@ -57,8 +52,8 @@ def virtual_stb(command, x_keymap=None, verbose=False):
     with x_server(1280, 720, verbose=verbose) as display:
         subprocess.Popen(
             ['ratpoison', '-d', display], close_fds=True,
-            stdin=open('/dev/null', 'r'), stdout=open('/dev/null', 'w'),
-            stderr=subprocess.STDOUT)
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
 
         os.environ['DISPLAY'] = display
         child = subprocess.Popen(command)

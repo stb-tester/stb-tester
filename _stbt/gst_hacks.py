@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import ctypes
 import platform
 from contextlib import contextmanager
@@ -11,7 +6,7 @@ from os.path import dirname
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst  # pylint:disable=wrong-import-order
+from gi.repository import Gst
 
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see
@@ -130,7 +125,6 @@ def test_map_sample_without_buffer():
 
     sample = Gst.Sample.new(None, None, None, None)
     try:
-        # pylint:disable=no-value-for-parameter
         with map_gst_sample(sample, Gst.MapFlags.READ):
             assert False
     except ValueError:

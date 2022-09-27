@@ -1,19 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Copyright 2013 YouView TV Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import sys
-from contextlib import contextmanager
 
 import cv2
 
@@ -48,6 +42,7 @@ def main():
             'MatchParameters' in the stbt API documentation. For example:
             'confirm_threshold=0.70')""")
     args = parser.parse_args(sys.argv[1:])
+    _stbt.logging.init_logger()
 
     mp = {}
     try:
@@ -72,8 +67,7 @@ def main():
     if source_image is None:
         error("Invalid image '%s'" % args.source_file)
 
-    with (_stbt.logging.scoped_debug_level(2) if args.verbose
-          else noop_contextmanager()):
+    with _stbt.logging.scoped_debug_level(2 if args.verbose else 1):
         match_found = False
         for result in stbt.match_all(
                 args.reference_file, frame=source_image,
@@ -86,11 +80,6 @@ def main():
             if not args.all:
                 break
         sys.exit(0 if match_found else 1)
-
-
-@contextmanager
-def noop_contextmanager():
-    yield
 
 
 if __name__ == "__main__":

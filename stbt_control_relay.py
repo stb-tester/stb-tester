@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 Allows using any of the stbt remote control backends remotely using the lirc
 protocol.
@@ -27,11 +27,7 @@ using its HTTP protocol.  So
 
 Will press KEY_OK on the roku device.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import argparse
 import logging
 import os
@@ -64,7 +60,7 @@ def main(argv):
         level=logging.DEBUG if args.verbose else logging.INFO)
 
     if args.verbose:
-        _stbt.logging._debug_level = 1  # pylint:disable=protected-access
+        _stbt.logging._debug_level = 1
 
     signal.signal(signal.SIGTERM, lambda _signo, _stack_frame: sys.exit(0))
 

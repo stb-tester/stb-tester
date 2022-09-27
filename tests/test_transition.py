@@ -1,10 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
-import time
 from collections import namedtuple
 
 import cv2
@@ -13,37 +6,37 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
-from _stbt.transition import StrictDiff
+from _stbt.transition import _TransitionResult
 
 
-class FakeDeviceUnderTest(object):
+class FakeDeviceUnderTest():
     def __init__(self, frames=None):
         self.state = "black"
-        self._frames = frames
+        self._frames = iter(frames) if frames else None
+        self._t = 0
 
     def press(self, key):
         frame_before = next(self.frames())
         self.state = key
-        return _Keypress(key, time.time(), time.time(), frame_before)
+        return _Keypress(key, self._t, self._t, frame_before)
 
     def frames(self):
         if self._frames is not None:
             # Ignore self.state, send the specified frames instead.
-            t = time.time()
-            for state in self._frames:
-                array = F(state, t)
-                yield stbt.Frame(array, time=t)
-                t += 0.04  # 25fps
+            for state in self._frames:  # pylint:disable=not-an-iterable
+                self._t += 0.04  # 25fps
+                array = F(state, self._t)
+                yield stbt.Frame(array, time=self._t)
 
         else:
             while True:
-                t = time.time()
-                array = F(self.state, t)
+                self._t += 0.04  # 25fps
+                array = F(self.state, self._t)
                 if self.state == "fade-to-black":
                     self.state = "black"
                 elif self.state == "fade-to-white":
                     self.state = "white"
-                yield stbt.Frame(array, time=t)
+                yield stbt.Frame(array, time=self._t)
 
 
 _Keypress = namedtuple("_Keypress", "key start_time end_time frame_before")
@@ -64,7 +57,7 @@ def F(state, t):
     return array
 
 
-@pytest.fixture(scope="function", params=[StrictDiff, stbt.MotionDiff])
+@pytest.fixture(scope="function", params=[stbt.BGRDiff, stbt.GrayscaleDiff])
 def diff_algorithm(request):
     previous = stbt.press_and_wait.differ
     try:
@@ -87,7 +80,7 @@ def test_press_and_wait(diff_algorithm, min_size):
     assert transition.status == stbt.TransitionStatus.COMPLETE
     assert transition.press_time < transition.animation_start_time
     assert transition.animation_start_time == transition.end_time
-    assert transition.duration < 0.01  # excludes stable period
+    assert transition.duration == 0.04  # excludes stable period
     assert transition.frame.min() == 255
 
     transition = stbt.press_and_wait("fade-to-black", min_size=min_size,
@@ -125,28 +118,44 @@ def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
     assert transition.status == stbt.TransitionStatus.COMPLETE
 
 
-@pytest.mark.parametrize("mask,region,min_size,expected", [
-    (None, stbt.Region.ALL, None, stbt.TransitionStatus.STABLE_TIMEOUT),
-    ("mask-out-left-half-720p.png", stbt.Region.ALL, None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (numpy.zeros((720, 640), dtype=numpy.uint8),
-     stbt.Region(x=0, y=0, right=640, bottom=720), None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region(x=640, y=0, right=1280, bottom=720), None,
-     stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region(x=0, y=0, right=1280, bottom=360), None,
+@pytest.mark.parametrize("mask,min_size,expected", [
+    (stbt.Region.ALL, None, stbt.TransitionStatus.STABLE_TIMEOUT),
+    ("mask-out-left-half-720p.png", None, stbt.TransitionStatus.START_TIMEOUT),
+    (numpy.full((720, 1280), 255, dtype=numpy.uint8), None,
      stbt.TransitionStatus.STABLE_TIMEOUT),
-    (None, stbt.Region.ALL, (0, 32), stbt.TransitionStatus.START_TIMEOUT),
-    (None, stbt.Region.ALL, (0, 10), stbt.TransitionStatus.STABLE_TIMEOUT),
+    (stbt.Region(x=640, y=0, right=1280, bottom=720), None,
+     stbt.TransitionStatus.START_TIMEOUT),
+    (stbt.Region(x=0, y=0, right=1280, bottom=360), None,
+     stbt.TransitionStatus.STABLE_TIMEOUT),
+    (stbt.Region.ALL, (0, 32), stbt.TransitionStatus.START_TIMEOUT),
+    (stbt.Region.ALL, (0, 10), stbt.TransitionStatus.STABLE_TIMEOUT),
+    (~stbt.Region(x=10, y=340, right=640, bottom=380), None,
+     stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
-def test_press_and_wait_with_mask_or_region(mask, region, min_size, expected,
+def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
                                             diff_algorithm):
     transition = stbt.press_and_wait(
-        "ball", mask=mask, region=region, min_size=min_size,
-        timeout_secs=0.2, stable_secs=0.1,
+        "ball", mask=mask, min_size=min_size, timeout_secs=0.2, stable_secs=0.1,
         _dut=FakeDeviceUnderTest())
     print(transition)
     assert transition.status == expected
+
+
+def test_press_and_wait_region_parameter():
+    # region is a synonym of mask, for backwards compatibility
+    transition = stbt.press_and_wait(
+        "ball", region=stbt.Region(x=640, y=0, right=1280, bottom=720),
+        timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
+    print(transition)
+    assert transition.status == stbt.TransitionStatus.START_TIMEOUT
+
+    with pytest.raises(ValueError,
+                       match="Cannot specify mask and region at the same time"):
+        stbt.press_and_wait(
+            "ball",
+            region=stbt.Region(x=640, y=0, right=1280, bottom=720),
+            mask=stbt.Region(x=640, y=0, right=1280, bottom=720),
+            timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
 
 
 def test_wait_for_transition_to_end(diff_algorithm):
@@ -171,14 +180,21 @@ def test_press_and_wait_timestamps(diff_algorithm):
     print(transition)
     assert transition
     assert isclose(transition.animation_start_time,
-                   transition.press_time + 0.40,
-                   rtol=0, atol=0.01)
-    assert isclose(transition.duration, 0.48, rtol=0, atol=0.01)
+                   transition.press_time + 0.40)
+    assert isclose(transition.duration, 0.48)
     assert isclose(transition.end_time, transition.animation_start_time + 0.08)
     assert isclose(transition.animation_duration, 0.08)
 
 
-def test_that_strictdiff_ignores_a_few_scattered_small_differences():
-    differ = StrictDiff(initial_frame=stbt.load_image("2px-different-1.png"),
-                        region=stbt.Region.ALL, mask=None)
-    assert not differ.diff(stbt.load_image("2px-different-2.png"))
+@pytest.mark.parametrize("status,          started,complete,stable", [
+    # pylint:disable=bad-whitespace
+    (stbt.TransitionStatus.START_TIMEOUT,  False,  False,   True),
+    (stbt.TransitionStatus.STABLE_TIMEOUT, True,   False,   False),
+    (stbt.TransitionStatus.COMPLETE,       True,   True,    True),
+])
+def test_transitionresult_properties(status, started, complete, stable):
+    t = _TransitionResult(key="KEY_OK", frame=None, status=status,
+                          press_time=0, animation_start_time=0, end_time=0)
+    assert t.started == started
+    assert t.complete == complete
+    assert t.stable == stable

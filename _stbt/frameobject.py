@@ -3,15 +3,9 @@ Copyright 2016-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from past.builtins import cmp
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import functools
 import threading
-from future.utils import with_metaclass
 
 try:
     from itertools import zip_longest
@@ -31,7 +25,7 @@ def for_object_repository(cls=None):
     Usage:
 
         @for_object_repository
-        class MyClass(object):
+        class MyClass():
             ...
     """
     # These classes are extracted by static analysis, so return the class
@@ -40,7 +34,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #     @for_object_repository()
-        #     class MyClass(object):
+        #     class MyClass():
         def decorator(cls):
             return cls
         return decorator
@@ -48,30 +42,35 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #    @for_object_repository
-        #    class MyClass(object):
+        #    class MyClass():
         return cls
 
 
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
-        if fn not in self._FrameObject__frame_object_cache:
-            self._FrameObject__frame_object_cache[fn] = fn(self)
-        return self._FrameObject__frame_object_cache[fn]
+        if fn.__name__ not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn.__name__] = fn(self)
+        return self._FrameObject__frame_object_cache[fn.__name__]
+    return inner
+
+
+def _convert_is_visible_to_bool(fn):
+    @functools.wraps(fn)
+    def inner(self):
+        return bool(fn(self))
     return inner
 
 
 def _mark_in_is_visible(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         try:
             self._FrameObject__local.in_is_visible += 1
         except AttributeError:
             self._FrameObject__local.in_is_visible = 1
         try:
-            return bool(fn(self))
+            return fn(self)
         finally:
             self._FrameObject__local.in_is_visible -= 1
     return inner
@@ -80,7 +79,6 @@ def _mark_in_is_visible(fn):
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         if (getattr(self._FrameObject__local, "in_is_visible", 0) or
                 self.is_visible):
             return fn(self)
@@ -99,6 +97,8 @@ class _FrameObjectMeta(type):
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
+                if k == 'is_visible':
+                    f = _convert_is_visible_to_bool(f)
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
@@ -122,8 +122,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
-class FrameObject(with_metaclass(_FrameObjectMeta, object)):
-    # pylint: disable=line-too-long
+class FrameObject(metaclass=_FrameObjectMeta):
     r'''Base class for user-defined Page Objects.
 
     FrameObjects are Stb-tester's implementation of the *Page Object* pattern.
@@ -179,8 +178,6 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
     .. _@property: https://docs.python.org/3.6/library/functions.html#property
     .. _fowler: https://martinfowler.com/bliki/PageObject.html
     .. _Object Repository: https://stb-tester.com/manual/object-repository
-
-    Added in v30: ``_fields`` and ``refresh``.
     '''
 
     def __init__(self, frame=None):
@@ -194,16 +191,30 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         if frame is None:
             from stbt_core import get_frame
             frame = get_frame()
-        self.__frame_object_cache = {}
-        self.__local = threading.local()
+        self.__frame_object_cache = {}  # pylint:disable=unused-private-member
+        self.__local = threading.local()  # pylint:disable=unused-private-member
         self._frame = frame
 
     def __repr__(self):
+        """The object's string representation shows all its public properties.
+
+        We only print properties we have already calculated, to avoid
+        triggering expensive calculations.
         """
-        The object's string representation includes all its public properties.
-        """
-        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
-        return "%s(%s)" % (self.__class__.__name__, args)
+        if self:
+            args = []
+            for x in self._fields:  # pylint:disable=no-member
+                name = getattr(self.__class__, x).fget.__name__
+                if name in self._FrameObject__frame_object_cache:
+                    args.append("%s=%r" % (
+                        name, self._FrameObject__frame_object_cache[name]))
+                else:
+                    args.append("%s=..." % (name,))
+        else:
+            args = ["is_visible=False"]
+        return "<%s(_frame=%r, %s)>" % (self.__class__.__name__,
+                                        self._frame,
+                                        ", ".join(args))
 
     def _iter_fields(self):
         if self:
@@ -225,31 +236,11 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         the values of all the public properties match, even if the underlying
         frame is different. All falsey FrameObjects of the same type are equal.
         """
-        return self.__cmp__(other) == 0
-
-    def __ne__(self, other):
-        return self.__cmp__(other) != 0
-
-    def __lt__(self, other):
-        return self.__cmp__(other) < 0
-
-    def __le__(self, other):
-        return self.__cmp__(other) <= 0
-
-    def __gt__(self, other):
-        return self.__cmp__(other) > 0
-
-    def __ge__(self, other):
-        return self.__cmp__(other) >= 0
-
-    def __cmp__(self, other):
-        # pylint: disable=protected-access
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                v = cmp(s[1], o[1])
-                if v != 0:
-                    return v
-            return 0
+                if s != o:
+                    return False
+            return True
         else:
             return NotImplemented
 
@@ -281,4 +272,4 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
 
         Any additional keyword arguments are passed on to ``__init__``.
         """
-        return type(self)(frame=frame, **kwargs)
+        return self.__class__(frame=frame, **kwargs)

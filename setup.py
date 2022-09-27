@@ -8,7 +8,7 @@ long_description = """\
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
 
-* Copyright © 2013-2020 Stb-tester.com Ltd,
+* Copyright © 2013-2022 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
 
@@ -34,7 +34,7 @@ This package doesn't bundle the Tesseract OCR engine, so `ocr()` and
 
 setuptools.setup(
     name="stbt_core",
-    version="32.0.2",
+    version="33.0.1",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
@@ -50,22 +50,20 @@ setuptools.setup(
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Software Development :: Testing",
     ],
-    # I have only tested Python 2.7 & 3.6
-    python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
+    python_requires=">=3.10",
     extras_require={
-        "ocr": ["lxml==4.2"],
-        "debug": ["Jinja2==2.10.1"],
+        "ocr": ["lxml==4.8.0"],
+        "debug": ["Jinja2==3.0.3"],
+        "keyboard": ["networkx==2.4"],
     },
     install_requires=[
-        "astroid==1.6.0",
-        "attrs==20.2.0",
-        "future==0.15.2",
-        "networkx==1.11",
-        "opencv-python~=3.2",
-        "pylint==1.8.3",
+        "astroid==2.11.6",
+        "attrs==21.2.0",
+        "isort==5.6.4",
+        "opencv-python~=4.5",
+        "pylint==2.14.3",
     ],
 )

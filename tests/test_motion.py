@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import time
 from contextlib import contextmanager
 
@@ -21,7 +16,7 @@ def test_motionresult_repr():
         == ("MotionResult("
             "time=1466002032.336, motion=True, "
             "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<Frame(time=1466002032.336, dimensions=1280x720x3)>)")
+            "frame=<Frame(time=1466002032.336)>)")
 
 
 def test_wait_for_motion_half_motion_str_2of4():
@@ -76,12 +71,21 @@ def test_detect_motion_region_and_mask():
     # Just check no exceptions
     dm()
     dm(mask="mask-out-left-half-720p.png")
-    dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+    dm(mask=numpy.full((720, 1280), 255, dtype=numpy.uint8))
+    dm(mask=r)
     dm(region=r)
-    dm(region=r, mask=numpy.zeros((720, 640), dtype=numpy.uint8))
 
-    with pytest.raises(ValueError):
-        dm(region=r, mask="mask-out-left-half-720p.png")
+    with pytest.raises(ValueError,
+                       match="Cannot specify mask and region at the same time"):
+        dm(region=r, mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+
+    with pytest.raises(ValueError,
+                       match=r"Mask\(<Image>\) doesn't overlap with the frame"):
+        dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
+
+    with pytest.raises(ValueError,
+                       match=r"~Region.ALL doesn't overlap with the frame"):
+        dm(mask=~stbt.Region.ALL)
 
 
 def fake_frames():
@@ -151,7 +155,7 @@ def write_video(g):
     vw.release()
 
 
-class MockTime(object):
+class MockTime():
     def __init__(self, start_time=1466084600.):
         self._time = start_time
         self._functions = []
