@@ -137,7 +137,7 @@ def send_response(sock, request, success, data=b""):
         pass
 
 
-class SdNotifySocket(object):
+class SdNotifySocket:
     """Implements the client side of the systemd notification protocol"""
     @classmethod
     def from_environ(cls):
@@ -154,8 +154,8 @@ class SdNotifySocket(object):
         if self.sockpath:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             sock.sendto(
-                "\n".join(u"%s=%s" % (k, v)
-                           for k, v in kwargs.items()).encode('utf-8'),
+                "\n".join("%s=%s" % (k, v)
+                          for k, v in kwargs.items()).encode('utf-8'),
                 self.sockpath)
 
 
