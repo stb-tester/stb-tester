@@ -279,7 +279,7 @@ def new_local_lirc_control(lircd_socket, control_name):
     def _connect():
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.settimeout(3)
+            s.settimeout(10)
             s.connect(lircd_socket)
             return s
         except socket.error as e:
