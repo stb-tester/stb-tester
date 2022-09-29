@@ -138,7 +138,7 @@ class HdmiCecControl(object):
         # 0x77 - 0xFF Reserved
     }
 
-    def __init__(self, device, source, destination):
+    def __init__(self, device, source, destination, rescan):
         # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
         # find it.
         # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
@@ -154,10 +154,15 @@ class HdmiCecControl(object):
             source = int(source, 16)
         if isinstance(destination, string_types):
             destination = int(destination, 16)
+        if not rescan or rescan.lower() in ("0", "no", "false", "off"):
+            rescan = False
+        else:
+            rescan = True
 
         self.source = source
         self.configured_destination = destination
         self.destination = None  # set by `rescan`
+        self.rescan = rescan
         self.press_and_hold_thread = None
         self.press_and_holding = False
         self.lock = threading.Condition()
@@ -191,7 +196,7 @@ class HdmiCecControl(object):
                 "Failed to open a connection to the CEC adapter")
         logging.info("HdmiCecControl: Opened connection to CEC adapter")
 
-        self.rescan()
+        self.scan()
 
     def press(self, key):
         with self.lock:
@@ -200,7 +205,7 @@ class HdmiCecControl(object):
                     "Can't call 'press' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.rescan()
+                self.scan(rescan=True)
                 raise HdmiCecError("Failed to send keydown for %s" % key)
             if not self.lib.Transmit(self.keyup_command()):
                 raise HdmiCecError("Failed to send keyup for %s" % key)
@@ -220,7 +225,7 @@ class HdmiCecControl(object):
                     "Can't call 'keydown' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
-                self.rescan()
+                self.scan(rescan=True)
                 raise HdmiCecError("Failed to send keydown for %s" % key)
 
             self.press_and_holding = True
@@ -309,7 +314,10 @@ class HdmiCecControl(object):
             retval = adapter.strComName
         return retval
 
-    def rescan(self):
+    def scan(self, rescan=False):
+        if rescan or self.rescan:
+            logging.info("HdmiCecControl: RescanActiveDevices()")
+            self.lib.RescanActiveDevices()
         ds = list(self._list_active_devices())
         logging.info("HdmiCecControl: Scan complete. Found %r", ds)
         if len(ds) == 0:
@@ -332,9 +340,7 @@ class HdmiCecControl(object):
             self.destination = destination
 
     def _list_active_devices(self):
-        self.lib.RescanActiveDevices()
         active = self.lib.GetActiveDevices()
-
         # We get a fixed size array back.  libcec-python doesn't implement
         # iteration or bounds checking:
         for n in range(16):
@@ -463,6 +469,6 @@ def _fake_cec():
 
 controls = [
     # pylint: disable=line-too-long
-    (r'hdmi-cec(:(?P<device>[^:]+)?(:(?P<source>[^:]+)?(:(?P<destination>[^:]+)?)?)?)?',
+    (r'hdmi-cec(:(?P<device>[^:]+)?(:(?P<source>[^:]+)?(:(?P<destination>[^:]+)?(:(?P<rescan>[^:]+)?)?)?)?)?',
      HdmiCecControl),
 ]
