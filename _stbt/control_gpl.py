@@ -155,6 +155,13 @@ class HdmiCecControl(object):
         if isinstance(destination, string_types):
             destination = int(destination, 16)
 
+        self.source = source
+        self.configured_destination = destination
+        self.destination = None  # set by `rescan`
+        self.press_and_hold_thread = None
+        self.press_and_holding = False
+        self.lock = threading.Condition()
+
         self.cecconfig = cec.libcec_configuration()
         self.cecconfig.strDeviceName = to_native_str("stb-tester")
         self.cecconfig.bActivateSource = 0
@@ -184,14 +191,7 @@ class HdmiCecControl(object):
                 "Failed to open a connection to the CEC adapter")
         logging.info("HdmiCecControl: Opened connection to CEC adapter")
 
-        self.configured_destination = destination
-        self.destination = None  # set by `rescan`
         self.rescan()
-
-        self.source = source
-        self.press_and_hold_thread = None
-        self.press_and_holding = False
-        self.lock = threading.Condition()
 
     def press(self, key):
         with self.lock:
