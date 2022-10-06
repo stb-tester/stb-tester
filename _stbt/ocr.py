@@ -168,7 +168,7 @@ def ocr(frame=None, region=Region.ALL,
         to "eng" (English). You can override the global default value by setting
         ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
         install the tesseract language pack; see installation instructions
-        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`__.
+        `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
