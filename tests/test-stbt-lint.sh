@@ -37,6 +37,7 @@ test_that_stbt_lint_ignores_generated_image_names() {
 	var = 'idontexist'
 	stbt.wait_for_match(var + '.png')
 	stbt.wait_for_match('%s.png' % var)
+	stbt.wait_for_match(f"{var} - selected.png")
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
 	stbt.wait_for_match(join('directory', 'idontexist.png'))
 	var.replace('idontexist', 'idontexist.png')
