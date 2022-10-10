@@ -16,7 +16,7 @@ import subprocess
 
 from astroid import (
     Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
-    Keyword, MANAGER, Name, Raise, Uninferable)
+    JoinedStr, Keyword, MANAGER, Name, Raise, Uninferable)
 from astroid.context import InferenceContext
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
@@ -218,7 +218,7 @@ def _is_uri(filename):
 
 def _is_calculated_value(node):
     return (
-        isinstance(node.parent, BinOp) or
+        isinstance(node.parent, (BinOp, JoinedStr)) or
         (isinstance(node.parent, Call) and
          node.parent.func.as_string().split(".")[-1] in ("join", "replace")))
 
