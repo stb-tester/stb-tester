@@ -1,8 +1,14 @@
 """Copyright 2019 Stb-tester.com Ltd."""
 
+import typing
 from collections import namedtuple
 
 from .types import Position, Region
+
+if typing.TYPE_CHECKING:
+    from typing import (
+        Any, Iterator, List, Optional, Sequence, Tuple, TypeVar, Union)
+    T = TypeVar("T")
 
 
 class Grid():
@@ -29,20 +35,27 @@ class Grid():
         grid position. If ``data`` is specified, then ``cols`` and ``rows`` are
         optional.
     """
-    def __init__(self, region, cols=None, rows=None, data=None):
-        self.region = region
+
+    def __init__(
+        self,
+        region: "Region",
+        cols: "Optional[int]" = None,
+        rows: "Optional[int]" = None,
+        data: "Optional[Sequence[Sequence[T]]]" = None,
+    ):
+        self.region: Region = region
         self.data = data
         if (rows is None or cols is None) and data is None:
             raise ValueError(
                 "Either `cols` and `rows`, or `data` must be specified")
         if rows is None:
-            self.rows = len(data)
+            self.rows: int = len(data)
         else:
-            self.rows = rows
+            self.rows: int = rows
         if cols is None:
-            self.cols = len(data[0])
+            self.cols: int = len(data[0])
         else:
-            self.cols = cols
+            self.cols: int = cols
 
     class Cell(namedtuple("Cell", "index position region data")):
         """A single cell in a `Grid`.
@@ -69,7 +82,7 @@ class Grid():
         """
         pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = "Grid(region=%r, cols=%r, rows=%r)" % (
             self.region, self.cols, self.rows)
         if self.data:
@@ -78,15 +91,21 @@ class Grid():
             return s
 
     @property
-    def area(self):
+    def area(self) -> int:
         return self.cols * self.rows
 
     @property
-    def cells(self):
+    def cells(self) -> "List[Cell]":
         return [self.get(index=i)
                 for i in range(self.cols * self.rows)]
 
-    def get(self, index=None, position=None, region=None, data=None):
+    def get(
+        self,
+        index: "Optional[int]" = None,
+        position: "Optional[Tuple[int, int]]" = None,
+        region: "Optional[Region]" = None,
+        data: "Any" = None,
+    ) -> "Cell":
         """Retrieve a single cell in the Grid.
 
         For example, let's say that you're looking for the selected item in
@@ -149,7 +168,7 @@ class Grid():
             region,
             self.data and self.data[position[1]][position[0]])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: "Union[int,Region,Position]") -> Cell:
         if isinstance(key, int):
             return self.get(index=key)
         elif isinstance(key, Region):
@@ -163,11 +182,11 @@ class Grid():
         else:
             return self.get(data=key)
 
-    def __iter__(self):
+    def __iter__(self) -> "Iterator[Cell]":
         for i in range(len(self)):
             yield self[i]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.cols * self.rows
 
     def _index_to_position(self, index):

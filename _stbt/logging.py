@@ -35,7 +35,7 @@ def init_logger():
     logger.propagate = False
 
 
-def debug(msg):
+def debug(msg: str):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if get_debug_level() > 0:
         logger.debug(msg)

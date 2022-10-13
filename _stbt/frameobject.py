@@ -6,6 +6,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 import functools
 import threading
+import typing
 
 try:
     from itertools import zip_longest
@@ -13,8 +14,15 @@ except ImportError:
     # Python 2:
     from itertools import izip_longest as zip_longest
 
+if typing.TYPE_CHECKING:
+    from .typing import FrameT, Optional
+    T = typing.TypeVar("T")
 
-def for_object_repository(cls=None):
+
+# Type annotation isn't quite right here, but don't know how to express this
+# correctly.  If it's called without brakets then the type is [T] -> T, but with
+# brackets it's [None] -> Callable[[T], T]:
+def for_object_repository(cls: "T" = None) -> "T":
     """A decorator that marks classes and functions so they appear in the Object
     Repository.
 
@@ -180,7 +188,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
     .. _Object Repository: https://stb-tester.com/manual/object-repository
     '''
 
-    def __init__(self, frame=None):
+    def __init__(self, frame: "Optional[FrameT]" = None) -> None:
         """The default constructor takes an optional frame of video; if the
         frame is not provided, it will grab a frame from the device-under-test.
 
@@ -195,7 +203,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
         self.__local = threading.local()  # pylint:disable=unused-private-member
         self._frame = frame
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """The object's string representation shows all its public properties.
 
         We only print properties we have already calculated, to avoid
@@ -223,14 +231,14 @@ class FrameObject(metaclass=_FrameObjectMeta):
         else:
             yield "is_visible", False
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """
         Delegates to ``is_visible``. The object will only be considered True if
         it is visible.
         """
         return bool(self.is_visible)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """
         Two instances of the same ``FrameObject`` type are considered equal if
         the values of all the public properties match, even if the underlying
@@ -244,7 +252,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
         else:
             return NotImplemented
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Two instances of the same ``FrameObject`` type are considered equal if
         the values of all the public properties match, even if the underlying
@@ -253,12 +261,12 @@ class FrameObject(metaclass=_FrameObjectMeta):
         return hash(tuple(v for _, v in self._iter_fields()))
 
     @property
-    def is_visible(self):
+    def is_visible(self) -> bool:
         raise NotImplementedError(
             "Objects deriving from FrameObject must define an is_visible "
             "property")
 
-    def refresh(self, frame=None, **kwargs):
+    def refresh(self: "T", frame: "Optional[FrameT]" = None, **kwargs) -> "T":
         """
         Returns a new FrameObject instance with a new frame. ``self`` is not
         modified.

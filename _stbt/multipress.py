@@ -3,6 +3,11 @@
 
 import re
 import time
+import typing
+
+if typing.TYPE_CHECKING:
+    from typing import Dict
+    from .typing import KeyT
 
 
 class MultiPress():
@@ -65,8 +70,12 @@ class MultiPress():
     .. _multi-press: https://en.wikipedia.org/wiki/Multi-tap
     """
 
-    def __init__(self, key_mapping=None, interpress_delay_secs=None,
-                 interletter_delay_secs=1):
+    def __init__(
+        self,
+        key_mapping: "Dict[KeyT, str]" = None,
+        interpress_delay_secs: float = None,
+        interletter_delay_secs: float = 1,
+    ):
 
         mapping = _parse_mapping_from_docstring(MultiPress.__doc__)
         if key_mapping is not None:
@@ -76,7 +85,7 @@ class MultiPress():
         self.interpress_delay_secs = interpress_delay_secs
         self.interletter_delay_secs = interletter_delay_secs
 
-    def enter_text(self, text):
+    def enter_text(self, text: str) -> None:
         """Enter the specified text using multi-press on the numeric keypad.
 
         :param str text:

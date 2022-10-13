@@ -1,17 +1,28 @@
 # coding: utf-8
 
+import typing
 import warnings
 from collections import deque
 
 from .config import ConfigurationError, get_config
-from .diff import GrayscaleDiff
+from .diff import FrameDiffer, GrayscaleDiff, MotionResult
 from .imgutils import limit_time
 from .logging import debug, draw_on
 from .types import Region, UITestFailure
 
+if typing.TYPE_CHECKING:
+    from typing import Iterator, Optional
+    from .mask import MaskTypes
+    from .typing import FrameT
 
-def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
-                  region=Region.ALL, frames=None):
+
+def detect_motion(
+    timeout_secs: float = 10,
+    noise_threshold: "Optional[float]" = None,
+    mask: "MaskTypes" = Region.ALL,
+    region: Region = Region.ALL,
+    frames: "Iterator[FrameT]" = None,
+) -> "Iterator[MotionResult]":
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
 
@@ -92,12 +103,17 @@ def detect_motion(timeout_secs=10, noise_threshold=None, mask=Region.ALL,
         yield result
 
 
-detect_motion.differ = GrayscaleDiff
+detect_motion.differ : FrameDiffer = GrayscaleDiff
 
 
 def wait_for_motion(
-        timeout_secs=10, consecutive_frames=None,
-        noise_threshold=None, mask=Region.ALL, region=Region.ALL, frames=None):
+    timeout_secs: float = 10,
+    consecutive_frames: int = None,
+    noise_threshold: "Optional[float]" = None,
+    mask: "MaskTypes" = Region.ALL,
+    region: Region = Region.ALL,
+    frames: "Iterator[FrameT]" = None,
+) -> MotionResult:
     """Search for motion in the device-under-test's video stream.
 
     "Motion" is difference in pixel values between two frames.
@@ -202,11 +218,12 @@ class MotionTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that motion was searched for.
     """
-    def __init__(self, screenshot, mask, timeout_secs):
+    def __init__(self, screenshot: "FrameT", mask: "MaskTypes",
+                 timeout_secs: float):
         super().__init__()
-        self.screenshot = screenshot
-        self.mask = mask
-        self.timeout_secs = timeout_secs
+        self.screenshot: "FrameT" = screenshot
+        self.mask: "MaskTypes" = mask
+        self.timeout_secs: float = timeout_secs
 
     def __str__(self):
         return "Didn't find motion within %g seconds, using mask=%r" % (

@@ -3,14 +3,22 @@
 
 import re
 import time
+import typing
 from logging import getLogger
 
 from attr import attrs, attrib
 from _stbt.grid import Grid
-from _stbt.mask import load_mask
+from _stbt.mask import MaskTypes, load_mask
 from _stbt.transition import TransitionStatus
 from _stbt.types import Region
 
+if typing.TYPE_CHECKING:
+    from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
+    from .transition import _TransitionResult
+    from .typing import FrameT, KeyT
+
+    T = TypeVar("T")
+    QueryT: typing.TypeAlias = Union["Keyboard.Key", Dict[str, str], str]
 
 log = getLogger("stbt.Keyboard")
 
@@ -180,7 +188,9 @@ class Keyboard():
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=str)
 
-    def __init__(self, *, mask=Region.ALL, navigate_timeout=60):
+    def __init__(
+        self, *, mask: MaskTypes = Region.ALL, navigate_timeout: float = 60
+    ):
         from networkx import DiGraph
 
         self.G = DiGraph()
@@ -202,7 +212,13 @@ class Keyboard():
         self._any_with_mode = False
         self._any_without_mode = False
 
-    def add_key(self, name, text=None, region=None, mode=None):
+    def add_key(
+        self,
+        name: str,
+        text: "Optional[str]" = None,
+        region: "Optional[Region]" = None,
+        mode: str = None,
+    ):
         """Add a key to the model (specification) of the keyboard.
 
         :param str name: The text or label you can see on the key.
@@ -236,7 +252,13 @@ class Keyboard():
         return self._add_key({"name": name, "text": text, "region": region,
                               "mode": mode})
 
-    def find_key(self, name=None, text=None, region=None, mode=None):
+    def find_key(
+        self,
+        name: "Optional[str]" = None,
+        text: "Optional[str]" = None,
+        region: "Optional[Region]" = None,
+        mode: "Optional[str]" = None,
+    ) -> Key:
         """Find a key in the model (specification) of the keyboard.
 
         Specify one or more of ``name``, ``text``, ``region``, and ``mode``
@@ -259,7 +281,13 @@ class Keyboard():
         return self._find_key({"name": name, "text": text, "region": region,
                                "mode": mode})
 
-    def find_keys(self, name=None, text=None, region=None, mode=None):
+    def find_keys(
+        self,
+        name: "Optional[str]" = None,
+        text: "Optional[str]" = None,
+        region: "Optional[Region]" = None,
+        mode: "Optional[str]" = None,
+    ) -> "List[Key]":
         """Find matching keys in the model of the keyboard.
 
         This is like `find_key`, but it returns a list containing any
@@ -376,8 +404,14 @@ class Keyboard():
             self._any_with_mode = True
         return node
 
-    def add_transition(self, source, target, keypress, mode=None,
-                       symmetrical=True):
+    def add_transition(
+        self,
+        source: "QueryT",
+        target: "QueryT",
+        keypress: "KeyT",
+        mode: "Optional[str]" = None,
+        symmetrical: bool = True,
+    ) -> None:
         """Add a transition to the model (specification) of the keyboard.
 
         For example: To go from "A" to "B", press "KEY_RIGHT" on the remote
@@ -429,7 +463,12 @@ class Keyboard():
         _add_weight(self.G, source, key)
         self.G_ = None
 
-    def add_edgelist(self, edgelist, mode=None, symmetrical=True):
+    def add_edgelist(
+        self,
+        edgelist: str,
+        mode: "Optional[str]" = None,
+        symmetrical: bool = True,
+    ) -> None:
         """Add keys and transitions specified in a string in "edgelist" format.
 
         :param str edgelist: A multi-line string where each line is in the
@@ -478,7 +517,7 @@ class Keyboard():
                     "(must contain 3 fields): %r"
                     % (i, line.strip()))
 
-    def add_grid(self, grid, mode=None):
+    def add_grid(self, grid: Grid, mode: "Optional[str]" = None) -> None:
         """Add keys, and transitions between them, to the model of the keyboard.
 
         If the keyboard (or part of the keyboard) is arranged in a regular
@@ -556,7 +595,13 @@ class Keyboard():
             region=grid.region,
             data=_reshape_array(keys, cols=grid.cols, rows=grid.rows))
 
-    def enter_text(self, text, page, verify_every_keypress=False, retries=2):
+    def enter_text(
+        self,
+        text: str,
+        page: "T",
+        verify_every_keypress: bool = False,
+        retries: int = 2,
+    ) -> "T":
         """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
@@ -617,7 +662,13 @@ class Keyboard():
         log.info("Entered %r", text)
         return page
 
-    def navigate_to(self, target, page, verify_every_keypress=False, retries=2):
+    def navigate_to(
+        self,
+        target: "QueryT",
+        page: "T",
+        verify_every_keypress: bool = False,
+        retries: int = 2,
+    ) -> "T":
         """Move the selection to the specified key.
 
         This won't press *KEY_OK* on the target; it only moves the selection
@@ -701,14 +752,20 @@ class Keyboard():
                         break  # to outer loop
         return page
 
-    def press_and_wait(self, key, timeout_secs=10, stable_secs=1):
+    def press_and_wait(
+        self, key: "KeyT", timeout_secs: int = 10, stable_secs: int = 1
+    ) -> "_TransitionResult":
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,
                                    stable_secs=stable_secs)
 
-    def wait_for_transition_to_end(self, initial_frame=None, timeout_secs=10,
-                                   stable_secs=1):
+    def wait_for_transition_to_end(
+        self,
+        initial_frame: "Optional[FrameT]" = None,
+        timeout_secs: float = 10,
+        stable_secs: float = 1,
+    ):
         import stbt_core as stbt
         return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
                                                timeout_secs=timeout_secs,

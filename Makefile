@@ -89,6 +89,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/stbt.conf \
     _stbt/transition.py \
     _stbt/types.py \
+    _stbt/typing.py \
     _stbt/utils.py \
     _stbt/wait.py \
     _stbt/x-key-mapping.conf \

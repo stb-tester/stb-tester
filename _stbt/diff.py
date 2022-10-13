@@ -1,12 +1,19 @@
 # coding: utf-8
 
+import typing
+
 import cv2
 import numpy
 
-from .imgutils import crop, _frame_repr, _image_region, pixel_bounding_box
+from .imgutils import (
+    Frame, crop, _frame_repr, _image_region, pixel_bounding_box)
 from .logging import ddebug, ImageLogger
 from .mask import load_mask
 from .types import Region
+
+if typing.TYPE_CHECKING:
+    from typing import Optional, Tuple
+    from .typing import MaskTypes, FrameT, SizeT
 
 
 class MotionResult():
@@ -27,19 +34,19 @@ class MotionResult():
     """
     _fields = ("time", "motion", "region", "frame")
 
-    def __init__(self, time, motion, region, frame):
-        self.time = time
-        self.motion = motion
-        self.region = region
-        self.frame = frame
+    def __init__(self, time: float, motion: bool, region: Region, frame: Frame):
+        self.time: float = time
+        self.motion: bool = motion
+        self.region: Region = region
+        self.frame: Frame = frame
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.motion
 
-    def __nonzero__(self):
+    def __nonzero__(self) -> bool:
         return self.__bool__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "MotionResult(time=%s, motion=%r, region=%r, frame=%s)" % (
                 "None" if self.time is None else "%.3f" % self.time,
@@ -54,7 +61,7 @@ class FrameDiffer():
     so that you can remember work you've done on frame B, so that you don't
     repeat that work when you need to compare against frame C.
     """
-    def diff(self, frame):
+    def diff(self, frame: "FrameT"):
         raise NotImplementedError(
             "%s.diff is not implemented" % self.__class__.__name__)
 
@@ -73,8 +80,14 @@ class BGRDiff(FrameDiffer):
     and `ocr`'s `text_color`.
     """
 
-    def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
-                 threshold=25, erode=True):
+    def __init__(
+        self,
+        initial_frame: "FrameT",
+        mask: "MaskTypes" = Region.ALL,
+        min_size: "Optional[Tuple[int, int]]" = None,
+        threshold: float = 25,
+        erode: bool = True,
+    ):
         self.prev_frame = initial_frame
         self.min_size = min_size
         self.threshold = threshold
@@ -90,7 +103,7 @@ class BGRDiff(FrameDiffer):
             kernel = None
         self.kernel = kernel
 
-    def diff(self, frame):
+    def diff(self, frame: "FrameT"):
         imglog = ImageLogger("BGRDiff", region=self.region,
                              min_size=self.min_size, threshold=self.threshold)
         imglog.imwrite("source", frame)
@@ -198,8 +211,14 @@ class GrayscaleDiff(FrameDiffer):
     `press_and_wait`.
     """
 
-    def __init__(self, initial_frame, mask=Region.ALL, min_size=None,
-                 threshold=0.84, erode=True):
+    def __init__(
+        self,
+        initial_frame: "FrameT",
+        mask: "MaskTypes" = Region.ALL,
+        min_size: "Optional[SizeT]" = None,
+        threshold: float = 0.84,
+        erode: bool = True,
+    ):
         self.prev_frame = initial_frame
         self.min_size = min_size
         self.threshold = threshold
@@ -217,10 +236,10 @@ class GrayscaleDiff(FrameDiffer):
 
         self.prev_frame_gray = self.gray(initial_frame)
 
-    def gray(self, frame):
+    def gray(self, frame: "FrameT"):
         return cv2.cvtColor(crop(frame, self.region), cv2.COLOR_BGR2GRAY)
 
-    def diff(self, frame):
+    def diff(self, frame: "FrameT"):
         frame_gray = self.gray(frame)
 
         imglog = ImageLogger("GrayscaleDiff", region=self.region,
