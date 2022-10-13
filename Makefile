@@ -28,8 +28,8 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-PYLINT ?= pylint
-PYTEST ?= pytest-3
+PYLINT ?= python3 -m pylint
+PYTEST ?= python3 -m pytest
 
 CFLAGS?=-O2
 
@@ -237,7 +237,7 @@ check-integrationtests: install-for-test
 	       grep -v -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
-	PYTHONPATH=$$PWD PYLINT=$(PYLINT) extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD PYLINT="$(PYLINT)" extra/pylint.sh $(PYTHON_FILES)
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb
