@@ -1,7 +1,13 @@
 import configparser
 import enum
 import os
+import typing
 from contextlib import contextmanager
+
+if typing.TYPE_CHECKING:
+    from typing import Callable, Union, Type
+    DefaultT = typing.TypeVar('DefaultT')
+    T = typing.TypeVar('T')
 
 _config = None
 
@@ -15,7 +21,12 @@ class NoDefault():
     pass
 
 
-def get_config(section, key, default=NoDefault, type_=str):
+def get_config(
+    section: str,
+    key: str,
+    default: "Union[Type[NoDefault], DefaultT]" = NoDefault,
+    type_: "Callable[[str], T]" = str,
+) -> "Union[T, DefaultT]":
     """Read the value of ``key`` from ``section`` of the test-pack
     configuration file.
 

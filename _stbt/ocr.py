@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import typing
 from enum import IntEnum
 
 import cv2
@@ -17,6 +18,12 @@ from .imgutils import Color, crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
+
+if typing.TYPE_CHECKING:
+    from typing import Dict, List, Optional, Union
+    from .typing import ColorT, FrameT
+    CorrectionsT = Dict[Union[re.Pattern, str], str]
+
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -118,11 +125,11 @@ class TextMatchResult():
     _fields = ("time", "match", "region", "frame", "text")
 
     def __init__(self, time, match, region, frame, text):
-        self.time = time
-        self.match = match
-        self.region = region
-        self.frame = frame
-        self.text = text
+        self.time: "Optional[float]" = time
+        self.match: bool = match
+        self.region: Region = region
+        self.frame: "FrameT" = frame
+        self.text: str = text
 
     def __bool__(self):
         return self.match
@@ -138,12 +145,21 @@ class TextMatchResult():
                 self.text))
 
 
-def ocr(frame=None, region=Region.ALL,
-        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None, tesseract_config=None, tesseract_user_words=None,
-        tesseract_user_patterns=None, upsample=True, text_color=None,
-        text_color_threshold=None, engine=None, char_whitelist=None,
-        corrections=None):
+def ocr(
+    frame: "FrameT" = None,
+    region: Region = Region.ALL,
+    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    lang: str = None,
+    tesseract_config: "Optional[Dict[str, Union[bool,str,int]]]" = None,
+    tesseract_user_words: "Union[List[str], str]" = None,
+    tesseract_user_patterns: "Union[List[str], str]" = None,
+    upsample: bool = True,
+    text_color: "ColorT" = None,
+    text_color_threshold: float = None,
+    engine: "Optional[OcrEngine]" = None,
+    char_whitelist: str = None,
+    corrections: "Optional[CorrectionsT]" = None,
+):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -280,11 +296,20 @@ def ocr(frame=None, region=Region.ALL,
     return text
 
 
-def match_text(text, frame=None, region=Region.ALL,
-               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
-               tesseract_config=None, case_sensitive=False, upsample=True,
-               text_color=None, text_color_threshold=None,
-               engine=None, char_whitelist=None):
+def match_text(
+    text: str,
+    frame: "FrameT" = None,
+    region: Region = Region.ALL,
+    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    lang: str = None,
+    tesseract_config: "Optional[Dict[str, Union[bool,str,int]]]" = None,
+    case_sensitive: bool = False,
+    upsample: bool = True,
+    text_color: "ColorT" = None,
+    text_color_threshold: float = None,
+    engine: "Optional[OcrEngine]" = None,
+    char_whitelist: str = None,
+) -> TextMatchResult:
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -372,7 +397,9 @@ def match_text(text, frame=None, region=Region.ALL,
 PatternType = type(re.compile(""))
 
 
-def apply_ocr_corrections(text, corrections=None):
+def apply_ocr_corrections(
+        text: str,
+        corrections: "Optional[CorrectionsT]" = None) -> str:
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
     This is available as a separate function so that you can use it to
@@ -414,7 +441,7 @@ def _apply_ocr_corrections(text, corrections):
 global_ocr_corrections = {}
 
 
-def set_global_ocr_corrections(corrections):
+def set_global_ocr_corrections(corrections: "CorrectionsT"):
     """Specify default OCR corrections that apply to all calls to `stbt.ocr`
     and `stbt.apply_ocr_corrections`.
 

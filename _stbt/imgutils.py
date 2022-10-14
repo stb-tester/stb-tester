@@ -5,14 +5,19 @@ import inspect
 import os
 import re
 import warnings
+import typing
 from functools import lru_cache
-from typing import overload, Tuple
+from typing import overload
 
 import cv2
 import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
+
+if typing.TYPE_CHECKING:
+    from typing import Optional, Tuple
+    from .typing import FrameT, ImageT
 
 
 class Frame(numpy.ndarray):
@@ -54,15 +59,15 @@ class Frame(numpy.ndarray):
         return repr(self)
 
     @property
-    def width(self):
+    def width(self) -> int:
         return self.shape[1]  # pylint:disable=unsubscriptable-object
 
     @property
-    def height(self):
+    def height(self) -> int:
         return self.shape[0]  # pylint:disable=unsubscriptable-object
 
     @property
-    def region(self):
+    def region(self) -> Region:
         return Region(0, 0, self.shape[1], self.shape[0])
 
 
@@ -126,15 +131,15 @@ class Image(numpy.ndarray):
         return repr(self)
 
     @property
-    def width(self):
+    def width(self) -> int:
         return self.shape[1]  # pylint:disable=unsubscriptable-object
 
     @property
-    def height(self):
+    def height(self) -> int:
         return self.shape[0]  # pylint:disable=unsubscriptable-object
 
     @property
-    def region(self):
+    def region(self) -> Region:
         return Region(0, 0, self.shape[1], self.shape[0])
 
 
@@ -189,12 +194,12 @@ class Color:
     def __init__(self, blue: int, green: int, red: int) -> None:
         ...
     @overload
-    def __init__(self, bgr: Tuple[int, int, int]) -> None:
+    def __init__(self, bgr: "Tuple[int, int, int]") -> None:
         ...
     def __init__(self, *args,
                  hexstring: str = None,
                  blue: int = None, green: int = None, red: int = None,
-                 bgr: Tuple[int, int, int] = None):
+                 bgr: "Tuple[int, int, int]" = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -275,17 +280,17 @@ class Color:
         return (numpy.asarray(out, dtype=numpy.uint8)
                      .reshape((1, 1, len(channels))))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Color('{self.hexstring}')"
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Color") -> bool:
         return isinstance(other, Color) and self.hexstring == other.hexstring
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.hexstring)
 
 
-def crop(frame, region):
+def crop(frame: "FrameT", region: Region) -> "FrameT":
     """Returns an image containing the specified region of ``frame``.
 
     :type frame: `stbt.Frame` or `numpy.ndarray`
@@ -321,7 +326,11 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
-def load_image(filename, flags=None, color_channels=None) -> Image:
+def load_image(
+    filename: "ImageT",
+    flags: "Optional[Tuple[int]]" = None,
+    color_channels: "Optional[int]" = None,
+) -> Image:
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
@@ -504,7 +513,7 @@ def _filename_repr(absolute_filename):
         return repr(_relative_filename(absolute_filename))
 
 
-def save_frame(image, filename):
+def save_frame(image: "FrameT", filename: str):
     """Saves an OpenCV image to the specified file.
 
     Takes an image obtained from `get_frame` or from the `screenshot`

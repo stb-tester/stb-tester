@@ -5,19 +5,23 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 import traceback
+import typing
 from contextlib import contextmanager
 
 from .logging import debug
 from .types import UITestError, UITestFailure
 
+if typing.TYPE_CHECKING:
+    from typing import ContextManager, Optional
+
 
 class PreconditionError(UITestError):
     """Exception raised by `as_precondition`."""
-    def __init__(self, message, original_exception):
+    def __init__(self, message: str, original_exception: Exception):
         super().__init__()
-        self.message = message
-        self.original_exception = original_exception
-        self.screenshot = None
+        self.message: str = message
+        self.original_exception: Exception = original_exception
+        self.screenshot: "Optional[FrameT]" = None
 
     def __str__(self):
         return (
@@ -26,7 +30,7 @@ class PreconditionError(UITestError):
 
 
 @contextmanager
-def as_precondition(message):
+def as_precondition(message: str) -> "ContextManager[None]":
     """Context manager that replaces test failures with test errors.
 
     Stb-tester's reports show test failures (that is, `UITestFailure` or

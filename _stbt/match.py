@@ -11,6 +11,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import enum
 import itertools
 from collections import namedtuple
+import typing
 
 import cv2
 import numpy
@@ -29,6 +30,10 @@ try:
     from .sqdiff import sqdiff
 except ImportError:
     sqdiff = None
+
+if typing.TYPE_CHECKING:
+    from typing import Iterator, Optional
+    from .typing import FrameT, ImageT
 
 
 class MatchMethod(enum.Enum):
@@ -140,9 +145,14 @@ class MatchParameters():
 
     """
 
-    def __init__(self, match_method=None, match_threshold=None,
-                 confirm_method=None, confirm_threshold=None,
-                 erode_passes=None):
+    def __init__(
+        self,
+        match_method: "Optional[MatchMethod]" = None,
+        match_threshold: "Optional[float]" = None,
+        confirm_method: "Optional[ConfirmMethod]" = None,
+        confirm_threshold: "Optional[float]" = None,
+        erode_passes: "Optional[int]" = None,
+    ):
 
         if match_method is None:
             match_method = get_config(
@@ -162,13 +172,13 @@ class MatchParameters():
         match_method = MatchMethod(match_method)
         confirm_method = ConfirmMethod(confirm_method)
 
-        self.match_method = match_method
-        self.match_threshold = match_threshold
-        self.confirm_method = confirm_method
-        self.confirm_threshold = confirm_threshold
-        self.erode_passes = erode_passes
+        self.match_method: MatchMethod = match_method
+        self.match_threshold: float = match_threshold
+        self.confirm_method: ConfirmMethod = confirm_method
+        self.confirm_threshold: float = confirm_threshold
+        self.erode_passes: int = erode_passes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "MatchParameters(match_method=%r, match_threshold=%r, "
             "confirm_method=%r, confirm_threshold=%r, erode_passes=%r)"
@@ -207,12 +217,12 @@ class MatchResult():
     def __init__(
             self, time, match, region,  # pylint: disable=redefined-outer-name
             first_pass_result, frame, image, _first_pass_matched=None):
-        self.time = time
-        self.match = match
-        self.region = region
-        self.first_pass_result = first_pass_result
-        self.frame = frame
-        self.image = image
+        self.time: "Optional[float]" = time
+        self.match: bool = match
+        self.region: Region = region
+        self.first_pass_result: float = first_pass_result
+        self.frame: "FrameT" = frame
+        self.image: "ImageT" = image
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
@@ -230,11 +240,16 @@ class MatchResult():
         return self.match
 
     @property
-    def position(self):
+    def position(self) -> Position:
         return Position(self.region.x, self.region.y)
 
 
-def match(image, frame=None, match_parameters=None, region=Region.ALL):
+def match(
+    image: "ImageT",
+    frame: "Optional[FrameT]" = None,
+    match_parameters: "Optional[MatchParameters]" = None,
+    region: Region = Region.ALL,
+) -> MatchResult:
     """
     Search for an image in a single video frame.
 
@@ -279,7 +294,12 @@ def match(image, frame=None, match_parameters=None, region=Region.ALL):
     return result
 
 
-def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
+def match_all(
+    image: "ImageT",
+    frame: "FrameT" = None,
+    match_parameters: "MatchParameters" = None,
+    region: Region = Region.ALL,
+) -> "Iterator[MatchResult]":
     """
     Search for all instances of an image in a single video frame.
 
@@ -399,8 +419,14 @@ def _match_all(image, frame, match_parameters, region):
             pass
 
 
-def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
-                   match_parameters=None, region=Region.ALL, frames=None):
+def wait_for_match(
+    image: "ImageT",
+    timeout_secs: float = 10,
+    consecutive_matches: int = 1,
+    match_parameters: "Optional[MatchParameters]" = None,
+    region: Region = Region.ALL,
+    frames: "Iterator[FrameT]" = None,
+) -> MatchResult:
     """Search for an image in the device-under-test's video stream.
 
     :param image: The image to search for. See `match`.
@@ -465,11 +491,12 @@ class MatchTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
-    def __init__(self, screenshot, expected, timeout_secs):
+    def __init__(self, screenshot: "FrameT", expected: str,
+                 timeout_secs: float):
         super().__init__()
-        self.screenshot = screenshot
-        self.expected = expected
-        self.timeout_secs = timeout_secs
+        self.screenshot: "FrameT" = screenshot
+        self.expected: str = expected
+        self.timeout_secs: float = timeout_secs
 
     def __str__(self):
         return "Didn't find match for '%s' within %g seconds." % (

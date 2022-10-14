@@ -10,6 +10,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
 from contextlib import contextmanager
+import typing
 
 from _stbt import android
 from _stbt.black import (
@@ -149,11 +150,16 @@ __all__ = [
     "wait_until",
 ]
 
+if typing.TYPE_CHECKING:
+    from _stbt.typing import ImageT, KeyT, RegionT
+    from _stbt.core import _Keypress
+
+
 # Functions available to stbt scripts
 # ===========================================================================
 
 
-def last_keypress():
+def last_keypress() -> str:
     """Returns information about the last key-press sent to the device under
     test.
 
@@ -164,7 +170,9 @@ def last_keypress():
     return _dut.last_keypress()
 
 
-def press(key, interpress_delay_secs=None, hold_secs=None):
+def press(
+    key: "KeyT", interpress_delay_secs: float = None, hold_secs: float = None
+):
     """Send the specified key-press to the device under test.
 
     :param str key:
@@ -213,7 +221,9 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
 
-def pressing(key, interpress_delay_secs=None):
+def pressing(
+    key: "KeyT", interpress_delay_secs: float = None
+) -> "typing.ContextManager[_Keypress]":
     """Context manager that will press and hold the specified key for the
     duration of the ``with`` code block.
 
@@ -228,7 +238,7 @@ def pressing(key, interpress_delay_secs=None):
     return _dut.pressing(key, interpress_delay_secs)
 
 
-def draw_text(text, duration_secs=3):
+def draw_text(text: str, duration_secs: float = 3) -> None:
     """Write the specified text to the output video.
 
     :param str text: The text to write.
@@ -241,12 +251,13 @@ def draw_text(text, duration_secs=3):
 
 
 def press_until_match(
-        key,
-        image,
-        interval_secs=None,
-        max_presses=None,
-        match_parameters=None,
-        region=Region.ALL):
+    key: "KeyT",
+    image: "ImageT",
+    interval_secs: "typing.Optional[float]" = None,
+    max_presses: "typing.Optional[int]" = None,
+    match_parameters: "typing.Optional[MatchParameters]" = None,
+    region: "RegionT" = Region.ALL,
+) -> MatchResult:
     """Call `press` as many times as necessary to find the specified image.
 
     :param key: See `press`.
@@ -278,7 +289,7 @@ def press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
 
 
-def frames(timeout_secs=None):
+def frames(timeout_secs: float = None) -> typing.Iterator[Frame]:
     """Generator that yields video frames captured from the device-under-test.
 
     For example::
@@ -307,7 +318,7 @@ def frames(timeout_secs=None):
     return _dut.frames(timeout_secs)
 
 
-def get_frame():
+def get_frame() -> Frame:
     """Grabs a video frame from the device-under-test.
 
     :rtype: stbt.Frame
