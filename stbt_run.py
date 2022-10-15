@@ -12,6 +12,7 @@ import sys
 
 import _stbt.core
 from _stbt import imgproc_cache
+from _stbt.config import get_config
 from _stbt.logging import debug, init_logger
 from _stbt.stbt_run import (load_test_function,
                             sane_unicode_and_exception_handling, video)
@@ -68,6 +69,23 @@ def pytest_addoption(parser):
         '--save-thumbnail', default='never',
         choices=['always', 'on-failure', 'never'],
         help="Save a thumbnail at the end of the test to thumbnail.jpg")
+    parser.addoption(
+        '--control',
+        default=get_config('global', 'control'),
+        help='The remote control to control the stb (default: %(default)s)')
+    parser.addoption(
+        '--source-pipeline',
+        default=get_config('global', 'source_pipeline'),
+        help='A gstreamer pipeline to use for A/V input (default: '
+             '%(default)s)')
+    parser.addoption(
+        '--sink-pipeline',
+        default=get_config('global', 'sink_pipeline'),
+        help='A gstreamer pipeline to use for video output '
+             '(default: %(default)s)')
+    parser.addoption(
+        '--save-video', help='Record video to the specified file',
+        metavar='FILE', default=get_config('run', 'save_video'))
 
 
 def pytest_sessionstart(session):
