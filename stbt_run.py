@@ -55,5 +55,40 @@ def main(argv):
         test_function.call()
 
 
+# Pytest plugin that does the same as the main above.
+def pytest_addoption(parser):
+    parser.addoption(
+        '--cache', default=imgproc_cache.default_filename,
+        help="Path for image-processing cache (default: %(default)s")
+    parser.addoption(
+        '--save-screenshot', default='on-failure',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a screenshot at the end of the test to screenshot.png")
+    parser.addoption(
+        '--save-thumbnail', default='never',
+        choices=['always', 'on-failure', 'never'],
+        help="Save a thumbnail at the end of the test to thumbnail.jpg")
+
+
+def pytest_sessionstart(session):
+    args = session.config.option
+    init_logger()
+    debug("Arguments:\n" + "\n".join([
+        "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
+
+    dut = _stbt.core.new_device_under_test_from_config(args)
+    session.dut = dut
+    session.video = video(args, dut)
+    session.video.__enter__()
+    session.imgproc_cache = imgproc_cache.setup_cache(filename=args.cache)
+    session.imgproc_cache.__enter__()
+    dut.get_frame()  # wait until pipeline is rolling
+
+
+def pytest_sessionfinish(session):
+    session.video.__exit__(None, None, None)
+    session.imgproc_cache.__exit__(None, None, None)
+
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
