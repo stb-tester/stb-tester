@@ -88,6 +88,10 @@ def pytest_addoption(parser):
         metavar='FILE', default=get_config('run', 'save_video'))
 
 
+def pytest_configure(config):
+    _stbt.logging._debug_level = config.option.verbose
+
+
 def pytest_sessionstart(session):
     args = session.config.option
     init_logger()
