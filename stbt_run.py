@@ -108,8 +108,8 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
-    session.video.__exit__(None, None, None)
     session.imgproc_cache.__exit__(None, None, None)
+    session.video.__exit__(None, None, None)
 
 
 if __name__ == '__main__':
