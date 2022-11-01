@@ -1,6 +1,5 @@
 """Copyright © 2015-2022 Stb-tester.com Ltd."""
 
-import functools
 import inspect
 from typing import Callable, TypeVar
 
@@ -140,18 +139,19 @@ def wait_until(callable_: Callable[[], T],
 def _callable_description(callable_):
     """Helper to provide nicer debug output when `wait_until` fails.
 
+    >>> import functools
     >>> _callable_description(wait_until)
     'wait_until'
     >>> _callable_description(
     ...     lambda: stbt.press("OK"))
     '    lambda: stbt.press("OK"))\\n'
     >>> _callable_description(functools.partial(eval, globals={}))
-    'eval'
+    'functools.partial(<built-in function eval>, globals={})'
     >>> _callable_description(
     ...     functools.partial(
     ...         functools.partial(eval, globals={}),
     ...         locals={}))
-    'eval'
+    'functools.partial(<built-in function eval>, globals={}, locals={})'
     >>> class T():
     ...     def __call__(self): return True;
     >>> _callable_description(T())
@@ -165,7 +165,5 @@ def _callable_description(callable_):
             except IOError:
                 pass
         return name
-    elif isinstance(callable_, functools.partial):
-        return _callable_description(callable_.func)
     else:
         return repr(callable_)
