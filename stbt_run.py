@@ -22,17 +22,7 @@ def main(argv):
     parser = _stbt.core.argparser()
     parser.prog = 'stbt run'
     parser.description = 'Run an stb-tester test script'
-    parser.add_argument(
-        '--cache', default=imgproc_cache.default_filename,
-        help="Path for image-processing cache (default: %(default)s")
-    parser.add_argument(
-        '--save-screenshot', default='on-failure',
-        choices=['always', 'on-failure', 'never'],
-        help="Save a screenshot at the end of the test to screenshot.png")
-    parser.add_argument(
-        '--save-thumbnail', default='never',
-        choices=['always', 'on-failure', 'never'],
-        help="Save a thumbnail at the end of the test to thumbnail.jpg")
+    add_arguments(parser.add_argument)
     parser.add_argument(
         'script', metavar='FILE[::TESTCASE]', help=(
             "The python test script to run. Optionally specify a python "
@@ -56,19 +46,25 @@ def main(argv):
         test_function.call()
 
 
-# Pytest plugin that does the same as the main above.
-def pytest_addoption(parser):
-    parser.addoption(
+def add_arguments(add_argument):
+    add_argument(
         '--cache', default=imgproc_cache.default_filename,
         help="Path for image-processing cache (default: %(default)s")
-    parser.addoption(
+    add_argument(
         '--save-screenshot', default='on-failure',
         choices=['always', 'on-failure', 'never'],
         help="Save a screenshot at the end of the test to screenshot.png")
-    parser.addoption(
+    add_argument(
         '--save-thumbnail', default='never',
         choices=['always', 'on-failure', 'never'],
         help="Save a thumbnail at the end of the test to thumbnail.jpg")
+
+
+# Pytest plugin that does the same as `main` above:
+
+def pytest_addoption(parser):
+    add_arguments(parser.addoption)
+    # Arguments from `_stbt.core.argparser`:
     parser.addoption(
         '--control',
         default=get_config('global', 'control'),
