@@ -417,6 +417,11 @@ def load_image(
         filename = None
         absolute_filename = None
         img = _convert_color(obj, color_channels, absolute_filename)
+        if img.shape[2] == 4:
+            # Normalise transparency channel to either 0 or 255, for stbt.match
+            img = img.copy()
+            chan = img[:, :, 3]
+            chan[chan < 255] = 0
     elif isinstance(filename, str):
         absolute_filename = find_file(filename)
         img = _imread(absolute_filename, color_channels)

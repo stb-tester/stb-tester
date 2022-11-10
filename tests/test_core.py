@@ -141,6 +141,10 @@ def test_load_image_alpha_normalisation():
     assert f.shape == (1, 3, 4)
     assert list(f[0, :, 3]) == [0, 0, 255]
 
+    aa = stbt.load_image(a)
+    assert aa.shape == (1, 3, 4)
+    assert list(aa[0, :, 3]) == [0, 0, 255]
+
 
 def test_that_load_image_with_nonexistent_image_raises_ioerror():
     with pytest.raises(FileNotFoundError,
