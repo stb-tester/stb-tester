@@ -191,15 +191,21 @@ class Color:
     def __init__(self, hexstring: str) -> None:
         ...
     @overload
-    def __init__(self, blue: int, green: int, red: int) -> None:
+    def __init__(self, blue: int, green: int, red: int,
+                 alpha: "Optional[int]" = None) -> None:
         ...
     @overload
     def __init__(self, bgr: "Tuple[int, int, int]") -> None:
         ...
+    @overload
+    def __init__(self, bgra: "Tuple[int, int, int, int]") -> None:
+        ...
     def __init__(self, *args,
                  hexstring: str = None,
                  blue: int = None, green: int = None, red: int = None,
-                 bgr: "Tuple[int, int, int]" = None) -> None:
+                 alpha: int = None,
+                 bgr: "Tuple[int, int, int]" = None,
+                 bgra: "Tuple[int, int, int, int]" = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -219,8 +225,10 @@ class Color:
             self.array = Color._from_sequence(*args)  # pylint:disable=no-value-for-parameter
         elif not args and bgr is not None:
             self.array = Color._from_sequence(*bgr)
+        elif not args and bgra is not None:
+            self.array = Color._from_sequence(*bgra)
         elif not args and all(x is not None for x in (blue, green, red)):
-            self.array = Color._from_sequence(blue, green, red)
+            self.array = Color._from_sequence(blue, green, red, alpha)
 
         else:
             raise TypeError("Color: __init__() expected a Color, '#rrggbb' "

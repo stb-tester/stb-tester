@@ -192,12 +192,15 @@ def test_crop():
     ([(0, 127, 247)], {}, "#f77f00"),  # a 3-tuple, BGR
     ([], {"bgr": (0, 127, 247)}, "#f77f00"),
     ([], {"bgr": (0, 127, 247, 255)}, "#f77f00ff"),  # a 4-tuple, BGRA
+    ([], {"bgra": (0, 127, 247, 255)}, "#f77f00ff"),
     ([0, 127, 247], {}, "#f77f00"),  # 3 separate arguments, BGR
     ([], {"blue": 0, "green": 127, "red": 247}, "#f77f00"),
     ([0, 127, 247, 255], {}, "#f77f00ff"),  # 4 separate arguments, BGRA
+    ([], {"blue": 0, "green": 127, "red": 247, "alpha": 255}, "#f77f00ff"),
     ([0, 127, 256], {}, ValueError),  # range 0-255
-    ([0, -127, 247], {}, ValueError),  # range 0-255
-    ([0, 127], {}, TypeError),
+    ([0, 127, 255, 256], {}, ValueError),
+    ([0, -127, 247], {}, ValueError),
+    ([0, 127], {}, TypeError),  # missing arguments
     ([], {}, TypeError),
     ([], {"blue": 0, "green": 127}, TypeError),
     ([stbt.Color("#000")], {}, "#000000"),  # constructing from another Color
