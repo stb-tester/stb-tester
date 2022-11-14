@@ -127,6 +127,32 @@ def test_load_image_from_filename_with_color_channels():
             assert isinstance(img, stbt.Image)
 
 
+def test_load_image_alpha_normalisation():
+    """Partially transparent pixels are made fully transparent."""
+
+    # Sanity check: The image is what we expect to be testing.
+    a = numpy.array([[[255, 255, 255,   0],
+                      [255, 255, 255, 127],
+                      [255, 255, 255, 255]]], dtype=numpy.uint8)
+    assert numpy.all(cv2.imread("tests/with-alpha-partially-opaque.png",
+                                cv2.IMREAD_UNCHANGED) == a)
+
+    f = stbt.load_image("with-alpha-partially-opaque.png")
+    assert f.shape == (1, 3, 4)
+    assert list(f[0, :, 3]) == [0, 0, 255]
+
+    aa = stbt.load_image(a)
+    assert aa.shape == (1, 3, 4)
+    assert list(aa[0, :, 3]) == [0, 0, 255]
+
+
+def test_load_image_twice():
+    # Can happen if you pass the result of `load_image` into `match`.
+    img = stbt.load_image("completely-transparent.png")
+    img2 = stbt.load_image(img)
+    assert numpy.all(img == img2)
+
+
 def test_that_load_image_with_nonexistent_image_raises_ioerror():
     with pytest.raises(FileNotFoundError,
                        match=r"\[Errno 2\] No such file: 'idontexist.png'"):
