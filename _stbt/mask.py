@@ -284,7 +284,7 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
         if n.op == "+":
             array = _to_array(n.left, region) | _to_array(n.right, region)
         elif n.op == "-":
-            array = _to_array(n.left, region) & ~_to_array(n.right, region)
+            array = _to_array(n.left, region) & ~_to_array(n.right, region)  # pylint:disable=invalid-unary-operand-type
         else:
             assert False, f"Unreachable: Unknown op {n.op}"
     elif mask._region is not None:
