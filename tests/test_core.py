@@ -3,15 +3,11 @@ import os
 import shutil
 import sys
 import time
+from unittest import mock
 
 import cv2
 import numpy
 import pytest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # Python 2 backport
 
 import stbt_core as stbt
 from stbt_core import wait_until

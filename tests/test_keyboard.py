@@ -1,13 +1,9 @@
 import logging
 import re
+from unittest import mock
 
 import numpy
 import pytest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # Python 2 backport
 
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions

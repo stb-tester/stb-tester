@@ -188,10 +188,7 @@ class MockTime():
 
     @contextmanager
     def patch(self):
-        try:
-            from unittest.mock import patch
-        except ImportError:
-            from mock import patch  # Python 2 backport
+        from unittest.mock import patch
 
         with patch("time.time", self.time), \
                 patch("time.sleep", self.sleep):
