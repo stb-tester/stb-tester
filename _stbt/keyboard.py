@@ -1,24 +1,23 @@
-# coding: utf-8
 """Copyright 2019-2020 Stb-tester.com Ltd."""
+
+from __future__ import annotations
 
 import re
 import time
-import typing
 from logging import getLogger
+from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
 
 from attr import attrs, attrib
+from _stbt.frameobject import FrameObject
 from _stbt.grid import Grid
+from _stbt.imgutils import FrameT
 from _stbt.mask import MaskTypes, load_mask
-from _stbt.transition import TransitionStatus
-from _stbt.types import Region
+from _stbt.transition import _TransitionResult, TransitionStatus
+from _stbt.types import KeyT, Region
 
-if typing.TYPE_CHECKING:
-    from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
-    from .transition import _TransitionResult
-    from .typing import FrameT, KeyT
 
-    T = TypeVar("T")
-    QueryT: typing.TypeAlias = Union["Keyboard.Key", Dict[str, str], str]
+FrameObjectT = TypeVar("FrameObjectT", bound=FrameObject)
+QueryT: TypeAlias = Union["Keyboard.Key", Dict[str, str], str]
 
 log = getLogger("stbt.Keyboard")
 
@@ -215,8 +214,8 @@ class Keyboard():
     def add_key(
         self,
         name: str,
-        text: "Optional[str]" = None,
-        region: "Optional[Region]" = None,
+        text: Optional[str] = None,
+        region: Optional[Region] = None,
         mode: str = None,
     ):
         """Add a key to the model (specification) of the keyboard.
@@ -254,10 +253,10 @@ class Keyboard():
 
     def find_key(
         self,
-        name: "Optional[str]" = None,
-        text: "Optional[str]" = None,
-        region: "Optional[Region]" = None,
-        mode: "Optional[str]" = None,
+        name: Optional[str] = None,
+        text: Optional[str] = None,
+        region: Optional[Region] = None,
+        mode: Optional[str] = None,
     ) -> Key:
         """Find a key in the model (specification) of the keyboard.
 
@@ -283,11 +282,11 @@ class Keyboard():
 
     def find_keys(
         self,
-        name: "Optional[str]" = None,
-        text: "Optional[str]" = None,
-        region: "Optional[Region]" = None,
-        mode: "Optional[str]" = None,
-    ) -> "List[Key]":
+        name: Optional[str] = None,
+        text: Optional[str] = None,
+        region: Optional[Region] = None,
+        mode: Optional[str] = None,
+    ) -> List[Key]:
         """Find matching keys in the model of the keyboard.
 
         This is like `find_key`, but it returns a list containing any
@@ -406,10 +405,10 @@ class Keyboard():
 
     def add_transition(
         self,
-        source: "QueryT",
-        target: "QueryT",
-        keypress: "KeyT",
-        mode: "Optional[str]" = None,
+        source: QueryT,
+        target: QueryT,
+        keypress: KeyT,
+        mode: Optional[str] = None,
         symmetrical: bool = True,
     ) -> None:
         """Add a transition to the model (specification) of the keyboard.
@@ -466,7 +465,7 @@ class Keyboard():
     def add_edgelist(
         self,
         edgelist: str,
-        mode: "Optional[str]" = None,
+        mode: Optional[str] = None,
         symmetrical: bool = True,
     ) -> None:
         """Add keys and transitions specified in a string in "edgelist" format.
@@ -517,7 +516,7 @@ class Keyboard():
                     "(must contain 3 fields): %r"
                     % (i, line.strip()))
 
-    def add_grid(self, grid: Grid, mode: "Optional[str]" = None) -> None:
+    def add_grid(self, grid: Grid, mode: Optional[str] = None) -> None:
         """Add keys, and transitions between them, to the model of the keyboard.
 
         If the keyboard (or part of the keyboard) is arranged in a regular
@@ -598,10 +597,10 @@ class Keyboard():
     def enter_text(
         self,
         text: str,
-        page: "T",
+        page: FrameObjectT,
         verify_every_keypress: bool = False,
         retries: int = 2,
-    ) -> "T":
+    ) -> FrameObjectT:
         """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
@@ -664,11 +663,11 @@ class Keyboard():
 
     def navigate_to(
         self,
-        target: "QueryT",
-        page: "T",
+        target: QueryT,
+        page: FrameObjectT,
         verify_every_keypress: bool = False,
         retries: int = 2,
-    ) -> "T":
+    ) -> FrameObjectT:
         """Move the selection to the specified key.
 
         This won't press *KEY_OK* on the target; it only moves the selection
@@ -753,8 +752,8 @@ class Keyboard():
         return page
 
     def press_and_wait(
-        self, key: "KeyT", timeout_secs: int = 10, stable_secs: int = 1
-    ) -> "_TransitionResult":
+        self, key: KeyT, timeout_secs: int = 10, stable_secs: int = 1
+    ) -> _TransitionResult:
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,
@@ -762,7 +761,7 @@ class Keyboard():
 
     def wait_for_transition_to_end(
         self,
-        initial_frame: "Optional[FrameT]" = None,
+        initial_frame: Optional[FrameT] = None,
         timeout_secs: float = 10,
         stable_secs: float = 1,
     ):

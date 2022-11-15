@@ -1,4 +1,4 @@
-# coding: utf-8
+from __future__ import annotations
 
 import errno
 import glob
@@ -6,23 +6,20 @@ import os
 import re
 import shutil
 import subprocess
-import typing
 from enum import IntEnum
+from typing import Dict, List, Optional, Union
 
 import cv2
 import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import Color, crop, _frame_repr, _validate_region
+from .imgutils import Color, ColorT, crop, FrameT, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
 
-if typing.TYPE_CHECKING:
-    from typing import Dict, List, Optional, Union
-    from .typing import ColorT, FrameT
-    CorrectionsT = Dict[Union[re.Pattern, str], str]
+CorrectionsT = Dict[Union[re.Pattern, str], str]
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
@@ -125,10 +122,10 @@ class TextMatchResult():
     _fields = ("time", "match", "region", "frame", "text")
 
     def __init__(self, time, match, region, frame, text):
-        self.time: "Optional[float]" = time
+        self.time: Optional[float] = time
         self.match: bool = match
         self.region: Region = region
-        self.frame: "FrameT" = frame
+        self.frame: FrameT = frame
         self.text: str = text
 
     def __bool__(self):
@@ -146,19 +143,19 @@ class TextMatchResult():
 
 
 def ocr(
-    frame: "FrameT" = None,
+    frame: FrameT = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     lang: str = None,
-    tesseract_config: "Optional[Dict[str, Union[bool,str,int]]]" = None,
-    tesseract_user_words: "Union[List[str], str]" = None,
-    tesseract_user_patterns: "Union[List[str], str]" = None,
+    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
+    tesseract_user_words: Union[List[str], str] = None,
+    tesseract_user_patterns: Union[List[str], str] = None,
     upsample: bool = True,
-    text_color: "ColorT" = None,
+    text_color: ColorT = None,
     text_color_threshold: float = None,
-    engine: "Optional[OcrEngine]" = None,
+    engine: Optional[OcrEngine] = None,
     char_whitelist: str = None,
-    corrections: "Optional[CorrectionsT]" = None,
+    corrections: Optional[CorrectionsT] = None,
 ):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -298,16 +295,16 @@ def ocr(
 
 def match_text(
     text: str,
-    frame: "FrameT" = None,
+    frame: FrameT = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     lang: str = None,
-    tesseract_config: "Optional[Dict[str, Union[bool,str,int]]]" = None,
+    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
     case_sensitive: bool = False,
     upsample: bool = True,
-    text_color: "ColorT" = None,
+    text_color: ColorT = None,
     text_color_threshold: float = None,
-    engine: "Optional[OcrEngine]" = None,
+    engine: Optional[OcrEngine] = None,
     char_whitelist: str = None,
 ) -> TextMatchResult:
     """Search for the specified text in a single video frame.
@@ -399,7 +396,7 @@ PatternType = type(re.compile(""))
 
 def apply_ocr_corrections(
         text: str,
-        corrections: "Optional[CorrectionsT]" = None) -> str:
+        corrections: Optional[CorrectionsT] = None) -> str:
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
     This is available as a separate function so that you can use it to
@@ -441,7 +438,7 @@ def _apply_ocr_corrections(text, corrections):
 global_ocr_corrections = {}
 
 
-def set_global_ocr_corrections(corrections: "CorrectionsT"):
+def set_global_ocr_corrections(corrections: CorrectionsT):
     """Specify default OCR corrections that apply to all calls to `stbt.ocr`
     and `stbt.apply_ocr_corrections`.
 

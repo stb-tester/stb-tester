@@ -1,19 +1,15 @@
-# coding: utf-8
+from __future__ import annotations
 
-import typing
+from typing import Optional
 
 import cv2
 import numpy
 
 from .imgutils import (
-    Frame, crop, _frame_repr, _image_region, pixel_bounding_box)
+    Frame, FrameT, crop, _frame_repr, _image_region, pixel_bounding_box)
 from .logging import ddebug, ImageLogger
-from .mask import load_mask
-from .types import Region
-
-if typing.TYPE_CHECKING:
-    from typing import Optional, Tuple
-    from .typing import MaskTypes, FrameT, SizeT
+from .mask import load_mask, MaskTypes
+from .types import Region, SizeT
 
 
 class MotionResult():
@@ -61,7 +57,7 @@ class FrameDiffer():
     so that you can remember work you've done on frame B, so that you don't
     repeat that work when you need to compare against frame C.
     """
-    def diff(self, frame: "FrameT"):
+    def diff(self, frame: FrameT):
         raise NotImplementedError(
             "%s.diff is not implemented" % self.__class__.__name__)
 
@@ -82,9 +78,9 @@ class BGRDiff(FrameDiffer):
 
     def __init__(
         self,
-        initial_frame: "FrameT",
-        mask: "MaskTypes" = Region.ALL,
-        min_size: "Optional[Tuple[int, int]]" = None,
+        initial_frame: FrameT,
+        mask: MaskTypes = Region.ALL,
+        min_size: Optional[SizeT] = None,
         threshold: float = 25,
         erode: bool = True,
     ):
@@ -103,7 +99,7 @@ class BGRDiff(FrameDiffer):
             kernel = None
         self.kernel = kernel
 
-    def diff(self, frame: "FrameT"):
+    def diff(self, frame: FrameT) -> MotionResult:
         imglog = ImageLogger("BGRDiff", region=self.region,
                              min_size=self.min_size, threshold=self.threshold)
         imglog.imwrite("source", frame)
@@ -213,9 +209,9 @@ class GrayscaleDiff(FrameDiffer):
 
     def __init__(
         self,
-        initial_frame: "FrameT",
-        mask: "MaskTypes" = Region.ALL,
-        min_size: "Optional[SizeT]" = None,
+        initial_frame: FrameT,
+        mask: MaskTypes = Region.ALL,
+        min_size: Optional[SizeT] = None,
         threshold: float = 0.84,
         erode: bool = True,
     ):
@@ -236,10 +232,10 @@ class GrayscaleDiff(FrameDiffer):
 
         self.prev_frame_gray = self.gray(initial_frame)
 
-    def gray(self, frame: "FrameT"):
+    def gray(self, frame: FrameT):
         return cv2.cvtColor(crop(frame, self.region), cv2.COLOR_BGR2GRAY)
 
-    def diff(self, frame: "FrameT"):
+    def diff(self, frame: FrameT) -> MotionResult:
         frame_gray = self.gray(frame)
 
         imglog = ImageLogger("GrayscaleDiff", region=self.region,

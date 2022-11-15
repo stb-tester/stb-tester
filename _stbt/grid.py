@@ -1,14 +1,14 @@
 """Copyright 2019 Stb-tester.com Ltd."""
 
-import typing
+from __future__ import annotations
+
 from collections import namedtuple
+from typing import Any, Iterator, List, Optional, Sequence, TypeVar, Union
 
-from .types import Position, Region
+from .types import Position, PositionT, Region
 
-if typing.TYPE_CHECKING:
-    from typing import (
-        Any, Iterator, List, Optional, Sequence, Tuple, TypeVar, Union)
-    T = TypeVar("T")
+
+T = TypeVar("T")
 
 
 class Grid():
@@ -38,10 +38,10 @@ class Grid():
 
     def __init__(
         self,
-        region: "Region",
-        cols: "Optional[int]" = None,
-        rows: "Optional[int]" = None,
-        data: "Optional[Sequence[Sequence[T]]]" = None,
+        region: Region,
+        cols: Optional[int] = None,
+        rows: Optional[int] = None,
+        data: Optional[Sequence[Sequence[T]]] = None,
     ):
         self.region: Region = region
         self.data = data
@@ -95,17 +95,17 @@ class Grid():
         return self.cols * self.rows
 
     @property
-    def cells(self) -> "List[Cell]":
+    def cells(self) -> List[Cell]:
         return [self.get(index=i)
                 for i in range(self.cols * self.rows)]
 
     def get(
         self,
-        index: "Optional[int]" = None,
-        position: "Optional[Tuple[int, int]]" = None,
-        region: "Optional[Region]" = None,
-        data: "Any" = None,
-    ) -> "Cell":
+        index: Optional[int] = None,
+        position: Optional[PositionT] = None,
+        region: Optional[Region] = None,
+        data: Any = None,
+    ) -> Cell:
         """Retrieve a single cell in the Grid.
 
         For example, let's say that you're looking for the selected item in
@@ -168,7 +168,7 @@ class Grid():
             region,
             self.data and self.data[position[1]][position[0]])
 
-    def __getitem__(self, key: "Union[int,Region,Position]") -> Cell:
+    def __getitem__(self, key: Union[int, Region, Position]) -> Cell:
         if isinstance(key, int):
             return self.get(index=key)
         elif isinstance(key, Region):
@@ -182,7 +182,7 @@ class Grid():
         else:
             return self.get(data=key)
 
-    def __iter__(self) -> "Iterator[Cell]":
+    def __iter__(self) -> Iterator[Cell]:
         for i in range(len(self)):
             yield self[i]
 

@@ -21,7 +21,7 @@ except ImportError:
 MaskTypes = Union[str, numpy.ndarray, "Mask", Region, None]
 
 
-def load_mask(mask: MaskTypes) -> "Mask":
+def load_mask(mask: MaskTypes) -> Mask:
     """Used to load a mask from disk, or to create a mask from a `Region`.
 
     A mask is a black & white image (the same size as the video-frame) that
@@ -190,31 +190,31 @@ class Mask:
         else:
             assert False, "Internal logic error"
 
-    def __add__(self, other: MaskTypes) -> "Mask":
+    def __add__(self, other: MaskTypes) -> Mask:
         if isinstance(other, (Region, Mask, type(None))):
             return Mask(BinOp("+", self, Mask(other)))
         else:
             return NotImplemented
 
-    def __radd__(self, other: MaskTypes) -> "Mask":
+    def __radd__(self, other: MaskTypes) -> Mask:
         if isinstance(other, (Region, Mask, type(None))):
             return Mask(other).__add__(self)
         else:
             return NotImplemented
 
-    def __sub__(self, other: MaskTypes) -> "Mask":
+    def __sub__(self, other: MaskTypes) -> Mask:
         if isinstance(other, (Region, Mask, type(None))):
             return Mask(BinOp("-", self, Mask(other)))
         else:
             return NotImplemented
 
-    def __rsub__(self, other: MaskTypes) -> "Mask":
+    def __rsub__(self, other: MaskTypes) -> Mask:
         if isinstance(other, (Region, Mask, type(None))):
             return Mask(other).__sub__(self)
         else:
             return NotImplemented
 
-    def __invert__(self) -> "Mask":
+    def __invert__(self) -> Mask:
         return Mask(self, invert=True)
 
 
@@ -284,7 +284,7 @@ def _to_array(mask: Mask, region: Region) -> numpy.ndarray:
         if n.op == "+":
             array = _to_array(n.left, region) | _to_array(n.right, region)
         elif n.op == "-":
-            array = _to_array(n.left, region) & ~_to_array(n.right, region)
+            array = _to_array(n.left, region) & ~_to_array(n.right, region)  # pylint:disable=invalid-unary-operand-type
         else:
             assert False, f"Unreachable: Unknown op {n.op}"
     elif mask._region is not None:

@@ -4,25 +4,23 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import functools
 import threading
-import typing
+from itertools import zip_longest
+from typing import Optional, TypeVar
 
-try:
-    from itertools import zip_longest
-except ImportError:
-    # Python 2:
-    from itertools import izip_longest as zip_longest
+from .imgutils import FrameT
 
-if typing.TYPE_CHECKING:
-    from .typing import FrameT, Optional
-    T = typing.TypeVar("T")
+
+T = TypeVar("T")
 
 
 # Type annotation isn't quite right here, but don't know how to express this
 # correctly.  If it's called without brakets then the type is [T] -> T, but with
 # brackets it's [None] -> Callable[[T], T]:
-def for_object_repository(cls: "T" = None) -> "T":
+def for_object_repository(cls: T = None) -> T:
     """A decorator that marks classes and functions so they appear in the Object
     Repository.
 
@@ -188,7 +186,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
     .. _Object Repository: https://stb-tester.com/manual/object-repository
     '''
 
-    def __init__(self, frame: "Optional[FrameT]" = None) -> None:
+    def __init__(self, frame: Optional[FrameT] = None) -> None:
         """The default constructor takes an optional frame of video; if the
         frame is not provided, it will grab a frame from the device-under-test.
 
@@ -266,7 +264,7 @@ class FrameObject(metaclass=_FrameObjectMeta):
             "Objects deriving from FrameObject must define an is_visible "
             "property")
 
-    def refresh(self: "T", frame: "Optional[FrameT]" = None, **kwargs) -> "T":
+    def refresh(self: T, frame: Optional[FrameT] = None, **kwargs) -> T:
         """
         Returns a new FrameObject instance with a new frame. ``self`` is not
         modified.

@@ -1,28 +1,24 @@
-# coding: utf-8
+from __future__ import annotations
 
-import typing
 import warnings
 from collections import deque
+from typing import Iterator, Optional
 
 from .config import ConfigurationError, get_config
 from .diff import FrameDiffer, GrayscaleDiff, MotionResult
-from .imgutils import limit_time
+from .imgutils import limit_time, FrameT
 from .logging import debug, draw_on
+from .mask import MaskTypes
 from .types import Region, UITestFailure
-
-if typing.TYPE_CHECKING:
-    from typing import Iterator, Optional
-    from .mask import MaskTypes
-    from .typing import FrameT
 
 
 def detect_motion(
     timeout_secs: float = 10,
-    noise_threshold: "Optional[float]" = None,
-    mask: "MaskTypes" = Region.ALL,
+    noise_threshold: Optional[float] = None,
+    mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
-    frames: "Iterator[FrameT]" = None,
-) -> "Iterator[MotionResult]":
+    frames: Iterator[FrameT] = None,
+) -> Iterator[MotionResult]:
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
 
@@ -109,10 +105,10 @@ detect_motion.differ : FrameDiffer = GrayscaleDiff
 def wait_for_motion(
     timeout_secs: float = 10,
     consecutive_frames: int = None,
-    noise_threshold: "Optional[float]" = None,
-    mask: "MaskTypes" = Region.ALL,
+    noise_threshold: Optional[float] = None,
+    mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
-    frames: "Iterator[FrameT]" = None,
+    frames: Iterator[FrameT] = None,
 ) -> MotionResult:
     """Search for motion in the device-under-test's video stream.
 
@@ -218,11 +214,11 @@ class MotionTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that motion was searched for.
     """
-    def __init__(self, screenshot: "FrameT", mask: "MaskTypes",
+    def __init__(self, screenshot: FrameT, mask: MaskTypes,
                  timeout_secs: float):
         super().__init__()
-        self.screenshot: "FrameT" = screenshot
-        self.mask: "MaskTypes" = mask
+        self.screenshot: FrameT = screenshot
+        self.mask: MaskTypes = mask
         self.timeout_secs: float = timeout_secs
 
     def __str__(self):
