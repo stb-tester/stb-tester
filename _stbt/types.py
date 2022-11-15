@@ -1,11 +1,13 @@
 # Don't import anything not in the Python standard library from this file
 
+from __future__ import annotations
+
 import typing
 from collections import namedtuple
 from enum import Enum
+from typing import Optional, Tuple, TypeAlias
 
 if typing.TYPE_CHECKING:
-    from typing import Optional, Tuple
     from .mask import Mask
 
 
@@ -31,6 +33,10 @@ class Direction(Enum):
         return str(self)
 
 
+# None means no region
+RegionT : TypeAlias = Optional["Region"]
+
+
 class _RegionClsMethods(type):
     """Metaclass for `Region`.
 
@@ -39,7 +45,7 @@ class _RegionClsMethods(type):
     incorrect behaviour). See <https://stackoverflow.com/a/42327454/606705>.
     """
 
-    def intersect(cls, *args: "Optional[Region]") -> "Optional[Region]":
+    def intersect(cls, *args: RegionT) -> RegionT:
         out = Region.ALL
         args = iter(args)
         try:
@@ -59,7 +65,7 @@ class _RegionClsMethods(type):
                 return None
         return Region.from_extents(*out)
 
-    def bounding_box(cls, *args: "Optional[Region]") -> "Optional[Region]":
+    def bounding_box(cls, *args: RegionT) -> RegionT:
         args = [_f for _f in args if _f]
         if not args:
             return None
@@ -240,10 +246,10 @@ class Region(namedtuple('Region', 'x y right bottom'),
         cls,
         x: float,
         y: float,
-        width: "Optional[float]" = None,
-        height: "Optional[float]" = None,
-        right: "Optional[float]" = None,
-        bottom: "Optional[float]" = None,
+        width: Optional[float] = None,
+        height: Optional[float] = None,
+        right: Optional[float] = None,
+        bottom: Optional[float] = None,
     ):
         if (width is None) == (right is None):
             raise ValueError("You must specify either 'width' or 'right'")
@@ -268,31 +274,31 @@ class Region(namedtuple('Region', 'x y right bottom'),
             return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
                 % (self.x, self.y, self.right, self.bottom)
 
-    def __add__(self, other) -> "Mask":
+    def __add__(self, other) -> Mask:
         """Adding 2 or more Regions together creates a mask with the pixels
         inside those Regions selected; all other pixels ignored."""
         from .mask import Mask
         return Mask(self).__add__(other)
 
-    def __radd__(self, other) -> "Mask":
+    def __radd__(self, other) -> Mask:
         """Adding 2 or more Regions together creates a mask with the pixels
         inside those Regions selected; all other pixels ignored."""
         from .mask import Mask
         return Mask(self).__radd__(other)
 
-    def __sub__(self, other) -> "Mask":
+    def __sub__(self, other) -> Mask:
         """Subtracting a Region removes that Region's pixels from the mask
         (so those pixels will be ignored)."""
         from .mask import Mask
         return Mask(self).__sub__(other)
 
-    def __rsub__(self, other) -> "Mask":
+    def __rsub__(self, other) -> Mask:
         """Subtracting a Region removes that Region's pixels from the mask
         (so those pixels will be ignored)."""
         from .mask import Mask
         return Mask(self).__rsub__(other)
 
-    def __invert__(self) -> "Mask":
+    def __invert__(self) -> Mask:
         """Inverting a Region creates a mask with the Region's pixels ignored,
         and the pixels outside the Region selected."""
         from .mask import Mask
@@ -312,17 +318,17 @@ class Region(namedtuple('Region', 'x y right bottom'),
                         (self.y + self.bottom) // 2)
 
     @staticmethod
-    def from_extents(x, y, right, bottom) -> "Region":
+    def from_extents(x, y, right, bottom) -> Region:
         return Region(x, y, right=right, bottom=bottom)
 
-    def to_slice(self) -> "Tuple[slice, slice]":
+    def to_slice(self) -> Tuple[slice, slice]:
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
         return (slice(max(0, self.y),
                       max(0, self.bottom)),
                 slice(max(0, self.x),
                       max(0, self.right)))
 
-    def contains(self, other: "Region") -> bool:
+    def contains(self, other: Region) -> bool:
         """
         :returns: True if ``other`` (a `Region` or `Position`) is entirely
             contained within self.
@@ -341,8 +347,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
                             "None. Got %r" % (other,))
 
     def translate(
-        self, x: "Optional[float]" = None, y: "Optional[float]" = None
-    ) -> "Region":
+        self, x: Optional[float] = None, y: Optional[float] = None
+    ) -> Region:
         """
         :returns: A new region with the position of the region adjusted by the
             given amounts.  The width and height are unaffected.
@@ -388,11 +394,11 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
     def extend(
         self,
-        x: "Optional[float]" = 0,
-        y: "Optional[float]" = 0,
-        right: "Optional[float]" = 0,
-        bottom: "Optional[float]" = 0,
-    ) -> "Region":
+        x: Optional[float] = 0,
+        y: Optional[float] = 0,
+        right: Optional[float] = 0,
+        bottom: Optional[float] = 0,
+    ) -> Region:
         """
         :returns: A new region with the edges of the region adjusted by the
             given amounts.
@@ -402,13 +408,13 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
     def replace(
         self,
-        x: "Optional[float]" = None,
-        y: "Optional[float]" = None,
-        width: "Optional[float]" = None,
-        height: "Optional[float]" = None,
-        right: "Optional[float]" = None,
-        bottom: "Optional[float]" = None,
-    ) -> "Region":
+        x: Optional[float] = None,
+        y: Optional[float] = None,
+        width: Optional[float] = None,
+        height: Optional[float] = None,
+        right: Optional[float] = None,
+        bottom: Optional[float] = None,
+    ) -> Region:
         """
         :returns: A new region with the edges of the region set to the given
             coordinates.
@@ -441,7 +447,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
         return Region(x=x, y=y, right=right, bottom=bottom)
 
-    def dilate(self, n: int) -> "Region":
+    def dilate(self, n: int) -> Region:
         """Expand the region by n px in all directions.
 
         >>> Region(20, 30, right=30, bottom=50).dilate(3)
@@ -449,7 +455,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
         """
         return self.extend(x=-n, y=-n, right=n, bottom=n)
 
-    def erode(self, n: int) -> "Region":
+    def erode(self, n: int) -> Region:
         """Shrink the region by n px in all directions.
 
         >>> Region(20, 30, right=30, bottom=50).erode(3)
@@ -462,28 +468,28 @@ class Region(namedtuple('Region', 'x y right bottom'),
         else:
             return None
 
-    def above(self, height: float = float("inf")) -> "Region":
+    def above(self, height: float = float("inf")) -> Region:
         """
         :returns: A new region above the current region, extending to the top
             of the frame (or to the specified height).
         """
         return self.replace(y=self.y - height, bottom=self.y)
 
-    def below(self, height: float = float("inf")) -> "Region":
+    def below(self, height: float = float("inf")) -> Region:
         """
         :returns: A new region below the current region, extending to the bottom
             of the frame (or to the specified height).
         """
         return self.replace(y=self.bottom, bottom=self.bottom + height)
 
-    def right_of(self, width: float = float("inf")) -> "Region":
+    def right_of(self, width: float = float("inf")) -> Region:
         """
         :returns: A new region to the right of the current region, extending to
             the right edge of the frame (or to the specified width).
         """
         return self.replace(x=self.right, right=self.right + width)
 
-    def left_of(self, width: float = float("inf")) -> "Region":
+    def left_of(self, width: float = float("inf")) -> Region:
         """
         :returns: A new region to the left of the current region, extending to
             the left edge of the frame (or to the specified width).

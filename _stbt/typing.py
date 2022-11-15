@@ -1,9 +1,9 @@
-from typing import Optional, Tuple, TypeAlias, Union
-import numpy.typing
-from _stbt.mask import MaskTypes  # pylint: disable=unused-import
+from __future__ import annotations
 
-from _stbt.types import Region
-from .imgutils import Color
+from typing import Tuple, TypeAlias, Union
+
+import numpy.typing
+
 
 KeyT : TypeAlias = str
 FrameT : TypeAlias = numpy.typing.NDArray[numpy.uint8]
@@ -11,9 +11,5 @@ FrameT : TypeAlias = numpy.typing.NDArray[numpy.uint8]
 # Anything that load_image can take:
 ImageT : TypeAlias = Union[numpy.typing.NDArray[numpy.uint8], str]
 
-# None means no region
-RegionT : TypeAlias = Optional[Region]
-
+PositionT : TypeAlias = Tuple[int, int]
 SizeT : TypeAlias = Tuple[int, int]
-
-ColorT : TypeAlias = Union[Color, str, Tuple[int, int, int]]

@@ -11,28 +11,28 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import enum
-import typing
 import warnings
+from typing import Optional
 
 from .diff import FrameDiffer, GrayscaleDiff
 from .logging import ddebug, debug, draw_on
+from .mask import MaskTypes
 from .types import Region
-
-if typing.TYPE_CHECKING:
-    from typing import Optional
-    from .typing import FrameT, KeyT, MaskTypes, SizeT
+from .typing import FrameT, KeyT, SizeT
 
 
 def press_and_wait(
-    key: "KeyT",
-    mask: "MaskTypes" = Region.ALL,
+    key: KeyT,
+    mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: "SizeT" = None,
+    min_size: SizeT = None,
     _dut=None,
-) -> "_TransitionResult":
+) -> _TransitionResult:
 
     """Press a key, then wait for the screen to change, then wait for it to stop
     changing.
@@ -135,14 +135,14 @@ press_and_wait.differ: FrameDiffer = GrayscaleDiff
 
 
 def wait_for_transition_to_end(
-    initial_frame: "FrameT" = None,
-    mask: "MaskTypes" = Region.ALL,
+    initial_frame: FrameT = None,
+    mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: "SizeT" = None,
+    min_size: SizeT = None,
     _dut=None,
-) -> "_TransitionResult":
+) -> _TransitionResult:
 
     """Wait for the screen to stop changing.
 
@@ -271,12 +271,12 @@ def _ddebug(s, f, *args):
 class _TransitionResult():
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
-        self.key: "KeyT" = key
-        self.frame: "FrameT" = frame
+        self.key: KeyT = key
+        self.frame: FrameT = frame
         self.status: TransitionStatus = status
         self.press_time: float = press_time
         self.animation_start_time: float = animation_start_time
-        self.end_time: "Optional[float]" = end_time
+        self.end_time: Optional[float] = end_time
 
     def __repr__(self):
         return (
@@ -306,13 +306,13 @@ class _TransitionResult():
         return self.status == TransitionStatus.COMPLETE
 
     @property
-    def duration(self) -> "Optional[float]":
+    def duration(self) -> Optional[float]:
         if self.end_time is None or self.press_time is None:
             return None
         return self.end_time - self.press_time
 
     @property
-    def animation_duration(self) -> "Optional[float]":
+    def animation_duration(self) -> Optional[float]:
         if self.end_time is None or self.animation_start_time is None:
             return None
         return self.end_time - self.animation_start_time

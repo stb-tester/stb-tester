@@ -1,12 +1,10 @@
 """Copyright 2020 Stb-tester.com Ltd."""
 
+from __future__ import annotations
+
 import re
 import time
-import typing
-
-if typing.TYPE_CHECKING:
-    from typing import Dict
-    from .typing import KeyT
+from .typing import KeyT
 
 
 class MultiPress():
@@ -71,7 +69,7 @@ class MultiPress():
 
     def __init__(
         self,
-        key_mapping: "Dict[KeyT, str]" = None,
+        key_mapping: dict[KeyT, str] = None,
         interpress_delay_secs: float = None,
         interletter_delay_secs: float = 1,
     ):
