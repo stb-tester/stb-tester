@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 import cv2
 import numpy
 import pytest
@@ -7,6 +5,7 @@ from numpy import isclose
 
 import stbt_core as stbt
 from _stbt.transition import _TransitionResult
+from _stbt.types import Keypress
 
 
 class FakeDeviceUnderTest():
@@ -18,7 +17,7 @@ class FakeDeviceUnderTest():
     def press(self, key):
         frame_before = next(self.frames())
         self.state = key
-        return _Keypress(key, self._t, self._t, frame_before)
+        return Keypress(key, self._t, self._t, frame_before)
 
     def frames(self):
         if self._frames is not None:
@@ -37,9 +36,6 @@ class FakeDeviceUnderTest():
                 elif self.state == "fade-to-white":
                     self.state = "white"
                 yield stbt.Frame(array, time=self._t)
-
-
-_Keypress = namedtuple("_Keypress", "key start_time end_time frame_before")
 
 
 def F(state, t):

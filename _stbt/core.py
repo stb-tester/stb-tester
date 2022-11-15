@@ -24,9 +24,9 @@ from _stbt import cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
-from _stbt.imgutils import _frame_repr, Frame
+from _stbt.imgutils import Frame
 from _stbt.logging import _Annotation, debug, warn
-from _stbt.types import NoVideo, Region
+from _stbt.types import Keypress, NoVideo, Region
 from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
@@ -126,7 +126,7 @@ class DeviceUnderTest():
                     frame_before = None
                 else:
                     frame_before = self.get_frame()
-                out = _Keypress(key, self._time.time(), None, frame_before)
+                out = Keypress(key, self._time.time(), None, frame_before)
                 self._control.press(key)
                 out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
@@ -143,7 +143,7 @@ class DeviceUnderTest():
             key = key.value
 
         with self._interpress_delay(interpress_delay_secs):
-            out = _Keypress(key, self._time.time(), None, self.get_frame())
+            out = Keypress(key, self._time.time(), None, self.get_frame())
             try:
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
@@ -244,20 +244,6 @@ class DeviceUnderTest():
             raise RuntimeError(
                 "stbt.get_frame(): Video capture has not been initialised")
         return self._display.get_frame()
-
-
-class _Keypress():
-    def __init__(self, key, start_time, end_time, frame_before):
-        self.key = key
-        self.start_time = start_time
-        self.end_time = end_time
-        self.frame_before = frame_before
-
-    def __repr__(self):
-        return (
-            "_Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
-                self.key, self.start_time, self.end_time,
-                _frame_repr(self.frame_before)))
 
 
 # stbt-run initialisation and convenience functions

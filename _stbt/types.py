@@ -501,6 +501,21 @@ Region.ALL: Region = Region(x=-float('inf'), y=-float('inf'),
                             right=float('inf'), bottom=float('inf'))
 
 
+class Keypress():
+    def __init__(self, key, start_time, end_time, frame_before):
+        self.key = key
+        self.start_time = start_time
+        self.end_time = end_time
+        self.frame_before = frame_before
+
+    def __repr__(self):
+        from .imgutils import _frame_repr
+        return (
+            "Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
+                self.key, self.start_time, self.end_time,
+                _frame_repr(self.frame_before)))
+
+
 class UITestError(Exception):
     """The test script had an unrecoverable error."""
     pass
