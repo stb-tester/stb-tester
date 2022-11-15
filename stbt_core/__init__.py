@@ -77,6 +77,7 @@ from _stbt.transition import (
     wait_for_transition_to_end)
 from _stbt.types import (
     Direction,
+    Keypress,
     NoVideo,
     Position,
     Region,
@@ -112,6 +113,7 @@ __all__ = [
     "Image",
     "is_screen_black",
     "Keyboard",
+    "Keypress",
     "last_keypress",
     "load_image",
     "load_mask",
@@ -152,7 +154,6 @@ __all__ = [
 ]
 
 
-from _stbt.core import _Keypress
 from _stbt.types import RegionT
 from _stbt.typing import ImageT, KeyT
 
@@ -225,7 +226,7 @@ def press(
 
 def pressing(
     key: KeyT, interpress_delay_secs: float = None
-) -> ContextManager[_Keypress]:
+) -> ContextManager[Keypress]:
     """Context manager that will press and hold the specified key for the
     duration of the ``with`` code block.
 
