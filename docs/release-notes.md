@@ -7,7 +7,7 @@ https://stb-tester.com/manual/python-api#release-notes instead.
 
 #### v33
 
-Unreleased.
+13 July 2022.
 
 ##### Major new features
 
