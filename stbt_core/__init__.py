@@ -1,4 +1,3 @@
-# coding: utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.

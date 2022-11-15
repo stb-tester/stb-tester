@@ -225,7 +225,6 @@ test_that_stbt_run_can_print_exceptions_with_unicode_characters() {
     which unbuffer &>/dev/null || skip "unbuffer is not installed"
 
     cat > test.py <<-EOF
-	# coding:utf-8
 	import sys
 	print(sys.argv[1])
 	if sys.argv[1] == "raise-unicode":

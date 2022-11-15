@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import errno
 import glob
 import os

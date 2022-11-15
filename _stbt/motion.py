@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import typing
 import warnings
 from collections import deque

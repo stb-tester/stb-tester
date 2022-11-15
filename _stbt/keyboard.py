@@ -1,4 +1,3 @@
-# coding: utf-8
 """Copyright 2019-2020 Stb-tester.com Ltd."""
 
 import re

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
 Copyright 2013-2020 stb-tester.com Ltd.

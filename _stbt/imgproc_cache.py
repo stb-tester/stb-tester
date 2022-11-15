@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 This file implements caching of expensive image processing operations for the
 purposes of speeding up subsequent runs of stbt auto-selftest.
