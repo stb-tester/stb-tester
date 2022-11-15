@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """Detection & frame-accurate measurement of animations and transitions.
 
 For example a selection that moves from one menu item to another or loading a

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 Copyright © 2014-2022 Stb-tester.com Ltd.
 Copyright © 2014 YouView TV Ltd.

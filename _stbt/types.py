@@ -1,4 +1,3 @@
-# coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
 import typing
