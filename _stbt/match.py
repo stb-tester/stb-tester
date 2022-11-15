@@ -19,12 +19,12 @@ import numpy
 from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
-from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
-                       _validate_region)
+from .imgutils import (
+    crop, FrameT, _frame_repr, ImageT, _image_region, limit_time, load_image,
+    _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
-from .typing import FrameT, ImageT
 from .utils import to_unicode
 
 try:

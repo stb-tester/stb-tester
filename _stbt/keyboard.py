@@ -10,10 +10,11 @@ from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
 from attr import attrs, attrib
 from _stbt.frameobject import FrameObject
 from _stbt.grid import Grid
+from _stbt.imgutils import FrameT
 from _stbt.mask import MaskTypes, load_mask
 from _stbt.transition import _TransitionResult, TransitionStatus
-from _stbt.types import Region
-from _stbt.typing import FrameT, KeyT
+from _stbt.types import KeyT, Region
+
 
 FrameObjectT = TypeVar("FrameObjectT", bound=FrameObject)
 QueryT: TypeAlias = Union["Keyboard.Key", Dict[str, str], str]

@@ -154,8 +154,8 @@ __all__ = [
 ]
 
 
-from _stbt.types import RegionT
-from _stbt.typing import ImageT, KeyT
+from _stbt.imgutils import ImageT
+from _stbt.types import KeyT, RegionT
 
 
 # Functions available to stbt scripts

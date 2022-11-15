@@ -11,7 +11,7 @@ import threading
 from itertools import zip_longest
 from typing import Optional, TypeVar
 
-from .typing import FrameT
+from .imgutils import FrameT
 
 
 T = TypeVar("T")

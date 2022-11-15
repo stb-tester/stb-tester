@@ -6,11 +6,10 @@ import cv2
 import numpy
 
 from .imgutils import (
-    Frame, crop, _frame_repr, _image_region, pixel_bounding_box)
+    Frame, FrameT, crop, _frame_repr, _image_region, pixel_bounding_box)
 from .logging import ddebug, ImageLogger
 from .mask import load_mask, MaskTypes
-from .types import Region
-from .typing import FrameT, SizeT
+from .types import Region, SizeT
 
 
 class MotionResult():
