@@ -1,21 +1,19 @@
+from __future__ import annotations
+
 import errno
 import inspect
 import os
 import re
 import warnings
-import typing
 from functools import lru_cache
-from typing import overload
+from typing import Optional, overload, Sequence, Tuple, TypeAlias, Union
 
 import cv2
 import numpy
 
 from .logging import ddebug, debug, warn
 from .types import Region
-
-if typing.TYPE_CHECKING:
-    from typing import Optional, Tuple
-    from .typing import FrameT, ImageT
+from .typing import FrameT, ImageT
 
 
 class Frame(numpy.ndarray):
@@ -296,7 +294,10 @@ class Color:
         return hash(self.hexstring)
 
 
-def crop(frame: "FrameT", region: Region) -> "FrameT":
+ColorT : TypeAlias = Union[Color, str, Tuple[int, int, int]]
+
+
+def crop(frame: FrameT, region: Region) -> FrameT:
     """Returns an image containing the specified region of ``frame``.
 
     :type frame: `stbt.Frame` or `numpy.ndarray`
@@ -333,9 +334,9 @@ def _image_region(image):
 
 
 def load_image(
-    filename: "ImageT",
-    flags: "Optional[Tuple[int]]" = None,
-    color_channels: "Optional[int]" = None,
+    filename: ImageT,
+    flags: Optional[Tuple[int]] = None,
+    color_channels: Optional[Sequence[int]] = None,
 ) -> Image:
     """Find & read an image from disk.
 
@@ -524,7 +525,7 @@ def _filename_repr(absolute_filename):
         return repr(_relative_filename(absolute_filename))
 
 
-def save_frame(image: "FrameT", filename: str):
+def save_frame(image: FrameT, filename: str):
     """Saves an OpenCV image to the specified file.
 
     Takes an image obtained from `get_frame` or from the `screenshot`

@@ -8,8 +8,10 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 from contextlib import contextmanager
-import typing
+from typing import ContextManager, Iterator, Optional
 
 from _stbt import android
 from _stbt.black import (
@@ -149,9 +151,10 @@ __all__ = [
     "wait_until",
 ]
 
-if typing.TYPE_CHECKING:
-    from _stbt.typing import ImageT, KeyT, RegionT
-    from _stbt.core import _Keypress
+
+from _stbt.core import _Keypress
+from _stbt.types import RegionT
+from _stbt.typing import ImageT, KeyT
 
 
 # Functions available to stbt scripts
@@ -170,7 +173,7 @@ def last_keypress() -> str:
 
 
 def press(
-    key: "KeyT", interpress_delay_secs: float = None, hold_secs: float = None
+    key: KeyT, interpress_delay_secs: float = None, hold_secs: float = None
 ):
     """Send the specified key-press to the device under test.
 
@@ -221,8 +224,8 @@ def press(
 
 
 def pressing(
-    key: "KeyT", interpress_delay_secs: float = None
-) -> "typing.ContextManager[_Keypress]":
+    key: KeyT, interpress_delay_secs: float = None
+) -> ContextManager[_Keypress]:
     """Context manager that will press and hold the specified key for the
     duration of the ``with`` code block.
 
@@ -250,12 +253,12 @@ def draw_text(text: str, duration_secs: float = 3) -> None:
 
 
 def press_until_match(
-    key: "KeyT",
-    image: "ImageT",
-    interval_secs: "typing.Optional[float]" = None,
-    max_presses: "typing.Optional[int]" = None,
-    match_parameters: "typing.Optional[MatchParameters]" = None,
-    region: "RegionT" = Region.ALL,
+    key: KeyT,
+    image: ImageT,
+    interval_secs: Optional[float] = None,
+    max_presses: Optional[int] = None,
+    match_parameters: Optional[MatchParameters] = None,
+    region: RegionT = Region.ALL,
 ) -> MatchResult:
     """Call `press` as many times as necessary to find the specified image.
 
@@ -288,7 +291,7 @@ def press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
 
 
-def frames(timeout_secs: float = None) -> typing.Iterator[Frame]:
+def frames(timeout_secs: float = None) -> Iterator[Frame]:
     """Generator that yields video frames captured from the device-under-test.
 
     For example::

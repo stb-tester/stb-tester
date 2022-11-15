@@ -1,5 +1,7 @@
 """Copyright © 2015-2022 Stb-tester.com Ltd."""
 
+from __future__ import annotations
+
 import inspect
 from typing import Callable, TypeVar
 

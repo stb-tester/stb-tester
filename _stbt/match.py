@@ -1,15 +1,17 @@
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
-Copyright 2013-2020 stb-tester.com Ltd.
+Copyright 2013-2022 stb-tester.com Ltd.
 
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import enum
 import itertools
 from collections import namedtuple
-import typing
+from typing import Iterator, Optional
 
 import cv2
 import numpy
@@ -22,16 +24,13 @@ from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
+from .typing import FrameT, ImageT
 from .utils import to_unicode
 
 try:
     from .sqdiff import sqdiff
 except ImportError:
     sqdiff = None
-
-if typing.TYPE_CHECKING:
-    from typing import Iterator, Optional
-    from .typing import FrameT, ImageT
 
 
 class MatchMethod(enum.Enum):
@@ -145,11 +144,11 @@ class MatchParameters():
 
     def __init__(
         self,
-        match_method: "Optional[MatchMethod]" = None,
-        match_threshold: "Optional[float]" = None,
-        confirm_method: "Optional[ConfirmMethod]" = None,
-        confirm_threshold: "Optional[float]" = None,
-        erode_passes: "Optional[int]" = None,
+        match_method: Optional[MatchMethod] = None,
+        match_threshold: Optional[float] = None,
+        confirm_method: Optional[ConfirmMethod] = None,
+        confirm_threshold: Optional[float] = None,
+        erode_passes: Optional[int] = None,
     ):
 
         if match_method is None:
@@ -215,12 +214,12 @@ class MatchResult():
     def __init__(
             self, time, match, region,  # pylint: disable=redefined-outer-name
             first_pass_result, frame, image, _first_pass_matched=None):
-        self.time: "Optional[float]" = time
+        self.time: Optional[float] = time
         self.match: bool = match
         self.region: Region = region
         self.first_pass_result: float = first_pass_result
-        self.frame: "FrameT" = frame
-        self.image: "ImageT" = image
+        self.frame: FrameT = frame
+        self.image: ImageT = image
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
@@ -243,9 +242,9 @@ class MatchResult():
 
 
 def match(
-    image: "ImageT",
-    frame: "Optional[FrameT]" = None,
-    match_parameters: "Optional[MatchParameters]" = None,
+    image: ImageT,
+    frame: Optional[FrameT] = None,
+    match_parameters: Optional[MatchParameters] = None,
     region: Region = Region.ALL,
 ) -> MatchResult:
     """
@@ -293,11 +292,11 @@ def match(
 
 
 def match_all(
-    image: "ImageT",
-    frame: "FrameT" = None,
-    match_parameters: "MatchParameters" = None,
+    image: ImageT,
+    frame: FrameT = None,
+    match_parameters: MatchParameters = None,
     region: Region = Region.ALL,
-) -> "Iterator[MatchResult]":
+) -> Iterator[MatchResult]:
     """
     Search for all instances of an image in a single video frame.
 
@@ -418,12 +417,12 @@ def _match_all(image, frame, match_parameters, region):
 
 
 def wait_for_match(
-    image: "ImageT",
+    image: ImageT,
     timeout_secs: float = 10,
     consecutive_matches: int = 1,
-    match_parameters: "Optional[MatchParameters]" = None,
+    match_parameters: Optional[MatchParameters] = None,
     region: Region = Region.ALL,
-    frames: "Iterator[FrameT]" = None,
+    frames: Iterator[FrameT] = None,
 ) -> MatchResult:
     """Search for an image in the device-under-test's video stream.
 
@@ -489,10 +488,10 @@ class MatchTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
-    def __init__(self, screenshot: "FrameT", expected: str,
+    def __init__(self, screenshot: FrameT, expected: str,
                  timeout_secs: float):
         super().__init__()
-        self.screenshot: "FrameT" = screenshot
+        self.screenshot: FrameT = screenshot
         self.expected: str = expected
         self.timeout_secs: float = timeout_secs
 
