@@ -403,10 +403,7 @@ def test_hdmi_cec_control_defaults():
 def _fake_cec():
     import io
     import pytest
-    try:
-        from unittest.mock import patch
-    except ImportError:
-        from mock import patch  # Python 2 backport
+    from unittest.mock import patch
 
     pytest.importorskip("cec")
 

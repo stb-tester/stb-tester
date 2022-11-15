@@ -1,9 +1,5 @@
 from textwrap import dedent
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # Python 2 backport
+from unittest import mock
 
 import stbt_core
 

@@ -7,12 +7,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 import functools
 import threading
 import typing
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    # Python 2:
-    from itertools import izip_longest as zip_longest
+from itertools import zip_longest
 
 if typing.TYPE_CHECKING:
     from .typing import FrameT, Optional

@@ -16,6 +16,7 @@ import json
 import os
 import sys
 from contextlib import contextmanager
+from itertools import zip_longest
 
 import numpy
 
@@ -27,12 +28,6 @@ except ImportError:
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    # Python 2:
-    from itertools import izip_longest as zip_longest
 
 
 MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024  # 1GiB
