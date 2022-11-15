@@ -14,10 +14,9 @@ import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import Color, ColorT, crop, _frame_repr, _validate_region
+from .imgutils import Color, ColorT, crop, FrameT, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .typing import FrameT
 from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 CorrectionsT = Dict[Union[re.Pattern, str], str]

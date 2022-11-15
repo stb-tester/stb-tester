@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 import time
-from .typing import KeyT
+
+from .types import KeyT
 
 
 class MultiPress():

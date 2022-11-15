@@ -10,10 +10,16 @@ from typing import Optional, overload, Sequence, Tuple, TypeAlias, Union
 
 import cv2
 import numpy
+import numpy.typing
 
 from .logging import ddebug, debug, warn
 from .types import Region
-from .typing import FrameT, ImageT
+
+
+FrameT : TypeAlias = numpy.typing.NDArray[numpy.uint8]
+
+# Anything that load_image can take:
+ImageT : TypeAlias = Union[numpy.typing.NDArray[numpy.uint8], str]
 
 
 class Frame(numpy.ndarray):

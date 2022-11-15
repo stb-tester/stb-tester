@@ -11,6 +11,10 @@ if typing.TYPE_CHECKING:
     from .mask import Mask
 
 
+PositionT : TypeAlias = Tuple[int, int]
+SizeT : TypeAlias = Tuple[int, int]
+
+
 class Position(namedtuple('Position', 'x y')):
     """A point with ``x`` and ``y`` coordinates."""
     pass
@@ -499,6 +503,9 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
 Region.ALL: Region = Region(x=-float('inf'), y=-float('inf'),
                             right=float('inf'), bottom=float('inf'))
+
+
+KeyT : TypeAlias = str
 
 
 class Keypress():

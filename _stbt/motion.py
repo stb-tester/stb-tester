@@ -6,11 +6,10 @@ from typing import Iterator, Optional
 
 from .config import ConfigurationError, get_config
 from .diff import FrameDiffer, GrayscaleDiff, MotionResult
-from .imgutils import limit_time
+from .imgutils import limit_time, FrameT
 from .logging import debug, draw_on
 from .mask import MaskTypes
 from .types import Region, UITestFailure
-from .typing import FrameT
 
 
 def detect_motion(

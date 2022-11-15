@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import namedtuple
 from typing import Any, Iterator, List, Optional, Sequence, TypeVar, Union
 
-from .types import Position, Region
-from .typing import PositionT
+from .types import Position, PositionT, Region
+
 
 T = TypeVar("T")
 

@@ -18,10 +18,10 @@ import warnings
 from typing import Optional
 
 from .diff import FrameDiffer, GrayscaleDiff
+from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
-from .types import Region
-from .typing import FrameT, KeyT, SizeT
+from .types import KeyT, Region, SizeT
 
 
 def press_and_wait(

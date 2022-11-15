@@ -10,6 +10,7 @@ import traceback
 from contextlib import contextmanager
 from typing import ContextManager, Optional
 
+from .imgutils import FrameT
 from .logging import debug
 from .types import UITestError, UITestFailure
 
