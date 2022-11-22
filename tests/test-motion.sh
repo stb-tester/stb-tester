@@ -80,18 +80,18 @@ test_wait_for_motion_with_region_does_not_report_motion() {
     ! stbt run -v test.py
 }
 
-test_wait_for_motion_with_high_noisethreshold_reports_motion() {
+test_wait_for_motion_with_low_noisethreshold_reports_motion() {
     cat > test.py <<-EOF
 	from stbt_core import wait_for_motion
-	wait_for_motion(noise_threshold=1.0)
+	wait_for_motion(noise_threshold=0)
 	EOF
     stbt run -v test.py
 }
 
-test_wait_for_motion_with_low_noisethreshold_does_not_report_motion() {
+test_wait_for_motion_with_high_noisethreshold_does_not_report_motion() {
     cat > test.py <<-EOF
 	from stbt_core import wait_for_motion
-	wait_for_motion(noise_threshold=0.0, timeout_secs=1)
+	wait_for_motion(noise_threshold=255, timeout_secs=1)
 	EOF
     ! stbt run -v test.py
 }

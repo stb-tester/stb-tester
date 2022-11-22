@@ -343,57 +343,49 @@ def test_motion_debug():
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
-            stbt-debug/00001/absdiff.png
-            stbt-debug/00001/absdiff_threshold_erode.png
-            stbt-debug/00001/absdiff_threshold.png
-            stbt-debug/00001/gray.png
+            stbt-debug/00001/eroded.png
             stbt-debug/00001/index.html
-            stbt-debug/00001/previous_frame_gray.png
+            stbt-debug/00001/previous_frame.png
             stbt-debug/00001/source.png
+            stbt-debug/00001/sqd.png
+            stbt-debug/00001/thresholded.png
             stbt-debug/00002
-            stbt-debug/00002/absdiff.png
-            stbt-debug/00002/absdiff_threshold_erode.png
-            stbt-debug/00002/absdiff_threshold.png
-            stbt-debug/00002/gray.png
+            stbt-debug/00002/eroded.png
             stbt-debug/00002/index.html
-            stbt-debug/00002/previous_frame_gray.png
+            stbt-debug/00002/previous_frame.png
             stbt-debug/00002/source.png
+            stbt-debug/00002/sqd.png
+            stbt-debug/00002/thresholded.png
             stbt-debug/00003
-            stbt-debug/00003/absdiff_masked.png
-            stbt-debug/00003/absdiff.png
-            stbt-debug/00003/absdiff_threshold_erode.png
-            stbt-debug/00003/absdiff_threshold.png
-            stbt-debug/00003/gray.png
+            stbt-debug/00003/eroded.png
             stbt-debug/00003/index.html
             stbt-debug/00003/mask.png
-            stbt-debug/00003/previous_frame_gray.png
+            stbt-debug/00003/previous_frame.png
             stbt-debug/00003/source.png
+            stbt-debug/00003/sqd.png
+            stbt-debug/00003/thresholded.png
             stbt-debug/00004
-            stbt-debug/00004/absdiff_masked.png
-            stbt-debug/00004/absdiff.png
-            stbt-debug/00004/absdiff_threshold_erode.png
-            stbt-debug/00004/absdiff_threshold.png
-            stbt-debug/00004/gray.png
+            stbt-debug/00004/eroded.png
             stbt-debug/00004/index.html
             stbt-debug/00004/mask.png
-            stbt-debug/00004/previous_frame_gray.png
+            stbt-debug/00004/previous_frame.png
             stbt-debug/00004/source.png
+            stbt-debug/00004/sqd.png
+            stbt-debug/00004/thresholded.png
             stbt-debug/00005
-            stbt-debug/00005/absdiff.png
-            stbt-debug/00005/absdiff_threshold_erode.png
-            stbt-debug/00005/absdiff_threshold.png
-            stbt-debug/00005/gray.png
+            stbt-debug/00005/eroded.png
             stbt-debug/00005/index.html
-            stbt-debug/00005/previous_frame_gray.png
+            stbt-debug/00005/previous_frame.png
             stbt-debug/00005/source.png
+            stbt-debug/00005/sqd.png
+            stbt-debug/00005/thresholded.png
             stbt-debug/00006
-            stbt-debug/00006/absdiff.png
-            stbt-debug/00006/absdiff_threshold_erode.png
-            stbt-debug/00006/absdiff_threshold.png
-            stbt-debug/00006/gray.png
+            stbt-debug/00006/eroded.png
             stbt-debug/00006/index.html
-            stbt-debug/00006/previous_frame_gray.png
+            stbt-debug/00006/previous_frame.png
             stbt-debug/00006/source.png
+            stbt-debug/00006/sqd.png
+            stbt-debug/00006/thresholded.png
         """)
 
         assert_expected("stbt-debug-expected-output/motion")
