@@ -137,8 +137,7 @@ class Keyboard():
 
     For a detailed tutorial, including an example that handles multiple
     keyboard modes (lowercase, uppercase, and symbols) see our article
-    `Testing on-screen keyboards with Stb-tester
-    <https://stb-tester.com/blog/2020/10/02/testing-onscreen-keyboards>`__.
+    `Testing on-screen keyboards <https://stb-tester.com/manual/keyboard>`__.
 
     ``stbt.Keyboard`` was added in v31.
 

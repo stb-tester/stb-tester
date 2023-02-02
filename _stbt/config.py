@@ -48,12 +48,12 @@ def get_config(
     the stb-tester device where the script is running. Values in the
     host-specific config file override values in ``.stbt.conf``. See
     `Configuration files
-    <https://stb-tester.com/manual/advanced-configuration#configuration-files>`__
+    <https://stb-tester.com/manual/configuration#configuration-files>`__
     for more details.
 
     Test scripts can use ``get_config`` to read tags that you specify at
     run-time: see `Automatic configuration keys
-    <https://stb-tester.com/manual/advanced-configuration#automatic-configuration-keys>`__.
+    <https://stb-tester.com/manual/configuration#automatic-configuration-keys>`__.
     For example::
 
         my_tag_value = stbt.get_config("result.tags", "my tag name")
