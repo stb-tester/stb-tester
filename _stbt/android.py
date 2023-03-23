@@ -206,7 +206,9 @@ class AdbDevice():
         :returns: `subprocess.CompletedProcess` from `subprocess.run`.
         :raises: `subprocess.CalledProcessError` if ``check`` is true and
             the adb process returns a non-zero exit status.
-        :raises: `AdbError` if ``adb connect`` fails.
+        :raises: `subprocess.TimeoutExpired` if ``timeout`` is specified and
+            the adb process doesn't finish within that number of seconds.
+        :raises: `stbt.android.AdbError` if ``adb connect`` fails.
         """
         if self.tcpip:
             self._connect(timeout)
