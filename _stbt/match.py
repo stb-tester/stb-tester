@@ -20,8 +20,8 @@ from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
 from .imgutils import (
-    crop, FrameT, _frame_repr, ImageT, _image_region, limit_time, load_image,
-    _validate_region)
+    Frame, crop, FrameT, _frame_repr, ImageT, _image_region, limit_time,
+    load_image, _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
@@ -330,6 +330,48 @@ def match_all(
             break
 
 
+def _norm_frame(frame: "FrameT"):
+    """Normalise single channel images to shape (h, w, 3) rather than (h, w) or
+    (h, w, 1).  match has the invariant that it behaves the same as if you'd
+    run `frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)` first.
+
+    We fiddle with the strides of the numpy array to avoid copying the data.
+    """
+    if not isinstance(frame, numpy.ndarray):
+        raise TypeError(
+            "Expected numpy.ndarray, got %r" % (type(frame).__name__,))
+    if frame.dtype != numpy.uint8:
+        raise TypeError(
+            "Expected numpy.ndarray of uint8, got %r" % (frame.dtype,))
+    frame = frame.view()
+    if frame.ndim == 2:
+        frame.shape = frame.shape + (1,)
+    if frame.ndim != 3:
+        raise ValueError(
+            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
+            (frame.shape,))
+    if frame.shape[2] not in (1, 3):
+        raise ValueError(
+            "Invalid shape for frame: %r. Shape must have 1 or 3 channels" %
+            (frame.shape,))
+    if frame.shape[2] == 1:
+        frame = numpy.lib.stride_tricks.as_strided(
+            frame, frame.shape[:2] + (3,), frame.strides[:2] + (0,),
+            subok=True, writeable=False)
+    return frame
+
+
+def test_norm_frame():
+    frame = Frame(
+        numpy.random.randint(256, size=(5, 5, 1), dtype=numpy.uint8), time=56)
+    normed = _norm_frame(frame)
+    assert normed.shape == (5, 5, 3)
+    assert isinstance(normed, Frame)
+    assert normed.time == 56
+    assert numpy.all(normed[:, :, 0] == normed[:, :, 1])
+    assert numpy.all(normed[:, :, 0] == normed[:, :, 2])
+
+
 def _match_all(image, frame, match_parameters, region):
     """
     Generator that yields a sequence of zero or more truthy MatchResults,
@@ -342,16 +384,10 @@ def _match_all(image, frame, match_parameters, region):
         from stbt_core import get_frame
         frame = get_frame()
 
-    # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
-    frame = frame.view()
-    if len(frame.shape) == 2:
-        frame.shape = frame.shape + (1,)
-    if len(frame.shape) != 3:
-        raise ValueError(
-            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
-            (frame.shape,))
+    # Normalise single channel images to shape (h, w, 3) rather than just (h, w)
+    frame = _norm_frame(frame)
 
-    t = load_image(image, color_channels={1: 1, 3: (3, 4)}[frame.shape[2]])
+    t = load_image(image, color_channels=(3, 4))
 
     if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
         raise ValueError("Frame %r must be larger than reference image %r"
@@ -359,10 +395,6 @@ def _match_all(image, frame, match_parameters, region):
     if any(t.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image %r must contain some data"
                          % (t.shape,))
-    if (frame.shape[2], t.shape[2]) not in [(1, 1), (3, 3), (3, 4)]:
-        raise ValueError(
-            "Frame %r and reference image %r must have the same number of "
-            "channels" % (frame.shape, t.shape))
 
     if t.shape[2] == 4:
         if cv2_compat.version < [3, 0, 0]:

@@ -5,6 +5,27 @@ These release notes apply to the Stb-tester open-source version. Customers of
 Stb-tester.com Ltd. should refer to the release notes at
 https://stb-tester.com/manual/python-api#release-notes instead.
 
+#### v34 (UNRELEASED)
+
+Unreleased
+
+##### Major new features
+
+##### Breaking changes since v32
+
+* `match`: The behaviour when matching a color image, or an image with alpha
+  against a greyscale frame has changed.  Previously the image was converted to
+  greyscale before matching.  Now the frame is converted to color before
+  matching.  This is unlikely to affect any existing tests as greyscale frames
+  are only created as a result of explicit image processing.
+
+##### Deprecated APIs
+
+##### Minor additions, bugfixes & improvements
+
+* match: Previously if `frame` was greyscale any alpha channel in `image` was
+  ignored.  Now the alpha channel is used if present.
+
 #### v33
 
 13 July 2022.
