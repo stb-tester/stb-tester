@@ -181,6 +181,16 @@ def test_that_partly_opaque_alpha_is_treated_as_fully_transparent():
     assert numpy.isclose(m1.first_pass_result, m2.first_pass_result)
 
 
+@pytest.mark.parametrize("shape", [
+    (268, 434, 1),
+    (268, 434),
+])
+def test_transparent_reference_image_with_single_channel_frame(shape):
+    f = stbt.load_image("buttons-on-blue-background.png", color_channels=1)
+    f.shape = shape
+    assert stbt.match("button-grayscale.png", frame=f)
+
+
 @pytest.mark.parametrize("frame,image,expected_region", [
     # pylint:disable=bad-whitespace,line-too-long
     ("images/regression/roku-tile-frame.png", "images/regression/roku-tile-selection.png", stbt.Region(x=325, y=145, right=545, bottom=325)),
