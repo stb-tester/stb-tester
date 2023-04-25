@@ -357,11 +357,11 @@ def test_1080p_mask():
 
 
 def test_mask_from_alpha_channel():
-    with pytest.raises(ValueError, match=(
-            r"<Image\(filename='.*', dimensions=.*x.*x3\)> "
-            r"doesn't have an alpha channel")):
-        Mask.from_alpha_channel("videotestsrc-full-frame.png")
+    # Image without alpha channel
+    assert Mask.from_alpha_channel("videotestsrc-full-frame.png") == \
+        Region(0, 0, 320, 240)
 
+    # Image with alpha channel
     alpha = Mask.from_alpha_channel("videotestsrc-blacktransparent-blue.png")
     _, mask_region = alpha.to_array(Region(0, 0, 138, 160))
     assert mask_region == Region(0, 0, 138, 160)

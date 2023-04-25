@@ -8,7 +8,7 @@ import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, crop, find_file, Image, ImageT, load_image,
+    _convert_color, crop, find_file, Image, ImageT, _image_region, load_image,
     pixel_bounding_box, _relative_filename)
 from .logging import logger
 from .types import Region
@@ -117,9 +117,10 @@ class Mask:
           path lookup algorithm.
         """
         image = load_image(image)
-        if image.shape[2] != 4:
-            raise ValueError(f"{image} doesn't have an alpha channel")
-        return Mask(image[:, :, 3])
+        if image.shape[2] == 4:
+            return Mask(image[:, :, 3])
+        else:
+            return Mask(_image_region(image))
 
     def __eq__(self, o):
         if isinstance(o, Region):
