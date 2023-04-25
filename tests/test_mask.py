@@ -6,7 +6,7 @@ import cv2
 import numpy
 import pytest
 
-from _stbt.imgutils import load_image
+from _stbt.imgutils import _image_region, load_image
 from _stbt.mask import Mask, _to_array
 from _stbt.types import Region
 
@@ -331,3 +331,26 @@ def test_mask_shape_mismatch():
                        match=(r"Mask\(.*\): shape \(720, 1280, 1\) doesn't "
                               r"match required shape \(1280, 720, 1\)")):
         Mask("mask-out-left-half-720p.png").to_array(Region(0, 0, 720, 1280))
+
+
+def test_1080p_mask():
+    frame = load_image("images/1080p/appletv.png")
+    assert _image_region(frame) == Region(x=0, y=0, right=1920, bottom=1080)
+
+    alpha = Mask(load_image("images/1080p/appletv_background.png")[:, :, 3])
+
+    # Old coordinates from 720p test script don't intersect mask from 1080p
+    # image:
+    mask = Region(x=26, y=500, right=1244, bottom=674)
+    mask = mask - ~alpha  # mask & alpha
+    with pytest.raises(ValueError, match=(
+            r"Region\(.*\) - ~Mask\(.*\) doesn't overlap with the frame's "
+            r"Region\(x=0, y=0, right=1920, bottom=1080\)")):
+        mask.to_array(_image_region(frame))
+
+    # Coordinates updated for 1080p image:
+    mask = Region(x=39, y=750, right=1866, bottom=1011)
+    mask = mask - ~alpha  # mask & alpha
+    mask_pixels, mask_region = mask.to_array(_image_region(frame))
+    assert mask_region == Region(x=49, y=750, right=1866, bottom=1011)
+    assert mask_pixels.shape == (261, 1817, 1)

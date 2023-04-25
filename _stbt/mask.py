@@ -10,6 +10,7 @@ import numpy
 from .imgutils import (
     _convert_color, crop, find_file, Image, load_image, pixel_bounding_box,
     _relative_filename)
+from .logging import logger
 from .types import Region
 
 try:
@@ -245,6 +246,8 @@ def _to_array_and_bounding_box_cached(
         bounding_box = Region.intersect(region, mask._region)
     else:
         bounding_box = pixel_bounding_box(array)
+        if bounding_box is None:
+            logger.warning("%r is an empty Region", mask)
 
     if bounding_box is None:
         raise ValueError("%r doesn't overlap with the frame's %r"
