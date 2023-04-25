@@ -8,8 +8,8 @@ import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, crop, find_file, Image, load_image, pixel_bounding_box,
-    _relative_filename)
+    _convert_color, crop, find_file, Image, ImageT, _image_region, load_image,
+    pixel_bounding_box, _relative_filename)
 from .logging import logger
 from .types import Region
 
@@ -102,6 +102,25 @@ class Mask:
         else:
             raise TypeError("Expected filename, Image, Mask, or Region. "
                             f"Got {m!r}")
+
+    @staticmethod
+    def from_alpha_channel(image: ImageT) -> Mask:
+        """Create a mask from the alpha channel of an image.
+
+        :type image: string or `numpy.ndarray`
+        :param image:
+          An image with an alpha (transparency) channel. This can be the
+          filename of a png file on disk, or an image previously loaded with
+          `stbt.load_image`.
+
+          Filenames should be relative paths. See `stbt.load_image` for the
+          path lookup algorithm.
+        """
+        image = load_image(image)
+        if image.shape[2] == 4:
+            return Mask(image[:, :, 3])
+        else:
+            return Mask(_image_region(image))
 
     def __eq__(self, o):
         if isinstance(o, Region):
