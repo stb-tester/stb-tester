@@ -43,7 +43,7 @@ COLOR_DEPTH_LOOKUP = {
 }
 
 
-def sqdiff(template, frame):
+def sqdiff(template, frame) -> "tuple[int, int]":
     if template.shape[:2] != frame.shape[:2]:
         raise ValueError("Template and frame must be the same size")
     try:
