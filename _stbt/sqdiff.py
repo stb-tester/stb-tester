@@ -1,5 +1,6 @@
 import ctypes
 import os
+import platform
 
 import numpy
 
@@ -10,7 +11,7 @@ def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(root, path)
 
 
-_libstbt = ctypes.CDLL(_find_file("libstbt.so"))
+_libstbt = ctypes.CDLL(_find_file(f"libstbt.{platform.machine()}.so"))
 
 
 class _SqdiffResult(ctypes.Structure):
