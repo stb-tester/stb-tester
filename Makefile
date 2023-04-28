@@ -73,7 +73,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/imgutils.py \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
-    _stbt/libstbt.so \
+    _stbt/libstbt.x86_64.so \
     _stbt/logging.py \
     _stbt/mask.py \
     _stbt/match.py \
@@ -297,7 +297,7 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-_stbt/libstbt.so : _stbt/sqdiff.c
+_stbt/libstbt.x86_64.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
 
 ### Documentation ############################################################
