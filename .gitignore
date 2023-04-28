@@ -11,7 +11,7 @@
 .stbt-prefix
 .venv
 __pycache__
-_stbt/libstbt.so
+_stbt/libstbt.x86_64.so
 debian-packages
 docs/stbt.1
 dist/
