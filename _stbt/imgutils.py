@@ -621,21 +621,17 @@ def find_file(filename: str) -> str:
             return filename
 
     else:
-        # Start searching from the first parent stack-frame that is outside of
-        # the _stbt installation directory (this file's directory).
-        _stbt_dir = os.path.abspath(os.path.dirname(__file__))
         caller = inspect.currentframe()
         try:
             caller = caller.f_back  # skip this frame (find_file)
             while caller:
                 caller_dir = os.path.abspath(
                     os.path.dirname(inspect.getframeinfo(caller).filename))
-                if not caller_dir.startswith(_stbt_dir):
-                    caller_path = os.path.join(caller_dir, filename)
-                    if os.path.isfile(caller_path):
-                        ddebug("Resolved relative path %r to %r" % (
-                            filename, caller_path))
-                        return caller_path
+                caller_path = os.path.join(caller_dir, filename)
+                if os.path.isfile(caller_path):
+                    ddebug("Resolved relative path %r to %r" % (
+                        filename, caller_path))
+                    return caller_path
                 caller = caller.f_back
         finally:
             # Avoid circular references between stack frame objects and
