@@ -611,38 +611,39 @@ def find_file(filename: str) -> str:
 
     Added in v33.
     """
-    if os.path.isabs(filename) and os.path.isfile(filename):
-        return filename
+    if os.path.isabs(filename):
+        if os.path.isfile(filename):
+            return filename
 
-    # Start searching from the first parent stack-frame that is outside of
-    # the _stbt installation directory (this file's directory).
-    _stbt_dir = os.path.abspath(os.path.dirname(__file__))
-    caller = inspect.currentframe()
-    try:
-        caller = caller.f_back  # skip this frame (find_file)
-        while caller:
-            caller_dir = os.path.abspath(
-                os.path.dirname(inspect.getframeinfo(caller).filename))
-            if not caller_dir.startswith(_stbt_dir):
-                caller_path = os.path.join(caller_dir, filename)
-                if os.path.isfile(caller_path):
-                    ddebug("Resolved relative path %r to %r" % (
-                        filename, caller_path))
-                    return caller_path
-            caller = caller.f_back
-    finally:
-        # Avoid circular references between stack frame objects and themselves
-        # for more deterministic GC.  See
-        # https://docs.python.org/3.6/library/inspect.html#the-interpreter-stack
-        # for more information.
-        del caller
+    else:
+        # Start searching from the first parent stack-frame that is outside of
+        # the _stbt installation directory (this file's directory).
+        _stbt_dir = os.path.abspath(os.path.dirname(__file__))
+        caller = inspect.currentframe()
+        try:
+            caller = caller.f_back  # skip this frame (find_file)
+            while caller:
+                caller_dir = os.path.abspath(
+                    os.path.dirname(inspect.getframeinfo(caller).filename))
+                if not caller_dir.startswith(_stbt_dir):
+                    caller_path = os.path.join(caller_dir, filename)
+                    if os.path.isfile(caller_path):
+                        ddebug("Resolved relative path %r to %r" % (
+                            filename, caller_path))
+                        return caller_path
+                caller = caller.f_back
+        finally:
+            # Avoid circular references between stack frame objects and
+            # themselves for more deterministic GC. See
+            # https://docs.python.org/3.10/library/inspect.html#the-interpreter-stack
+            del caller
 
-    # Fall back to image from cwd, to allow loading an image saved previously
-    # during the same test-run.
-    if os.path.isfile(filename):
-        abspath = os.path.abspath(filename)
-        ddebug("Resolved relative path %r to %r" % (filename, abspath))
-        return abspath
+        # Fall back to image from cwd, to allow loading an image saved
+        # previously during the same test-run.
+        if os.path.isfile(filename):
+            abspath = os.path.abspath(filename)
+            ddebug("Resolved relative path %r to %r" % (filename, abspath))
+            return abspath
 
     raise FileNotFoundError(errno.ENOENT, "No such file", filename)
 
