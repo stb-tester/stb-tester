@@ -137,8 +137,8 @@ install-core: all
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
 	done
-	printf "libexecdir = '%s'\nsysconfdir = '%s'\n" \
-	    "$(libexecdir)" "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
+	printf "sysconfdir = '%s'\n" \
+	    "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
 	chmod 0644 $(DESTDIR)$(pythondir)/_stbt/vars.py
 
 install-virtual-stb: $(INSTALL_VSTB_FILES)
