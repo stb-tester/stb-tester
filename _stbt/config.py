@@ -135,9 +135,9 @@ def _config_init(force=False):
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
             from .vars import sysconfdir
-            config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
         except ImportError:
-            pass
+            sysconfdir = "/etc"
+        config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
 
         # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
         # directory specification:
