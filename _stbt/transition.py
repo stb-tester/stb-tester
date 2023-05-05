@@ -130,7 +130,7 @@ def press_and_wait(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut.frames())
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -148,7 +148,7 @@ def wait_for_transition_to_end(
     timeout_secs: float = 10,
     stable_secs: float = 1,
     min_size: "SizeT|None" = None,
-    _dut=None,
+    _frames: "typing.Iterator[core.Frame]|None" = None,
 ) -> _TransitionResult:
 
     """Wait for the screen to stop changing.
@@ -174,9 +174,9 @@ def wait_for_transition_to_end(
 
     :returns: See `press_and_wait`.
     """
-    if _dut is None:
+    if _frames is None:
         import stbt_core
-        _dut = stbt_core
+        _frames = stbt_core.frames()
 
     if region is not Region.ALL:
         if mask is not Region.ALL:
@@ -187,7 +187,7 @@ def wait_for_transition_to_end(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut)
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, _frames)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
@@ -196,14 +196,13 @@ def wait_for_transition_to_end(
 class _Transition():
     def __init__(self, mask: "MaskTypes", timeout_secs: float,
                  stable_secs: float, min_size: "SizeT|None",
-                 dut: "core.DeviceUnderTest"):
+                 frames: "typing.Iterator[core.Frame]"):
         self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
         self.min_size = min_size
-        self.dut = dut
+        self.frames = frames
 
-        self.frames = self.dut.frames()
         self.expiry_time = None
 
     def wait(self, press_result):
