@@ -38,6 +38,7 @@ def press_and_wait(
     timeout_secs: float = 10,
     stable_secs: float = 1,
     min_size: "SizeT|None" = None,
+    frames: "typing.Iterator[core.Frame]|None" = None,
     _dut=None,
 ) -> _TransitionResult:
 
@@ -72,6 +73,9 @@ def press_and_wait(
         to be considered as "motion". Use this to ignore small differences,
         such as the blinking text cursor in a search box.
     :type min_size: Tuple[int, int]
+
+    :param frames: An iterable of video-frames to analyse. Defaults to
+        `stbt.frames()`.
 
     :returns:
         An object that will evaluate to true if the transition completed, false
@@ -120,6 +124,8 @@ def press_and_wait(
     if _dut is None:
         import stbt_core
         _dut = stbt_core
+    if frames is None:
+        frames = _dut.frames()
 
     if region is not Region.ALL:
         if mask is not Region.ALL:
@@ -130,7 +136,7 @@ def press_and_wait(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, _dut.frames())
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -148,7 +154,7 @@ def wait_for_transition_to_end(
     timeout_secs: float = 10,
     stable_secs: float = 1,
     min_size: "SizeT|None" = None,
-    _frames: "typing.Iterator[core.Frame]|None" = None,
+    frames: "typing.Iterator[core.Frame]|None" = None,
 ) -> _TransitionResult:
 
     """Wait for the screen to stop changing.
@@ -171,12 +177,14 @@ def wait_for_transition_to_end(
     :param Region region: See `press_and_wait`.
     :param int|float timeout_secs: See `press_and_wait`.
     :param int|float stable_secs: See `press_and_wait`.
+    :param frames: An iterable of video-frames to analyse. Defaults to
+        `stbt.frames()`.
 
     :returns: See `press_and_wait`.
     """
-    if _frames is None:
+    if frames is None:
         import stbt_core
-        _frames = stbt_core.frames()
+        frames = stbt_core.frames()
 
     if region is not Region.ALL:
         if mask is not Region.ALL:
@@ -187,7 +195,7 @@ def wait_for_transition_to_end(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, _frames)
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result

@@ -158,11 +158,11 @@ def test_wait_for_transition_to_end(diff_algorithm):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.wait_for_transition_to_end(
-        timeout_secs=0.2, stable_secs=0.1, _frames=_stbt.frames())
+        timeout_secs=0.2, stable_secs=0.1, frames=_stbt.frames())
 
     _stbt.press("ball")
     transition = stbt.wait_for_transition_to_end(
-        timeout_secs=0.2, stable_secs=0.1, _frames=_stbt.frames())
+        timeout_secs=0.2, stable_secs=0.1, frames=_stbt.frames())
     print(transition)
     assert not transition
     assert transition.status == stbt.TransitionStatus.STABLE_TIMEOUT
