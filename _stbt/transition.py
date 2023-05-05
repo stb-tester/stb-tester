@@ -14,6 +14,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 from __future__ import annotations
 
 import enum
+import typing
 import warnings
 from typing import Optional
 
@@ -22,6 +23,11 @@ from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
 from .types import KeyT, Region, SizeT
+
+if typing.TYPE_CHECKING:
+    # pylint:disable=unused-import
+    from . import core
+    # pylint:enable=unused-import
 
 
 def press_and_wait(
@@ -187,7 +193,9 @@ def wait_for_transition_to_end(
 
 
 class _Transition():
-    def __init__(self, mask, timeout_secs, stable_secs, min_size, dut):
+    def __init__(self, mask: "MaskTypes", timeout_secs: float,
+                 stable_secs: float, min_size: "SizeT|None",
+                 dut: "core.DeviceUnderTest"):
         self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
