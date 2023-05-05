@@ -246,6 +246,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
         commutative and associative.
     """
 
+    ALL: "Region"
+
     def __new__(
         cls,
         x: float,

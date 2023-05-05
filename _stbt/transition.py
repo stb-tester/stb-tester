@@ -22,11 +22,12 @@ from .diff import FrameDiffer, GrayscaleDiff
 from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
-from .types import KeyT, Region, SizeT
+from .types import KeyT, Region
 
 if typing.TYPE_CHECKING:
     # pylint:disable=unused-import
     from . import core
+    from .types import SizeT
     # pylint:enable=unused-import
 
 
@@ -36,7 +37,7 @@ def press_and_wait(
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: SizeT = None,
+    min_size: "SizeT|None" = None,
     _dut=None,
 ) -> _TransitionResult:
 
@@ -141,12 +142,12 @@ press_and_wait.differ: FrameDiffer = GrayscaleDiff
 
 
 def wait_for_transition_to_end(
-    initial_frame: FrameT = None,
+    initial_frame: "FrameT|None" = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: SizeT = None,
+    min_size: "SizeT|None" = None,
     _dut=None,
 ) -> _TransitionResult:
 
