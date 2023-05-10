@@ -113,6 +113,8 @@ def press_and_wait(
     using `load_mask`. The ``region`` parameter is deprecated; pass your
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
+
+    Added in v34: The ``frames`` parameter.
     """
     if _dut is None:
         import stbt_core
@@ -170,8 +172,7 @@ def wait_for_transition_to_end(
     :param Region region: See `press_and_wait`.
     :param int|float timeout_secs: See `press_and_wait`.
     :param int|float stable_secs: See `press_and_wait`.
-    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
-        Defaults to ``stbt.frames()``.
+    :param Iterator[stbt.Frame] frames: See `press_and_wait`.
 
     :returns: See `press_and_wait`.
     """
