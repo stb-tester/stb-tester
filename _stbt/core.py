@@ -7,9 +7,12 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import argparse
 import datetime
 import sys
+import typing
 import threading
 import warnings
 import weakref
@@ -33,6 +36,11 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
 
 Gst.init(None)
+
+if typing.TYPE_CHECKING:
+    # pylint:disable=unused-import
+    from _stbt.control import RemoteControl
+    # pylint:enable=unused-import
 
 warnings.filterwarnings(
     action="default", category=DeprecationWarning, module=r"_stbt")
@@ -84,13 +92,13 @@ class DeviceUnderTest():
                  mainloop=None, _time=None):
         if _time is None:
             import time as _time
-        self._time_of_last_press = 0
-        self._display = display
-        self._control = control
-        self._sink_pipeline = sink_pipeline
-        self._mainloop = mainloop
+        self._time_of_last_press: float = 0
+        self._display: Display = display
+        self._control: RemoteControl = control
+        self._sink_pipeline: SinkPipeline = sink_pipeline
+        self._mainloop: typing.ContextManager[None] = mainloop
         self._time = _time
-        self._last_keypress = None
+        self._last_keypress: Keypress | None = None
 
     def __enter__(self):
         if self._display:
