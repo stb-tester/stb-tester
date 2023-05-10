@@ -14,21 +14,14 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 from __future__ import annotations
 
 import enum
-import typing
 import warnings
-from typing import Optional
+from typing import Iterator, Optional
 
 from .diff import FrameDiffer, GrayscaleDiff
 from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
-from .types import KeyT, Region
-
-if typing.TYPE_CHECKING:
-    # pylint:disable=unused-import
-    from . import core
-    from .types import SizeT
-    # pylint:enable=unused-import
+from .types import KeyT, Region, SizeT
 
 
 def press_and_wait(
@@ -37,8 +30,8 @@ def press_and_wait(
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: "SizeT|None" = None,
-    frames: "typing.Iterator[core.Frame]|None" = None,
+    min_size: SizeT | None = None,
+    frames: Iterator[FrameT] | None = None,
     _dut=None,
 ) -> _TransitionResult:
 
@@ -74,8 +67,8 @@ def press_and_wait(
         such as the blinking text cursor in a search box.
     :type min_size: Tuple[int, int]
 
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        `stbt.frames()`.
+    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
+        Defaults to ``stbt.frames()``.
 
     :returns:
         An object that will evaluate to true if the transition completed, false
@@ -148,13 +141,13 @@ press_and_wait.differ: FrameDiffer = GrayscaleDiff
 
 
 def wait_for_transition_to_end(
-    initial_frame: "FrameT|None" = None,
+    initial_frame: FrameT | None = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: "SizeT|None" = None,
-    frames: "typing.Iterator[core.Frame]|None" = None,
+    min_size: SizeT | None = None,
+    frames: Iterator[FrameT] | None = None,
 ) -> _TransitionResult:
 
     """Wait for the screen to stop changing.
@@ -177,8 +170,8 @@ def wait_for_transition_to_end(
     :param Region region: See `press_and_wait`.
     :param int|float timeout_secs: See `press_and_wait`.
     :param int|float stable_secs: See `press_and_wait`.
-    :param frames: An iterable of video-frames to analyse. Defaults to
-        `stbt.frames()`.
+    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
+        Defaults to ``stbt.frames()``.
 
     :returns: See `press_and_wait`.
     """
@@ -202,9 +195,9 @@ def wait_for_transition_to_end(
 
 
 class _Transition():
-    def __init__(self, mask: "MaskTypes", timeout_secs: float,
-                 stable_secs: float, min_size: "SizeT|None",
-                 frames: "typing.Iterator[core.Frame]"):
+    def __init__(self, mask: MaskTypes, timeout_secs: float,
+                 stable_secs: float, min_size: SizeT | None,
+                 frames: Iterator[FrameT]):
         self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs

@@ -7,6 +7,8 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
+from __future__ import annotations
+
 import argparse
 import datetime
 import sys
@@ -91,12 +93,12 @@ class DeviceUnderTest():
         if _time is None:
             import time as _time
         self._time_of_last_press: float = 0
-        self._display: "Display" = display
-        self._control: "RemoteControl" = control
-        self._sink_pipeline: "SinkPipeline" = sink_pipeline
-        self._mainloop: "typing.ContextManager[None]" = mainloop
+        self._display: Display = display
+        self._control: RemoteControl = control
+        self._sink_pipeline: SinkPipeline = sink_pipeline
+        self._mainloop: typing.ContextManager[None] = mainloop
         self._time = _time
-        self._last_keypress: "Keypress|None" = None
+        self._last_keypress: Keypress | None = None
 
     def __enter__(self):
         if self._display:
