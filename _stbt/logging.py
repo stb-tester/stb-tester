@@ -33,10 +33,10 @@ def init_logger():
     logger.propagate = False
 
 
-def debug(msg: str):
+def debug(msg: str, *args, **kwargs):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if get_debug_level() > 0:
-        logger.debug(msg)
+        logger.debug(msg, *args, **kwargs)
 
 
 def ddebug(s):
@@ -45,8 +45,8 @@ def ddebug(s):
         trace_logger.debug(s)
 
 
-def warn(s):
-    logger.warning(s)
+def warn(msg: str, *args, **kwargs):
+    logger.warning(msg, *args, **kwargs)
 
 
 def get_debug_level():

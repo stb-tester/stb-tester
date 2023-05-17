@@ -19,7 +19,7 @@ from typing import Iterator, Optional
 
 from .diff import BGRDiff, FrameDiffer
 from .imgutils import FrameT
-from .logging import ddebug, debug, draw_on
+from .logging import ddebug, debug, draw_on, warn
 from .mask import MaskTypes
 from .types import KeyT, Region, SizeT
 
@@ -31,6 +31,7 @@ def press_and_wait(
     timeout_secs: float = 10,
     stable_secs: float = 1,
     min_size: SizeT | None = None,
+    retries: int = 0,
     frames: Iterator[FrameT] | None = None,
     _dut=None,
 ) -> _TransitionResult:
@@ -66,6 +67,10 @@ def press_and_wait(
         to be considered as "motion". Use this to ignore small differences,
         such as the blinking text cursor in a search box.
     :type min_size: Tuple[int, int]
+
+    :param int retries: Press the key again (up to this number of times) if
+        the first press didn't have any effect (that is, if the press failed
+        with `TransitionStatus.START_TIMEOUT`). Defaults to 0 (no retries).
 
     :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
         Defaults to ``stbt.frames()``.
@@ -114,7 +119,7 @@ def press_and_wait(
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
 
-    Added in v34: The ``frames`` parameter.
+    Added in v34: The ``retries`` and ``frames`` parameters.
 
     Changed in v34: The difference-detection algorithm takes color into
     account.
@@ -133,6 +138,20 @@ def press_and_wait(
             "pass your Region to 'mask' instead",
             DeprecationWarning, stacklevel=2)
         mask = region
+
+    result = _press_and_wait(key, mask, timeout_secs, stable_secs,
+                             min_size, frames, _dut)
+    for i in range(retries):
+        if result.status != TransitionStatus.START_TIMEOUT:
+            return result
+        warn("Keypress %s had no effect; retrying %i/%i", key, i + 1, retries)
+        result = _press_and_wait(key, mask, timeout_secs, stable_secs,
+                                 min_size, frames, _dut)
+    return result
+
+
+def _press_and_wait(key, mask, timeout_secs, stable_secs, min_size,
+                    frames, _dut) -> _TransitionResult:
 
     t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
     press_result = _dut.press(key)
