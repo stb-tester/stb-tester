@@ -14,7 +14,7 @@ from .types import Region, UITestFailure
 
 def detect_motion(
     timeout_secs: float = 10,
-    noise_threshold: Optional[float] = None,
+    noise_threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     frames: Iterator[FrameT] = None,
@@ -39,13 +39,12 @@ def detect_motion(
         the iterator will yield frames forever. Note that you can stop
         iterating (for example with ``break``) at any time.
 
-    :param float noise_threshold:
-        The amount of noise to ignore. This is only useful with noisy analogue
-        video sources. Valid values range from 0 (all differences are
-        considered noise; a value of 0 will never report motion) to 1.0 (any
-        difference is considered motion).
+    :param int noise_threshold:
+        The difference in pixel intensity to ignore. Valid values range from 0
+        (any difference is considered motion) to 255 (which would never report
+        motion).
 
-        This defaults to 0.84. You can override the global default value by
+        This defaults to 25. You can override the global default value by
         setting ``noise_threshold`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
@@ -64,6 +63,11 @@ def detect_motion(
     using `load_mask`. The ``region`` parameter is deprecated; pass your
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
+
+    Changed in v34: The difference-detection algorithm takes color into
+    account. The ``noise_threshold`` parameter changed range (from 0.0-1.0 to
+    0-255), sense (from "bigger is stricter" to "smaller is stricter"), and
+    default value (from 0.84 to 25).
     """
     if frames is None:
         import stbt_core
@@ -81,7 +85,7 @@ def detect_motion(
         mask = region
 
     if noise_threshold is None:
-        noise_threshold = get_config('motion', 'noise_threshold', type_=float)
+        noise_threshold = get_config('motion', 'noise_threshold', type_=int)
 
     debug(f"Searching for motion, using mask={mask}")
 
@@ -105,7 +109,7 @@ detect_motion.differ : FrameDiffer = BGRDiff
 def wait_for_motion(
     timeout_secs: float = 10,
     consecutive_frames: int = None,
-    noise_threshold: Optional[float] = None,
+    noise_threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     frames: Iterator[FrameT] = None,
@@ -132,7 +136,7 @@ def wait_for_motion(
         setting ``consecutive_frames`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
-    :param float noise_threshold: See `detect_motion`.
+    :param int noise_threshold: See `detect_motion`.
     :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
     :param Region region: See `detect_motion`.
     :param Iterator[stbt.Frame] frames: See `detect_motion`.
@@ -147,6 +151,11 @@ def wait_for_motion(
     using `load_mask`. The ``region`` parameter is deprecated; pass your
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
+
+    Changed in v34: The difference-detection algorithm takes color into
+    account. The ``noise_threshold`` parameter changed range (from 0.0-1.0 to
+    0-255), sense (from "bigger is stricter" to "smaller is stricter"), and
+    default value (from 0.84 to 25).
     """
     if frames is None:
         import stbt_core
