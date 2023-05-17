@@ -115,6 +115,9 @@ def press_and_wait(
     at the same time.
 
     Added in v34: The ``frames`` parameter.
+
+    Changed in v34: The difference-detection algorithm takes color into
+    account.
     """
     if _dut is None:
         import stbt_core
