@@ -352,9 +352,19 @@ class Region(namedtuple('Region', 'x y right bottom'),
             raise TypeError("Region.contains expects a Region, Position, or "
                             "None. Got %r" % (other,))
 
-    def translate(
-        self, x: Optional[float] = None, y: Optional[float] = None
-    ) -> Region:
+    @typing.overload
+    def translate(self, x: Region) -> Region:
+        ...
+
+    @typing.overload
+    def translate(self, x: float | None, y: float | None) -> Region:
+        ...
+
+    @typing.overload
+    def translate(self, x: tuple[int, int]) -> Region:
+        ...
+
+    def translate(self, x=None, y=None):
         """
         :returns: A new region with the position of the region adjusted by the
             given amounts.  The width and height are unaffected.

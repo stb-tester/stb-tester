@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, TypeAlias, Union
 
 import cv2
 import numpy
@@ -19,7 +19,7 @@ except ImportError:
     Xxhash64 = None
 
 
-MaskTypes = Union[str, numpy.ndarray, "Mask", Region, None]
+MaskTypes: TypeAlias = Union[str, numpy.ndarray, "Mask", Region, None]
 
 
 def load_mask(mask: MaskTypes) -> Mask:
