@@ -139,7 +139,7 @@ def press_and_wait(
     return result
 
 
-press_and_wait.differ: FrameDiffer = BGRDiff
+press_and_wait.differ: FrameDiffer = BGRDiff()
 
 
 def wait_for_transition_to_end(
@@ -210,8 +210,9 @@ class _Transition():
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
-        differ = press_and_wait.differ(initial_frame=press_result.frame_before,
-                                       mask=self.mask, min_size=self.min_size)
+        differ_ = press_and_wait.differ.replace(min_size=self.min_size)
+        differ = FrameDiffer(differ_, press_result.frame_before, self.mask)
+
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
@@ -244,8 +245,8 @@ class _Transition():
             self.expiry_time = initial_frame.time + self.timeout_secs
 
         first_stable_frame = initial_frame
-        differ = press_and_wait.differ(initial_frame=initial_frame,
-                                       mask=self.mask, min_size=self.min_size)
+        differ_ = press_and_wait.differ.replace(min_size=self.min_size)
+        differ = FrameDiffer(differ_, initial_frame, self.mask)
         while True:
             f = next(self.frames)
             motion_result = differ.diff(f)

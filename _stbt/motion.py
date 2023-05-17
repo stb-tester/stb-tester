@@ -90,7 +90,8 @@ def detect_motion(
     except StopIteration:
         return
 
-    differ = detect_motion.differ(frame, mask, threshold=noise_threshold)
+    differ_ = detect_motion.differ.replace(threshold=noise_threshold)
+    differ = FrameDiffer(differ_, frame, mask)
     for frame in frames:
         result = differ.diff(frame)
         draw_on(frame, result, label="detect_motion()")
@@ -99,7 +100,7 @@ def detect_motion(
         yield result
 
 
-detect_motion.differ : FrameDiffer = BGRDiff
+detect_motion.differ : FrameDiffer = BGRDiff()
 
 
 def wait_for_motion(

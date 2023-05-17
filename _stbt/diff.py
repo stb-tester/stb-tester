@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+import typing
 
 import cv2
 import numpy
@@ -49,20 +49,77 @@ class MotionResult():
                 self.motion, self.region, _frame_repr(self.frame)))
 
 
-class FrameDiffer():
-    """Interface for different algorithms for diffing frames in a sequence.
+class UNSET:
+    """Sentinel"""
 
-    Say you have a sequence of frames A, B, C. Typically you will compare frame
-    A against B, and then frame B against C. This is a class (not a function)
-    so that you can remember work you've done on frame B, so that you don't
-    repeat that work when you need to compare against frame C.
+
+class Differ:
     """
-    def diff(self, frame: FrameT):
+    This is a low level interface enabling customising how two images are
+    compared.  It's used by `wait_for_motion` and `press_and_wait`.
+
+    `Differ` is designed so we can efficiently implement `GrayscaleDiff`
+    without doing the colour -> grayscale conversion on the same image twice -
+    just as we could before.  To avoid internal state the interface makes
+    preprocessing explicit.  This makes the classes hard to use, but that's ok -
+    it's a low-level interface intended mostly for internal use.
+
+    The only public interface is the subclass constructors.  The methods are not
+    intended for use by external code.
+    """
+    PreProcessedFrame: typing.TypeAlias = FrameT
+    PreProcessedMask: typing.TypeAlias = tuple[numpy.ndarray | None, Region]
+
+    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+        """
+        Return a new Differ with the specified parameters replaced.
+
+        Differs are immutable, much like namedtuples.  This method allows
+        creating a new differ, overriding some of the parameters.
+
+        This is needed to allow passing parameters like `min_size` directly to
+        e.g. `press_and_wait` rather than at `Differ` construction time.
+
+        :meta private:
+        """
+        raise NotImplementedError(
+            "%s.replace is not implemented" % self.__class__.__name__)
+
+    def preprocess_mask(
+            self, mask: MaskTypes, frame_region: Region) -> "PreProcessedMask":
+        """
+        Pre-process a mask.  The returned value from this will be passed to
+        `preprocess` and `diff`.
+
+        :meta private:
+        """
+        return load_mask(mask).to_array(frame_region)
+
+    def preprocess(
+            self, frame: FrameT,
+            mask_tuple: "PreProcessedMask"  # pylint:disable=unused-argument
+    ) -> "PreProcessedFrame":
+        """
+        Pre-process a frame.  The returned value from this will be passed to
+        `diff`.  `mask_tuple` is the return value from `preprocess_mask`.
+
+        :meta private:
+        """
+        return frame
+
+    def diff(self, a: "PreProcessedFrame", b: "PreProcessedFrame",
+             mask_tuple: "PreProcessedMask") -> MotionResult:
+        """
+        Compare two frames.  `a` and `b` are the return values from
+        `preprocess`.  `mask_tuple` is the return value from `preprocess_mask`.
+
+        :meta private:
+        """
         raise NotImplementedError(
             "%s.diff is not implemented" % self.__class__.__name__)
 
 
-class BGRDiff(FrameDiffer):
+class BGRDiff(Differ):
     """Compares 2 frames by calculating the color distance between them.
 
     The algorithm is a simple euclidean distance between each pair of
@@ -78,18 +135,12 @@ class BGRDiff(FrameDiffer):
 
     def __init__(
         self,
-        initial_frame: FrameT,
-        mask: MaskTypes = Region.ALL,
-        min_size: Optional[SizeT] = None,
+        min_size: SizeT | None = None,
         threshold: float = 25,
         erode: bool = True,
     ):
-        self.prev_frame = initial_frame
         self.min_size = min_size
         self.threshold = threshold
-
-        self.mask_, self.region = load_mask(mask).to_array(
-            _image_region(initial_frame))
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
@@ -99,15 +150,25 @@ class BGRDiff(FrameDiffer):
             kernel = None
         self.kernel = kernel
 
-    def diff(self, frame: FrameT) -> MotionResult:
-        imglog = ImageLogger("BGRDiff", region=self.region,
+    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+        if min_size is UNSET:
+            min_size = self.min_size
+        if threshold is UNSET:
+            threshold = self.threshold
+        if erode is UNSET:
+            erode = self.kernel
+        return self.__class__(min_size, threshold, erode)
+
+    def diff(self, prev_frame, frame, mask):  # pylint:disable=too-many-locals,arguments-renamed
+        mask_pixels, region = mask
+
+        imglog = ImageLogger("BGRDiff", region=region,
                              min_size=self.min_size, threshold=self.threshold)
         imglog.imwrite("source", frame)
-        imglog.imwrite("previous_frame", self.prev_frame)
+        imglog.imwrite("previous_frame", prev_frame)
 
-        mask_pixels = self.mask_
-        cframe = crop(frame, self.region)
-        cprev = crop(self.prev_frame, self.region)
+        cframe = crop(frame, region)
+        cprev = crop(prev_frame, region)
 
         sqd = numpy.subtract(cframe, cprev, dtype=numpy.int32)
         sqd = (sqd[:, :, 0] ** 2 +
@@ -139,12 +200,37 @@ class BGRDiff(FrameDiffer):
         out_region = pixel_bounding_box(d)
         if out_region:
             # Undo crop:
-            out_region = out_region.translate(self.region)
+            out_region = out_region.translate(region)
 
         motion = bool(out_region and (
             self.min_size is None or
             (out_region.width >= self.min_size[0] and
              out_region.height >= self.min_size[1])))
+        result = MotionResult(getattr(frame, "time", None), motion,
+                              out_region, frame)
+        ddebug(str(result))
+        imglog.html(BGRDIFF_HTML, result=result)
+        return result
+
+
+class FrameDiffer():
+    """Interface for different algorithms for diffing frames in a sequence.
+
+    Say you have a sequence of frames A, B, C. Typically you will compare frame
+    A against B, and then frame B against C. This is a class (not a function)
+    so that you can remember work you've done on frame B, so that you don't
+    repeat that work when you need to compare against frame C.
+    """
+    def __init__(self, differ: Differ, initial_frame: FrameT,
+                 mask: MaskTypes = Region.ALL):
+        self.differ: Differ = differ
+        self.mask_tuple = differ.preprocess_mask(
+            mask, _image_region(initial_frame))
+        self.prev_frame = differ.preprocess(initial_frame, self.mask_tuple)
+
+    def diff(self, frame: FrameT) -> MotionResult:
+        new_frame = self.differ.preprocess(frame, self.mask_tuple)
+        motion = self.differ.diff(self.prev_frame, new_frame, self.mask_tuple)
 
         if motion:
             # Only update the comparison frame if it's different to the previous
@@ -152,13 +238,9 @@ class BGRDiff(FrameDiffer):
             # because the differences between frames 1 and 2 might be small and
             # the differences between frames 2 and 3 might be small but we'd see
             # the difference by looking between 1 and 3.
-            self.prev_frame = frame
+            self.prev_frame = new_frame
 
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
-        ddebug(str(result))
-        imglog.html(BGRDIFF_HTML, result=result)
-        return result
+        return motion
 
 
 BGRDIFF_HTML = """\
@@ -198,7 +280,7 @@ BGRDIFF_HTML = """\
 """
 
 
-class GrayscaleDiff(FrameDiffer):
+class GrayscaleDiff(Differ):
     """Compares 2 frames by converting them to grayscale, calculating
     pixel-wise absolute differences, and ignoring differences below a
     threshold.
@@ -209,18 +291,12 @@ class GrayscaleDiff(FrameDiffer):
 
     def __init__(
         self,
-        initial_frame: FrameT,
-        mask: MaskTypes = Region.ALL,
-        min_size: Optional[SizeT] = None,
+        min_size: SizeT | None = None,
         threshold: float = 0.84,
         erode: bool = True,
     ):
-        self.prev_frame = initial_frame
         self.min_size = min_size
         self.threshold = threshold
-
-        self.mask_, self.region = load_mask(mask).to_array(
-            _image_region(initial_frame))
 
         if isinstance(erode, numpy.ndarray):  # For power users
             kernel = erode
@@ -230,27 +306,37 @@ class GrayscaleDiff(FrameDiffer):
             kernel = None
         self.kernel = kernel
 
-        self.prev_frame_gray = self.gray(initial_frame)
+    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+        if min_size is UNSET:
+            min_size = self.min_size
+        if threshold is UNSET:
+            threshold = self.threshold
+        if erode is UNSET:
+            erode = self.kernel
+        return self.__class__(min_size, threshold, erode)
 
-    def gray(self, frame: FrameT):
-        return cv2.cvtColor(crop(frame, self.region), cv2.COLOR_BGR2GRAY)
+    def preprocess(self, frame, mask_tuple):
+        _, region = mask_tuple
+        return frame, cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
 
-    def diff(self, frame: FrameT) -> MotionResult:
-        frame_gray = self.gray(frame)
+    def diff(self, a, b, mask_tuple) -> MotionResult:
+        _, prev_frame_gray = a
+        frame, frame_gray = b
+        mask, region = mask_tuple
 
-        imglog = ImageLogger("GrayscaleDiff", region=self.region,
+        imglog = ImageLogger("GrayscaleDiff", region=region,
                              min_size=self.min_size,
                              threshold=self.threshold)
         imglog.imwrite("source", frame)
         imglog.imwrite("gray", frame_gray)
-        imglog.imwrite("previous_frame_gray", self.prev_frame_gray)
+        imglog.imwrite("previous_frame_gray", prev_frame_gray)
 
-        absdiff = cv2.absdiff(self.prev_frame_gray, frame_gray)
+        absdiff = cv2.absdiff(prev_frame_gray, frame_gray)
         imglog.imwrite("absdiff", absdiff)
 
-        if self.mask_ is not None:
-            absdiff = cv2.bitwise_and(absdiff, self.mask_)
-            imglog.imwrite("mask", self.mask_)
+        if mask is not None:
+            absdiff = cv2.bitwise_and(absdiff, mask)
+            imglog.imwrite("mask", mask)
             imglog.imwrite("absdiff_masked", absdiff)
 
         _, thresholded = cv2.threshold(
@@ -265,21 +351,12 @@ class GrayscaleDiff(FrameDiffer):
         out_region = pixel_bounding_box(thresholded)
         if out_region:
             # Undo crop:
-            out_region = out_region.translate(self.region)
+            out_region = out_region.translate(region)
 
         motion = bool(out_region and (
             self.min_size is None or
             (out_region.width >= self.min_size[0] and
              out_region.height >= self.min_size[1])))
-
-        if motion:
-            # Only update the comparison frame if it's different to the previous
-            # one.  This makes `detect_motion` more sensitive to slow motion
-            # because the differences between frames 1 and 2 might be small and
-            # the differences between frames 2 and 3 might be small but we'd see
-            # the difference by looking between 1 and 3.
-            self.prev_frame = frame
-            self.prev_frame_gray = frame_gray
 
         result = MotionResult(getattr(frame, "time", None), motion,
                               out_region, frame)

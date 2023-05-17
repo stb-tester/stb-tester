@@ -8,9 +8,9 @@ def test_bgrdiff():
     frame2 = stbt.load_image("images/diff/xfinity-search-keyboard-2.png")
 
     # GrayscaleDiff doesn't see the difference in the "?123"
-    assert not stbt.GrayscaleDiff(frame1).diff(frame2)
+    assert not stbt.FrameDiffer(stbt.GrayscaleDiff(), frame1).diff(frame2)
 
     # BGRDiff does see it:
-    result = stbt.BGRDiff(frame1).diff(frame2)
+    result = stbt.FrameDiffer(stbt.BGRDiff(), frame1).diff(frame2)
     assert result
     assert result.region == stbt.Region(x=87, y=145, right=129, bottom=161)
