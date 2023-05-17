@@ -111,7 +111,7 @@ def wipe():
     frame = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     for x in range(0, 720, 2):
         frame[x:x + 2, :, :] = 255
-        yield stbt.Frame(frame, time=x / 30.)
+        yield stbt.Frame(frame.copy(), time=x / 30.)
 
 
 def clamp(x, bottom, top):
@@ -124,10 +124,10 @@ def gradient_wipe(min_=100, max_=200, swipe_height=40):
         (720 + swipe_height * 4, 1280, 3), dtype=numpy.uint8)
     diff = max_ - min_
 
-    # detect_motion ignores differences of under 40, so what's the fastest we
+    # detect_motion ignores differences of under 25, so what's the fastest we
     # can wipe while making sure the inter-frame differences are always under
-    # 40?:
-    speed = 40 * swipe_height / diff
+    # 25?:
+    speed = 24 * swipe_height / diff
 
     print("pixel difference: %f" % (diff / swipe_height))
     print("max_speed: %f" % speed)
@@ -139,7 +139,7 @@ def gradient_wipe(min_=100, max_=200, swipe_height=40):
 
     for x in range(0, frame.shape[0] - swipe_height * 3, int(speed)):
         frame[x:x + swipe_height * 3, :, :] = edge
-        yield stbt.Frame(frame[swipe_height * 2:swipe_height * 2 + 720],
+        yield stbt.Frame(frame[swipe_height * 2:swipe_height * 2 + 720].copy(),
                          time=x / 30.)
 
 

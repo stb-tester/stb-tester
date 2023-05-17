@@ -5,7 +5,7 @@ from collections import deque
 from typing import Iterator, Optional
 
 from .config import ConfigurationError, get_config
-from .diff import FrameDiffer, GrayscaleDiff, MotionResult
+from .diff import BGRDiff, FrameDiffer, MotionResult
 from .imgutils import limit_time, FrameT
 from .logging import debug, draw_on
 from .mask import MaskTypes
@@ -99,7 +99,7 @@ def detect_motion(
         yield result
 
 
-detect_motion.differ : FrameDiffer = GrayscaleDiff
+detect_motion.differ : FrameDiffer = BGRDiff
 
 
 def wait_for_motion(
