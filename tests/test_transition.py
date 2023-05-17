@@ -4,19 +4,26 @@ import pytest
 from numpy import isclose
 
 import stbt_core as stbt
+from _stbt.logging import scoped_debug_level
 from _stbt.transition import _TransitionResult
 from _stbt.types import Keypress
 
 
 class FakeDeviceUnderTest():
-    def __init__(self, frames=None):
+    def __init__(self, frames=None, ignores=0):
         self.state = "black"
         self._frames = iter(frames) if frames else None
         self._t = 0
+        self._ignores = ignores
 
     def press(self, key):
+        print(f"FakeDeviceUnderTest.press({key})")
         frame_before = next(self.frames())
-        self.state = key
+        if self._ignores == 0:
+            self.state = key
+        else:
+            print(f"(FakeDeviceUnderTest ignored key {key})")
+            self._ignores -= 1
         return Keypress(key, self._t, self._t, frame_before)
 
     def frames(self):
@@ -152,6 +159,28 @@ def test_press_and_wait_region_parameter():
             region=stbt.Region(x=640, y=0, right=1280, bottom=720),
             mask=stbt.Region(x=640, y=0, right=1280, bottom=720),
             timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
+
+
+def test_press_and_wait_retries():
+    with scoped_debug_level(1):
+
+        transition = stbt.press_and_wait("white",
+                                         timeout_secs=0.2, stable_secs=0.1,
+                                         _dut=FakeDeviceUnderTest(ignores=2))
+        print(transition)
+        assert transition.status == stbt.TransitionStatus.START_TIMEOUT
+
+        transition = stbt.press_and_wait("white", retries=1,
+                                         timeout_secs=0.2, stable_secs=0.1,
+                                         _dut=FakeDeviceUnderTest(ignores=2))
+        print(transition)
+        assert transition.status == stbt.TransitionStatus.START_TIMEOUT
+
+        transition = stbt.press_and_wait("white", retries=2,
+                                         timeout_secs=0.2, stable_secs=0.1,
+                                         _dut=FakeDeviceUnderTest(ignores=2))
+        print(transition)
+        assert transition.status == stbt.TransitionStatus.COMPLETE
 
 
 def test_wait_for_transition_to_end(diff_algorithm):
