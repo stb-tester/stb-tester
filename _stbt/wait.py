@@ -105,7 +105,8 @@ def wait_until(callable_: Callable[[], T],
         predicate = lambda x: x
     stable_value = None
     stable_predicate_value = None
-    expiry_time = time.time() + timeout_secs
+    start_time = time.time()
+    expiry_time = start_time + timeout_secs
 
     while True:
         t = time.time()
@@ -118,13 +119,15 @@ def wait_until(callable_: Callable[[], T],
                 stable_value = value
                 stable_predicate_value = predicate_value
             if predicate_value and t - stable_since >= stable_secs:
-                debug("wait_until succeeded: %s"
-                      % _callable_description(callable_))
+                debug("wait_until succeeded in %.3fs: %s"
+                      % (time.time() - start_time,
+                         _callable_description(callable_)))
                 return stable_value
         else:
             if predicate_value:
-                debug("wait_until succeeded: %s"
-                      % _callable_description(callable_))
+                debug("wait_until succeeded in %.3fs: %s"
+                      % (time.time() - start_time,
+                         _callable_description(callable_)))
                 return value
 
         if t >= expiry_time:
