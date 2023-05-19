@@ -53,19 +53,27 @@ class UNSET:
 
 
 class Differ:
-    """
-    This is a low level interface enabling customising how two images are
-    compared.  It's used by `wait_for_motion` and `press_and_wait`.
+    """An algorithm that compares two images or frames to find the differences
+    between them.
 
-    `Differ` is designed so we can efficiently implement `GrayscaleDiff`
-    without doing the colour -> grayscale conversion on the same image twice -
-    just as we could before.  To avoid internal state the interface makes
-    preprocessing explicit.  This makes the classes hard to use, but that's ok -
-    it's a low-level interface intended mostly for internal use.
-
-    The only public interface is the subclass constructors.  The methods are not
-    intended for use by external code.
+    Subclasses of this class implement the actual diffing algorithms: See
+    `BGRDiff` and `GrayscaleDiff`.
     """
+
+    # This is a low level interface that allows us to customise how two images
+    # or frames are compared. It's used by `detect_motion`/`wait_for_motion`
+    # and `press_and_wait`.
+    #
+    # `Differ` is designed so we can efficiently implement `GrayscaleDiff`
+    # without doing the colour -> grayscale conversion on the same image twice.
+    # To avoid internal state the interface makes preprocessing explicit; the
+    # caller (`DetectMotion`) is responsible for keeping track of that state.
+    # This makes the classes hard to use, but that's ok — it's a low-level
+    # interface intended mostly for internal use.
+    #
+    # The only public interface is the subclass constructors. The methods are
+    # not intended for use by external code.
+
     PreProcessedFrame: typing.TypeAlias = FrameT
     PreProcessedMask: typing.TypeAlias = tuple[numpy.ndarray | None, Region]
 
@@ -73,11 +81,11 @@ class Differ:
         """
         Return a new Differ with the specified parameters replaced.
 
-        Differs are immutable, much like namedtuples.  This method allows
-        creating a new differ, overriding some of the parameters.
+        Differs are immutable. This method allows creating a new differ,
+        overriding some of the parameters.
 
-        This is needed to allow passing parameters like `min_size` directly to
-        e.g. `press_and_wait` rather than at `Differ` construction time.
+        This is needed to allow passing parameters like `min_size` when calling
+        functions like `press_and_wait`.
 
         :meta private:
         """
@@ -121,14 +129,15 @@ class Differ:
 class BGRDiff(Differ):
     """Compares 2 frames by calculating the color distance between them.
 
-    The algorithm is a simple euclidean distance between each pair of
+    The algorithm calculates the euclidean distance between each pair of
     corresponding pixels in the 2 frames. The color difference is then
-    binarized using the specified threshold: Values greater than the threshold
-    are counted as differences (that is, motion). Then, an "erode" operation
-    removes differences that are only 1 pixel wide or high. If any differences
-    remain, the 2 frames are considered different.
+    binarized using the specified threshold: Values smaller than the threshold
+    are ignored. Then, an "erode" operation removes differences that are only 1
+    pixel wide or high. If any differences remain, the 2 frames are considered
+    different.
 
-    This is the default diffing algorithm for `find_selection_from_background`
+    This is the default diffing algorithm for `detect_motion`,
+    `wait_for_motion`, `press_and_wait`, `find_selection_from_background`,
     and `ocr`'s `text_color`.
     """
 
@@ -254,8 +263,8 @@ class GrayscaleDiff(Differ):
     pixel-wise absolute differences, and ignoring differences below a
     threshold.
 
-    This is the default diffing algorithm for `wait_for_motion` and
-    `press_and_wait`.
+    This was the default diffing algorithm for `wait_for_motion` and
+    `press_and_wait` before v34.
     """
 
     def __init__(
