@@ -21,7 +21,7 @@ from _stbt.config import (
     get_config)
 from _stbt.diff import (
     BGRDiff,
-    FrameDiffer,
+    Differ,
     GrayscaleDiff,
     MotionResult)
 from _stbt.frameobject import (
@@ -98,12 +98,12 @@ __all__ = [
     "crop",
     "debug",
     "detect_motion",
+    "Differ",
     "Direction",
     "draw_text",
     "find_file",
     "for_object_repository",
     "Frame",
-    "FrameDiffer",
     "FrameObject",
     "frames",
     "get_config",
