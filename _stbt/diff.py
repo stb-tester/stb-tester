@@ -5,8 +5,7 @@ import typing
 import cv2
 import numpy
 
-from .imgutils import (
-    Frame, FrameT, crop, _frame_repr, _image_region, pixel_bounding_box)
+from .imgutils import Frame, FrameT, crop, _frame_repr, pixel_bounding_box
 from .logging import ddebug, ImageLogger
 from .mask import load_mask, MaskTypes
 from .types import Region, SizeT
@@ -211,36 +210,6 @@ class BGRDiff(Differ):
         ddebug(str(result))
         imglog.html(BGRDIFF_HTML, result=result)
         return result
-
-
-class FrameDiffer():
-    """Interface for different algorithms for diffing frames in a sequence.
-
-    Say you have a sequence of frames A, B, C. Typically you will compare frame
-    A against B, and then frame B against C. This is a class (not a function)
-    so that you can remember work you've done on frame B, so that you don't
-    repeat that work when you need to compare against frame C.
-    """
-    def __init__(self, differ: Differ, initial_frame: FrameT,
-                 mask: MaskTypes = Region.ALL):
-        self.differ: Differ = differ
-        self.mask_tuple = differ.preprocess_mask(
-            mask, _image_region(initial_frame))
-        self.prev_frame = differ.preprocess(initial_frame, self.mask_tuple)
-
-    def diff(self, frame: FrameT) -> MotionResult:
-        new_frame = self.differ.preprocess(frame, self.mask_tuple)
-        motion = self.differ.diff(self.prev_frame, new_frame, self.mask_tuple)
-
-        if motion:
-            # Only update the comparison frame if it's different to the previous
-            # one.  This makes `detect_motion` more sensitive to slow motion
-            # because the differences between frames 1 and 2 might be small and
-            # the differences between frames 2 and 3 might be small but we'd see
-            # the difference by looking between 1 and 3.
-            self.prev_frame = new_frame
-
-        return motion
 
 
 BGRDIFF_HTML = """\

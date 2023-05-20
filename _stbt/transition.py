@@ -17,10 +17,11 @@ import enum
 import warnings
 from typing import Iterator, Optional
 
-from .diff import BGRDiff, Differ, FrameDiffer
+from .diff import BGRDiff, Differ
 from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
+from .motion import DetectMotion
 from .types import KeyT, Region, SizeT
 
 
@@ -210,15 +211,15 @@ class _Transition():
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
-        differ_ = press_and_wait.differ.replace(min_size=self.min_size)
-        differ = FrameDiffer(differ_, press_result.frame_before, self.mask)
+        differ = press_and_wait.differ.replace(min_size=self.min_size)
+        dm = DetectMotion(differ, press_result.frame_before, self.mask)
 
         # Wait for animation to start
         for f in self.frames:
             if f.time < press_result.end_time:
                 # Discard frame to work around latency in video-capture pipeline
                 continue
-            motion_result = differ.diff(f)
+            motion_result = dm.diff(f)
             draw_on(f, motion_result, label="transition")
             if motion_result:
                 _debug("Animation started", f)
@@ -245,11 +246,11 @@ class _Transition():
             self.expiry_time = initial_frame.time + self.timeout_secs
 
         first_stable_frame = initial_frame
-        differ_ = press_and_wait.differ.replace(min_size=self.min_size)
-        differ = FrameDiffer(differ_, initial_frame, self.mask)
+        differ = press_and_wait.differ.replace(min_size=self.min_size)
+        dm = DetectMotion(differ, initial_frame, self.mask)
         while True:
             f = next(self.frames)
-            motion_result = differ.diff(f)
+            motion_result = dm.diff(f)
             draw_on(f, motion_result, label="transition")
             if motion_result:
                 _debug("Animation in progress", f)
