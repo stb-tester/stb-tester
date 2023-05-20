@@ -17,7 +17,7 @@ import enum
 import warnings
 from typing import Iterator, Optional
 
-from .diff import BGRDiff, FrameDiffer
+from .diff import BGRDiff, Differ, FrameDiffer
 from .imgutils import FrameT
 from .logging import ddebug, debug, draw_on
 from .mask import MaskTypes
@@ -139,7 +139,7 @@ def press_and_wait(
     return result
 
 
-press_and_wait.differ: FrameDiffer = BGRDiff()
+press_and_wait.differ: Differ = BGRDiff()
 
 
 def wait_for_transition_to_end(
