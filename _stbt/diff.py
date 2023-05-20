@@ -104,7 +104,7 @@ class Differ:
 
     def preprocess(
             self, frame: FrameT,
-            mask_tuple: "PreProcessedMask"  # pylint:disable=unused-argument
+            mask: "PreProcessedMask"  # pylint:disable=unused-argument
     ) -> "PreProcessedFrame":
         """
         Pre-process a frame.  The returned value from this will be passed to
@@ -115,7 +115,7 @@ class Differ:
         return frame
 
     def diff(self, a: "PreProcessedFrame", b: "PreProcessedFrame",
-             mask_tuple: "PreProcessedMask") -> MotionResult:
+             mask: "PreProcessedMask") -> MotionResult:
         """
         Compare two frames.  `a` and `b` are the return values from
         `preprocess`.  `mask_tuple` is the return value from `preprocess_mask`.
@@ -167,8 +167,10 @@ class BGRDiff(Differ):
             erode = self.kernel
         return self.__class__(min_size, threshold, erode)
 
-    def diff(self, prev_frame, frame, mask):  # pylint:disable=too-many-locals,arguments-renamed
+    def diff(self, a, b, mask):
         mask_pixels, region = mask
+        prev_frame = a
+        frame = b
 
         imglog = ImageLogger("BGRDiff", region=region,
                              min_size=self.min_size, threshold=self.threshold)
@@ -293,14 +295,14 @@ class GrayscaleDiff(Differ):
             erode = self.kernel
         return self.__class__(min_size, threshold, erode)
 
-    def preprocess(self, frame, mask_tuple):
-        _, region = mask_tuple
+    def preprocess(self, frame, mask):
+        _, region = mask
         return frame, cv2.cvtColor(crop(frame, region), cv2.COLOR_BGR2GRAY)
 
-    def diff(self, a, b, mask_tuple) -> MotionResult:
+    def diff(self, a, b, mask) -> MotionResult:
         _, prev_frame_gray = a
         frame, frame_gray = b
-        mask, region = mask_tuple
+        mask, region = mask
 
         imglog = ImageLogger("GrayscaleDiff", region=region,
                              min_size=self.min_size,
