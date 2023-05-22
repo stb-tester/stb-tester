@@ -93,14 +93,16 @@ class Differ:
             "%s.replace is not implemented" % self.__class__.__name__)
 
     def preprocess_mask(
-            self, mask: MaskTypes, frame_region: Region) -> "_PreProcessedMask":
+            self, mask: MaskTypes,
+            frame_region: Region  # pylint:disable=unused-argument
+    ) -> "_PreProcessedMask":
         """
         Pre-process a mask.  The returned value from this will be passed to
         `preprocess` and `diff`.
 
         :meta private:
         """
-        return load_mask(mask).to_array(frame_region)
+        return mask
 
     def preprocess(
             self, frame: FrameT,
@@ -166,6 +168,10 @@ class BGRDiff(Differ):
         if erode is UNSET:
             erode = self.kernel
         return self.__class__(min_size, threshold, erode)
+
+    def preprocess_mask(
+            self, mask: MaskTypes, frame_region: Region):
+        return load_mask(mask).to_array(frame_region)
 
     def diff(self, a, b, mask):
         mask_pixels, region = mask
@@ -294,6 +300,10 @@ class GrayscaleDiff(Differ):
         if erode is UNSET:
             erode = self.kernel
         return self.__class__(min_size, threshold, erode)
+
+    def preprocess_mask(
+            self, mask: MaskTypes, frame_region: Region):
+        return load_mask(mask).to_array(frame_region)
 
     def preprocess(self, frame, mask):
         _, region = mask
