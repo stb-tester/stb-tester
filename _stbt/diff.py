@@ -74,8 +74,8 @@ class Differ:
     # The only public interface is the subclass constructors. The methods are
     # not intended for use by external code.
 
-    PreProcessedFrame: typing.TypeAlias = FrameT
-    PreProcessedMask: typing.TypeAlias = tuple[numpy.ndarray | None, Region]
+    _PreProcessedFrame: typing.TypeAlias
+    _PreProcessedMask: typing.TypeAlias
 
     def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
         """
@@ -93,7 +93,7 @@ class Differ:
             "%s.replace is not implemented" % self.__class__.__name__)
 
     def preprocess_mask(
-            self, mask: MaskTypes, frame_region: Region) -> "PreProcessedMask":
+            self, mask: MaskTypes, frame_region: Region) -> "_PreProcessedMask":
         """
         Pre-process a mask.  The returned value from this will be passed to
         `preprocess` and `diff`.
@@ -104,8 +104,8 @@ class Differ:
 
     def preprocess(
             self, frame: FrameT,
-            mask: "PreProcessedMask"  # pylint:disable=unused-argument
-    ) -> "PreProcessedFrame":
+            mask: "_PreProcessedMask"  # pylint:disable=unused-argument
+    ) -> "_PreProcessedFrame":
         """
         Pre-process a frame.  The returned value from this will be passed to
         `diff`.  `mask_tuple` is the return value from `preprocess_mask`.
@@ -114,8 +114,8 @@ class Differ:
         """
         return frame
 
-    def diff(self, a: "PreProcessedFrame", b: "PreProcessedFrame",
-             mask: "PreProcessedMask") -> MotionResult:
+    def diff(self, a: "_PreProcessedFrame", b: "_PreProcessedFrame",
+             mask: "_PreProcessedMask") -> MotionResult:
         """
         Compare two frames.  `a` and `b` are the return values from
         `preprocess`.  `mask_tuple` is the return value from `preprocess_mask`.
