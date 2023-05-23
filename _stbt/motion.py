@@ -5,8 +5,8 @@ from collections import deque
 from typing import Iterator, Optional
 
 from .config import ConfigurationError, get_config
-from .diff import BGRDiff, FrameDiffer, MotionResult
-from .imgutils import limit_time, FrameT
+from .diff import BGRDiff, Differ, MotionResult
+from .imgutils import _image_region, limit_time, FrameT
 from .logging import debug, draw_on
 from .mask import MaskTypes
 from .types import Region, UITestFailure
@@ -94,16 +94,52 @@ def detect_motion(
     except StopIteration:
         return
 
-    differ = detect_motion.differ(frame, mask, threshold=noise_threshold)
+    differ = detect_motion.differ.replace(threshold=noise_threshold)
+    dm = DetectMotion(differ, frame, mask)
     for frame in frames:
-        result = differ.diff(frame)
+        result = dm.diff(frame)
         draw_on(frame, result, label="detect_motion()")
         debug("%s found: %s" % (
             "Motion" if result.motion else "No motion", str(result)))
         yield result
 
 
-detect_motion.differ : FrameDiffer = BGRDiff
+detect_motion.differ : Differ = BGRDiff()
+
+
+class DetectMotion():
+    """Concrete implementation of the `detect_motion` algorithm.
+
+    This class is an internal implementation detail, not part of the public
+    API. It isn't part of `detect_motion` because it offers a more convenient
+    API for `press_and_wait` to use.
+
+    Responsibilities of this class:
+
+    - Remember the work done on already-seen frames (e.g. GrayscaleDiff's
+      colorspace conversion).
+    - The logic for when we update the "reference" frame.
+    """
+    def __init__(self, differ: Differ, initial_frame: FrameT,
+                 mask: MaskTypes = Region.ALL):
+        self.differ: Differ = differ
+        self.mask_tuple = differ.preprocess_mask(
+            mask, _image_region(initial_frame))
+        self.prev_frame = differ.preprocess(initial_frame, self.mask_tuple)
+
+    def diff(self, frame: FrameT) -> MotionResult:
+        new_frame = self.differ.preprocess(frame, self.mask_tuple)
+        motion = self.differ.diff(self.prev_frame, new_frame, self.mask_tuple)
+
+        if motion:
+            # Only update the comparison frame if it's different to the previous
+            # one.  This makes `detect_motion` more sensitive to slow motion
+            # because the differences between frames 1 and 2 might be small and
+            # the differences between frames 2 and 3 might be small but we'd see
+            # the difference by looking between 1 and 3.
+            self.prev_frame = new_frame
+
+        return motion
 
 
 def wait_for_motion(
