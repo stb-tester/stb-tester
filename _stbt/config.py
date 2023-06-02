@@ -1,14 +1,7 @@
-from __future__ import annotations
-
 import configparser
 import enum
 import os
 from contextlib import contextmanager
-from typing import Callable, Union, Type, TypeVar
-
-
-DefaultT = TypeVar('DefaultT')
-T = TypeVar('T')
 
 _config = None
 
@@ -22,12 +15,7 @@ class NoDefault():
     pass
 
 
-def get_config(
-    section: str,
-    key: str,
-    default: Union[Type[NoDefault], DefaultT] = NoDefault,
-    type_: Callable[[str], T] = str,
-) -> Union[T, DefaultT]:
+def get_config(section, key, default=NoDefault, type_=str):
     """Read the value of ``key`` from ``section`` of the test-pack
     configuration file.
 
@@ -48,15 +36,12 @@ def get_config(
     the stb-tester device where the script is running. Values in the
     host-specific config file override values in ``.stbt.conf``. See
     `Configuration files
-    <https://stb-tester.com/manual/configuration#configuration-files>`__
+    <https://stb-tester.com/manual/advanced-configuration#configuration-files>`__
     for more details.
 
     Test scripts can use ``get_config`` to read tags that you specify at
     run-time: see `Automatic configuration keys
-    <https://stb-tester.com/manual/configuration#automatic-configuration-keys>`__.
-    For example::
-
-        my_tag_value = stbt.get_config("result.tags", "my tag name")
+    <https://stb-tester.com/manual/advanced-configuration#automatic-configuration-keys>`__.
 
     Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
     found, unless ``default`` is specified (in which case ``default`` is
@@ -135,9 +120,9 @@ def _config_init(force=False):
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
             from .vars import sysconfdir
+            config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
         except ImportError:
-            sysconfdir = "/etc"
-        config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
+            pass
 
         # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
         # directory specification:

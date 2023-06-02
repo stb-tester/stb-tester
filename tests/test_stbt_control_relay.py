@@ -30,18 +30,18 @@ def srcdir(filename="", here=os.path.abspath(__file__)):
     return os.path.join(os.path.dirname(here), "..", filename)
 
 
-@pytest.fixture(scope='session')
+@pytest.yield_fixture(scope='session')
 def installed_stbt_control_relay():
     with named_temporary_directory("stbt-control-relay-install.XXXXXX") as tmp:
         try:
-            oldprefix = open(srcdir(".stbt-prefix"), encoding="utf-8").read()
+            oldprefix = open(srcdir(".stbt-prefix")).read()
         except IOError:
             oldprefix = None
         subprocess.check_call(
             ["make", "prefix=%s" % tmp, "install-stbt-control-relay"],
             cwd=srcdir())
         if oldprefix is not None:
-            open(srcdir(".stbt-prefix"), "w", encoding="utf-8").write(oldprefix)
+            open(srcdir(".stbt-prefix"), 'w').write(oldprefix)
         else:
             os.unlink(srcdir(".stbt-prefix"))
 
@@ -49,7 +49,7 @@ def installed_stbt_control_relay():
         yield "%s/bin/stbt-control-relay" % tmp
 
 
-@pytest.fixture(scope='function')
+@pytest.yield_fixture(scope='function')
 def stbt_control_relay_on_path(installed_stbt_control_relay):
     with scoped_path_addition(os.path.dirname(installed_stbt_control_relay)):
         yield installed_stbt_control_relay
@@ -79,7 +79,7 @@ def test_stbt_control_relay(stbt_control_relay_on_path):  # pylint: disable=unus
                 Released KEY_MENU
                 """)
 
-            assert expected == open(t("one-file"), encoding="utf-8").read()
+            assert expected == open(t("one-file")).read()
 
 
 def socket_passing_setup(socket):
@@ -89,7 +89,7 @@ def socket_passing_setup(socket):
         os.environ['LISTEN_PID'] = str(os.getpid())
         if fd != 3:
             os.dup2(fd, 3)
-        os.set_inheritable(3, True)
+        os.set_inheritable(3, True)  # pylint:disable=no-member
         os.closerange(4, 100)
 
     return preexec_fn

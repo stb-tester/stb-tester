@@ -8,6 +8,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 import argparse
 import sys
+from contextlib import contextmanager
 
 import cv2
 
@@ -42,7 +43,6 @@ def main():
             'MatchParameters' in the stbt API documentation. For example:
             'confirm_threshold=0.70')""")
     args = parser.parse_args(sys.argv[1:])
-    _stbt.logging.init_logger()
 
     mp = {}
     try:
@@ -67,7 +67,8 @@ def main():
     if source_image is None:
         error("Invalid image '%s'" % args.source_file)
 
-    with _stbt.logging.scoped_debug_level(2 if args.verbose else 1):
+    with (_stbt.logging.scoped_debug_level(2) if args.verbose
+          else noop_contextmanager()):
         match_found = False
         for result in stbt.match_all(
                 args.reference_file, frame=source_image,
@@ -80,6 +81,11 @@ def main():
             if not args.all:
                 break
         sys.exit(0 if match_found else 1)
+
+
+@contextmanager
+def noop_contextmanager():
+    yield
 
 
 if __name__ == "__main__":

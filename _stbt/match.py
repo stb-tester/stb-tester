@@ -1,17 +1,16 @@
+# coding: utf-8
+
 """
 Copyright 2012-2014 YouView TV Ltd and contributors.
-Copyright 2013-2022 stb-tester.com Ltd.
+Copyright 2013-2020 stb-tester.com Ltd.
 
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import annotations
-
 import enum
 import itertools
 from collections import namedtuple
-from typing import Iterator, Optional
 
 import cv2
 import numpy
@@ -19,9 +18,8 @@ import numpy
 from . import cv2_compat
 from .config import ConfigurationError, get_config
 from .imgproc_cache import memoize_iterator
-from .imgutils import (
-    Frame, crop, FrameT, _frame_repr, ImageT, _image_region, limit_time,
-    load_image, _validate_region)
+from .imgutils import (crop, _frame_repr, _image_region, limit_time, load_image,
+                       _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
 from .types import Position, Region, UITestFailure
@@ -34,8 +32,6 @@ except ImportError:
 
 
 class MatchMethod(enum.Enum):
-    """An enum. See `MatchParameters` for documentation of these values."""
-
     SQDIFF = "sqdiff"
     SQDIFF_NORMED = "sqdiff-normed"
     CCORR_NORMED = "ccorr-normed"
@@ -47,8 +43,6 @@ class MatchMethod(enum.Enum):
 
 
 class ConfirmMethod(enum.Enum):
-    """An enum. See `MatchParameters` for documentation of these values."""
-
     NONE = "none"
     ABSDIFF = "absdiff"
     NORMED_ABSDIFF = "normed-absdiff"
@@ -142,14 +136,9 @@ class MatchParameters():
 
     """
 
-    def __init__(
-        self,
-        match_method: Optional[MatchMethod] = None,
-        match_threshold: Optional[float] = None,
-        confirm_method: Optional[ConfirmMethod] = None,
-        confirm_threshold: Optional[float] = None,
-        erode_passes: Optional[int] = None,
-    ):
+    def __init__(self, match_method=None, match_threshold=None,
+                 confirm_method=None, confirm_threshold=None,
+                 erode_passes=None):
 
         if match_method is None:
             match_method = get_config(
@@ -169,13 +158,13 @@ class MatchParameters():
         match_method = MatchMethod(match_method)
         confirm_method = ConfirmMethod(confirm_method)
 
-        self.match_method: MatchMethod = match_method
-        self.match_threshold: float = match_threshold
-        self.confirm_method: ConfirmMethod = confirm_method
-        self.confirm_threshold: float = confirm_threshold
-        self.erode_passes: int = erode_passes
+        self.match_method = match_method
+        self.match_threshold = match_threshold
+        self.confirm_method = confirm_method
+        self.confirm_threshold = confirm_threshold
+        self.erode_passes = erode_passes
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return (
             "MatchParameters(match_method=%r, match_threshold=%r, "
             "confirm_method=%r, confirm_threshold=%r, erode_passes=%r)"
@@ -214,12 +203,12 @@ class MatchResult():
     def __init__(
             self, time, match, region,  # pylint: disable=redefined-outer-name
             first_pass_result, frame, image, _first_pass_matched=None):
-        self.time: Optional[float] = time
-        self.match: bool = match
-        self.region: Region = region
-        self.first_pass_result: float = first_pass_result
-        self.frame: FrameT = frame
-        self.image: ImageT = image
+        self.time = time
+        self.match = match
+        self.region = region
+        self.first_pass_result = first_pass_result
+        self.frame = frame
+        self.image = image
         self._first_pass_matched = _first_pass_matched
 
     def __repr__(self):
@@ -237,16 +226,11 @@ class MatchResult():
         return self.match
 
     @property
-    def position(self) -> Position:
+    def position(self):
         return Position(self.region.x, self.region.y)
 
 
-def match(
-    image: ImageT,
-    frame: Optional[FrameT] = None,
-    match_parameters: Optional[MatchParameters] = None,
-    region: Region = Region.ALL,
-) -> MatchResult:
+def match(image, frame=None, match_parameters=None, region=Region.ALL):
     """
     Search for an image in a single video frame.
 
@@ -282,6 +266,9 @@ def match(
     :returns:
       A `MatchResult`, which will evaluate to true if a match was found,
       false otherwise.
+
+    Added in v30: Support transparency in the reference image, and new match
+    method ``MatchMethod.SQDIFF``.
     """
     result = next(_match_all(image, frame, match_parameters, region))
     if result.match:
@@ -291,12 +278,7 @@ def match(
     return result
 
 
-def match_all(
-    image: ImageT,
-    frame: FrameT = None,
-    match_parameters: MatchParameters = None,
-    region: Region = Region.ALL,
-) -> Iterator[MatchResult]:
+def match_all(image, frame=None, match_parameters=None, region=Region.ALL):
     """
     Search for all instances of an image in a single video frame.
 
@@ -330,48 +312,6 @@ def match_all(
             break
 
 
-def _norm_frame(frame: "FrameT"):
-    """Normalise single channel images to shape (h, w, 3) rather than (h, w) or
-    (h, w, 1).  match has the invariant that it behaves the same as if you'd
-    run `frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)` first.
-
-    We fiddle with the strides of the numpy array to avoid copying the data.
-    """
-    if not isinstance(frame, numpy.ndarray):
-        raise TypeError(
-            "Expected numpy.ndarray, got %r" % (type(frame).__name__,))
-    if frame.dtype != numpy.uint8:
-        raise TypeError(
-            "Expected numpy.ndarray of uint8, got %r" % (frame.dtype,))
-    frame = frame.view()
-    if frame.ndim == 2:
-        frame.shape = frame.shape + (1,)
-    if frame.ndim != 3:
-        raise ValueError(
-            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
-            (frame.shape,))
-    if frame.shape[2] not in (1, 3):
-        raise ValueError(
-            "Invalid shape for frame: %r. Shape must have 1 or 3 channels" %
-            (frame.shape,))
-    if frame.shape[2] == 1:
-        frame = numpy.lib.stride_tricks.as_strided(
-            frame, frame.shape[:2] + (3,), frame.strides[:2] + (0,),
-            subok=True, writeable=False)
-    return frame
-
-
-def test_norm_frame():
-    frame = Frame(
-        numpy.random.randint(256, size=(5, 5, 1), dtype=numpy.uint8), time=56)
-    normed = _norm_frame(frame)
-    assert normed.shape == (5, 5, 3)
-    assert isinstance(normed, Frame)
-    assert normed.time == 56
-    assert numpy.all(normed[:, :, 0] == normed[:, :, 1])
-    assert numpy.all(normed[:, :, 0] == normed[:, :, 2])
-
-
 def _match_all(image, frame, match_parameters, region):
     """
     Generator that yields a sequence of zero or more truthy MatchResults,
@@ -384,10 +324,16 @@ def _match_all(image, frame, match_parameters, region):
         from stbt_core import get_frame
         frame = get_frame()
 
-    # Normalise single channel images to shape (h, w, 3) rather than just (h, w)
-    frame = _norm_frame(frame)
+    # Normalise single channel images to shape (h, w, 1) rather than just (h, w)
+    frame = frame.view()
+    if len(frame.shape) == 2:
+        frame.shape = frame.shape + (1,)
+    if len(frame.shape) != 3:
+        raise ValueError(
+            "Invalid shape for frame: %r. Shape must have 2 or 3 elements" %
+            (frame.shape,))
 
-    t = load_image(image, color_channels=(3, 4))
+    t = load_image(image, color_channels={1: 1, 3: (3, 4)}[frame.shape[2]])
 
     if any(frame.shape[x] < t.shape[x] for x in (0, 1)):
         raise ValueError("Frame %r must be larger than reference image %r"
@@ -395,6 +341,10 @@ def _match_all(image, frame, match_parameters, region):
     if any(t.shape[x] < 1 for x in (0, 1)):
         raise ValueError("Reference image %r must contain some data"
                          % (t.shape,))
+    if (frame.shape[2], t.shape[2]) not in [(1, 1), (3, 3), (3, 4)]:
+        raise ValueError(
+            "Frame %r and reference image %r must have the same number of "
+            "channels" % (frame.shape, t.shape))
 
     if t.shape[2] == 4:
         if cv2_compat.version < [3, 0, 0]:
@@ -403,9 +353,8 @@ def _match_all(image, frame, match_parameters, region):
                 "support requires OpenCV 3.0 or greater (you have %s)."
                 % (t.relative_filename, cv2_compat.version))
 
-        if (cv2_compat.version < [4, 4, 0] and
-                match_parameters.match_method not in (
-                    MatchMethod.SQDIFF, MatchMethod.CCORR_NORMED)):
+        if match_parameters.match_method not in (MatchMethod.SQDIFF,
+                                                 MatchMethod.CCORR_NORMED):
             # See `matchTemplateMask`:
             # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
             raise ValueError(
@@ -422,9 +371,9 @@ def _match_all(image, frame, match_parameters, region):
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
         template_name=t.filename or "<Image>",
-        region=input_region)
-    imglog.imwrite("source", frame)
+        input_region=input_region)
 
+    # pylint:disable=undefined-loop-variable
     try:
         for (matched, match_region, first_pass_matched,
              first_pass_certainty) in _find_matches(
@@ -448,14 +397,8 @@ def _match_all(image, frame, match_parameters, region):
             pass
 
 
-def wait_for_match(
-    image: ImageT,
-    timeout_secs: float = 10,
-    consecutive_matches: int = 1,
-    match_parameters: Optional[MatchParameters] = None,
-    region: Region = Region.ALL,
-    frames: Iterator[FrameT] = None,
-) -> MatchResult:
+def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
+                   match_parameters=None, region=Region.ALL, frames=None):
     """Search for an image in the device-under-test's video stream.
 
     :param image: The image to search for. See `match`.
@@ -506,7 +449,7 @@ def wait_for_match(
             debug("Matched " + (image.relative_filename or "<Image>"))
             return res
 
-    raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)
+    raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)  # pylint:disable=undefined-loop-variable
 
 
 class MatchTimeout(UITestFailure):
@@ -520,19 +463,18 @@ class MatchTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
-    def __init__(self, screenshot: FrameT, expected: str,
-                 timeout_secs: float):
-        super().__init__()
-        self.screenshot: FrameT = screenshot
-        self.expected: str = expected
-        self.timeout_secs: float = timeout_secs
+    def __init__(self, screenshot, expected, timeout_secs):
+        super(MatchTimeout, self).__init__()
+        self.screenshot = screenshot
+        self.expected = expected
+        self.timeout_secs = timeout_secs
 
     def __str__(self):
         return "Didn't find match for '%s' within %g seconds." % (
             self.expected, self.timeout_secs)
 
 
-@memoize_iterator({"version": "33"})
+@memoize_iterator({"version": "31"})
 def _find_matches(image, template, match_parameters, imglog):
     """Our image-matching algorithm.
 
@@ -545,6 +487,12 @@ def _find_matches(image, template, match_parameters, imglog):
     matching locations.
     """
 
+    if template.shape[2] == 4:
+        # Normalise transparency channel to either 0 or 255
+        mask = template[:, :, 3]
+        mask[mask < 255] = 0
+
+    # pylint:disable=undefined-loop-variable
     for i, first_pass_matched, region, first_pass_certainty in \
             _find_candidate_matches(image, template, match_parameters, imglog):
         confirmed = (
@@ -570,6 +518,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     http://opencv-code.com/tutorials/fast-template-matching-with-image-pyramid
     """
 
+    imglog.imwrite("source", image)
     imglog.imwrite("template", template)
     imglog.set(template_shape=template.shape)
     if template.shape[2] == 4:
@@ -577,7 +526,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
 
     ddebug("Original image %s, template %s" % (image.shape, template.shape))
 
-    method = {
+    method = {  # pylint:disable=redefined-outer-name
         MatchMethod.SQDIFF: cv2.TM_SQDIFF,
         MatchMethod.SQDIFF_NORMED: cv2.TM_SQDIFF_NORMED,
         MatchMethod.CCORR_NORMED: cv2.TM_CCORR_NORMED,
@@ -688,7 +637,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
                         width=template.shape[1], height=template.shape[0])
 
 
-def _match_template(image, template, mask, method, roi_mask, level, imwrite):
+def _match_template(image, template, mask, method, roi_mask, level, imwrite):  # pylint:disable=redefined-outer-name
 
     ddebug("Level %d: image %s, template %s" % (
         level, image.shape, template.shape))
@@ -762,12 +711,9 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         # We still get a number between 0 - 1.
 
         if mask is not None:
-            if cv2_compat.version < [4, 4, 0]:
-                # matchTemplateMask normalises source & template image to [0,1].
-                # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
-                scale = max(1, numpy.count_nonzero(mask))
-            else:
-                scale = max(1, numpy.count_nonzero(mask)) * (255 ** 2)
+            # matchTemplateMask normalises the source & template image to [0,1].
+            # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
+            scale = max(1, numpy.count_nonzero(mask))
         else:
             scale = template.size * (255 ** 2)
     else:
@@ -943,10 +889,16 @@ def _log_match_image_debug(imglog):
             result.region, _Annotation.MATCHED if result._first_pass_matched
             else _Annotation.NO_MATCH)
 
-    template = """\
+    imglog.imwrite(
+        "source_with_matches", imglog.images["source"],
+        [x.region for x in imglog.data["matches"]],
+        [_Annotation.MATCHED if x.match else _Annotation.NO_MATCH
+         for x in imglog.data["matches"]])
+
+    template = u"""\
         <h4>{{title}}</h4>
 
-        {{ annotated_image(matches) }}
+        <img src="source_with_matches.png" />
 
         <h5>First pass (find candidate matches):</h5>
 
@@ -958,7 +910,7 @@ def _log_match_image_debug(imglog):
 
         {% if fast_path %}
         <p>Taking fast path - template shape <code>{{ template_shape }}</code>
-        matches size of target region <code>{{ region }}</code></p>
+        matches size of target region <code>{{ input_region }}</code></p>
 
         <table class="table">
         <tr>

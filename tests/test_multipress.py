@@ -1,5 +1,11 @@
+# coding: utf-8
+
 from textwrap import dedent
-from unittest import mock
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # Python 2 backport
 
 import stbt_core
 

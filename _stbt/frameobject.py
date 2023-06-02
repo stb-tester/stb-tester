@@ -4,23 +4,17 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import annotations
-
 import functools
 import threading
-from itertools import zip_longest
-from typing import Optional, TypeVar
 
-from .imgutils import FrameT
+try:
+    from itertools import zip_longest
+except ImportError:
+    # Python 2:
+    from itertools import izip_longest as zip_longest
 
 
-T = TypeVar("T")
-
-
-# Type annotation isn't quite right here, but don't know how to express this
-# correctly.  If it's called without brakets then the type is [T] -> T, but with
-# brackets it's [None] -> Callable[[T], T]:
-def for_object_repository(cls: T = None) -> T:
+def for_object_repository(cls=None):
     """A decorator that marks classes and functions so they appear in the Object
     Repository.
 
@@ -55,16 +49,9 @@ def for_object_repository(cls: T = None) -> T:
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        if fn.__name__ not in self._FrameObject__frame_object_cache:
-            self._FrameObject__frame_object_cache[fn.__name__] = fn(self)
-        return self._FrameObject__frame_object_cache[fn.__name__]
-    return inner
-
-
-def _convert_is_visible_to_bool(fn):
-    @functools.wraps(fn)
-    def inner(self):
-        return bool(fn(self))
+        if fn not in self._FrameObject__frame_object_cache:
+            self._FrameObject__frame_object_cache[fn] = fn(self)
+        return self._FrameObject__frame_object_cache[fn]
     return inner
 
 
@@ -76,7 +63,7 @@ def _mark_in_is_visible(fn):
         except AttributeError:
             self._FrameObject__local.in_is_visible = 1
         try:
-            return fn(self)
+            return bool(fn(self))
         finally:
             self._FrameObject__local.in_is_visible -= 1
     return inner
@@ -103,8 +90,6 @@ class _FrameObjectMeta(type):
                         "FrameObjects must be immutable but this property has "
                         "a setter")
                 f = v.fget
-                if k == 'is_visible':
-                    f = _convert_is_visible_to_bool(f)
                 # The value of any property is cached after the first use
                 f = _memoize_property_fn(f)
                 # Public properties return `None` if the FrameObject isn't
@@ -129,6 +114,7 @@ class _FrameObjectMeta(type):
 
 
 class FrameObject(metaclass=_FrameObjectMeta):
+    # pylint: disable=line-too-long
     r'''Base class for user-defined Page Objects.
 
     FrameObjects are Stb-tester's implementation of the *Page Object* pattern.
@@ -184,9 +170,11 @@ class FrameObject(metaclass=_FrameObjectMeta):
     .. _@property: https://docs.python.org/3.6/library/functions.html#property
     .. _fowler: https://martinfowler.com/bliki/PageObject.html
     .. _Object Repository: https://stb-tester.com/manual/object-repository
+
+    Added in v30: ``_fields`` and ``refresh``.
     '''
 
-    def __init__(self, frame: Optional[FrameT] = None) -> None:
+    def __init__(self, frame=None):
         """The default constructor takes an optional frame of video; if the
         frame is not provided, it will grab a frame from the device-under-test.
 
@@ -197,30 +185,16 @@ class FrameObject(metaclass=_FrameObjectMeta):
         if frame is None:
             from stbt_core import get_frame
             frame = get_frame()
-        self.__frame_object_cache = {}  # pylint:disable=unused-private-member
-        self.__local = threading.local()  # pylint:disable=unused-private-member
+        self.__frame_object_cache = {}
+        self.__local = threading.local()
         self._frame = frame
 
-    def __repr__(self) -> str:
-        """The object's string representation shows all its public properties.
-
-        We only print properties we have already calculated, to avoid
-        triggering expensive calculations.
+    def __repr__(self):
         """
-        if self:
-            args = []
-            for x in self._fields:  # pylint:disable=no-member
-                name = getattr(self.__class__, x).fget.__name__
-                if name in self._FrameObject__frame_object_cache:
-                    args.append("%s=%r" % (
-                        name, self._FrameObject__frame_object_cache[name]))
-                else:
-                    args.append("%s=..." % (name,))
-        else:
-            args = ["is_visible=False"]
-        return "<%s(_frame=%r, %s)>" % (self.__class__.__name__,
-                                        self._frame,
-                                        ", ".join(args))
+        The object's string representation includes all its public properties.
+        """
+        args = ", ".join(("%s=%r" % x) for x in self._iter_fields())
+        return "%s(%s)" % (self.__class__.__name__, args)
 
     def _iter_fields(self):
         if self:
@@ -229,28 +203,48 @@ class FrameObject(metaclass=_FrameObjectMeta):
         else:
             yield "is_visible", False
 
-    def __bool__(self) -> bool:
+    def __bool__(self):
         """
         Delegates to ``is_visible``. The object will only be considered True if
         it is visible.
         """
         return bool(self.is_visible)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other):
         """
         Two instances of the same ``FrameObject`` type are considered equal if
         the values of all the public properties match, even if the underlying
         frame is different. All falsey FrameObjects of the same type are equal.
         """
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return self.__cmp__(other) != 0
+
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    def __le__(self, other):
+        return self.__cmp__(other) <= 0
+
+    def __gt__(self, other):
+        return self.__cmp__(other) > 0
+
+    def __ge__(self, other):
+        return self.__cmp__(other) >= 0
+
+    def __cmp__(self, other):
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                if s != o:
-                    return False
-            return True
+                if s[1] < o[1]:
+                    return -1
+                elif s[1] > o[1]:
+                    return 1
+            return 0
         else:
             return NotImplemented
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         """
         Two instances of the same ``FrameObject`` type are considered equal if
         the values of all the public properties match, even if the underlying
@@ -259,12 +253,12 @@ class FrameObject(metaclass=_FrameObjectMeta):
         return hash(tuple(v for _, v in self._iter_fields()))
 
     @property
-    def is_visible(self) -> bool:
+    def is_visible(self):
         raise NotImplementedError(
             "Objects deriving from FrameObject must define an is_visible "
             "property")
 
-    def refresh(self: T, frame: Optional[FrameT] = None, **kwargs) -> T:
+    def refresh(self, frame=None, **kwargs):
         """
         Returns a new FrameObject instance with a new frame. ``self`` is not
         modified.
@@ -278,4 +272,4 @@ class FrameObject(metaclass=_FrameObjectMeta):
 
         Any additional keyword arguments are passed on to ``__init__``.
         """
-        return self.__class__(frame=frame, **kwargs)
+        return type(self)(frame=frame, **kwargs)

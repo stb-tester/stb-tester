@@ -57,6 +57,7 @@ def test_match_debug():
             stbt-debug/00001/match0-heatmap.png
             stbt-debug/00001/match0-source_with_match.png
             stbt-debug/00001/source.png
+            stbt-debug/00001/source_with_matches.png
             stbt-debug/00001/template.png
             stbt-debug/00002
             stbt-debug/00002/index.html
@@ -141,6 +142,7 @@ def test_match_debug():
             stbt-debug/00002/match6-heatmap.png
             stbt-debug/00002/match6-source_with_match.png
             stbt-debug/00002/source.png
+            stbt-debug/00002/source_with_matches.png
             stbt-debug/00002/template.png
             stbt-debug/00003
             stbt-debug/00003/index.html
@@ -233,6 +235,7 @@ def test_match_debug():
             stbt-debug/00003/match6-heatmap.png
             stbt-debug/00003/match6-source_with_match.png
             stbt-debug/00003/source.png
+            stbt-debug/00003/source_with_matches.png
             stbt-debug/00003/template.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -311,6 +314,7 @@ def test_match_debug():
             stbt-debug/00004/match6-heatmap.png
             stbt-debug/00004/match6-source_with_match.png
             stbt-debug/00004/source.png
+            stbt-debug/00004/source_with_matches.png
             stbt-debug/00004/template.png
             """)
 
@@ -343,49 +347,57 @@ def test_motion_debug():
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
-            stbt-debug/00001/eroded.png
+            stbt-debug/00001/absdiff.png
+            stbt-debug/00001/absdiff_threshold_erode.png
+            stbt-debug/00001/absdiff_threshold.png
+            stbt-debug/00001/gray.png
             stbt-debug/00001/index.html
-            stbt-debug/00001/previous_frame.png
+            stbt-debug/00001/previous_frame_gray.png
             stbt-debug/00001/source.png
-            stbt-debug/00001/sqd.png
-            stbt-debug/00001/thresholded.png
             stbt-debug/00002
-            stbt-debug/00002/eroded.png
+            stbt-debug/00002/absdiff.png
+            stbt-debug/00002/absdiff_threshold_erode.png
+            stbt-debug/00002/absdiff_threshold.png
+            stbt-debug/00002/gray.png
             stbt-debug/00002/index.html
-            stbt-debug/00002/previous_frame.png
+            stbt-debug/00002/previous_frame_gray.png
             stbt-debug/00002/source.png
-            stbt-debug/00002/sqd.png
-            stbt-debug/00002/thresholded.png
             stbt-debug/00003
-            stbt-debug/00003/eroded.png
+            stbt-debug/00003/absdiff_masked.png
+            stbt-debug/00003/absdiff.png
+            stbt-debug/00003/absdiff_threshold_erode.png
+            stbt-debug/00003/absdiff_threshold.png
+            stbt-debug/00003/gray.png
             stbt-debug/00003/index.html
             stbt-debug/00003/mask.png
-            stbt-debug/00003/previous_frame.png
+            stbt-debug/00003/previous_frame_gray.png
             stbt-debug/00003/source.png
-            stbt-debug/00003/sqd.png
-            stbt-debug/00003/thresholded.png
             stbt-debug/00004
-            stbt-debug/00004/eroded.png
+            stbt-debug/00004/absdiff_masked.png
+            stbt-debug/00004/absdiff.png
+            stbt-debug/00004/absdiff_threshold_erode.png
+            stbt-debug/00004/absdiff_threshold.png
+            stbt-debug/00004/gray.png
             stbt-debug/00004/index.html
             stbt-debug/00004/mask.png
-            stbt-debug/00004/previous_frame.png
+            stbt-debug/00004/previous_frame_gray.png
             stbt-debug/00004/source.png
-            stbt-debug/00004/sqd.png
-            stbt-debug/00004/thresholded.png
             stbt-debug/00005
-            stbt-debug/00005/eroded.png
+            stbt-debug/00005/absdiff.png
+            stbt-debug/00005/absdiff_threshold_erode.png
+            stbt-debug/00005/absdiff_threshold.png
+            stbt-debug/00005/gray.png
             stbt-debug/00005/index.html
-            stbt-debug/00005/previous_frame.png
+            stbt-debug/00005/previous_frame_gray.png
             stbt-debug/00005/source.png
-            stbt-debug/00005/sqd.png
-            stbt-debug/00005/thresholded.png
             stbt-debug/00006
-            stbt-debug/00006/eroded.png
+            stbt-debug/00006/absdiff.png
+            stbt-debug/00006/absdiff_threshold_erode.png
+            stbt-debug/00006/absdiff_threshold.png
+            stbt-debug/00006/gray.png
             stbt-debug/00006/index.html
-            stbt-debug/00006/previous_frame.png
+            stbt-debug/00006/previous_frame_gray.png
             stbt-debug/00006/source.png
-            stbt-debug/00006/sqd.png
-            stbt-debug/00006/thresholded.png
         """)
 
         assert_expected("stbt-debug-expected-output/motion")
@@ -425,11 +437,11 @@ def test_ocr_debug():
             stbt-debug/00002/tessinput.png
             stbt-debug/00002/upsampled.png
             stbt-debug/00003
-            stbt-debug/00003/binarized.png
-            stbt-debug/00003/diff.png
             stbt-debug/00003/index.html
             stbt-debug/00003/source.png
             stbt-debug/00003/tessinput.png
+            stbt-debug/00003/text_color_difference.png
+            stbt-debug/00003/text_color_threshold.png
             stbt-debug/00003/upsampled.png
             stbt-debug/00004
             stbt-debug/00004/index.html
@@ -442,11 +454,11 @@ def test_ocr_debug():
             stbt-debug/00005/tessinput.png
             stbt-debug/00005/upsampled.png
             stbt-debug/00006
-            stbt-debug/00006/binarized.png
-            stbt-debug/00006/diff.png
             stbt-debug/00006/index.html
             stbt-debug/00006/source.png
             stbt-debug/00006/tessinput.png
+            stbt-debug/00006/text_color_difference.png
+            stbt-debug/00006/text_color_threshold.png
             stbt-debug/00006/upsampled.png
             """)
 
@@ -474,24 +486,24 @@ def test_is_screen_black_debug():
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
-            stbt-debug/00001/gray.png
+            stbt-debug/00001/grey.png
             stbt-debug/00001/index.html
             stbt-debug/00001/non_black.png
             stbt-debug/00001/source.png
             stbt-debug/00002
-            stbt-debug/00002/gray.png
+            stbt-debug/00002/grey.png
             stbt-debug/00002/index.html
             stbt-debug/00002/mask.png
             stbt-debug/00002/non_black.png
             stbt-debug/00002/source.png
             stbt-debug/00003
-            stbt-debug/00003/gray.png
+            stbt-debug/00003/grey.png
             stbt-debug/00003/index.html
             stbt-debug/00003/mask.png
             stbt-debug/00003/non_black.png
             stbt-debug/00003/source.png
             stbt-debug/00004
-            stbt-debug/00004/gray.png
+            stbt-debug/00004/grey.png
             stbt-debug/00004/index.html
             stbt-debug/00004/non_black.png
             stbt-debug/00004/source.png

@@ -68,7 +68,7 @@ test_that_press_times_out_when_lircd_doesnt_reply() {
 	import stbt_core as stbt
 	stbt.press("button_that_causes_timeout")
 	EOF
-    $timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
+    timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
     [ $ret -eq $timedout ] && fail "'stbt run' timed out"
     [ $ret -ne 0 ] || fail "Expected 'press' to raise exception"
@@ -104,7 +104,7 @@ test_that_press_ignores_lircd_broadcast_messages_on_no_reply() {
 	import stbt_core as stbt
 	stbt.press("button_that_causes_sighup_and_broadcast_and_timeout")
 	EOF
-    $timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
+    timeout 30s stbt run -v --control lirc:$lircd_socket:test test.py
     ret=$?
     [ $ret -eq $timedout ] && fail "'stbt run' timed out"
     [ $ret -ne 0 ] || fail "Expected 'press' to raise exception"

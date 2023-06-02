@@ -1,44 +1,12 @@
+# coding: utf-8
 # Don't import anything not in the Python standard library from this file
 
-from __future__ import annotations
-
-import typing
 from collections import namedtuple
-from enum import Enum
-from typing import Optional, Tuple, TypeAlias
-
-if typing.TYPE_CHECKING:
-    from .mask import Mask
-
-
-PositionT : TypeAlias = Tuple[int, int]
-SizeT : TypeAlias = Tuple[int, int]
 
 
 class Position(namedtuple('Position', 'x y')):
     """A point with ``x`` and ``y`` coordinates."""
     pass
-
-
-class Size(namedtuple('Size', 'width height')):
-    """Size of a rectangle with ``width`` and ``height``."""
-
-
-class Direction(Enum):
-
-    #: Process the image from left to right
-    HORIZONTAL = "horizontal"
-
-    #: Process the image from top to bottom
-    VERTICAL = "vertical"
-
-    # For nicer formatting in generated API documentation:
-    def __repr__(self):
-        return str(self)
-
-
-# None means no region
-RegionT : TypeAlias = Optional["Region"]
 
 
 class _RegionClsMethods(type):
@@ -49,7 +17,7 @@ class _RegionClsMethods(type):
     incorrect behaviour). See <https://stackoverflow.com/a/42327454/606705>.
     """
 
-    def intersect(cls, *args: RegionT) -> RegionT:
+    def intersect(cls, *args):
         out = Region.ALL
         args = iter(args)
         try:
@@ -69,7 +37,7 @@ class _RegionClsMethods(type):
                 return None
         return Region.from_extents(*out)
 
-    def bounding_box(cls, *args: RegionT) -> RegionT:
+    def bounding_box(cls, *args):
         args = [_f for _f in args if _f]
         if not args:
             return None
@@ -237,6 +205,9 @@ class Region(namedtuple('Region', 'x y right bottom'),
         ...     Region.bounding_box(a, Region.bounding_box(b, c))
         True
 
+        Changed in v30: ``bounding_box`` can take an arbitrary number of region
+        arguments, rather than exactly two.
+
     .. py:staticmethod:: intersect(*args)
 
         :returns: The intersection of the passed regions, or ``None`` if the
@@ -244,19 +215,12 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
         Any parameter can be ``None`` (an empty Region) so intersect is
         commutative and associative.
+
+        Changed in v30: ``intersect`` can take an arbitrary number of region
+        arguments, rather than exactly two.
+
     """
-
-    ALL: "Region"
-
-    def __new__(
-        cls,
-        x: float,
-        y: float,
-        width: Optional[float] = None,
-        height: Optional[float] = None,
-        right: Optional[float] = None,
-        bottom: Optional[float] = None,
-    ):
+    def __new__(cls, x, y, width=None, height=None, right=None, bottom=None):
         if (width is None) == (right is None):
             raise ValueError("You must specify either 'width' or 'right'")
         if (height is None) == (bottom is None):
@@ -280,61 +244,31 @@ class Region(namedtuple('Region', 'x y right bottom'),
             return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
                 % (self.x, self.y, self.right, self.bottom)
 
-    def __add__(self, other) -> Mask:
-        """Adding 2 or more Regions together creates a mask with the pixels
-        inside those Regions selected; all other pixels ignored."""
-        from .mask import Mask
-        return Mask(self).__add__(other)
-
-    def __radd__(self, other) -> Mask:
-        """Adding 2 or more Regions together creates a mask with the pixels
-        inside those Regions selected; all other pixels ignored."""
-        from .mask import Mask
-        return Mask(self).__radd__(other)
-
-    def __sub__(self, other) -> Mask:
-        """Subtracting a Region removes that Region's pixels from the mask
-        (so those pixels will be ignored)."""
-        from .mask import Mask
-        return Mask(self).__sub__(other)
-
-    def __rsub__(self, other) -> Mask:
-        """Subtracting a Region removes that Region's pixels from the mask
-        (so those pixels will be ignored)."""
-        from .mask import Mask
-        return Mask(self).__rsub__(other)
-
-    def __invert__(self) -> Mask:
-        """Inverting a Region creates a mask with the Region's pixels ignored,
-        and the pixels outside the Region selected."""
-        from .mask import Mask
-        return Mask(self, invert=True)
-
     @property
-    def width(self) -> float:
+    def width(self):
         return self.right - self.x
 
     @property
-    def height(self) -> float:
+    def height(self):
         return self.bottom - self.y
 
     @property
-    def center(self) -> float:
+    def center(self):
         return Position((self.x + self.right) // 2,
                         (self.y + self.bottom) // 2)
 
     @staticmethod
-    def from_extents(x, y, right, bottom) -> Region:
+    def from_extents(x, y, right, bottom):
         return Region(x, y, right=right, bottom=bottom)
 
-    def to_slice(self) -> Tuple[slice, slice]:
+    def to_slice(self):
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
         return (slice(max(0, self.y),
                       max(0, self.bottom)),
                 slice(max(0, self.x),
                       max(0, self.right)))
 
-    def contains(self, other: Region) -> bool:
+    def contains(self, other):
         """
         :returns: True if ``other`` (a `Region` or `Position`) is entirely
             contained within self.
@@ -351,18 +285,6 @@ class Region(namedtuple('Region', 'x y right bottom'),
         else:
             raise TypeError("Region.contains expects a Region, Position, or "
                             "None. Got %r" % (other,))
-
-    @typing.overload
-    def translate(self, x: Region) -> Region:
-        ...
-
-    @typing.overload
-    def translate(self, x: float | None, y: float | None) -> Region:
-        ...
-
-    @typing.overload
-    def translate(self, x: tuple[int, int]) -> Region:
-        ...
 
     def translate(self, x=None, y=None):
         """
@@ -408,13 +330,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return Region.from_extents(self.x + p[0], self.y + p[1],
                                    self.right + p[0], self.bottom + p[1])
 
-    def extend(
-        self,
-        x: Optional[float] = 0,
-        y: Optional[float] = 0,
-        right: Optional[float] = 0,
-        bottom: Optional[float] = 0,
-    ) -> Region:
+    def extend(self, x=0, y=0, right=0, bottom=0):
         """
         :returns: A new region with the edges of the region adjusted by the
             given amounts.
@@ -422,15 +338,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return Region.from_extents(
             self.x + x, self.y + y, self.right + right, self.bottom + bottom)
 
-    def replace(
-        self,
-        x: Optional[float] = None,
-        y: Optional[float] = None,
-        width: Optional[float] = None,
-        height: Optional[float] = None,
-        right: Optional[float] = None,
-        bottom: Optional[float] = None,
-    ) -> Region:
+    def replace(self, x=None, y=None, width=None, height=None, right=None,
+                bottom=None):
         """
         :returns: A new region with the edges of the region set to the given
             coordinates.
@@ -463,7 +372,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
 
         return Region(x=x, y=y, right=right, bottom=bottom)
 
-    def dilate(self, n: int) -> Region:
+    def dilate(self, n):
         """Expand the region by n px in all directions.
 
         >>> Region(20, 30, right=30, bottom=50).dilate(3)
@@ -471,7 +380,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
         """
         return self.extend(x=-n, y=-n, right=n, bottom=n)
 
-    def erode(self, n: int) -> Region:
+    def erode(self, n):
         """Shrink the region by n px in all directions.
 
         >>> Region(20, 30, right=30, bottom=50).erode(3)
@@ -484,28 +393,28 @@ class Region(namedtuple('Region', 'x y right bottom'),
         else:
             return None
 
-    def above(self, height: float = float("inf")) -> Region:
+    def above(self, height=float('inf')):
         """
         :returns: A new region above the current region, extending to the top
             of the frame (or to the specified height).
         """
         return self.replace(y=self.y - height, bottom=self.y)
 
-    def below(self, height: float = float("inf")) -> Region:
+    def below(self, height=float('inf')):
         """
         :returns: A new region below the current region, extending to the bottom
             of the frame (or to the specified height).
         """
         return self.replace(y=self.bottom, bottom=self.bottom + height)
 
-    def right_of(self, width: float = float("inf")) -> Region:
+    def right_of(self, width=float('inf')):
         """
         :returns: A new region to the right of the current region, extending to
             the right edge of the frame (or to the specified width).
         """
         return self.replace(x=self.right, right=self.right + width)
 
-    def left_of(self, width: float = float("inf")) -> Region:
+    def left_of(self, width=float('inf')):
         """
         :returns: A new region to the left of the current region, extending to
             the left edge of the frame (or to the specified width).
@@ -513,26 +422,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return self.replace(x=self.x - width, right=self.x)
 
 
-Region.ALL: Region = Region(x=-float('inf'), y=-float('inf'),
-                            right=float('inf'), bottom=float('inf'))
-
-
-KeyT : TypeAlias = str
-
-
-class Keypress():
-    def __init__(self, key, start_time, end_time, frame_before):
-        self.key = key
-        self.start_time = start_time
-        self.end_time = end_time
-        self.frame_before = frame_before
-
-    def __repr__(self):
-        from .imgutils import _frame_repr
-        return (
-            "Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
-                self.key, self.start_time, self.end_time,
-                _frame_repr(self.frame_before)))
+Region.ALL = Region(x=-float('inf'), y=-float('inf'),
+                    right=float('inf'), bottom=float('inf'))
 
 
 class UITestError(Exception):

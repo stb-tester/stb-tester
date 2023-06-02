@@ -1,7 +1,5 @@
 import threading
 
-import pytest
-
 import stbt_core as stbt
 
 
@@ -13,7 +11,7 @@ class TruthyFrameObject(stbt.FrameObject):
     >>> bool(TruthyFrameObject(frame))
     True
     >>> TruthyFrameObject(frame)
-    <TruthyFrameObject(_frame=<Frame(time=None)>, is_visible=True)>
+    TruthyFrameObject(is_visible=True)
     """
     @property
     def is_visible(self):
@@ -28,7 +26,7 @@ class FalseyFrameObject(stbt.FrameObject):
     >>> bool(fo)
     False
     >>> fo
-    <FalseyFrameObject(_frame=<Frame(time=None)>, is_visible=False)>
+    FalseyFrameObject(is_visible=False)
     >>> print(fo.public)
     None
     >>> fo._private
@@ -48,17 +46,11 @@ class FalseyFrameObject(stbt.FrameObject):
 
 
 class FrameObjectWithProperties(stbt.FrameObject):
-    # pylint:disable=line-too-long
     """Only public properties are listed in repr.
 
     >>> frame = _load_frame("with-dialog")
-    >>> page = FrameObjectWithProperties(frame)
-    >>> page
-    <FrameObjectWithProperties(_frame=<Frame(time=None)>, is_visible=True, public=...)>
-    >>> page.public
-    5
-    >>> page
-    <FrameObjectWithProperties(_frame=<Frame(time=None)>, is_visible=True, public=5)>
+    >>> FrameObjectWithProperties(frame)
+    FrameObjectWithProperties(is_visible=True, public=5)
     """
     @property
     def is_visible(self):
@@ -74,12 +66,11 @@ class FrameObjectWithProperties(stbt.FrameObject):
 
 
 class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
-    # pylint:disable=line-too-long
     """Properties can be called from is_visible.
 
     >>> frame = _load_frame("with-dialog")
     >>> FrameObjectThatCallsItsOwnProperties(frame)
-    <FrameObjectThatCallsItsOwnProperties(_frame=<Frame(time=None)>, is_visible=True, public=5)>
+    FrameObjectThatCallsItsOwnProperties(is_visible=True, public=5)
     """
     @property
     def is_visible(self):
@@ -94,8 +85,42 @@ class FrameObjectThatCallsItsOwnProperties(stbt.FrameObject):
         return 6
 
 
+class OrderedFrameObject(stbt.FrameObject):
+    """
+    FrameObject defines a default sort order based on the values of the
+    public properties (in lexicographical order by property name; that is, in
+    this example the `color` value is compared before `size`):
+
+    >>> import numpy
+    >>> red = OrderedFrameObject(numpy.array([[[0, 0, 255]]]))
+    >>> bigred = OrderedFrameObject(numpy.array([[[0, 0, 255], [0, 0, 255]]]))
+    >>> green = OrderedFrameObject(numpy.array([[[0, 255, 0]]]))
+    >>> blue = OrderedFrameObject(numpy.array([[[255, 0, 0]]]))
+    >>> print(sorted([red, green, blue, bigred]))
+    [...'blue'..., ...'green'..., ...'red', size=1..., ...'red', size=2)]
+    """
+
+    @property
+    def is_visible(self):
+        return True
+
+    @property
+    def size(self):
+        return self._frame.shape[0] * self._frame.shape[1]
+
+    @property
+    def color(self):
+        if self._frame[0, 0, 0] == 255:
+            return "blue"
+        elif self._frame[0, 0, 1] == 255:
+            return "green"
+        elif self._frame[0, 0, 2] == 255:
+            return "red"
+        else:
+            return "grey?"
+
+
 class PrintingFrameObject(stbt.FrameObject):
-    # pylint:disable=line-too-long
     """
     This is a very naughty FrameObject.  It's properties cause side-effects so
     we can check that the caching is working:
@@ -114,7 +139,7 @@ class PrintingFrameObject(stbt.FrameObject):
     >>> m.another
     10
     >>> m
-    <PrintingFrameObject(_frame=<Frame(time=None)>, is_visible=True, another=10)>
+    PrintingFrameObject(is_visible=True, another=10)
     """
     @property
     def is_visible(self):
@@ -157,7 +182,7 @@ class FalseyPrintingFrameObject(stbt.FrameObject):
     >>> m._another
     11
     >>> m
-    <FalseyPrintingFrameObject(_frame=<Frame(time=None)>, is_visible=False)>
+    FalseyPrintingFrameObject(is_visible=False)
     """
     @property
     def is_visible(self):
@@ -208,7 +233,7 @@ def test_that_is_visible_and_properties_arent_racy():
 
 
 def _load_frame(name):
-    return stbt.Frame(stbt.load_image("images/frameobject/%s.png" % name))
+    return stbt.load_image("images/frameobject/%s.png" % name)
 
 
 class Dialog(stbt.FrameObject):
@@ -249,11 +274,11 @@ class Dialog(stbt.FrameObject):
     like this:
 
     >>> dialog
-    <Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is great', title=...)>
+    Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information')
     >>> dialog_fab
-    <Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is fabulous', title=...)>
+    Dialog(is_visible=True, message=u'This set-top box is fabulous', title=u'Information')
     >>> no_dialog
-    <Dialog(_frame=<Frame(time=None)>, is_visible=False)>
+    Dialog(is_visible=False)
 
     This makes it convenient to use doctests for unit-testing your Frame
     Objects.
@@ -279,7 +304,7 @@ class Dialog(stbt.FrameObject):
     in a dict:
 
     >>> {dialog: 1}
-    {<Dialog(_frame=<Frame(time=None)>, is_visible=True, message=u'This set-top box is great', title=u'Information')>: 1}
+    {Dialog(is_visible=True, message=u'This set-top box is great', title=u'Information'): 1}
     >>> len({no_dialog, dialog, dialog, dialog_bunnies})
     2
 
@@ -379,116 +404,3 @@ class Dialog(stbt.FrameObject):
         `MatchResult` which includes the entire frame passed into `match`.
         """
         return stbt.match('tests/info.png', frame=self._frame)
-
-
-# Tests for "rich comparison" methods ########################################
-
-frame1 = _load_frame("with-dialog")
-frame2 = _load_frame("with-dialog2")
-
-
-class F(stbt.FrameObject):
-    def __init__(self, frame, is_visible, a="a", b="b", _c="_c"):
-        super().__init__(frame)
-        self._is_visible = is_visible
-        self._a = a
-        self._b = b
-        self.__c = _c
-
-    @property
-    def is_visible(self):
-        return self._is_visible
-
-    @property
-    def a(self):
-        return self._a
-
-    @property
-    def b(self):
-        return self._b
-
-    @property
-    def _c(self):
-        return self.__c
-
-
-class FF(F):
-    pass
-
-
-class FFF(F):
-    @property
-    def d(self):
-        return "d"
-
-
-class G(stbt.FrameObject):
-    def __init__(self, frame, is_visible, a="a", b="b", _c="_c"):
-        super().__init__(frame)
-        self._is_visible = is_visible
-        self._a = a
-        self._b = b
-        self.__c = _c
-
-    @property
-    def is_visible(self):
-        return self._is_visible
-
-    @property
-    def a(self):
-        return self._a
-
-    @property
-    def b(self):
-        return self._b
-
-    @property
-    def _c(self):
-        return self.__c
-
-
-@pytest.mark.parametrize("f1,f2", [
-    # Two instances of the same FrameObject type are considered equal if the
-    # values of all the public properties match, even if the underlying frame
-    # is different. Private properties don't count.
-    (F(frame1, True, a=1, b=2, _c=3), F(frame2, True, a=1, b=2, _c=4)),
-
-    # All falsey FrameObjects of the same type are equal.
-    (F(frame1, False, a=1, b=2), F(frame2, False, a=3, b=4)),
-
-    # Subclasses are equal too, as long as they don't have extra properties.
-    (F(frame1, True, a=1, b=2), FF(frame2, True, a=1, b=2)),
-
-    # Regression test: `None` properties don't raise TypeError.
-    (F(frame1, True, a=1, b=None), F(frame2, True, a=1, b=None)),
-])
-def test_frameobject_comparison_equal(f1, f2):
-    # pylint:disable=comparison-with-itself,unneeded-not
-    assert f1 == f1
-    assert f1 == f2
-    assert f2 == f1
-    assert not f1 != f2
-    assert not f2 != f1
-
-
-@pytest.mark.parametrize("f1,f2", [
-    # Same type, different property values.
-    (F(frame1, True, a=1, b=2), F(frame2, True, a=1, b=3)),
-    (F(frame1, True, a=1, b=2), F(frame2, True, a=3, b=2)),
-    (F(frame1, True, a=1, b=2), F(frame2, True, a=1, b=None)),
-
-    # Subclass with same properties but different values.
-    (F(frame1, True, a=1, b=2), FF(frame2, True, a=1, b=3)),
-
-    # Subclass with additional property.
-    (F(frame1, True, a=1, b=2), FFF(frame1, True, a=1, b=2)),
-
-    # Different (unrelated) types.
-    (F(frame1, True, a=1, b=2), G(frame2, True, a=1, b=2)),
-])
-def test_frameobject_comparison_not_equal(f1, f2):
-    # pylint:disable=unneeded-not
-    assert not f1 == f2
-    assert not f2 == f1
-    assert f1 != f2
-    assert f2 != f1

@@ -1,6 +1,6 @@
 import ctypes
 import sys
-from functools import reduce
+from functools import reduce  # pylint:disable=redefined-builtin
 
 import gi
 

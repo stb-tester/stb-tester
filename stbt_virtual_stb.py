@@ -52,8 +52,8 @@ def virtual_stb(command, x_keymap=None, verbose=False):
     with x_server(1280, 720, verbose=verbose) as display:
         subprocess.Popen(
             ['ratpoison', '-d', display], close_fds=True,
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL)
+            stdin=open('/dev/null', 'r'), stdout=open('/dev/null', 'w'),
+            stderr=subprocess.STDOUT)
 
         os.environ['DISPLAY'] = display
         child = subprocess.Popen(command)

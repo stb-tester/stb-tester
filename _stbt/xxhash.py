@@ -7,9 +7,21 @@ with xxhash takes ~242us, whereas using hash() builtin or hashlib.sha1 takes
 
 import binascii
 import ctypes
+import os
 import struct
+import sys
+import glob
 
-_libxxhash = ctypes.CDLL("libxxhash.so.0")
+
+def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
+    path_pattern = path.replace(".", "*")
+    list = glob.glob(os.path.join(root, path_pattern))
+    if not list:
+        raise LookupError("File {} not found".format(path))
+    return list[0]
+
+
+_libxxhash = ctypes.CDLL(_find_file("libxxhash.so"))
 
 _XXH_errorcode = ctypes.c_int
 _XXH64_hash_t = ctypes.c_ulonglong

@@ -1,25 +1,19 @@
+# coding: utf-8
 """Copyright 2019-2020 Stb-tester.com Ltd."""
-
-from __future__ import annotations
 
 import re
 import time
 from logging import getLogger
-from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
 
+import numpy
 from attr import attrs, attrib
-from _stbt.frameobject import FrameObject
 from _stbt.grid import Grid
-from _stbt.imgutils import FrameT
-from _stbt.mask import MaskTypes, load_mask
-from _stbt.transition import _TransitionResult, TransitionStatus
-from _stbt.types import KeyT, Region
+from _stbt.imgutils import load_image
+from _stbt.transition import TransitionStatus
+from _stbt.types import Region
 
 
-FrameObjectT = TypeVar("FrameObjectT", bound=FrameObject)
-QueryT: TypeAlias = Union["Keyboard.Key", Dict[str, str], str]
-
-log = getLogger("stbt.Keyboard")
+log = getLogger("stbt.keyboard")
 
 
 class Keyboard():
@@ -37,7 +31,13 @@ class Keyboard():
 
     The constructor takes the following parameters:
 
-    :param str|numpy.ndarray|Mask|Region mask:
+    :param graph: Deprecated; will be removed in the next release. Instead,
+        first create the Keyboard object, and then use `add_key`,
+        `add_transition`, `add_edgelist`, and `add_grid` to build the model of
+        the keyboard.
+
+    :type mask: str or `numpy.ndarray`
+    :param str mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
         current selection has finished moving. If the search page has a
         blinking cursor you need to mask out the region where the cursor can
@@ -137,7 +137,8 @@ class Keyboard():
 
     For a detailed tutorial, including an example that handles multiple
     keyboard modes (lowercase, uppercase, and symbols) see our article
-    `Testing on-screen keyboards <https://stb-tester.com/manual/keyboard>`__.
+    `Testing on-screen keyboards with Stb-tester
+    <https://stb-tester.com/blog/2020/10/02/testing-onscreen-keyboards>`__.
 
     ``stbt.Keyboard`` was added in v31.
 
@@ -157,9 +158,9 @@ class Keyboard():
 
     Changed in v33:
 
-    * Added class `stbt.Keyboard.Key` (the type returned from `find_key`). This
-      used to be a private API, but now it is public so that you can use it in
-      type annotations for your Page Object's ``selection`` property.
+    * Moved private class ``Key`` (the type returned from `find_key`) to be a
+      public API `stbt.Keyboard.Key`, so that you can use it in type
+      annotations for your Page Object's `selection` property.
     * Tries to recover from missed or double keypresses. To disable this
       behaviour specify ``retries=0`` when calling `enter_text` or
       `navigate_to`.
@@ -186,16 +187,23 @@ class Keyboard():
         region = attrib(default=None, type=Region)
         mode = attrib(default=None, type=str)
 
-    def __init__(
-        self, *, mask: MaskTypes = Region.ALL, navigate_timeout: float = 60
-    ):
+    def __init__(self, graph=None, mask=None, navigate_timeout=60):
         from networkx import DiGraph
 
+        if graph is not None:
+            raise ValueError(
+                "The `graph` parameter of `stbt.Keyboard` constructor is "
+                "deprecated. See the API documentation for details.")
         self.G = DiGraph()
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
-        self.mask = load_mask(mask)
+        self.mask = None
+        if isinstance(mask, numpy.ndarray):
+            self.mask = mask
+        elif mask:
+            self.mask = load_image(mask, color_channels=1)
+
         self.navigate_timeout = navigate_timeout
 
         self.symmetrical_keys = {
@@ -210,13 +218,7 @@ class Keyboard():
         self._any_with_mode = False
         self._any_without_mode = False
 
-    def add_key(
-        self,
-        name: str,
-        text: Optional[str] = None,
-        region: Optional[Region] = None,
-        mode: str = None,
-    ):
+    def add_key(self, name, text=None, region=None, mode=None):
         """Add a key to the model (specification) of the keyboard.
 
         :param str name: The text or label you can see on the key.
@@ -235,12 +237,12 @@ class Keyboard():
             "uppercase", "shift", or "symbols") if your keyboard supports
             different modes. Note that the same key, if visible in different
             modes, needs to be modelled as separate keys (for example
-            ``(name=" ", mode="lowercase")`` and
-            ``(name=" ", mode="uppercase")``) because their navigation
-            connections are totally different: pressing up from the former goes
-            to lowercase "c", but pressing up from the latter goes to uppercase
-            "C". ``mode`` is optional if your keyboard doesn't have modes, or
-            if you only need to use the default mode.
+            ``(name="space", mode="lowercase")`` and ``(name="space",
+            mode="uppercase")``) because their navigation connections are
+            totally different: pressing up from the former goes to lowercase
+            "c", but pressing up from the latter goes to uppercase "C".
+            ``mode`` is optional if your keyboard doesn't have modes, or if you
+            only need to use the default mode.
 
         :returns: The added key (`stbt.Keyboard.Key`). This is an object that
             you can use with `add_transition`.
@@ -250,13 +252,7 @@ class Keyboard():
         return self._add_key({"name": name, "text": text, "region": region,
                               "mode": mode})
 
-    def find_key(
-        self,
-        name: Optional[str] = None,
-        text: Optional[str] = None,
-        region: Optional[Region] = None,
-        mode: Optional[str] = None,
-    ) -> Key:
+    def find_key(self, name=None, text=None, region=None, mode=None):
         """Find a key in the model (specification) of the keyboard.
 
         Specify one or more of ``name``, ``text``, ``region``, and ``mode``
@@ -279,20 +275,14 @@ class Keyboard():
         return self._find_key({"name": name, "text": text, "region": region,
                                "mode": mode})
 
-    def find_keys(
-        self,
-        name: Optional[str] = None,
-        text: Optional[str] = None,
-        region: Optional[Region] = None,
-        mode: Optional[str] = None,
-    ) -> List[Key]:
+    def find_keys(self, name=None, text=None, region=None, mode=None):
         """Find matching keys in the model of the keyboard.
 
         This is like `find_key`, but it returns a list containing any
         keys that match the given parameters. For example, if there is a space
         key in both the lowercase and uppercase modes of the keyboard, calling
-        ``find_keys(text=" ")`` will return a list of 2 objects
-        ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
+        ``find_keys(text=" ")`` will return a list of 2 objects
+        ``[Key(text=" ", mode="lowercase"), Key(text=" ", mode="uppercase")]``.
 
         This method doesn't raise an exception; the list will be empty if no
         keys matched.
@@ -391,7 +381,7 @@ class Keyboard():
                              "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
         self.G_ = None
-        if node.region is None:
+        if node.region is None:  # pylint:disable=simplifiable-if-statement
             self._any_without_region = True
         else:
             self._any_with_region = True
@@ -402,14 +392,8 @@ class Keyboard():
             self._any_with_mode = True
         return node
 
-    def add_transition(
-        self,
-        source: QueryT,
-        target: QueryT,
-        keypress: KeyT,
-        mode: Optional[str] = None,
-        symmetrical: bool = True,
-    ) -> None:
+    def add_transition(self, source, target, keypress, mode=None,
+                       symmetrical=True):
         """Add a transition to the model (specification) of the keyboard.
 
         For example: To go from "A" to "B", press "KEY_RIGHT" on the remote
@@ -461,12 +445,7 @@ class Keyboard():
         _add_weight(self.G, source, key)
         self.G_ = None
 
-    def add_edgelist(
-        self,
-        edgelist: str,
-        mode: Optional[str] = None,
-        symmetrical: bool = True,
-    ) -> None:
+    def add_edgelist(self, edgelist, mode=None, symmetrical=True):
         """Add keys and transitions specified in a string in "edgelist" format.
 
         :param str edgelist: A multi-line string where each line is in the
@@ -515,7 +494,7 @@ class Keyboard():
                     "(must contain 3 fields): %r"
                     % (i, line.strip()))
 
-    def add_grid(self, grid: Grid, mode: Optional[str] = None) -> None:
+    def add_grid(self, grid, mode=None):
         """Add keys, and transitions between them, to the model of the keyboard.
 
         If the keyboard (or part of the keyboard) is arranged in a regular
@@ -593,13 +572,7 @@ class Keyboard():
             region=grid.region,
             data=_reshape_array(keys, cols=grid.cols, rows=grid.rows))
 
-    def enter_text(
-        self,
-        text: str,
-        page: FrameObjectT,
-        verify_every_keypress: bool = False,
-        retries: int = 2,
-    ) -> FrameObjectT:
+    def enter_text(self, text, page, verify_every_keypress=False, retries=2):
         """Enter the specified text using the on-screen keyboard.
 
         :param str text: The text to enter. If your keyboard only supports a
@@ -643,8 +616,6 @@ class Keyboard():
         the :ref:`example above <keyboard-example>`.
         """
 
-        log.info("enter_text %r", text)
-
         for letter in text:
             # Sanity check so we don't fail halfway through typing.
             if not self._find_keys({"text": letter}):
@@ -655,18 +626,12 @@ class Keyboard():
                                     page, verify_every_keypress, retries)
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
-            log.debug("Entered %r; the selection is now on %r",
+            log.debug("Keyboard: Entered %r; the selection is now on %r",
                       letter, page.selection)
-        log.info("Entered %r", text)
+        log.info("Keyboard: Entered %r", text)
         return page
 
-    def navigate_to(
-        self,
-        target: QueryT,
-        page: FrameObjectT,
-        verify_every_keypress: bool = False,
-        retries: int = 2,
-    ) -> FrameObjectT:
+    def navigate_to(self, target, page, verify_every_keypress=False, retries=2):
         """Move the selection to the specified key.
 
         This won't press *KEY_OK* on the target; it only moves the selection
@@ -689,8 +654,6 @@ class Keyboard():
 
         import stbt_core as stbt
 
-        log.info("navigate_to: %r", target)
-
         targets = self._find_keys(target)
         if not targets:
             raise ValueError("'%s' isn't in the keyboard" % (target,))
@@ -700,8 +663,6 @@ class Keyboard():
             self.G_ = _strip_shift_transitions(self.G)
 
         assert page, "%s page isn't visible" % type(page).__name__
-        assert page.selection in self.G_, \
-            "page.selection (%r) isn't in the keyboard" % (page.selection,)
         deadline = time.time() + self.navigate_timeout
         current = page.selection
         while current not in targets:
@@ -709,7 +670,7 @@ class Keyboard():
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
                 % (target, self.navigate_timeout))
             keys = list(_keys_to_press(self.G_, current, targets))
-            log.debug("navigating from %r to %r by pressing %r",
+            log.debug("Keyboard: navigating from %r to %r by pressing %r",
                       current, target, [k for k, _ in keys])
             if not verify_every_keypress:
                 for k, _ in keys[:-1]:
@@ -750,20 +711,14 @@ class Keyboard():
                         break  # to outer loop
         return page
 
-    def press_and_wait(
-        self, key: KeyT, timeout_secs: int = 10, stable_secs: int = 1
-    ) -> _TransitionResult:
+    def press_and_wait(self, key, timeout_secs=10, stable_secs=1):
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,
                                    stable_secs=stable_secs)
 
-    def wait_for_transition_to_end(
-        self,
-        initial_frame: Optional[FrameT] = None,
-        timeout_secs: float = 10,
-        stable_secs: float = 1,
-    ):
+    def wait_for_transition_to_end(self, initial_frame=None, timeout_secs=10,
+                                   stable_secs=1):
         import stbt_core as stbt
         return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
                                                timeout_secs=timeout_secs,
@@ -777,7 +732,7 @@ def _minimal_query(query):
 
 
 def _keys_to_press(G, source, targets):
-    from networkx.algorithms.shortest_paths.generic import shortest_path
+    from networkx import shortest_path
 
     paths = sorted(
         [shortest_path(G, source=source, target=t, weight="weight")

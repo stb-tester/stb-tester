@@ -1,3 +1,4 @@
+# coding: utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.
@@ -8,21 +9,16 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import annotations
-
 from contextlib import contextmanager
-from typing import ContextManager, Iterator, Optional
 
-from _stbt import android
 from _stbt.black import (
     is_screen_black)
 from _stbt.config import (
     ConfigurationError,
     get_config)
 from _stbt.diff import (
-    BGRDiff,
-    Differ,
-    GrayscaleDiff,
+    FrameDiffer,
+    MotionDiff,
     MotionResult)
 from _stbt.frameobject import (
     for_object_repository,
@@ -30,9 +26,7 @@ from _stbt.frameobject import (
 from _stbt.grid import (
     Grid)
 from _stbt.imgutils import (
-    Color,
     crop,
-    find_file,
     Frame,
     Image,
     load_image,
@@ -41,10 +35,6 @@ from _stbt.keyboard import (
     Keyboard)
 from _stbt.logging import (
     debug)
-from _stbt.mask import (
-    load_mask,
-    Mask,
-    MaskTypes)
 from _stbt.match import (
     ConfirmMethod,
     match,
@@ -73,52 +63,40 @@ from _stbt.precondition import (
     PreconditionError)
 from _stbt.transition import (
     press_and_wait,
+    StrictDiff,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
-    Direction,
-    Keypress,
     NoVideo,
     Position,
     Region,
-    Size,
     UITestError,
     UITestFailure)
 from _stbt.wait import (
     wait_until)
 
 __all__ = [
-    "android",
     "apply_ocr_corrections",
     "as_precondition",
-    "BGRDiff",
-    "Color",
     "ConfigurationError",
     "ConfirmMethod",
     "crop",
     "debug",
     "detect_motion",
-    "Differ",
-    "Direction",
     "draw_text",
-    "find_file",
     "for_object_repository",
     "Frame",
+    "FrameDiffer",
     "FrameObject",
     "frames",
     "get_config",
     "get_frame",
-    "GrayscaleDiff",
     "Grid",
     "Image",
     "is_screen_black",
     "Keyboard",
-    "Keypress",
     "last_keypress",
     "load_image",
-    "load_mask",
-    "Mask",
-    "MaskTypes",
     "match",
     "match_all",
     "match_text",
@@ -126,6 +104,7 @@ __all__ = [
     "MatchParameters",
     "MatchResult",
     "MatchTimeout",
+    "MotionDiff",
     "MotionResult",
     "MotionTimeout",
     "MultiPress",
@@ -142,7 +121,7 @@ __all__ = [
     "Region",
     "save_frame",
     "set_global_ocr_corrections",
-    "Size",
+    "StrictDiff",
     "TextMatchResult",
     "TransitionStatus",
     "UITestError",
@@ -153,16 +132,11 @@ __all__ = [
     "wait_until",
 ]
 
-
-from _stbt.imgutils import ImageT
-from _stbt.types import KeyT, RegionT
-
-
 # Functions available to stbt scripts
 # ===========================================================================
 
 
-def last_keypress() -> str:
+def last_keypress():
     """Returns information about the last key-press sent to the device under
     test.
 
@@ -173,9 +147,7 @@ def last_keypress() -> str:
     return _dut.last_keypress()
 
 
-def press(
-    key: KeyT, interpress_delay_secs: float = None, hold_secs: float = None
-):
+def press(key, interpress_delay_secs=None, hold_secs=None):
     """Send the specified key-press to the device under test.
 
     :param str key:
@@ -218,15 +190,16 @@ def press(
           `stbt.press_and_wait` to detect when the device-under-test reacted to
           the keypress.
 
+    * Added in v29: The ``hold_secs`` parameter.
+    * Changed in v30: Returns an object with keypress timings, instead of
+      ``None``.
     * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
       value, which must be a string).
     """
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
 
-def pressing(
-    key: KeyT, interpress_delay_secs: float = None
-) -> ContextManager[Keypress]:
+def pressing(key, interpress_delay_secs=None):
     """Context manager that will press and hold the specified key for the
     duration of the ``with`` code block.
 
@@ -241,7 +214,7 @@ def pressing(
     return _dut.pressing(key, interpress_delay_secs)
 
 
-def draw_text(text: str, duration_secs: float = 3) -> None:
+def draw_text(text, duration_secs=3):
     """Write the specified text to the output video.
 
     :param str text: The text to write.
@@ -254,13 +227,12 @@ def draw_text(text: str, duration_secs: float = 3) -> None:
 
 
 def press_until_match(
-    key: KeyT,
-    image: ImageT,
-    interval_secs: Optional[float] = None,
-    max_presses: Optional[int] = None,
-    match_parameters: Optional[MatchParameters] = None,
-    region: RegionT = Region.ALL,
-) -> MatchResult:
+        key,
+        image,
+        interval_secs=None,
+        max_presses=None,
+        match_parameters=None,
+        region=Region.ALL):
     """Call `press` as many times as necessary to find the specified image.
 
     :param key: See `press`.
@@ -292,7 +264,7 @@ def press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
 
 
-def frames(timeout_secs: float = None) -> Iterator[Frame]:
+def frames(timeout_secs=None):
     """Generator that yields video frames captured from the device-under-test.
 
     For example::
@@ -321,7 +293,7 @@ def frames(timeout_secs: float = None) -> Iterator[Frame]:
     return _dut.frames(timeout_secs)
 
 
-def get_frame() -> Frame:
+def get_frame():
     """Grabs a video frame from the device-under-test.
 
     :rtype: stbt.Frame
@@ -345,6 +317,7 @@ def get_frame() -> Frame:
 # ===========================================================================
 
 class UnconfiguredDeviceUnderTest():
+    # pylint:disable=unused-argument
     def last_keypress(self):
         return None
 

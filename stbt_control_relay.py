@@ -78,7 +78,6 @@ def main(argv):
     control = uri_to_control(args.output)
 
     logging.info("stbt-control-relay started up with output '%s'", args.output)
-    SdNotifySocket.from_environ().notify(READY=1)
 
     while True:
         try:
@@ -131,28 +130,6 @@ def send_response(sock, request, success, data=b""):
         sock.sendall(message)
     except Exception:  # pylint: disable=broad-except
         pass
-
-
-class SdNotifySocket:
-    """Implements the client side of the systemd notification protocol"""
-    @classmethod
-    def from_environ(cls):
-        sockpath = os.environ.pop('NOTIFY_SOCKET', None)
-        if sockpath and sockpath.startswith('@'):
-            # It's an abstract socket
-            sockpath = "\0" + sockpath[1:]
-        return cls(sockpath)
-
-    def __init__(self, sockpath):
-        self.sockpath = sockpath
-
-    def notify(self, **kwargs):
-        if self.sockpath:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-            sock.sendto(
-                "\n".join("%s=%s" % (k, v)
-                          for k, v in kwargs.items()).encode('utf-8'),
-                self.sockpath)
 
 
 if __name__ == "__main__":

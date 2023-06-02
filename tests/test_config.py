@@ -14,19 +14,19 @@ def test_sponge_that_new_data_end_up_in_file():
     with scoped_curdir():
         with _sponge('hello') as f:
             f.write('hello')
-        assert open('hello', encoding='utf-8').read() == 'hello'
+        assert open('hello').read() == 'hello'
 
 
 def test_sponge_that_on_exception_file_isnt_modified():
     with scoped_curdir():
-        open('foo', 'w', encoding='utf-8').write('bar')
+        open('foo', 'w').write('bar')
         try:
             with _sponge('foo') as f:
                 f.write('hello')
                 raise RuntimeError()
         except RuntimeError:
             pass
-        assert open('foo', encoding='utf-8').read() == 'bar'
+        assert open('foo').read() == 'bar'
 
 test_config = dedent("""\
     [global]
@@ -40,7 +40,7 @@ def set_config_test():
     with scoped_curdir() as d:
         test_cfg = d + '/test.cfg'
         os.environ['STBT_CONFIG_FILE'] = test_cfg
-        with open(test_cfg, 'w', encoding='utf-8') as f:
+        with open(test_cfg, 'w') as f:
             f.write(test_config)
         yield
 
@@ -71,8 +71,8 @@ def test_that_set_config_preserves_file_comments_and_formatting():
     raise SkipTest("set_config doesn't currently preserve formatting")
     with set_config_test():
         set_config('global', 'test', 'goodbye')
-        assert open('test.cfg', 'r', encoding='utf-8').read() == \
-            test_config.replace('hello', 'goodbye')
+        assert open('test.cfg', 'r').read() == test_config.replace(
+            'hello', 'goodbye')
 
 
 def test_that_set_config_creates_directories_if_required():
@@ -91,11 +91,11 @@ def test_that_set_config_writes_to_the_first_stbt_config_file():
         filled_cfg = d + '/test.cfg'
         empty_cfg = d + '/empty.cfg'
         os.environ['STBT_CONFIG_FILE'] = '%s:%s' % (filled_cfg, empty_cfg)
-        open(filled_cfg, 'w', encoding='utf-8')
-        open(empty_cfg, 'w', encoding='utf-8')
+        open(filled_cfg, 'w')
+        open(empty_cfg, 'w')
         set_config('global', 'test', 'goodbye')
-        assert open(filled_cfg, encoding='utf-8').read().startswith('[global]')
-        assert open(empty_cfg, encoding='utf-8').read() == ''
+        assert open(filled_cfg).read().startswith('[global]')
+        assert open(empty_cfg).read() == ''
 
 
 class MyEnum(enum.Enum):
@@ -152,7 +152,7 @@ def temporary_config(contents, prefix="stbt-test-config"):
         filename = os.path.join(d, "stbt.conf")
         os.environ["STBT_CONFIG_FILE"] = to_unicode(":".join([filename,
                                                               original_env]))
-        with open(filename, "w", encoding="utf-8") as f:
+        with open(filename, "w") as f:
             f.write(dedent(contents))
         _config_init(force=True)
         try:

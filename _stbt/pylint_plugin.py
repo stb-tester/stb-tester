@@ -16,8 +16,7 @@ import subprocess
 
 from astroid import (
     Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
-    JoinedStr, Keyword, MANAGER, Name, Raise, Uninferable)
-from astroid.context import InferenceContext
+    Keyword, MANAGER, Name, Raise, Uninferable)
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
@@ -206,7 +205,7 @@ def _get_argnames(node):
     if isinstance(node, FunctionDef):
         return node.argnames()
     if isinstance(node, ClassDef) and node.newstyle:
-        for method in node.methods():
+        for method in node.methods():  # pylint:disable=redefined-outer-name
             if method.name == "__init__":
                 return method.argnames()[1:]
     return []
@@ -218,7 +217,7 @@ def _is_uri(filename):
 
 def _is_calculated_value(node):
     return (
-        isinstance(node.parent, (BinOp, JoinedStr)) or
+        isinstance(node.parent, BinOp) or
         (isinstance(node.parent, Call) and
          node.parent.func.as_string().split(".")[-1] in ("join", "replace")))
 
@@ -304,5 +303,4 @@ def _infer(node):
 
 
 def register(linter):
-    InferenceContext.max_inferred = 1000
     linter.register_checker(StbtChecker(linter))

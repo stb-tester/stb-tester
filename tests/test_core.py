@@ -1,13 +1,19 @@
+# coding: utf-8
+
 import itertools
 import os
 import shutil
 import sys
 import time
-from unittest import mock
 
 import cv2
 import numpy
 import pytest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # Python 2 backport
 
 import stbt_core as stbt
 from stbt_core import wait_until
@@ -50,9 +56,11 @@ def test_that_slicing_a_Frame_is_still_a_Frame():
     assert f4.height == 720
 
 
-def test_that_load_image_looks_in_callers_directory(test_pack_root):  # pylint:disable=unused-argument
+def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in
     # ./subdirectory/test_load_image_from_subdirectory.py
+
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
 
     f = stbt.load_image("videotestsrc-redblue.png")
     assert numpy.array_equal(
@@ -70,14 +78,15 @@ def test_load_image_with_unicode_filename():
     print(sys.getfilesystemencoding())
     shutil.copyfile(_find_file("Rothlisberger.png"),
                     _find_file("Röthlisberger.png"))
-    assert stbt.load_image("Röthlisberger.png") is not None
-    assert stbt.load_image("R\xf6thlisberger.png") is not None
+    assert stbt.load_image(u"Röthlisberger.png") is not None
+    assert stbt.load_image(u"Röthlisberger.png".encode("utf-8")) is not None
+    assert stbt.load_image(u"R\xf6thlisberger.png") is not None
 
 
 def test_load_image_with_numpy_array():
     a = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     img = stbt.load_image(a)
-    assert (a.__array_interface__["data"][0] ==  # pylint:disable=no-member
+    assert (a.__array_interface__["data"][0] ==
             img.__array_interface__["data"][0])
     assert img.filename is None
     assert img.relative_filename is None
@@ -106,8 +115,8 @@ def test_load_image_with_stbt_image():
 
 def test_load_image_from_filename_with_color_channels():
     files = [
-        "videotestsrc-grayscale.png",
-        "videotestsrc-grayscale-alpha.png",
+        "videotestsrc-greyscale.png",
+        "videotestsrc-greyscale-alpha.png",
         "completely-transparent.png",
         "with-alpha-but-completely-opaque.png",
         "uint16.png",
@@ -121,35 +130,8 @@ def test_load_image_from_filename_with_color_channels():
             assert isinstance(img, stbt.Image)
 
 
-def test_load_image_alpha_normalisation():
-    """Partially transparent pixels are made fully transparent."""
-
-    # Sanity check: The image is what we expect to be testing.
-    a = numpy.array([[[255, 255, 255,   0],
-                      [255, 255, 255, 127],
-                      [255, 255, 255, 255]]], dtype=numpy.uint8)
-    assert numpy.all(cv2.imread("tests/with-alpha-partially-opaque.png",
-                                cv2.IMREAD_UNCHANGED) == a)
-
-    f = stbt.load_image("with-alpha-partially-opaque.png")
-    assert f.shape == (1, 3, 4)
-    assert list(f[0, :, 3]) == [0, 0, 255]
-
-    aa = stbt.load_image(a)
-    assert aa.shape == (1, 3, 4)
-    assert list(aa[0, :, 3]) == [0, 0, 255]
-
-
-def test_load_image_twice():
-    # Can happen if you pass the result of `load_image` into `match`.
-    img = stbt.load_image("completely-transparent.png")
-    img2 = stbt.load_image(img)
-    assert numpy.all(img == img2)
-
-
 def test_that_load_image_with_nonexistent_image_raises_ioerror():
-    with pytest.raises(FileNotFoundError,
-                       match=r"\[Errno 2\] No such file: 'idontexist.png'"):
+    with pytest.raises(IOError, match="No such file: idontexist.png"):
         stbt.load_image("idontexist.png")
 
 
@@ -157,7 +139,7 @@ def test_that_image_and_frame_repr_can_print_numpy_scalar():
     # Operations like `numpy.max` propagate the type of the input, so its
     # output is still a `stbt.Image`.
     f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
-    assert repr(numpy.max(f)) == "<Frame(time=None)>"
+    assert repr(numpy.max(f)) == "Frame(0, dtype=uint8)"
 
     img = stbt.load_image("action-panel.png")
     assert repr(numpy.max(img)) == "Image(255, dtype=uint8)"
@@ -168,6 +150,12 @@ def test_crop():
     cropped = stbt.crop(img, stbt.Region(x=1045, y=672, right=1081, bottom=691))
     reference = stbt.load_image("action-panel-blue-button.png")
     assert numpy.array_equal(reference, cropped)
+
+    # It's a view onto the same memory:
+    assert cropped[0, 0, 0] == img[672, 1045, 0]
+    assert img[672, 1045, 0] != 0
+    cropped[0, 0, 0] = 0
+    assert img[672, 1045, 0] == 0
 
     assert img.filename == "action-panel.png"
     assert cropped.filename == img.filename
@@ -186,65 +174,6 @@ def test_crop():
         stbt.crop(img, None)
     with pytest.raises(ValueError):
         stbt.crop(img, stbt.Region(x=-10, y=-10, right=0, bottom=0))
-
-    # It's a view onto the same memory:
-    img = cv2.imread(_find_file("action-panel.png"))
-    cropped = stbt.crop(img, stbt.Region(x=1045, y=672, right=1081, bottom=691))
-    assert cropped[0, 0, 0] == img[672, 1045, 0]
-    assert img[672, 1045, 0] != 0
-    cropped[0, 0, 0] = 0
-    assert img[672, 1045, 0] == 0
-
-
-@pytest.mark.parametrize("args,kwargs,expected", [
-    (["#f77f00"], {}, "#f77f00"),
-    (["#F77F00"], {}, "#f77f00"),
-    (["f77f00"], {}, "#f77f00"),
-    (["f77f00"], {}, "#f77f00"),
-    (["f77f00ff"], {}, "#f77f00ff"),
-    (["#0a3"], {}, "#00aa33"),
-    (["#0A3"], {}, "#00aa33"),
-    (["#111"], {}, "#111111"),
-    (["#12345"], {}, ValueError),
-    (["#1234567"], {}, ValueError),
-    (["#12345g"], {}, ValueError),
-    ([], {"hexstring": "#f77f00"}, "#f77f00"),
-    ([(0, 127, 247)], {}, "#f77f00"),  # a 3-tuple, BGR
-    ([], {"bgr": (0, 127, 247)}, "#f77f00"),
-    ([], {"bgr": (0, 127, 247, 255)}, "#f77f00ff"),  # a 4-tuple, BGRA
-    ([], {"bgra": (0, 127, 247, 255)}, "#f77f00ff"),
-    ([0, 127, 247], {}, "#f77f00"),  # 3 separate arguments, BGR
-    ([], {"blue": 0, "green": 127, "red": 247}, "#f77f00"),
-    ([0, 127, 247, 255], {}, "#f77f00ff"),  # 4 separate arguments, BGRA
-    ([], {"blue": 0, "green": 127, "red": 247, "alpha": 255}, "#f77f00ff"),
-    ([0, 127, 256], {}, ValueError),  # range 0-255
-    ([0, 127, 255, 256], {}, ValueError),
-    ([0, -127, 247], {}, ValueError),
-    ([0, 127], {}, TypeError),  # missing arguments
-    ([], {}, TypeError),
-    ([], {"blue": 0, "green": 127}, TypeError),
-    ([stbt.Color("#000")], {}, "#000000"),  # constructing from another Color
-    ([stbt.load_image("button.png")[3, 65]], {}, "#ff1443"),  # from a pixel
-    ([stbt.load_image("button.png", color_channels=4)[3, 65]], {}, "#ff1443ff"),
-    ([], {"bgr": stbt.load_image("button.png")[3, 65]}, "#ff1443"),
-])
-def test_color_constructor(args, kwargs, expected):
-    if isinstance(expected, type):
-        with pytest.raises(expected):
-            print(stbt.Color(*args, **kwargs))
-    else:
-        assert expected == stbt.Color(*args, **kwargs).hexstring
-
-
-def test_color_equality_and_hash():
-    c1 = stbt.Color("#000")
-    c2 = stbt.Color(0, 0, 0)
-    assert c1 is not c2
-    assert c1 == c2
-    assert c1 != stbt.Color("#001")
-    d = {c1: 1}
-    d[c2] = 2
-    assert d == {c2: 2}
 
 
 def test_region_intersect():
@@ -301,25 +230,22 @@ def test_region_translate():
         stbt.Region(2, 3, 2, 1).translate(stbt.Region(0, 0, 1, 1), 5)
 
 
-@pytest.mark.parametrize("frame,mask,threshold,expected", [
+@pytest.mark.parametrize("frame,mask,threshold,region,expected", [
     # pylint:disable=line-too-long
-    ("black-full-frame.png", stbt.Region.ALL, None, True),
-    ("videotestsrc-full-frame.png", stbt.Region.ALL, None, False),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-non-black.png", None, True),
-    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, False),
-    ("videotestsrc-full-frame.png", stbt.load_image("videotestsrc-mask-no-video.png"), None, False),
-    ("videotestsrc-full-frame.png", stbt.Region(x=160, y=180, right=240, bottom=240), 20, True),
-    ("videotestsrc-full-frame.png", stbt.Region(x=159, y=180, right=240, bottom=240), 20, False),
-    ("videotestsrc-full-frame.png", ~stbt.Region(x=160, y=180, right=240, bottom=240), 20, False),
-    ("videotestsrc-full-frame.png", stbt.Region(46, 160, 44, 20) + stbt.Region(138, 160, 44, 20) + stbt.Region(228, 160, 44, 20), None, True),
-    ("videotestsrc-full-frame.png", ~(stbt.Region(46, 160, 44, 20) + stbt.Region(138, 160, 44, 20) + stbt.Region(228, 160, 44, 20)), None, False),
+    ("black-full-frame.png", None, None, stbt.Region.ALL, True),
+    ("videotestsrc-full-frame.png", None, None, stbt.Region.ALL, False),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-non-black.png", None, stbt.Region.ALL, True),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, stbt.Region.ALL, False),
+    ("videotestsrc-full-frame.png", "videotestsrc-mask-no-video.png", None, stbt.Region.ALL, False),
+    ("videotestsrc-full-frame.png", None, 20, stbt.Region(x=160, y=180, right=240, bottom=240), True),
     # Threshold bounds for almost-black frame:
-    ("almost-black.png", stbt.Region.ALL, 3, True),
-    ("almost-black.png", stbt.Region.ALL, 2, False),
+    ("almost-black.png", None, 3, stbt.Region.ALL, True),
+    ("almost-black.png", None, 2, stbt.Region.ALL, False),
 ])
-def test_is_screen_black(frame, mask, threshold, expected):
+def test_is_screen_black(frame, mask, threshold, region, expected):
     frame = stbt.load_image(frame)
-    assert expected == bool(stbt.is_screen_black(frame, mask, threshold))
+    assert expected == bool(
+        stbt.is_screen_black(frame, mask, threshold, region))
 
 
 def test_is_screen_black_result():
@@ -336,19 +262,16 @@ def test_is_screen_black_with_numpy_mask():
     mask[180:240, 160:213] = 255
     assert stbt.is_screen_black(frame, mask)
 
-    mask[:, :] = 255
-    assert not stbt.is_screen_black(frame, mask)
 
-
-def test_is_screen_black_region_parameter():
-    # region is a synonym of mask, for backwards compatibility
+def test_is_screen_black_with_numpy_mask_and_region():
     frame = stbt.load_image("videotestsrc-full-frame.png")
-    region = stbt.Region(x=160, y=180, right=240, bottom=240)
-    assert stbt.is_screen_black(frame, mask=region)
-    assert stbt.is_screen_black(frame, region=region)
+    region = stbt.Region(x=160, y=180, right=320, bottom=240)
+    mask = numpy.zeros((60, 160), dtype=numpy.uint8)
+    mask[:, :80] = 255
+    assert stbt.is_screen_black(frame, mask, 20, region)
 
-    with pytest.raises(ValueError):
-        stbt.is_screen_black(frame, mask=region, region=region)
+    mask[:, :] = 255
+    assert not stbt.is_screen_black(frame, mask, 20, region)
 
 
 class C():

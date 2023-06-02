@@ -41,12 +41,12 @@ class _FileOutlet():
         self.filename = filename
 
     def set(self, power):
-        with open(self.filename, 'wb') as f:
-            f.write([b'0', b'1'][power])
+        with open(self.filename, 'w') as f:
+            f.write(['0', '1'][power])
 
     def get(self):
         try:
-            with open(self.filename, 'rb') as f:
+            with open(self.filename, 'r') as f:
                 return bool(int(f.read(1)))
         except IOError as e:
             if e.errno == errno.ENOENT:

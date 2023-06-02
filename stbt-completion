@@ -7,6 +7,7 @@
 
 complete -o nospace -F _stbt stbt
 complete -o nospace -F _stbt_run stbt_run.py
+complete -o nospace -F _stbt_record stbt_record.py
 
 _stbt() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
@@ -18,6 +19,7 @@ _stbt() {
                     control \
                     lint \
                     power \
+                    record \
                     run \
                     screenshot \
                     match \
@@ -29,6 +31,7 @@ _stbt() {
             control)  _stbt_control;;
             lint)     _stbt_lint;;
             power)    _stbt_power;;
+            record)   _stbt_record;;
             run)      _stbt_run;;
             match)    _stbt_match;;
             *)        COMPREPLY=();;
@@ -51,6 +54,25 @@ _stbt_run() {
                         --control --source-pipeline --sink-pipeline)" \
                     -- "$cur")
                 $(_stbt_filename_possibly_with_test_functions));;
+    esac
+}
+
+_stbt_record() {
+    _stbt_get_prev
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control=*) COMPREPLY=($(_stbt_control_uri));;
+        --source-pipeline=*) COMPREPLY=();;
+        --sink-pipeline=*) COMPREPLY=();;
+        --control-recorder=*) COMPREPLY=($(_stbt_control_recorder_uri));;
+        -o=*|--output-file=*) COMPREPLY=($(_stbt_filenames "$cur"));;
+        *) COMPREPLY=($(compgen \
+            -W "$(_stbt_trailing_space \
+                    --help --verbose \
+                    --control --source-pipeline --sink-pipeline \
+                    --control-recorder --output-file)" \
+            -- "$cur"));;
     esac
 }
 
@@ -153,6 +175,22 @@ _stbt_control_uri() {
     esac
 }
 
+_stbt_control_recorder_uri() {
+    local cur="$_stbt_cur"
+    local prev="$_stbt_prev"
+    case "$prev" in
+        --control-recorder=lirc:*:*:) _stbt_lirc_name;;
+        --control-recorder=lirc:*:) _stbt_lirc_port_or_name;;
+        --control-recorder=lirc:) _stbt_lirc_socket_or_port_or_hostname;;
+        --control-recorder=file:) _stbt_control_recorder_file;;
+        --control-recorder=stbt-control:) _stbt_filenames "$cur";;
+        *) compgen -W "$( \
+                    _stbt_no_space lirc: file://
+                    _stbt_trailing_space stbt-control)" \
+                -- "$cur";;
+    esac
+}
+
 _stbt_irnetbox_output() {
     local cur="$_stbt_cur"
     compgen -S ":" -W "$(
@@ -191,6 +229,11 @@ _stbt_hostname() {
 _stbt_rfb_port() {
     local cur="$_stbt_cur"
     compgen -W "$(_stbt_trailing_space 5900)" -- "$cur"
+}
+
+_stbt_control_recorder_file() {
+    local cur="$_stbt_cur"
+    compgen -f -P "//" -- "${cur#//}"
 }
 
 _stbt_config_keys() {
@@ -304,7 +347,7 @@ _stbt_takes_arg() {
     case "$1" in
         --control|--source-pipeline|--sink-pipeline) true;;
         --save-video) true;;
-        -o|--output-file) true;;
+        --control-recorder|-o|--output-file) true;;
         --keymap) true;;
         --power-outlet) true;;
         *) false;;

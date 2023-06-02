@@ -16,7 +16,7 @@ def test_motionresult_repr():
         == ("MotionResult("
             "time=1466002032.336, motion=True, "
             "region=Region(x=321, y=32, right=334, bottom=42), "
-            "frame=<Frame(time=1466002032.336)>)")
+            "frame=<Frame(time=1466002032.336, dimensions=1280x720x3)>)")
 
 
 def test_wait_for_motion_half_motion_str_2of4():
@@ -71,21 +71,12 @@ def test_detect_motion_region_and_mask():
     # Just check no exceptions
     dm()
     dm(mask="mask-out-left-half-720p.png")
-    dm(mask=numpy.full((720, 1280), 255, dtype=numpy.uint8))
-    dm(mask=r)
+    dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
     dm(region=r)
+    dm(region=r, mask=numpy.zeros((720, 640), dtype=numpy.uint8))
 
-    with pytest.raises(ValueError,
-                       match="Cannot specify mask and region at the same time"):
-        dm(region=r, mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
-
-    with pytest.raises(ValueError,
-                       match=r"Mask\(<Image>\) doesn't overlap with the frame"):
-        dm(mask=numpy.zeros((720, 1280), dtype=numpy.uint8))
-
-    with pytest.raises(ValueError,
-                       match=r"~Region.ALL doesn't overlap with the frame"):
-        dm(mask=~stbt.Region.ALL)
+    with pytest.raises(ValueError):
+        dm(region=r, mask="mask-out-left-half-720p.png")
 
 
 def fake_frames():
@@ -111,7 +102,7 @@ def wipe():
     frame = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     for x in range(0, 720, 2):
         frame[x:x + 2, :, :] = 255
-        yield stbt.Frame(frame.copy(), time=x / 30.)
+        yield stbt.Frame(frame, time=x / 30.)
 
 
 def clamp(x, bottom, top):
@@ -124,10 +115,10 @@ def gradient_wipe(min_=100, max_=200, swipe_height=40):
         (720 + swipe_height * 4, 1280, 3), dtype=numpy.uint8)
     diff = max_ - min_
 
-    # detect_motion ignores differences of under 25, so what's the fastest we
+    # detect_motion ignores differences of under 40, so what's the fastest we
     # can wipe while making sure the inter-frame differences are always under
-    # 25?:
-    speed = 24 * swipe_height / diff
+    # 40?:
+    speed = 40 * swipe_height / diff
 
     print("pixel difference: %f" % (diff / swipe_height))
     print("max_speed: %f" % speed)
@@ -139,7 +130,7 @@ def gradient_wipe(min_=100, max_=200, swipe_height=40):
 
     for x in range(0, frame.shape[0] - swipe_height * 3, int(speed)):
         frame[x:x + swipe_height * 3, :, :] = edge
-        yield stbt.Frame(frame[swipe_height * 2:swipe_height * 2 + 720].copy(),
+        yield stbt.Frame(frame[swipe_height * 2:swipe_height * 2 + 720],
                          time=x / 30.)
 
 
@@ -188,7 +179,10 @@ class MockTime():
 
     @contextmanager
     def patch(self):
-        from unittest.mock import patch
+        try:
+            from unittest.mock import patch
+        except ImportError:
+            from mock import patch  # Python 2 backport
 
         with patch("time.time", self.time), \
                 patch("time.sleep", self.sleep):

@@ -1,4 +1,3 @@
-timeout="/usr/bin/timeout --verbose --signal=INT --kill-after=10"
 timedout=124
 
 fail() { echo "error: $*"; exit 1; }
@@ -15,12 +14,6 @@ assert() {
         !,0) fail "Expected command to fail: $*";;
         !,*) ;;
     esac
-}
-
-assert_log() {
-    if ! grep -qF "$1" "$scratchdir/log"; then
-        fail "log doesn't contain text: $1"
-    fi
 }
 
 killtree() {

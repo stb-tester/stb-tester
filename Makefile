@@ -10,7 +10,6 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-platform?=x86_64
 python_version?=3
 pythondir?=$(prefix)/lib/python$(python_version)/site-packages
 sysconfdir?=$(prefix)/etc
@@ -29,8 +28,8 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-PYLINT ?= python3 -m pylint
-PYTEST ?= python3 -m pytest
+PYLINT ?= pylint
+PYTEST ?= pytest-3
 
 CFLAGS?=-O2
 
@@ -74,9 +73,9 @@ INSTALL_PYLIB_FILES = \
     _stbt/imgutils.py \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
-    _stbt/libstbt.$(platform).so \
+    _stbt/libstbt.so \
+    _stbt/libxxhash.so \
     _stbt/logging.py \
-    _stbt/mask.py \
     _stbt/match.py \
     _stbt/motion.py \
     _stbt/multipress.py \
@@ -105,6 +104,7 @@ INSTALL_CORE_SCRIPTS = \
     stbt_lint.py \
     stbt_match.py \
     stbt_power.py \
+    stbt_record.py \
     stbt_run.py \
     stbt-screenshot \
     stbt-tv
@@ -137,8 +137,8 @@ install-core: all
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
 	done
-	printf "sysconfdir = '%s'\n" \
-	    "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
+	printf "libexecdir = '%s'\nsysconfdir = '%s'\n" \
+	    "$(libexecdir)" "$(sysconfdir)" > $(DESTDIR)$(pythondir)/_stbt/vars.py
 	chmod 0644 $(DESTDIR)$(pythondir)/_stbt/vars.py
 
 install-virtual-stb: $(INSTALL_VSTB_FILES)
@@ -214,7 +214,7 @@ check-pytest: all
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
 	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
-	       grep -v -e __init__.py -e tests/vstb-example-html5/ -e ^extra/)
+	       grep -v tests/vstb-example-html5/)
 check-pythonpackage:
 	export STBT_CONFIG_FILE=$$PWD/tests/stbt.conf && \
 	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
@@ -237,7 +237,7 @@ check-integrationtests: install-for-test
 	       grep -v -e tests/test-virtual-stb.sh) |\
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
-	PYTHONPATH=$$PWD PYLINT="$(PYLINT)" extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD PYLINT=$(PYLINT) extra/pylint.sh $(PYTHON_FILES)
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb
@@ -271,7 +271,9 @@ tests/buttons.png: tests/buttons.svg
 # list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = $(shell git ls-files)
+DIST = $(shell git ls-files | grep -v '^vendor/')
+DIST += VERSION
+DIST += vendor/.submodules-checked-out
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
 	@$(TAR) --version 2>/dev/null | grep -q GNU || { \
@@ -280,8 +282,10 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    exit 1; }
 	# Separate tar and gzip so we can pass "-n" for more deterministic
 	# tarball generation
+	SUBMODULE_DIST=$$( \
+	    git submodule foreach -q 'git ls-files | sed s,^,$$path/,') && \
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
-	         -f stb-tester-$(VERSION).tar $^ && \
+	         -f stb-tester-$(VERSION).tar $^ $$SUBMODULE_DIST && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
@@ -298,8 +302,27 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-_stbt/libstbt.$(platform).so : _stbt/sqdiff.c
+### Third-party dependencies #################################################
+
+XXHASH_SOURCES = \
+    vendor/xxHash/xxhash.c \
+    vendor/xxHash/xxhash.h
+
+_stbt/libxxhash.so : $(XXHASH_SOURCES)
+	$(CC) -shared -fPIC -O3 -o $@ $(filter-out %.h,$(XXHASH_SOURCES)) $(CFLAGS)
+
+_stbt/libstbt.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
+
+SUBMODULE_FILES = $(XXHASH_SOURCES)
+
+$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
+
+vendor/.submodules-checked-out : .gitmodules
+	git submodule init && \
+	git submodule sync && \
+	git submodule update && \
+	touch $@
 
 ### Documentation ############################################################
 
@@ -322,18 +345,18 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu2204
+CI_DOCKER_IMAGES = ubuntu2004
 
-$(CI_DOCKER_IMAGES:%=.github/workflows/.%.built): .github/workflows/.%.built: .github/workflows/%.dockerfile
-	docker build -t stbtester/ci:$* -f .github/workflows/$*.dockerfile \
-	    .github/workflows/ && \
+$(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
+	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \
+	    .circleci/ && \
 	touch $@
 
-ci-docker-images: $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built)
-publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built)
+ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
+publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.circleci/.%.built)
 	set -x && \
 	for x in $(CI_DOCKER_IMAGES); do \
-	    docker push stbtester/ci:$$x; \
+	    docker push stbtester/circleci:$$x; \
 	done
 
 ### PyPI Packaging ###########################################################

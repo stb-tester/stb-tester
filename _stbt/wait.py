@@ -1,21 +1,13 @@
-"""Copyright © 2015-2022 Stb-tester.com Ltd."""
+"""Copyright 2015-2019 Stb-tester.com Ltd."""
 
-from __future__ import annotations
-
+import functools
 import inspect
-from typing import Callable, TypeVar
 
 from .logging import debug
 
 
-T = TypeVar("T")
-
-
-def wait_until(callable_: Callable[[], T],
-               timeout_secs: float = 10,
-               interval_secs: float = 0,
-               predicate: Callable[[T], bool] = None,
-               stable_secs: float = 0) -> T | None:
+def wait_until(callable_, timeout_secs=10, interval_secs=0, predicate=None,
+               stable_secs=0):
     """Wait until a condition becomes true, or until a timeout.
 
     Calls ``callable_`` repeatedly (with a delay of ``interval_secs`` seconds
@@ -105,8 +97,7 @@ def wait_until(callable_: Callable[[], T],
         predicate = lambda x: x
     stable_value = None
     stable_predicate_value = None
-    start_time = time.time()
-    expiry_time = start_time + timeout_secs
+    expiry_time = time.time() + timeout_secs
 
     while True:
         t = time.time()
@@ -119,15 +110,13 @@ def wait_until(callable_: Callable[[], T],
                 stable_value = value
                 stable_predicate_value = predicate_value
             if predicate_value and t - stable_since >= stable_secs:
-                debug("wait_until succeeded in %.3fs: %s"
-                      % (time.time() - start_time,
-                         _callable_description(callable_)))
+                debug("wait_until succeeded: %s"
+                      % _callable_description(callable_))
                 return stable_value
         else:
             if predicate_value:
-                debug("wait_until succeeded in %.3fs: %s"
-                      % (time.time() - start_time,
-                         _callable_description(callable_)))
+                debug("wait_until succeeded: %s"
+                      % _callable_description(callable_))
                 return value
 
         if t >= expiry_time:
@@ -144,19 +133,18 @@ def wait_until(callable_: Callable[[], T],
 def _callable_description(callable_):
     """Helper to provide nicer debug output when `wait_until` fails.
 
-    >>> import functools
     >>> _callable_description(wait_until)
     'wait_until'
     >>> _callable_description(
     ...     lambda: stbt.press("OK"))
     '    lambda: stbt.press("OK"))\\n'
     >>> _callable_description(functools.partial(eval, globals={}))
-    'functools.partial(<built-in function eval>, globals={})'
+    'eval'
     >>> _callable_description(
     ...     functools.partial(
     ...         functools.partial(eval, globals={}),
     ...         locals={}))
-    'functools.partial(<built-in function eval>, globals={}, locals={})'
+    'eval'
     >>> class T():
     ...     def __call__(self): return True;
     >>> _callable_description(T())
@@ -170,5 +158,7 @@ def _callable_description(callable_):
             except IOError:
                 pass
         return name
+    elif isinstance(callable_, functools.partial):
+        return _callable_description(callable_.func)
     else:
         return repr(callable_)

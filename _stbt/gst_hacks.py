@@ -6,7 +6,7 @@ from os.path import dirname
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst
+from gi.repository import Gst  # pylint:disable=wrong-import-order
 
 # Here we are using ctypes to call `gst_buffer_map` and `gst_buffer_unmap`
 # because PyGObject does not properly expose struct GstMapInfo (see
@@ -30,7 +30,8 @@ class _GstMapInfo(ctypes.Structure):
 _GstMapInfo_p = ctypes.POINTER(_GstMapInfo)
 
 if platform.system() == "Darwin":
-    _libgst = ctypes.CDLL(dirname(Gst.__path__) + "/../libgstreamer-1.0.dylib")
+    lib_path = dirname(Gst.__path__[0]) if isinstance(Gst.__path__, list) else dirname(Gst.__path__)
+    _libgst = ctypes.CDLL(lib_path + "/../libgstreamer-1.0.dylib")
 else:
     _libgst = ctypes.CDLL("libgstreamer-1.0.so.0")
 _libgst.gst_buffer_map.argtypes = [ctypes.c_void_p, _GstMapInfo_p, ctypes.c_int]
@@ -125,6 +126,7 @@ def test_map_sample_without_buffer():
 
     sample = Gst.Sample.new(None, None, None, None)
     try:
+        # pylint:disable=no-value-for-parameter
         with map_gst_sample(sample, Gst.MapFlags.READ):
             assert False
     except ValueError:

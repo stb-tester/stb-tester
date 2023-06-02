@@ -1,26 +1,22 @@
-from __future__ import annotations
+# coding: utf-8
 
 import errno
 import glob
 import os
 import re
-import shutil
 import subprocess
+from distutils.version import LooseVersion
 from enum import IntEnum
-from typing import Dict, List, Optional, Union
 
 import cv2
 import numpy
 
 from . import imgproc_cache
 from .config import get_config
-from .imgutils import Color, ColorT, crop, FrameT, _frame_repr, _validate_region
+from .imgutils import crop, _frame_repr, _validate_region
 from .logging import debug, ImageLogger, warn
 from .types import Region
-from .utils import LooseVersion, named_temporary_directory, to_unicode
-
-CorrectionsT = Dict[Union[re.Pattern, str], str]
-
+from .utils import named_temporary_directory, to_unicode
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
 # ligatures and different forms of the same punctuation.  We strip out this
@@ -28,25 +24,25 @@ CorrectionsT = Dict[Union[re.Pattern, str], str]
 # meaning.  This means that stbt.ocr give much more consistent results.
 _ocr_replacements = {
     # Ligatures
-    'ﬀ': 'ff',
-    'ﬁ': 'fi',
-    'ﬂ': 'fl',
-    'ﬃ': 'ffi',
-    'ﬄ': 'ffl',
-    'ﬅ': 'ft',
-    'ﬆ': 'st',
+    u'ﬀ': u'ff',
+    u'ﬁ': u'fi',
+    u'ﬂ': u'fl',
+    u'ﬃ': u'ffi',
+    u'ﬄ': u'ffl',
+    u'ﬅ': u'ft',
+    u'ﬆ': u'st',
     # Punctuation
-    '“': '"',
-    '”': '"',
-    '‘': '\'',
-    '’': '\'',
+    u'“': u'"',
+    u'”': u'"',
+    u'‘': u'\'',
+    u'’': u'\'',
     # These are actually different glyphs!:
-    '‐': '-',
-    '‑': '-',
-    '‒': '-',
-    '–': '-',
-    '—': '-',
-    '―': '-',
+    u'‐': u'-',
+    u'‑': u'-',
+    u'‒': u'-',
+    u'–': u'-',
+    u'—': u'-',
+    u'―': u'-',
 }
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
@@ -122,12 +118,13 @@ class TextMatchResult():
     _fields = ("time", "match", "region", "frame", "text")
 
     def __init__(self, time, match, region, frame, text):
-        self.time: Optional[float] = time
-        self.match: bool = match
-        self.region: Region = region
-        self.frame: FrameT = frame
-        self.text: str = text
+        self.time = time
+        self.match = match
+        self.region = region
+        self.frame = frame
+        self.text = text
 
+    # pylint:disable=no-member
     def __bool__(self):
         return self.match
 
@@ -142,34 +139,27 @@ class TextMatchResult():
                 self.text))
 
 
-def ocr(
-    frame: FrameT = None,
-    region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: str = None,
-    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
-    tesseract_user_words: Union[List[str], str] = None,
-    tesseract_user_patterns: Union[List[str], str] = None,
-    upsample: bool = True,
-    text_color: ColorT = None,
-    text_color_threshold: float = None,
-    engine: Optional[OcrEngine] = None,
-    char_whitelist: str = None,
-    corrections: Optional[CorrectionsT] = None,
-):
+def ocr(frame=None, region=Region.ALL,
+        mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+        lang=None, tesseract_config=None, tesseract_user_words=None,
+        tesseract_user_patterns=None, upsample=True, text_color=None,
+        text_color_threshold=None, engine=None, char_whitelist=None,
+        corrections=None):
     r"""Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
     open-source OCR engine.
 
-    :param Frame frame:
+    :param frame:
       If this is specified it is used as the video frame to process; otherwise
-      a new frame is grabbed from the device-under-test.
+      a new frame is grabbed from the device-under-test. This is an image in
+      OpenCV format (for example as returned by `frames` and `get_frame`).
 
-    :param Region region:
-      Only search within the specified region of the video frame.
+    :param region: Only search within the specified region of the video frame.
+    :type region: `Region`
 
-    :param OcrMode mode: Tesseract's layout analysis mode.
+    :param mode: Tesseract's layout analysis mode.
+    :type mode: `OcrMode`
 
     :param str lang:
         The three-letter
@@ -181,7 +171,7 @@ def ocr(
         to "eng" (English). You can override the global default value by setting
         ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
         install the tesseract language pack; see installation instructions
-        `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
+        `here <https://stb-tester.com/manual/troubleshooting#install-ocr-language-pack>`__.
 
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
@@ -219,23 +209,26 @@ def ocr(
         you should only disable it if you are doing your own pre-processing on
         the image.
 
-    :param Color text_color:
+    :type text_color: 3-element tuple of integers between 0 and 255, BGR order
+    :param text_color:
         Color of the text. Specifying this can improve OCR results when
         tesseract's default thresholding algorithm doesn't detect the text,
         for example white text on a light-colored background or text on a
-        translucent overlay with dynamic content underneath.
+        translucent overlay.
 
     :param int text_color_threshold:
         The threshold to use with ``text_color``, between 0 and 255. Defaults
         to 25. You can override the global default value by setting
         ``text_color_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
 
-    :param OcrEngine engine:
+    :param engine:
         The OCR engine to use. Defaults to ``OcrEngine.TESSERACT``. You can
         override the global default value by setting ``engine`` in the ``[ocr]``
         section of :ref:`.stbt.conf`.
+    :type engine: `OcrEngine`
 
-    :param str char_whitelist:
+    :type char_whitelist: unicode string
+    :param char_whitelist:
         String of characters that are allowed. Useful when you know that the
         text is only going to contain numbers or IP addresses, for example so
         that tesseract won't think that a zero is the letter o.
@@ -264,6 +257,7 @@ def ocr(
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
 
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     | Added in v32: The ``corrections`` parameter.
     """
@@ -288,25 +282,16 @@ def ocr(
     text = text.strip().translate(_ocr_transtab)
     text = apply_ocr_corrections(text, corrections)
 
-    debug("ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
+    debug(u"ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     _log_ocr_image_debug(imglog, text)
     return text
 
 
-def match_text(
-    text: str,
-    frame: FrameT = None,
-    region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: str = None,
-    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
-    case_sensitive: bool = False,
-    upsample: bool = True,
-    text_color: ColorT = None,
-    text_color_threshold: float = None,
-    engine: Optional[OcrEngine] = None,
-    char_whitelist: str = None,
-) -> TextMatchResult:
+def match_text(text, frame=None, region=Region.ALL,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               tesseract_config=None, case_sensitive=False, upsample=True,
+               text_color=None, text_color_threshold=None,
+               engine=None, char_whitelist=None):
     """Search for the specified text in a single video frame.
 
     This can be used as an alternative to `match`, searching for text instead
@@ -337,6 +322,7 @@ def match_text(
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
 
+    | Added in v30: The ``engine`` parameter and support for Tesseract v4.
     | Added in v31: The ``char_whitelist`` parameter.
     """
     if frame is None:
@@ -394,9 +380,7 @@ def match_text(
 PatternType = type(re.compile(""))
 
 
-def apply_ocr_corrections(
-        text: str,
-        corrections: Optional[CorrectionsT] = None) -> str:
+def apply_ocr_corrections(text, corrections=None):
     """Applies the same corrections as `stbt.ocr`'s ``corrections`` parameter.
 
     This is available as a separate function so that you can use it to
@@ -428,8 +412,8 @@ def _apply_ocr_corrections(text, corrections):
     for k in corrections:
         if isinstance(k, str):
             # Match plain strings at word boundaries
-            text = re.sub(r"(^|\W)(" + re.escape(k) + r")(\W|$)",
-                          replace_string, text, re.UNICODE)
+            text = re.sub(r"(^|\s)(" + re.escape(k) + r")(\s|$)",
+                          replace_string, text)
         elif isinstance(k, PatternType):
             text = re.sub(k, replace_regex, text)
     return text
@@ -438,7 +422,7 @@ def _apply_ocr_corrections(text, corrections):
 global_ocr_corrections = {}
 
 
-def set_global_ocr_corrections(corrections: CorrectionsT):
+def set_global_ocr_corrections(corrections):
     """Specify default OCR corrections that apply to all calls to `stbt.ocr`
     and `stbt.apply_ocr_corrections`.
 
@@ -466,7 +450,7 @@ def _tesseract_version(output=None):
     Note that LooseVersion.__cmp__ simply sorts lexicographically according
     to the "." or "-" separated components in the version string:
 
-    >>> _tesseract_version("tesseract 4.0.0-beta.1")
+    >>> _tesseract_version("tesseract 4.0.0-beta.1").version
     [4, 0, 0, '-', 'beta', 1]
     >>> (_tesseract_version('tesseract 4.0.0-beta.1') >
     ...  _tesseract_version('tesseract 4.0.0'))
@@ -510,7 +494,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     tesseract_version = _tesseract_version()
 
-    if tesseract_version < [4, 0]:
+    if tesseract_version < LooseVersion("4.0"):
         if engine == OcrEngine.DEFAULT:
             engine = OcrEngine.TESSERACT
         if engine != OcrEngine.TESSERACT:
@@ -518,7 +502,7 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
             raise ValueError("%s isn't available in tesseract %s"
                              % (engine, tesseract_version))
 
-    if mode >= OcrMode.RAW_LINE and tesseract_version < [3, 4]:
+    if mode >= OcrMode.RAW_LINE and tesseract_version < LooseVersion("3.04"):
         # NB `str(mode)` looks like "OcrMode.RAW_LINE"
         raise ValueError("%s isn't available in tesseract %s"
                          % (mode, tesseract_version))
@@ -538,8 +522,18 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
         if upsample:
             frame = _upsample(frame, imglog)
             upsample = False
-        frame = ocr.text_color_differ(frame, text_color, text_color_threshold,
-                                      imglog)
+
+        # Calculate distance of each pixel from `text_color`, then discard
+        # everything further than `text_color_threshold` distance away.
+        diff = numpy.subtract(frame, text_color, dtype=numpy.int32)
+        frame = numpy.sqrt((diff[:, :, 0] ** 2 +
+                            diff[:, :, 1] ** 2 +
+                            diff[:, :, 2] ** 2) // 3) \
+                     .astype(numpy.uint8)
+        imglog.imwrite("text_color_difference", frame)
+        _, frame = cv2.threshold(frame, text_color_threshold, 255,
+                                 cv2.THRESH_BINARY)
+        imglog.imwrite("text_color_threshold", frame)
 
     return _tesseract_subprocess(frame, mode, lang, _config,  # pylint:disable=unexpected-keyword-arg
                                  user_patterns, user_words, upsample,
@@ -547,33 +541,12 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
                                  tesseract_version, use_cache=True)
 
 
-def bgr_diff(frame, color, threshold, imglog):
-    # Calculate distance of each pixel from `text_color`, then discard
-    # everything further than `text_color_threshold` distance away.
-    sqd = numpy.subtract(frame, Color(color).array, dtype=numpy.int32)
-    sqd = (sqd[:, :, 0] ** 2 +
-           sqd[:, :, 1] ** 2 +
-           sqd[:, :, 2] ** 2)
-
-    if imglog.enabled:
-        normalised = numpy.sqrt(sqd / 3)
-        imglog.imwrite("diff", normalised)
-
-    d = sqd >= (threshold ** 2) * 3
-    d = d.astype(numpy.uint8) * 255
-    imglog.imwrite("binarized", d)
-    return d
-
-
-ocr.text_color_differ = bgr_diff
-
-
-@imgproc_cache.memoize({"version": "33"})
+@imgproc_cache.memoize({"version": "32"})
 def _tesseract_subprocess(
         frame, mode, lang, _config, user_patterns, user_words, upsample,
         engine, char_whitelist, imglog, tesseract_version):
 
-    if tesseract_version >= [4, 0]:
+    if tesseract_version >= LooseVersion("4.0"):
         engine_flags = ["--oem", str(int(engine))]
         tessdata_suffix = ''
     else:
@@ -588,7 +561,7 @@ def _tesseract_subprocess(
 
     with named_temporary_directory(prefix='stbt-ocr-', dir=tmpdir) as tmp:
 
-        if tesseract_version >= [3, 5]:
+        if tesseract_version >= LooseVersion("3.05"):
             psm_flag = "--psm"
         else:
             psm_flag = "-psm"
@@ -606,11 +579,11 @@ def _tesseract_subprocess(
             os.mkdir(tessdata_dir)
             _symlink_copy_dir(_find_tessdata_dir(tessdata_suffix), tmp)
             tessenv['TESSDATA_PREFIX'] = tmp + '/'
-            if tesseract_version >= [4, 0, 0]:
+            if tesseract_version >= LooseVersion("4.0.0"):
                 tessenv['TESSDATA_PREFIX'] += "tessdata"
 
         if ('tessedit_create_hocr' in _config and
-                tesseract_version >= [3, 4]):
+                tesseract_version >= LooseVersion('3.04')):
             _config['tessedit_create_txt'] = 0
 
         if user_words:
@@ -619,8 +592,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_words' and " +
                     "'tesseract_config[\"user_words_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-words' % (tessdata_dir, lang),
-                      'w', encoding='utf-8') as f:
+            with open('%s/%s.user-words' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_words))
             _config['user_words_suffix'] = 'user-words'
 
@@ -630,8 +602,7 @@ def _tesseract_subprocess(
                     "You cannot specify 'user_patterns' and " +
                     "'tesseract_config[\"user_patterns_suffix\"]' " +
                     "at the same time")
-            with open('%s/%s.user-patterns' % (tessdata_dir, lang),
-                      'w', encoding='utf-8') as f:
+            with open('%s/%s.user-patterns' % (tessdata_dir, lang), 'w') as f:
                 f.write('\n'.join(to_unicode(x) for x in user_patterns))
             _config['user_patterns_suffix'] = 'user-patterns'
 
@@ -647,8 +618,7 @@ def _tesseract_subprocess(
             _config['tessedit_write_images'] = True
 
         if _config:
-            with open(tessdata_dir + '/configs/stbtester',
-                      'w', encoding='utf-8') as cfg:
+            with open(tessdata_dir + '/configs/stbtester', 'w') as cfg:
                 for k, v in _config.items():
                     if isinstance(v, bool):
                         cfg.write(('%s %s\n' % (k, 'T' if v else 'F')))
@@ -672,7 +642,7 @@ def _tesseract_subprocess(
         for filename in glob.glob(tmp + "/output.*"):
             _, ext = os.path.splitext(filename)
             if ext in (".txt", ".hocr"):
-                with open(filename, encoding='utf-8') as f:
+                with open(filename) as f:
                     return f.read()
 
 
@@ -692,17 +662,17 @@ def _hocr_iterate(hocr):
     need_space = False
     for elem in hocr.iterdescendants():
         if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
-            yield ('\n', elem)
+            yield (u'\n', elem)
             need_space = False
         if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
                 'ocr_line' in elem.get('class').split() and started:
-            yield ('\n', elem)
+            yield (u'\n', elem)
             need_space = False
         for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
             if t:
                 if t.strip():
                     if need_space and started:
-                        yield (' ', None)
+                        yield (u' ', None)
                     need_space = False
                     yield (str(t).strip(), e)
                     started = True
@@ -717,7 +687,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
         lower = lambda s: s.lower()
 
     words_only = [(lower(w).translate(_ocr_transtab), elem)
-                  for w, elem in _hocr_iterate(hocr) if w.strip() != '']
+                  for w, elem in _hocr_iterate(hocr) if w.strip() != u'']
     phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
@@ -731,7 +701,7 @@ def _hocr_find_phrase(hocr, phrase, case_sensitive):
 
 def _hocr_elem_region(elem):
     while elem is not None:
-        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or '')
+        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
         if m:
             extents = [int(x) for x in m.groups()]
             return Region.from_extents(*extents)
@@ -739,6 +709,8 @@ def _hocr_elem_region(elem):
 
 
 def _find_tessdata_dir(tessdata_suffix):
+    from distutils.spawn import find_executable
+
     tessdata_prefix = os.environ.get("TESSDATA_PREFIX", None)
     if tessdata_prefix:
         tessdata = tessdata_prefix + tessdata_suffix
@@ -749,7 +721,7 @@ def _find_tessdata_dir(tessdata_suffix):
             raise RuntimeError('Invalid TESSDATA_PREFIX: %s' % tessdata_prefix)
 
     tess_prefix_share = os.path.normpath(
-        shutil.which('tesseract') + '/../../share/')
+        find_executable('tesseract') + '/../../share/')
     for suffix in [
             '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
             '/tesseract-ocr/4.00/tessdata']:
@@ -772,11 +744,11 @@ def _log_ocr_image_debug(imglog, output=None):
             "Matched" if imglog.data["result"] else "Didn't match")
         hocr = imglog.data["hocr"]
         if hocr is None:
-            output = ""
+            output = u""
         else:
-            output = "".join(x for x, _ in _hocr_iterate(hocr))
+            output = u"".join(x for x, _ in _hocr_iterate(hocr))
 
-    template = """\
+    template = u"""\
         <h4>{{title}}</h4>
 
         {{ annotated_image(result) }}
@@ -815,17 +787,17 @@ def _log_ocr_image_debug(imglog, output=None):
         <img src="upsampled.png" />
         {% endif %}
 
-        {% if "diff" in images %}
+        {% if "text_color_difference" in images %}
         <h5>Color difference {{ text_color }}:</h5>
-        <img src="diff.png" />
+        <img src="text_color_difference.png" />
         {% endif %}
 
-        {% if "binarized" in images %}
+        {% if "text_color_threshold" in images %}
         <h5>
           Color difference – binarised
           (threshold={{ text_color_threshold }}):
         </h5>
-        <img src="binarized.png" />
+        <img src="text_color_threshold.png" />
         {% endif %}
 
         {% if "tessinput" in images %}

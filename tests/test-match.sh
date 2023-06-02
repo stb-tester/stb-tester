@@ -44,8 +44,10 @@ test_wait_for_match_nonexistent_template() {
 	from stbt_core import wait_for_match
 	wait_for_match("idontexist.png")
 	EOF
-    ! stbt run -v test.py || fail "Test should have failed"
-    assert_log "FileNotFoundError: [Errno 2] No such file: 'idontexist.png'"
+    ! stbt run -v test.py &> test.log || fail "Test should have failed"
+    grep -q "No such file: idontexist.png" test.log ||
+        fail "Expected 'No such file: idontexist.png' but saw '$(
+            grep 'No such file' test.log | head -n1)'"
 }
 
 test_wait_for_match_opencv_image_can_be_used_as_template() {
@@ -225,11 +227,12 @@ test_match_nonexistent_template() {
 	EOF
     ! stbt run -vv test.py \
         || fail "Trying to match an non-existant template should throw"
-    assert_log "FAIL: test.py: FileNotFoundError: [Errno 2] No such file: 'idontexist.png'"
+    cat log | grep -Eq "FAIL: test.py: (IO|OS)Error: No such file: idontexist.png" \
+        || fail "Didn't see 'No such file'"
 }
 
 test_match_invalid_template() {
-    # Like test_match.py:test_that_match_rejects_grayscale_template, but checks
+    # Like test_match.py:test_that_match_rejects_greyscale_template, but checks
     # that "stbt run -vv" doesn't report a later exception from the _match_all
     # teardown. (This is a regression test.)
     cat > test.py <<-EOF

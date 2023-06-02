@@ -28,7 +28,7 @@ def main():
         "--bash-completion", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "name", metavar="section.key",
-        help="e.g. 'global.source_pipeline'")
+        help="e.g. 'global.source_pipeline' or 'record.control_recorder'")
     args = parser.parse_args(sys.argv[1:])
 
     if args.bash_completion:

@@ -1,7 +1,10 @@
+# coding: utf-8
+
 import os
 import re
 import timeit
 from contextlib import contextmanager
+from distutils.version import LooseVersion
 from textwrap import dedent
 from unittest import SkipTest
 
@@ -30,8 +33,8 @@ def requires_tesseract(func):
     ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL, None),
     ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40), None),
     ("programme--white-on-black.png", "programme", stbt.Region.ALL, None),
-    ("UJJM--white-text-on-gray-boxes.png", "", stbt.Region.ALL, None),
-    ("UJJM--white-text-on-gray-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
+    ("UJJM--white-text-on-grey-boxes.png", "", stbt.Region.ALL, None),
+    ("UJJM--white-text-on-grey-boxes.png", "UJJM", stbt.Region.ALL, stbt.OcrMode.SINGLE_LINE),
 ])
 def test_ocr_on_static_images(image, expected_text, region, mode):
     kwargs = {"region": region}
@@ -58,17 +61,17 @@ def test_that_ocr_region_none_isnt_allowed(region):
 def test_that_ocr_reads_unicode():
     text = stbt.ocr(frame=load_image('ocr/unicode.png'), lang='eng+deu')
     assert isinstance(text, str)
-    assert '£500\nDavid Röthlisberger' == text
+    assert u'£500\nDavid Röthlisberger' == text
 
 
 @requires_tesseract
 def test_that_ocr_can_read_small_text():
     text = stbt.ocr(frame=load_image('ocr/small.png'))
-    assert 'Small anti-aliased text is hard to read\nunless you magnify' == \
+    assert u'Small anti-aliased text is hard to read\nunless you magnify' == \
         text
 
 
-ligature_text = dedent("""\
+ligature_text = dedent(u"""\
     All the similar "quotes" and "quotes",
     'quotes' and 'quotes' should be recognised.
 
@@ -95,7 +98,7 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
         text = text.replace(bad, good)
     assert ligature_text == text
     assert stbt.match_text("em-dash,", frame)
-    assert stbt.match_text("em\u2014dash,", frame)
+    assert stbt.match_text(u"em\u2014dash,", frame)
 
 
 @requires_tesseract
@@ -110,10 +113,10 @@ def test_that_match_text_accepts_unicode():
 @requires_tesseract
 def test_that_default_language_is_configurable():
     f = load_image("ocr/unicode.png")
-    assert not stbt.match_text("Röthlisberger", f)  # reads Réthlisberger
+    assert not stbt.match_text(u"Röthlisberger", f)  # reads Réthlisberger
     with temporary_config({"ocr.lang": "deu"}):
-        assert stbt.match_text("Röthlisberger", f)
-        assert "Röthlisberger" in stbt.ocr(f)
+        assert stbt.match_text(u"Röthlisberger", f)
+        assert u"Röthlisberger" in stbt.ocr(f)
 
 
 @contextmanager
@@ -140,7 +143,7 @@ def test_that_setting_config_options_has_an_effect():
     # effect at all.  This at least excercises our code which sets config
     # options.  I'm not happy about this and I hope to be able to replace this
     # once we have more experience with these settings in the real world.
-    if _tesseract_version() >= [3, 4]:
+    if _tesseract_version() >= LooseVersion('3.04'):
         hocr_mode_config = {
             "tessedit_create_txt": 0,
             "tessedit_create_hocr": 1}
@@ -160,11 +163,11 @@ def test_that_setting_config_options_has_an_effect():
     r'\d\*.\d\*.\d\*.\d\*',
 ])
 def test_tesseract_user_patterns(patterns):
-    if _tesseract_version() < [3, 3]:
+    if _tesseract_version() < LooseVersion('3.03'):
         raise SkipTest('tesseract is too old')
 
     # Now the real test:
-    assert '192.168.10.1' == stbt.ocr(
+    assert u'192.168.10.1' == stbt.ocr(
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         tesseract_user_patterns=patterns)
@@ -173,7 +176,7 @@ def test_tesseract_user_patterns(patterns):
 @requires_tesseract
 def test_char_whitelist():
     # Without char_whitelist tesseract reads "OO" (the letter oh).
-    assert '00' == stbt.ocr(
+    assert u'00' == stbt.ocr(
         frame=load_image('ocr/00.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         char_whitelist="0123456789")
@@ -218,14 +221,10 @@ def test_corrections(corrections, expected):
     "text,corrections,expected",
     # Same test-cases as `test_corrections` above:
     [('OO', c, e) for (c, e) in corrections_test_cases] +
-    # Plain strings match entire words at word boundaries, regexes don't:
+    # Plain strings match entire words at word boundaries:
     [('itv+', {'itv+': 'Apple tv+'}, 'Apple tv+'),
      ('hitv+', {'itv+': 'Apple tv+'}, 'hitv+'),
      ('This is itv+ innit', {'itv+': 'Apple tv+'}, 'This is Apple tv+ innit'),
-     ('the saw said he saws, he saw.',
-      {'he saw': 'HE SAW', re.compile("he", re.IGNORECASE): "ħé"},
-      'tħé saw said ħé saws, ħé SAW.'),
-     (r'T\/ & REPLAY', {r'T\/': 'TV'}, 'TV & REPLAY'),
      # Make sure it tries all the patterns:
      ('A B C', {'A': '1', 'B': '2', 'C': '3'}, '1 2 3'),
     ])
@@ -238,10 +237,10 @@ def test_apply_ocr_corrections(text, corrections, expected):
     pytest.param(None, marks=pytest.mark.xfail),
     ['192.168.10.1'],
     b'192.168.10.1',
-    '192.168.10.1',
+    u'192.168.10.1',
 ])
 def test_user_dictionary_with_non_english_language(words):
-    assert '192.168.10.1' == stbt.ocr(
+    assert u'192.168.10.1' == stbt.ocr(
         frame=load_image('ocr/192.168.10.1.png'),
         mode=stbt.OcrMode.SINGLE_WORD,
         lang="deu",
@@ -250,15 +249,15 @@ def test_user_dictionary_with_non_english_language(words):
 # Menu as listed in menu.svg:
 menu = [
     [
-        "Onion Bhaji",
-        "Mozzarella Pasta\nBake",
-        "Lamb and Date\nCasserole",
-        "Jerk Chicken"
+        u"Onion Bhaji",
+        u"Mozzarella Pasta\nBake",
+        u"Lamb and Date\nCasserole",
+        u"Jerk Chicken"
     ], [
-        "Beef Wellington",
-        "Kerala Prawn Curry",
-        "Chocolate Fudge Cake",
-        "Halloumi Stuffed\nPeppers"
+        u"Beef Wellington",
+        u"Kerala Prawn Curry",
+        u"Chocolate Fudge Cake",
+        u"Halloumi Stuffed\nPeppers"
     ]
 ]
 
@@ -280,7 +279,7 @@ def test_that_text_location_is_recognised():
     def test(text, region, upsample):
         result = stbt.match_text(text, frame=frame, upsample=upsample)
         assert result
-        assert region.contains(result.region)
+        assert region.contains(result.region)  # pylint:disable=no-member
 
     for text, region, multiline in iterate_menu():
         # Don't currently support multi-line comments
@@ -292,9 +291,11 @@ def test_that_text_location_is_recognised():
 
 
 @requires_tesseract
-def test_match_text_stringify_result(test_pack_root):  # pylint:disable=unused-argument
+def test_match_text_stringify_result():
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
+
     frame = load_image("ocr/menu.png")
-    result = stbt.match_text("Onion Bhaji", frame=frame)
+    result = stbt.match_text(u"Onion Bhaji", frame=frame)
 
     assert re.match(
         r"TextMatchResult\(time=None, match=True, region=Region\(.*\), "
@@ -316,7 +317,7 @@ def test_that_text_region_is_correct_even_with_regions_larger_than_frame():
 @requires_tesseract
 def test_that_match_text_returns_no_match_for_non_matching_text():
     frame = load_image("ocr/menu.png")
-    assert not stbt.match_text("Noodle Soup", frame=frame)
+    assert not stbt.match_text(u"Noodle Soup", frame=frame)
 
 
 @requires_tesseract
@@ -352,12 +353,14 @@ def test_ocr_on_text_next_to_image_match():
 
 
 @requires_tesseract
-@pytest.mark.parametrize("image,color,expected", [
+@pytest.mark.parametrize("image,color,expected,region", [
     # This region has a selected "Summary" button (white on light blue) and
-    # unselected buttons "Details" and "More Episodes" (light gray on black).
+    # unselected buttons "Details" and "More Episodes" (light grey on black).
     # Without specifying text_color, OCR only sees the latter two.
-    ("ocr/Summary.png", (235, 235, 235), "Summary"),
-    ("ocr/Summary.png", "#ebebeb", "Summary"),
+    # Testing without specifying a region would also work, but with a small
+    # region the test runs much faster (0.1s instead of 3s per ocr call).
+    ("action-panel.png", (235, 235, 235), "Summary",
+     stbt.Region(0, 370, right=1280, bottom=410)),
 
     # This is a light "8" on a dark background. Without the context of any
     # other surrounding text, OCR reads it as ":" or ";"! Presumably tesseract
@@ -365,17 +368,17 @@ def test_ocr_on_text_next_to_image_match():
     # it's assuming that it's seeing printed matter (a scanned book with black
     # text on white background). Expanding the region to include other text
     # would solve the problem, but so does specifying the text color.
-    ("ocr/ch8.png", (252, 242, 255), "8"),
+    ("ocr/ch8.png", (252, 242, 255), "8", stbt.Region.ALL),
 ])
-def test_ocr_text_color(image, color, expected):
+def test_ocr_text_color(image, color, expected, region):
     frame = load_image(image)
     mode = stbt.OcrMode.SINGLE_LINE
 
-    assert expected not in stbt.ocr(frame, mode=mode)
-    assert expected == stbt.ocr(frame, mode=mode, text_color=color)
+    assert expected not in stbt.ocr(frame, region, mode)
+    assert expected == stbt.ocr(frame, region, mode, text_color=color)
 
-    assert not stbt.match_text(expected, frame, mode=mode)
-    assert stbt.match_text(expected, frame, mode=mode, text_color=color)
+    assert not stbt.match_text(expected, frame, region, mode)
+    assert stbt.match_text(expected, frame, region, mode, text_color=color)
 
 
 @requires_tesseract
@@ -394,7 +397,7 @@ def test_ocr_text_color_threshold():
 
 @requires_tesseract
 def test_that_ocr_engine_has_an_effect():
-    if _tesseract_version() < [4, 0]:
+    if _tesseract_version() < LooseVersion("4.0"):
         raise SkipTest('tesseract is too old')
 
     f = load_image("ocr/ambig.png")

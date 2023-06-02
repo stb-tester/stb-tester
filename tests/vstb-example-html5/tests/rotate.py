@@ -1,3 +1,4 @@
+# pylint: disable=F0401
 from stbt_core import press, wait_for_match
 
 

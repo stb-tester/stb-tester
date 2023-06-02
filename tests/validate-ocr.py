@@ -80,7 +80,7 @@ def main(argv):
         sys.stderr.write("%i / %i Complete\r" % (n, len(files)))
 
         imgname = f[:-len('.txt')]
-        with open(f, encoding='utf-8') as of:
+        with open(f) as of:
             text = of.read()
 
         sections = text.split('---', 1)
@@ -100,9 +100,8 @@ def main(argv):
 
     if args.report_filename:
         template = os.path.dirname(__file__) + '/validate-ocr.html.jinja'
-        with open(args.report_filename, 'w', encoding='utf-8') as f:
-            f.write(jinja2.Template(open(template, encoding='utf-8').read())
-                    .render(
+        with open(args.report_filename, 'w') as f:
+            f.write(jinja2.Template(open(template).read()).render(
                 images=results,
                 total=total,
                 total_matched=total_matched,

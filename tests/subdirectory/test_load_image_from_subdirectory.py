@@ -7,8 +7,11 @@ import pytest
 import stbt_core as stbt
 
 
-def test_that_load_image_looks_in_callers_directory(test_pack_root):  # pylint:disable=unused-argument
+def test_that_load_image_looks_in_callers_directory():
     # See also the test with the same name in ../test_core.py
+
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), ".."))
 
     f = stbt.load_image("videotestsrc-redblue.png")
     assert numpy.array_equal(

@@ -37,7 +37,6 @@ test_that_stbt_lint_ignores_generated_image_names() {
 	var = 'idontexist'
 	stbt.wait_for_match(var + '.png')
 	stbt.wait_for_match('%s.png' % var)
-	stbt.wait_for_match(f"{var} - selected.png")
 	stbt.wait_for_match(os.path.join('directory', 'idontexist.png'))
 	stbt.wait_for_match(join('directory', 'idontexist.png'))
 	var.replace('idontexist', 'idontexist.png')
@@ -58,9 +57,9 @@ test_that_stbt_lint_ignores_images_created_by_the_stbt_script() {
     cat > test.py <<-EOF &&
 	import cv2, stbt_core as stbt
 	stbt.save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
-	cv2.imwrite('neither-do-i.png', stbt.get_frame())  # pylint:disable=no-member
+	cv2.imwrite('neither-do-i.png', stbt.get_frame())
 	
-	from cv2 import imwrite  # pylint:disable=no-name-in-module
+	from cv2 import imwrite
 	from stbt_core import save_frame
 	save_frame(stbt.get_frame(), 'i-dont-exist-yet.png')
 	imwrite('neither-do-i.png', stbt.get_frame())

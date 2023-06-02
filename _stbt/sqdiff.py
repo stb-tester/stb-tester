@@ -1,6 +1,6 @@
 import ctypes
 import os
-import platform
+import glob
 
 import numpy
 
@@ -8,10 +8,14 @@ from .logging import debug
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
-    return os.path.join(root, path)
+    path_pattern = path.replace(".", "*")
+    list = glob.glob(os.path.join(root, path_pattern))
+    if not list:
+        raise LookupError("File {} not found".format(path))
+    return list[0]
 
 
-_libstbt = ctypes.CDLL(_find_file(f"libstbt.{platform.machine()}.so"))
+_libstbt = ctypes.CDLL(_find_file("libstbt.so"))
 
 
 class _SqdiffResult(ctypes.Structure):
@@ -44,7 +48,7 @@ COLOR_DEPTH_LOOKUP = {
 }
 
 
-def sqdiff(template, frame) -> "tuple[int, int]":
+def sqdiff(template, frame):
     if template.shape[:2] != frame.shape[:2]:
         raise ValueError("Template and frame must be the same size")
     try:

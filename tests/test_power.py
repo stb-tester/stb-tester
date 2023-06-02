@@ -1,10 +1,14 @@
 """Tests for the _ATEN_PE6108G PDU class"""
 
 from contextlib import contextmanager
-from unittest.mock import patch
 
 import pytest
 from pysnmp.proto.rfc1902 import Integer
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch  # Python 2 backport
 
 from _stbt.power import uri_to_power_outlet
 

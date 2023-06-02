@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
 This file implements caching of expensive image processing operations for the
 purposes of speeding up subsequent runs of stbt auto-selftest.
@@ -16,7 +18,7 @@ import json
 import os
 import sys
 from contextlib import contextmanager
-from itertools import zip_longest
+from distutils.version import LooseVersion
 
 import numpy
 
@@ -28,6 +30,12 @@ except ImportError:
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    # Python 2:
+    from itertools import izip_longest as zip_longest
 
 
 MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024  # 1GiB
@@ -61,7 +69,7 @@ def setup_cache(filename=None):
     if filename is None:
         filename = default_filename
     mkdir_p(os.path.dirname(filename) or ".")
-    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:
+    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:  # pylint: disable=no-member
         assert _cache is None
         try:
             _cache = db
@@ -207,7 +215,7 @@ def _cache_put(key, value):
     with _cache.begin(write=True) as txn:
         try:
             txn.put(key, json.dumps(value).encode("utf-8"))
-        except lmdb.MapFullError:
+        except lmdb.MapFullError:  # pylint: disable=no-member
             global _cache_full_warning
             if not _cache_full_warning:
                 sys.stderr.write(
@@ -229,6 +237,8 @@ class _ArgsEncoder(json.JSONEncoder):
             if o.enabled:
                 raise NotCachable()
             return None
+        elif isinstance(o, LooseVersion):
+            return str(o)
         elif isinstance(o, set):
             return sorted(o)
         elif isinstance(o, MatchParameters):

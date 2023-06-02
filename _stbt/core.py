@@ -1,3 +1,4 @@
+# coding: utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.
@@ -7,12 +8,9 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import annotations
-
 import argparse
 import datetime
 import sys
-import typing
 import threading
 import warnings
 import weakref
@@ -23,13 +21,13 @@ from enum import Enum
 import cv2
 import gi
 
-from _stbt import cv2_compat
+import _stbt.cv2_compat as cv2_compat
 from _stbt import logging
 from _stbt.config import get_config
 from _stbt.gst_utils import array_from_sample, gst_sample_make_writable
-from _stbt.imgutils import Frame
-from _stbt.logging import _Annotation, debug, warn
-from _stbt.types import Keypress, NoVideo, Region
+from _stbt.imgutils import _frame_repr, Frame
+from _stbt.logging import _Annotation, ddebug, debug, warn
+from _stbt.types import NoVideo, Region
 from _stbt.utils import to_unicode
 
 gi.require_version("Gst", "1.0")
@@ -37,13 +35,9 @@ from gi.repository import GLib, Gst  # pylint:disable=wrong-import-order
 
 Gst.init(None)
 
-if typing.TYPE_CHECKING:
-    # pylint:disable=unused-import
-    from _stbt.control import RemoteControl
-    # pylint:enable=unused-import
-
 warnings.filterwarnings(
-    action="default", category=DeprecationWarning, module=r"_stbt")
+    action="always", category=DeprecationWarning, message='.*stb-tester')
+
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -92,13 +86,13 @@ class DeviceUnderTest():
                  mainloop=None, _time=None):
         if _time is None:
             import time as _time
-        self._time_of_last_press: float = 0
-        self._display: Display = display
-        self._control: RemoteControl = control
-        self._sink_pipeline: SinkPipeline = sink_pipeline
-        self._mainloop: typing.ContextManager[None] = mainloop
+        self._time_of_last_press = None
+        self._display = display
+        self._control = control
+        self._sink_pipeline = sink_pipeline
+        self._mainloop = mainloop
         self._time = _time
-        self._last_keypress: Keypress | None = None
+        self._last_keypress = None
 
     def __enter__(self):
         if self._display:
@@ -134,7 +128,7 @@ class DeviceUnderTest():
                     frame_before = None
                 else:
                     frame_before = self.get_frame()
-                out = Keypress(key, self._time.time(), None, frame_before)
+                out = _Keypress(key, self._time.time(), None, frame_before)
                 self._control.press(key)
                 out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
@@ -151,13 +145,13 @@ class DeviceUnderTest():
             key = key.value
 
         with self._interpress_delay(interpress_delay_secs):
-            out = Keypress(key, self._time.time(), None, self.get_frame())
+            out = _Keypress(key, self._time.time(), None, self.get_frame())
             try:
                 self._control.keydown(key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 self._last_keypress = out
                 yield out
-            except:
+            except:  # pylint:disable=bare-except
                 exc_info = sys.exc_info()
                 try:
                     self._control.keyup(key)
@@ -176,21 +170,23 @@ class DeviceUnderTest():
         if interpress_delay_secs is None:
             interpress_delay_secs = get_config(
                 "press", "interpress_delay_secs", type_=float)
-        # `sleep` is inside a `while` loop because the actual suspension
-        # time of `sleep` may be less than that requested.
-        while True:
-            seconds_to_wait = (
-                self._time_of_last_press - self._time.time() +
-                interpress_delay_secs)
-            if seconds_to_wait > 0:
-                self._time.sleep(seconds_to_wait)
-            else:
-                break
+        if self._time_of_last_press is not None:
+            # `sleep` is inside a `while` loop because the actual suspension
+            # time of `sleep` may be less than that requested.
+            while True:
+                seconds_to_wait = (
+                    self._time_of_last_press - datetime.datetime.now() +
+                    datetime.timedelta(seconds=interpress_delay_secs)
+                ).total_seconds()
+                if seconds_to_wait > 0:
+                    self._time.sleep(seconds_to_wait)
+                else:
+                    break
 
         try:
             yield
         finally:
-            self._time_of_last_press = self._time.time()
+            self._time_of_last_press = datetime.datetime.now()
 
     def draw_text(self, text, duration_secs=3):
         self._sink_pipeline.draw(text, duration_secs)
@@ -236,8 +232,10 @@ class DeviceUnderTest():
         first = True
 
         while True:
+            ddebug("user thread: Getting sample at %s" % self._time.time())
             frame = self._display.get_frame(
                 max(10, timeout_secs or 0), since=timestamp)
+            ddebug("user thread: Got sample at %s" % self._time.time())
             timestamp = frame.time
 
             if not first and timeout_secs is not None and timestamp > end_time:
@@ -252,6 +250,20 @@ class DeviceUnderTest():
             raise RuntimeError(
                 "stbt.get_frame(): Video capture has not been initialised")
         return self._display.get_frame()
+
+
+class _Keypress():
+    def __init__(self, key, start_time, end_time, frame_before):
+        self.key = key
+        self.start_time = start_time
+        self.end_time = end_time
+        self.frame_before = frame_before
+
+    def __repr__(self):
+        return (
+            "_Keypress(key=%r, start_time=%r, end_time=%r, frame_before=%s)" % (
+                self.key, self.start_time, self.end_time,
+                _frame_repr(self.frame_before)))
 
 
 # stbt-run initialisation and convenience functions
@@ -301,7 +313,7 @@ def _mainloop():
         mainloop.quit()
         thread.join(10)
         debug("teardown: Exiting (GLib mainloop %s)" % (
-              "is still alive!" if thread.is_alive() else "ok"))
+              "is still alive!" if thread.isAlive() else "ok"))
 
 
 def _draw_annotation(img, annotation):
@@ -674,6 +686,13 @@ class Display():
         # `self.last_frame` is how we communicate from this thread (the GLib
         # main loop) to the main application thread running the user's script.
         # Note that only this thread writes to self.last_frame.
+
+        if isinstance(frame_or_exception, Exception):
+            ddebug("glib thread: reporting exception to user thread: %s" %
+                   frame_or_exception)
+        else:
+            ddebug("glib thread: new sample (time=%s)." %
+                   frame_or_exception.time)
 
         with self._condition:
             self.last_frame = frame_or_exception

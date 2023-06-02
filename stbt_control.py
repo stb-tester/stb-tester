@@ -17,7 +17,6 @@ from textwrap import dedent
 
 import _stbt.control
 from _stbt.config import ConfigurationError, get_config
-from _stbt.logging import init_logger
 
 SPECIAL_CHARS = {
     curses.ascii.SP: "Space",
@@ -40,7 +39,6 @@ SPECIAL_CHARS = {
 
 def main(argv):
     args = argparser().parse_args(argv[1:])
-    init_logger()
 
     if args.help_keymap:
         sys.exit(show_help_keymap())
@@ -125,7 +123,7 @@ def show_help_keymap():
 
 def main_loop(control_uri, keymap_file):
     try:
-        keymap = load_keymap(open(keymap_file, "r", encoding="utf-8"))
+        keymap = load_keymap(open(keymap_file, "r"))
     except IOError:
         error("Failed to load keymap file '%s'\n"
               "(see 'stbt control --help' for details of the keymap file)."

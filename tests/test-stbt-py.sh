@@ -2,7 +2,7 @@
 
 test_that_invalid_control_doesnt_hang() {
     touch test.py
-    $timeout 10 stbt run -v --control asdf test.py
+    timeout 10 stbt run -v --control asdf test.py
     local ret=$?
     [ $ret -ne $timedout ] || fail "'stbt run --control asdf' timed out"
 }
@@ -81,7 +81,7 @@ test_that_frames_doesnt_time_out() {
 	for _ in stbt.frames():
 	    pass
 	EOF
-    $timeout 12 stbt run -v test.py
+    timeout 12 stbt run -v test.py
     local ret=$?
     [ $ret -eq $timedout ] || fail "Unexpected exit status '$ret'"
 }
@@ -145,7 +145,7 @@ test_using_frames_to_measure_black_screen() {
 }
 
 test_that_frames_doesnt_deadlock() {
-    cat > test.py <<-EOF
+    cat > test.py <<-EOF &&
 	import stbt_core as stbt
 	for frame in stbt.frames():
 	    print(frame.time)
@@ -160,8 +160,10 @@ test_that_frames_doesnt_deadlock() {
 	frames3 = stbt.frames()
 	frame3 = next(frames3)  # old 'frames' still holds lock
 	EOF
-    local t
-    $timeout 10 stbt run -v test.py
+    timeout 10 stbt run -v test.py &&
+
+    cat > test2.py <<-EOF
+EOF
 }
 
 test_that_is_screen_black_reads_default_threshold_from_stbt_conf() {
@@ -214,7 +216,7 @@ test_save_video() {
 	wait_for_match("$testdir/videotestsrc-redblue.png")
 	EOF
     set_config run.save_video "" &&
-    $timeout 10 stbt run -v --control none \
+    timeout 10 stbt run -v --control none \
         --source-pipeline 'filesrc location=video.webm' \
         test.py
 }
@@ -269,8 +271,9 @@ test_press_visualisation() {
 }
 
 test_clock_visualisation() {
-    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, sys; \
-        sys.exit(0 if _stbt.ocr._tesseract_version() >= [3, 3] else 77)"
+    PYTHONPATH="$srcdir" $python -c "import _stbt.ocr, distutils, sys; \
+        sys.exit(0 if (_stbt.ocr._tesseract_version() \
+                       >= distutils.version.LooseVersion('3.03')) else 77)"
     case $? in
         0) true;;
         77) skip "Requires tesseract >= 3.03 for 'tesseract_user_patterns'";;
@@ -381,7 +384,7 @@ test_that_frames_are_read_only() {
 
 test_that_get_frame_time_is_wall_time() {
     cat > test.py <<-EOF &&
-	import stbt_core as stbt, os, time
+	import stbt_core as stbt, time
 
 	f = stbt.get_frame()
 	t = time.time()
@@ -392,7 +395,7 @@ test_that_get_frame_time_is_wall_time() {
 
 	# get_frame() gives us the last frame that arrived.  This may arrived a
 	# little time ago and have been waiting in a buffer.
-	assert t - 0.1 < f.time < t
+	assert t - 0.2 < f.time < t
 	EOF
 
     stbt run -vv test.py
@@ -455,26 +458,6 @@ test_template_annotation_with_ndarray_template() {
 }
 
 test_draw_text() {
-    # On CircleCI this is failing often (always?) with first_pass_result=0.9519.
-    #
-    # For comparison:
-    #
-    #     $ ./stbt_match.py -v tests/white-full-frame.png tests/draw-text.png
-    #     first_pass_result=0.2688
-    #
-    #     $ ./stbt_match.py -v tests/black-full-frame.png tests/draw-text.png
-    #     first_pass_result=0.9138
-    #
-    # This is slightly higher than white-full-frame.png because it matches part
-    # of the black background behind the time that we draw on the video; but
-    # it's still less than 0.95:
-    #
-    #     $ cat test.py
-    #     import stbt_core as stbt
-    #     stbt.wait_for_match("tests/draw-text.png")
-    #     $ ./stbt_run.py -v --source-pipeline 'videotestsrc pattern=white' test.py
-    #     first_pass_result=0.2816
-    #
     cat > draw-text.py <<-EOF &&
 	import stbt_core as stbt
 	from time import sleep
@@ -482,8 +465,8 @@ test_draw_text() {
 	sleep(60)
 	EOF
     cat > verify-draw-text.py <<-EOF &&
-	import os, stbt_core as stbt
-	stbt.wait_for_match("$testdir/draw-text.png", timeout_secs=10)
+	import stbt_core as stbt
+	stbt.wait_for_match("$testdir/draw-text.png")
 	EOF
     mkfifo fifo || fail "Initial test setup failed"
 

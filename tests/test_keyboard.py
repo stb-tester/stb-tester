@@ -1,9 +1,16 @@
+# coding: utf-8
+
 import logging
 import re
-from unittest import mock
 
+import networkx as nx
 import numpy
 import pytest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # Python 2 backport
 
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
@@ -134,7 +141,7 @@ class DUT():
 
 class DoubleKeypressDUT(DUT):
     def handle_press(self, keypress):
-        super().handle_press(keypress)
+        super(DoubleKeypressDUT, self).handle_press(keypress)
         if keypress == "KEY_RIGHT" and self.selection == "b":
             logging.debug("DoubleKeypressDUT.handle_press: Double KEY_RIGHT "
                           "press from a to c skipping over b")
@@ -143,17 +150,17 @@ class DoubleKeypressDUT(DUT):
 
 class MissedKeypressDUT(DUT):
     def __init__(self):
-        super().__init__()
+        super(MissedKeypressDUT, self).__init__()
         self._last_press_ignored = False
 
     def handle_press(self, keypress):
         if keypress == "KEY_OK":
-            super().handle_press(keypress)
+            super(MissedKeypressDUT, self).handle_press(keypress)
             return
 
         # Ignore every other up/down/left/right keypress
         if self._last_press_ignored:
-            super().handle_press(keypress)
+            super(MissedKeypressDUT, self).handle_press(keypress)
             self._last_press_ignored = False
         else:
             logging.debug("MissedKeypressDUT.handle_press: Ignoring %s",
@@ -171,7 +178,7 @@ class MissedKeypressDUT(DUT):
 
 class SlowDUT(DUT):
     def __init__(self):
-        super().__init__()
+        super(SlowDUT, self).__init__()
         self._delayed_keypress = None
 
     def handle_press_and_wait(self, key, **_kwargs):
@@ -183,7 +190,7 @@ class SlowDUT(DUT):
         key = self._delayed_keypress
         self._delayed_keypress = None
         assert key is not None
-        super().handle_press(key)
+        super(SlowDUT, self).handle_press(key)
         return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
@@ -227,24 +234,18 @@ def slow_dut():
         yield dut
 
 
-class _NotSpecified():  # sentinel value
-    pass
-
-
 class SearchPage(stbt.FrameObject):
     """Immutable Page Object representing the test's view of the DUT."""
 
-    def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
-        super().__init__(
+    def __init__(self, dut, kb):
+        super(SearchPage, self).__init__(
             frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
         self.dut = dut
         self.kb = kb
-        self._is_visible = is_visible
-        self._selection = selection
 
     @property
     def is_visible(self):
-        return self._is_visible
+        return True
 
     @property
     def mode(self):
@@ -258,8 +259,6 @@ class SearchPage(stbt.FrameObject):
         # In practice this would use image processing to detect the current
         # selection & mode, then look up the key by region & mode.
         # See test_find_key_by_region for an example.
-        if self._selection != _NotSpecified:
-            return self._selection
         query = {}
         if self.dut.selection == " ":
             query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
@@ -610,19 +609,6 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     assert dut.pressed == []
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
-def test_that_keyboard_validates_the_page_object_selection(dut, kb):
-    page = SearchPage(dut, kb, is_visible=False)
-    with pytest.raises(AssertionError) as excinfo:
-        page.navigate_to("a", page)
-    assert "SearchPage page isn't visible" in str(excinfo.value)
-
-    page = SearchPage(dut, kb, selection=None)
-    with pytest.raises(AssertionError) as excinfo:
-        page.navigate_to("a", page)
-    assert "page.selection (None) isn't in the keyboard" in str(excinfo.value)
-
-
 def test_that_navigate_to_doesnt_type_text_from_shift_transitions(dut):
     page = SearchPage(dut, kb4)
     dut.symbols_is_shift = True
@@ -889,8 +875,6 @@ def test_keyboard_weights(kb):
 
 
 def test_that_we_need_add_weight():
-    from networkx.algorithms.shortest_paths.generic import shortest_path
-
     # W X Y Z
     #  SPACE
     kb = stbt.Keyboard()
@@ -905,9 +889,9 @@ def test_that_we_need_add_weight():
         kb.add_transition(k1, k2, "KEY_RIGHT")
 
     # This is the bug:
-    assert shortest_path(kb.G, W, Z) == [W, SPACE, Z]
+    assert nx.shortest_path(kb.G, W, Z) == [W, SPACE, Z]
     # And this is how we fix it:
-    assert shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
+    assert nx.shortest_path(kb.G, W, Z, weight="weight") == [W, X, Y, Z]
 
     assert [k for k, _ in _keys_to_press(kb.G, W, [Z])] == ["KEY_RIGHT"] * 3
 

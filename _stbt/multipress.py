@@ -1,11 +1,8 @@
+# coding: utf-8
 """Copyright 2020 Stb-tester.com Ltd."""
-
-from __future__ import annotations
 
 import re
 import time
-
-from .types import KeyT
 
 
 class MultiPress():
@@ -68,12 +65,8 @@ class MultiPress():
     .. _multi-press: https://en.wikipedia.org/wiki/Multi-tap
     """
 
-    def __init__(
-        self,
-        key_mapping: dict[KeyT, str] = None,
-        interpress_delay_secs: float = None,
-        interletter_delay_secs: float = 1,
-    ):
+    def __init__(self, key_mapping=None, interpress_delay_secs=None,
+                 interletter_delay_secs=1):
 
         mapping = _parse_mapping_from_docstring(MultiPress.__doc__)
         if key_mapping is not None:
@@ -83,7 +76,7 @@ class MultiPress():
         self.interpress_delay_secs = interpress_delay_secs
         self.interletter_delay_secs = interletter_delay_secs
 
-    def enter_text(self, text: str) -> None:
+    def enter_text(self, text):
         """Enter the specified text using multi-press on the numeric keypad.
 
         :param str text:

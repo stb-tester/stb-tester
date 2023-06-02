@@ -403,7 +403,10 @@ def test_hdmi_cec_control_defaults():
 def _fake_cec():
     import io
     import pytest
-    from unittest.mock import patch
+    try:
+        from unittest.mock import patch
+    except ImportError:
+        from mock import patch  # Python 2 backport
 
     pytest.importorskip("cec")
 
@@ -414,7 +417,6 @@ def _fake_cec():
         return True
 
     def cec_cmd_get_data(cmd):
-        # TODO: Port to Python 3.
         # Ugly, but can't find another way to do it
         import ctypes
         return str(buffer(ctypes.cast(  # pylint:disable=undefined-variable

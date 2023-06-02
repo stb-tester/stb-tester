@@ -4,24 +4,20 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import annotations
-
 import traceback
 from contextlib import contextmanager
-from typing import ContextManager, Optional
 
-from .imgutils import FrameT
 from .logging import debug
 from .types import UITestError, UITestFailure
 
 
 class PreconditionError(UITestError):
     """Exception raised by `as_precondition`."""
-    def __init__(self, message: str, original_exception: Exception):
-        super().__init__()
-        self.message: str = message
-        self.original_exception: Exception = original_exception
-        self.screenshot: Optional[FrameT] = None
+    def __init__(self, message, original_exception):
+        super(PreconditionError, self).__init__()
+        self.message = message
+        self.original_exception = original_exception
+        self.screenshot = None
 
     def __str__(self):
         return (
@@ -30,7 +26,7 @@ class PreconditionError(UITestError):
 
 
 @contextmanager
-def as_precondition(message: str) -> ContextManager[None]:
+def as_precondition(message):
     """Context manager that replaces test failures with test errors.
 
     Stb-tester's reports show test failures (that is, `UITestFailure` or

@@ -1,12 +1,14 @@
-import setuptools
+# coding: utf-8
 
+# import setuptools
+from setuptools import setup, Extension
 
 long_description = """\
 # Stb-tester open-source APIs (stbt_core)
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
 
-* Copyright © 2013-2022 Stb-tester.com Ltd,
+* Copyright © 2013-2021 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
 
@@ -29,29 +31,39 @@ This package doesn't bundle the Tesseract OCR engine, so `ocr()` and
 [LICENSE]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 [Stb-tester Platform]: https://stb-tester.com
 """
-
-setuptools.setup(
+extentions = [Extension('_stbt.libstbt',
+                        sources=['_stbt/sqdiff.c'],
+                        extra_compile_args=["-std=c99"],
+                        ),
+              Extension('_stbt.libxxhash',
+                        sources=['_stbt/xxhash.c'],
+                        depends=['_stbt/xxhash.h'],
+                        extra_compile_args=["-std=c99"],
+                        )
+              ]
+setup(
     name="stbt_core",
-    version="33.0.2",
+    version="133.0.0",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
-    description="Automated GUI testing for Set-Top Boxes",
+    description="Automated GUI testing for Set-Top Boxes, with MacOS and Linux MOD",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://stb-tester.com",
     packages=["stbt_core", "_stbt"],
     package_data={
-        "_stbt": ["stbt.conf"],
+        "_stbt": ["stbt.conf", "sqdiff.c", "xorg.conf.in", "xxhash.c", "xxhash.h"],  # , "libstbt.so", "libxxhash.so",
     },
+    ext_modules=extentions,
     classifiers=[
         # pylint:disable=line-too-long
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Software Development :: Testing",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     extras_require={
         "ocr": ["lxml==4.8.0"],
         "debug": ["Jinja2==3.0.3"],
