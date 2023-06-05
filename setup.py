@@ -60,10 +60,10 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Testing",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.6",
     extras_require={
         "ocr": ["lxml==4.8.0"],
         "debug": ["Jinja2==3.0.3"],
