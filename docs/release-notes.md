@@ -5,9 +5,9 @@ These release notes apply to the Stb-tester open-source version. Customers of
 Stb-tester.com Ltd. should refer to the release notes at
 https://stb-tester.com/manual/release-notes instead.
 
-#### v34 (UNRELEASED)
+#### v34
 
-Unreleased
+UNRELEASED.
 
 ##### Changes in behaviour since v33
 
