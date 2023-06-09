@@ -65,8 +65,7 @@ Unreleased
   empty region. Useful for debugging issues with the coordinates in your test
   script. #790
 
-- wait_until: Log how long the `wait_until` call took until it succeeded.
-  1581900c #788
+- wait_until: Log how long the `wait_until` call took until it succeeded. #788
 
 - New `Differ` API for customising the diffing algorithm used by
   `wait_for_motion`, `press_and_wait`, and related APIs. This is an API for
