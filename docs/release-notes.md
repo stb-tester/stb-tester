@@ -20,9 +20,9 @@ UNRELEASED.
   operation other than `match`. #791
 
 - match: Don't ignore reference image's alpha channel if `frame` is a
-  single-channel (greyscale) image. Previously the reference image was
-  converted to greyscale before matching; now the frame is converted to color
-  before matching. This is unlikely to affect any existing tests as greyscale
+  single-channel (grayscale) image. Previously the reference image was
+  converted to grayscale before matching; now the frame is converted to color
+  before matching. This is unlikely to affect any existing tests as grayscale
   frames are only created as a result of explicit image processing. #792 #789
 
 - wait_for_motion, detect_motion, press_and_wait, wait_for_transition_to_end:
@@ -36,7 +36,7 @@ UNRELEASED.
   Note that the `noise_threshold` of `BGRDiff` is different in scale (it's now
   0-255 instead of 0.0-1.0) and in direction (a smaller number means a stricter
   threshold). `BGRDiff`'s default threshold is 25, so it's slightly stricter
-  (`GreyscaleDiff`'s threshold of 0.84 would correspond to roughly a value of
+  (`GrayscaleDiff`'s threshold of 0.84 would correspond to roughly a value of
   40 in the `BGRDiff` algorithm).
 
   To continue using the previous algorithm, run the following code early in
@@ -71,7 +71,7 @@ UNRELEASED.
   `wait_for_motion`, `press_and_wait`, and related APIs. This is an API for
   power users who are comfortable implementing their own image processing. It
   is an unstable API — that is, the API or its behaviour might change in future
-  stb-tester releases. `BGRDiff` and `GreyscaleDiff` are concrete
+  stb-tester releases. `BGRDiff` and `GrayscaleDiff` are concrete
   implementations (subclasses) of this API, and their constructors *are* stable
   APIs. #799
 
