@@ -3,28 +3,78 @@ Stb-tester release notes
 
 These release notes apply to the Stb-tester open-source version. Customers of
 Stb-tester.com Ltd. should refer to the release notes at
-https://stb-tester.com/manual/python-api#release-notes instead.
+https://stb-tester.com/manual/release-notes instead.
 
 #### v34 (UNRELEASED)
 
 Unreleased
 
-##### Major new features
+##### Changes in behaviour since v33
 
-##### Breaking changes since v32
+- load_image: Normalize alpha channel when loading numpy arrays. Calling
+  `load_image` with a numpy array now behaves the same as calling it with a
+  PNG filename. #783
 
-* `match`: The behaviour when matching a color image, or an image with alpha
-  against a greyscale frame has changed.  Previously the image was converted to
-  greyscale before matching.  Now the frame is converted to color before
-  matching.  This is unlikely to affect any existing tests as greyscale frames
-  are only created as a result of explicit image processing.
+- Mask: Add `from_alpha_channel` constructor. Useful when you have a reference
+  image with some transparent parts, but you want to use that same mask for an
+  operation other than `match`. #791
 
-##### Deprecated APIs
+- match: Don't ignore reference image's alpha channel if `frame` is a
+  single-channel (greyscale) image. Previously the reference image was
+  converted to greyscale before matching; now the frame is converted to color
+  before matching. This is unlikely to affect any existing tests as greyscale
+  frames are only created as a result of explicit image processing. #792 #789
 
-##### Minor additions, bugfixes & improvements
+- wait_for_motion, detect_motion, press_and_wait, wait_for_transition_to_end:
+  Make `BGRDiff` the default diffing algorithm. #785
 
-* match: Previously if `frame` was greyscale any alpha channel in `image` was
-  ignored.  Now the alpha channel is used if present.
+  The previous default (`GrayscaleDiff`) doesn't detect changes that are
+  different in colour but of a similar overall intensity, such as the blue
+  (focused) vs. white (unfocused) letters in [the Xfinity on-screen keyboard](
+  https://github.com/stb-tester/stb-tester/blob/main/tests/images/diff/xfinity-search-keyboard-1.png).
+
+  Note that the `noise_threshold` of `BGRDiff` is different in scale (it's now
+  0-255 instead of 0.0-1.0) and in direction (a smaller number means a stricter
+  threshold). `BGRDiff`'s default threshold is 25, so it's slightly stricter
+  (`GreyscaleDiff`'s threshold of 0.84 would correspond to roughly a value of
+  40 in the `BGRDiff` algorithm).
+
+  To continue using the previous algorithm, run the following code early in
+  your test script (for example at the top level of your package's
+  `__init__.py`):
+
+      stbt.detect_motion.differ = stbt.GrayscaleDiff()
+      stbt.press_and_wait.differ = stbt.GrayscaleDiff()
+
+  Note that the above 2 lines also affect `wait_for_motion` and
+  `wait_for_transition_to_end`.
+
+##### Other new features and fixes
+
+- press_and_wait, wait_for_transition_to_end: Add `frames` parameter
+  (consistent with `wait_for_motion`). This will allow performing some custom
+  transformation on the video (such as removing background behind a translucent
+  overlay) before it's processed by the motion detection of `press_and_wait`.
+  #797
+
+- press_and_wait: Add `retries` parameter. If the keypress had no effect at
+  all, retry this number of times. Defaults to 0, so you have to opt-in to this
+  behaviour by specifying, for example, `retries=1` or `retries=2`. #798
+
+- Mask.to_array: Log a warning if adding or subtracting masks results in an
+  empty region. Useful for debugging issues with the coordinates in your test
+  script. #790
+
+- wait_until: Log how long the `wait_until` call took until it succeeded.
+  1581900c #788
+
+- New `Differ` API for customising the diffing algorithm used by
+  `wait_for_motion`, `press_and_wait`, and related APIs. This is an API for
+  power users who are comfortable implementing their own image processing. It
+  is an unstable API — that is, the API or its behaviour might change in future
+  stb-tester releases. `BGRDiff` and `GreyscaleDiff` are concrete
+  implementations (subclasses) of this API, and their constructors *are* stable
+  APIs. #799
 
 #### v33
 
