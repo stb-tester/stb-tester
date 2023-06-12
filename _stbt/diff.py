@@ -131,8 +131,8 @@ class Differ:
 class BGRDiff(Differ):
     """Compares 2 frames by calculating the color distance between them.
 
-    The algorithm calculates the euclidean distance between each pair of
-    corresponding pixels in the 2 frames. The color difference is then
+    The algorithm calculates the euclidean distance in BGR colorspace between
+    each pair of corresponding pixels in the 2 frames. This distance is then
     binarized using the specified threshold: Values smaller than the threshold
     are ignored. Then, an "erode" operation removes differences that are only 1
     pixel wide or high. If any differences remain, the 2 frames are considered
