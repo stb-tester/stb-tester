@@ -229,7 +229,8 @@ def _threshold_diff_bgr(
         threshold: int) -> numpy.ndarray[numpy.uint8]:
     if a.shape[:2] != b.shape[:2]:
         raise ValueError("Images must be the same size")
-    if a.shape[2] != 3 or b.shape[2] != 3:
+    if (len(a.shape) < 3 or a.shape[2] != 3 or
+            len(b.shape) < 3 or b.shape[2] != 3):
         raise ValueError("Images must be 3-channel BGR images")
     try:
         from . import libstbt
