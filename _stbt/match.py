@@ -24,13 +24,9 @@ from .imgutils import (
     load_image, _validate_region)
 from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
                       ImageLogger)
+from .sqdiff import sqdiff
 from .types import Position, Region, UITestFailure
 from .utils import to_unicode
-
-try:
-    from .sqdiff import sqdiff
-except ImportError:
-    sqdiff = None
 
 
 class MatchMethod(enum.Enum):
@@ -589,8 +585,7 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
         raise ConfigurationError("'match.pyramid_levels' must be > 0")
 
     if (match_parameters.match_method == MatchMethod.SQDIFF and
-            template.shape[:2] == image.shape[:2] and
-            sqdiff is not None):
+            template.shape[:2] == image.shape[:2]):
         # Fast-path: image and template are the same size, skip pyramid, FFT,
         # etc.  This is particularly useful for full-image matching.
         ddebug("stbt-match: frame and template sizes match: Using fast-path")

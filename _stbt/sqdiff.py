@@ -1,76 +1,17 @@
-import ctypes
-import os
-import platform
-
 import numpy
 
 from .logging import debug
-
-
-def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
-    return os.path.join(root, path)
-
-
-_libstbt = ctypes.CDLL(_find_file(f"libstbt.{platform.machine()}.so"))
-
-
-class _SqdiffResult(ctypes.Structure):
-    _fields_ = [("total", ctypes.c_uint64),
-                ("count", ctypes.c_uint32)]
-
-
-# SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
-#                     const uint8_t *f, uint16_t f_stride,
-#                     uint16_t width_px, uint16_t height_px,
-#                     int color_depth)
-
-_libstbt.sqdiff.restype = _SqdiffResult
-_libstbt.sqdiff.argtypes = [
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.c_uint16, ctypes.c_uint16,
-    ctypes.c_int
-]
-
-
-PIXEL_DEPTH_BGR = 1
-PIXEL_DEPTH_BGRx = 2
-PIXEL_DEPTH_BGRA = 3
-
-COLOR_DEPTH_LOOKUP = {
-    (3, 3): PIXEL_DEPTH_BGR,
-    (4, 3): PIXEL_DEPTH_BGRx,
-    (4, 4): PIXEL_DEPTH_BGRA,
-}
 
 
 def sqdiff(template, frame) -> "tuple[int, int]":
     if template.shape[:2] != frame.shape[:2]:
         raise ValueError("Template and frame must be the same size")
     try:
-        return _sqdiff_c(template, frame)
-    except NotImplementedError as e:
+        from . import libstbt
+        return libstbt.sqdiff(template, frame)
+    except (ImportError, NotImplementedError) as e:
         debug("sqdiff Missed fast-path: %s" % e)
         return _sqdiff_numpy(template, frame)
-
-
-def _sqdiff_c(template, frame):
-    if template.dtype != numpy.uint8 or frame.dtype != numpy.uint8:
-        raise NotImplementedError("dtype must be uint8")
-
-    if frame.strides[2] != 1 or template.strides[2] != 1 or \
-            frame.strides[1] != 3:
-        raise NotImplementedError("Pixel data must be contiguous")
-
-    color_depth = COLOR_DEPTH_LOOKUP[(template.strides[1], template.shape[2])]
-
-    t = template.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-    f = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-
-    out = _libstbt.sqdiff(t, template.strides[0],
-                          f, frame.strides[0],
-                          template.shape[1], template.shape[0], color_depth)
-    return out.total, out.count
 
 
 def _sqdiff_numpy(template, frame):
@@ -105,6 +46,7 @@ def _random_template(size=(1280, 720)):
 
 
 def test_sqdiff():
+    from .libstbt import sqdiff as sqdiff_c
     f = numpy.array(range(1280 * 720 * 3), dtype=numpy.uint8)
     f.shape = (720, 1280, 3)
     t = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
@@ -113,32 +55,33 @@ def test_sqdiff():
     tt[:, :, :3] = f
     tt[:, :, 3] = 255
 
-    assert (0, 1280 * 720 * 3) == _sqdiff_c(t, f)
-    assert (0, 1280 * 720 * 3) == _sqdiff_c(tt, f)
-    assert (0, 1280 * 720 * 3) == _sqdiff_c(tt[:, :, :3], f)
+    assert (0, 1280 * 720 * 3) == sqdiff_c(t, f)
+    assert (0, 1280 * 720 * 3) == sqdiff_c(tt, f)
+    assert (0, 1280 * 720 * 3) == sqdiff_c(tt[:, :, :3], f)
 
     f = numpy.ones((720, 1280, 3), dtype=numpy.uint8) * 255
     t = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     tt = numpy.zeros((720, 1280, 4), dtype=numpy.uint8)
 
-    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == _sqdiff_c(t, f)
-    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == _sqdiff_c(t, f)
-    assert (0, 0) == _sqdiff_c(tt, f)
+    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == sqdiff_c(t, f)
+    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == sqdiff_c(t, f)
+    assert (0, 0) == sqdiff_c(tt, f)
 
     tt[:, :, 3] = 255
-    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == _sqdiff_c(t, f)
-    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == _sqdiff_c(t, f)
-    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == _sqdiff_c(tt, f)
+    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == sqdiff_c(t, f)
+    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == sqdiff_c(t, f)
+    assert (1280 * 720 * 255 * 255 * 3, 1280 * 720 * 3) == sqdiff_c(tt, f)
 
 
 def test_sqdiff_c_numpy_equivalence():
+    from .libstbt import sqdiff as sqdiff_c
     for _ in range(100):
         frame_cropped, template, template_transparent = _random_template()
 
         for t in (template, template_transparent,
                   template_transparent[:, :, :3]):
             assert (_sqdiff_numpy(t, frame_cropped) ==
-                    _sqdiff_c(t, frame_cropped))
+                    sqdiff_c(t, frame_cropped))
 
 
 def _make_sqdiff_numba():
@@ -183,6 +126,7 @@ def _make_sqdiff_numba():
 
 def _measure_performance():
     import timeit
+    from .libstbt import sqdiff as sqdiff_c
 
     _sqdiff_numba = _make_sqdiff_numba()
 
@@ -200,7 +144,7 @@ def _measure_performance():
                 lambda: _sqdiff_numpy(t, frame_cropped),
                 repeat=3, number=10)) / 10
             c_time = min(timeit.repeat(
-                lambda: _sqdiff_c(t, frame_cropped),
+                lambda: sqdiff_c(t, frame_cropped),
                 repeat=3, number=10)) / 10
             if _sqdiff_numba:
                 numba_time = min(timeit.repeat(

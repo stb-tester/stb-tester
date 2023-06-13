@@ -6,7 +6,6 @@ exclude _stbt/gst_hacks.py
 exclude _stbt/gst_utils.py
 exclude _stbt/irnetbox.py
 exclude _stbt/power.py
-exclude _stbt/sqdiff.py
 exclude _stbt/stbt_run.py
 exclude _stbt/x11.py
 exclude _stbt/xxhash.py
