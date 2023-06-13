@@ -189,7 +189,7 @@ static void threshold_diff_BGR_line(
         int16_t diff_g = a[1] - b[1];
         int16_t diff_r = a[2] - b[2];
         uint32_t sqdiff = diff_b * diff_b + diff_g * diff_g + diff_r * diff_r;
-        uint8_t present = (sqdiff > threshold_sq) ? 1 : 0;
+        uint8_t present = (sqdiff >= threshold_sq) ? 1 : 0;
         out[0] = present;
         a += 3;
         b += 3;

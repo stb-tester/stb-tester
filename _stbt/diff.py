@@ -259,7 +259,7 @@ def _threshold_diff_bgr_numpy(
                            normalised.astype(numpy.uint8) &
                            mask_pixels[:, :, 0])
 
-    return (sqd > threshold).astype(numpy.uint8)
+    return (sqd >= threshold).astype(numpy.uint8)
 
 
 BGRDIFF_HTML = """\
