@@ -18,6 +18,10 @@ static uint32_t sqdiff_BGRA(
     uint32_t *count,
     const unsigned char* t, const unsigned char* f,
     uint16_t len_px);
+static void threshold_diff_BGR_line(
+    uint8_t *out, const uint8_t* a, uint8_t* b,
+    uint16_t len_px, uint32_t threshold_sq
+);
 
 typedef struct _SqdiffResult {
     uint64_t total;
@@ -136,4 +140,59 @@ static uint32_t sqdiff_BGRA(uint32_t *count,
     }
     *count += this_count;
     return this_total;
+}
+
+/**
+ * Calculate the square difference between two images, thresholded by a
+ * threshold_sq value.  Writes the result to out.
+ *
+ * a and b are pointers to the first pixel of the first line of the images.
+ * The images are assumed to be stored in packed BGR format.
+ *
+ * line_stride_a and line_stride_b are the number of bytes between the start
+ * of one line and the start of the next for a and b respectively.
+ *
+ * width_px and height_px are the width and height of the images in pixels.
+ *
+ * threshold_sq is the square of the threshold value.  If the square difference
+ * between two pixels is greater than this value, the output pixel will be 1,
+ * otherwise it will be 0.
+ *
+ * out is a pointer to the first pixel of the first line of the output image.
+ * The memory area for this image must be at least width_px * height_px bytes.
+ */
+void threshold_diff_bgr(
+    uint8_t *out,
+    const uint8_t* a, uint16_t line_stride_a,
+    uint8_t* b, uint16_t line_stride_b,
+    uint32_t threshold_sq,
+    uint16_t width_px, uint16_t height_px
+)
+{
+    for (uint16_t y = 0; y < height_px; y++) {
+        threshold_diff_BGR_line(out, a, b, width_px, threshold_sq);
+        a += line_stride_a;
+        b += line_stride_b;
+        out += width_px;
+    }
+}
+
+static void threshold_diff_BGR_line(
+    uint8_t *out,
+    const uint8_t* a, uint8_t* b,
+    uint16_t len_px,
+    uint32_t threshold_sq
+)
+{
+    for (uint16_t n = 0; n < len_px; n++) {
+        int16_t diff_b = a[0] - b[0];
+        int16_t diff_g = a[1] - b[1];
+        int16_t diff_r = a[2] - b[2];
+        uint32_t sqdiff = diff_b * diff_b + diff_g * diff_g + diff_r * diff_r;
+        uint8_t present = (sqdiff >= threshold_sq) ? 1 : 0;
+        out[0] = present;
+        a += 3;
+        b += 3;
+        out += 1;
+    }
 }

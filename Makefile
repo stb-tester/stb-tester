@@ -74,6 +74,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/imgutils.py \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
+    _stbt/libstbt.py \
     _stbt/libstbt.$(platform).so \
     _stbt/logging.py \
     _stbt/mask.py \
