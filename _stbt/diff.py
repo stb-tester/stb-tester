@@ -186,16 +186,8 @@ class BGRDiff(Differ):
         cframe = crop(frame, region)
         cprev = crop(prev_frame, region)
 
-        if imglog.enabled:
-            normalised = numpy.sqrt(
-                (cframe.astype(numpy.int32) - cprev) ** 2 / 3)
-            if mask_pixels is None:
-                imglog.imwrite("sqd", normalised)
-            else:
-                imglog.imwrite("sqd",
-                               normalised.astype(numpy.uint8) & mask_pixels)
-
-        d = _threshold_diff_bgr(cprev, cframe, (self.threshold ** 2) * 3)
+        d = _threshold_diff_bgr(cprev, cframe, (self.threshold ** 2) * 3,
+                                imglog, mask_pixels)
         if mask_pixels is not None:
             numpy.bitwise_and(d, mask_pixels[:, :, 0], out=d)
             imglog.imwrite("mask", mask_pixels)
@@ -226,7 +218,11 @@ class BGRDiff(Differ):
 
 def _threshold_diff_bgr(
         a: numpy.ndarray[numpy.uint8], b: numpy.ndarray[numpy.uint8],
-        threshold: int) -> numpy.ndarray[numpy.uint8]:
+        threshold: int,
+        imglog: ImageLogger,
+        mask_pixels: "numpy.ndarray[numpy.uint8] | None"
+) -> numpy.ndarray[numpy.uint8]:
+
     if a.shape[:2] != b.shape[:2]:
         raise ValueError("Images must be the same size")
     if (len(a.shape) < 3 or a.shape[2] != 3 or
@@ -234,17 +230,36 @@ def _threshold_diff_bgr(
         raise ValueError("Images must be 3-channel BGR images")
     try:
         from . import libstbt
-        return libstbt.threshold_diff_bgr(a, b, threshold)
+        if not imglog.enabled:
+            return libstbt.threshold_diff_bgr(a, b, threshold)
     except (ImportError, NotImplementedError) as e:
-        debug("threshold_diff_bgr Missed fast-path: %s" % e)
-        return _threshold_diff_bgr_numpy(a, b, threshold)
+        debug("BGRDiff missed fast-path: %s" % e)
+
+    return _threshold_diff_bgr_numpy(a, b, threshold, imglog, mask_pixels)
 
 
 def _threshold_diff_bgr_numpy(
         a: numpy.ndarray[numpy.uint8], b: numpy.ndarray[numpy.uint8],
-        threshold: int) -> numpy.ndarray[numpy.uint8]:
-    sqdiff = numpy.sum((a.astype(numpy.int32) - b) ** 2, axis=2)
-    return (sqdiff > threshold).astype(numpy.uint8)
+        threshold: int,
+        imglog: "ImageLogger | None" = None,
+        mask_pixels: "numpy.ndarray[numpy.uint8] | None" = None
+) -> numpy.ndarray[numpy.uint8]:
+
+    sqd = numpy.subtract(a, b, dtype=numpy.int32)
+    sqd = (sqd[:, :, 0] ** 2 +
+           sqd[:, :, 1] ** 2 +
+           sqd[:, :, 2] ** 2)
+
+    if imglog is not None and imglog.enabled:
+        normalised = numpy.sqrt(sqd / 3)
+        if mask_pixels is None:
+            imglog.imwrite("sqd", normalised)
+        else:
+            imglog.imwrite("sqd",
+                           normalised.astype(numpy.uint8) &
+                           mask_pixels[:, :, 0])
+
+    return (sqd > threshold).astype(numpy.uint8)
 
 
 BGRDIFF_HTML = """\
