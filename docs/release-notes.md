@@ -75,6 +75,8 @@ UNRELEASED.
   implementations (subclasses) of this API, and their constructors *are* stable
   APIs. #799
 
+- Implement `BGRDiff` in C for performance improvement. #801
+
 #### v33
 
 13 July 2022.
