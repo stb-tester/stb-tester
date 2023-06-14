@@ -7,7 +7,7 @@ https://stb-tester.com/manual/release-notes instead.
 
 #### v34
 
-UNRELEASED.
+14 June 2023.
 
 ##### Changes in behaviour since v33
 

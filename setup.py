@@ -6,7 +6,7 @@ long_description = """\
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
 
-* Copyright © 2013-2022 Stb-tester.com Ltd,
+* Copyright © 2013-2023 Stb-tester.com Ltd,
   2012-2014 YouView TV Ltd. and other contributors.
 * License: LGPL v2.1 or (at your option) any later version (see [LICENSE]).
 
@@ -32,7 +32,7 @@ This package doesn't bundle the Tesseract OCR engine, so `ocr()` and
 
 setuptools.setup(
     name="stbt_core",
-    version="33.0.2",
+    version="34.0.0",
     author="Stb-tester.com Ltd.",
     author_email="support@stb-tester.com",
     description="Automated GUI testing for Set-Top Boxes",
