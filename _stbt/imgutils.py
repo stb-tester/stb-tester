@@ -36,6 +36,10 @@ class Frame(numpy.ndarray):
         as number of seconds since the unix epoch (1970-01-01T00:00:00Z). This
         is the same format used by the Python standard library function
         `time.time`.
+    :ivar int width: The width of the frame, in pixels.
+    :ivar int height: The height of the frame, in pixels.
+    :ivar Region region: A `Region` corresponding to the full size of the
+        frame — that is, ``Region(0, 0, width, height)``.
     """
     def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
