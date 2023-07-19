@@ -4,6 +4,7 @@ import re
 import time
 
 from _stbt.config import ConfigurationError
+from _stbt.types import PDU
 
 
 def uri_to_power_outlet(uri):
@@ -24,7 +25,7 @@ def uri_to_power_outlet(uri):
     raise ConfigurationError('Invalid power outlet URI: "%s"' % uri)
 
 
-class _NoOutlet():
+class _NoOutlet(PDU):
     def set(self, power):
         if not power:
             raise RuntimeError(
@@ -35,7 +36,7 @@ class _NoOutlet():
         return True
 
 
-class _FileOutlet():
+class _FileOutlet(PDU):
     """Power outlet useful for testing"""
     def __init__(self, filename):
         self.filename = filename
@@ -55,7 +56,7 @@ class _FileOutlet():
                 raise
 
 
-class _ShellOutlet():
+class _ShellOutlet(PDU):
     """
     stbt-power used to be written in bash, supporting three different types of
     hardware.  This is a wrapper to allow the old bash script to continue
@@ -76,7 +77,7 @@ class _ShellOutlet():
         return {b'ON': True, b'OFF': False}[power]
 
 
-class _Aviosys8800Pro():
+class _Aviosys8800Pro(PDU):
     """Documentation of the serial IO protocol found on the Aviosys website:
 
     http://www.aviosys.com/downloads/manuals/power/USB%20Net%20Power%208800%20Pro%20Manual_EN.pdf
@@ -195,7 +196,7 @@ class _FakeAviosys8800ProSerial():
         return len(data)
 
 
-class _RittalSnmpPower():
+class _RittalSnmpPower(PDU):
     """
     Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
     """
@@ -217,7 +218,7 @@ class _RittalSnmpPower():
             raise RuntimeError("Setting power failed with unknown error")
 
 
-class _ATEN_PE6108G():
+class _ATEN_PE6108G(PDU):
     """Class to control the ATEN PDU using pysnmp module. """
 
     def __init__(self, address, outlet):
