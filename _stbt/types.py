@@ -551,3 +551,20 @@ class UITestFailure(Exception):
 class NoVideo(Exception):
     """No video available from the source pipeline."""
     pass
+
+
+class PDU:
+    """API to control a specific outlet of a network-controlled Power
+    Distribution Unit (PDU).
+    """
+    def power_on(self):
+        self.set(True)
+
+    def power_off(self):
+        self.set(False)
+
+    def set(self, power: bool):
+        raise NotImplementedError()
+
+    def get(self) -> bool:
+        raise NotImplementedError()
