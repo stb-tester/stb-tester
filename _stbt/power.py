@@ -1,6 +1,8 @@
 import errno
+import json
 import os
 import re
+import subprocess
 import time
 
 from _stbt.config import ConfigurationError
@@ -17,6 +19,7 @@ def uri_to_power_outlet(uri):
         (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
          ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
+        (r'kasa:(?P<hostname>[^:]+)', Kasa),
     ]
     for regex, factory in remotes:
         m = re.match(regex, uri, re.VERBOSE | re.IGNORECASE)
@@ -68,11 +71,9 @@ class _ShellOutlet(PDU):
                     '--power-outlet=%s' % uri]
 
     def set(self, power):
-        import subprocess
         subprocess.check_call(self.cmd + [["off", "on"][power]])
 
     def get(self):
-        import subprocess
         power = subprocess.check_output(self.cmd + ["status"]).strip()
         return {b'ON': True, b'OFF': False}[power]
 
@@ -294,3 +295,172 @@ class _SnmpInteger():
             raise RuntimeError("Unexpected result ({})".format(result))
 
         return int(result)
+
+
+class Kasa(PDU):
+    """TP-Link Kasa smart plugs."""
+
+    def __init__(self, hostname):
+        self.hostname = hostname
+
+    def set(self, power):
+        # `kasa` CLI from python-kasa.
+        subprocess.check_call(
+            ["kasa", "--host", self.hostname, "--type", "plug",
+             "on" if power else "off"])
+
+    def get(self):
+        json_data = subprocess.check_output(
+            ["kasa", "--host", self.hostname, "--type", "plug", "--json",
+             "state"])
+        return _kasa_output_to_state(json.loads(json_data))
+
+
+def _kasa_output_to_state(json_data):
+    return bool(json_data["system"]["get_sysinfo"]["relay_state"])
+
+
+def test_kasa_output_to_state():
+    KASA_OUTPUT = {
+        "system": {
+            "get_sysinfo": {
+                "sw_ver": "1.0.20 Build 221125 Rel.092759",
+                "hw_ver": "1.0",
+                "model": "KP115(UK)",
+                "deviceId": "80063DA95EAC2AA16EB1ACED077C10E820CF1A73",
+                "oemId": "C7A36E0C2D4BAB44DED6EF0870AC707F",
+                "hwId": "39E8408ED974DD69D8A77D9F8781637E",
+                "rssi": -10,
+                "latitude_i": 514771,
+                "longitude_i": -911,
+                "alias": "Kasa CI PDU",
+                "status": "new",
+                "obd_src": "tplink",
+                "mic_type": "IOT.SMARTPLUGSWITCH",
+                "feature": "TIM:ENE",
+                "mac": "9C:53:22:2B:55:38",
+                "updating": 0,
+                "led_off": 0,
+                "relay_state": 1,
+                "on_time": 3,
+                "icon_hash": "",
+                "dev_name": "Smart Wi-Fi Plug Mini",
+                "active_mode": "none",
+                "next_action": {
+                    "type": -1
+                },
+                "ntc_state": 0,
+                "err_code": 0
+            }
+        },
+        "schedule": {
+            "get_rules": {
+                "rule_list": [],
+                "version": 2,
+                "enable": 0,
+                "err_code": 0
+            },
+            "get_next_action": {
+                "type": -1,
+                "err_code": 0
+            },
+            "get_realtime": {
+                "err_code": -2,
+                "err_msg": "member not support"
+            },
+            "get_daystat": {
+                "day_list": [
+                    {
+                        "year": 2023,
+                        "month": 7,
+                        "day": 19,
+                        "time": 31
+                    }
+                ],
+                "err_code": 0
+            },
+            "get_monthstat": {
+                "month_list": [
+                    {
+                        "year": 2023,
+                        "month": 7,
+                        "time": 31
+                    }
+                ],
+                "err_code": 0
+            }
+        },
+        "anti_theft": {
+            "get_rules": {
+                "rule_list": [],
+                "version": 2,
+                "enable": 0,
+                "err_code": 0
+            },
+            "get_next_action": {
+                "err_code": -2,
+                "err_msg": "member not support"
+            }
+        },
+        "time": {
+            "get_time": {
+                "year": 2023,
+                "month": 7,
+                "mday": 19,
+                "hour": 14,
+                "min": 48,
+                "sec": 36,
+                "err_code": 0
+            },
+            "get_timezone": {
+                "index": 39,
+                "err_code": 0
+            }
+        },
+        "cnCloud": {
+            "get_info": {
+                "username": "stb-tester@example.com",
+                "server": "n-devs.tplinkcloud.com",
+                "binded": 1,
+                "cld_connection": 1,
+                "illegalType": 0,
+                "stopConnect": 0,
+                "tcspStatus": 1,
+                "fwDlPage": "",
+                "tcspInfo": "",
+                "fwNotifyType": -1,
+                "err_code": 0
+            }
+        },
+        "emeter": {
+            "get_realtime": {
+                "current_ma": 0,
+                "voltage_mv": 242535,
+                "power_mw": 0,
+                "total_wh": 0,
+                "err_code": 0
+            },
+            "get_daystat": {
+                "day_list": [
+                    {
+                        "year": 2023,
+                        "month": 7,
+                        "day": 19,
+                        "energy_wh": 0
+                    }
+                ],
+                "err_code": 0
+            },
+            "get_monthstat": {
+                "month_list": [
+                    {
+                        "year": 2023,
+                        "month": 7,
+                        "energy_wh": 0
+                    }
+                ],
+                "err_code": 0
+            }
+        }
+    }
+    assert _kasa_output_to_state(KASA_OUTPUT) is True
