@@ -164,7 +164,7 @@ from _stbt.types import KeyT, RegionT
 # ===========================================================================
 
 
-def last_keypress() -> str:
+def last_keypress() -> "Keypress|None":
     """Returns information about the last key-press sent to the device under
     test.
 
@@ -177,7 +177,7 @@ def last_keypress() -> str:
 
 def press(
     key: KeyT, interpress_delay_secs: float = None, hold_secs: float = None
-):
+) -> Keypress:
     """Send the specified key-press to the device under test.
 
     :param str key:
