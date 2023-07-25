@@ -159,6 +159,8 @@ __all__ = [
 from _stbt.imgutils import ImageT
 from _stbt.types import KeyT, RegionT
 
+TEST_PACK_ROOT: "str|None" = None
+
 
 # Functions available to stbt scripts
 # ===========================================================================

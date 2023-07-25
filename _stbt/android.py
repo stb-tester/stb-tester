@@ -179,7 +179,7 @@ class AdbDevice():
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
             return
         import stbt_core
-        root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+        root = stbt_core.TEST_PACK_ROOT
         if root is None:
             return
         if not os.path.exists(os.path.join(root, "config/android/adbkey")):

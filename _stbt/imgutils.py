@@ -156,7 +156,7 @@ def _relative_filename(absolute_filename):
     if absolute_filename is None:
         return None
     import stbt_core
-    root = getattr(stbt_core, "TEST_PACK_ROOT", None)
+    root = stbt_core.TEST_PACK_ROOT
     if root is None:
         return absolute_filename
     relpath = os.path.relpath(absolute_filename, root)
