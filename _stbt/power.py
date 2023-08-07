@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import errno
 import json
 import os
@@ -9,7 +11,7 @@ from _stbt.config import ConfigurationError
 from _stbt.types import PDU
 
 
-def uri_to_power_outlet(uri):
+def uri_to_power_outlet(uri: str) -> PDU:
     remotes = [
         (r'none', _NoOutlet),
         (r'file:(?P<filename>[^:]+)', _FileOutlet),
@@ -201,7 +203,7 @@ class _RittalSnmpPower(PDU):
     """
     Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
     """
-    def __init__(self, address, outlet_no, community):
+    def __init__(self, address: str, outlet_no: "int | str", community: str):
         outlet_no = int(outlet_no)
         index = outlet_no - 1
         if index < 0:
@@ -249,7 +251,7 @@ class _ATEN_PE6108G(PDU):
 
 
 class _SnmpInteger():
-    def __init__(self, address, oid, community):
+    def __init__(self, address: str, oid: str, community: str):
         from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
         self.oid = oid
         self._community = community
@@ -259,13 +261,13 @@ class _SnmpInteger():
             port = "161"
         self._transport = UdpTransportTarget((address, int(port)))
 
-    def set(self, value):
+    def set(self, value: int) -> int:
         return self._cmd(value)
 
-    def get(self):
+    def get(self) -> int:
         return self._cmd(None)
 
-    def _cmd(self, value):
+    def _cmd(self, value: "int | None") -> int:
         from pysnmp.entity.rfc3413.oneliner import cmdgen
         from pysnmp.proto.rfc1905 import NoSuchObject
         from pysnmp.proto.rfc1902 import Integer
