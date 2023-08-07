@@ -6,9 +6,15 @@ import os
 import re
 import subprocess
 import time
+import typing
 
 from _stbt.config import ConfigurationError
 from _stbt.types import PDU
+
+if typing.TYPE_CHECKING:
+    # pylint: disable=unused-import
+    import configparser
+    # pylint: enable=unused-import
 
 
 def uri_to_power_outlet(uri: str) -> PDU:
@@ -28,6 +34,74 @@ def uri_to_power_outlet(uri: str) -> PDU:
         if m:
             return factory(**m.groupdict())
     raise ConfigurationError('Invalid power outlet URI: "%s"' % uri)
+
+
+def config_to_power_outlet(
+        config: "dict[str, dict[str, str]] | configparser.ConfigParser") -> PDU:
+    """
+    Factory function for PDU objects based on stbt config.
+    `device_under_test.power_outlet` references a section in the config file.
+    The section contains keys and values to configure the PDU.  Example:
+
+    ```
+    [device_under_test]
+    power_outlet = myoutlet
+
+    [power_outlet myoutlet]
+    type = apc7xxx
+    address = 192.168.7.5
+    outlet = 1
+    ```
+
+    `type` is mandatory, other keys depend on the type of PDU.  Common keys are:
+
+    * `address`: IP address or hostname of the PDU
+    * `outlet`: Outlet number
+
+    In addition to the above, `rittal` PDUs require a `community` key.
+
+    The `device_under_test.power_outlet` key may also specify a URI as accepted
+    by `uri_to_power_outlet` for backwards compatible with old config files.
+    This may be removed in the future once no customers are using it.
+    """
+    try:
+        pduname = config["device_under_test"]["power_outlet"]
+    except KeyError:
+        return _NoOutlet()
+    try:
+        # For backwards compatibility with old config files
+        return uri_to_power_outlet(pduname)
+    except ConfigurationError:
+        pass
+    try:
+        section = config["power_outlet %s" % pduname]
+    except KeyError:
+        raise ConfigurationError(
+            "Expected to find section \"pdu.%s\" in config file because "
+            "device_under_test.power_outlet == %r.  No such section found" %
+            (pduname, pduname))
+    try:
+        ty = section["type"].lower()
+        if ty == "none":
+            return _NoOutlet()
+        elif ty == "file":
+            return _FileOutlet(section["filename"])
+        elif ty == "aten":
+            return _ATEN_PE6108G(pdu["address"], pdu["outlet"])
+        elif ty == "rittal-snmp":
+            return _RittalSnmpPower(pdu["address"], pdu["outlet"],
+                                    pdu["community"])
+        elif ty == "aviosys-8800-pro":
+            return _new_aviosys_8800_pro(section.get("filename"))
+        elif ty == "kasa":
+            return Kasa(section["address"])
+        else:
+            raise ConfigurationError(
+                '%s: Unknown power outlet type: "%s"' % (pduname, ty))
+    except KeyError as e:
+        raise ConfigurationError(
+            'Failed to find key "%s" in section [power_outlet %s] in config '
+            'file' % (e.args[0], pduname))
 
 
 class _NoOutlet(PDU):
@@ -122,8 +196,10 @@ class _Aviosys8800Pro(PDU):
                 % response.strip())
 
 
-def _new_aviosys_8800_pro(filename='/dev/ttyACM0'):
+def _new_aviosys_8800_pro(filename=None):
     import serial
+    if filename is None:
+        filename = '/dev/ttyACM0'
     return _Aviosys8800Pro(serial.Serial(filename, baudrate=19200))
 
 
