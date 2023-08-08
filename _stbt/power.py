@@ -14,6 +14,9 @@ from _stbt.types import PDU
 if typing.TYPE_CHECKING:
     # pylint: disable=unused-import
     import configparser
+    import pysnmp.hlapi
+    SnmpAuth: typing.TypeAlias = (
+        pysnmp.hlapi.CommunityData | pysnmp.hlapi.UsmUserData)
     # pylint: enable=unused-import
 
 
@@ -21,9 +24,10 @@ def uri_to_power_outlet(uri: str) -> PDU:
     remotes = [
         (r'none', _NoOutlet),
         (r'file:(?P<filename>[^:]+)', _FileOutlet),
-        (r'aten:(?P<address>[^: ]+):(?P<outlet>[^: ]+)', _ATEN_PE6108G),
-        (r'rittal:(?P<address>[^: ]+):(?P<outlet_no>[^: ]+)'
-         ':(?P<community>[^: ]+)', _RittalSnmpPower),
+        (r'aten:(?P<address>[^: ]+):(?P<outlet>[^: ]+)',
+         _ATEN_PE6108G.from_uri_groups),
+        (r'rittal:(?P<address>[^: ]+):(?P<outlet>[^: ]+)'
+         ':(?P<community>[^: ]+)', _RittalSnmpPower.from_uri_groups),
         (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
          ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
@@ -87,10 +91,9 @@ def config_to_power_outlet(
         elif ty == "file":
             return _FileOutlet(section["filename"])
         elif ty == "aten":
-            return _ATEN_PE6108G(pdu["address"], pdu["outlet"])
+            return _ATEN_PE6108G.from_config_section(section)
         elif ty == "rittal-snmp":
-            return _RittalSnmpPower(pdu["address"], pdu["outlet"],
-                                    pdu["community"])
+            return _RittalSnmpPower.from_config_section(section)
         elif ty == "aviosys-8800-pro":
             return _new_aviosys_8800_pro(section.get("filename"))
         elif ty == "kasa":
@@ -279,15 +282,29 @@ class _RittalSnmpPower(PDU):
     """
     Tested with the DK 7955.310.  SNMP OIDs may be different on other devices.
     """
-    def __init__(self, address: str, outlet_no: "int | str", community: str):
-        outlet_no = int(outlet_no)
-        index = outlet_no - 1
+    def __init__(self, address: tuple[str, int], outlet: int,
+                 snmp_auth: "SnmpAuth"):
+        outlet = int(outlet)
+        index = outlet - 1
         if index < 0:
             raise ValueError("Invalid outlet_no %i.  Min outlet no is 1" %
-                             outlet_no)
+                             outlet)
         self._snmp = _SnmpInteger(
             address, "1.3.6.1.4.1.2606.7.4.2.2.1.11.1.%i" % (52 + index * 7),
-            community)
+            snmp_auth)
+
+    @classmethod
+    def from_uri_groups(cls, address, outlet, community):
+        return cls.from_config_section({
+            "address": address,
+            "community": community,
+            "outlet": outlet,
+        })
+
+    @classmethod
+    def from_config_section(cls, section: dict[str, str]):
+        address, auth = _snmp_config(section)
+        return cls(address, int(section["outlet"]), auth)
 
     def get(self):
         return bool(self._snmp.get())
@@ -299,14 +316,24 @@ class _RittalSnmpPower(PDU):
 
 class _ATEN_PE6108G(PDU):
     """Class to control the ATEN PDU using pysnmp module. """
+    AUTH_DEFAULTS = {"version": "2c", "community": "administrator"}
 
-    def __init__(self, address, outlet):
+    def __init__(
+            self, address: tuple[str, int], outlet: int, snmp_auth: "SnmpAuth"):
         outlet = int(outlet)
         outlet_offset = 1 if outlet <= 8 else 2
         self._snmp = _SnmpInteger(
             address, "1.3.6.1.4.1.21317.1.3.2.2.2.2.%i.0" % (
-                outlet + outlet_offset),
-            community='administrator')
+                outlet + outlet_offset), auth=snmp_auth)
+
+    @classmethod
+    def from_uri_groups(cls, address, outlet):
+        return cls.from_config_section({"address": address, "outlet": outlet})
+
+    @classmethod
+    def from_config_section(cls, config: "dict[str, str]"):
+        address, auth = _snmp_config(config, cls.AUTH_DEFAULTS)
+        return cls(address, int(config['outlet']), auth)
 
     def set(self, power):
         new_state = self._snmp.set(2 if power else 1)
@@ -326,16 +353,165 @@ class _ATEN_PE6108G(PDU):
         return {3: False, 2: True, 1: False}[result]
 
 
+# Sentinel:
+class _NotSpecified:
+    pass
+
+
+def _snmp_config(
+        section: "dict[str, str]",
+        defaults: "dict[str, str] | None" = None
+) -> "tuple[tuple[str, int], SnmpAuth]":
+    """Convert a config section to a pysnmp auth data object.  This roughly
+    expects the same keys and values as `man snmp.conf`, but snake_case rather
+    than camelCase.
+    """
+    from pysnmp import hlapi
+
+    if defaults is None:
+        defaults = {}
+
+    address = section["address"]
+    if ':' in address:
+        address, port = address.split(":", 2)
+    else:
+        port = "161"
+    port = int(port)
+
+    # Determine SNMP version automatically based on the authentication
+    # options present:
+    version = section.get("version")
+    if version is None:
+        if section.get("username"):
+            version = "3"
+        elif section.get("community"):
+            version = "2c"
+        elif "version" in defaults:
+            version = defaults["version"]
+        else:
+            raise ConfigurationError(
+                "No SNMP version specified and no authentication credentials "
+                "provided")
+
+    def get(key, default: "typing.Any" = _NotSpecified):
+        out = section.get(key, defaults.get(key, default))
+        if out is _NotSpecified:
+            raise ConfigurationError("No %s specified" % key)
+        return out
+
+    if version == "3":
+        # Configuration strings match `man snmpcmd`:
+        kwargs = {}
+        AUTH_PROTOS = {
+            "MD5": hlapi.usmHMACMD5AuthProtocol,
+            "SHA": hlapi.usmHMACSHAAuthProtocol,
+            "SHA-224": hlapi.usmHMAC128SHA224AuthProtocol,
+            "SHA-256": hlapi.usmHMAC192SHA256AuthProtocol,
+            "SHA-384": hlapi.usmHMAC256SHA384AuthProtocol,
+            "SHA-512": hlapi.usmHMAC384SHA512AuthProtocol,
+        }
+        auth_passphrase = get("auth_passphrase", None)
+        auth_protocol = get("auth_protocol", None)
+        if auth_passphrase and not auth_protocol:
+            auth_protocol = "MD5"
+        if auth_protocol:
+            kwargs["authProtocol"] = AUTH_PROTOS[auth_protocol.upper()]
+            kwargs["authKey"] = auth_passphrase
+
+        PRIV_PROTOS = {
+            "DES": hlapi.usmDESPrivProtocol,
+            "AES": hlapi.usmAesCfb128Protocol,
+        }
+        priv_passphrase = get("priv_passphrase", None)
+        priv_protocol = get("priv_protocol", None)
+        if priv_passphrase and not priv_protocol:
+            priv_protocol = "DES"
+        if priv_protocol:
+            kwargs["privProtocol"] = PRIV_PROTOS[priv_protocol.upper()]
+            kwargs["privKey"] = priv_passphrase
+
+        auth = hlapi.UsmUserData(userName=get("username"), **kwargs)
+    elif version == "2c":
+        auth = hlapi.CommunityData(get("community"), mpModel=1)
+    elif version == "1":
+        auth = hlapi.CommunityData(get("community"), mpModel=0)
+    else:
+        raise ValueError("Invalid SNMP version %s" % version)
+
+    return ((address, port), auth)
+
+
+def test_snmp_config():
+    import pytest
+    from pysnmp import hlapi
+
+    with pytest.raises(KeyError):
+        # address is mandatory
+        _snmp_config({"community": "public"})
+
+    with pytest.raises(ConfigurationError):
+        # Some authentication credentials are required:
+        _snmp_config({"address": "localhost"})
+
+    # Can specifty a port:
+    a, c = _snmp_config({"address": "localhost:1234", "community": "public"})
+    assert a == ("localhost", 1234)
+
+    a, c = _snmp_config({"address": "localhost", "community": "public"})
+    assert a == ("localhost", 161)
+    assert isinstance(c, hlapi.CommunityData)
+    assert c.communityName == "public"
+
+    # If community is specified, version defaults to 2c:
+    assert c.mpModel == 1
+
+    # But it can be overridden:
+    _, c = _snmp_config({
+        "address": "localhost", "community": "public", "version": "1"})
+    assert c.mpModel == 0
+
+    # Version 3 takes precedence over v2c if both are username and community
+    # are specified:
+    _, c = _snmp_config({
+        "address": "localhost", "community": "public", "username": "stbt"})
+    assert isinstance(c, hlapi.UsmUserData)
+    assert c.userName == "stbt"
+    assert c.authKey is None
+    assert c.authProtocol == hlapi.usmNoAuthProtocol
+    assert c.privKey is None
+    assert c.privProtocol == hlapi.usmNoPrivProtocol
+
+    _, c = _snmp_config({
+        "address": "localhost", "username": "stbt",
+        "auth_passphrase": "passw0rd!"})
+    assert c.authKey == "passw0rd!"
+    assert c.authProtocol == hlapi.usmHMACMD5AuthProtocol
+    assert c.privKey is None
+
+    _, c = _snmp_config({
+        "address": "localhost", "username": "stbt",
+        "auth_passphrase": "passw0rd!",
+        "priv_passphrase": "s3cret"})
+    assert c.privKey == "s3cret"
+    assert c.privProtocol == hlapi.usmDESPrivProtocol
+
+    _, c = _snmp_config({
+        "address": "localhost", "username": "stbt",
+        "auth_passphrase": "passw0rd!",
+        "priv_passphrase": "s3cret",
+        "auth_protocol": "sha",
+        "priv_protocol": "aes"
+    })
+    assert c.authProtocol == hlapi.usmHMACSHAAuthProtocol
+    assert c.privProtocol == hlapi.usmAesCfb128Protocol
+
+
 class _SnmpInteger():
-    def __init__(self, address: str, oid: str, community: str):
+    def __init__(self, address: "tuple[str, int]", oid: str, auth: "SnmpAuth"):
         from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
         self.oid = oid
-        self._community = community
-        if ':' in address:
-            address, port = address.split(address, 2)
-        else:
-            port = "161"
-        self._transport = UdpTransportTarget((address, int(port)))
+        self._transport = UdpTransportTarget(address)
+        self._auth = auth
 
     def set(self, value: int) -> int:
         return self._cmd(value)
@@ -352,14 +528,10 @@ class _SnmpInteger():
 
         if value is None:  # `status` command
             error_ind, _, _, var_binds = command_generator.getCmd(
-                cmdgen.CommunityData(self._community),
-                self._transport,
-                self.oid)
+                self._auth, self._transport, self.oid)
         else:
             error_ind, _, _, var_binds = command_generator.setCmd(
-                cmdgen.CommunityData(self._community),
-                self._transport,
-                (self.oid, Integer(value)))
+                self._auth, self._transport, (self.oid, Integer(value)))
 
         if error_ind is not None:
             raise RuntimeError("SNMP Error ({})".format(error_ind))
