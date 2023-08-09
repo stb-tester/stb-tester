@@ -87,7 +87,7 @@ def config_to_power_outlet(
         section = config["power_outlet %s" % pduname]
     except KeyError:
         raise ConfigurationError(
-            "Expected to find section \"pdu.%s\" in config file because "
+            "Expected to find section [power_outlet %s] in config file because "
             "device_under_test.power_outlet == %r.  No such section found" %
             (pduname, pduname))
     try:
