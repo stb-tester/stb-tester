@@ -15,6 +15,8 @@ Unreleased
 
 ##### Minor additions, bugfixes & improvements
 
+* `stbt power` - Added support for APC7xxx PDUs [#805].
+
 #### v34
 
 14 June 2023.

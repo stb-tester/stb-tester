@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import errno
 import json
 import os
@@ -92,7 +93,9 @@ def config_to_power_outlet(
             return _FileOutlet(section["filename"])
         elif ty == "aten":
             return _ATEN_PE6108G.from_config_section(section)
-        elif ty == "rittal-snmp":
+        elif ty == "apc":
+            return _APC7xxx.from_config_section(section)
+        elif ty == "rittal":
             return _RittalSnmpPower.from_config_section(section)
         elif ty == "aviosys-8800-pro":
             return _new_aviosys_8800_pro(section.get("filename"))
@@ -351,6 +354,49 @@ class _ATEN_PE6108G(PDU):
         result = self._snmp.get()
         # 3 represents moving between states
         return {3: False, 2: True, 1: False}[result]
+
+
+class _APC7xxx(PDU):
+    """Class to control the APC 7xxx PDU using pysnmp module. """
+    PORT_STATE_CONTROL_OID = "1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.{outlet}"
+
+    class Cmd(enum.IntEnum):
+        """See rPDUOutletControlOutletCommand in powernet446.mib:
+        https://www.apc.com/us/en/download/document/APC_POWERNETMIB_446_EN/
+        """
+        IMMEDIATE_ON = 1
+        IMMEDIATE_OFF = 2
+        IMMEDIATE_REBOOT = 3
+        OUTLET_UNKNOWN = 4
+        DELAYED_ON = 5
+        DELAYED_OFF = 6
+        DELAYED_REBOOT = 7
+        CANCEL_PENDING_COMMAND = 8
+
+    def __init__(self, address: tuple[str, int], outlet: int, auth: SnmpAuth):
+        outlet = int(outlet)
+        self._snmp = _SnmpInteger(
+            address, self.PORT_STATE_CONTROL_OID.format(outlet=outlet), auth)
+
+    @classmethod
+    def from_config_section(cls, section: dict[str, str]):
+        address, auth = _snmp_config(section)
+        return cls(address, int(section["outlet"]), auth)
+
+    def set(self, power: bool):
+        desired = int(
+            self.Cmd.IMMEDIATE_ON if power else self.Cmd.IMMEDIATE_OFF)
+        new_state = self._snmp.set(desired)
+        if new_state != desired:
+            raise RuntimeError(
+                "Setting power failed: Got %s" % self.Cmd(new_state))
+
+    def get(self):
+        result = self.Cmd(self._snmp.get())
+        if result not in [self.Cmd.IMMEDIATE_ON, self.Cmd.IMMEDIATE_OFF]:
+            raise RuntimeError(
+                "Getting power failed: Got %s" % result)
+        return bool(result == self.Cmd.IMMEDIATE_ON)
 
 
 # Sentinel:
