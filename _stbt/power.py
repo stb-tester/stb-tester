@@ -3,7 +3,6 @@ from __future__ import annotations
 import enum
 import errno
 import json
-import os
 import re
 import subprocess
 import time
@@ -29,8 +28,6 @@ def uri_to_power_outlet(uri: str) -> PDU:
          _ATEN_PE6108G.from_uri_groups),
         (r'rittal:(?P<address>[^: ]+):(?P<outlet>[^: ]+)'
          ':(?P<community>[^: ]+)', _RittalSnmpPower.from_uri_groups),
-        (r'(?P<model>pdu|ipp|testfallback):(?P<hostname>[^: ]+)'
-         ':(?P<outlet>[^: ]+)', _ShellOutlet),
         (r'aviosys-8800-pro(:(?P<filename>[^:]+))?', _new_aviosys_8800_pro),
         (r'kasa:(?P<hostname>[^:]+)', Kasa),
     ]
@@ -139,25 +136,6 @@ class _FileOutlet(PDU):
                 return True
             else:
                 raise
-
-
-class _ShellOutlet(PDU):
-    """
-    stbt-power used to be written in bash, supporting three different types of
-    hardware.  This is a wrapper to allow the old bash script to continue
-    working until it can be removed entirely.
-    """
-    def __init__(self, model, hostname, outlet=None):
-        uri = '%s:%s:%s' % (model, hostname, outlet)
-        self.cmd = ['bash', os.path.dirname(__file__) + "/stbt-power.sh",
-                    '--power-outlet=%s' % uri]
-
-    def set(self, power):
-        subprocess.check_call(self.cmd + [["off", "on"][power]])
-
-    def get(self):
-        power = subprocess.check_output(self.cmd + ["status"]).strip()
-        return {b'ON': True, b'OFF': False}[power]
 
 
 class _Aviosys8800Pro(PDU):

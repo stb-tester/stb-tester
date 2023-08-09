@@ -11,6 +11,13 @@ Unreleased
 
 ##### Breaking changes since v34
 
+* `stbt power` - Dropped support for PDU types "pdu" and "ipp" as there were
+  several issues with their implementation [#805].  If you were using one of
+  these PDU types please [raise an issue] on GitHub.
+
+[#805]: https://github.com/stb-tester/stb-tester/pull/805
+[raise an issue]: https://github.com/stb-tester/stb-tester/issues/new
+
 ##### Major new features
 
 ##### Minor additions, bugfixes & improvements

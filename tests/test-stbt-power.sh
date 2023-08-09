@@ -30,10 +30,3 @@ test_that_stbt_power_status_prints_status() {
     stbt power on
     [ "$(stbt power status)" = "ON" ] || fail
 }
-
-test_stbt_power_shell_fallback() {
-    for cmd in on off status; do
-        stbt power --power-outlet=testfallback:a:1 "$cmd" \
-            || fail "Shell fallback failed"
-    done
-}
