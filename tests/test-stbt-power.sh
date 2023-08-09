@@ -1,14 +1,5 @@
 # Run with ./run-tests.sh
 
-test_that_stbt_power_status_prints_ON_by_default() {
-    [ "$(stbt power status)" = "ON" ] || fail
-}
-
-test_that_stbt_power_status_on_and_off_fail_by_default() {
-    stbt power on || fail "Power should be always on if there is no outlet"
-    ! stbt power off || fail "Cannot switch off if there is no outlet"
-}
-
 test_that_selected_power_controller_comes_from_command_line_then_config() {
     echo 0 >power-status
     echo 0 >power-status2

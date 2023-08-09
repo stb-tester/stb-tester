@@ -93,3 +93,17 @@ def test_aten_set_timeout():
 
         with pytest.raises(RuntimeError):
             aten.set(False)
+
+
+def test_nooutlet():
+    p = configparser.ConfigParser()
+    pdu = config_to_power_outlet(p)
+
+    # If we've got no power control then we can't turn the power off:
+    assert pdu.get()
+
+    # No-op
+    pdu.power_on()
+
+    with pytest.raises(Exception):
+        pdu.power_off()
