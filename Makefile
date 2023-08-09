@@ -87,7 +87,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
     _stbt/stbt_run.py \
-    _stbt/stbt-power.sh \
     _stbt/stbt.conf \
     _stbt/transition.py \
     _stbt/types.py \
