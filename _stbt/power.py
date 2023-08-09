@@ -39,7 +39,9 @@ def uri_to_power_outlet(uri: str) -> PDU:
 
 
 def config_to_power_outlet(
-        config: "dict[str, dict[str, str]] | configparser.ConfigParser") -> PDU:
+        power_outlet: "str | None" = None,
+        config: "dict[str, dict[str, str]] | configparser.ConfigParser | None" = None  # pylint: disable=line-too-long
+) -> PDU:
     """
     Factory function for PDU objects based on stbt config.
     `device_under_test.power_outlet` references a section in the config file.
@@ -66,10 +68,16 @@ def config_to_power_outlet(
     by `uri_to_power_outlet` for backwards compatible with old config files.
     This may be removed in the future once no customers are using it.
     """
-    try:
-        pduname = config["device_under_test"]["power_outlet"]
-    except KeyError:
-        return _NoOutlet()
+    if config is None:
+        from _stbt.config import _config_init
+        config = _config_init()
+    if power_outlet is not None:
+        pduname = power_outlet
+    else:
+        try:
+            pduname = config["device_under_test"]["power_outlet"]
+        except KeyError:
+            return _NoOutlet()
     try:
         # For backwards compatibility with old config files
         return uri_to_power_outlet(pduname)
