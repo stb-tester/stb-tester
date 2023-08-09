@@ -5,6 +5,16 @@ These release notes apply to the Stb-tester open-source version. Customers of
 Stb-tester.com Ltd. should refer to the release notes at
 https://stb-tester.com/manual/release-notes instead.
 
+#### v35 (unreleased)
+
+Unreleased
+
+##### Breaking changes since v34
+
+##### Major new features
+
+##### Minor additions, bugfixes & improvements
+
 #### v34
 
 14 June 2023.
