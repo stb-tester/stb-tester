@@ -46,7 +46,7 @@ oid = "1.3.6.1.4.1.21317.1.3.2.2.2.2.{0}.0".format(outlet + 1)
 def test_aten_get_on():
     with mock_command_gen() as mock_command:
         mock_command.getCmd.return_value = mock_data(2)
-        aten = config_to_power_outlet(CONFIG)
+        aten = config_to_power_outlet(config=CONFIG)
 
         result = aten.get()
 
@@ -56,7 +56,7 @@ def test_aten_get_on():
 def test_aten_get_off():
     with mock_command_gen() as mock_command:
         mock_command.getCmd.return_value = mock_data(1)
-        aten = config_to_power_outlet(CONFIG)
+        aten = config_to_power_outlet(config=CONFIG)
 
         result = aten.get()
 
@@ -67,7 +67,7 @@ def test_aten_set_on():
     with mock_command_gen() as mock_command:
         mock_command.setCmd.return_value = mock_data(2)
         mock_command.getCmd.side_effect = [mock_data(n) for n in (1, 1, 1, 2)]
-        aten = config_to_power_outlet(CONFIG)
+        aten = config_to_power_outlet(config=CONFIG)
 
         aten.set(True)
 
@@ -78,7 +78,7 @@ def test_aten_set_off():
     with mock_command_gen() as mock_command:
         mock_command.setCmd.return_value = mock_data(1)
         mock_command.getCmd.side_effect = [mock_data(n) for n in (2, 2, 1)]
-        aten = config_to_power_outlet(CONFIG)
+        aten = config_to_power_outlet(config=CONFIG)
 
         aten.set(False)
 
@@ -89,7 +89,7 @@ def test_aten_set_timeout():
     with mock_command_gen() as mock_command:
         mock_command.setCmd.return_value = mock_data(1)
         mock_command.getCmd.return_value = mock_data(2)
-        aten = config_to_power_outlet(CONFIG)
+        aten = config_to_power_outlet(config=CONFIG)
 
         with pytest.raises(RuntimeError):
             aten.set(False)
@@ -97,7 +97,7 @@ def test_aten_set_timeout():
 
 def test_nooutlet():
     p = configparser.ConfigParser()
-    pdu = config_to_power_outlet(p)
+    pdu = config_to_power_outlet(config=p)
 
     # If we've got no power control then we can't turn the power off:
     assert pdu.get()
