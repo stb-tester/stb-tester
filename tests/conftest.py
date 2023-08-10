@@ -17,4 +17,4 @@ def test_pack_root():
     try:
         yield
     finally:
-        delattr(stbt_core, "TEST_PACK_ROOT")
+        stbt_core.TEST_PACK_ROOT = None

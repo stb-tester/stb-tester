@@ -159,12 +159,14 @@ __all__ = [
 from _stbt.imgutils import ImageT
 from _stbt.types import KeyT, RegionT
 
+TEST_PACK_ROOT: "str|None" = None
+
 
 # Functions available to stbt scripts
 # ===========================================================================
 
 
-def last_keypress() -> str:
+def last_keypress() -> "Keypress|None":
     """Returns information about the last key-press sent to the device under
     test.
 
@@ -177,7 +179,7 @@ def last_keypress() -> str:
 
 def press(
     key: KeyT, interpress_delay_secs: float = None, hold_secs: float = None
-):
+) -> Keypress:
     """Send the specified key-press to the device under test.
 
     :param str key:
