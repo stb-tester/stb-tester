@@ -521,11 +521,24 @@ KeyT : TypeAlias = str
 
 
 class Keypress():
-    def __init__(self, key, start_time, end_time, frame_before):
-        self.key = key
-        self.start_time = start_time
-        self.end_time = end_time
-        self.frame_before = frame_before
+    """Information about a keypress sent with `stbt.press`."""
+    def __init__(self, key: str, start_time: float, end_time: float,
+                 frame_before: "stbt.Frame"):
+
+        #: The name of the key that was pressed.
+        self.key: str = key
+
+        #: The time just before the keypress started (in seconds since the
+        #: unix epoch, like ``time.time()`` and ``stbt.Frame.time``).
+        self.start_time: float = start_time
+
+        #: The time when transmission of the keypress signal completed.
+        self.end_time: float = end_time
+
+        #: The most recent video-frame just before the keypress started.
+        #: Typically this is used by functions like `stbt.press_and_wait` to
+        #: detect when the device-under-test reacted to the keypress.
+        self.frame_before: "stbt.Frame" = frame_before
 
     def __repr__(self):
         from .imgutils import _frame_repr

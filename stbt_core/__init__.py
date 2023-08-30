@@ -209,18 +209,8 @@ def press(
         There is a maximum limit of 60 seconds.
 
     :returns:
-        An object with the following attributes:
-
-        * **key** (*str*) – the name of the key that was pressed.
-        * **start_time** (*float*) – the time just before the keypress started
-          (in seconds since the unix epoch, like ``time.time()`` and
-          ``stbt.Frame.time``).
-        * **end_time** (*float*) – the time when transmission of the keypress
-          signal completed.
-        * **frame_before** (`stbt.Frame`) – the most recent video-frame just
-          before the keypress started. Typically this is used by functions like
-          `stbt.press_and_wait` to detect when the device-under-test reacted to
-          the keypress.
+        A `stbt.Keypress` object with information about the keypress that was
+        sent.
 
     * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
       value, which must be a string).
