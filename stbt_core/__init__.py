@@ -189,9 +189,8 @@ def press(
         lircd.conf configuration file.
 
         If you are using HDMI CEC control, see the available key names
-        `here <https://github.com/stb-tester/stb-tester/blob/v28/_stbt/control_gpl.py#L18-L117>`__.
-        Note that some devices might not understand all of the CEC commands in
-        that list.
+        `here <https://stb-tester.com/kb/cec-names>`__. Note that some devices
+        might not understand every CEC command in that list.
 
     :type interpress_delay_secs: int or float
     :param interpress_delay_secs:
