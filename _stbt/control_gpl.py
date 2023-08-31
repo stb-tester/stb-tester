@@ -95,6 +95,7 @@ class HdmiCecControl(object):
         "KEY_SUB_PICTURE": 81,  # <- not in input-event-codes.h
         "KEY_VOD": 82,
         "KEY_EPG": 83,
+        "KEY_GUIDE": 83,  # alias
         "KEY_TIMER_PROGRAMMING": 84,  # <- not in input-event-codes.h
         "KEY_CONFIG": 85,  # Initial Configuration
         # 0x56 - 0x5F Reserved
