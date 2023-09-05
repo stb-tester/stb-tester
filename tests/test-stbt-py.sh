@@ -517,6 +517,7 @@ test_annotations_json() {
 
     stbt run -v \
         --sink-pipeline 'gdppay ! filesink location=fifo' \
+		--stbt-opt global.save_annotations=true \
         press.py &
     press_script=$!
     trap "kill $press_script; rm fifo" EXIT
@@ -528,6 +529,13 @@ test_annotations_json() {
 	for frame in stbt.frames(timeout_secs=3):
 	    assert not stbt.match("$testdir/black.png", frame)
 	    assert not stbt.match("$testdir/red-black.png", frame)
+	with open("annotations.jsonl") as f:
+	    print(f.read())
+	with open("annotations.jsonl") as f:
+	    lines = [json.loads(line) for line in f]
+	assert len(lines) > 3
+	assert {"type": "text", "text": "Test"} in lines
+	assert {"type": "key", "key": "KEY_BLACK"} in lines
 	EOF
     stbt run -v --sink-pipeline=autovideosink --control none \
         --source-pipeline 'filesrc location=fifo ! gdpdepay' \

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import sys
 import typing
 import threading
@@ -330,9 +331,12 @@ class SinkPipeline():
 
         self._draw_annotations = get_config(
             "global", "draw_annotations", True, bool)
+        self._save_annotations = get_config(
+            "global", "save_annotations", False, bool)
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.annotations = []
+        self._annotations_file: "TextIOWrapper | None" = None
         self._raise_in_user_thread = raise_in_user_thread
         self.received_eos = threading.Event()
         self._frames = deque(maxlen=35)
@@ -405,6 +409,9 @@ class SinkPipeline():
 
     def __enter__(self):
         self.received_eos.clear()
+        if self._save_annotations:
+            self._annotations_file = open(
+                "annotations.jsonl", "a", buffering=8192, encoding="utf-8")
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
     def exit_prep(self):
@@ -445,6 +452,10 @@ class SinkPipeline():
 
         self.sink_pipeline.set_state(Gst.State.NULL)
 
+        if self._annotations_file:
+            self._annotations_file.close()
+            self._annotations_file = None
+
         # Don't want to cause the Display object to hang around on our account,
         # we won't be raising any errors from now on anyway:
         self._raise_in_user_thread = None
@@ -454,6 +465,14 @@ class SinkPipeline():
         Called from `Display` for each frame.
         """
         now = sample.time
+        if self._save_annotations:
+            self._annotations_file.write(json.dumps({
+                'type': 'frame',
+                'time': now,
+            }) + '\n')
+            # Don't want to do the actual writing in the user thread, so we do
+            # it here:
+            self._annotations_file.flush()
         if self._draw_annotations:
             self._frames.appendleft(sample)
             while self._frames:
@@ -530,12 +549,29 @@ class SinkPipeline():
                             "%H:%M:%S.%f")[:-4]) +
                     ' ' +
                     to_unicode(obj))
+                if self._save_annotations:
+                    self._annotations_file.write(json.dumps({
+                        'type': 'text',
+                        'time': start_time,
+                        'text': text,
+                        'duration': duration_secs,
+                    }) + '\n')
                 if self._draw_annotations:
                     self.text_annotations.append(
                         _TextAnnotation(start_time, text, duration_secs))
             elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:
+                    if self._save_annotations:
+                        c = annotation.colour
+                        color = '#%02x%02x%02x' % (c[2], c[1], c[0])
+                        self._annotations_file.write(json.dumps({
+                            'type': 'annotation',
+                            'time': annotation.time,
+                            'region': annotation.region,
+                            'label': annotation.label,
+                            'color': color,
+                        }) + '\n')
                     if self._draw_annotations:
                         self.annotations.append(annotation)
             else:
