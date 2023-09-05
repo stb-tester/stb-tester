@@ -498,6 +498,43 @@ test_draw_text() {
         verify-draw-text.py
 }
 
+test_annotations_json() {
+	set_config global.draw_annotations false &&
+
+	cat > press.py <<-EOF &&
+	import time
+	import stbt_core as stbt
+	stbt.TEST_PACK_ROOT = "$testdir"
+	stbt.draw_text("Test", duration_secs=60)
+	stbt.press("black")
+	stbt.press("red")
+	time.sleep(0.1)
+	stbt.match("$testdir/videotestsrc-redblue.png")
+	
+	time.sleep(60)
+	EOF
+    mkfifo fifo || fail "Initial test setup failed"
+
+    stbt run -v \
+        --sink-pipeline 'gdppay ! filesink location=fifo' \
+        press.py &
+    press_script=$!
+    trap "kill $press_script; rm fifo" EXIT
+
+    cat > verify.py <<-EOF &&
+	import json
+	import stbt_core as stbt
+	stbt.wait_for_match("$testdir/videotestsrc-redblue.png")
+	for frame in stbt.frames(timeout_secs=3):
+	    assert not stbt.match("$testdir/black.png", frame)
+	    assert not stbt.match("$testdir/red-black.png", frame)
+	EOF
+    stbt run -v --sink-pipeline=autovideosink --control none \
+        --source-pipeline 'filesrc location=fifo ! gdpdepay' \
+        verify.py &&
+	kill $press_script
+}
+
 test_that_press_waits_between_subsequent_presses() {
     cat > test.py <<-EOF &&
 	import stbt_core as stbt, datetime

@@ -328,6 +328,8 @@ class SinkPipeline():
     def __init__(self, user_sink_pipeline, raise_in_user_thread, save_video=""):
         import time as _time
 
+        self._draw_annotations = get_config(
+            "global", "draw_annotations", True, bool)
         self.annotations_lock = threading.Lock()
         self.text_annotations = []
         self.annotations = []
@@ -452,46 +454,54 @@ class SinkPipeline():
         Called from `Display` for each frame.
         """
         now = sample.time
-        self._frames.appendleft(sample)
-
-        while self._frames:
-            oldest = self._frames.pop()
-            if oldest.time > now - self._sink_latency_secs:
-                self._frames.append(oldest)
-                break
-            self._push_sample(oldest)
+        if self._draw_annotations:
+            self._frames.appendleft(sample)
+            while self._frames:
+                oldest = self._frames.pop()
+                if oldest.time > now - self._sink_latency_secs:
+                    self._frames.append(oldest)
+                    break
+                self._push_sample(oldest)
+        else:
+            # If we're not drawing annotations then we don't need to wait for
+            # annotations to arrive before pushing the sample:
+            self._push_sample(sample)
 
     def _push_sample(self, sample):
-        # Calculate whether we need to draw any annotations on the output video.
-        now = sample.time
-        annotations = []
-        with self.annotations_lock:
-            # Remove expired annotations
-            self.text_annotations = [x for x in self.text_annotations
-                                     if now < x.end_time]
-            current_texts = [x for x in self.text_annotations if x.time <= now]
-            for annotation in list(self.annotations):
-                if annotation.time == now:
-                    annotations.append(annotation)
-                if now >= annotation.time:
-                    self.annotations.remove(annotation)
+        if self._draw_annotations:
+            # Calculate whether we need to draw any annotations on the output
+            # video.
+            now = sample.time
+            annotations = []
+            with self.annotations_lock:
+                # Remove expired annotations
+                self.text_annotations = [
+                    x for x in self.text_annotations if now < x.end_time]
+                current_texts = [
+                    x for x in self.text_annotations if x.time <= now]
+                for annotation in list(self.annotations):
+                    if annotation.time == now:
+                        annotations.append(annotation)
+                    if now >= annotation.time:
+                        self.annotations.remove(annotation)
 
-        sample = gst_sample_make_writable(sample)
-        img = array_from_sample(sample, readwrite=True)
-        # Text:
-        _draw_text(
-            img,
-            datetime.datetime.fromtimestamp(now).strftime("%H:%M:%S.%f")[:-4],
-            (10, 30), (255, 255, 255))
-        for i, x in enumerate(reversed(current_texts)):
-            origin = (10, (i + 2) * 30)
-            age = float(now - x.time) / 3
-            color = (int(255 * max([1 - age, 0.5])),) * 3
-            _draw_text(img, x.text, origin, color)
+            sample = gst_sample_make_writable(sample)
+            img = array_from_sample(sample, readwrite=True)
+            # Text:
+            _draw_text(
+                img,
+                datetime.datetime.fromtimestamp(now).strftime(
+                    "%H:%M:%S.%f")[:-4],
+                (10, 30), (255, 255, 255))
+            for i, x in enumerate(reversed(current_texts)):
+                origin = (10, (i + 2) * 30)
+                age = float(now - x.time) / 3
+                color = (int(255 * max([1 - age, 0.5])),) * 3
+                _draw_text(img, x.text, origin, color)
 
-        # Regions:
-        for annotation in annotations:
-            _draw_annotation(img, annotation)
+            # Regions:
+            for annotation in annotations:
+                _draw_annotation(img, annotation)
 
         APPSRC_LIMIT_BYTES = 100 * 1024 * 1024  # 100MB
         if self.appsrc.props.current_level_bytes > APPSRC_LIMIT_BYTES:
@@ -520,12 +530,14 @@ class SinkPipeline():
                             "%H:%M:%S.%f")[:-4]) +
                     ' ' +
                     to_unicode(obj))
-                self.text_annotations.append(
-                    _TextAnnotation(start_time, text, duration_secs))
+                if self._draw_annotations:
+                    self.text_annotations.append(
+                        _TextAnnotation(start_time, text, duration_secs))
             elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:
-                    self.annotations.append(annotation)
+                    if self._draw_annotations:
+                        self.annotations.append(annotation)
             else:
                 raise TypeError(
                     "Can't draw object of type '%s'" % type(obj).__name__)
