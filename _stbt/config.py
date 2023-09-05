@@ -85,6 +85,22 @@ def get_config(
             section, key, type_.__name__))
 
 
+def init_config_from_cmdline_args(args: list[str]):
+    config = _config_init()
+
+    for arg in args:
+        try:
+            section_key, value = arg.split('=', 2)
+            section, key = section_key.split('.', 2)
+        except ValueError:
+            raise ConfigurationError(
+                'Invalid --stbt-opt argument: %s (must be in the form '
+                'section.key=value)' % arg)
+        if not config.has_section(section):
+            config.add_section(section)
+        config.set(section, key, value)
+
+
 def set_config(section, option, value):
     """Update config values (in memory and on disk).
 

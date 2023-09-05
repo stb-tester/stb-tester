@@ -12,7 +12,7 @@ import sys
 
 import _stbt.core
 from _stbt import imgproc_cache
-from _stbt.config import get_config
+from _stbt.config import get_config, init_config_from_cmdline_args
 from _stbt.logging import debug, init_logger
 from _stbt.stbt_run import (load_test_function,
                             sane_unicode_and_exception_handling, video)
@@ -37,6 +37,7 @@ def main(argv):
     debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
+    init_config_from_cmdline_args(args.stbt_opt)
     dut = _stbt.core.new_device_under_test_from_config(args)
     with sane_unicode_and_exception_handling(args.script), \
             video(args, dut), \
@@ -58,6 +59,9 @@ def add_arguments(add_argument):
         '--save-thumbnail', default='never',
         choices=['always', 'on-failure', 'never'],
         help="Save a thumbnail at the end of the test to thumbnail.jpg")
+    add_argument(
+        "--stbt-opt", action="append", default=[], metavar="SECTION.KEY=VALUE",
+        help="Set a stbt config option (e.g. --stbt-opt global.control=xyz)")
 
 
 # Pytest plugin that does the same as `main` above:
@@ -94,6 +98,7 @@ def pytest_sessionstart(session):
     debug("Arguments:\n" + "\n".join([
         "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
+    init_config_from_cmdline_args(args.stbt_opt)
     dut = _stbt.core.new_device_under_test_from_config(args)
     session.dut = dut
     session.video = video(args, dut)
