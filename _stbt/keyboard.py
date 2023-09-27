@@ -318,7 +318,7 @@ class Keyboard():
                 _join_with_commas([str(x) for x in sorted(keys)],
                                   last_one=" or ")))
 
-    def _find_keys(self, query, mode=None):
+    def _find_keys(self, query, mode=None) -> "list[Key]":
         """Like the public `find_keys`, but takes a "query" (see _find_key)."""
         if isinstance(query, Keyboard.Key):
             if mode is not None and query.mode != mode:
@@ -368,7 +368,7 @@ class Keyboard():
                 _join_with_commas([str(x) for x in sorted(keys)],
                                   last_one=" or ")))
 
-    def _add_key(self, spec):
+    def _add_key(self, spec) -> "Key":
         """Add a node to the graph. Raises if the node already exists."""
         nodes = self._find_keys(spec)
         if len(nodes) > 0:
@@ -515,7 +515,7 @@ class Keyboard():
                     "(must contain 3 fields): %r"
                     % (i, line.strip()))
 
-    def add_grid(self, grid: Grid, mode: Optional[str] = None) -> None:
+    def add_grid(self, grid: Grid, mode: Optional[str] = None) -> Grid:
         """Add keys, and transitions between them, to the model of the keyboard.
 
         If the keyboard (or part of the keyboard) is arranged in a regular
@@ -751,7 +751,7 @@ class Keyboard():
         return page
 
     def press_and_wait(
-        self, key: KeyT, timeout_secs: int = 10, stable_secs: int = 1
+        self, key: KeyT, timeout_secs: float = 10, stable_secs: float = 1
     ) -> _TransitionResult:
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
