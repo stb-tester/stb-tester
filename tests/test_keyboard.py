@@ -476,8 +476,56 @@ for k in "abcdefghijklmnopqrstuvwxzy1234567890":
                        {"mode": "lowercase", "name": k},
                        "KEY_OK")
 
+# Same as kb1, but defined in a more succinct way using merge=True
+kb5 = stbt.Keyboard()
+kb5.add_grid(stbt.Grid(
+    region=stbt.Region(x=125, y=95, right=430, bottom=500),
+    data=[
+        ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+        "abcdef",
+        "ghijkl",
+        "mnopqr",
+        "stuvwx",
+        "yz1234",
+        "567890",
+        [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+    ]), mode="lowercase", merge=True)
+kb5.add_grid(stbt.Grid(
+    region=stbt.Region(x=125, y=95, right=430, bottom=500),
+    data=[
+        ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+        "ABCDEF",
+        "GHIJKL",
+        "MNOPQR",
+        "STUVWX",
+        "YZ1234",
+        "567890",
+        [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+    ]), mode="uppercase", merge=True)
+kb5.add_grid(stbt.Grid(
+    region=stbt.Region(x=125, y=95, right=430, bottom=500),
+    data=[
+        ["lowercase"] * 2 + ["uppercase"] * 2 + ["symbols"] * 2,
+        "!@#$%&",
+        "~*\\/?^",
+        "_`;:|=",
+        "éñ[]{}",
+        "çü.,+-",
+        "<>()'\"",
+        [" "] * 2 + ["BACKSPACE"] * 2 + ["CLEAR"] * 2
+    ]), mode="symbols", merge=True)
 
-@pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
+# Mode changes: For example when "ABC" is selected and we are in
+# lowercase mode, pressing OK takes us to "ABC" still selected
+# but the keyboard is now in uppercase mode.
+for source_mode in ["lowercase", "uppercase", "symbols"]:
+    for target_mode in ["lowercase", "uppercase", "symbols"]:
+        kb5.add_transition({"name": target_mode, "mode": source_mode},
+                           {"name": target_mode, "mode": target_mode},
+                           "KEY_OK")
+
+
+@pytest.mark.parametrize("kb", [kb1, kb2, kb5], ids=["kb1", "kb2", "kb5"])
 def test_enter_text_mixed_case(dut, kb):
     logging.debug("Keys: %r", kb.G.nodes())
     page = SearchPage(dut, kb)
@@ -490,8 +538,8 @@ def test_enter_text_mixed_case(dut, kb):
 
 
 @pytest.mark.parametrize("kb",
-                         [kb1, kb2, kb3],
-                         ids=["kb1", "kb2", "kb3"])
+                         [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_enter_text_single_case(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -500,7 +548,8 @@ def test_enter_text_single_case(dut, kb):
     assert dut.entered == "hi there"
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_that_enter_text_uses_minimal_keypresses(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -509,7 +558,8 @@ def test_that_enter_text_uses_minimal_keypresses(dut, kb):
                            "KEY_RIGHT", "KEY_OK"]
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_enter_text_twice(dut, kb):
     """This is really a test of your Page Object's implementation of enter_text.
 
@@ -536,7 +586,8 @@ def test_that_enter_text_finds_keys_by_text(dut):
     assert dut.entered == " "
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_navigate_to(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -545,7 +596,7 @@ def test_navigate_to(dut, kb):
     assert dut.pressed == ["KEY_DOWN"] * 6 + ["KEY_RIGHT"] * 2
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2], ids=["kb1", "kb2"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb5], ids=["kb1", "kb2", "kb5"])
 def test_navigate_to_other_mode(dut, kb):
     page = SearchPage(dut, kb)
     assert page.selection.name == "a"
@@ -563,7 +614,8 @@ def test_navigate_to_other_mode(dut, kb):
     ("c", False, 2),
     ("c", True, 1),
 ])
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_that_navigate_to_checks_target(double_keypress_dut, kb, target,
                                         verify_every_keypress, num_presses):
     """DUT skips the B when pressing right from A (and lands on C)."""
@@ -599,7 +651,8 @@ def test_that_navigate_to_waits_for_dut_to_catch_up(slow_dut):
     assert slow_dut.pressed == ["KEY_RIGHT"] * 5
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     page = SearchPage(dut, kb)
     with pytest.raises(ValueError):
@@ -610,7 +663,8 @@ def test_that_keyboard_validates_the_targets_before_navigating(dut, kb):
     assert dut.pressed == []
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_that_keyboard_validates_the_page_object_selection(dut, kb):
     page = SearchPage(dut, kb, is_visible=False)
     with pytest.raises(AssertionError) as excinfo:
@@ -818,7 +872,8 @@ def assert_repr_equal(a, b):
     assert re.match("^" + a + "$", b)
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_keys_to_press(kb):
     a = kb.find_key("a")
     b = kb.find_key("b")
@@ -874,7 +929,8 @@ def test_keys_to_press(kb):
             ("KEY_DOWN", {space})]
 
 
-@pytest.mark.parametrize("kb", [kb1, kb2, kb3], ids=["kb1", "kb2", "kb3"])
+@pytest.mark.parametrize("kb", [kb1, kb2, kb3, kb5],
+                         ids=["kb1", "kb2", "kb3", "kb5"])
 def test_keyboard_weights(kb):
     five = kb.find_key("5", mode="lowercase" if kb.modes else None)
     six = kb.find_key("6", mode="lowercase" if kb.modes else None)
