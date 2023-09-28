@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import time
+import typing
 from logging import getLogger
 from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
 
@@ -318,7 +320,7 @@ class Keyboard():
                 _join_with_commas([str(x) for x in sorted(keys)],
                                   last_one=" or ")))
 
-    def _find_keys(self, query, mode=None):
+    def _find_keys(self, query, mode=None) -> "list[Key]":
         """Like the public `find_keys`, but takes a "query" (see _find_key)."""
         if isinstance(query, Keyboard.Key):
             if mode is not None and query.mode != mode:
@@ -368,7 +370,7 @@ class Keyboard():
                 _join_with_commas([str(x) for x in sorted(keys)],
                                   last_one=" or ")))
 
-    def _add_key(self, spec):
+    def _add_key(self, spec) -> "Key":
         """Add a node to the graph. Raises if the node already exists."""
         nodes = self._find_keys(spec)
         if len(nodes) > 0:
@@ -515,7 +517,8 @@ class Keyboard():
                     "(must contain 3 fields): %r"
                     % (i, line.strip()))
 
-    def add_grid(self, grid: Grid, mode: Optional[str] = None) -> None:
+    def add_grid(self, grid: Grid, mode: Optional[str] = None,
+                 merge: bool = False) -> Grid:
         """Add keys, and transitions between them, to the model of the keyboard.
 
         If the keyboard (or part of the keyboard) is arranged in a regular
@@ -534,19 +537,25 @@ class Keyboard():
         :param str mode: Optional mode that applies to all the keys specified
             in ``grid``. See `add_key` for more details about modes.
 
+        :param bool merge: If True, adjacent keys with the same name and mode
+            will be merged, and a single larger key will be added in its place.
+
         :returns: A new `stbt.Grid` where each cell's data is a key object
             that can be used with `add_transition` (for example to define
             additional transitions from the edges of this grid onto other
             keys).
         """
 
+        # For merging keys allow looking them up by value:
+        specs: dict[tuple[tuple[str, typing.Any], ...], list[_MutRegion]] = {}
+
         # First add the keys. It's an exception if any of them already exist.
         # The data is a string or a dict; we don't support previously-created
         # Key instances because what should we do with the existing Key's
         # `region`?
-        keys = []
         for cell in grid:
             x, y = cell.position
+            spec: "dict[str, typing.Any]"
             if cell.data is None:
                 raise ValueError("Grid cell [%i,%i] doesn't have any data"
                                  % (x, y))
@@ -565,29 +574,55 @@ class Keyboard():
                                  % (type(cell.data), x, y))
 
             spec["mode"] = mode
-            spec["region"] = cell.region
-            keys.append(self._add_key(spec))
+            if "region" in spec:
+                del spec["region"]
+
+            # Can't use a dict as a key in another dict, so convert to a tuple
+            # like ((key, value), ...)
+            spec_key = tuple(sorted(spec.items()))
+            specs.setdefault(spec_key, []).append(
+                _MutRegion(cell.position.x, cell.position.y,
+                           cell.position.x + 1, cell.position.y + 1))
+
+        keys: "list[Keyboard.Key | None]" = [None] * (grid.cols * grid.rows)
+        for tspec, regions in specs.items():
+            if merge:
+                regions = _merge_regions(regions)
+            for region in regions:
+                spec = dict(tspec)
+                spec["region"] = Region.bounding_box(
+                    grid[region.x, region.y].region,
+                    grid[region.right - 1, region.bottom - 1].region)
+                key = self._add_key(spec)
+                for x in range(region.x, region.right):
+                    for y in range(region.y, region.bottom):
+                        keys[y * grid.cols + x] = key
 
         # Now add the transitions.
         for cell in grid:
             x, y = cell.position
             source = keys[grid[x, y].index]
+            assert isinstance(source, Keyboard.Key)
             if x > 0:
                 target = keys[grid[x - 1, y].index]
-                self.add_transition(source, target, "KEY_LEFT",
-                                    symmetrical=False)
+                if source is not target:
+                    self.add_transition(source, target, "KEY_LEFT",
+                                        symmetrical=False)
             if x < grid.cols - 1:
                 target = keys[grid[x + 1, y].index]
-                self.add_transition(source, target, "KEY_RIGHT",
-                                    symmetrical=False)
+                if source is not target:
+                    self.add_transition(source, target, "KEY_RIGHT",
+                                        symmetrical=False)
             if y > 0:
                 target = keys[grid[x, y - 1].index]
-                self.add_transition(source, target, "KEY_UP",
-                                    symmetrical=False)
+                if source is not target:
+                    self.add_transition(source, target, "KEY_UP",
+                                        symmetrical=False)
             if y < grid.rows - 1:
                 target = keys[grid[x, y + 1].index]
-                self.add_transition(source, target, "KEY_DOWN",
-                                    symmetrical=False)
+                if source is not target:
+                    self.add_transition(source, target, "KEY_DOWN",
+                                        symmetrical=False)
 
         return Grid(
             region=grid.region,
@@ -751,7 +786,7 @@ class Keyboard():
         return page
 
     def press_and_wait(
-        self, key: KeyT, timeout_secs: int = 10, stable_secs: int = 1
+        self, key: KeyT, timeout_secs: float = 10, stable_secs: float = 1
     ) -> _TransitionResult:
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
@@ -768,6 +803,86 @@ class Keyboard():
         return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
                                                timeout_secs=timeout_secs,
                                                stable_secs=stable_secs)
+
+
+@dataclasses.dataclass
+class _MutRegion:
+    x: int
+    y: int
+    right: int
+    bottom: int
+
+
+def _merge_regions(posns: list[_MutRegion]):
+    """Given a list of regions, merge any that are touching into larger regions.
+
+    This can currently only cope with rectangular regions.
+    """
+    if len(posns) <= 1:
+        # Common case
+        return posns
+    # First do horizontal merge:
+    out: list[_MutRegion] = []
+    last = None
+    for posn in posns:
+        if last and posn.x == last.right and posn.y == last.y:
+            last.right += 1
+        else:
+            last = posn
+            out.append(last)
+
+    # Now do vertical merge in >x^2 time because I'm lazy:
+    modified = True
+    while modified:
+        modified = False
+        for n, a in enumerate(out):
+            for m, b in enumerate(out[n + 1:], n + 1):
+                if a.bottom != b.y:
+                    continue
+                if a.x == b.x and a.right == b.right:
+                    a.bottom = b.bottom
+                    del out[m]
+                    modified = True
+                    break
+                # Only support rectangles for now:
+                if b.x < a.right and a.x < b.right:
+                    # Overlapping, but not equal
+                    raise NotImplementedError(
+                        "Keyboard.add_grid doesn't currently support "
+                        "merging non-rectangular regions"
+                    )
+            if modified:
+                break
+    return out
+
+
+def test_merge_regions():
+    import textwrap
+    import pytest
+
+    def r(s):
+        out = []
+        s = textwrap.dedent(s)
+        for y, line in enumerate(s.split("\n")):
+            for x, c in enumerate(line):
+                if c == "#":
+                    out.append(_MutRegion(x, y, x + 1, y + 1))
+        return out
+
+    assert _merge_regions([]) == []
+    assert _merge_regions(r("#")) == [_MutRegion(0, 0, 1, 1)]
+    assert _merge_regions(r("##")) == [_MutRegion(0, 0, 2, 1)]
+    assert _merge_regions(r("#\n#")) == [_MutRegion(0, 0, 1, 2)]
+    assert _merge_regions(r(".##\n.##")) == [_MutRegion(1, 0, 3, 2)]
+    with pytest.raises(NotImplementedError):
+        _merge_regions(r("##\n#."))
+    assert _merge_regions(r("""\
+        ......##.
+        ..##..##.
+        ..##....#
+        """)) == [_MutRegion(6, 0, 8, 2),
+                  _MutRegion(2, 1, 4, 3),
+                  _MutRegion(8, 2, 9, 3)]
 
 
 def _minimal_query(query):

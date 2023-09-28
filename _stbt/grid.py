@@ -168,7 +168,8 @@ class Grid():
             region,
             self.data and self.data[position[1]][position[0]])
 
-    def __getitem__(self, key: Union[int, Region, Position]) -> Cell:
+    def __getitem__(
+            self, key: Union[int, Region, Position, tuple[int, int]]) -> Cell:
         if isinstance(key, int):
             return self.get(index=key)
         elif isinstance(key, Region):
