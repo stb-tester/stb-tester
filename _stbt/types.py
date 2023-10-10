@@ -5,23 +5,26 @@ from __future__ import annotations
 import typing
 from collections import namedtuple
 from enum import Enum
-from typing import Optional, Tuple, TypeAlias
+from typing import Optional, TypeAlias
 
 if typing.TYPE_CHECKING:
     from .mask import Mask
 
 
-PositionT : TypeAlias = Tuple[int, int]
-SizeT : TypeAlias = Tuple[int, int]
+PositionT : TypeAlias = tuple[int, int]
+SizeT : TypeAlias = tuple[int, int]
 
 
-class Position(namedtuple('Position', 'x y')):
+class Position(typing.NamedTuple):
     """A point with ``x`` and ``y`` coordinates."""
-    pass
+    x: int
+    y: int
 
 
-class Size(namedtuple('Size', 'width height')):
+class Size(typing.NamedTuple):
     """Size of a rectangle with ``width`` and ``height``."""
+    width: int
+    height: int
 
 
 class Direction(Enum):
@@ -38,7 +41,7 @@ class Direction(Enum):
 
 
 # None means no region
-RegionT : TypeAlias = Optional["Region"]
+RegionT : TypeAlias = "Region | None"
 
 
 class _RegionClsMethods(type):
@@ -327,7 +330,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
     def from_extents(x, y, right, bottom) -> Region:
         return Region(x, y, right=right, bottom=bottom)
 
-    def to_slice(self) -> Tuple[slice, slice]:
+    def to_slice(self) -> tuple[slice, slice]:
         """A 2-dimensional slice suitable for indexing a `stbt.Frame`."""
         return (slice(max(0, self.y),
                       max(0, self.bottom)),
@@ -513,8 +516,8 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return self.replace(x=self.x - width, right=self.x)
 
 
-Region.ALL: Region = Region(x=-float('inf'), y=-float('inf'),
-                            right=float('inf'), bottom=float('inf'))
+Region.ALL = Region(x=-float('inf'), y=-float('inf'),
+                    right=float('inf'), bottom=float('inf'))
 
 
 KeyT : TypeAlias = str

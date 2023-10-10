@@ -7,7 +7,7 @@ import re
 import shutil
 import subprocess
 from enum import IntEnum
-from typing import Dict, List, Optional, Union
+from typing import Optional
 
 import cv2
 import numpy
@@ -19,7 +19,7 @@ from .logging import debug, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
 
-CorrectionsT = Dict[Union[re.Pattern, str], str]
+CorrectionsT = dict[re.Pattern | str, str]
 
 
 # Tesseract sometimes has a hard job distinguishing certain glyphs such as
@@ -122,7 +122,7 @@ class TextMatchResult():
     _fields = ("time", "match", "region", "frame", "text")
 
     def __init__(self, time, match, region, frame, text):
-        self.time: Optional[float] = time
+        self.time: float | None = time
         self.match: bool = match
         self.region: Region = region
         self.frame: FrameT = frame
@@ -143,18 +143,18 @@ class TextMatchResult():
 
 
 def ocr(
-    frame: FrameT = None,
+    frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: str = None,
-    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
-    tesseract_user_words: Union[List[str], str] = None,
-    tesseract_user_patterns: Union[List[str], str] = None,
+    lang: Optional[str] = None,
+    tesseract_config: Optional[dict[str, bool | str | int]] = None,
+    tesseract_user_words: Optional[list[str] | str] = None,
+    tesseract_user_patterns: Optional[list[str] | str] = None,
     upsample: bool = True,
-    text_color: ColorT = None,
-    text_color_threshold: float = None,
+    text_color: Optional[ColorT] = None,
+    text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
-    char_whitelist: str = None,
+    char_whitelist: Optional[str] = None,
     corrections: Optional[CorrectionsT] = None,
 ):
     r"""Return the text present in the video frame as a Unicode string.
@@ -295,17 +295,17 @@ def ocr(
 
 def match_text(
     text: str,
-    frame: FrameT = None,
+    frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: str = None,
-    tesseract_config: Optional[Dict[str, Union[bool, str, int]]] = None,
+    lang: Optional[str] = None,
+    tesseract_config: Optional[dict[str, bool | str | int]] = None,
     case_sensitive: bool = False,
     upsample: bool = True,
-    text_color: ColorT = None,
-    text_color_threshold: float = None,
+    text_color: Optional[ColorT] = None,
+    text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
-    char_whitelist: str = None,
+    char_whitelist: Optional[str] = None,
 ) -> TextMatchResult:
     """Search for the specified text in a single video frame.
 

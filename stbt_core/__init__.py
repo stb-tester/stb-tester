@@ -10,6 +10,7 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 
 from __future__ import annotations
 
+import typing
 from contextlib import contextmanager
 from typing import ContextManager, Iterator, Optional
 
@@ -158,6 +159,9 @@ __all__ = [
 
 from _stbt.imgutils import ImageT
 from _stbt.types import KeyT, RegionT
+if typing.TYPE_CHECKING:
+    import _stbt.core
+
 
 TEST_PACK_ROOT: "str|None" = None
 
@@ -178,7 +182,8 @@ def last_keypress() -> "Keypress|None":
 
 
 def press(
-    key: KeyT, interpress_delay_secs: float = None, hold_secs: float = None
+    key: KeyT, interpress_delay_secs: Optional[float] = None,
+    hold_secs: Optional[float] = None
 ) -> Keypress:
     """Send the specified key-press to the device under test.
 
@@ -218,7 +223,7 @@ def press(
 
 
 def pressing(
-    key: KeyT, interpress_delay_secs: float = None
+    key: KeyT, interpress_delay_secs: Optional[float] = None
 ) -> ContextManager[Keypress]:
     """Context manager that will press and hold the specified key for the
     duration of the ``with`` code block.
@@ -285,7 +290,7 @@ def press_until_match(
         key, image, interval_secs, max_presses, match_parameters, region)
 
 
-def frames(timeout_secs: float = None) -> Iterator[Frame]:
+def frames(timeout_secs: Optional[float] = None) -> Iterator[Frame]:
     """Generator that yields video frames captured from the device-under-test.
 
     For example::
@@ -368,7 +373,8 @@ class UnconfiguredDeviceUnderTest():
             "stbt.get_frame isn't configured to run on your hardware")
 
 
-_dut = UnconfiguredDeviceUnderTest()
+_dut: "_stbt.core.DeviceUnderTest | UnconfiguredDeviceUnderTest" = (
+    UnconfiguredDeviceUnderTest())
 
 
 @contextmanager

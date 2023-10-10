@@ -23,7 +23,7 @@ from .types import Region
 
 def is_screen_black(frame: Optional[Frame] = None,
                     mask: MaskTypes = Region.ALL,
-                    threshold: int = None,
+                    threshold: "Optional[int]" = None,
                     region: Region = Region.ALL) -> "_IsScreenBlackResult":
     """Check for the presence of a black screen in a video frame.
 
@@ -112,9 +112,9 @@ def is_screen_black(frame: Optional[Frame] = None,
 
 
 class _IsScreenBlackResult():
-    def __init__(self, black, frame):
-        self.black = black
-        self.frame = frame
+    def __init__(self, black: bool, frame: Frame):
+        self.black: bool = black
+        self.frame: Frame = frame
 
     def __bool__(self):
         return self.black

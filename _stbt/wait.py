@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from .logging import debug
 
@@ -14,7 +14,7 @@ T = TypeVar("T")
 def wait_until(callable_: Callable[[], T],
                timeout_secs: float = 10,
                interval_secs: float = 0,
-               predicate: Callable[[T], bool] = None,
+               predicate: Optional[Callable[[T], bool]] = None,
                stable_secs: float = 0) -> T | None:
     """Wait until a condition becomes true, or until a timeout.
 

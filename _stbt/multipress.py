@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from typing import Optional
 
 from .types import KeyT
 
@@ -70,8 +71,8 @@ class MultiPress():
 
     def __init__(
         self,
-        key_mapping: dict[KeyT, str] = None,
-        interpress_delay_secs: float = None,
+        key_mapping: Optional[dict[KeyT, str]] = None,
+        interpress_delay_secs: Optional[float] = None,
         interletter_delay_secs: float = 1,
     ):
 

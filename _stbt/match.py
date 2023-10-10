@@ -289,8 +289,8 @@ def match(
 
 def match_all(
     image: ImageT,
-    frame: FrameT = None,
-    match_parameters: MatchParameters = None,
+    frame: Optional[FrameT] = None,
+    match_parameters: Optional[MatchParameters] = None,
     region: Region = Region.ALL,
 ) -> Iterator[MatchResult]:
     """
@@ -450,7 +450,7 @@ def wait_for_match(
     consecutive_matches: int = 1,
     match_parameters: Optional[MatchParameters] = None,
     region: Region = Region.ALL,
-    frames: Iterator[FrameT] = None,
+    frames: Optional[Iterator[FrameT]] = None,
 ) -> MatchResult:
     """Search for an image in the device-under-test's video stream.
 

@@ -4,9 +4,10 @@ import errno
 import inspect
 import os
 import re
+import typing
 import warnings
 from functools import lru_cache
-from typing import Optional, overload, Sequence, Tuple, TypeAlias, Union
+from typing import Optional, overload, Sequence, TypeAlias
 
 import cv2
 import numpy
@@ -19,7 +20,7 @@ from .types import Region
 FrameT : TypeAlias = numpy.typing.NDArray[numpy.uint8]
 
 # Anything that load_image can take:
-ImageT : TypeAlias = Union[numpy.typing.NDArray[numpy.uint8], str]
+ImageT : TypeAlias = numpy.typing.NDArray[numpy.uint8] | str
 
 
 class Frame(numpy.ndarray):
@@ -201,17 +202,17 @@ class Color:
                  alpha: "Optional[int]" = None) -> None:
         ...
     @overload
-    def __init__(self, bgr: "Tuple[int, int, int]") -> None:
+    def __init__(self, bgr: "tuple[int, int, int]") -> None:
         ...
     @overload
-    def __init__(self, bgra: "Tuple[int, int, int, int]") -> None:
+    def __init__(self, bgra: "tuple[int, int, int, int]") -> None:
         ...
     def __init__(self, *args,
                  hexstring: str = None,
                  blue: int = None, green: int = None, red: int = None,
                  alpha: int = None,
-                 bgr: "Tuple[int, int, int]" = None,
-                 bgra: "Tuple[int, int, int, int]" = None) -> None:
+                 bgr: "tuple[int, int, int]" = None,
+                 bgra: "tuple[int, int, int, int]" = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -304,7 +305,7 @@ class Color:
         return hash(self.hexstring)
 
 
-ColorT : TypeAlias = Union[Color, str, Tuple[int, int, int]]
+ColorT : TypeAlias = Color | str | tuple[int, int, int]
 
 
 def crop(frame: FrameT, region: Region) -> FrameT:
@@ -367,7 +368,7 @@ def load_image(
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`. Deprecated; use
       ``color_channels`` instead.
 
-    :param Tuple[int] color_channels: Tuple of acceptable numbers of color
+    :param tuple[int] color_channels: tuple of acceptable numbers of color
       channels for the output image: 1 for grayscale, 3 for color, and 4 for
       color with an alpha (transparency) channel. For example,
       ``color_channels=(3, 4)`` will accept color images with or without an
