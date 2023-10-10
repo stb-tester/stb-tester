@@ -7,7 +7,7 @@ import re
 import typing
 import warnings
 from functools import lru_cache
-from typing import Optional, overload, Sequence, TypeAlias
+from typing import overload, TypeAlias
 
 import cv2
 import numpy
@@ -344,11 +344,23 @@ def _image_region(image):
     return Region(0, 0, s[1], s[0])
 
 
+@typing.overload
+def load_image(filename: ImageT) -> Image:
+    ...
+
+
+@typing.overload
+def load_image(filename: ImageT, flags: int) -> Image:
+    ...
+
+
+@typing.overload
 def load_image(
-    filename: ImageT,
-    flags: Optional[Tuple[int]] = None,
-    color_channels: Optional[Sequence[int]] = None,
-) -> Image:
+        filename: ImageT, /, color_channels: int | tuple[int, ...]) -> Image:
+    ...
+
+
+def load_image(filename, flags=None, color_channels=None) -> Image:
     """Find & read an image from disk.
 
     If given a relative filename, this will search in the directory of the
