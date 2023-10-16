@@ -402,37 +402,35 @@ def test_hdmi_cec_control_defaults():
 
 @contextmanager
 def _fake_cec():
+    import binascii
     import io
-    import pytest
+    import cec  # pylint:disable=unused-import
     from unittest.mock import patch
 
-    pytest.importorskip("cec")
-
-    io = io.BytesIO()
+    io = io.StringIO()
 
     def Open(_, device):
-        io.write(b'Open(%r)\n' % device)
+        io.write('Open(%r)\n' % device)
         return True
 
     def cec_cmd_get_data(cmd):
-        # TODO: Port to Python 3.
         # Ugly, but can't find another way to do it
         import ctypes
-        return str(buffer(ctypes.cast(  # pylint:disable=undefined-variable
-            int(cmd.parameters.data), ctypes.POINTER(ctypes.c_uint8)).contents,
-            0, cmd.parameters.size))
+        return memoryview(ctypes.cast(  # pylint:disable=undefined-variable
+            int(cmd.parameters.data),
+            ctypes.POINTER(ctypes.c_uint8 * cmd.parameters.size)).contents)
 
     def Transmit(_, cmd):
-        io.write(b"Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
+        io.write("Transmit(dest: 0x%x, src: 0x%x, op: 0x%x, data: <%s>)\n" % (
             cmd.destination, cmd.initiator, cmd.opcode,
-            cec_cmd_get_data(cmd).encode('hex')))
+            binascii.hexlify(cec_cmd_get_data(cmd)).decode()))
         return True
 
     def RescanActiveDevices(_):
-        io.write(b"RescanActiveDevices()\n")
+        io.write("RescanActiveDevices()\n")
 
     def GetActiveDevices(_):
-        io.write(b"GetActiveDevices()\n")
+        io.write("GetActiveDevices()\n")
 
         class _L(list):
             @property
@@ -443,7 +441,7 @@ def _fake_cec():
                    False, False, True, False, False, False, False, False])
 
     def GetDeviceOSDName(_, destination):
-        io.write(b"GetDeviceOSDName(%r)\n" % destination)
+        io.write("GetDeviceOSDName(%r)\n" % destination)
         return "Test"
 
     with patch('cec.ICECAdapter.Open', Open), \
