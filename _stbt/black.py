@@ -23,8 +23,8 @@ from .types import Region
 
 def is_screen_black(frame: Optional[Frame] = None,
                     mask: MaskTypes = Region.ALL,
-                    threshold: "Optional[int]" = None,
-                    region: Region = Region.ALL) -> "_IsScreenBlackResult":
+                    threshold: Optional[int] = None,
+                    region: Region = Region.ALL) -> _IsScreenBlackResult:
     """Check for the presence of a black screen in a video frame.
 
     :param Frame frame:
