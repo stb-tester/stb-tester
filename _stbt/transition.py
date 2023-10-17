@@ -31,9 +31,9 @@ def press_and_wait(
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: SizeT | None = None,
+    min_size: Optional[SizeT] = None,
     retries: int = 0,
-    frames: Iterator[FrameT] | None = None,
+    frames: Optional[Iterator[FrameT]] = None,
     _dut=None,
 ) -> _TransitionResult:
 
@@ -67,7 +67,7 @@ def press_and_wait(
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
         to be considered as "motion". Use this to ignore small differences,
         such as the blinking text cursor in a search box.
-    :type min_size: Tuple[int, int]
+    :type min_size: tuple[int, int]
 
     :param int retries: Press the key again (up to this number of times) if
         the first press didn't have any effect (that is, if the press failed
@@ -166,13 +166,13 @@ press_and_wait.differ: Differ = BGRDiff()
 
 
 def wait_for_transition_to_end(
-    initial_frame: FrameT | None = None,
+    initial_frame: Optional[FrameT] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
-    min_size: SizeT | None = None,
-    frames: Iterator[FrameT] | None = None,
+    min_size: Optional[SizeT] = None,
+    frames: Optional[Iterator[FrameT]] = None,
 ) -> _TransitionResult:
 
     """Wait for the screen to stop changing.
@@ -310,7 +310,7 @@ class _TransitionResult():
         self.status: TransitionStatus = status
         self.press_time: float = press_time
         self.animation_start_time: float = animation_start_time
-        self.end_time: Optional[float] = end_time
+        self.end_time: float | None = end_time
 
     def __repr__(self):
         return (

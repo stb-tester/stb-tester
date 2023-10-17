@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import traceback
 from contextlib import contextmanager
-from typing import ContextManager, Optional
+from typing import Iterator
 
 from .imgutils import FrameT
 from .logging import debug
@@ -21,7 +21,7 @@ class PreconditionError(UITestError):
         super().__init__()
         self.message: str = message
         self.original_exception: Exception = original_exception
-        self.screenshot: Optional[FrameT] = None
+        self.screenshot: FrameT | None = None
 
     def __str__(self):
         return (
@@ -30,7 +30,7 @@ class PreconditionError(UITestError):
 
 
 @contextmanager
-def as_precondition(message: str) -> ContextManager[None]:
+def as_precondition(message: str) -> Iterator[None]:
     """Context manager that replaces test failures with test errors.
 
     Stb-tester's reports show test failures (that is, `UITestFailure` or

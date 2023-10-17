@@ -17,7 +17,7 @@ def detect_motion(
     noise_threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
-    frames: Iterator[FrameT] = None,
+    frames: Optional[Iterator[FrameT]] = None,
 ) -> Iterator[MotionResult]:
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
@@ -144,11 +144,11 @@ class DetectMotion():
 
 def wait_for_motion(
     timeout_secs: float = 10,
-    consecutive_frames: int = None,
+    consecutive_frames: "Optional[int | str]" = None,
     noise_threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
-    frames: Iterator[FrameT] = None,
+    frames: "Optional[Iterator[FrameT]]" = None,
 ) -> MotionResult:
     """Search for motion in the device-under-test's video stream.
 

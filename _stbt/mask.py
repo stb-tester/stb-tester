@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Optional, Tuple, TypeAlias, Union
+from typing import TypeAlias
 
 import cv2
 import numpy
@@ -19,7 +19,7 @@ except ImportError:
     Xxhash64 = None
 
 
-MaskTypes: TypeAlias = Union[str, numpy.ndarray, "Mask", Region, None]
+MaskTypes: TypeAlias = "str | numpy.ndarray | Mask | Region | None"
 
 
 def load_mask(mask: MaskTypes) -> Mask:
@@ -149,7 +149,7 @@ class Mask:
                          self._invert))
 
     def to_array(self, region: Region, color_channels: int = 1) \
-            -> Tuple[Optional[numpy.ndarray], Region]:
+            -> tuple[numpy.ndarray | None, Region]:
         """Materialize the mask to a numpy array of the specified size.
 
         Most users will never need to call this method; it's for people who
@@ -163,7 +163,7 @@ class Mask:
           will be identical — for example with 3 channels, pixels will be
           either [0, 0, 0] or [255, 255, 255].
 
-        :rtype: Tuple[Optional[numpy.ndarray], Region]
+        :rtype: tuple[numpy.ndarray | None, Region]
         :returns:
           A tuple of:
 
@@ -249,7 +249,7 @@ class BinOp:
 def _to_array_and_bounding_box_cached(
         mask: Mask,
         region: Region,
-        color_channels: int) -> Tuple[Optional[numpy.ndarray], Region]:
+        color_channels: int) -> tuple[numpy.ndarray | None, Region]:
 
     if mask._region is not None and not mask._invert:
         array = None

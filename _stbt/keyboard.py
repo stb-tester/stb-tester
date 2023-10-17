@@ -7,7 +7,7 @@ import re
 import time
 import typing
 from logging import getLogger
-from typing import Dict, List, Optional, Union, TypeAlias, TypeVar
+from typing import Optional, TypeAlias, TypeVar
 
 from attr import attrs, attrib
 from _stbt.frameobject import FrameObject
@@ -19,7 +19,7 @@ from _stbt.types import KeyT, Region
 
 
 FrameObjectT = TypeVar("FrameObjectT", bound=FrameObject)
-QueryT: TypeAlias = Union["Keyboard.Key", Dict[str, str], str]
+QueryT: TypeAlias = "Keyboard.Key | dict[str, str] | str"
 
 log = getLogger("stbt.Keyboard")
 
@@ -287,7 +287,7 @@ class Keyboard():
         text: Optional[str] = None,
         region: Optional[Region] = None,
         mode: Optional[str] = None,
-    ) -> List[Key]:
+    ) -> list[Key]:
         """Find matching keys in the model of the keyboard.
 
         This is like `find_key`, but it returns a list containing any

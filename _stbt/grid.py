@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from typing import Any, Iterator, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Iterator, Optional, Sequence, TypeVar
 
 from .types import Position, PositionT, Region
 
@@ -95,7 +95,7 @@ class Grid():
         return self.cols * self.rows
 
     @property
-    def cells(self) -> List[Cell]:
+    def cells(self) -> list[Cell]:
         return [self.get(index=i)
                 for i in range(self.cols * self.rows)]
 
@@ -161,6 +161,8 @@ class Grid():
                     break
             else:
                 raise IndexError("data %r not found" % (data,))
+        else:
+            assert False, "Unreachable"
 
         return Grid.Cell(
             index,
@@ -169,7 +171,7 @@ class Grid():
             self.data and self.data[position[1]][position[0]])
 
     def __getitem__(
-            self, key: Union[int, Region, Position, tuple[int, int]]) -> Cell:
+            self, key: "int | Region | Position | tuple[int, int]") -> Cell:
         if isinstance(key, int):
             return self.get(index=key)
         elif isinstance(key, Region):
@@ -190,7 +192,7 @@ class Grid():
     def __len__(self) -> int:
         return self.cols * self.rows
 
-    def _index_to_position(self, index):
+    def _index_to_position(self, index: int) -> Position:
         area = self.cols * self.rows
         if index < -area:
             raise IndexError("Index out of range: index %r in %r" %
@@ -203,10 +205,10 @@ class Grid():
             raise IndexError("Index out of range: index %r in %r" %
                              (index, self))
 
-    def _position_to_index(self, position):
+    def _position_to_index(self, position: Position) -> int:
         return position[0] + position[1] * self.cols
 
-    def _region_to_position(self, region):
+    def _region_to_position(self, region) -> Position:
         rel = region.translate(x=-self.region.x, y=-self.region.y)
         centre = (float(rel.x + rel.right) / 2,
                   float(rel.y + rel.bottom) / 2)
