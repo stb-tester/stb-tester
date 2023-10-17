@@ -380,7 +380,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     :param flags: Flags to pass to :ocv:pyfunc:`cv2.imread`. Deprecated; use
       ``color_channels`` instead.
 
-    :param tuple[int] color_channels: tuple of acceptable numbers of color
+    :param tuple[int] color_channels: Tuple of acceptable numbers of color
       channels for the output image: 1 for grayscale, 3 for color, and 4 for
       color with an alpha (transparency) channel. For example,
       ``color_channels=(3, 4)`` will accept color images with or without an
