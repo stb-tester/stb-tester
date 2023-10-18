@@ -200,10 +200,16 @@ class HdmiCecControl(object):
                     "Can't call 'press' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
+                logging.warning(
+                    "HdmiCecControl: keydown transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
                 self.rescan()
-                raise HdmiCecError("Failed to send keydown for %s" % key)
+                return
             if not self.lib.Transmit(self.keyup_command()):
-                raise HdmiCecError("Failed to send keyup for %s" % key)
+                logging.warning(
+                    "HdmiCecControl: keyup transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
+                return
 
         logging.debug("HdmiCecControl: Pressed %s", key)
 
@@ -220,8 +226,10 @@ class HdmiCecControl(object):
                     "Can't call 'keydown' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
+                logging.warning(
+                    "HdmiCecControl: keydown transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
                 self.rescan()
-                raise HdmiCecError("Failed to send keydown for %s" % key)
 
             self.press_and_holding = True
             self.press_and_hold_thread = threading.Thread(
@@ -243,7 +251,10 @@ class HdmiCecControl(object):
 
         with self.lock:
             if not self.lib.Transmit(self.keyup_command()):
-                raise HdmiCecError("Failed to send keyup for %s" % key)
+                logging.warning(
+                    "HdmiCecControl: keyup transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
+                return
         logging.debug("HdmiCecControl: Released %s", key)
 
     def send_keydowns(self, key):
