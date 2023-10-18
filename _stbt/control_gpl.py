@@ -1,12 +1,9 @@
 import logging
 import re
-import sys
 import threading
 import time
 from contextlib import contextmanager
 from textwrap import dedent
-
-from .utils import to_unicode
 
 
 class HdmiCecError(Exception):
@@ -134,14 +131,7 @@ class HdmiCecControl():
     }
 
     def __init__(self, device, source, destination):
-        # On Ubuntu 18.04 `cec/__init__.py` tries to import `_cec` but can't
-        # find it.
-        # https://bugs.launchpad.net/ubuntu/+source/libcec/+bug/1805620
-        sys.path.insert(0, "/usr/lib/python2.7/dist-packages/cec")
-        try:
-            import cec  # pylint:disable=import-error
-        finally:
-            sys.path.pop(0)
+        import cec
 
         if source is None:
             source = 1
@@ -151,7 +141,7 @@ class HdmiCecControl():
             destination = int(destination, 16)
 
         self.cecconfig = cec.libcec_configuration()
-        self.cecconfig.strDeviceName = to_unicode("stb-tester")
+        self.cecconfig.strDeviceName = "stb-tester"
         self.cecconfig.bActivateSource = 0
         self.cecconfig.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.cecconfig.clientVersion = cec.LIBCEC_VERSION_CURRENT
@@ -173,7 +163,6 @@ class HdmiCecControl():
             device = self.detect_adapter()
             if device is None:
                 raise HdmiCecFatalError("No adapter found")
-        device = to_unicode(device)
         if not self.lib.Open(device):
             raise HdmiCecFatalError(
                 "Failed to open a connection to the CEC adapter")
@@ -195,10 +184,16 @@ class HdmiCecControl():
                     "Can't call 'press' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
+                logging.warning(
+                    "HdmiCecControl: keydown transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
                 self.rescan()
-                raise HdmiCecError("Failed to send keydown for %s" % key)
+                return
             if not self.lib.Transmit(self.keyup_command()):
-                raise HdmiCecError("Failed to send keyup for %s" % key)
+                logging.warning(
+                    "HdmiCecControl: keyup transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
+                return
 
         logging.debug("HdmiCecControl: Pressed %s", key)
 
@@ -215,8 +210,10 @@ class HdmiCecControl():
                     "Can't call 'keydown' while holding another key")
 
             if not self.lib.Transmit(self.keydown_command(key)):
+                logging.warning(
+                    "HdmiCecControl: keydown transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
                 self.rescan()
-                raise HdmiCecError("Failed to send keydown for %s" % key)
 
             self.press_and_holding = True
             self.press_and_hold_thread = threading.Thread(
@@ -238,7 +235,10 @@ class HdmiCecControl():
 
         with self.lock:
             if not self.lib.Transmit(self.keyup_command()):
-                raise HdmiCecError("Failed to send keyup for %s" % key)
+                logging.warning(
+                    "HdmiCecControl: keyup transmit failed for %s "
+                    "but we assume it's just a missing ACK", key)
+                return
         logging.debug("HdmiCecControl: Released %s", key)
 
     def send_keydowns(self, key):
@@ -265,12 +265,12 @@ class HdmiCecControl():
 
     def keydown_command(self, key):
         keycode = self.get_keycode(key)
-        keydown_str = to_unicode("%X%X:44:%02X") % (
+        keydown_str = "%X%X:44:%02X" % (
             self.source, self.destination, keycode)
         return self.lib.CommandFromString(keydown_str)
 
     def keyup_command(self):
-        keyup_str = to_unicode("%X%X:45") % (self.source, self.destination)
+        keyup_str = "%X%X:45" % (self.source, self.destination)
         return self.lib.CommandFromString(keyup_str)
 
     def get_keycode(self, key):
@@ -339,7 +339,7 @@ class HdmiCecControl():
 
     def _log_cec_message(self, level, _time, message):
         logging.log(self.cec_to_log_level[level], "libcec: %s",
-                    to_unicode(message))
+                    message)
         return 0
 
 
