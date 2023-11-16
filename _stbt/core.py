@@ -215,19 +215,15 @@ class DeviceUnderTest():
         if match_parameters is None:
             match_parameters = MatchParameters()
 
-        i = 0
-
-        while True:
+        for i in range(max_presses + 1):
             try:
                 return wait_for_match(image, timeout_secs=interval_secs,
                                       match_parameters=match_parameters,
                                       region=region, frames=self.frames())
             except MatchTimeout:
-                if i < max_presses:
-                    self.press(key)
-                    i += 1
-                else:
+                if i == max_presses:
                     raise
+            self.press(key)
 
     def frames(self, timeout_secs=None):
         if timeout_secs is not None:
