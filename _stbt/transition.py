@@ -319,7 +319,7 @@ class Transition():
 
     def __repr__(self):
         return (
-            "Transition(key=%r, frame=<Frame>, status=%s, "
+            "_TransitionResult(key=%r, frame=<Frame>, status=%s, "
             "press_time=%s, animation_start_time=%s, end_time=%s)" % (
                 self.key,
                 self.status,
@@ -330,7 +330,7 @@ class Transition():
     def __str__(self):
         # Also lists the properties -- it's useful to see them in the logs.
         return (
-            "Transition(key=%r, frame=<Frame>, status=%s, "
+            "_TransitionResult(key=%r, frame=<Frame>, status=%s, "
             "press_time=%s, animation_start_time=%s, end_time=%s, duration=%s, "
             "animation_duration=%s)" % (
                 self.key,
@@ -368,6 +368,11 @@ class Transition():
     def stable(self) -> bool:
         return self.status in (TransitionStatus.START_TIMEOUT,
                                TransitionStatus.COMPLETE)
+
+
+# For backwards compatibility with users who may have done
+# `from _stbt.transition import TransitionResult`; remove in v35.
+_TransitionResult = Transition
 
 
 class TransitionStatus(enum.Enum):
