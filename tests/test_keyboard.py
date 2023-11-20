@@ -7,7 +7,7 @@ import pytest
 
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
-from _stbt.transition import _TransitionResult, TransitionStatus
+from _stbt.transition import Transition, TransitionStatus
 
 # pylint:disable=redefined-outer-name
 
@@ -126,10 +126,10 @@ class DUT():
 
     def handle_press_and_wait(self, key, **_kwargs):
         self.handle_press(key)
-        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+        return Transition(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
     def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
-        return _TransitionResult(None, None, TransitionStatus.COMPLETE, 0, 0, 0)
+        return Transition(None, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
 class DoubleKeypressDUT(DUT):
@@ -166,7 +166,7 @@ class MissedKeypressDUT(DUT):
             status = TransitionStatus.START_TIMEOUT
         else:
             status = TransitionStatus.COMPLETE
-        return _TransitionResult(key, None, status, 0, 0, 0)
+        return Transition(key, None, status, 0, 0, 0)
 
 
 class SlowDUT(DUT):
@@ -177,14 +177,14 @@ class SlowDUT(DUT):
     def handle_press_and_wait(self, key, **_kwargs):
         logging.debug("SlowDUT.handle_press: delaying %s", key)
         self._delayed_keypress = key
-        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+        return Transition(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
     def handle_wait_for_transition_to_end(self, *_args, **_kwargs):
         key = self._delayed_keypress
         self._delayed_keypress = None
         assert key is not None
         super().handle_press(key)
-        return _TransitionResult(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
+        return Transition(key, None, TransitionStatus.COMPLETE, 0, 0, 0)
 
 
 @pytest.fixture(scope="function")

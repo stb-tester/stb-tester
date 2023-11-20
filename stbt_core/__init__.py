@@ -74,6 +74,7 @@ from _stbt.precondition import (
     PreconditionError)
 from _stbt.transition import (
     press_and_wait,
+    Transition,
     TransitionStatus,
     wait_for_transition_to_end)
 from _stbt.types import (
@@ -147,6 +148,7 @@ __all__ = [
     "set_global_ocr_corrections",
     "Size",
     "TextMatchResult",
+    "Transition",
     "TransitionStatus",
     "UITestError",
     "UITestFailure",
