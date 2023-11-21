@@ -14,7 +14,7 @@ from _stbt.frameobject import FrameObject
 from _stbt.grid import Grid
 from _stbt.imgutils import FrameT
 from _stbt.mask import MaskTypes, load_mask
-from _stbt.transition import _TransitionResult, TransitionStatus
+from _stbt.transition import Transition, TransitionStatus
 from _stbt.types import KeyT, Region
 
 
@@ -787,7 +787,7 @@ class Keyboard():
 
     def press_and_wait(
         self, key: KeyT, timeout_secs: float = 10, stable_secs: float = 1
-    ) -> _TransitionResult:
+    ) -> Transition:
         import stbt_core as stbt
         return stbt.press_and_wait(key, mask=self.mask,
                                    timeout_secs=timeout_secs,

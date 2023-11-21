@@ -5,7 +5,7 @@ from numpy import isclose
 
 import stbt_core as stbt
 from _stbt.logging import scoped_debug_level
-from _stbt.transition import _TransitionResult
+from _stbt.transition import Transition
 from _stbt.types import Keypress
 
 
@@ -218,8 +218,8 @@ def test_press_and_wait_timestamps(diff_algorithm):
     (stbt.TransitionStatus.COMPLETE,       True,   True,    True),
 ])
 def test_transitionresult_properties(status, started, complete, stable):
-    t = _TransitionResult(key="KEY_OK", frame=None, status=status,
-                          press_time=0, animation_start_time=0, end_time=0)
+    t = Transition(key="KEY_OK", frame=None, status=status,
+                   press_time=0, animation_start_time=0, end_time=0)
     assert t.started == started
     assert t.complete == complete
     assert t.stable == stable

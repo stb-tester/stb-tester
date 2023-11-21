@@ -35,7 +35,7 @@ def press_and_wait(
     retries: int = 0,
     frames: Optional[Iterator[FrameT]] = None,
     _dut=None,
-) -> _TransitionResult:
+) -> Transition:
 
     """Press a key, then wait for the screen to change, then wait for it to stop
     changing.
@@ -77,37 +77,8 @@ def press_and_wait(
         Defaults to ``stbt.frames()``.
 
     :returns:
-        An object that will evaluate to true if the transition completed, false
-        otherwise. It has the following attributes:
-
-        * **key** (*str*) – The name of the key that was pressed.
-        * **frame** (`stbt.Frame`) – If successful, the first video frame when
-          the transition completed; if timed out, the last frame seen.
-        * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT`` (the
-          transition didn't start – nothing moved), ``STABLE_TIMEOUT`` (the
-          transition didn't end – movement didn't stop), or ``COMPLETE`` (the
-          transition started and then stopped). If it's ``COMPLETE``, the whole
-          object will evaluate as true.
-        * **started** (*bool*) – The transition started (movement was seen
-          after the keypress). Implies that ``status`` is either ``COMPLETE``
-          or ``STABLE_TIMEOUT``.
-        * **complete** (*bool*) – The transition completed (movement started
-          and then stopped). Implies that ``status`` is ``COMPLETE``.
-        * **stable** (*bool*) – The screen is stable (no movement). Implies
-          ``complete or not started``.
-        * **press_time** (*float*) – When the key-press completed.
-        * **animation_start_time** (*float*) – When animation started after the
-          key-press (or ``None`` if timed out).
-        * **end_time** (*float*) – When animation completed (or ``None`` if
-          timed out).
-        * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
-          ``None`` if timed out).
-        * **animation_duration** (*float*) – Time from ``animation_start_time``
-          to ``end_time`` (or ``None`` if timed out).
-
-        All times are measured in seconds since 1970-01-01T00:00Z; the
-        timestamps can be compared with system time (the output of
-        ``time.time()``).
+        A `Transition` object that will evaluate to true if the transition
+        completed, false otherwise.
 
     Changed in v32: Use the same difference-detection algorithm as
     `wait_for_motion`.
@@ -152,7 +123,7 @@ def press_and_wait(
 
 
 def _press_and_wait(key, mask, timeout_secs, stable_secs, min_size,
-                    frames, _dut) -> _TransitionResult:
+                    frames, _dut) -> Transition:
 
     t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
     press_result = _dut.press(key)
@@ -173,7 +144,7 @@ def wait_for_transition_to_end(
     stable_secs: float = 1,
     min_size: Optional[SizeT] = None,
     frames: Optional[Iterator[FrameT]] = None,
-) -> _TransitionResult:
+) -> Transition:
 
     """Wait for the screen to stop changing.
 
@@ -252,12 +223,12 @@ class _Transition():
                 _debug(
                     "Transition didn't start within %s seconds of pressing %s",
                     f, self.timeout_secs, press_result.key)
-                return _TransitionResult(
+                return Transition(
                     press_result.key, f, TransitionStatus.START_TIMEOUT,
                     press_result.end_time, None, None)
 
         end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
-        return _TransitionResult(
+        return Transition(
             press_result.key, end_result.frame, end_result.status,
             press_result.end_time, animation_start_time, end_result.end_time)
 
@@ -283,13 +254,13 @@ class _Transition():
                 _debug("Transition complete (stable for %ss since %.3f).",
                        first_stable_frame, self.stable_secs,
                        first_stable_frame.time)
-                return _TransitionResult(
+                return Transition(
                     None, first_stable_frame, TransitionStatus.COMPLETE,
                     None, initial_frame.time, first_stable_frame.time)
             if f.time >= self.expiry_time:
                 _debug("Transition didn't end within %s seconds",
                        f, self.timeout_secs)
-                return _TransitionResult(
+                return Transition(
                     None, f, TransitionStatus.STABLE_TIMEOUT,
                     None, initial_frame.time, None)
 
@@ -302,7 +273,41 @@ def _ddebug(s, f, *args):
     ddebug(("transition: %.3f: " + s) % ((getattr(f, "time", 0),) + args))
 
 
-class _TransitionResult():
+class Transition():
+    """The return value from `press_and_wait` and `wait_for_transition_to_end`.
+
+    This object will evaluate to true if the transition completed, false
+    otherwise. It has the following attributes:
+
+    * **key** (*str*) – The name of the key that was pressed.
+    * **frame** (`stbt.Frame`) – If successful, the first video frame when
+      the transition completed; if timed out, the last frame seen.
+    * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT`` (the
+      transition didn't start – nothing moved), ``STABLE_TIMEOUT`` (the
+      transition didn't end – movement didn't stop), or ``COMPLETE`` (the
+      transition started and then stopped). If it's ``COMPLETE``, the whole
+      object will evaluate as true.
+    * **started** (*bool*) – The transition started (movement was seen
+      after the keypress). Implies that ``status`` is either ``COMPLETE``
+      or ``STABLE_TIMEOUT``.
+    * **complete** (*bool*) – The transition completed (movement started
+      and then stopped). Implies that ``status`` is ``COMPLETE``.
+    * **stable** (*bool*) – The screen is stable (no movement). Implies
+      ``complete or not started``.
+    * **press_time** (*float*) – When the key-press completed.
+    * **animation_start_time** (*float*) – When animation started after the
+      key-press (or ``None`` if timed out).
+    * **end_time** (*float*) – When animation completed (or ``None`` if
+      timed out).
+    * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
+      ``None`` if timed out).
+    * **animation_duration** (*float*) – Time from ``animation_start_time``
+      to ``end_time`` (or ``None`` if timed out).
+
+    All times are measured in seconds since 1970-01-01T00:00Z; the
+    timestamps can be compared with system time (the output of
+    ``time.time()``).
+    """
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
         self.key: KeyT = key
@@ -363,6 +368,11 @@ class _TransitionResult():
     def stable(self) -> bool:
         return self.status in (TransitionStatus.START_TIMEOUT,
                                TransitionStatus.COMPLETE)
+
+
+# For backwards compatibility with users who may have done
+# `from _stbt.transition import TransitionResult`; remove in v35.
+_TransitionResult = Transition
 
 
 class TransitionStatus(enum.Enum):
