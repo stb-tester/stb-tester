@@ -356,7 +356,7 @@ def load_image(filename: ImageT, flags: int) -> Image:
 
 @typing.overload
 def load_image(
-        filename: ImageT, /, color_channels: int | tuple[int, ...]) -> Image:
+        filename: ImageT, *, color_channels: int | tuple[int, ...]) -> Image:
     ...
 
 
