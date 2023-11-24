@@ -279,34 +279,33 @@ class Transition():
     This object will evaluate to true if the transition completed, false
     otherwise. It has the following attributes:
 
-    * **key** (*str*) – The name of the key that was pressed.
-    * **frame** (`stbt.Frame`) – If successful, the first video frame when
+    :ivar str key: The name of the key that was pressed.
+    :ivar stbt.Frame frame: If successful, the first video frame when
       the transition completed; if timed out, the last frame seen.
-    * **status** (`stbt.TransitionStatus`) – Either ``START_TIMEOUT`` (the
+    :ivar stbt.TransitionStatus status: Either ``START_TIMEOUT`` (the
       transition didn't start – nothing moved), ``STABLE_TIMEOUT`` (the
       transition didn't end – movement didn't stop), or ``COMPLETE`` (the
       transition started and then stopped). If it's ``COMPLETE``, the whole
       object will evaluate as true.
-    * **started** (*bool*) – The transition started (movement was seen
+    :ivar bool started: The transition started (movement was seen
       after the keypress). Implies that ``status`` is either ``COMPLETE``
       or ``STABLE_TIMEOUT``.
-    * **complete** (*bool*) – The transition completed (movement started
+    :ivar bool complete: The transition completed (movement started
       and then stopped). Implies that ``status`` is ``COMPLETE``.
-    * **stable** (*bool*) – The screen is stable (no movement). Implies
+    :ivar bool stable: The screen is stable (no movement). Implies
       ``complete or not started``.
-    * **press_time** (*float*) – When the key-press completed.
-    * **animation_start_time** (*float*) – When animation started after the
+    :ivar float press_time: When the key-press completed.
+    :ivar float animation_start_time: When animation started after the
       key-press (or ``None`` if timed out).
-    * **end_time** (*float*) – When animation completed (or ``None`` if
-      timed out).
-    * **duration** (*float*) – Time from ``press_time`` to ``end_time`` (or
+    :ivar float end_time: When animation completed (or ``None`` if timed out).
+    :ivar float duration: Time from ``press_time`` to ``end_time`` (or
       ``None`` if timed out).
-    * **animation_duration** (*float*) – Time from ``animation_start_time``
+    :ivar float animation_duration: Time from ``animation_start_time``
       to ``end_time`` (or ``None`` if timed out).
 
     All times are measured in seconds since 1970-01-01T00:00Z; the
     timestamps can be compared with system time (the output of
-    ``time.time()``).
+    `time.time`).
     """
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
