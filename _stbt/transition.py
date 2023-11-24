@@ -45,36 +45,34 @@ def press_and_wait(
     duration of animations; or to measure how long it takes for a screen (such
     as an EPG) to finish populating.
 
-    :param str key: The name of the key to press (passed to `stbt.press`).
+    :param key: The name of the key to press (passed to `stbt.press`).
 
-    :param str|numpy.ndarray|Mask|Region mask:
+    :param mask:
         A `Region` or a mask that specifies which parts of the image to
         analyse. This accepts anything that can be converted to a Mask using
         `stbt.load_mask`. See :doc:`masks`.
 
-    :param Region region:
-      Deprecated synonym for ``mask``. Use ``mask`` instead.
+    :param region:
+        Deprecated synonym for ``mask``. Use ``mask`` instead.
 
-    :param int|float timeout_secs: A timeout in seconds. This function will
-        return a falsey value if the transition didn't complete within this
-        number of seconds from the key-press.
+    :param timeout_secs: A timeout in seconds. This function will return a
+        falsey value if the transition didn't complete within this number of
+        seconds from the key-press.
 
-    :param int|float stable_secs: A duration in seconds. The screen must stay
-        unchanged (within the specified region or mask) for this long, for the
-        transition to be considered "complete".
-    :type timeout_secs: int or float
+    :param stable_secs: A duration in seconds. The screen must stay unchanged
+        (within the specified region or mask) for this long, for the transition
+        to be considered "complete".
 
     :param min_size: A tuple of ``(width, height)``, in pixels, for differences
         to be considered as "motion". Use this to ignore small differences,
         such as the blinking text cursor in a search box.
-    :type min_size: tuple[int, int]
 
-    :param int retries: Press the key again (up to this number of times) if
-        the first press didn't have any effect (that is, if the press failed
-        with `TransitionStatus.START_TIMEOUT`). Defaults to 0 (no retries).
+    :param retries: Press the key again (up to this number of times) if the
+        first press didn't have any effect (that is, if the status would have
+        been `TransitionStatus.START_TIMEOUT`). Defaults to 0 (no retries).
 
-    :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
-        Defaults to ``stbt.frames()``.
+    :param frames: An iterable of video-frames to analyse. Defaults to
+        ``stbt.frames()``.
 
     :returns:
         A `Transition` object that will evaluate to true if the transition
@@ -159,14 +157,14 @@ def wait_for_transition_to_end(
         end = wait_for_transition_to_end(m.frame)
         time_to_fully_populated = end.end_time - keypress.start_time
 
-    :param stbt.Frame initial_frame: The frame of video when the transition
-        started. If `None`, we'll pull a new frame from the device under test.
+    :param initial_frame: The frame of video when the transition started. If
+        `None`, we'll pull a new frame from the device under test.
 
-    :param str|numpy.ndarray|Mask|Region mask: See `press_and_wait`.
-    :param Region region: See `press_and_wait`.
-    :param int|float timeout_secs: See `press_and_wait`.
-    :param int|float stable_secs: See `press_and_wait`.
-    :param Iterator[stbt.Frame] frames: See `press_and_wait`.
+    :param mask: See `press_and_wait`.
+    :param region: See `press_and_wait`.
+    :param timeout_secs: See `press_and_wait`.
+    :param stable_secs: See `press_and_wait`.
+    :param frames: See `press_and_wait`.
 
     :returns: See `press_and_wait`.
     """
