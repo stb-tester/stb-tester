@@ -7,7 +7,7 @@ import re
 import typing
 import warnings
 from functools import lru_cache
-from typing import overload, TypeAlias
+from typing import Optional, overload, TypeAlias
 
 import cv2
 import numpy
@@ -199,20 +199,20 @@ class Color:
         ...
     @overload
     def __init__(self, blue: int, green: int, red: int,
-                 alpha: "Optional[int]" = None) -> None:
+                 alpha: Optional[int] = None) -> None:
         ...
     @overload
-    def __init__(self, bgr: "tuple[int, int, int]") -> None:
+    def __init__(self, bgr: tuple[int, int, int]) -> None:
         ...
     @overload
-    def __init__(self, bgra: "tuple[int, int, int, int]") -> None:
+    def __init__(self, bgra: tuple[int, int, int, int]) -> None:
         ...
     def __init__(self, *args,
                  hexstring: str = None,
                  blue: int = None, green: int = None, red: int = None,
                  alpha: int = None,
-                 bgr: "tuple[int, int, int]" = None,
-                 bgra: "tuple[int, int, int, int]" = None) -> None:
+                 bgr: tuple[int, int, int] = None,
+                 bgra: tuple[int, int, int, int] = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -298,7 +298,7 @@ class Color:
     def __repr__(self) -> str:
         return f"Color('{self.hexstring}')"
 
-    def __eq__(self, other: "Color") -> bool:
+    def __eq__(self, other: Color) -> bool:
         return isinstance(other, Color) and self.hexstring == other.hexstring
 
     def __hash__(self) -> int:
