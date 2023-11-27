@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import errno
 import glob
 import os
@@ -450,6 +451,69 @@ def set_global_ocr_corrections(corrections: CorrectionsT):
     global global_ocr_corrections
     debug("Initialising global ocr corrections to: %r" % (corrections,))
     global_ocr_corrections = corrections
+
+
+class OcrApprox:
+    """
+    Approximate string equality.
+
+    `ocr` sometimes mistakes some characters, such as "O" instead of "0",
+    especially when reading short fragments of text without enough context.
+    Wrapping the text in an `OcrApprox` object will treat such characters as
+    equal to each other. It also ignores spaces. For example:
+
+    >>> OcrApprox("hello") == "hel 10"
+    True
+
+    :param ratio: A number between 0.0 and 1.0 (inclusive). Set this to a number
+        less than 1.0 to allow for some mismatches. The default value (1.0)
+        means that the two strings must be identical (apart from spaces and
+        similar-looking characters such as "O" vs. "0", as described above).
+    """
+    def __init__(self, text: str, ratio: float = 1.0):
+        self.text = text
+        self.ratio = ratio
+
+    def __repr__(self):
+        if self.ratio == 1:
+            return f"OcrApprox({self.text!r})"
+        else:
+            return f"OcrApprox({self.text!r}, ratio={self.ratio!r})"
+
+    def __str__(self):
+        return self.text
+
+    def __eq__(self, other):
+        if isinstance(other, OcrApprox):
+            ratio = min(other.ratio, self.ratio)
+            other = other.text
+        else:
+            ratio = self.ratio
+        if self.text == other:
+            return True
+        elif ratio == 1.0:
+            return _ocrapprox_norm(self.text) == _ocrapprox_norm(other)
+        else:
+            r = difflib.SequenceMatcher(
+                None, _ocrapprox_norm(self.text), _ocrapprox_norm(other),
+                autojunk=False).ratio()
+            return r >= ratio
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+def _ocrapprox_norm(text):
+    return text.replace("''", '"') \
+               .replace('m', 'rn') \
+               .replace('i', 'l') \
+               .replace('I', 'l') \
+               .replace('1', 'l') \
+               .replace('|', 'l') \
+               .replace('0', 'O') \
+               .replace('o', 'O') \
+               .replace('5', 'S') \
+               .replace(' ', '')
 
 
 _memoise_tesseract_version = None
