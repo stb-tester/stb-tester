@@ -176,10 +176,10 @@ class FrameObject(metaclass=_FrameObjectMeta):
       allows writing testcases in a natural way, while expensive operations
       like ``ocr`` will only be done once per frame.
 
-    The FrameObject base class defines several convenient methods and
-    attributes (see below).
-
     For more details see `Object Repository`_ in the Stb-tester manual.
+
+    The FrameObject base class defines several convenient methods and
+    attributes:
 
     .. _@property: https://docs.python.org/3.6/library/functions.html#property
     .. _fowler: https://martinfowler.com/bliki/PageObject.html
@@ -188,7 +188,8 @@ class FrameObject(metaclass=_FrameObjectMeta):
 
     def __init__(self, frame: Optional[FrameT] = None) -> None:
         """The default constructor takes an optional frame of video; if the
-        frame is not provided, it will grab a frame from the device-under-test.
+        frame is not provided, it will grab a live frame from the
+        device-under-test.
 
         If you override the constructor in your derived class (for example to
         accept additional parameters), make sure to accept an optional
