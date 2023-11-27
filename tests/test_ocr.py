@@ -455,3 +455,43 @@ def _test_that_cache_speeds_up_ocr():
     print("ocr with cache (frame 2): %s" % (time2,))
     assert time2 < (time1 * 10)
     assert cached_ocr1() == cached_ocr2()
+
+
+@pytest.mark.parametrize("a", [
+    "hello",
+    "he110",
+])
+@pytest.mark.parametrize("b", [
+    "hello",
+    "he110",
+    "hel 10",
+])
+def test_ocr_eq_should_match(a, b):
+    assert stbt.ocr_eq(a, b)
+    assert stbt.ocr_eq(b, a)  # pylint:disable=arguments-out-of-order
+
+
+@pytest.mark.parametrize("a,b", [
+    ("hello", "hell"),
+    ("hello", "helloo"),
+    ("hello", "HELLO"),
+    ("hello", ""),
+    ("hello", "goodbye"),
+    ("", "hello"),
+])
+def test_ocr_eq_shouldnt_match(a, b):
+    assert not stbt.ocr_eq(a, b)
+    assert not stbt.ocr_eq(b, a)  # pylint:disable=arguments-out-of-order
+
+
+def test_ocr_eq_replacements():
+    assert stbt.ocr_eq("hello", "hel 10")
+    assert stbt.ocr_eq.normalize("hel 10") == "hellO"
+    orig = stbt.ocr_eq.replacements
+    try:
+        stbt.ocr_eq.replacements = {"1": "l"}
+        assert stbt.ocr_eq("hello", "he11o")
+        assert not stbt.ocr_eq("hello", "hel 10")
+        assert stbt.ocr_eq.normalize("hel 10") == "hel l0"
+    finally:
+        stbt.ocr_eq.replacements = orig

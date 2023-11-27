@@ -452,6 +452,43 @@ def set_global_ocr_corrections(corrections: CorrectionsT):
     global_ocr_corrections = corrections
 
 
+def ocr_eq(a: str, b: str) -> bool:
+    """Compare two strings for equality, ignoring common OCR errors.
+
+    `ocr` sometimes mistakes some characters, such as "O" instead of "0",
+    especially when reading short fragments of text without enough context.
+    ``ocr_eq`` wil treat such characters as equal to each other. It also
+    ignores spaces. For example:
+
+    >>> ocr_eq("hello", "hel 10")
+    True
+    """
+    return ocr_eq.normalize(a) == ocr_eq.normalize(b)
+
+
+ocr_eq.replacements = {
+    "''": '"',
+    "m": "rn",
+    "i": "l",
+    "I": "l",
+    "1": "l",
+    "|": "l",
+    "0": "O",
+    "o": "O",
+    "5": "S",
+    " ": "",
+}
+
+
+def normalize(text):
+    for a, b in ocr_eq.replacements.items():
+        text = text.replace(a, b)
+    return text
+
+
+ocr_eq.normalize = normalize
+
+
 _memoise_tesseract_version = None
 
 
