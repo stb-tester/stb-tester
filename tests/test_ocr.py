@@ -492,3 +492,14 @@ def test_ocrapprox_should_match(a, b):
 def test_ocrapprox_shouldnt_match(a, b):
     assert a != b
     assert b != a
+
+
+def test_ocrapprox_replacements():
+    assert stbt.OcrApprox("hello") == "hel 10"
+    orig = stbt.OcrApprox.replacements
+    try:
+        stbt.OcrApprox.replacements = {"1": "l"}
+        assert stbt.OcrApprox("hello") == "he11o"
+        assert stbt.OcrApprox("hello") != "hel 10"
+    finally:
+        stbt.OcrApprox.replacements = orig

@@ -470,6 +470,20 @@ class OcrApprox:
         means that the two strings must be identical (apart from spaces and
         similar-looking characters such as "O" vs. "0", as described above).
     """
+
+    replacements = {
+        "''": '"',
+        "m": "rn",
+        "i": "l",
+        "I": "l",
+        "1": "l",
+        "|": "l",
+        "0": "O",
+        "o": "O",
+        "5": "S",
+        " ": "",
+    }
+
     def __init__(self, text: str, ratio: float = 1.0):
         self.text = text
         self.ratio = ratio
@@ -492,28 +506,21 @@ class OcrApprox:
         if self.text == other:
             return True
         elif ratio == 1.0:
-            return _ocrapprox_norm(self.text) == _ocrapprox_norm(other)
+            return OcrApprox._norm(self.text) == OcrApprox._norm(other)
         else:
             r = difflib.SequenceMatcher(
-                None, _ocrapprox_norm(self.text), _ocrapprox_norm(other),
+                None, OcrApprox._norm(self.text), OcrApprox._norm(other),
                 autojunk=False).ratio()
             return r >= ratio
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
-
-def _ocrapprox_norm(text):
-    return text.replace("''", '"') \
-               .replace('m', 'rn') \
-               .replace('i', 'l') \
-               .replace('I', 'l') \
-               .replace('1', 'l') \
-               .replace('|', 'l') \
-               .replace('0', 'O') \
-               .replace('o', 'O') \
-               .replace('5', 'S') \
-               .replace(' ', '')
+    @staticmethod
+    def _norm(text):
+        for a, b in OcrApprox.replacements.items():
+            text = text.replace(a, b)
+        return text
 
 
 _memoise_tesseract_version = None
