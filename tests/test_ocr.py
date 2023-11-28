@@ -460,10 +460,6 @@ def _test_that_cache_speeds_up_ocr():
 @pytest.mark.parametrize("a", [
     stbt.OcrApprox("hello"),
     stbt.OcrApprox("he110"),
-    stbt.OcrApprox("hell", ratio=0.8),
-    stbt.OcrApprox("helloo", ratio=0.8),
-    stbt.OcrApprox("", ratio=0),
-    stbt.OcrApprox("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", ratio=0),
 ])
 @pytest.mark.parametrize("b", [
     stbt.OcrApprox("hello"),
@@ -484,10 +480,8 @@ def test_ocrapprox_should_match(a, b):
     (stbt.OcrApprox("hello"), ""),
     (stbt.OcrApprox("hello"), "goodbye"),
     (stbt.OcrApprox(""), "hello"),
-    (stbt.OcrApprox("hello", ratio=0.8), "goodbye"),
-    (stbt.OcrApprox("hello", ratio=0.8), "hel"),
+    (stbt.OcrApprox("hello"), stbt.OcrApprox("hell")),
     (stbt.OcrApprox("hello"), stbt.OcrApprox("goodbye")),
-    (stbt.OcrApprox("hello", ratio=0.8), stbt.OcrApprox("goodbye", ratio=0.2)),
 ])
 def test_ocrapprox_shouldnt_match(a, b):
     assert a != b

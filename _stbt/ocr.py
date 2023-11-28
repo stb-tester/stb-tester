@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import difflib
 import errno
 import glob
 import os
@@ -464,11 +463,6 @@ class OcrApprox:
 
     >>> OcrApprox("hello") == "hel 10"
     True
-
-    :param ratio: A number between 0.0 and 1.0 (inclusive). Set this to a number
-        less than 1.0 to allow for some mismatches. The default value (1.0)
-        means that the two strings must be identical (apart from spaces and
-        similar-looking characters such as "O" vs. "0", as described above).
     """
 
     replacements = {
@@ -484,34 +478,22 @@ class OcrApprox:
         " ": "",
     }
 
-    def __init__(self, text: str, ratio: float = 1.0):
+    def __init__(self, text: str):
         self.text = text
-        self.ratio = ratio
 
     def __repr__(self):
-        if self.ratio == 1:
-            return f"OcrApprox({self.text!r})"
-        else:
-            return f"OcrApprox({self.text!r}, ratio={self.ratio!r})"
+        return f"OcrApprox({self.text!r})"
 
     def __str__(self):
         return self.text
 
     def __eq__(self, other):
         if isinstance(other, OcrApprox):
-            ratio = min(other.ratio, self.ratio)
             other = other.text
-        else:
-            ratio = self.ratio
         if self.text == other:
             return True
-        elif ratio == 1.0:
-            return OcrApprox._norm(self.text) == OcrApprox._norm(other)
         else:
-            r = difflib.SequenceMatcher(
-                None, OcrApprox._norm(self.text), OcrApprox._norm(other),
-                autojunk=False).ratio()
-            return r >= ratio
+            return OcrApprox._norm(self.text) == OcrApprox._norm(other)
 
     def __ne__(self, other):
         return not self.__eq__(other)
