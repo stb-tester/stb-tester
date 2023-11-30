@@ -3,9 +3,11 @@ from __future__ import annotations
 import errno
 import glob
 import os
+import pprint
 import re
 import shutil
 import subprocess
+import textwrap
 from enum import IntEnum
 from typing import Optional
 
@@ -455,13 +457,26 @@ def set_global_ocr_corrections(corrections: CorrectionsT):
 def ocr_eq(a: str, b: str) -> bool:
     """Compare two strings for equality, ignoring common OCR errors.
 
-    `ocr` sometimes mistakes some characters, such as "O" instead of "0",
+    `stbt.ocr` sometimes mistakes some characters, such as "O" instead of "0",
     especially when reading short fragments of text without enough context.
-    ``ocr_eq`` wil treat such characters as equal to each other. It also
-    ignores spaces. For example:
+    ``ocr_eq`` wil treat such characters as equal to each other. It also ignores
+    spaces. For example:
 
     >>> ocr_eq("hello", "hel 10")
     True
+
+    The character mapping used by ``ocr_eq``'s normalization algorithm is
+    available in ``ocr_eq.replacements``; you can modify it by adding or
+    removing entries. The default mapping is:
+
+    >>> ocr_eq.replacements
+    {replacements}
+
+    If you need to normalize a single string using this same algorithm, use
+    ``ocr_eq.normalize``:
+
+    >>> ocr_eq.normalize("hel 10")
+    'hellO'
 
     Added in v34.
     """
@@ -480,6 +495,12 @@ ocr_eq.replacements = {
     "5": "S",
     " ": "",
 }
+
+
+ocr_eq.__doc__ = ocr_eq.__doc__.format(  # type: ignore
+    replacements=textwrap.indent(
+        pprint.PrettyPrinter(sort_dicts=False).pformat(ocr_eq.replacements),
+        "    ").strip())
 
 
 def normalize(text):
