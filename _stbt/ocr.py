@@ -462,6 +462,8 @@ def ocr_eq(a: str, b: str) -> bool:
 
     >>> ocr_eq("hello", "hel 10")
     True
+
+    Added in v34.
     """
     return ocr_eq.normalize(a) == ocr_eq.normalize(b)
 
