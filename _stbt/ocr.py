@@ -3,11 +3,9 @@ from __future__ import annotations
 import errno
 import glob
 import os
-import pprint
 import re
 import shutil
 import subprocess
-import textwrap
 from enum import IntEnum
 from typing import Optional
 
@@ -470,7 +468,16 @@ def ocr_eq(a: str, b: str) -> bool:
     removing entries. The default mapping is:
 
     >>> ocr_eq.replacements
-    {replacements}
+    {"''": '"',
+     'm': 'rn',
+     'i': 'l',
+     'I': 'l',
+     '1': 'l',
+     '|': 'l',
+     '0': 'O',
+     'o': 'O',
+     '5': 'S',
+     ' ': ''}
 
     If you need to normalize a single string using this same algorithm, use
     ``ocr_eq.normalize``:
@@ -485,22 +492,16 @@ def ocr_eq(a: str, b: str) -> bool:
 
 ocr_eq.replacements = {
     "''": '"',
-    "m": "rn",
-    "i": "l",
-    "I": "l",
-    "1": "l",
-    "|": "l",
-    "0": "O",
-    "o": "O",
-    "5": "S",
-    " ": "",
+    'm': 'rn',
+    'i': 'l',
+    'I': 'l',
+    '1': 'l',
+    '|': 'l',
+    '0': 'O',
+    'o': 'O',
+    '5': 'S',
+    ' ': '',
 }
-
-
-ocr_eq.__doc__ = ocr_eq.__doc__.format(  # type: ignore
-    replacements=textwrap.indent(
-        pprint.PrettyPrinter(sort_dicts=False).pformat(ocr_eq.replacements),
-        "    ").strip())
 
 
 def normalize(text):
