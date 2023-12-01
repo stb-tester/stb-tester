@@ -455,13 +455,35 @@ def set_global_ocr_corrections(corrections: CorrectionsT):
 def ocr_eq(a: str, b: str) -> bool:
     """Compare two strings for equality, ignoring common OCR errors.
 
-    `ocr` sometimes mistakes some characters, such as "O" instead of "0",
+    `stbt.ocr` sometimes mistakes some characters, such as "O" instead of "0",
     especially when reading short fragments of text without enough context.
-    ``ocr_eq`` wil treat such characters as equal to each other. It also
-    ignores spaces. For example:
+    ``ocr_eq`` wil treat such characters as equal to each other. It also ignores
+    spaces. For example:
 
     >>> ocr_eq("hello", "hel 10")
     True
+
+    The character mapping used by ``ocr_eq``'s normalization algorithm is
+    available in ``ocr_eq.replacements``; you can modify it by adding or
+    removing entries. The default mapping is:
+
+    >>> ocr_eq.replacements
+    {"''": '"',
+     'm': 'rn',
+     'i': 'l',
+     'I': 'l',
+     '1': 'l',
+     '|': 'l',
+     '0': 'O',
+     'o': 'O',
+     '5': 'S',
+     ' ': ''}
+
+    If you need to normalize a single string using this same algorithm, use
+    ``ocr_eq.normalize``:
+
+    >>> ocr_eq.normalize("hel 10")
+    'hellO'
 
     Added in v34.
     """
@@ -470,15 +492,15 @@ def ocr_eq(a: str, b: str) -> bool:
 
 ocr_eq.replacements = {
     "''": '"',
-    "m": "rn",
-    "i": "l",
-    "I": "l",
-    "1": "l",
-    "|": "l",
-    "0": "O",
-    "o": "O",
-    "5": "S",
-    " ": "",
+    'm': 'rn',
+    'i': 'l',
+    'I': 'l',
+    '1': 'l',
+    '|': 'l',
+    '0': 'O',
+    'o': 'O',
+    '5': 'S',
+    ' ': '',
 }
 
 
