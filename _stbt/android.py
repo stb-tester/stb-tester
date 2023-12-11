@@ -127,8 +127,8 @@ class AdbDevice():
     :param string address:
         IP address (if using Network ADB) or serial number (if connected via
         USB) of the Android device. You can get the serial number by running
-        ``adb devices -l``. If not specified, there must be only one Android
-        device connected by USB.
+        ``adb devices -l``. If not specified, this is read from
+        "device_under_test.ip_address" in your :ref:`node-specific-config`.
     :param string adb_server:
         The ADB server (that is, the PC connected to the Android device).
         Defaults to localhost.
