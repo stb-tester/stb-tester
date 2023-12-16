@@ -31,17 +31,17 @@ class Keyboard():
     by specifying two things:
 
     * A `Directed Graph`_ that specifies the navigation between every key on
-      the keyboard. For example: When *A* is selected, pressing *KEY_RIGHT* on
+      the keyboard. For example: When *A* is focused, pressing *KEY_RIGHT* on
       the remote control goes to *B*, and so on.
 
-    * A `Page Object`_ that tells you which key is currently selected on the
+    * A `Page Object`_ that tells you which key is currently focused on the
       screen. See the ``page`` parameter to `enter_text` and `navigate_to`.
 
     The constructor takes the following parameters:
 
     :param str|numpy.ndarray|Mask|Region mask:
         A mask to use when calling `stbt.press_and_wait` to determine when the
-        current selection has finished moving. If the search page has a
+        current focus has finished moving. If the search page has a
         blinking cursor you need to mask out the region where the cursor can
         appear, as well as any other regions with dynamic content (such as a
         picture-in-picture with live TV). See `stbt.press_and_wait` for more
@@ -109,18 +109,18 @@ class Keyboard():
                 ...
 
             @property
-            def selection(self):
-                """Returns the selected key.
+            def focus(self):
+                """Returns the focused key.
 
                 Used by `Keyboard.enter_text` and `Keyboard.navigate_to`.
 
-                Note: The reference image (selection.png) is carefully cropped
+                Note: The reference image (focus.png) is carefully cropped
                 so that it will match the normal keys as well as the larger
                 "SPACE", "DELETE" and "CLEAR" keys. The middle of the image
                 (where the key's label appears) is transparent so that it will
                 match any key.
                 """
-                m = stbt.match("selection.png", frame=self._frame)
+                m = stbt.match("focus.png", frame=self._frame)
                 if m:
                     return kb.find_key(region=m.region)
                 else:
@@ -154,14 +154,14 @@ class Keyboard():
       object, and then use `add_key`, `add_transition`, `add_edgelist`, and
       `add_grid` to build the model of the keyboard.
     * Removed the ``stbt.Keyboard.Selection`` type. Instead, your Page Object's
-      ``selection`` property should return a `Key` value obtained from
+      ``focus`` property should return a `Key` value obtained from
       `find_key`.
 
     Changed in v33:
 
     * Added class `stbt.Keyboard.Key` (the type returned from `find_key`). This
       used to be a private API, but now it is public so that you can use it in
-      type annotations for your Page Object's ``selection`` property.
+      type annotations for your Page Object's ``focus`` property.
     * Tries to recover from missed or double keypresses. To disable this
       behaviour specify ``retries=0`` when calling `enter_text` or
       `navigate_to`.
@@ -264,10 +264,9 @@ class Keyboard():
         Specify one or more of ``name``, ``text``, ``region``, and ``mode``
         (as many as are needed to uniquely identify the key).
 
-        For example, your Page Object's ``selection`` property would do some
-        image processing to find the selection on screen, and then use
-        ``find_key`` to identify the current key based on the region of that
-        selection.
+        For example, your Page Object's ``focus`` property would do some
+        image processing to find the position of the focus, and then use
+        ``find_key`` to identify the focused key based on that region.
 
         :returns: A `stbt.Keyboard.Key` object that unambiguously identifies
             the key in the model. It has "name", "text", "region", and "mode"
@@ -645,19 +644,19 @@ class Keyboard():
             sub-class that describes the appearance of the on-screen keyboard.
             It must implement the following:
 
-            * ``selection`` (`Key`) — property that returns a Key object, as
+            * ``focus`` (`Key`) — property that returns a Key object, as
               returned from `find_key`.
 
             When you call *enter_text*, ``page`` must represent the current
             state of the device-under-test.
 
         :param bool verify_every_keypress:
-            If True, we will read the selected key after every keypress and
+            If True, we will read the focused key after every keypress and
             assert that it matches the model. If False (the default) we will
-            only verify the selected key corresponding to each of the
+            only verify the focused key corresponding to each of the
             characters in ``text``. For example: to get from *A* to *D* you
             need to press *KEY_RIGHT* three times. The default behaviour will
-            only verify that the selected key is *D* after the third keypress.
+            only verify that the focused key is *D* after the third keypress.
             This is faster, and closer to the way a human uses the on-screen
             keyboard.
 
@@ -690,7 +689,7 @@ class Keyboard():
                                     page, verify_every_keypress, retries)
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
-            log.debug("Entered %r; the selection is now on %r",
+            log.debug("Entered %r; the focus is now on %r",
                       letter, self._get_focus(page))
         log.info("Entered %r", text)
         return page
@@ -702,10 +701,9 @@ class Keyboard():
         verify_every_keypress: bool = False,
         retries: int = 2,
     ) -> FrameObjectT:
-        """Move the selection to the specified key.
+        """Move the focus to the specified key.
 
-        This won't press *KEY_OK* on the target; it only moves the selection
-        there.
+        This won't press *KEY_OK* on the target; it only moves the focus there.
 
         :param target: This can be a Key object returned from `find_key`, or it
             can be a dict that contains one or more of "name", "text",
@@ -754,18 +752,18 @@ class Keyboard():
             for key, immediate_targets in keys:
                 transition = self.press_and_wait(key, stable_secs=0.5)
                 assert transition.status != TransitionStatus.STABLE_TIMEOUT, \
-                    "Selection didn't stabilise after pressing %s" % (key,)
+                    "Focus didn't stabilise after pressing %s" % (key,)
                 page = page.refresh(frame=transition.frame)
                 assert page, "%s page isn't visible" % type(page).__name__
                 current = self._get_focus(page)
                 if (current not in immediate_targets and
                         not verify_every_keypress):
-                    # Wait a bit longer for selection to reach the target
+                    # Wait a bit longer for focus to reach the target
                     transition = self.wait_for_transition_to_end(
                         initial_frame=page._frame, stable_secs=2)
                     assert transition.status != \
                         TransitionStatus.STABLE_TIMEOUT, \
-                        "Selection didn't stabilise after pressing %s" % (key,)
+                        "Focus didn't stabilise after pressing %s" % (key,)
                     page = page.refresh(frame=transition.frame)
                     assert page, "%s page isn't visible" % type(page).__name__
                     current = self._get_focus(page)
