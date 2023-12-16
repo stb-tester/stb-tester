@@ -167,6 +167,11 @@ class Keyboard():
       `navigate_to`.
     * Increased default ``navigate_timeout`` from 20 to 60 seconds.
 
+    Changed in v34:
+
+    * The property of the ``page`` object should be called ``focus``, not
+      ``selection`` (for backward compatibility we still support ``selection``).
+
     .. _Page Object: https://stb-tester.com/manual/object-repository#what-is-a-page-object
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     '''
