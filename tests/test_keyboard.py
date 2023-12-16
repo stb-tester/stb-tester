@@ -231,58 +231,76 @@ class _NotSpecified():  # sentinel value
     pass
 
 
-class SearchPage(stbt.FrameObject):
-    """Immutable Page Object representing the test's view of the DUT."""
+def SearchPage(dut, kb, is_visible=True, selection=_NotSpecified,
+               property_name="selection"):
 
-    def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
-        super().__init__(
-            frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
-        self.dut = dut
-        self.kb = kb
-        self._is_visible = is_visible
-        self._selection = selection
+    class _SearchPage(stbt.FrameObject):
+        """Immutable Page Object representing the test's view of the DUT."""
 
-    @property
-    def is_visible(self):
-        return self._is_visible
+        def __init__(self, dut, kb, is_visible=True, selection=_NotSpecified):
+            super().__init__(
+                frame=numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
+            self.dut = dut
+            self.kb = kb
+            self._is_visible = is_visible
+            self._selection = selection
 
-    @property
-    def mode(self):
-        if self.kb.modes:
-            return self.dut.mode
+        @property
+        def is_visible(self):
+            return self._is_visible
+
+        @property
+        def mode(self):
+            if self.kb.modes:
+                return self.dut.mode
+            else:
+                return None
+
+        if property_name == "selection":
+            @property
+            def selection(self):
+                return self._focus_property
+        elif property_name == "focus":
+            @property
+            def focus(self):
+                return self._focus_property
         else:
-            return None
+            assert False, f"Unexpected name {property_name!r}"
 
-    @property
-    def selection(self):
-        # In practice this would use image processing to detect the current
-        # selection & mode, then look up the key by region & mode.
-        # See test_find_key_by_region for an example.
-        if self._selection != _NotSpecified:
-            return self._selection
-        query = {}
-        if self.dut.selection == " ":
-            query = {"text": " "}  # for test_that_enter_text_finds_keys_by_text
-        else:
-            query = {"name": self.dut.selection}
-        if self.kb.modes:
-            query["mode"] = self.dut.mode
-        key = self.kb.find_key(**query)
-        logging.debug("SearchPage.selection: %r", key)
-        return key
+        @property
+        def _focus_property(self):
+            # In practice this would use image processing to detect the current
+            # selection & mode, then look up the key by region & mode.
+            # See test_find_key_by_region for an example.
+            if self._selection != _NotSpecified:
+                return self._selection
+            query = {}
+            if self.dut.selection == " ":
+                # For test_that_enter_text_finds_keys_by_text
+                query = {"text": " "}
+            else:
+                query = {"name": self.dut.selection}
+            if self.kb.modes:
+                query["mode"] = self.dut.mode
+            key = self.kb.find_key(**query)
+            logging.debug("SearchPage.selection: %r", key)
+            return key
 
-    def refresh(self, frame=None, **kwargs):
-        page = SearchPage(self.dut, self.kb)
-        logging.debug("SearchPage.refresh: Now on %r", page.selection)
-        return page
+        def refresh(self, frame=None, **kwargs):
+            page = SearchPage(self.dut, self.kb, property_name=property_name)
+            logging.debug("SearchPage.refresh: Now on %r", page._focus_property)
+            return page
 
-    def enter_text(self, text, retries=2):
-        return self.kb.enter_text(text, page=self, retries=retries)
+        def enter_text(self, text, retries=2):
+            return self.kb.enter_text(text, page=self, retries=retries)
 
-    def navigate_to(self, target, verify_every_keypress=False, retries=2):
-        return self.kb.navigate_to(target, page=self,
-                                   verify_every_keypress=verify_every_keypress,
-                                   retries=retries)
+        def navigate_to(self, target, verify_every_keypress=False, retries=2):
+            return self.kb.navigate_to(
+                target, page=self,
+                verify_every_keypress=verify_every_keypress,
+                retries=retries)
+
+    return _SearchPage(dut, kb, is_visible, selection)
 
 
 kb1 = stbt.Keyboard()  # Full model with modes, defined using Grids
@@ -526,14 +544,15 @@ for source_mode in ["lowercase", "uppercase", "symbols"]:
 
 
 @pytest.mark.parametrize("kb", [kb1, kb2, kb5], ids=["kb1", "kb2", "kb5"])
-def test_enter_text_mixed_case(dut, kb):
+@pytest.mark.parametrize("property_name", ["selection", "focus"])
+def test_enter_text_mixed_case(dut, kb, property_name):
     logging.debug("Keys: %r", kb.G.nodes())
-    page = SearchPage(dut, kb)
-    assert page.selection.name == "a"
-    assert page.selection.text == "a"
-    assert page.selection.mode == "lowercase"
+    page = SearchPage(dut, kb, property_name=property_name)
+    assert getattr(page, property_name).name == "a"
+    assert getattr(page, property_name).text == "a"
+    assert getattr(page, property_name).mode == "lowercase"
     page = page.enter_text("Hi there")
-    assert page.selection.name == "e"
+    assert getattr(page, property_name).name == "e"
     assert dut.entered == "Hi there"
 
 

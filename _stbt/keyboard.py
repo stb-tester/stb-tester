@@ -691,7 +691,7 @@ class Keyboard():
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
             log.debug("Entered %r; the selection is now on %r",
-                      letter, page.selection)
+                      letter, self._get_focus(page))
         log.info("Entered %r", text)
         return page
 
@@ -735,10 +735,11 @@ class Keyboard():
             self.G_ = _strip_shift_transitions(self.G)
 
         assert page, "%s page isn't visible" % type(page).__name__
-        assert page.selection in self.G_, \
-            "page.selection (%r) isn't in the keyboard" % (page.selection,)
+        current = self._get_focus(page)
+        assert current in self.G_, \
+            "page.%s (%r) isn't in the keyboard" % (
+                self._get_focus_property_name(page), current)
         deadline = time.time() + self.navigate_timeout
-        current = page.selection
         while current not in targets:
             assert time.time() < deadline, (
                 "Keyboard.navigate_to: Didn't reach %r after %s seconds"
@@ -756,7 +757,7 @@ class Keyboard():
                     "Selection didn't stabilise after pressing %s" % (key,)
                 page = page.refresh(frame=transition.frame)
                 assert page, "%s page isn't visible" % type(page).__name__
-                current = page.selection
+                current = self._get_focus(page)
                 if (current not in immediate_targets and
                         not verify_every_keypress):
                     # Wait a bit longer for selection to reach the target
@@ -767,7 +768,7 @@ class Keyboard():
                         "Selection didn't stabilise after pressing %s" % (key,)
                     page = page.refresh(frame=transition.frame)
                     assert page, "%s page isn't visible" % type(page).__name__
-                    current = page.selection
+                    current = self._get_focus(page)
                 if current not in immediate_targets:
                     message = (
                         "Expected to see %s after pressing %s, but saw %r."
@@ -803,6 +804,20 @@ class Keyboard():
         return stbt.wait_for_transition_to_end(initial_frame, mask=self.mask,
                                                timeout_secs=timeout_secs,
                                                stable_secs=stable_secs)
+
+    def _get_focus(self, page):
+        # `focus` is the official name we support; `selection` for backward
+        # compatibility.
+        try:
+            return page.selection
+        except AttributeError:
+            pass
+        return page.focus
+
+    def _get_focus_property_name(self, page):
+        if hasattr(page, "selection"):
+            return "selection"
+        return "focus"
 
 
 @dataclasses.dataclass
