@@ -694,8 +694,9 @@ class Keyboard():
                                     page, verify_every_keypress, retries)
             self.press_and_wait("KEY_OK", stable_secs=0.5, timeout_secs=1)  # pylint:disable=stbt-unused-return-value
             page = page.refresh()
-            log.debug("Entered %r; the focus is now on %r",
-                      letter, self._get_focus(page))
+            property_name, current = self._get_focus(page)
+            log.debug("Entered %r; the %s is now on %r",
+                      letter, property_name, current)
         log.info("Entered %r", text)
         return page
 
@@ -738,10 +739,9 @@ class Keyboard():
             self.G_ = _strip_shift_transitions(self.G)
 
         assert page, "%s page isn't visible" % type(page).__name__
-        current = self._get_focus(page)
+        property_name, current = self._get_focus(page)
         assert current in self.G_, \
-            "page.%s (%r) isn't in the keyboard" % (
-                self._get_focus_property_name(page), current)
+            "page.%s (%r) isn't in the keyboard" % (property_name, current)
         deadline = time.time() + self.navigate_timeout
         while current not in targets:
             assert time.time() < deadline, (
@@ -757,10 +757,11 @@ class Keyboard():
             for key, immediate_targets in keys:
                 transition = self.press_and_wait(key, stable_secs=0.5)
                 assert transition.status != TransitionStatus.STABLE_TIMEOUT, \
-                    "Focus didn't stabilise after pressing %s" % (key,)
+                    "%s didn't stabilise after pressing %s" % (
+                        property_name.capitalize(), key,)
                 page = page.refresh(frame=transition.frame)
                 assert page, "%s page isn't visible" % type(page).__name__
-                current = self._get_focus(page)
+                property_name, current = self._get_focus(page)
                 if (current not in immediate_targets and
                         not verify_every_keypress):
                     # Wait a bit longer for focus to reach the target
@@ -768,10 +769,11 @@ class Keyboard():
                         initial_frame=page._frame, stable_secs=2)
                     assert transition.status != \
                         TransitionStatus.STABLE_TIMEOUT, \
-                        "Focus didn't stabilise after pressing %s" % (key,)
+                        "%s didn't stabilise after pressing %s" % (
+                            property_name.capitalize(), key,)
                     page = page.refresh(frame=transition.frame)
                     assert page, "%s page isn't visible" % type(page).__name__
-                    current = self._get_focus(page)
+                    property_name, current = self._get_focus(page)
                 if current not in immediate_targets:
                     message = (
                         "Expected to see %s after pressing %s, but saw %r."
@@ -812,15 +814,10 @@ class Keyboard():
         # `focus` is the official name we support; `selection` for backward
         # compatibility.
         try:
-            return page.selection
+            return "selection", page.selection
         except AttributeError:
             pass
-        return page.focus
-
-    def _get_focus_property_name(self, page):
-        if hasattr(page, "selection"):
-            return "selection"
-        return "focus"
+        return "focus", page.focus
 
 
 @dataclasses.dataclass
