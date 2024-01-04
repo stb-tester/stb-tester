@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import errno
 import glob
 import os
@@ -490,7 +491,26 @@ def ocr_eq(a: str, b: str) -> bool:
     return ocr_eq.normalize(a) == ocr_eq.normalize(b)
 
 
-ocr_eq.replacements = {
+def normalize(text):
+    return _normalize(text, ocr_eq.replacements)
+
+
+def _normalize(text, replacements):
+    for a, b in replacements.items():
+        text = text.replace(a, b)
+    return text
+
+
+class Replacements(collections.UserDict):
+    def __setitem__(self, key: str, value: str) -> None:
+        value = _normalize(value, self)
+        return super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        raise TypeError("Cannot remove items from ocr_eq.replacements")
+
+
+ocr_eq.replacements = Replacements({
     "''": '"',
     'm': 'rn',
     'i': 'l',
@@ -501,13 +521,7 @@ ocr_eq.replacements = {
     'o': 'O',
     '5': 'S',
     ' ': '',
-}
-
-
-def normalize(text):
-    for a, b in ocr_eq.replacements.items():
-        text = text.replace(a, b)
-    return text
+})
 
 
 ocr_eq.normalize = normalize

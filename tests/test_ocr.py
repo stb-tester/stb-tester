@@ -487,11 +487,18 @@ def test_ocr_eq_shouldnt_match(a, b):
 def test_ocr_eq_replacements():
     assert stbt.ocr_eq("hello", "hel 10")
     assert stbt.ocr_eq.normalize("hel 10") == "hellO"
-    orig = stbt.ocr_eq.replacements
+    orig = stbt.ocr_eq.replacements.copy()
     try:
         stbt.ocr_eq.replacements = {"1": "l"}
         assert stbt.ocr_eq("hello", "he11o")
         assert not stbt.ocr_eq("hello", "hel 10")
         assert stbt.ocr_eq.normalize("hel 10") == "hel l0"
     finally:
-        stbt.ocr_eq.replacements = orig
+        stbt.ocr_eq.replacements = orig.copy()
+
+    try:
+        # "I" is already normalized to "l"
+        stbt.ocr_eq.replacements["İ"] = "I"
+        assert stbt.ocr_eq("İ", "I")
+    finally:
+        stbt.ocr_eq.replacements = orig.copy()
