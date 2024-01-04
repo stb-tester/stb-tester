@@ -11,7 +11,7 @@ import _stbt.config
 import stbt_core as stbt
 from _stbt import imgproc_cache
 from _stbt.imgutils import load_image
-from _stbt.ocr import _tesseract_version
+from _stbt.ocr import _tesseract_version, Replacements
 from _stbt.utils import named_temporary_directory
 
 
@@ -484,21 +484,40 @@ def test_ocr_eq_shouldnt_match(a, b):
     assert not stbt.ocr_eq(b, a)  # pylint:disable=arguments-out-of-order
 
 
+@contextmanager
+def temporary_ocr_eq_replacements():
+    orig = stbt.ocr_eq.replacements.copy()
+    try:
+        yield
+    finally:
+        stbt.ocr_eq.replacements = orig.copy()
+
+
 def test_ocr_eq_replacements():
     assert stbt.ocr_eq("hello", "hel 10")
     assert stbt.ocr_eq.normalize("hel 10") == "hellO"
-    orig = stbt.ocr_eq.replacements.copy()
-    try:
+    with temporary_ocr_eq_replacements():
         stbt.ocr_eq.replacements = {"1": "l"}
         assert stbt.ocr_eq("hello", "he11o")
         assert not stbt.ocr_eq("hello", "hel 10")
         assert stbt.ocr_eq.normalize("hel 10") == "hel l0"
-    finally:
-        stbt.ocr_eq.replacements = orig.copy()
 
-    try:
+    with temporary_ocr_eq_replacements():
         # "I" is already normalized to "l"
         stbt.ocr_eq.replacements["İ"] = "I"
         assert stbt.ocr_eq("İ", "I")
-    finally:
-        stbt.ocr_eq.replacements = orig.copy()
+
+    with temporary_ocr_eq_replacements():
+        # The order we specify these replacements won't ultimately matter:
+        stbt.ocr_eq.replacements = Replacements({"İ": "I"})
+        stbt.ocr_eq.replacements["I"] = "l"
+        assert stbt.ocr_eq("İ", "I")
+
+    with temporary_ocr_eq_replacements():
+        # Changing something that had already been changed due to earlier
+        # normalisations is safe, because the `replacements` dict is iterated
+        # in insertion order:
+        stbt.ocr_eq.replacements["l"] = "*"
+        assert stbt.ocr_eq("hello", "he11o")
+        assert stbt.ocr_eq("hello", "he**o")
+        assert stbt.ocr_eq("he11o", "he**o")
