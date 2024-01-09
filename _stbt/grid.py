@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Generic, Iterator, Optional, Sequence, TypeVar
+from typing import Generic, Iterator, Optional, Sequence, TypeVar
 
 from .types import Position, PositionT, Region
 
@@ -110,7 +110,7 @@ class Grid(Generic[T]):
         index: Optional[int] = None,
         position: Optional[PositionT] = None,
         region: Optional[Region] = None,
-        data: Any = None,
+        data: Optional[T] = None,
     ) -> Cell:
         """Retrieve a single cell in the Grid.
 
@@ -150,6 +150,7 @@ class Grid(Generic[T]):
                       else self._position_to_region(position))
         elif position is not None:
             index = self._position_to_index(position)
+            position = Position(position[0], position[1])
             region = (None if self.region is None
                       else self._position_to_region(position))
         elif region is not None:
@@ -158,6 +159,7 @@ class Grid(Generic[T]):
             region = (None if self.region is None
                       else self._position_to_region(position))
         elif data is not None:
+            assert self.data is not None
             for i in range(self.cols * self.rows):
                 position = self._index_to_position(i)
                 if data == self.data[position[1]][position[0]]:
@@ -174,7 +176,8 @@ class Grid(Generic[T]):
             index,
             position,
             region,
-            self.data and self.data[position[1]][position[0]])
+            (self.data[position[1]][position[0]] if self.data is not None
+             else None))
 
     def __getitem__(
             self, key: "int | Region | Position | tuple[int, int]") -> Cell:
@@ -211,7 +214,7 @@ class Grid(Generic[T]):
             raise IndexError("Index out of range: index %r in %r" %
                              (index, self))
 
-    def _position_to_index(self, position: Position) -> int:
+    def _position_to_index(self, position: PositionT) -> int:
         return position[0] + position[1] * self.cols
 
     def _region_to_position(self, region) -> Position:
