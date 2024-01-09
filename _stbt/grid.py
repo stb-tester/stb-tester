@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Generic, Iterator, Optional, Sequence, TypeVar
+from typing import cast, Generic, Iterator, Optional, Sequence, TypeVar
 
 from .types import Position, PositionT, Region
 
@@ -180,7 +180,7 @@ class Grid(Generic[T]):
              else None))
 
     def __getitem__(
-            self, key: "int | Region | Position | tuple[int, int]") -> Cell:
+            self, key: int | Region | Position | tuple[int, int] | T) -> Cell:
         if isinstance(key, int):
             return self.get(index=key)
         elif isinstance(key, Region):
@@ -190,9 +190,10 @@ class Grid(Generic[T]):
                 len(key) == 2 and
                 isinstance(key[0], int) and
                 isinstance(key[1], int)):
+            key = Position(key[0], key[1])
             return self.get(position=key)
         else:
-            return self.get(data=key)
+            return self.get(data=cast(T, key))
 
     def __iter__(self) -> Iterator[Cell]:
         for i in range(len(self)):
