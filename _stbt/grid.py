@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
-from typing import Any, Iterator, Optional, Sequence, TypeVar
+import dataclasses
+from typing import Any, Generic, Iterator, Optional, Sequence, TypeVar
 
 from .types import Position, PositionT, Region
 
@@ -11,7 +11,7 @@ from .types import Position, PositionT, Region
 T = TypeVar("T")
 
 
-class Grid():
+class Grid(Generic[T]):
     """A grid with items arranged left to right, then down.
 
     For example a keyboard, or a grid of posters, arranged like this::
@@ -49,15 +49,18 @@ class Grid():
             raise ValueError(
                 "Either `cols` and `rows`, or `data` must be specified")
         if rows is None:
+            assert data is not None
             self.rows: int = len(data)
         else:
             self.rows: int = rows
         if cols is None:
+            assert data is not None
             self.cols: int = len(data[0])
         else:
             self.cols: int = cols
 
-    class Cell(namedtuple("Cell", "index position region data")):
+    @dataclasses.dataclass
+    class Cell:
         """A single cell in a `Grid`.
 
         Don't construct Cells directly; create a `Grid` instead.
@@ -80,7 +83,10 @@ class Grid():
         :ivar data: The data corresponding to the cell, if data was specified
             when you created the `Grid`.
         """
-        pass
+        index: int
+        position: Position
+        region: Region | None
+        data: T | None
 
     def __repr__(self) -> str:
         s = "Grid(region=%r, cols=%r, rows=%r)" % (
