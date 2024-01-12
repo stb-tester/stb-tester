@@ -72,7 +72,7 @@ def press_and_wait(
         been `TransitionStatus.START_TIMEOUT`). Defaults to 0 (no retries).
 
     :param frames: An iterable of video-frames to analyse. Defaults to
-        ``stbt.frames()``.
+        `stbt.frames()`.
 
     :returns:
         A `Transition` object that will evaluate to true if the transition
