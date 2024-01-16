@@ -998,3 +998,44 @@ def test_strip_shift_transitions():
     assert sorted(G_.edges(data=True)) != sorted(kb4.G.edges(data=True))
     assert len(G_.edges(data=True)) == len(kb4.G.edges(data=True)) - len(
         "abcdefghijklmnopqrstuvwxyz1234567890")
+
+
+def test_channel4_keyboard():
+    REGION = stbt.Region(50, 166, right=1235, bottom=242)
+
+    LOWERCASE = stbt.Grid(
+        stbt.Region(66, 182, right=1226, bottom=228),
+        data=[["123"] * 2 + [" "] * 2 + list("abcdefghijklmnopqrstuvwxyz") +
+              ["BACKSPACE"] * 2])
+    NUMBERS = stbt.Grid(
+        stbt.Region(357, 180, right=934, bottom=228),
+        data=[["#+="] * 2 + [" "] * 2 + list("1234567890") + ["BACKSPACE"] * 2])
+    SYMBOLS = stbt.Grid(
+        stbt.Region(x=35, y=179, right=1235, bottom=228),
+        data=[["abc"] * 2 + [" "] * 3 +
+              list("`'\";:~=*+-_,.?!@#$%^&|/\\()[]{}<>") + ["BACKSPACE"] * 2])
+
+    KEYBOARD = stbt.Keyboard(mask=REGION)
+
+    KEYBOARD.add_grid(LOWERCASE, mode="lowercase", merge=True)
+    KEYBOARD.add_grid(NUMBERS, mode="numbers", merge=True)
+    KEYBOARD.add_grid(SYMBOLS, mode="symbols", merge=True)
+
+    # It's difficult to tell which key we'll land on when we press KEY_PLAY,
+    # so we add transitions from every key to every other key according to the
+    # mode.
+    for source_mode, target_mode in [
+        ("lowercase", "numbers"),
+        ("numbers", "symbols"),
+        ("symbols", "lowercase"),
+    ]:
+        for source in KEYBOARD.find_keys(mode=source_mode):
+            for target in KEYBOARD.find_keys(mode=target_mode):
+                KEYBOARD.add_transition(
+                    source=source, target=target,
+                    keypress="KEY_PLAY", symmetrical=False)
+
+    targets = KEYBOARD.find_keys("BACKSPACE")
+    current = KEYBOARD.find_key("#+=")
+    keys = [x[0] for x in _keys_to_press(KEYBOARD.G, current, targets)]
+    assert keys == ["KEY_RIGHT"] * 12

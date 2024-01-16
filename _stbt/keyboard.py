@@ -912,7 +912,7 @@ def _keys_to_press(G, source, targets):
     paths = sorted(
         [shortest_path(G, source=source, target=t, weight="weight")
          for t in targets],
-        key=len)
+        key=lambda p: _path_weight(G, p))
     path = paths[0]
     # shortest_path(G, "A", "V") -> ["A", "H", "O", "V"]
     # shortest_path(G, "A", "A") -> ["A"]
@@ -930,6 +930,15 @@ def _keys_to_press(G, source, targets):
         # us again.
         if len(possible_targets) > 1:
             break
+
+
+def _path_weight(G, path):
+    if len(path) == 1:
+        return 0
+    total = 0
+    for s, t in zip(path[:-1], path[1:]):
+        total += G[s][t].get("weight", 1)
+    return total
 
 
 def _add_weight(G, source, key):
