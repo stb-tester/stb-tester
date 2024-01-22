@@ -3,6 +3,7 @@ from __future__ import annotations
 import configparser
 import enum
 import os
+import typing
 from contextlib import contextmanager
 from typing import Callable, Type, TypeVar
 
@@ -20,6 +21,26 @@ class ConfigurationError(Exception):
 
 class NoDefault():
     pass
+
+
+@typing.overload
+def get_config(
+    section: str,
+    key: str,
+    *,
+    type_: Callable[[str], T] = str,
+) -> "T":
+    ...
+
+
+@typing.overload
+def get_config(
+    section: str,
+    key: str,
+    default: DefaultT,
+    type_: Callable[[str], T] = str,
+) -> "T | DefaultT":
+    ...
 
 
 def get_config(
