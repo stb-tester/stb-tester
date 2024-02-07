@@ -100,6 +100,7 @@ class StbtChecker(BaseChecker):
                             '_stbt.transition', '_stbt.wait'):
                         self.add_message(
                             'E7002', node=node, args=node.func.as_string())
+                        break
 
         if re.search(r"\bwait_until$", node.func.as_string()):
             if node.args:
@@ -130,6 +131,7 @@ class StbtChecker(BaseChecker):
                     if len(args) <= index and "frame" not in kwargs:
                         self.add_message('E7004', node=node,
                                          args=node.as_string())
+                        break
 
         if isinstance(node.func, Attribute) and node.func.attrname == "refresh":
             for c in _infer(node.func.expr):
@@ -137,6 +139,7 @@ class StbtChecker(BaseChecker):
                     if isinstance(node.parent, Expr):  # not an assignment
                         self.add_message('E7009', node=node,
                                          args=node.func.expr.as_string())
+                        break
 
     def visit_assert(self, assertion):
         if isinstance(assertion.test, Const) and assertion.test.value is True:
