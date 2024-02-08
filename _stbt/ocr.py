@@ -478,6 +478,7 @@ def ocr_eq(a: str, b: str) -> bool:
      '0': 'O',
      'o': 'O',
      '5': 'S',
+     '8': 'B',
      ' ': ''}
 
     If you need to normalize a single string using this same algorithm, use
@@ -520,6 +521,7 @@ ocr_eq.replacements = Replacements({
     '0': 'O',
     'o': 'O',
     '5': 'S',
+    '8': 'B',
     ' ': '',
 })
 
