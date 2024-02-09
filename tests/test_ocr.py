@@ -12,6 +12,7 @@ import stbt_core as stbt
 from _stbt import imgproc_cache
 from _stbt.imgutils import load_image
 from _stbt.ocr import _tesseract_version, Replacements
+from _stbt.types import Region
 from _stbt.utils import named_temporary_directory
 
 
@@ -380,16 +381,36 @@ def test_ocr_text_color(image, color, expected):
 
 @requires_tesseract
 def test_ocr_text_color_threshold():
-    f = load_image("ocr/blue-search-white-guide.png")
-    c = (220, 220, 220)
-    assert stbt.ocr(f) != "Guide"
-    # pylint:disable=fixme
-    # TODO: Find an example where text_color_threshold is necessary. Since
-    # tesseract 4.0.0 the default text_color_threshold actually works.
-    # assert stbt.ocr(f, text_color=c) != "Guide"
-    assert stbt.ocr(f, text_color=c, text_color_threshold=50) == "Guide"
+    f = load_image("ocr/Crunchyroll.png")
+    c = "#ffffff"
+    m = stbt.OcrMode.SINGLE_LINE
+
+    # Without text_color, the left & right corners of the drop-shadow are
+    # read as junk (often "L ... J" but here ". Crunchyroll A").
+    assert stbt.ocr(f, mode=m) != "Crunchyroll"
+
+    # Our default threshold causes far too thin letters; tesseract reads
+    # "Cerchyroll".
+    assert stbt.ocr(f, mode=m, text_color=c) != "Crunchyroll"
+
+    assert stbt.ocr(f, mode=m, text_color=c, text_color_threshold=50) \
+        == "Crunchyroll"
     with temporary_config({'ocr.text_color_threshold': '50'}):
-        assert stbt.ocr(f, text_color=c) == "Guide"
+        assert stbt.ocr(f, mode=m, text_color=c) == "Crunchyroll"
+
+
+@requires_tesseract
+@pytest.mark.parametrize("image,region,color,threshold,expected", [
+    # pylint:disable=line-too-long
+    ("images/appletv/BBC iPlayer.png", Region(x=635, y=354, right=843, bottom=389), "#ffffff", 50, "BBC iPIayer"),
+    ("images/appletv/BT Sport.png", Region(x=236, y=267, right=448, bottom=302), "#ffffff", 50, "BT Sport"),
+    ("images/appletv/Crunchyroll.png", Region(x=835, y=441, right=1041, bottom=476), "#ffffff", 50, "Crunchyroll"),
+    ("images/appletv/YouTube.png", Region(x=42, y=235, right=245, bottom=270), "#ffffff", 50, "YouTube"),
+])
+def test_ocr_text_color_threshold_2(image, region, color, threshold, expected):
+    f = stbt.load_image(image)
+    assert stbt.ocr(f, region=region, text_color=color,
+                    text_color_threshold=threshold) == expected
 
 
 @requires_tesseract
