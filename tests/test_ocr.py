@@ -293,6 +293,24 @@ def test_that_text_location_is_recognised():
 
 
 @requires_tesseract
+def test_upsample_default_value():
+    image = load_image("ocr/Operacja Napoleon.png")
+
+    # reads "Operacio Napoleon"
+    assert stbt.ocr(frame=image, lang="pol") != "Operacja Napoleon"
+    assert not stbt.match_text("Operacja Napoleon", frame=image, lang="pol")
+
+    assert stbt.ocr(frame=image, lang="pol", upsample=False) == \
+        "Operacja Napoleon"
+    assert stbt.match_text("Operacja Napoleon", frame=image, lang="pol",
+                           upsample=False)
+
+    with temporary_config({"ocr.upsample": "False"}):
+        assert stbt.ocr(frame=image, lang="pol") == "Operacja Napoleon"
+        assert stbt.match_text("Operacja Napoleon", frame=image, lang="pol")
+
+
+@requires_tesseract
 def test_match_text_stringify_result(test_pack_root):  # pylint:disable=unused-argument
     frame = load_image("ocr/menu.png")
     result = stbt.match_text("Onion Bhaji", frame=frame)
