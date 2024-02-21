@@ -62,4 +62,5 @@ RUN mkdir -p $HOME/.parallel && \
 ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
+    https://github.com/tesseract-ocr/tessdata/raw/590567f/pol.traineddata \
     /usr/share/tesseract-ocr/4.00/tessdata/

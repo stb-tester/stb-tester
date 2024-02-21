@@ -151,7 +151,7 @@ def ocr(
     tesseract_config: Optional[dict[str, bool | str | int]] = None,
     tesseract_user_words: Optional[list[str] | str] = None,
     tesseract_user_patterns: Optional[list[str] | str] = None,
-    upsample: bool = True,
+    upsample: Optional[bool] = None,
     text_color: Optional[ColorT] = None,
     text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
@@ -217,8 +217,10 @@ def ocr(
         Upsample the image 3x before passing it to tesseract. This helps to
         preserve information in the text's anti-aliasing that would otherwise
         be lost when tesseract binarises the image. This defaults to ``True``;
-        you should only disable it if you are doing your own pre-processing on
-        the image.
+        you can override the global default value by setting ``upsample=False``
+        in the ``[ocr]`` section of :ref:`.stbt.conf`. You should set this to
+        False if the text is already quite large, or if you are doing your own
+        binarisation (pre-processing the image to make it black and white).
 
     :param Color text_color:
         Color of the text. Specifying this can improve OCR results when
@@ -280,6 +282,9 @@ def ocr(
     if isinstance(tesseract_user_patterns, (bytes, str)):
         tesseract_user_patterns = [tesseract_user_patterns]
 
+    if upsample is None:
+        upsample = get_config("ocr", "upsample", type_=bool)
+
     imglog = ImageLogger("ocr", result=None)
 
     text = _tesseract(
@@ -302,7 +307,7 @@ def match_text(
     lang: Optional[str] = None,
     tesseract_config: Optional[dict[str, bool | str | int]] = None,
     case_sensitive: bool = False,
-    upsample: bool = True,
+    upsample: Optional[bool] = None,
     text_color: Optional[ColorT] = None,
     text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
@@ -345,6 +350,9 @@ def match_text(
         frame = get_frame()
 
     region = _validate_region(frame, region)
+
+    if upsample is None:
+        upsample = get_config("ocr", "upsample", type_=bool)
 
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
