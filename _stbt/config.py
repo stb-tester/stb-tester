@@ -101,9 +101,9 @@ def get_config(
             raise ConfigurationError(e.message)
         else:
             return default
-    except ValueError:
-        raise ConfigurationError("'%s.%s' invalid type (must be %s)" % (
-            section, key, type_.__name__))
+    except ValueError as e:
+        raise ConfigurationError("'%s.%s' invalid type (must be %s): %s" % (
+            section, key, type_.__name__, e))
 
 
 def set_config(section, option, value):
