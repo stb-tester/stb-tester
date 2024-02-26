@@ -534,7 +534,7 @@ def temporary_ocr_eq_replacements():
 
 def test_ocr_eq_replacements():
     assert stbt.ocr_eq("hello", "hel 10")
-    assert stbt.ocr_eq.normalize("hel 10") == "hellO"
+    assert stbt.ocr_eq.normalize("hel 10") == "hello"
     with temporary_ocr_eq_replacements():
         stbt.ocr_eq.replacements = {"1": "l"}
         assert stbt.ocr_eq("hello", "he11o")
@@ -560,3 +560,10 @@ def test_ocr_eq_replacements():
         assert stbt.ocr_eq("hello", "he11o")
         assert stbt.ocr_eq("hello", "he**o")
         assert stbt.ocr_eq("he11o", "he**o")
+
+    assert stbt.ocr_eq("Movies & TV", "Movies 8. TV")  # YouTube menu
+    assert stbt.ocr_eq("8 .", "&")  # Hypothetical (not yet seen in real life)
+    assert stbt.ocr_eq("BT Sport", "8T Sport")  # Apple TV
+    assert stbt.ocr_eq("App version", "App vefslon")  # YouTube settings menu
+    assert stbt.ocr_eq("YuppTV - Live, CatchUp, Movies",
+                       "YuppTV - Live, CatchUp. Movies")  # Roku

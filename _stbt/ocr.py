@@ -477,23 +477,35 @@ def ocr_eq(a: str, b: str) -> bool:
     removing entries. The default mapping is:
 
     >>> ocr_eq.replacements
-    {"''": '"',
-     'm': 'rn',
-     'i': 'l',
-     'I': 'l',
-     '1': 'l',
-     '|': 'l',
-     '0': 'O',
-     'o': 'O',
-     '5': 'S',
+    {' ': '',
+     "''": '"',
+     ',': '.',
+     '0': 'o', 'O': 'o',
+     '1': 'l', 'i': 'l', 'I': 'l', '|': 'l', '7': 'l',
+     '2': 'z', 'Z': 'z',
+     '4': 'A',
+     '5': 's', 'S': 's',
+     '6': 'g', 'G': 'g',
+     '8.': '&',
      '8': 'B',
-     ' ': ''}
+     '9': 'g', 'q': 'g',
+     'f': 'r', 'F': 'r',
+     'ł': 't',
+     'm': 'rn',
+     'C': 'c',
+     'K': 'k',
+     'P': 'p',
+     'V': 'v',
+     'W': 'w',
+     'vv': 'w',
+     'X': 'x',
+     'Y': 'y'}
 
     If you need to normalize a single string using this same algorithm, use
     ``ocr_eq.normalize``:
 
     >>> ocr_eq.normalize("hel 10")
-    'hellO'
+    'hello'
 
     Added in v34.
     """
@@ -520,17 +532,29 @@ class Replacements(collections.UserDict):
 
 
 ocr_eq.replacements = Replacements({
-    "''": '"',
-    'm': 'rn',
-    'i': 'l',
-    'I': 'l',
-    '1': 'l',
-    '|': 'l',
-    '0': 'O',
-    'o': 'O',
-    '5': 'S',
-    '8': 'B',
     ' ': '',
+    "''": '"',
+    ',': '.',
+    '0': 'o', 'O': 'o',
+    '1': 'l', 'i': 'l', 'I': 'l', '|': 'l', '7': 'l',
+    '2': 'z', 'Z': 'z',
+    '4': 'A',
+    '5': 's', 'S': 's',
+    '6': 'g', 'G': 'g',
+    '8.': '&',
+    '8': 'B',
+    '9': 'g', 'q': 'g',
+    'f': 'r', 'F': 'r',
+    'ł': 't',
+    'm': 'rn',
+    'C': 'c',
+    'K': 'k',
+    'P': 'p',
+    'V': 'v',
+    'W': 'w',
+    'vv': 'w',
+    'X': 'x',
+    'Y': 'y',
 })
 
 
