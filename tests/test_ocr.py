@@ -523,6 +523,88 @@ def test_ocr_eq_shouldnt_match(a, b):
     assert not stbt.ocr_eq(b, a)  # pylint:disable=arguments-out-of-order
 
 
+def test_ocr_eq_shouldnt_match_other_entries_from_real_world_menus():
+    items = {
+        "Add channels",
+        "Angry Birds Space",
+        "App Store",
+        "App version",
+        "Arcade",
+        "Auto-play",
+        "BBC iPlayer",
+        "BT Sport",
+        "CBS News",
+        "Channel 4",
+        "Clear search history",
+        "Clear watch history",
+        "Computers",
+        "Credits",
+        "Crunchyroll",
+        "DAZN",
+        "Disney Plus",
+        "Disney+",
+        "ESPN",
+        "Fitness",
+        "Gaming",
+        "Get YouTube Premium",
+        "hayu",
+        "Hello World (dev)",
+        "Help",
+        "Home",
+        "ITVX",
+        "Language",
+        "Library",
+        "Link with TV code",
+        "Link with Wi-Fi",
+        "Linked devices",
+        "Location",
+        "Log in",
+        "Log out",
+        "MLB",
+        "More",
+        "Movies & TV",
+        "Movies",
+        "MUBI",
+        "Music",
+        "My5",
+        "NBA",
+        "Netflix",
+        "NOW TV",
+        "NOW",
+        "Photos",
+        "Pluto TV - It's Free TV",
+        "Pluto TV",
+        "Podcasts",
+        "Previews",
+        "Prime Video",
+        "Privacy and Terms",
+        "Purchases and memberships",
+        "Rakuten TV",
+        "Red Bull TV",
+        "Reset app",
+        "Restricted mode",
+        "Roku Quick Tips",
+        "Search",
+        "Send feedback",
+        "Settings",
+        "Sign in",
+        "Sign out",
+        "Sky News",
+        "STV Player",
+        "Subscriptions",
+        "TV off",
+        "TV Shows",
+        "TV",
+        "YouTube",
+        "YuppTV - Live, CatchUp, Movies",
+    }
+    for item in items:
+        others = items - {item}
+        for other in others:
+            assert not stbt.ocr_eq(item, other)
+            assert not stbt.ocr_eq(other, item)
+
+
 @contextmanager
 def temporary_ocr_eq_replacements():
     orig = stbt.ocr_eq.replacements.copy()
@@ -534,7 +616,7 @@ def temporary_ocr_eq_replacements():
 
 def test_ocr_eq_replacements():
     assert stbt.ocr_eq("hello", "hel 10")
-    assert stbt.ocr_eq.normalize("hel 10") == "hellO"
+    assert stbt.ocr_eq.normalize("hel 10") == "hello"
     with temporary_ocr_eq_replacements():
         stbt.ocr_eq.replacements = {"1": "l"}
         assert stbt.ocr_eq("hello", "he11o")
@@ -560,3 +642,10 @@ def test_ocr_eq_replacements():
         assert stbt.ocr_eq("hello", "he11o")
         assert stbt.ocr_eq("hello", "he**o")
         assert stbt.ocr_eq("he11o", "he**o")
+
+    assert stbt.ocr_eq("Movies & TV", "Movies 8. TV")  # YouTube menu
+    assert stbt.ocr_eq("8 .", "&")  # Hypothetical (not yet seen in real life)
+    assert stbt.ocr_eq("BT Sport", "8T Sport")  # Apple TV
+    assert stbt.ocr_eq("App version", "App vefslon")  # YouTube settings menu
+    assert stbt.ocr_eq("YuppTV - Live, CatchUp, Movies",
+                       "YuppTV - Live, CatchUp. Movies")  # Roku
