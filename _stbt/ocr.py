@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import unicodedata
 from enum import IntEnum
 from typing import Optional
 
@@ -467,7 +468,7 @@ def ocr_eq(a: str, b: str) -> bool:
     `stbt.ocr` sometimes mistakes some characters, such as "O" instead of "0",
     especially when reading short fragments of text without enough context.
     ``ocr_eq`` wil treat such characters as equal to each other. It also ignores
-    spaces. For example:
+    spaces and punctuation. For example:
 
     >>> ocr_eq("hello", "hel 10")
     True
@@ -477,10 +478,7 @@ def ocr_eq(a: str, b: str) -> bool:
     removing entries. The default mapping is:
 
     >>> ocr_eq.replacements
-    {' ': '',
-     "''": '"',
-     ',': '.',
-     '0': 'o', 'O': 'o',
+    {'0': 'o', 'O': 'o',
      '1': 'l', 'i': 'l', 'I': 'l', '|': 'l', '7': 'l',
      '2': 'z', 'Z': 'z',
      '4': 'A',
@@ -515,15 +513,20 @@ def normalize(text):
     return _normalize(text, ocr_eq.replacements)
 
 
-def _normalize(text, replacements):
+def _normalize(text: str, replacements,
+               remove_whitespace=True, remove_punctuation=True) -> str:
     for a, b in replacements.items():
         text = text.replace(a, b)
+    if remove_whitespace:
+        text = "".join(c for c in text if not c.isspace())
+    if remove_punctuation:
+        text = "".join(c for c in text if unicodedata.category(c)[0] != 'P')
     return text
 
 
 class Replacements(collections.UserDict):
     def __setitem__(self, key: str, value: str) -> None:
-        value = _normalize(value, self)
+        value = _normalize(value, self, False, False)
         return super().__setitem__(key, value)
 
     def __delitem__(self, key):
@@ -531,9 +534,6 @@ class Replacements(collections.UserDict):
 
 
 ocr_eq.replacements = Replacements({
-    ' ': '',
-    "''": '"',
-    ',': '.',
     '0': 'o', 'O': 'o',
     '1': 'l', 'i': 'l', 'I': 'l', '|': 'l', '7': 'l',
     '2': 'z', 'Z': 'z',
