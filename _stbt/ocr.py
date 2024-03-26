@@ -509,7 +509,10 @@ def ocr_eq(a: str, b: str) -> bool:
     return ocr_eq.normalize(a) == ocr_eq.normalize(b)
 
 
-def normalize(text):
+def normalize(text: str):
+    if not isinstance(text, str):
+        raise TypeError(
+            f"stbt.ocr_eq.normalize: Expected a str, got {text!r}")
     return _normalize(text, ocr_eq.replacements)
 
 
