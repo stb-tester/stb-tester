@@ -518,6 +518,10 @@ class SinkPipeline():
                     to_unicode(obj))
                 self.text_annotations.append(
                     _TextAnnotation(start_time, text, duration_secs))
+            elif isinstance(obj, logging.SourceRegion):
+                # Backwards compatibility.  Consider changing this in the
+                # future.
+                pass
             elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:

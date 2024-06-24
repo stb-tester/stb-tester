@@ -16,7 +16,7 @@ import cv2
 from .config import get_config
 from .imgutils import (
     crop, Frame, _frame_repr, _image_region, pixel_bounding_box)
-from .logging import debug, ImageLogger
+from .logging import debug, draw_source_region, ImageLogger
 from .mask import load_mask, MaskTypes
 from .types import Region
 
@@ -78,6 +78,7 @@ def is_screen_black(frame: Optional[Frame] = None,
 
     mask_, region = load_mask(mask).to_array(_image_region(frame))
 
+    draw_source_region(frame, region)
     imglog = ImageLogger("is_screen_black", region=region, threshold=threshold)
     imglog.imwrite("source", frame)
 

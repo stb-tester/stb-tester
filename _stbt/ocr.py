@@ -17,7 +17,7 @@ import numpy
 from . import imgproc_cache
 from .config import get_config
 from .imgutils import Color, ColorT, crop, FrameT, _frame_repr, _validate_region
-from .logging import debug, ImageLogger, warn
+from .logging import debug, draw_source_region, ImageLogger, warn
 from .types import Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
 
@@ -286,6 +286,7 @@ def ocr(
     if upsample is None:
         upsample = get_config("ocr", "upsample", type_=bool)
 
+    draw_source_region(frame, region)
     imglog = ImageLogger("ocr", result=None)
 
     text = _tesseract(
@@ -360,6 +361,7 @@ def match_text(
 
     rts = getattr(frame, "time", None)
 
+    draw_source_region(frame, region)
     imglog = ImageLogger("match_text")
 
     xml = _tesseract(frame, region, mode, lang, _config,
