@@ -3,6 +3,7 @@ import itertools
 import logging
 import os
 import sys
+import typing
 from collections import namedtuple, OrderedDict
 from contextlib import contextmanager
 from textwrap import dedent
@@ -10,6 +11,9 @@ from textwrap import dedent
 from .config import get_config
 from .types import Region
 from .utils import mkdir_p
+
+if typing.TYPE_CHECKING:
+    from _stbt.core import SinkPipeline
 
 
 _debug_level = None
@@ -340,17 +344,32 @@ def draw_on(frame, *args, **kwargs):
     draw_sink_ref = getattr(frame, '_draw_sink', None)
     if not draw_sink_ref:
         return
-    draw_sink = draw_sink_ref()
+    draw_sink: "SinkPipeline | None" = draw_sink_ref()
     if not draw_sink:
         return
     draw_sink.draw(*args, **kwargs)
 
 
+def draw_source_region(frame, region):
+    draw_on(frame, SourceRegion(region, getattr(frame, "time", None)))
+
+
+class SourceRegion(typing.NamedTuple):
+    region: Region
+    time: "float | None"
+
+
 class _Annotation(namedtuple("_Annotation", "time region label colour")):
     MATCHED = (32, 0, 255)  # Red
     NO_MATCH = (32, 255, 255)  # Yellow
+    SOURCE_REGION = (255, 128, 128)  # Blue
 
     @staticmethod
     def from_result(result, label=""):
-        colour = _Annotation.MATCHED if result else _Annotation.NO_MATCH
+        if isinstance(result, SourceRegion):
+            colour = _Annotation.SOURCE_REGION
+        elif result:
+            colour = _Annotation.MATCHED
+        else:
+            colour = _Annotation.NO_MATCH
         return _Annotation(result.time, result.region, label, colour)

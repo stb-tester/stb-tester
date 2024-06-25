@@ -22,8 +22,8 @@ from .imgproc_cache import memoize_iterator
 from .imgutils import (
     Frame, crop, FrameT, _frame_repr, ImageT, _image_region, limit_time,
     load_image, _validate_region)
-from .logging import (_Annotation, ddebug, debug, draw_on, get_debug_level,
-                      ImageLogger)
+from .logging import (_Annotation, ddebug, debug, draw_on, draw_source_region,
+                      get_debug_level, ImageLogger)
 from .sqdiff import sqdiff
 from .types import Position, Region, UITestFailure
 from .utils import to_unicode
@@ -415,6 +415,7 @@ def _match_all(image, frame, match_parameters, region):
         raise ValueError("%r must be larger than reference image %r"
                          % (input_region, t.shape))
 
+    draw_source_region(frame, input_region)
     imglog = ImageLogger(
         "match", match_parameters=match_parameters,
         template_name=t.filename or "<Image>",
