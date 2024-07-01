@@ -907,12 +907,22 @@ def _minimal_query(query):
 
 
 def _keys_to_press(G, source, targets):
+    from networkx import NetworkXNoPath
     from networkx.algorithms.shortest_paths.generic import shortest_path
 
-    paths = sorted(
-        [shortest_path(G, source=source, target=t, weight="weight")
-         for t in targets],
-        key=lambda p: _path_weight(G, p))
+    assert targets
+
+    paths = []
+    for t in targets:
+        try:
+            paths.append(shortest_path(
+                G, source=source, target=t, weight="weight"))
+        except NetworkXNoPath:
+            pass
+    if not paths:
+        raise NetworkXNoPath("No path to %s." % (
+            _join_with_commas([str(t) for t in targets], last_one=" or ")))
+    paths.sort(key=lambda p: _path_weight(G, p))
     path = paths[0]
     # shortest_path(G, "A", "V") -> ["A", "H", "O", "V"]
     # shortest_path(G, "A", "A") -> ["A"]

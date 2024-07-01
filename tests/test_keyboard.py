@@ -4,6 +4,7 @@ from unittest import mock
 
 import numpy
 import pytest
+from networkx import NetworkXNoPath
 
 import stbt_core as stbt
 from _stbt.keyboard import _keys_to_press, _strip_shift_transitions
@@ -1039,3 +1040,42 @@ def test_channel4_keyboard():
     current = KEYBOARD.find_key("#+=")
     keys = [x[0] for x in _keys_to_press(KEYBOARD.G, current, targets)]
     assert keys == ["KEY_RIGHT"] * 12
+
+
+def test_disjoint_modes():
+    # The Channel 4 app has a grid-like keyboard on one of my Apple TVs (4K 1st
+    # gen) and a single row on my other Apple TV (4k 3rd gen), despite having
+    # the same tvOS version and app version. I have a single Page Object that
+    # recognises both appearances, and models the keyboard as having 2 disjoint
+    # modes (that is, there's no way to get from one mode to the other).
+    kb = stbt.Keyboard()
+    kb.add_grid(
+        stbt.Grid(stbt.Region(0, 0, 200, 200), data=[
+            ["a", "b", "c", "d", "e", "f"],
+            ["g", "h", "i", "j", "k", "l"],
+            ["m", "n", "o", "p", "q", "r"],
+            ["s", "t", "u", "v", "w", "x"],
+            ["y", "z", "1", "2", "3", "4"],
+            ["5", "6", "7", "8", "9", "0"]]),
+        mode="grid")
+    kb.add_grid(
+        stbt.Grid(stbt.Region(0, 0, 1280, 50),
+                  data=["abcdefghijklmnopqrstuvwxyz"]),
+        mode="single-row")
+
+    keys = [x[0] for x in _keys_to_press(kb.G,
+                                         kb.find_key("a", mode="grid"),
+                                         kb.find_keys("g"))]
+    assert keys == ["KEY_DOWN"]
+
+    keys = [x[0] for x in _keys_to_press(kb.G,
+                                         kb.find_key("a", mode="single-row"),
+                                         kb.find_keys("g"))]
+    assert keys == ["KEY_RIGHT"] * 6
+
+    with pytest.raises(NetworkXNoPath, match=(
+            r"No path to Keyboard\.Key\(name='0', text='0', "
+            r"region=Region\(.*\), mode='grid'\)\.")):
+        list(_keys_to_press(kb.G,
+                            kb.find_key("a", mode="single-row"),
+                            kb.find_keys("0")))
