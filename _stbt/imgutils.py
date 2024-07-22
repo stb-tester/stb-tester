@@ -193,6 +193,9 @@ class Color:
     Note: When you specify the colors in this way, the BGR order is the
     opposite of the HTML-style RGB order. This is for compatibility with the
     way OpenCV stores colors.
+
+    Any ``stbt`` APIs that take a ``Color`` will also accept a string or tuple
+    in the above formats, so you don't need to construct a ``Color`` explicitly.
     """
     @overload
     def __init__(self, hexstring: str) -> None:
