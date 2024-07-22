@@ -224,6 +224,7 @@ class NotCachable(Exception):
 
 class _ArgsEncoder(json.JSONEncoder):
     def default(self, o):  # pylint:disable=method-hidden
+        from _stbt.imgutils import Color
         from _stbt.match import MatchParameters
         if isinstance(o, ImageLogger):
             if o.enabled:
@@ -231,6 +232,8 @@ class _ArgsEncoder(json.JSONEncoder):
             return None
         elif isinstance(o, set):
             return sorted(o)
+        elif isinstance(o, Color):
+            return o.hexstring
         elif isinstance(o, MatchParameters):
             return {
                 "match_method": o.match_method.value,
@@ -303,6 +306,40 @@ def _check_cache_behaviour(func):
     print("%s without cache: %s" % (func.__name__, uncached_time))
 
     return cached_time, uncached_time, cached_result, uncached_result
+
+
+def test_memoize_types():
+    # `memoize` isn't guaranteed to return the exact type that was returned,
+    # because it goes through JSON serialisation. This is OK because `memoize`
+    # is only used to cache the results of internal stbt functions, and the
+    # (internal) users of memoize ensure that they handle the cached return
+    # values correctly. Here we test that, at least, common arguments don't
+    # cause any serialisation problems.
+    import stbt_core as stbt
+
+    @memoize()
+    def f(arg):
+        return arg
+
+    @memoize()
+    def f2(arg):
+        return str(arg)  # stbt.Color is not JSON serialisable
+
+    with named_temporary_directory() as tmpdir, \
+            setup_cache(tmpdir), enable_caching():
+
+        assert f(stbt.Region(1, 2, 3, 4)) == stbt.Region(1, 2, 3, 4)
+        assert f(stbt.Region(1, 2, 3, 4)) == [1, 2, 4, 6]
+
+        assert f(stbt.Size(1, 2)) == stbt.Size(1, 2)
+        assert f(stbt.Size(1, 2)) == [1, 2]
+
+        assert f(stbt.Position(1, 2)) == [1, 2]
+        assert f(stbt.Position(3, 4)) == stbt.Position(3, 4)
+        assert f(stbt.Position(3, 4)) == [3, 4]
+
+        assert f2(stbt.Color("#ff7f00")) == "Color('#ff7f00')"
+        assert f2(stbt.Color("#ff7f00")) == "Color('#ff7f00')"
 
 
 def test_memoize_iterator():
