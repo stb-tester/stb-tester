@@ -242,7 +242,7 @@ class Color:
 
         else:
             raise TypeError("Color: __init__() expected a Color, '#rrggbb' "
-                            "string, or 3 integers in Blue-Green-Red order. ")
+                            "string, or 3 integers in Blue-Green-Red order.")
 
         self.array.flags.writeable = False
 
