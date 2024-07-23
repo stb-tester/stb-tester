@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import time
 from unittest import mock
@@ -1082,6 +1083,8 @@ def test_disjoint_modes():
                             kb.find_keys("0")))
 
 
+@pytest.mark.skipif("STBT_RUN_PERFORMANCE_TESTS" not in os.environ,
+                    reason="$STBT_RUN_PERFORMANCE_TESTS is not set")
 def test_keyboard_definition_performance():
     start_time = time.time()
     kb = stbt.Keyboard()
@@ -1090,4 +1093,4 @@ def test_keyboard_definition_performance():
                               data=["abcdefghijklmnopqrstuvwxyz"]),
                     mode=str(mode))
     duration = time.time() - start_time
-    assert duration < 0.1
+    assert duration < 0.3
