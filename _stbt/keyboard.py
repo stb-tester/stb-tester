@@ -6,6 +6,7 @@ import dataclasses
 import re
 import time
 import typing
+from collections import defaultdict
 from logging import getLogger
 from typing import Optional, TypeAlias, TypeVar
 
@@ -201,6 +202,7 @@ class Keyboard():
         self.G = DiGraph()
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
+        self.name_index = defaultdict(list)
 
         self.mask = load_mask(mask)
         self.navigate_timeout = navigate_timeout
@@ -346,7 +348,11 @@ class Keyboard():
             raise ValueError("Empty query %r" % (query,))
         if mode is not None:
             query["mode"] = mode
-        return [x for x in self.G.nodes()
+        if "name" in query:
+            nodes = self.name_index[query["name"]]
+        else:
+            nodes = self.G.nodes()
+        return [x for x in nodes
                 if ("name" not in query or x.name == query["name"]) and
                    ("text" not in query or x.text == query["text"]) and
                    ("region" not in query or (
@@ -394,6 +400,7 @@ class Keyboard():
                              "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
         self.G_ = None
+        self.name_index[node.name].append(node)
         if node.region is None:
             self._any_without_region = True
         else:
