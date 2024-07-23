@@ -347,15 +347,12 @@ class Keyboard():
         if mode is not None:
             query["mode"] = mode
         return [x for x in self.G.nodes()
-                if all(Keyboard.QUERYER[k](x, v) for k, v in query.items())]
-
-    QUERYER = {
-        "name": lambda x, v: x.name == v,
-        "text": lambda x, v: x.text == v,
-        "region": lambda x, v: (x.region is not None and
-                                x.region.contains(v.center)),
-        "mode": lambda x, v: x.mode == v,
-    }
+                if ("name" not in query or x.name == query["name"]) and
+                   ("text" not in query or x.text == query["text"]) and
+                   ("region" not in query or (
+                    x.region is not None and
+                    x.region.contains(query["region"].center))) and
+                   ("mode" not in query or x.mode == query["mode"])]
 
     def _find_or_add_key(self, query):
         """Note: We don't want to expose this operation in the public API
