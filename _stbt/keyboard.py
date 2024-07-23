@@ -6,6 +6,7 @@ import dataclasses
 import re
 import time
 import typing
+from collections import defaultdict
 from logging import getLogger
 from typing import Optional, TypeAlias, TypeVar
 
@@ -201,6 +202,7 @@ class Keyboard():
         self.G = DiGraph()
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
+        self.name_index = defaultdict(list)
 
         self.mask = load_mask(mask)
         self.navigate_timeout = navigate_timeout
@@ -222,7 +224,7 @@ class Keyboard():
         name: str,
         text: Optional[str] = None,
         region: Optional[Region] = None,
-        mode: str = None,
+        mode: Optional[str] = None,
     ):
         """Add a key to the model (specification) of the keyboard.
 
@@ -346,16 +348,17 @@ class Keyboard():
             raise ValueError("Empty query %r" % (query,))
         if mode is not None:
             query["mode"] = mode
-        return [x for x in self.G.nodes()
-                if all(Keyboard.QUERYER[k](x, v) for k, v in query.items())]
-
-    QUERYER = {
-        "name": lambda x, v: x.name == v,
-        "text": lambda x, v: x.text == v,
-        "region": lambda x, v: (x.region is not None and
-                                x.region.contains(v.center)),
-        "mode": lambda x, v: x.mode == v,
-    }
+        if "name" in query:
+            nodes = self.name_index[query["name"]]
+        else:
+            nodes = self.G.nodes()
+        return [x for x in nodes
+                if ("name" not in query or x.name == query["name"]) and
+                   ("text" not in query or x.text == query["text"]) and
+                   ("region" not in query or (
+                    x.region is not None and
+                    x.region.contains(query["region"].center))) and
+                   ("mode" not in query or x.mode == query["mode"])]
 
     def _find_or_add_key(self, query):
         """Note: We don't want to expose this operation in the public API
@@ -397,6 +400,7 @@ class Keyboard():
                              "other keys in the keyboard do" % (spec,))
         self.G.add_node(node)
         self.G_ = None
+        self.name_index[node.name].append(node)
         if node.region is None:
             self._any_without_region = True
         else:
