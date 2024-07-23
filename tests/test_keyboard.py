@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from unittest import mock
 
 import numpy
@@ -1079,3 +1080,14 @@ def test_disjoint_modes():
         list(_keys_to_press(kb.G,
                             kb.find_key("a", mode="single-row"),
                             kb.find_keys("0")))
+
+
+def test_keyboard_definition_performance():
+    start_time = time.time()
+    kb = stbt.Keyboard()
+    for mode in range(100):
+        kb.add_grid(stbt.Grid(region=stbt.Region(0, 0, 26, 1),
+                              data=["abcdefghijklmnopqrstuvwxyz"]),
+                    mode=str(mode))
+    duration = time.time() - start_time
+    assert duration < 0.1
