@@ -222,7 +222,7 @@ class Keyboard():
         name: str,
         text: Optional[str] = None,
         region: Optional[Region] = None,
-        mode: str = None,
+        mode: Optional[str] = None,
     ):
         """Add a key to the model (specification) of the keyboard.
 
