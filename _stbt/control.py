@@ -203,27 +203,27 @@ class LircControl(RemoteControl):
         self._connect = connect_fn
 
     def press(self, key):
-        s = self._connect()
-        command = b"SEND_ONCE %s %s" % (to_bytes(self.control_name),
-                                        to_bytes(key))
-        s.sendall(command + b"\n")
-        _read_lircd_reply(s, command)
+        with self._connect() as s:
+            command = b"SEND_ONCE %s %s" % (to_bytes(self.control_name),
+                                            to_bytes(key))
+            s.sendall(command + b"\n")
+            _read_lircd_reply(s, command)
         debug("Pressed %s" % key)
 
     def keydown(self, key):
-        s = self._connect()
-        command = b"SEND_START %s %s" % (to_bytes(self.control_name),
-                                         to_bytes(key))
-        s.sendall(command + b"\n")
-        _read_lircd_reply(s, command)
+        with self._connect() as s:
+            command = b"SEND_START %s %s" % (to_bytes(self.control_name),
+                                             to_bytes(key))
+            s.sendall(command + b"\n")
+            _read_lircd_reply(s, command)
         debug("Holding %s" % key)
 
     def keyup(self, key):
-        s = self._connect()
-        command = b"SEND_STOP %s %s" % (to_bytes(self.control_name),
-                                        to_bytes(key))
-        s.sendall(command + b"\n")
-        _read_lircd_reply(s, command)
+        with self._connect() as s:
+            command = b"SEND_STOP %s %s" % (to_bytes(self.control_name),
+                                            to_bytes(key))
+            s.sendall(command + b"\n")
+            _read_lircd_reply(s, command)
         debug("Released %s" % key)
 
 
