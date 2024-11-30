@@ -407,6 +407,7 @@ class RemoteFrameBuffer(RemoteControl):
             % (self.hostname, self.port))
 
     def _handshake(self):
+        assert self.socket
         s = self.socket
         prot_info = s.recv(20)
         if prot_info != b'RFB 003.008\n':
@@ -418,6 +419,7 @@ class RemoteFrameBuffer(RemoteControl):
         debug("RemoteFrameBuffer: handshake completed")
 
     def _press_down(self, key):
+        assert self.socket
         key_code = self._get_key_code(key)
         self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
         debug(
@@ -425,13 +427,16 @@ class RemoteFrameBuffer(RemoteControl):
             % key_code)
 
     def _release(self, key):
+        assert self.socket
         key_code = self._get_key_code(key)
         self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
         debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
 
     def _close(self):
+        assert self.socket
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
+        self.socket = None
         debug("RemoteFrameBuffer: socket connection closed")
 
     def _get_key_code(self, key):
@@ -641,7 +646,7 @@ class X11Control(RemoteControl):
     def __init__(self, display=None, mapping=None):
         self.display = display
         if shutil.which('xdotool') is None:
-            raise Exception("x11 control: xdotool not installed")
+            raise FileNotFoundError("x11 control: xdotool not installed")
         self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
         if mapping is not None:
             self.mapping.update(_load_key_mapping(mapping))
