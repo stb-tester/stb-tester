@@ -351,7 +351,7 @@ def _norm_frame(frame: "FrameT"):
             "Invalid shape for frame: %r. Shape must have 1 or 3 channels" %
             (frame.shape,))
     if frame.shape[2] == 1:
-        frame = numpy.lib.stride_tricks.as_strided(
+        frame = numpy.lib.stride_tricks.as_strided(  # type:ignore
             frame, frame.shape[:2] + (3,), frame.strides[:2] + (0,),
             subok=True, writeable=False)
     return frame
