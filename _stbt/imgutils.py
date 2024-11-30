@@ -417,7 +417,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     if flags is not None:
         # Backwards compatibility
         if color_channels is not None:
-            raise Exception(
+            raise ValueError(
                 "flags cannot be specified at the same time as color_channels")
         if flags == cv2.IMREAD_GRAYSCALE:
             color_channels = (1,)
@@ -426,7 +426,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         elif flags == cv2.IMREAD_UNCHANGED:
             color_channels = (1, 3, 4)
         else:
-            raise Exception("Unsupported imread flags %s" % flags)
+            raise ValueError("Unsupported imread flags %s" % flags)
         warnings.warn(
             "load_image: flags=%s argument is deprecated. Use "
             "color_channels=%r instead" % (flags, color_channels),
