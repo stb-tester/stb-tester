@@ -100,7 +100,8 @@ class Image(numpy.ndarray):
     Added in v32.
     """
     def __new__(cls, array, dtype=None, order=None,
-                filename=None, absolute_filename=None):
+                filename: str|None = None,
+                absolute_filename: str|None = None):
 
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         i = isinstance(array, Image)
@@ -115,9 +116,20 @@ class Image(numpy.ndarray):
         if obj is None:
             return
         # pylint: disable=attribute-defined-outside-init
-        self.filename = getattr(obj, "filename", None)
-        self.relative_filename = getattr(obj, "relative_filename", None)
-        self.absolute_filename = getattr(obj, "absolute_filename", None)
+        if hasattr(obj, "filename") and obj.filename is not None:
+            self.filename = str(obj.filename)
+        else:
+            self.filename = None
+        if (hasattr(obj, "absolute_filename") and
+                obj.absolute_filename is not None):
+            self.absolute_filename = str(obj.absolute_filename)
+        else:
+            self.absolute_filename = None
+        if (hasattr(obj, "relative_filename") and
+                obj.relative_filename is not None):
+            self.relative_filename = str(obj.relative_filename)
+        else:
+            self.relative_filename = None
 
     def __repr__(self):
         if len(self.shape) == 3:
@@ -150,7 +162,7 @@ class Image(numpy.ndarray):
         return Region(0, 0, self.shape[1], self.shape[0])
 
 
-def _relative_filename(absolute_filename):
+def _relative_filename(absolute_filename) -> str|None:
     """Returns filename relative to the test-pack root if inside the test-pack,
     or absolute path if outside the test-pack.
     """
