@@ -517,11 +517,11 @@ class MatchTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
-    def __init__(self, screenshot: FrameT, expected: str,
+    def __init__(self, screenshot: FrameT, expected: str|None,
                  timeout_secs: float):
         super().__init__()
         self.screenshot: FrameT = screenshot
-        self.expected: str = expected
+        self.expected: str|None = expected
         self.timeout_secs: float = timeout_secs
 
     def __str__(self):
