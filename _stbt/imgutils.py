@@ -646,6 +646,7 @@ def find_file(filename: str) -> str:
 
     else:
         caller = inspect.currentframe()
+        assert caller
         try:
             caller = caller.f_back  # skip this frame (find_file)
             while caller:
