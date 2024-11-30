@@ -286,4 +286,4 @@ class FrameObject(metaclass=_FrameObjectMeta):
 
         Any additional keyword arguments are passed on to ``__init__``.
         """
-        return self.__class__(frame=frame, **kwargs)
+        return self.__class__(frame=frame, **kwargs)  # type:ignore
