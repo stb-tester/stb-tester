@@ -42,7 +42,8 @@ class Frame(numpy.ndarray):
     :ivar Region region: A `Region` corresponding to the full size of the
         frame — that is, ``Region(0, 0, width, height)``.
     """
-    def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
+    def __new__(cls, array, dtype=None, order=None, time: float|None = None,
+                _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         i = isinstance(array, Frame)
         if time is None and i:
@@ -55,7 +56,11 @@ class Frame(numpy.ndarray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
+        # pylint: disable=attribute-defined-outside-init
+        if hasattr(obj, "time") and obj.time is not None:
+            self.time = float(obj.time)
+        else:
+            self.time = None
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
     def __repr__(self):
