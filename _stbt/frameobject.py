@@ -9,7 +9,7 @@ from __future__ import annotations
 import functools
 import threading
 from itertools import zip_longest
-from typing import Optional, TypeVar
+from typing import Callable, Optional, overload, TypeVar
 
 from .imgutils import FrameT
 
@@ -17,10 +17,17 @@ from .imgutils import FrameT
 T = TypeVar("T")
 
 
-# Type annotation isn't quite right here, but don't know how to express this
-# correctly.  If it's called without brakets then the type is [T] -> T, but with
-# brackets it's [None] -> Callable[[T], T]:
-def for_object_repository(cls: T = None) -> T:
+@overload
+def for_object_repository(cls: T) -> T:
+    ...
+
+
+@overload
+def for_object_repository() -> Callable[[T], T]:
+    ...
+
+
+def for_object_repository(cls=None):
     """A decorator that marks classes and functions so they appear in the Object
     Repository.
 
