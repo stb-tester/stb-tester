@@ -106,9 +106,9 @@ class _FrameObjectMeta(type):
             if isinstance(v, property):
                 # Properties must not have setters
                 if v.fset is not None:
-                    raise Exception(
-                        "FrameObjects must be immutable but this property has "
-                        "a setter")
+                    raise TypeError(
+                        f"FrameObjects must be immutable but property {k!r} "
+                        "has a setter")
                 f = v.fget
                 if k == 'is_visible':
                     f = _convert_is_visible_to_bool(f)
