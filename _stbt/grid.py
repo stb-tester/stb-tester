@@ -80,7 +80,6 @@ class Grid():
         :ivar data: The data corresponding to the cell, if data was specified
             when you created the `Grid`.
         """
-        pass
 
     def __repr__(self) -> str:
         s = "Grid(region=%r, cols=%r, rows=%r)" % (

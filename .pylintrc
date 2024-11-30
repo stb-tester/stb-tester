@@ -50,7 +50,6 @@ disable=
   too-many-statements,
   ungrouped-imports,
   unnecessary-lambda-assignment,
-  unnecessary-pass,
   use-implicit-booleaness-not-comparison,
   wrong-import-position,
 
