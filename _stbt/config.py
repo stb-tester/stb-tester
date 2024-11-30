@@ -90,16 +90,16 @@ def get_config(
 
     try:
         if type_ is bool:
-            return config.getboolean(section, key)
-        elif issubclass(type_, enum.Enum):
+            return config.getboolean(section, key)  # type:ignore
+        elif issubclass(type_, enum.Enum):  # type:ignore
             return _to_enum(type_, config.get(section, key), section, key)
         else:
-            return type_(config.get(section, key))
+            return type_(config.get(section, key))  # type:ignore
     except configparser.Error as e:
         if default is NoDefault:
             raise ConfigurationError(e.message)
         else:
-            return default
+            return default  # type:ignore
     except ValueError as e:
         raise ConfigurationError("'%s.%s' invalid type (must be %s): %s" % (
             section, key, type_.__name__, e))
@@ -154,7 +154,7 @@ def _config_init(force=False):
         config_files = [_find_file('stbt.conf')]
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            from .vars import sysconfdir
+            from .vars import sysconfdir  # type:ignore
         except ImportError:
             sysconfdir = "/etc"
         config_files.append(os.path.join(sysconfdir, 'stbt/stbt.conf'))
