@@ -210,12 +210,14 @@ class Color:
     @overload
     def __init__(self, bgra: tuple[int, int, int, int]) -> None:
         ...
-    def __init__(self, *args,
-                 hexstring: str = None,
-                 blue: int = None, green: int = None, red: int = None,
-                 alpha: int = None,
-                 bgr: tuple[int, int, int] = None,
-                 bgra: tuple[int, int, int, int] = None) -> None:
+    def __init__(self, *args,  # type:ignore
+                 hexstring: str|None = None,
+                 blue: int|None = None,
+                 green: int|None = None,
+                 red: int|None = None,
+                 alpha: int|None = None,
+                 bgr: tuple[int, int, int]|None = None,
+                 bgra: tuple[int, int, int, int]|None = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -237,7 +239,8 @@ class Color:
             self.array = Color._from_sequence(*bgr)
         elif not args and bgra is not None:
             self.array = Color._from_sequence(*bgra)
-        elif not args and all(x is not None for x in (blue, green, red)):
+        elif (not args and
+                blue is not None and green is not None and red is not None):
             self.array = Color._from_sequence(blue, green, red, alpha)
 
         else:
@@ -253,7 +256,7 @@ class Color:
                  else f"{self.array[0][0][3]:02x}")))
 
     @staticmethod
-    def _from_string(s):
+    def _from_string(s: str):
         m = re.match(r"^#?([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$", s)
         if m:
             s = m.group(1)
@@ -281,7 +284,8 @@ class Color:
         return Color._from_sequence(b, g, r, a)
 
     @staticmethod
-    def _from_sequence(b, g, r, a=None):
+    def _from_sequence(b: int|str, g: int|str, r: int|str,
+                       a: int|str|None = None):
         channels = [b, g, r]
         if a is not None:
             channels.append(a)
