@@ -219,9 +219,9 @@ class FrameObject(metaclass=_FrameObjectMeta):
             args = []
             for x in self._fields:  # pylint:disable=no-member
                 name = getattr(self.__class__, x).fget.__name__
-                if name in self._FrameObject__frame_object_cache:
+                if name in self.__frame_object_cache:
                     args.append("%s=%r" % (
-                        name, self._FrameObject__frame_object_cache[name]))
+                        name, self.__frame_object_cache[name]))
                 else:
                     args.append("%s=..." % (name,))
         else:
