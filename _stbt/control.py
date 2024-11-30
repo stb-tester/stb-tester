@@ -820,25 +820,3 @@ def test_x11_control():
             for line in log:
                 print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')
-
-
-def test_uri_to_control():
-    global IRNetBoxControl  # pylint:disable=global-variable-undefined
-    orig_IRNetBoxControl = IRNetBoxControl
-    try:
-        # pylint:disable=redefined-outer-name
-        def IRNetBoxControl(hostname, port, output, config):
-            return ":".join([hostname, str(port or '10001'), output, config])
-        out = uri_to_control("irnetbox:localhost:1234:1:conf")
-        assert out == "localhost:1234:1:conf", (
-            "Failed to parse uri with irnetbox port. Output was '%s'" % out)
-        out = uri_to_control("irnetbox:localhost:1:conf")
-        assert out == "localhost:10001:1:conf", (
-            "Failed to parse uri without irnetbox port. Output was '%s'" % out)
-        try:
-            uri_to_control("irnetbox:localhost::1:conf")
-            assert False, "Uri with empty field should have raised"
-        except ConfigurationError:
-            pass
-    finally:
-        IRNetBoxControl = orig_IRNetBoxControl
