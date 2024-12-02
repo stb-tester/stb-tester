@@ -55,6 +55,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         xterm && \
     apt-get clean
 
+RUN pip3 install pyright[nodejs] && pyright --version
+
 RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
 
