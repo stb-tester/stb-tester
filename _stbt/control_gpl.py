@@ -231,6 +231,7 @@ class HdmiCecControl():
             self.press_and_hold_thread = None
             self.lock.notify_all()
 
+        assert thread
         thread.join()
 
         with self.lock:

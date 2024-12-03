@@ -208,7 +208,7 @@ PYTHON_FILES := \
       | grep -v -e ^setup.py \
                 -e ^vendor/)
 
-check: check-pylint check-pytest check-integrationtests
+check: check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
 	STBT_CONFIG_FILE=$$PWD/tests/stbt.conf \
@@ -238,6 +238,8 @@ check-integrationtests: install-for-test
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
 	PYTHONPATH=$$PWD PYLINT="$(PYLINT)" extra/pylint.sh $(PYTHON_FILES)
+check-pyright: all
+	PYTHONPATH=$$PWD pyright
 
 ifeq ($(enable_virtual_stb), yes)
 install: install-virtual-stb

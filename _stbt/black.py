@@ -105,7 +105,9 @@ def is_screen_black(frame: Optional[Frame] = None,
         if result.black:
             bounding_box = None
         else:
-            bounding_box = pixel_bounding_box(thresholded).translate(region)
+            bounding_box = pixel_bounding_box(thresholded)
+            assert bounding_box
+            bounding_box = bounding_box.translate(region)
         imglog.set(maxVal=maxVal, non_black_region=bounding_box)
     _log_image_debug(imglog, result)
 

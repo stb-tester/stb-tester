@@ -326,7 +326,7 @@ def match_all(
             break
 
 
-def _norm_frame(frame: "FrameT"):
+def _norm_frame(frame: FrameT) -> FrameT:
     """Normalise single channel images to shape (h, w, 3) rather than (h, w) or
     (h, w, 1).  match has the invariant that it behaves the same as if you'd
     run `frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)` first.
@@ -351,7 +351,7 @@ def _norm_frame(frame: "FrameT"):
             "Invalid shape for frame: %r. Shape must have 1 or 3 channels" %
             (frame.shape,))
     if frame.shape[2] == 1:
-        frame = numpy.lib.stride_tricks.as_strided(
+        frame = numpy.lib.stride_tricks.as_strided(  # type:ignore
             frame, frame.shape[:2] + (3,), frame.strides[:2] + (0,),
             subok=True, writeable=False)
     return frame
@@ -368,7 +368,7 @@ def test_norm_frame():
     assert numpy.all(normed[:, :, 0] == normed[:, :, 2])
 
 
-def _match_all(image, frame, match_parameters, region):
+def _match_all(image, frame: Optional[FrameT], match_parameters, region):
     """
     Generator that yields a sequence of zero or more truthy MatchResults,
     followed by a falsey MatchResult.
@@ -517,11 +517,11 @@ class MatchTimeout(UITestFailure):
     :vartype timeout_secs: int or float
     :ivar timeout_secs: Number of seconds that the image was searched for.
     """
-    def __init__(self, screenshot: FrameT, expected: str,
+    def __init__(self, screenshot: FrameT, expected: str|None,
                  timeout_secs: float):
         super().__init__()
         self.screenshot: FrameT = screenshot
-        self.expected: str = expected
+        self.expected: str|None = expected
         self.timeout_secs: float = timeout_secs
 
     def __str__(self):

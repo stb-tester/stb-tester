@@ -553,7 +553,6 @@ class Keypress():
 
 class UITestError(Exception):
     """The test script had an unrecoverable error."""
-    pass
 
 
 class UITestFailure(Exception):
@@ -561,12 +560,10 @@ class UITestFailure(Exception):
 
     Inherit from this if you need to define your own test-failure exceptions.
     """
-    pass
 
 
 class NoVideo(Exception):
     """No video available from the source pipeline."""
-    pass
 
 
 class PDU:

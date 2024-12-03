@@ -42,7 +42,8 @@ class Frame(numpy.ndarray):
     :ivar Region region: A `Region` corresponding to the full size of the
         frame — that is, ``Region(0, 0, width, height)``.
     """
-    def __new__(cls, array, dtype=None, order=None, time=None, _draw_sink=None):
+    def __new__(cls, array, dtype=None, order=None, time: float|None = None,
+                _draw_sink=None):
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         i = isinstance(array, Frame)
         if time is None and i:
@@ -55,7 +56,11 @@ class Frame(numpy.ndarray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.time = getattr(obj, 'time', None)  # pylint: disable=attribute-defined-outside-init
+        # pylint: disable=attribute-defined-outside-init
+        if time := getattr(obj, "time", None):
+            self.time = float(time)
+        else:
+            self.time = None
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
     def __repr__(self):
@@ -100,7 +105,8 @@ class Image(numpy.ndarray):
     Added in v32.
     """
     def __new__(cls, array, dtype=None, order=None,
-                filename=None, absolute_filename=None):
+                filename: str|None = None,
+                absolute_filename: str|None = None):
 
         obj = numpy.asarray(array, dtype=dtype, order=order).view(cls)
         i = isinstance(array, Image)
@@ -115,9 +121,18 @@ class Image(numpy.ndarray):
         if obj is None:
             return
         # pylint: disable=attribute-defined-outside-init
-        self.filename = getattr(obj, "filename", None)
-        self.relative_filename = getattr(obj, "relative_filename", None)
-        self.absolute_filename = getattr(obj, "absolute_filename", None)
+        if filename := getattr(obj, "filename", None):
+            self.filename = str(filename)
+        else:
+            self.filename = None
+        if absolute_filename := getattr(obj, "absolute_filename", None):
+            self.absolute_filename = str(absolute_filename)
+        else:
+            self.absolute_filename = None
+        if relative_filename := getattr(obj, "relative_filename", None):
+            self.relative_filename = str(relative_filename)
+        else:
+            self.relative_filename = None
 
     def __repr__(self):
         if len(self.shape) == 3:
@@ -150,7 +165,7 @@ class Image(numpy.ndarray):
         return Region(0, 0, self.shape[1], self.shape[0])
 
 
-def _relative_filename(absolute_filename):
+def _relative_filename(absolute_filename) -> str|None:
     """Returns filename relative to the test-pack root if inside the test-pack,
     or absolute path if outside the test-pack.
     """
@@ -201,7 +216,15 @@ class Color:
     def __init__(self, hexstring: str) -> None:
         ...
     @overload
+    def __init__(self, blue: int, green: int, red: int, /) -> None:
+        ...
+    @overload
     def __init__(self, blue: int, green: int, red: int,
+                 alpha: Optional[int] = None, /) -> None:
+        ...
+    # kwargs:
+    @overload
+    def __init__(self, *, blue: int, green: int, red: int,
                  alpha: Optional[int] = None) -> None:
         ...
     @overload
@@ -211,11 +234,13 @@ class Color:
     def __init__(self, bgra: tuple[int, int, int, int]) -> None:
         ...
     def __init__(self, *args,
-                 hexstring: str = None,
-                 blue: int = None, green: int = None, red: int = None,
-                 alpha: int = None,
-                 bgr: tuple[int, int, int] = None,
-                 bgra: tuple[int, int, int, int] = None) -> None:
+                 hexstring: str|None = None,
+                 blue: int|None = None,
+                 green: int|None = None,
+                 red: int|None = None,
+                 alpha: int|None = None,
+                 bgr: tuple[int, int, int]|None = None,
+                 bgra: tuple[int, int, int, int]|None = None) -> None:
 
         self.array: numpy.ndarray  # BGR with shape (1, 1, 3) or BGRA (1, 1, 4)
 
@@ -237,7 +262,8 @@ class Color:
             self.array = Color._from_sequence(*bgr)
         elif not args and bgra is not None:
             self.array = Color._from_sequence(*bgra)
-        elif not args and all(x is not None for x in (blue, green, red)):
+        elif (not args and
+                blue is not None and green is not None and red is not None):
             self.array = Color._from_sequence(blue, green, red, alpha)
 
         else:
@@ -253,7 +279,7 @@ class Color:
                  else f"{self.array[0][0][3]:02x}")))
 
     @staticmethod
-    def _from_string(s):
+    def _from_string(s: str):
         m = re.match(r"^#?([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$", s)
         if m:
             s = m.group(1)
@@ -281,7 +307,8 @@ class Color:
         return Color._from_sequence(b, g, r, a)
 
     @staticmethod
-    def _from_sequence(b, g, r, a=None):
+    def _from_sequence(b: int|str, g: int|str, r: int|str,
+                       a: int|str|None = None):
         channels = [b, g, r]
         if a is not None:
             channels.append(a)
@@ -413,7 +440,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     if flags is not None:
         # Backwards compatibility
         if color_channels is not None:
-            raise Exception(
+            raise ValueError(
                 "flags cannot be specified at the same time as color_channels")
         if flags == cv2.IMREAD_GRAYSCALE:
             color_channels = (1,)
@@ -422,7 +449,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
         elif flags == cv2.IMREAD_UNCHANGED:
             color_channels = (1, 3, 4)
         else:
-            raise Exception("Unsupported imread flags %s" % flags)
+            raise ValueError("Unsupported imread flags %s" % flags)
         warnings.warn(
             "load_image: flags=%s argument is deprecated. Use "
             "color_channels=%r instead" % (flags, color_channels),
@@ -642,6 +669,7 @@ def find_file(filename: str) -> str:
 
     else:
         caller = inspect.currentframe()
+        assert caller
         try:
             caller = caller.f_back  # skip this frame (find_file)
             while caller:

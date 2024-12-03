@@ -22,5 +22,6 @@ jobs:
     - run: git config --global --add safe.directory /__w/stb-tester/stb-tester
     - run: tesseract --version
     - run: make check-pylint
+    - run: pyright --version && make check-pyright
     - run: make check-pytest
     - run: make check-integrationtests

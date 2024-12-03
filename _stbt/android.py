@@ -9,12 +9,15 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 """
 
+from __future__ import annotations
+
 import os
 import re
 import shutil
 import subprocess
 import threading
 import time
+import typing
 from collections import namedtuple
 from contextlib import contextmanager
 from logging import getLogger
@@ -22,6 +25,9 @@ from logging import getLogger
 from enum import Enum
 
 from _stbt.config import ConfigurationError, get_config
+
+if typing.TYPE_CHECKING:
+    from _stbt.imgutils import Frame
 
 
 __all__ = [
@@ -143,8 +149,11 @@ class AdbDevice():
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
 
-    def __init__(self, address=None, adb_server=None, adb_binary=None,
-                 tcpip=None, coordinate_system=None):
+    def __init__(self, address: str|None = None,
+                 adb_server: str|None = None,
+                 adb_binary: str|None = None,
+                 tcpip: bool|None = None,
+                 coordinate_system: CoordinateSystem|None = None):
 
         self.address = address or get_config("device_under_test", "ip_address",
                                              default=None)
@@ -159,12 +168,12 @@ class AdbDevice():
             tcpip = _is_ip_address(self.address)
         self.tcpip = tcpip
 
-        if self.tcpip and not self.address:
-            raise ConfigurationError('AdbDevice: If "tcpip=True" '
-                                     'you must specify "address"')
-
-        if self.tcpip and ":" not in self.address:
-            self.address = self.address + ":5555"
+        if self.tcpip:
+            if not self.address:
+                raise ConfigurationError('AdbDevice: If "tcpip=True" '
+                                         'you must specify "address"')
+            if ":" not in self.address:
+                self.address = self.address + ":5555"
 
         self.coordinate_system = coordinate_system or get_config(
             "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
@@ -221,7 +230,7 @@ class AdbDevice():
                          stderr=subprocess.STDOUT,
                          encoding="utf-8").stdout
 
-    def get_frame(self, coordinate_system=None) -> "stbt.Frame":
+    def get_frame(self, coordinate_system=None) -> Frame:
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
@@ -379,6 +388,7 @@ class AdbDevice():
         return _command
 
     def _connect(self, timeout=None):
+        assert self.address
         if self.address in self.devices():
             return
 

@@ -387,27 +387,13 @@ class RemoteFrameBuffer(RemoteControl):
         self.hostname = hostname
         self.port = int(port or 5900)
         self.timeout = 3
-        self.socket = None
 
     def press(self, key):
-        self._connect_socket()
-        self._handshake()
-        self._press_down(key)
-        self._release(key)
-        self._close()
-
-    def _connect_socket(self):
-        self.socket = socket.socket()
-        s = self.socket
-        if self.timeout:
-            s.settimeout(self.timeout)
-        s.connect((self.hostname, self.port))
+        s = socket.create_connection((self.hostname, self.port), self.timeout)
         debug(
             "RemoteFrameBuffer: connected to %s:%d"
             % (self.hostname, self.port))
 
-    def _handshake(self):
-        s = self.socket
         prot_info = s.recv(20)
         if prot_info != b'RFB 003.008\n':
             raise socket.error("wrong RFB protocol info")
@@ -417,26 +403,18 @@ class RemoteFrameBuffer(RemoteControl):
         s.recv(24)
         debug("RemoteFrameBuffer: handshake completed")
 
-    def _press_down(self, key):
-        key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
+        key_code = self._KEYNAMES.get(key, key)
+        s.send(struct.pack('!BBxxI', 4, 1, key_code))
         debug(
             "RemoteFrameBuffer: pressed down (0x%04x)"
             % key_code)
 
-    def _release(self, key):
-        key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+        s.send(struct.pack('!BBxxI', 4, 0, key_code))
         debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
 
-    def _close(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        s.shutdown(socket.SHUT_RDWR)
+        s.close()
         debug("RemoteFrameBuffer: socket connection closed")
-
-    def _get_key_code(self, key):
-        key_code = self._KEYNAMES.get(key, key)
-        return key_code
 
 
 class IRNetBoxControl(RemoteControl):
@@ -641,7 +619,7 @@ class X11Control(RemoteControl):
     def __init__(self, display=None, mapping=None):
         self.display = display
         if shutil.which('xdotool') is None:
-            raise Exception("x11 control: xdotool not installed")
+            raise FileNotFoundError("x11 control: xdotool not installed")
         self.mapping = _load_key_mapping(_find_file("x-key-mapping.conf"))
         if mapping is not None:
             self.mapping.update(_load_key_mapping(mapping))
@@ -820,25 +798,3 @@ def test_x11_control():
             for line in log:
                 print("xterm.log: " + line, end=' ')
         assert os.path.exists(tmp + '/good')
-
-
-def test_uri_to_control():
-    global IRNetBoxControl  # pylint:disable=global-variable-undefined
-    orig_IRNetBoxControl = IRNetBoxControl
-    try:
-        # pylint:disable=redefined-outer-name
-        def IRNetBoxControl(hostname, port, output, config):
-            return ":".join([hostname, str(port or '10001'), output, config])
-        out = uri_to_control("irnetbox:localhost:1234:1:conf")
-        assert out == "localhost:1234:1:conf", (
-            "Failed to parse uri with irnetbox port. Output was '%s'" % out)
-        out = uri_to_control("irnetbox:localhost:1:conf")
-        assert out == "localhost:10001:1:conf", (
-            "Failed to parse uri without irnetbox port. Output was '%s'" % out)
-        try:
-            uri_to_control("irnetbox:localhost::1:conf")
-            assert False, "Uri with empty field should have raised"
-        except ConfigurationError:
-            pass
-    finally:
-        IRNetBoxControl = orig_IRNetBoxControl

@@ -9,7 +9,7 @@ from __future__ import annotations
 import functools
 import threading
 from itertools import zip_longest
-from typing import Optional, TypeVar
+from typing import Callable, Optional, overload, TypeVar
 
 from .imgutils import FrameT
 
@@ -17,10 +17,17 @@ from .imgutils import FrameT
 T = TypeVar("T")
 
 
-# Type annotation isn't quite right here, but don't know how to express this
-# correctly.  If it's called without brakets then the type is [T] -> T, but with
-# brackets it's [None] -> Callable[[T], T]:
-def for_object_repository(cls: T = None) -> T:
+@overload
+def for_object_repository(cls: T) -> T:
+    ...
+
+
+@overload
+def for_object_repository() -> Callable[[T], T]:
+    ...
+
+
+def for_object_repository(cls=None):
     """A decorator that marks classes and functions so they appear in the Object
     Repository.
 
@@ -99,9 +106,9 @@ class _FrameObjectMeta(type):
             if isinstance(v, property):
                 # Properties must not have setters
                 if v.fset is not None:
-                    raise Exception(
-                        "FrameObjects must be immutable but this property has "
-                        "a setter")
+                    raise TypeError(
+                        f"FrameObjects must be immutable but property {k!r} "
+                        "has a setter")
                 f = v.fget
                 if k == 'is_visible':
                     f = _convert_is_visible_to_bool(f)
@@ -212,9 +219,9 @@ class FrameObject(metaclass=_FrameObjectMeta):
             args = []
             for x in self._fields:  # pylint:disable=no-member
                 name = getattr(self.__class__, x).fget.__name__
-                if name in self._FrameObject__frame_object_cache:
+                if name in self.__frame_object_cache:
                     args.append("%s=%r" % (
-                        name, self._FrameObject__frame_object_cache[name]))
+                        name, self.__frame_object_cache[name]))
                 else:
                     args.append("%s=..." % (name,))
         else:
@@ -279,4 +286,4 @@ class FrameObject(metaclass=_FrameObjectMeta):
 
         Any additional keyword arguments are passed on to ``__init__``.
         """
-        return self.__class__(frame=frame, **kwargs)
+        return self.__class__(frame=frame, **kwargs)  # type:ignore
