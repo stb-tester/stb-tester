@@ -57,8 +57,8 @@ class Frame(numpy.ndarray):
         if obj is None:
             return
         # pylint: disable=attribute-defined-outside-init
-        if hasattr(obj, "time") and obj.time is not None:
-            self.time = float(obj.time)
+        if time := getattr(obj, "time", None):
+            self.time = float(time)
         else:
             self.time = None
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
@@ -121,18 +121,16 @@ class Image(numpy.ndarray):
         if obj is None:
             return
         # pylint: disable=attribute-defined-outside-init
-        if hasattr(obj, "filename") and obj.filename is not None:
-            self.filename = str(obj.filename)
+        if filename := getattr(obj, "filename", None):
+            self.filename = str(filename)
         else:
             self.filename = None
-        if (hasattr(obj, "absolute_filename") and
-                obj.absolute_filename is not None):
-            self.absolute_filename = str(obj.absolute_filename)
+        if absolute_filename := getattr(obj, "absolute_filename", None):
+            self.absolute_filename = str(absolute_filename)
         else:
             self.absolute_filename = None
-        if (hasattr(obj, "relative_filename") and
-                obj.relative_filename is not None):
-            self.relative_filename = str(obj.relative_filename)
+        if relative_filename := getattr(obj, "relative_filename", None):
+            self.relative_filename = str(relative_filename)
         else:
             self.relative_filename = None
 
