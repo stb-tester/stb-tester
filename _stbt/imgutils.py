@@ -218,7 +218,15 @@ class Color:
     def __init__(self, hexstring: str) -> None:
         ...
     @overload
+    def __init__(self, blue: int, green: int, red: int, /) -> None:
+        ...
+    @overload
     def __init__(self, blue: int, green: int, red: int,
+                 alpha: Optional[int] = None, /) -> None:
+        ...
+    # kwargs:
+    @overload
+    def __init__(self, *, blue: int, green: int, red: int,
                  alpha: Optional[int] = None) -> None:
         ...
     @overload
@@ -227,7 +235,7 @@ class Color:
     @overload
     def __init__(self, bgra: tuple[int, int, int, int]) -> None:
         ...
-    def __init__(self, *args,  # type:ignore
+    def __init__(self, *args,
                  hexstring: str|None = None,
                  blue: int|None = None,
                  green: int|None = None,
