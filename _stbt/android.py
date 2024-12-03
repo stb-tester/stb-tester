@@ -9,6 +9,8 @@ https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 .. _ADB: https://developer.android.com/studio/command-line/adb.html
 """
 
+from __future__ import annotations
+
 import os
 import re
 import shutil
@@ -228,7 +230,7 @@ class AdbDevice():
                          stderr=subprocess.STDOUT,
                          encoding="utf-8").stdout
 
-    def get_frame(self, coordinate_system=None) -> "Frame":
+    def get_frame(self, coordinate_system=None) -> Frame:
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
