@@ -387,28 +387,13 @@ class RemoteFrameBuffer(RemoteControl):
         self.hostname = hostname
         self.port = int(port or 5900)
         self.timeout = 3
-        self.socket = None
 
     def press(self, key):
-        self._connect_socket()
-        self._handshake()
-        self._press_down(key)
-        self._release(key)
-        self._close()
-
-    def _connect_socket(self):
-        self.socket = socket.socket()
-        s = self.socket
-        if self.timeout:
-            s.settimeout(self.timeout)
-        s.connect((self.hostname, self.port))
+        s = socket.create_connection((self.hostname, self.port), self.timeout)
         debug(
             "RemoteFrameBuffer: connected to %s:%d"
             % (self.hostname, self.port))
 
-    def _handshake(self):
-        assert self.socket
-        s = self.socket
         prot_info = s.recv(20)
         if prot_info != b'RFB 003.008\n':
             raise socket.error("wrong RFB protocol info")
@@ -418,30 +403,18 @@ class RemoteFrameBuffer(RemoteControl):
         s.recv(24)
         debug("RemoteFrameBuffer: handshake completed")
 
-    def _press_down(self, key):
-        assert self.socket
-        key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 1, key_code))
+        key_code = self._KEYNAMES.get(key, key)
+        s.send(struct.pack('!BBxxI', 4, 1, key_code))
         debug(
             "RemoteFrameBuffer: pressed down (0x%04x)"
             % key_code)
 
-    def _release(self, key):
-        assert self.socket
-        key_code = self._get_key_code(key)
-        self.socket.send(struct.pack('!BBxxI', 4, 0, key_code))
+        s.send(struct.pack('!BBxxI', 4, 0, key_code))
         debug("RemoteFrameBuffer: release (0x%04x)" % key_code)
 
-    def _close(self):
-        assert self.socket
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
-        self.socket = None
+        s.shutdown(socket.SHUT_RDWR)
+        s.close()
         debug("RemoteFrameBuffer: socket connection closed")
-
-    def _get_key_code(self, key):
-        key_code = self._KEYNAMES.get(key, key)
-        return key_code
 
 
 class IRNetBoxControl(RemoteControl):
