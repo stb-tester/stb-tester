@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import threading
 import time
+import typing
 from collections import namedtuple
 from contextlib import contextmanager
 from logging import getLogger
@@ -22,7 +23,9 @@ from logging import getLogger
 from enum import Enum
 
 from _stbt.config import ConfigurationError, get_config
-from _stbt.imgutils import Frame
+
+if typing.TYPE_CHECKING:
+    from _stbt.imgutils import Frame
 
 
 __all__ = [
@@ -225,7 +228,7 @@ class AdbDevice():
                          stderr=subprocess.STDOUT,
                          encoding="utf-8").stdout
 
-    def get_frame(self, coordinate_system=None) -> Frame:
+    def get_frame(self, coordinate_system=None) -> "Frame":
         """Take a screenshot using ADB.
 
         If you are capturing video from the Android device via another method
@@ -241,6 +244,7 @@ class AdbDevice():
 
         import cv2
         import numpy
+        from _stbt.imgutils import Frame
 
         if coordinate_system is None:
             coordinate_system = self.coordinate_system
