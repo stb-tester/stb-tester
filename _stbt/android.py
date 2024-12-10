@@ -198,6 +198,7 @@ class AdbDevice():
                 "commit the 'config/android' directory to git.")
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
+        os.chmod(os.path.join(os.environ["HOME"], ".android/adbkey"), 0o600)
 
     def adb(self, args, *, timeout=None, **subprocess_kwargs) \
             -> subprocess.CompletedProcess:
