@@ -335,15 +335,8 @@ class AdbDevice():
     def logcat(self, filename="logcat.log", logcat_args=None):
         """Run ``adb logcat`` and stream the logs to ``filename``.
 
-        This is a context manager. You can use it as a decorator on your
-        test-case functions, and ``adb logcat`` will run for the duration
-        of the decorated function::
-
-            adb = stbt.android.AdbDevice()
-
-            @adb.logcat()
-            def test_launching_my_androidtv_app():
-                ...
+        This is a context manager. See :doc:`logs` for the recommended way
+        to use it.
 
         :param str filename:
             Where the logs are written.
