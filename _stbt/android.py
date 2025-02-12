@@ -256,7 +256,13 @@ class AdbDevice():
             timestamp = time.time()
             data = self.adb(["shell", "screencap", "-p"],
                             timeout=60, capture_output=True) \
-                       .stdout.replace(b"\r\n", b"\n")
+                       .stdout
+            assert isinstance(data, bytes)
+            if data.startswith(b"\x89PNG\r\r\n"):
+                # Older versions of `adb shell` convert LF to CRLF.
+                # The PNG format is designed to detect this: It should start
+                # with 0x89, followed by "PNG", followed by CRLF.
+                data = data.replace(b"\r\n", b"\n")
             img = cv2.imdecode(
                 numpy.asarray(bytearray(data), dtype=numpy.uint8),
                 cv2.IMREAD_COLOR)
