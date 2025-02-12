@@ -258,6 +258,7 @@ class AdbDevice():
                             timeout=60, capture_output=True) \
                        .stdout
             assert isinstance(data, bytes)
+            header = data[:10]
             if data.startswith(b"\x89PNG\r\r\n"):
                 # Older versions of `adb shell` convert LF to CRLF.
                 # The PNG format is designed to detect this: It should start
@@ -270,7 +271,7 @@ class AdbDevice():
                 logger.warning(
                     "AdbDevice.get_frame: Failed to get screenshot "
                     "via ADB (attempt %d/3)\n"
-                    "Length of data: %d", attempt, len(data))
+                    "Header: %s, length: %d", attempt, header, len(data))
             else:
                 break
         else:
