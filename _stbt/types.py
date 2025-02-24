@@ -322,7 +322,7 @@ class Region(namedtuple('Region', 'x y right bottom'),
         return self.bottom - self.y
 
     @property
-    def center(self) -> float:
+    def center(self) -> Position:
         return Position((self.x + self.right) // 2,
                         (self.y + self.bottom) // 2)
 
