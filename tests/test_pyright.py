@@ -16,3 +16,6 @@ def f():
 
     r: stbt.Region|None = stbt.Region.bounding_box(None, *lines)
     print(r)
+
+    r2: None = stbt.Region.bounding_box()
+    print(r2)
