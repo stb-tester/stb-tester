@@ -148,7 +148,7 @@ def ocr(
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: Optional[str] = None,
+    lang: Optional[str | list[str]] = None,
     tesseract_config: Optional[dict[str, bool | str | int]] = None,
     tesseract_user_words: Optional[list[str] | str] = None,
     tesseract_user_patterns: Optional[list[str] | str] = None,
@@ -173,16 +173,17 @@ def ocr(
 
     :param OcrMode mode: Tesseract's layout analysis mode.
 
-    :param str lang:
+    :param lang:
         The three-letter
         `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`__
         language code of the language you are attempting to read; for example
         "eng" for English or "deu" for German. More than one language can be
-        specified by joining with '+'; for example "eng+deu" means that the
-        text to be read may be in a mixture of English and German. This defaults
-        to "eng" (English). You can override the global default value by setting
-        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
-        install the tesseract language pack; see installation instructions
+        specified by passing a list of languages; for example `["eng", "deu"]`
+        means that the text to be read may be in a mixture of English and
+        German. This defaults to "eng" (English). You can override the global
+        default value by setting ``lang`` in the ``[ocr]`` section of
+        :ref:`.stbt.conf`. You may need to install the tesseract language pack;
+        see installation instructions
         `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
 
     :param dict tesseract_config:
@@ -306,7 +307,7 @@ def match_text(
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
     mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-    lang: Optional[str] = None,
+    lang: Optional[str | list[str]] = None,
     tesseract_config: Optional[dict[str, bool | str | int]] = None,
     case_sensitive: bool = False,
     upsample: Optional[bool] = None,
@@ -612,6 +613,8 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     if lang is None:
         lang = get_config("ocr", "lang", "eng")
+    elif isinstance(lang, list):
+        lang = '+'.join(lang)
 
     if text_color_threshold is None:
         text_color_threshold = get_config(
