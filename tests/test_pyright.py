@@ -13,3 +13,6 @@ def f():
     ]
     all_lines = stbt.Region.bounding_box(*lines)
     print(all_lines.width)  # "width" is not a known attribute of "None" (reportOptionalMemberAccess)
+
+    r: stbt.Region|None = stbt.Region.bounding_box(None, *lines)
+    print(r)
