@@ -72,6 +72,18 @@ class _RegionClsMethods(type):
                 return None
         return Region.from_extents(*out)
 
+    @typing.overload
+    def bounding_box(cls) -> None:
+        ...
+
+    @typing.overload
+    def bounding_box(cls, *args: Region) -> Region:
+        ...
+
+    @typing.overload
+    def bounding_box(cls, *args: RegionT) -> RegionT:
+        ...
+
     def bounding_box(cls, *args: RegionT) -> RegionT:
         args = [_f for _f in args if _f]
         if not args:
