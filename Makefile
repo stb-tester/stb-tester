@@ -173,6 +173,7 @@ etc/stbt.conf : _stbt/stbt.conf
 
 STBT_CONTROL_RELAY_PYLIB_FILES = \
     _stbt/__init__.py \
+    _stbt/ch9329.py \
     _stbt/config.py \
     _stbt/control.py \
     _stbt/control_gpl.py \

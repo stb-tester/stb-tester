@@ -28,6 +28,11 @@ try:
 except ImportError:
     gpl_controls = None
 
+try:
+    import typing
+except ImportError:
+    pass
+
 
 # pylint: disable=abstract-method
 
@@ -54,6 +59,7 @@ class UnknownKeyError(Exception):
 def _lookup_uri_to_control(uri, display=None):
     controls = [
         (r'adb(:(?P<address>.*))?', new_adb_device),
+        (r'ch9329:(?P<device>.+)', _new_ch9329_control),
         (r'error(:(?P<message>.*))?', ErrorControl),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
         (r'''irnetbox:
@@ -796,6 +802,11 @@ def _connect_tcp_socket(address, port, timeout=3):
             address, port, e)),)
         e.strerror = e.args[0]
         raise
+
+
+def _new_ch9329_control(device):
+    from . import ch9329
+    return ch9329.CH9329Control(device)
 
 
 class FileToSocket(object):
