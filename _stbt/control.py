@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import division
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
+import enum
 import os
 import re
 import socket
@@ -54,6 +55,7 @@ class UnknownKeyError(Exception):
 def _lookup_uri_to_control(uri, display=None):
     controls = [
         (r'adb(:(?P<address>.*))?', new_adb_device),
+        (r'ch9329:(?P<device>.+)', CH9329Control),
         (r'error(:(?P<message>.*))?', ErrorControl),
         (r'file(:(?P<filename>[^,]+))?', FileControl),
         (r'''irnetbox:
@@ -678,6 +680,170 @@ class X11Control(RemoteControl):
         subprocess.check_call(
             ['xdotool', 'key', self.mapping.get(key, key)], env=e)
         debug("Pressed %s" % key)
+
+
+class CH9329Command(enum.Enum):
+    GET_INFO = 0x01
+    SEND_KB_GENERAL_DATA = 0x02
+    SEND_KB_MEDIA_DATA = 0x03
+    CMD_SEND_MS_ABS_DATA = 0x04
+    CMD_SEND_MS_REL_DATA = 0x05
+    CMD_SEND_MY_HID_DATA = 0x06
+    CMD_READ_MY_HID_DATA = 0x07
+    CMD_GET_PARA_CFG = 0x08
+    CMD_SET_PARA_CFG = 0x09
+    CMD_GET_USB_STRING = 0x0a
+    CMD_SET_USB_STRING = 0x0b
+    CMD_SET_DEFAULT_CFG = 0x0c
+    CMD_RESET = 0x0f
+
+
+class CH9329Modifier(enum.Flag):
+    LEFT_CTRL = 1 << 0
+    LEFT_SHIFT = 1 << 1
+    LEFT_ALT = 1 << 2
+    LEFT_META = 1 << 3
+    RIGHT_CTRL = 1 << 4
+    RIGHT_SHIFT = 1 << 5
+    RIGHT_ALT = 1 << 6
+    RIGHT_META = 1 << 7
+
+
+class CH9329Error(enum.Enum):
+    SUCCESS = 0x00
+    TIMEOUT = 0xe1
+    HEAD = 0xe2
+    CMD = 0xe3
+    SUM = 0xe4
+    PARA = 0xe5
+    OPERATE = 0xe6
+
+
+CH9329_HEADER = 0x57ab  # Big endian
+
+
+class NeedDataError(Exception):
+    def __init__(self, at_least):
+        self.at_least = at_least
+
+
+class CH9329Control(RemoteControl):
+    """Send a key-press using the CH9329 serial to USB HID adaptor."""
+    def __init__(self, device):
+        import serial
+        self.device = serial.Serial(device, 9600)
+        self.frame = b''
+
+    def press(self, key):
+        keydown, keyup = self._encode(key)
+        print("Writing %s" % keydown.hex())
+        self.device.write(keydown)
+        self._read_one()
+        print("Writing %s" % keydown.hex())
+        self.device.write(keyup)
+        self._read_one()
+
+    def _read_one(self):
+        while True:
+            try:
+                frame, length = self._deframe(self.frame)
+            except NeedDataError as e:
+                print("Need %d more bytes" % e.at_least)
+                d = self.device.read(e.at_least)
+                print("Read %d bytes: %s" % (len(d), d))
+                self.frame += d
+            else:
+                self.frame = self.frame[length:]
+                return CH9329Control._parse_response(frame)
+
+    @staticmethod
+    def _encode(key):
+        from . import hid_keycodes
+        if hasattr(hid_keycodes.KeyboardPage, key):
+            keycode = hid_keycodes.KeyboardPage[key]
+        elif hasattr(hid_keycodes.ACPIKeyCode, key):
+            keycode = hid_keycodes.ACPIKeyCode[key]
+        elif hasattr(hid_keycodes.MultimediaKeyCode, key):
+            keycode = hid_keycodes.MultimediaKeyCode[key]
+        elif key.startswith('KEY_KB_'):
+            keycode = hid_keycodes.KeyboardPage["KEY_" + key[7:]]
+        elif key.startswith('KEY_ACPI_'):
+            keycode = hid_keycodes.ACPIKeyCode["KEY_" + key[9:]]
+        elif key.startswith('KEY_MM_'):
+            keycode = hid_keycodes.MultimediaKeyCode["KEY_" + key[7:]]
+        else:
+            raise ValueError("Unknown key %r" % key)
+
+        if isinstance(keycode, hid_keycodes.KeyboardPage):
+            return (
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_GENERAL_DATA.value,
+                    struct.pack('BBB', 0, 0, keycode.value)),
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_GENERAL_DATA.value,
+                    struct.pack('BBB', 0, 0, 0)),
+            )
+        elif isinstance(keycode, hid_keycodes.ACPIKeyCode):
+            return (
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_MEDIA_DATA.value,
+                    struct.pack('BB', hid_keycodes.ACPI_KEY_REPORT_ID, keycode.value)),
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_MEDIA_DATA.value,
+                    struct.pack('BB', hid_keycodes.ACPI_KEY_REPORT_ID, 0x00)),
+            )
+        elif isinstance(keycode, hid_keycodes.MultimediaKeyCode):
+            return (
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_MEDIA_DATA.value,
+                    struct.pack('>I', keycode.value | hid_keycodes.MULTIMEDIA_KEY_REPORT_ID << 24)),
+                CH9329Control._frame(
+                    0, CH9329Command.SEND_KB_MEDIA_DATA.value,
+                    struct.pack('BBBB', hid_keycodes.MULTIMEDIA_KEY_REPORT_ID, 0, 0, 0)),
+            )
+        else:
+            assert False
+
+    @staticmethod
+    def _frame(address, command, payload):
+        # Big endian:
+        frame = struct.pack('>HBBB', 0x57ab, address, command, len(payload)) + payload
+        csum = sum(frame) & 0xff
+        frame += struct.pack('B', csum)
+        return frame
+
+    @staticmethod
+    def _deframe(frame):
+        if len(frame) < 6:
+            raise NeedDataError(6 - len(frame))
+        header, address, command, length = struct.unpack('>HBBB', frame[:5])
+        if header != 0x57ab:
+            raise ValueError("Invalid header in frame %s.  Expected 0x%04x, got 0x%04x" % (
+                frame.hex(), 0x57ab, header,
+            ))
+        frame_len = 6 + length
+        if len(frame) < frame_len:
+            raise NeedDataError(frame_len - len(frame))
+        payload = frame[5:5 + length]
+        csum = frame[5 + length]
+        expected_csum = sum(frame[:5 + length]) & 0xff
+        if csum != expected_csum:
+            raise ValueError(
+                "Checksum error.  Expected %02x, got %02x for frame %s" % (
+                    expected_csum, csum, frame.hex()))
+        return (address, command, payload), frame_len
+
+    @staticmethod
+    def _parse_response(frame):
+        address, command, payload = frame
+        if not command & 0x80:
+            raise ValueError("Response command %02x is not a response" % command)
+        if command & 0x40:
+            assert len(payload) == 1
+            error = CH9329Error(payload[0])
+            raise ValueError("Response command %02x is an error: %r" % (
+                command, error))
+        return address, CH9329Command(command & 0x3f), payload
 
 
 def file_control_recorder(filename):
