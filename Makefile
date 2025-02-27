@@ -176,6 +176,7 @@ STBT_CONTROL_RELAY_PYLIB_FILES = \
     _stbt/config.py \
     _stbt/control.py \
     _stbt/control_gpl.py \
+    _stbt/hid_keycodes.py \
     _stbt/irnetbox.py \
     _stbt/logging.py \
     _stbt/stbt.conf \
