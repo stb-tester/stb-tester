@@ -784,7 +784,7 @@ class CH9329Control(RemoteControl):
                 return encoder(keycode)
 
         # Allow more control over the packets we send for exploratory testing:
-        m = re.match(r'^RAW_([a-fA-F0-9]{2})_([a-fA-F0-9]{2}+)_([a-fA-F0-9]{2}+)$', key)
+        m = re.match(r'^RAW_([a-fA-F0-9]{2})_([a-fA-F0-9]+)_([a-fA-F0-9]+)$', key)
         if m:
             command = int(m.group(1), 16)
             data = bytes.fromhex(m.group(3 if keyup else 2))
