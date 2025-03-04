@@ -21,13 +21,13 @@ class CH9329Control(RemoteControl):
 
     def keydown(self, key: str):
         keydown = _encode(key)
-        print("Writing %s" % keydown.hex())
+        logger.debug("Writing %s", keydown.hex())
         self.device.write(keydown)
         self._read_one()
 
     def keyup(self, key: str):
         keyup = _encode(key, keyup=True)
-        print("Writing %s" % keyup.hex())
+        logger.debug("Writing %s", keyup.hex())
         self.device.write(keyup)
         self._read_one()
 
