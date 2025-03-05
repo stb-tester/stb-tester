@@ -374,7 +374,7 @@ ACPI_KEY_REPORT_ID = 0x01
 class ACPIKeyCode(enum.Enum):
     KEY_POWER = 0x01
     KEY_SLEEP = 0x02
-    KEY_WAKE = 0x03
+    KEY_WAKE = 0x04
 
 
 MULTIMEDIA_KEY_REPORT_ID = 0x02
