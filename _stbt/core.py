@@ -128,6 +128,8 @@ class DeviceUnderTest():
             # You must ensure that lircd's --repeat-max is set high enough.
             raise ValueError("press: hold_secs must be less than 60 seconds")
 
+        if section := get_config("control", "keymap_section", None):
+            key = get_config(section, key, key)
         if hold_secs is None:
             with self._interpress_delay(interpress_delay_secs):
                 if self._display is None:
