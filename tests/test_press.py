@@ -1,5 +1,9 @@
+from unittest.mock import Mock
+
 import pytest
 
+from _stbt.config import _config_init
+from _stbt.control import RemoteControl
 from _stbt.core import DeviceUnderTest, NoSinkPipeline
 
 
@@ -22,6 +26,31 @@ def test_that_pressing_context_manager_suppresses_keyup_exceptions():
         with dut.pressing("KEY_MENU"):
             assert False
     assert control.keyup_called == 1
+
+
+def test_keymap_section():
+    config = _config_init()
+    try:
+        config.add_section("control")
+        config.set("control", "keymap_section", "my_keymap")
+        config.add_section("my_keymap")
+        config.set("my_keymap", "KEY_FLOOBLE", "KEY_UP")
+
+        control = Mock(spec=RemoteControl)
+        dut = DeviceUnderTest(control=control, display=_FakeDisplay(),
+                              sink_pipeline=NoSinkPipeline())
+        dut.press("KEY_OK")
+        assert control.press.call_args[0] == ("KEY_OK",)
+        dut.press("KEY_FLOOBLE")
+        assert control.press.call_args[0] == ("KEY_UP",)
+        with dut.pressing("KEY_OK"):
+            assert control.keydown.call_args[0] == ("KEY_OK",)
+        assert control.keyup.call_args[0] == ("KEY_OK",)
+        with dut.pressing("KEY_FLOOBLE"):
+            assert control.keydown.call_args[0] == ("KEY_UP",)
+        assert control.keyup.call_args[0] == ("KEY_UP",)
+    finally:
+        _config_init(force=True)
 
 
 class FakeControl():
