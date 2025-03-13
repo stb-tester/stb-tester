@@ -46,22 +46,13 @@ class CH9329Control(RemoteControl):
 
 
 def _encode(key: str, keyup: bool = False):
-    m = re.match(r'^KEYCODE?_(ACPI|KB|MM)_([a-fA-F0-9]+)$', key)
+    m = re.match(r'^KEYCODE_(ACPI|KB|MM)_([a-fA-F0-9]+)$', key)
     if m:
         encoder, _ = ENCODERS[m.group(1)]
         if keyup:
             return encoder(0)
         else:
             return encoder(int(m.group(2), 16))
-
-    m = re.match(r'^KEY?_(ACPI|KB|MM)_(.+)$', key)
-    if m:
-        encoder, key_enum = ENCODERS[m.group(1)]
-        keycode = getattr(key_enum, "KEY_" + m.group(2)).value
-        if keyup:
-            return encoder(0)
-        else:
-            return encoder(keycode)
 
     # Allow more control over the packets we send for exploratory testing:
     m = re.match(r'^RAW_([a-fA-F0-9]{2})_([a-fA-F0-9]+)_([a-fA-F0-9]+)$', key)
@@ -73,12 +64,12 @@ def _encode(key: str, keyup: bool = False):
     for encoder, key_enum in ENCODERS.values():
         try:
             keycode = getattr(key_enum, key).value
-            if keyup:
-                return encoder(0)
-            else:
-                return encoder(keycode)
         except AttributeError:
-            pass
+            continue
+        if keyup:
+            return encoder(0)
+        else:
+            return encoder(keycode)
 
     raise ValueError("Unknown key %r" % key)
 
@@ -198,183 +189,191 @@ class NeedDataError(Exception):
 
 class KeyboardPage(enum.Enum):
     "From https://source.android.com/docs/core/interaction/input/keyboard-devices"
-    KEY_A = 0x04
-    KEY_B = 0x05
-    KEY_C = 0x06
-    KEY_D = 0x07
-    KEY_E = 0x08
-    KEY_F = 0x09
-    KEY_G = 0x0a
-    KEY_H = 0x0b
-    KEY_I = 0x0c
-    KEY_J = 0x0d
-    KEY_K = 0x0e
-    KEY_L = 0x0f
-    KEY_M = 0x10
-    KEY_N = 0x11
-    KEY_O = 0x12
-    KEY_P = 0x13
-    KEY_Q = 0x14
-    KEY_R = 0x15
-    KEY_S = 0x16
-    KEY_T = 0x17
-    KEY_U = 0x18
-    KEY_V = 0x19
-    KEY_W = 0x1a
-    KEY_X = 0x1b
-    KEY_Y = 0x1c
-    KEY_Z = 0x1d
-    KEY_1 = 0x1e
-    KEY_2 = 0x1f
-    KEY_3 = 0x20
-    KEY_4 = 0x21
-    KEY_5 = 0x22
-    KEY_6 = 0x23
-    KEY_7 = 0x24
-    KEY_8 = 0x25
-    KEY_9 = 0x26
-    KEY_0 = 0x27
-    KEY_ENTER = 0x28
-    KEY_ESC = 0x29
-    KEY_BACKSPACE = 0x2a
-    KEY_TAB = 0x2b
-    KEY_SPACE = 0x2c
-    KEY_MINUS = 0x2d
-    KEY_EQUAL = 0x2e
-    KEY_LEFTBRACE = 0x2f
-    KEY_RIGHTBRACE = 0x30
-    KEY_BACKSLASH = 0x31
-    KEY_BACKSLASH2 = 0x32
-    KEY_SEMICOLON = 0x33
-    KEY_APOSTROPHE = 0x34
-    KEY_GRAVE = 0x35
-    KEY_COMMA = 0x36
-    KEY_DOT = 0x37
-    KEY_SLASH = 0x38
-    KEY_CAPSLOCK = 0x39
-    KEY_F1 = 0x3a
-    KEY_F2 = 0x3b
-    KEY_F3 = 0x3c
-    KEY_F4 = 0x3d
-    KEY_F5 = 0x3e
-    KEY_F6 = 0x3f
-    KEY_F7 = 0x40
-    KEY_F8 = 0x41
-    KEY_F9 = 0x42
-    KEY_F10 = 0x43
-    KEY_F11 = 0x44
-    KEY_F12 = 0x45
-    KEY_SYSRQ = 0x46
-    KEY_SCROLLLOCK = 0x47
-    KEY_PAUSE = 0x48
-    KEY_INSERT = 0x49
-    KEY_HOME = 0x4a
-    KEY_PAGEUP = 0x4b
-    KEY_DELETE = 0x4c
-    KEY_END = 0x4d
-    KEY_PAGEDOWN = 0x4e
-    KEY_RIGHT = 0x4f
-    KEY_LEFT = 0x50
-    KEY_DOWN = 0x51
-    KEY_UP = 0x52
-    KEY_NUMLOCK = 0x53
-    KEY_KPSLASH = 0x54
-    KEY_KPASTERISK = 0x55
-    KEY_KPMINUS = 0x56
-    KEY_KPPLUS = 0x57
-    KEY_KPENTER = 0x58
-    KEY_KP1 = 0x59
-    KEY_KP2 = 0x5a
-    KEY_KP3 = 0x5b
-    KEY_KP4 = 0x5c
-    KEY_KP5 = 0x5d
-    KEY_KP6 = 0x5e
-    KEY_KP7 = 0x5f
-    KEY_KP8 = 0x60
-    KEY_KP9 = 0x61
-    KEY_KP0 = 0x62
-    KEY_KPDOT = 0x63
-    KEY_102ND = 0x64
-    KEY_COMPOSE = 0x65
-    KEY_POWER = 0x66
-    KEY_KPEQUAL = 0x67
-    KEY_F13 = 0x68
-    KEY_F14 = 0x69
-    KEY_F15 = 0x6a
-    KEY_F16 = 0x6b
-    KEY_F17 = 0x6c
-    KEY_F18 = 0x6d
-    KEY_F19 = 0x6e
-    KEY_F20 = 0x6f
-    KEY_F21 = 0x70
-    KEY_F22 = 0x71
-    KEY_F23 = 0x72
-    KEY_F24 = 0x73
-    KEY_OPEN = 0x74
-    KEY_HELP = 0x75
-    KEY_PROPS = 0x76
-    KEY_FRONT = 0x77
-    KEY_STOP = 0x78
-    KEY_AGAIN = 0x79
-    KEY_UNDO = 0x7a
-    KEY_CUT = 0x7b
-    KEY_COPY = 0x7c
-    KEY_PASTE = 0x7d
-    KEY_FIND = 0x7e
-    KEY_MUTE = 0x7f
-    KEY_VOLUMEUP = 0x80
-    KEY_VOLUMEDOWN = 0x81
-    KEY_KPCOMMA = 0x85
-    KEY_RO = 0x87
-    KEY_KATAKANAHIRAGANA = 0x88
-    KEY_YEN = 0x89
-    KEY_HENKAN = 0x8a
-    KEY_MUHENKAN = 0x8b
-    KEY_KPJPCOMMA = 0x8c
-    KEY_HANGEUL = 0x90
-    KEY_HANJA = 0x91
-    KEY_KATAKANA = 0x92
-    KEY_HIRAGANA = 0x93
-    KEY_ZENKAKUHANKAKU = 0x94
-    KEY_KPLEFTPAREN = 0xb6
-    KEY_KPRIGHTPAREN = 0xb7
-    KEY_LEFTCTRL = 0xe0
-    KEY_LEFTSHIFT = 0xe1
-    KEY_LEFTALT = 0xe2
-    KEY_LEFTMETA = 0xe3
-    KEY_RIGHTCTRL = 0xe4
-    KEY_RIGHTSHIFT = 0xe5
-    KEY_RIGHTALT = 0xe6
-    KEY_RIGHTMETA = 0xe7
-    KEY_PLAYPAUSE = 0xe8
-    KEY_STOPCD = 0xe9
-    KEY_PREVIOUSSONG = 0xea
-    KEY_NEXTSONG = 0xeb
-    KEY_EJECTCD = 0xec
-    KEY_VOLUMEUP2 = 0xed
-    KEY_VOLUMEDOWN2 = 0xee
-    KEY_MUTE2 = 0xef
-    KEY_WWW = 0xf0
-    KEY_BACK = 0xf1
-    KEY_FORWARD = 0xf2
-    KEY_STOP2 = 0xf3
-    KEY_FIND2 = 0xf4
-    KEY_SCROLLUP = 0xf5
-    KEY_SCROLLDOWN = 0xf6
-    KEY_EDIT = 0xf7
-    KEY_SLEEP = 0xf8
-    KEY_COFFEE = 0xf9
-    KEY_REFRESH = 0xfa
-    KEY_CALC = 0xfb
+    KEY_KB_A = 0x04
+    KEY_KB_B = 0x05
+    KEY_KB_C = 0x06
+    KEY_KB_D = 0x07
+    KEY_KB_E = 0x08
+    KEY_KB_F = 0x09
+    KEY_KB_G = 0x0a
+    KEY_KB_H = 0x0b
+    KEY_KB_I = 0x0c
+    KEY_KB_J = 0x0d
+    KEY_KB_K = 0x0e
+    KEY_KB_L = 0x0f
+    KEY_KB_M = 0x10
+    KEY_KB_N = 0x11
+    KEY_KB_O = 0x12
+    KEY_KB_P = 0x13
+    KEY_KB_Q = 0x14
+    KEY_KB_R = 0x15
+    KEY_KB_S = 0x16
+    KEY_KB_T = 0x17
+    KEY_KB_U = 0x18
+    KEY_KB_V = 0x19
+    KEY_KB_W = 0x1a
+    KEY_KB_X = 0x1b
+    KEY_KB_Y = 0x1c
+    KEY_KB_Z = 0x1d
+    KEY_KB_1 = 0x1e
+    KEY_KB_2 = 0x1f
+    KEY_KB_3 = 0x20
+    KEY_KB_4 = 0x21
+    KEY_KB_5 = 0x22
+    KEY_KB_6 = 0x23
+    KEY_KB_7 = 0x24
+    KEY_KB_8 = 0x25
+    KEY_KB_9 = 0x26
+    KEY_KB_0 = 0x27
+    KEY_KB_ENTER = 0x28
+    KEY_KB_ESC = 0x29
+    KEY_KB_BACKSPACE = 0x2a
+    KEY_KB_TAB = 0x2b
+    KEY_KB_SPACE = 0x2c
+    KEY_KB_MINUS = 0x2d
+    KEY_KB_EQUAL = 0x2e
+    KEY_KB_LEFTBRACE = 0x2f
+    KEY_KB_RIGHTBRACE = 0x30
+    KEY_KB_BACKSLASH = 0x31
+    KEY_KB_BACKSLASH2 = 0x32
+    KEY_KB_SEMICOLON = 0x33
+    KEY_KB_APOSTROPHE = 0x34
+    KEY_KB_GRAVE = 0x35
+    KEY_KB_COMMA = 0x36
+    KEY_KB_DOT = 0x37
+    KEY_KB_SLASH = 0x38
+    KEY_KB_CAPSLOCK = 0x39
+    KEY_KB_F1 = 0x3a
+    KEY_KB_F2 = 0x3b
+    KEY_KB_F3 = 0x3c
+    KEY_KB_F4 = 0x3d
+    KEY_KB_F5 = 0x3e
+    KEY_KB_F6 = 0x3f
+    KEY_KB_F7 = 0x40
+    KEY_KB_F8 = 0x41
+    KEY_KB_F9 = 0x42
+    KEY_KB_F10 = 0x43
+    KEY_KB_F11 = 0x44
+    KEY_KB_F12 = 0x45
+    KEY_KB_SYSRQ = 0x46
+    KEY_KB_SCROLLLOCK = 0x47
+    KEY_KB_PAUSE = 0x48
+    KEY_KB_INSERT = 0x49
+    KEY_KB_HOME = 0x4a
+    KEY_KB_PAGEUP = 0x4b
+    KEY_KB_DELETE = 0x4c
+    KEY_KB_END = 0x4d
+    KEY_KB_PAGEDOWN = 0x4e
+    KEY_KB_RIGHT = 0x4f
+    KEY_KB_LEFT = 0x50
+    KEY_KB_DOWN = 0x51
+    KEY_KB_UP = 0x52
+    KEY_KB_NUMLOCK = 0x53
+    KEY_KB_KPSLASH = 0x54
+    KEY_KB_KPASTERISK = 0x55
+    KEY_KB_KPMINUS = 0x56
+    KEY_KB_KPPLUS = 0x57
+    KEY_KB_KPENTER = 0x58
+    KEY_KB_KP1 = 0x59
+    KEY_KB_KP2 = 0x5a
+    KEY_KB_KP3 = 0x5b
+    KEY_KB_KP4 = 0x5c
+    KEY_KB_KP5 = 0x5d
+    KEY_KB_KP6 = 0x5e
+    KEY_KB_KP7 = 0x5f
+    KEY_KB_KP8 = 0x60
+    KEY_KB_KP9 = 0x61
+    KEY_KB_KP0 = 0x62
+    KEY_KB_KPDOT = 0x63
+    KEY_KB_102ND = 0x64
+    KEY_KB_COMPOSE = 0x65
+    KEY_KB_POWER = 0x66
+    KEY_KB_KPEQUAL = 0x67
+    KEY_KB_F13 = 0x68
+    KEY_KB_F14 = 0x69
+    KEY_KB_F15 = 0x6a
+    KEY_KB_F16 = 0x6b
+    KEY_KB_F17 = 0x6c
+    KEY_KB_F18 = 0x6d
+    KEY_KB_F19 = 0x6e
+    KEY_KB_F20 = 0x6f
+    KEY_KB_F21 = 0x70
+    KEY_KB_F22 = 0x71
+    KEY_KB_F23 = 0x72
+    KEY_KB_F24 = 0x73
+    KEY_KB_OPEN = 0x74
+    KEY_KB_HELP = 0x75
+    KEY_KB_PROPS = 0x76
+    KEY_KB_FRONT = 0x77
+    KEY_KB_STOP = 0x78
+    KEY_KB_AGAIN = 0x79
+    KEY_KB_UNDO = 0x7a
+    KEY_KB_CUT = 0x7b
+    KEY_KB_COPY = 0x7c
+    KEY_KB_PASTE = 0x7d
+    KEY_KB_FIND = 0x7e
+    KEY_KB_MUTE = 0x7f
+    KEY_KB_VOLUMEUP = 0x80
+    KEY_KB_VOLUMEDOWN = 0x81
+    KEY_KB_KPCOMMA = 0x85
+    KEY_KB_RO = 0x87
+    KEY_KB_KATAKANAHIRAGANA = 0x88
+    KEY_KB_YEN = 0x89
+    KEY_KB_HENKAN = 0x8a
+    KEY_KB_MUHENKAN = 0x8b
+    KEY_KB_KPJPCOMMA = 0x8c
+    KEY_KB_HANGEUL = 0x90
+    KEY_KB_HANJA = 0x91
+    KEY_KB_KATAKANA = 0x92
+    KEY_KB_HIRAGANA = 0x93
+    KEY_KB_ZENKAKUHANKAKU = 0x94
+    KEY_KB_KPLEFTPAREN = 0xb6
+    KEY_KB_KPRIGHTPAREN = 0xb7
+    KEY_KB_LEFTCTRL = 0xe0
+    KEY_KB_LEFTSHIFT = 0xe1
+    KEY_KB_LEFTALT = 0xe2
+    KEY_KB_LEFTMETA = 0xe3
+    KEY_KB_RIGHTCTRL = 0xe4
+    KEY_KB_RIGHTSHIFT = 0xe5
+    KEY_KB_RIGHTALT = 0xe6
+    KEY_KB_RIGHTMETA = 0xe7
+    KEY_KB_PLAYPAUSE = 0xe8
+    KEY_KB_STOPCD = 0xe9
+    KEY_KB_PREVIOUSSONG = 0xea
+    KEY_KB_NEXTSONG = 0xeb
+    KEY_KB_EJECTCD = 0xec
+    KEY_KB_VOLUMEUP2 = 0xed
+    KEY_KB_VOLUMEDOWN2 = 0xee
+    KEY_KB_MUTE2 = 0xef
+    KEY_KB_WWW = 0xf0
+    KEY_KB_BACK = 0xf1
+    KEY_KB_FORWARD = 0xf2
+    KEY_KB_STOP2 = 0xf3
+    KEY_KB_FIND2 = 0xf4
+    KEY_KB_SCROLLUP = 0xf5
+    KEY_KB_SCROLLDOWN = 0xf6
+    KEY_KB_EDIT = 0xf7
+    KEY_KB_SLEEP = 0xf8
+    KEY_KB_COFFEE = 0xf9
+    KEY_KB_REFRESH = 0xfa
+    KEY_KB_CALC = 0xfb
+
+    # Useful defaults, we may expand these in the future based on experience
+    # with real devices:
+    KEY_UP = KEY_KB_UP
+    KEY_DOWN = KEY_KB_DOWN
+    KEY_LEFT = KEY_KB_LEFT
+    KEY_RIGHT = KEY_KB_RIGHT
+    KEY_OK = KEY_KB_ENTER
 
 
 ACPI_KEY_REPORT_ID = 0x01
 
 
 class ACPIKeyCode(enum.Enum):
-    KEY_POWER = 0x01
-    KEY_SLEEP = 0x02
-    KEY_WAKE = 0x04
+    KEY_ACPI_POWER = 0x01
+    KEY_ACPI_SLEEP = 0x02
+    KEY_ACPI_WAKE = 0x04
 
 
 MULTIMEDIA_KEY_REPORT_ID = 0x02
@@ -382,37 +381,35 @@ MULTIMEDIA_KEY_REPORT_ID = 0x02
 
 class MultimediaKeyCode(enum.Enum):
     "3 bytes big endian"
-    KEY_VOLUMEUP = 1 << 0 + 16
-    KEY_VOLUMEDOWN = 1 << 1 + 16
-    KEY_MUTE = 1 << 2 + 16
-    KEY_PLAYPAUSE = 1 << 3 + 16
-    KEY_NEXT = 1 << 4 + 16
-    KEY_PREV = 1 << 5 + 16
-    KEY_STOPCD = 1 << 6 + 16
-    KEY_EJECT = 1 << 7 + 16
+    KEY_MM_VOLUMEUP = 1 << 0 + 16
+    KEY_MM_VOLUMEDOWN = 1 << 1 + 16
+    KEY_MM_MUTE = 1 << 2 + 16
+    KEY_MM_PLAYPAUSE = 1 << 3 + 16
+    KEY_MM_NEXT = 1 << 4 + 16
+    KEY_MM_PREV = 1 << 5 + 16
+    KEY_MM_STOPCD = 1 << 6 + 16
+    KEY_MM_EJECT = 1 << 7 + 16
 
-    KEY_EMAIL = 1 << 8
-    KEY_SEARCH = 1 << 9
-    KEY_FAVOURITES = 1 << 10
-    KEY_HOME = 1 << 11
-    KEY_BACK = 1 << 12
-    KEY_FORWARD = 1 << 13
-    KEY_STOP = 1 << 14
-    KEY_REFRESH = 1 << 15
+    KEY_MM_EMAIL = 1 << 8
+    KEY_MM_SEARCH = 1 << 9
+    KEY_MM_FAVOURITES = 1 << 10
+    KEY_MM_HOME = 1 << 11
+    KEY_MM_BACK = 1 << 12
+    KEY_MM_FORWARD = 1 << 13
+    KEY_MM_STOP = 1 << 14
+    KEY_MM_REFRESH = 1 << 15
 
-    KEY_MEDIA = 1 << 16 - 16
-    KEY_MYCOMPUTER = 1 << 17 - 16
-    KEY_CALC = 1 << 18 - 16
-    KEY_SCREENSAVER = 1 << 19 - 16
-    KEY_COMPUTER = 1 << 20 - 16
-    KEY_MINIMIZE = 1 << 21 - 16
-    KEY_RECORD = 1 << 22 - 16
-    KEY_REWIND = 1 << 23 - 16
+    KEY_MM_MEDIA = 1 << 16 - 16
+    KEY_MM_MYCOMPUTER = 1 << 17 - 16
+    KEY_MM_CALC = 1 << 18 - 16
+    KEY_MM_SCREENSAVER = 1 << 19 - 16
+    KEY_MM_COMPUTER = 1 << 20 - 16
+    KEY_MM_MINIMIZE = 1 << 21 - 16
+    KEY_MM_RECORD = 1 << 22 - 16
+    KEY_MM_REWIND = 1 << 23 - 16
 
 
 ENCODERS: "dict[str, tuple[typing.Callable[[int], bytes], typing.Type[enum.Enum]]]" = {
-    # Order here is significant: the first match is used if the type is
-    # unspecified.
     'KB': (_encode_kb_general_data, KeyboardPage),
     'ACPI': (_encode_acpi_key_data, ACPIKeyCode),
     'MM': (_encode_mm_key_data, MultimediaKeyCode),
