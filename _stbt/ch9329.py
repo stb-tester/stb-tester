@@ -20,16 +20,16 @@ class CH9329Control(RemoteControl):
         self.keyup(key)
 
     def keydown(self, key: str):
-        keydown = _encode(key)
-        logger.debug("Writing %s", keydown.hex())
-        self.device.write(keydown)
-        self._read_one()
+        self._request(_encode(key))
 
     def keyup(self, key: str):
-        keyup = _encode(key, keyup=True)
-        logger.debug("Writing %s", keyup.hex())
-        self.device.write(keyup)
-        self._read_one()
+        self._request(_encode(key, keyup=True))
+
+    def _request(self, frame: bytes):
+        logger.debug("Writing %s", frame.hex())
+        self.device.reset_input_buffer()
+        self.device.write(frame)
+        return self._read_one()
 
     def _read_one(self):
         while True:
