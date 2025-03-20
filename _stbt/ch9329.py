@@ -117,15 +117,26 @@ def _frame(address: int, command: int, payload: bytes):
 def _deframe(frame: bytes):
     if len(frame) < 6:
         raise NeedDataError(6 - len(frame))
+    start_pos = frame.find(b'\x57\xab')
+    discarded = 0
+    if start_pos == -1:
+        raise ValueError("Couldn't find header 57ab in frame %s" % (
+            frame.hex()))
+    elif start_pos > 0:
+        logger.warning(
+            "Discarding %iB unexpected data found before frame header: %s in buffer %s",
+            start_pos, frame[:start_pos].hex(),
+            frame.hex())
+        discarded = start_pos
+        frame = frame[start_pos:]
+    if len(frame) < 6:
+        raise NeedDataError(6 - len(frame))
     header, address, command, length = struct.unpack('>HBBB', frame[:5])
     assert isinstance(header, int)
     assert isinstance(address, int)
     assert isinstance(command, int)
     assert isinstance(length, int)
-    if header != 0x57ab:
-        raise ValueError("Invalid header in frame %s.  Expected 0x%04x, got 0x%04x" % (
-            frame.hex(), 0x57ab, header,
-        ))
+    assert header == 0x57ab
     frame_len = 6 + length
     if len(frame) < frame_len:
         raise NeedDataError(frame_len - len(frame))
@@ -136,7 +147,50 @@ def _deframe(frame: bytes):
         raise ValueError(
             "Checksum error.  Expected %02x, got %02x for frame %s" % (
                 expected_csum, csum, frame.hex()))
-    return (address, command, payload), frame_len
+    return (address, command, payload), frame_len + discarded
+
+
+def test_deframe():
+    def assert_need_data(frame: bytes, at_least: int):
+        try:
+            _deframe(frame)
+            assert False, "Expected NeedDataError"
+        except NeedDataError as e:
+            assert e.at_least == at_least, e.at_least
+
+    def parse(frame: bytes, expected_bytes_read=None):
+        if expected_bytes_read is None:
+            expected_bytes_read = len(frame)
+        f, length = _deframe(frame)
+        assert length == expected_bytes_read
+        return _parse_response(*f)
+
+    assert_need_data(b'', 6)
+    assert_need_data(b'\x57', 5)
+
+    assert _deframe(b'\x57\xab\x00\x00\x00\x02') == ((0, 0, b''), 6)
+    assert _deframe(b'\x57\xab\x00\x00\x00\x02\x00') == ((0, 0, b''), 6)
+
+    R = bytes.fromhex("57ab0081083801000000000000c4")
+    EXPECTED = (0, CH9329Command.GET_INFO, b'\x38\x01\x00\x00\x00\x00\x00\x00')
+
+    assert parse(R) == EXPECTED
+
+    for junk_prefix in [b'', b'\x57', b'\xab', b'\x00\x00']:
+        expected_bytes_read = len(R) + len(junk_prefix)
+        for suffix in [b'', b'\x00', b'\x00\x00']:
+            buf = junk_prefix + R + suffix
+            for n in range(expected_bytes_read):
+                try:
+                    data, read_bytes = _deframe(buf[:n])
+                    assert False
+                except NeedDataError as e:
+                    assert e.at_least > 0
+                    assert n + e.at_least <= expected_bytes_read
+
+            data, read_bytes = _deframe(buf)
+            assert read_bytes == expected_bytes_read
+            assert _parse_response(*data) == EXPECTED
 
 
 def _parse_response(address: int, command: int, payload: bytes):
