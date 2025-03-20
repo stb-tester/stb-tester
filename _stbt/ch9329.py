@@ -27,6 +27,14 @@ class CH9329Control(RemoteControl):
 
     def _request(self, frame: bytes):
         logger.debug("Writing %s", frame.hex())
+        self.device.timeout = 0
+        while True:
+            data = self.device.read(128)
+            if data:
+                logger.warning("Discarding unexpected data: %s", data.hex())
+            else:
+                break
+        self.device.timeout = 10
         self.device.reset_input_buffer()
         self.device.write(frame)
         return self._read_one()
