@@ -124,7 +124,7 @@ class DeviceUnderTest():
         if isinstance(key, Enum):
             key = key.value
         if section := get_config("control", "keymap_section", None):
-            key = get_config(section, key, key)
+            key = get_config(section, key, default=key)
 
         if hold_secs is not None and hold_secs > 60:
             # You must ensure that lircd's --repeat-max is set high enough.
@@ -152,7 +152,7 @@ class DeviceUnderTest():
         if isinstance(key, Enum):
             key = key.value
         if section := get_config("control", "keymap_section", None):
-            key = get_config(section, key, key)
+            key = get_config(section, key, default=key)
 
         with self._interpress_delay(interpress_delay_secs):
             out = Keypress(key, self._time.time(), None, self.get_frame())
