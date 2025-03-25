@@ -273,9 +273,6 @@ def ocr(
         `stbt.set_global_ocr_corrections`. If global corrections have been set
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
-
-    | Added in v31: The ``char_whitelist`` parameter.
-    | Added in v32: The ``corrections`` parameter.
     """
     if frame is None:
         from stbt_core import get_frame
@@ -350,8 +347,6 @@ def match_text(
         assert m.match
         while not stbt.match('selected-button.png').region.contains(m.region):
             stbt.press('KEY_DOWN')
-
-    | Added in v31: The ``char_whitelist`` parameter.
     """
     if frame is None:
         from stbt_core import get_frame

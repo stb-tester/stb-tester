@@ -101,8 +101,6 @@ class Image(numpy.ndarray):
     :vartype relative_filename: str or None
     :ivar relative_filename: The path resolved by `stbt.load_image`, relative
         to the root of the test-pack git repo.
-
-    Added in v32.
     """
     def __new__(cls, array, dtype=None, order=None,
                 filename: str|None = None,
@@ -426,11 +424,6 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
     :raises: `IOError` if the specified path doesn't exist or isn't a valid
         image file.
 
-    * Changed in v32: Return type is now `stbt.Image`, which is a
-      `numpy.ndarray` sub-class with additional attributes ``filename``,
-      ``relative_filename`` and ``absolute_filename``.
-    * Changed in v32: Allows passing an image (`numpy.ndarray` or `stbt.Image`)
-      instead of a string, in which case this function returns the given image.
     * Changed in v33: Added the ``color_channels`` parameter and deprecated
       ``flags``. The image will always be converted to the format specified by
       ``color_channels`` (previously it was only converted to the format

@@ -201,9 +201,6 @@ class MatchResult():
 
     :ivar Image image: The reference image that was searched for, as given to
         `match`.
-
-    Changed in v32: The type of the ``image`` attribute is now `stbt.Image`.
-    Previously it was a string or a numpy array.
     """
     _fields = ("time", "match", "region", "first_pass_result", "frame", "image")
 
