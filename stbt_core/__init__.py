@@ -179,8 +179,6 @@ def last_keypress() -> "Keypress|None":
     test.
 
     See the return type of `stbt.press`.
-
-    Added in v32.
     """
     return _dut.last_keypress()
 

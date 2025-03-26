@@ -81,9 +81,6 @@ def get_config(
     Raises `ConfigurationError` if the specified ``section`` or ``key`` is not
     found, unless ``default`` is specified (in which case ``default`` is
     returned).
-
-    Changed in v32: Allow specifying ``None`` as the default value (previously
-    ``None`` would be treated as if you hadn't specified any default value).
     """
 
     config = _config_init()
@@ -168,7 +165,8 @@ def _config_init(force=False):
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '')
                      .split(':')))
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(
+            interpolation=configparser.ExtendedInterpolation())
         config.read(config_files)
         _config = config
     return _config

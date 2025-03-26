@@ -78,9 +78,6 @@ def press_and_wait(
         A `Transition` object that will evaluate to true if the transition
         completed, false otherwise.
 
-    Changed in v32: Use the same difference-detection algorithm as
-    `wait_for_motion`.
-
     Added in v33: The ``started``, ``complete`` and ``stable`` attributes of
     the returned value.
 

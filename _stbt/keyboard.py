@@ -142,22 +142,6 @@ class Keyboard():
     keyboard modes (lowercase, uppercase, and symbols) see our article
     `Testing on-screen keyboards <https://stb-tester.com/manual/keyboard>`__.
 
-    ``stbt.Keyboard`` was added in v31.
-
-    Changed in v32:
-
-    * Added support for keyboards with different modes (such as uppercase,
-      lowercase, and symbols).
-    * Changed the internal representation of the Directed Graph. Manipulating
-      the networkx graph directly is no longer supported.
-    * Removed ``stbt.Keyboard.parse_edgelist`` and
-      ``stbt.grid_to_navigation_graph``. Instead, first create the Keyboard
-      object, and then use `add_key`, `add_transition`, `add_edgelist`, and
-      `add_grid` to build the model of the keyboard.
-    * Removed the ``stbt.Keyboard.Selection`` type. Instead, your Page Object's
-      ``focus`` property should return a `Key` value obtained from
-      `find_key`.
-
     Changed in v33:
 
     * Added class `stbt.Keyboard.Key` (the type returned from `find_key`). This

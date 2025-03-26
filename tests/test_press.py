@@ -41,14 +41,16 @@ def test_keymap_section():
                               sink_pipeline=NoSinkPipeline())
         dut.press("KEY_OK")
         assert control.press.call_args[0] == ("KEY_OK",)
-        dut.press("KEY_FLOOBLE")
+        keypress = dut.press("KEY_FLOOBLE")
         assert control.press.call_args[0] == ("KEY_UP",)
+        assert keypress.key == "KEY_FLOOBLE"
         with dut.pressing("KEY_OK"):
             assert control.keydown.call_args[0] == ("KEY_OK",)
         assert control.keyup.call_args[0] == ("KEY_OK",)
-        with dut.pressing("KEY_FLOOBLE"):
+        with dut.pressing("KEY_FLOOBLE") as keypress:
             assert control.keydown.call_args[0] == ("KEY_UP",)
         assert control.keyup.call_args[0] == ("KEY_UP",)
+        assert keypress.key == "KEY_FLOOBLE"
     finally:
         _config_init(force=True)
 

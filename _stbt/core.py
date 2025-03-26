@@ -124,7 +124,9 @@ class DeviceUnderTest():
         if isinstance(key, Enum):
             key = key.value
         if section := get_config("control", "keymap_section", None):
-            key = get_config(section, key, key)
+            mapped_key = get_config(section, key, default=key)
+        else:
+            mapped_key = key
 
         if hold_secs is not None and hold_secs > 60:
             # You must ensure that lircd's --repeat-max is set high enough.
@@ -137,7 +139,7 @@ class DeviceUnderTest():
                 else:
                     frame_before = self.get_frame()
                 out = Keypress(key, self._time.time(), None, frame_before)
-                self._control.press(key)
+                self._control.press(mapped_key)
                 out.end_time = self._time.time()
             self.draw_text(key, duration_secs=3)
             self._last_keypress = out
@@ -152,26 +154,28 @@ class DeviceUnderTest():
         if isinstance(key, Enum):
             key = key.value
         if section := get_config("control", "keymap_section", None):
-            key = get_config(section, key, key)
+            mapped_key = get_config(section, key, default=key)
+        else:
+            mapped_key = key
 
         with self._interpress_delay(interpress_delay_secs):
             out = Keypress(key, self._time.time(), None, self.get_frame())
             try:
-                self._control.keydown(key)
+                self._control.keydown(mapped_key)
                 self.draw_text("Holding %s" % key, duration_secs=3)
                 self._last_keypress = out
                 yield out
             except:
                 exc_info = sys.exc_info()
                 try:
-                    self._control.keyup(key)
+                    self._control.keyup(mapped_key)
                     self.draw_text("Released %s" % key, duration_secs=3)
                 except Exception:  # pylint:disable=broad-except
                     # Don't mask original exception from the test script.
                     pass
                 raise exc_info[1].with_traceback(exc_info[2])
             else:
-                self._control.keyup(key)
+                self._control.keyup(mapped_key)
                 out.end_time = self._time.time()
                 self.draw_text("Released %s" % key, duration_secs=3)
 
