@@ -156,7 +156,7 @@ def temporary_config(contents, prefix="stbt-test-config"):
             f.write(dedent(contents))
         _config_init(force=True)
         try:
-            yield filename
+            yield
         finally:
             os.environ["STBT_CONFIG_FILE"] = original_env
             _config_init(force=True)
@@ -193,30 +193,3 @@ def test_get_config_with_default_value():
         assert get_config("nosuchsection", "test", None) is None
         with pytest.raises(ConfigurationError):
             get_config("nosuchsection", "test")
-
-
-CONFIG_WITH_INTERPOLATION = dedent("""\
-    [ocr]
-    lang = ${device_type:lang}
-    basic = %(lang)s
-
-    [device_type]
-    lang = deu
-
-    """)
-
-
-def test_get_config_interpolation():
-    # Stb-tester uses extended interpolation:
-    # https://docs.python.org/3.10/library/configparser.html#configparser.ExtendedInterpolation
-    with temporary_config(CONFIG_WITH_INTERPOLATION):
-        assert get_config("ocr", "lang") == "deu"
-        # Basic interpolation syntax is treated literally:
-        assert get_config("ocr", "basic") == "%(lang)s"
-
-
-def test_that_set_config_preserves_interpolation():
-    with temporary_config(CONFIG_WITH_INTERPOLATION) as filename:
-        set_config("device_type", "lang", "eng")
-        assert open(filename, encoding="utf-8").read() == \
-            CONFIG_WITH_INTERPOLATION.replace("deu", "eng")

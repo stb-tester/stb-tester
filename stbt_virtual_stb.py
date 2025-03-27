@@ -60,10 +60,10 @@ def virtual_stb(command, x_keymap=None, verbose=False):
 
         try:
             config.update({
-                "control": "x11:${x_display},%{x_keymap}",
+                "control": "x11:%(x_display)s,%(x_keymap)s",
                 "source_pipeline": (
                     'ximagesrc use-damage=false remote=true show-pointer=false '
-                    'display-name=${x_display} ! video/x-raw,framerate=24/1'),
+                    'display-name=%(x_display)s ! video/x-raw,framerate=24/1'),
                 "x_display": display,
                 "vstb_child_pid": str(child.pid),
                 "vstb_pid": str(os.getpid()),
