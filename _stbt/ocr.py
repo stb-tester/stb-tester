@@ -178,11 +178,16 @@ def ocr(
         `ISO-639-3 <http://www.loc.gov/standards/iso639-2/php/code_list.php>`__
         language code of the language you are attempting to read; for example
         "eng" for English or "deu" for German. More than one language can be
-        specified by joining with '+'; for example "eng+deu" means that the
-        text to be read may be in a mixture of English and German. This defaults
-        to "eng" (English). You can override the global default value by setting
-        ``lang`` in the ``[ocr]`` section of :ref:`.stbt.conf`. You may need to
-        install the tesseract language pack; see installation instructions
+        specified by joining with '+': for example "eng+deu" means that the
+        text to be read may be in a mixture of English and German.
+
+        This defaults to "eng" (English). You can change the global default
+        value by setting ``lang`` in the ``[ocr]`` section of
+        :ref:`.stbt.conf` or the appropriate
+        :ref:`Node-specific configuration file <node-specific-config>`.
+
+        You may need to install the tesseract language pack; see installation
+        instructions
         `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
 
     :param dict tesseract_config:
