@@ -112,14 +112,7 @@ def test_that_match_text_accepts_unicode():
 def test_that_default_language_is_configurable():
     f = load_image("ocr/unicode.png")
     assert not stbt.match_text("Röthlisberger", f)  # reads Réthlisberger
-    assert "Röthlisberger" not in stbt.ocr(f)
     with temporary_config({"ocr.lang": "deu"}):
-        assert stbt.match_text("Röthlisberger", f)
-        assert "Röthlisberger" in stbt.ocr(f)
-    with temporary_config({"ocr.lang": "deu", "device_type.lang": "eng"}):
-        assert not stbt.match_text("Röthlisberger", f)
-        assert "Röthlisberger" not in stbt.ocr(f)
-    with temporary_config({"ocr.lang": "eng", "device_type.lang": "deu"}):
         assert stbt.match_text("Röthlisberger", f)
         assert "Röthlisberger" in stbt.ocr(f)
 

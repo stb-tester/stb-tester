@@ -183,8 +183,7 @@ def ocr(
 
         This defaults to "eng" (English). You can change the global default
         value by setting ``lang`` in the ``[ocr]`` section of
-        :ref:`.stbt.conf`. You can change the default value for a specific Node
-        by setting ``lang`` in the ``[device_type]`` section of the appropriate
+        :ref:`.stbt.conf` or the appropriate
         :ref:`Node-specific configuration file <node-specific-config>`.
 
         You may need to install the tesseract language pack; see installation
@@ -611,8 +610,6 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
     if _config is None:
         _config = {}
 
-    if lang is None:
-        lang = get_config("device_type", "lang", None)
     if lang is None:
         lang = get_config("ocr", "lang", "eng")
 

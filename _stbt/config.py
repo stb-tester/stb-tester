@@ -165,8 +165,7 @@ def _config_init(force=False):
         config_files.extend(
             reversed(os.environ.get('STBT_CONFIG_FILE', '')
                      .split(':')))
-        config = configparser.ConfigParser(
-            interpolation=configparser.ExtendedInterpolation())
+        config = configparser.ConfigParser()
         config.read(config_files)
         _config = config
     return _config
