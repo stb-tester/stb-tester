@@ -83,6 +83,9 @@ def _lookup_uri_to_control(uri, display=None):
          RedRatHttpControl.new_bt),
         (r'redrat-ir:(?P<hostname>[^:/]+):((?P<port>\d+))?:'
          r'(?P<serial_no>[^:/]+):(?P<output>[^:/]+)', RedRatHttpControl.new_ir),
+        (r'bluerat:(?P<hostname>[^:/]+):((?P<port>\d+))?:'
+         r'(?P<serial_no>[^:/]+):(?P<target_bt_address>[^:/]+)',
+         RedRatHttpControl.new_bluerat),
     ]
     if gpl_controls is not None:
         controls += gpl_controls
@@ -591,6 +594,14 @@ class RedRatHttpControl(RemoteControl):
         port = int(port or 4254)
         return RedRatHttpControl(
             "http://%s:%i/api/bt/modules/%s/targets/%s/send" % (
+                hostname, port, serial_no, target_bt_address), timeout_secs)
+
+    @staticmethod
+    def new_bluerat(hostname, port, serial_no, target_bt_address,
+                    timeout_secs=3):
+        port = int(port or 4254)
+        return RedRatHttpControl(
+            "http://%s:%i/api/bluetoothdevices/%s/targets/%s/send" % (
                 hostname, port, serial_no, target_bt_address), timeout_secs)
 
     def press(self, key):
