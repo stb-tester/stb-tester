@@ -14,6 +14,7 @@ import inspect
 import itertools
 import json
 import os
+import shutil
 import sys
 from contextlib import contextmanager
 from itertools import zip_longest
@@ -60,8 +61,18 @@ def setup_cache(filename=None):
 
     if filename is None:
         filename = default_filename
+    filename = os.path.abspath(filename)
     mkdir_p(os.path.dirname(filename) or ".")
-    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:
+
+    # No point making the map bigger than the filesystem
+    df = os.statvfs(os.path.dirname(filename))
+    map_size = int(df.f_frsize * df.f_blocks * 0.9)
+
+    # Round down to page size:
+    map_size -= map_size % 4096
+    map_size = min(map_size, MAX_CACHE_SIZE_BYTES)
+
+    with lmdb.open(filename, map_size=map_size) as db:
         assert _cache is None
         try:
             _cache = db
@@ -211,10 +222,10 @@ def _cache_put(key, value):
             global _cache_full_warning
             if not _cache_full_warning:
                 sys.stderr.write(
-                    "Image processing cache is full.  This will "
-                    "cause degraded performance.  Consider "
-                    "deleting the cache file (%s) to purge old "
-                    "results\n" % _cache.path())
+                    "Image processing cache is full.  Deleting the cache file "
+                    "(%s) to purge old results\nThis will take effect for the "
+                    "next test-run." % _cache.path())
+                shutil.rmtree(_cache.path(), ignore_errors=True)
                 _cache_full_warning = True
 
 
