@@ -204,18 +204,18 @@ def memoize_iterator(additional_fields=None):
 
 
 def _cache_put(key, value):
-    with _cache.begin(write=True) as txn:
-        try:
+    try:
+        with _cache.begin(write=True) as txn:
             txn.put(key, json.dumps(value).encode("utf-8"))
-        except lmdb.MapFullError:
-            global _cache_full_warning
-            if not _cache_full_warning:
-                sys.stderr.write(
-                    "Image processing cache is full.  This will "
-                    "cause degraded performance.  Consider "
-                    "deleting the cache file (%s) to purge old "
-                    "results\n" % _cache.path())
-                _cache_full_warning = True
+    except (lmdb.MapFullError, lmdb.DiskError):
+        global _cache_full_warning
+        if not _cache_full_warning:
+            sys.stderr.write(
+                "Image processing cache is full.  This will "
+                "cause degraded performance.  Consider "
+                "deleting the cache file (%s) to purge old "
+                "results\n" % _cache.path())
+            _cache_full_warning = True
 
 
 class NotCachable(Exception):
