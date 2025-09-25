@@ -558,3 +558,9 @@ def test_merge_regions_performance(n):
     print(times)
     print(min(times))
     assert min(times) < (0.001 * n / 20)
+
+
+def test_gray_blue_false_positive():
+    k2 = stbt.load_image("images/regression/xfinity-keyboard-2.png")
+    k3 = stbt.load_image("images/regression/xfinity-keyboard-3.png")
+    assert not stbt.match(k2, k3)
