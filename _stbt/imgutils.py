@@ -231,6 +231,9 @@ class Color:
     @overload
     def __init__(self, bgra: tuple[int, int, int, int]) -> None:
         ...
+    @overload
+    def __init__(self, color: Color, /) -> None:
+        ...
     def __init__(self, *args,
                  hexstring: str|None = None,
                  blue: int|None = None,
