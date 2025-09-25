@@ -70,6 +70,11 @@ class StbtChecker(BaseChecker):
                   "the instance you call it on; it returns a new instance. "
                   'For example, instead of "page.refresh()" you need to use '
                   '"page = page.refresh()".'),
+        'E7010': ('FrameObject properties must not use "%s"',
+                  'stbt-frame-object-property-single-frame',
+                  'FrameObject properties must process a single frame; '
+                  'functions like "stbt.wait_for_match" retrieve additional '
+                  'frames from the device-under-test.'),
     }
 
     def visit_const(self, node):
@@ -116,6 +121,19 @@ class StbtChecker(BaseChecker):
                     r"\b(press|press_and_wait|pressing|press_until_match)$",
                     node.func.as_string()):
                 self.add_message('E7007', node=node, args=node.func.as_string())
+
+            if re.search(
+                    r"\b(audio_chunks"
+                    "|detect_motion"
+                    "|frames"
+                    "|get_rms_volume"
+                    "|play_audio_file"
+                    "|wait_for_match"
+                    "|wait_for_motion"
+                    "|wait_for_volume_change"
+                    "|wait_until)$",
+                    node.func.as_string()):
+                self.add_message('E7010', node=node, args=node.func.as_string())
 
             for funcdef in _infer(node.func):
                 argnames = _get_argnames(funcdef)
