@@ -539,6 +539,30 @@ class RedRatHttpControl(RemoteControl):
     @staticmethod
     def new_bt(hostname, port, serial_no, target_bt_address, timeout_secs=3):
         port = int(port or 4254)
+        serial_no = None if serial_no == 'any' else int(serial_no)
+
+        response = requests.get("/api/bluetoothdevices", timeout=10)
+        response.raise_for_status()
+        devices = response.json()
+        options: list[tuple[int, str]] = []
+        for d in devices:
+            if serial_no == 'any' or d["serialNumber"] == serial_no:
+                for p in d["pairInfo"]:
+                    if (target_bt_address == "any" or
+                            p["address"] == target_bt_address):
+                        options.append((d["serialNumber"], p["address"]))
+        if len(options) == 0:
+            raise ConfigurationError(
+                "No Bluetooth devices found matching serial number %r and "
+                "target address %r. /api/bluetoothedevices says %r" % (
+                    serial_no, target_bt_address, devices))
+        if len(options) > 1:
+            raise ConfigurationError(
+                "Multiple Bluetooth devices found matching serial number %r "
+                "and target address %r. /api/bluetoothedevices says %r" % (
+                    serial_no, target_bt_address, devices))
+        serial_no, target_bt_address = options[0]
+
         return RedRatHttpControl(
             "http://%s:%i/api/bt/modules/%s/targets/%s/send" % (
                 hostname, port, serial_no, target_bt_address), timeout_secs)
