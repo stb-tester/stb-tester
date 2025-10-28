@@ -759,6 +759,7 @@ def _tesseract_subprocess(
             _config['tessedit_write_images'] = True
 
         if _config:
+            os.makedirs(tessdata_dir + '/configs', exist_ok=True)
             with open(tessdata_dir + '/configs/stbtester',
                       'w', encoding='utf-8') as cfg:
                 for k, v in _config.items():
