@@ -20,6 +20,7 @@ FrameT : TypeAlias = numpy.typing.NDArray[numpy.uint8]
 
 # Anything that load_image can take:
 ImageT : TypeAlias = numpy.typing.NDArray[numpy.uint8] | str
+BACKEND: typing.Literal["cv2", "pil"] = "cv2"
 
 
 class Frame(numpy.ndarray):
@@ -626,8 +627,6 @@ def pixel_bounding_box(img: FrameT) -> Optional[Region]:
     ... ], dtype=numpy.uint8))
     Region(x=1, y=1, right=5, bottom=6)
     """
-    import cv2
-
     if len(img.shape) == 2 or len(img.shape) == 3 and img.shape[2] == 1:
         pass
     elif len(img.shape) == 3 and img.shape[2] == 3:
@@ -635,11 +634,17 @@ def pixel_bounding_box(img: FrameT) -> Optional[Region]:
     else:
         raise ValueError("Single-channel or 3-channel (BGR) image required. "
                          "Provided image has shape %r" % (img.shape,))
-    rect = cv2.boundingRect(img)
-    if rect[2] == 0 or rect[3] == 0:
-        return None
+    if BACKEND == "cv2":
+        import cv2
+        rect = cv2.boundingRect(img)
+        if rect[2] != 0 and rect[3] != 0:
+            return Region(*rect)
+    elif BACKEND == "pil":
+        import PIL.Image
+        if bbox := PIL.Image.fromarray(img).getbbox():
+            return Region.from_extents(*bbox)
     else:
-        return Region(*rect)
+        raise ValueError("Unsupported backend: %r" % BACKEND)
 
 
 def find_file(filename: str) -> str:
