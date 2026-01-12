@@ -131,7 +131,7 @@ class Mask:
         if not isinstance(o, Mask):
             return False
         if self._array is not None:
-            return numpy.array_equal(self._array, o._array)
+            return self._invert == o._invert and numpy.array_equal(self._array, o._array)
         else:
             return ((self._filename, self._binop, self._region, self._invert) ==
                     (o._filename, o._binop, o._region, o._invert))

@@ -7,7 +7,7 @@ import numpy
 import pytest
 
 from _stbt.imgutils import _image_region, load_image
-from _stbt.mask import Mask, _to_array
+from _stbt.mask import load_mask, Mask, _to_array
 from _stbt.types import Region
 
 
@@ -211,6 +211,16 @@ def test_mask_comparison():
     assert Region.ALL == Mask(Region.ALL)
     assert ~Mask(Region.ALL) == Mask(None)
     assert ~Mask(Region.ALL) != None  # that'd be going too far
+
+    m1 = load_mask(numpy.array([[255, 0], [0, 255]], dtype=numpy.uint8))
+    m2 = load_mask(numpy.array([[255, 0], [0, 255]], dtype=numpy.uint8))
+
+    assert m1 == m2
+    assert m1 != ~m2
+    assert ~m1 != m2
+    assert m1 == ~~m2
+    assert m1 != Mask(r)
+    assert Mask(r) != m1
 
 
 def test_mask_memoization():
