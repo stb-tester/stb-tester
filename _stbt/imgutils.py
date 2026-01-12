@@ -9,7 +9,6 @@ import warnings
 from functools import lru_cache
 from typing import Optional, overload, TypeAlias
 
-import cv2
 import numpy
 import numpy.typing
 
@@ -434,6 +433,7 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
       `stbt.Image` or numpy array). The returned numpy array is read-only.
     """
     if flags is not None:
+        import cv2
         # Backwards compatibility
         if color_channels is not None:
             raise ValueError(
@@ -482,7 +482,8 @@ def load_image(filename, flags=None, color_channels=None) -> Image:
 
 
 @lru_cache(maxsize=5)
-def _imread(absolute_filename, color_channels):
+def _imread(absolute_filename: str, color_channels: tuple[int, ...]) -> FrameT:
+    import cv2
     if color_channels == (3,):
         flags = cv2.IMREAD_COLOR
     elif color_channels == (1,):
@@ -507,6 +508,15 @@ def _convert_color(img, color_channels, absolute_filename):
             "Invalid shape for image: %r. Shape must have 2 or 3 elements" %
             (img.shape,))
 
+    if len(img.shape) == 2:
+        img = img.reshape(img.shape + (1,))
+    c = img.shape[2]
+
+    if c in color_channels and img.dtype == numpy.uint8:
+        # Noop:
+        return img
+
+    import cv2
     if img.dtype == numpy.uint16:
         warn("Image %s has 16 bits per channel. Converting to 8 bits."
              % _filename_repr(absolute_filename))
@@ -514,10 +524,6 @@ def _convert_color(img, color_channels, absolute_filename):
     elif img.dtype != numpy.uint8:
         raise ValueError("Image %s must be 8-bits per channel (got %s)"
                          % (_filename_repr(absolute_filename), img.dtype))
-
-    if len(img.shape) == 2:
-        img = img.reshape(img.shape + (1,))
-    c = img.shape[2]
 
     if c == 1:
         if 1 in color_channels:
@@ -580,10 +586,11 @@ def save_frame(image: FrameT, filename: str):
     Takes an image obtained from `get_frame` or from the `screenshot`
     property of `MatchTimeout` or `MotionTimeout`.
     """
+    import cv2
     cv2.imwrite(filename, image)
 
 
-def pixel_bounding_box(img):
+def pixel_bounding_box(img: FrameT) -> Optional[Region]:
     """
     Find the smallest region that contains all the non-zero pixels in an image.
 
@@ -619,6 +626,8 @@ def pixel_bounding_box(img):
     ... ], dtype=numpy.uint8))
     Region(x=1, y=1, right=5, bottom=6)
     """
+    import cv2
+
     if len(img.shape) == 2 or len(img.shape) == 3 and img.shape[2] == 1:
         pass
     elif len(img.shape) == 3 and img.shape[2] == 3:

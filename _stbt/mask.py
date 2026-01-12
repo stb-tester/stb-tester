@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import typing
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import TypeAlias
 
-import cv2
 import numpy
 
 from .imgutils import (
-    _convert_color, crop, find_file, Image, ImageT, _image_region, load_image,
+    _convert_color, crop, find_file, Image, _image_region, load_image,
     pixel_bounding_box, _relative_filename)
 from .logging import logger
 from .types import Region
@@ -17,6 +17,9 @@ try:
     from _stbt.xxhash import Xxhash64
 except ImportError:
     Xxhash64 = None
+
+if typing.TYPE_CHECKING:
+    from .imgutils import ImageT
 
 
 MaskTypes: TypeAlias = "str | numpy.ndarray | Mask | Region | None"
@@ -264,6 +267,7 @@ def _to_array_and_bounding_box_cached(
     elif mask._region is not None and not mask._invert:
         bounding_box = Region.intersect(region, mask._region)
     else:
+        assert array is not None
         bounding_box = pixel_bounding_box(array)
         if bounding_box is None:
             logger.warning("%r is an empty Region", mask)
@@ -280,7 +284,8 @@ def _to_array_and_bounding_box_cached(
             array = None
     if array is not None:
         if color_channels == 3:
-            array = cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+            array = _convert_color(
+                array, color_channels=(3,), absolute_filename=mask._filename)
         array.flags.writeable = False
 
     return array, bounding_box
