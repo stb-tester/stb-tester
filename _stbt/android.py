@@ -138,22 +138,10 @@ class AdbDevice(object):
     def __init__(self, address=None, adb_server=None, adb_binary=None,
                  tcpip=None, coordinate_system=None, _config=None):
 
-        if _config is None:
-            import _stbt.config
-            _config = _stbt.config._config_init()  # pylint:disable=protected-access
+        self.address = address
+        self.adb_server = adb_server
+        self.adb_binary = adb_binary or "adb"
 
-        self.address = address or _config.get("android", "address",
-                                              fallback=None)
-        self.adb_server = adb_server or _config.get("android", "adb_server",
-                                                    fallback=None)
-        self.adb_binary = adb_binary or _config.get("android", "adb_binary",
-                                                    fallback="adb")
-
-        if tcpip is None:
-            try:
-                tcpip = _config.getboolean("android", "tcpip")
-            except configparser.Error:
-                pass
         if tcpip is None:
             tcpip = _is_ip_address(self.address)
         self.tcpip = tcpip
@@ -166,15 +154,7 @@ class AdbDevice(object):
             self.address = self.address + ":5555"
 
         if coordinate_system is None:
-            name = _config.get("android", "coordinate_system",
-                               fallback="ADB_NATIVE")
-            if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
-                raise ValueError(
-                    "Invalid value '%s' for android.coordinate_system in "
-                    "config file. Valid values are %s."
-                    % (name, ", ".join("'%s'" % k for k in
-                                       CoordinateSystem.__members__)))  # pylint:disable=no-member
-            coordinate_system = CoordinateSystem[name]
+            coordinate_system = CoordinateSystem.ADB_NATIVE
         self.coordinate_system = coordinate_system
 
         if self.tcpip:
