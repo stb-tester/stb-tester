@@ -181,9 +181,6 @@ class AdbDevice():
 
         self._setup_adb_key()
 
-        if self.tcpip:
-            self._connect(timeout=60)
-
     def _setup_adb_key(self):
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
             return
