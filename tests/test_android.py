@@ -6,9 +6,16 @@ import pytest
 from numpy import isclose
 
 from stbt_core import match, Region
-from _stbt.android import (_centre_point, _Dimensions,
-                           _parse_display_dimensions, _resize,
-                           _to_native_coordinates, AdbDevice, CoordinateSystem)
+from _stbt.android import (
+    _centre_point,
+    _Device,
+    _Dimensions,
+    _parse_devices,
+    _parse_display_dimensions,
+    _resize,
+    _to_native_coordinates,
+    AdbDevice,
+    CoordinateSystem)
 
 
 @pytest.mark.parametrize("r", [
@@ -131,6 +138,48 @@ def test_parse_display_dimensions():
 def test_adbdevice_default_constructor():
     adb = AdbDevice()
     assert adb.coordinate_system == CoordinateSystem.HDMI_720P
+
+
+def test_parse_devices():
+    # pylint:disable=line-too-long
+    devices_output = dedent("""\
+        * daemon not running; starting now at tcp:5037
+        * daemon started successfully
+        List of devices attached
+        192.168.84.242:5555    device product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1
+        1321221037657          unauthorized usb:2-1 transport_id:2
+
+        """)
+    assert _parse_devices(devices_output) == {
+        "192.168.84.242:5555": _Device("192.168.84.242:5555", "device", "product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1"),
+        "1321221037657": _Device("1321221037657", "unauthorized", "usb:2-1 transport_id:2"),
+    }
+
+    devices_output = dedent("""\
+        List of devices attached
+        192.168.84.242:5555    unauthorized transport_id:1
+        1321221037657          device usb:2-1 product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1
+
+        """)
+    assert _parse_devices(devices_output) == {
+        "192.168.84.242:5555": _Device("192.168.84.242:5555", "unauthorized", "transport_id:1"),
+        "1321221037657": _Device("1321221037657", "device", "usb:2-1 product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1"),
+    }
+
+    devices_output = dedent("""
+        List of devices attached
+        192.168.84.242:5555    offline product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1
+
+        """)
+    assert _parse_devices(devices_output) == {
+        "192.168.84.242:5555": _Device("192.168.84.242:5555", "offline", "product:mdarcy model:SHIELD_Android_TV device:mdarcy transport_id:1"),
+    }
+
+    devices_output = dedent("""\
+        List of devices attached
+
+        """)
+    assert _parse_devices(devices_output) == {}
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
