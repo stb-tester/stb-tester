@@ -116,8 +116,8 @@ def adb(args, **subprocess_kwargs) -> subprocess.CompletedProcess:
     """Send commands to an Android device using `ADB`_.
 
     This is a convenience function. It will construct an `AdbDevice` with the
-    default parameters (taken from your config files) and call `AdbDevice.adb`
-    with the parameters given here.
+    default parameters (taken from your :ref:`configuration-files`) and call
+    `AdbDevice.adb` with the parameters given here.
 
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
@@ -127,24 +127,23 @@ def adb(args, **subprocess_kwargs) -> subprocess.CompletedProcess:
 class AdbDevice():
     """Send commands to an Android device using `ADB`_.
 
-    Default values for each parameter can be specified in your "stbt.conf"
-    config file under the "[android]" section.
-
     :param string address:
-        IP address (if using Network ADB) or serial number (if connected via
+        IP address (if using Network ADB) or serial number (if connected by
         USB) of the Android device. You can get the serial number by running
         ``adb devices -l``. If not specified, this is read from
-        "device_under_test.ip_address" in your :ref:`node-specific-config`.
+        ``device_under_test.ip_address`` in your :ref:`node-specific-config`.
+        Leave it as ``None`` (unspecified) to use the only USB connected device.
     :param string adb_server:
         The ADB server (that is, the PC connected to the Android device).
-        Defaults to localhost.
+        Defaults to localhost, or configuration option ``android.adb_server``.
     :param string adb_binary:
-        The path to the ADB client executable. Defaults to "adb".
+        The path to the ADB client executable. Defaults to ``"adb"``, or
+        configuration option ``android.adb_binary``.
     :param bool tcpip:
         The ADB server communicates with the Android device via TCP/IP, not
         USB. This requires that you have enabled Network ADB access on the
         device. Defaults to True if ``address`` is an IP address, False
-        otherwise.
+        otherwise, or the configuration option ``android.tcpip``.
 
     .. _ADB: https://developer.android.com/studio/command-line/adb.html
     """
@@ -180,9 +179,6 @@ class AdbDevice():
             type_=CoordinateSystem)
 
         self._setup_adb_key()
-
-        if self.tcpip:
-            self._connect(timeout=60)
 
     def _setup_adb_key(self):
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
@@ -243,6 +239,7 @@ class AdbDevice():
         :returns: A `stbt.Frame`, that is, an image in OpenCV format. Note that
             the ``time`` attribute won't be very accurate (probably to <0.5s or
             so).
+        :raises: `stbt.android.AdbError` if adb fails for any reason.
         """
 
         import cv2
