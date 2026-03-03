@@ -91,7 +91,7 @@ def uri_to_control(uri, display=None):
 
 def new_adb_device(address):
     from _stbt.android import AdbDevice
-    return AdbDevice(address)
+    return AdbDevice(address, lazy_connect=True)
 
 
 class NullControl(RemoteControl):
