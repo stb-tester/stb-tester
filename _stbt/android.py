@@ -153,8 +153,7 @@ class AdbDevice():
                  adb_server: str|None = None,
                  adb_binary: str|None = None,
                  tcpip: bool|None = None,
-                 coordinate_system: CoordinateSystem|None = None,
-                 lazy_connect: bool = False):
+                 coordinate_system: CoordinateSystem|None = None):
 
         self.address = address or get_config("device_under_test", "ip_address",
                                              default=None)
@@ -181,9 +180,6 @@ class AdbDevice():
             type_=CoordinateSystem)
 
         self._setup_adb_key()
-
-        if not lazy_connect and self.tcpip:
-            self._connect()
 
     def _setup_adb_key(self):
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
