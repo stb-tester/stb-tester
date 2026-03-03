@@ -20,6 +20,7 @@ import time
 import typing
 from collections import namedtuple
 from contextlib import contextmanager
+from dataclasses import dataclass
 from logging import getLogger
 
 from enum import Enum
@@ -214,10 +215,10 @@ class AdbDevice():
             the adb process returns a non-zero exit status.
         :raises: `subprocess.TimeoutExpired` if ``timeout`` is specified and
             the adb process doesn't finish within that number of seconds.
-        :raises: `stbt.android.AdbError` if ``adb connect`` fails.
+        :raises: `stbt.android.AdbError` if the Android device is offline or
+            unauthorized.
         """
-        if self.tcpip:
-            self._connect(timeout)
+        self._connect(timeout)
         return self._adb(args, timeout=timeout, **subprocess_kwargs)
 
     def devices(self) -> str:
@@ -370,8 +371,7 @@ class AdbDevice():
         """Like `AdbDevice.adb`, but runs `subprocess.Popen` instead of
         `subprocess.run`.
         """
-        if self.tcpip:
-            self._connect()
+        self._connect()
         _command = self._build_adb_command() + args
         logger.debug("AdbDevice._Popen: About to run command: %r", _command)
         return subprocess.Popen(_command, **kwargs)
@@ -386,26 +386,52 @@ class AdbDevice():
         return _command
 
     def _connect(self, timeout=None):
-        assert self.address
-        if self.address in self.devices():
-            return
-
+        # Ensure the device is connected (run `adb connect` if using Network
+        # ADB) and authorized. Otherwise commands such as `adb logcat` might
+        # hang indefinitely "waiting for device".
         if timeout is None:
             timeout = 60
 
-        # "adb connect" always returns success; we have to parse the output
-        # which looks like "connected to 192.168.2.163:5555" or
-        # "already connected to 192.168.2.163:5555" or
-        # "unable to connect to 192.168.2.100:5555".
-        output = self._adb(["connect", self.address], timeout=timeout,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           encoding="utf-8") \
-                     .stdout
-        if ("connected to %s" % self.address) not in output:
-            logger.debug("%s", output)
-            raise AdbError("adb connect %s failed" % self.address,
-                           output=output, devices=self.devices())
-        time.sleep(2)
+        devices_output = self.devices()
+        devices = _parse_devices(devices_output)
+
+        if self.address is None:
+            if not devices:
+                raise AdbError("No adb devices found", devices=devices_output)
+            elif len(devices) > 1:
+                raise AdbError("Multiple adb devices found but no address "
+                               "specified", devices=devices_output)
+            self.address = list(devices.keys())[0]
+
+        if _is_ip_address(self.address) and (
+                self.address not in devices or
+                devices[self.address].status != "device"):
+            # "adb connect" always returns success; we have to parse the output
+            # which looks like "connected to 192.168.2.163:5555" or
+            # "already connected to 192.168.2.163:5555" or
+            # "unable to connect to 192.168.2.100:5555".
+            output = self._adb(["connect", self.address], timeout=timeout,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               encoding="utf-8") \
+                         .stdout
+            if ("connected to %s" % self.address) not in output:
+                logger.debug("%s", output)
+                raise AdbError("adb connect %s failed" % self.address,
+                               output=output, devices=self.devices())
+            time.sleep(2)
+            # It might say "already connected to xxx" even if the device is
+            # still in state "unauthorized", so check devices again.
+            devices_output = self.devices()
+            devices = _parse_devices(devices_output)
+
+        if self.address not in devices:
+            raise AdbError("adb device %r not found" % self.address,
+                           devices=devices_output)
+        device = devices[self.address]
+        if device.status != "device":
+            raise AdbError("adb device %r is in state %r" %
+                           (self.address, device.status),
+                           devices=devices_output)
 
     def _to_native_coordinates(self, x, y):
         if self.coordinate_system == CoordinateSystem.ADB_NATIVE:
@@ -819,6 +845,24 @@ def _is_ip_address(address):
     True
     """
     return bool(re.match(r"^\d+\.\d+\.\d+\.\d+(:\d+)?$", str(address)))
+
+
+@dataclass
+class _Device:
+    address: str
+    status: typing.Literal["device", "offline", "unauthorized"]
+    details: str|None
+
+
+def _parse_devices(devices_output: str) -> dict[str, _Device]:
+    devices = {}
+    for line in devices_output.splitlines():
+        m = re.match(r"(\S+)\s+(device|offline|unauthorized)(?:\s+(.*))?", line)
+        if m:
+            address, status, details = m.groups()
+            if status in ("device", "offline", "unauthorized"):
+                devices[address] = _Device(address, status, details)
+    return devices
 
 
 def _resize(img, coordinate_system):

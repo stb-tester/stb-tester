@@ -38,7 +38,7 @@ import sys
 
 import _stbt.logging
 from _stbt.control import uri_to_control
-from _stbt.utils import to_bytes
+from _stbt.utils import to_bytes, to_unicode
 
 
 def main(argv):
@@ -110,8 +110,16 @@ def main(argv):
                 elif action == b"SEND_STOP":
                     control.keyup(key)
             except Exception as e:  # pylint: disable=broad-except
-                logging.error("Error pressing or releasing key %r: %s", key, e,
-                              exc_info=True)
+                logs = ""
+                if output := getattr(e, "output", None):
+                    logs += "\n\n" + to_unicode(output)
+                if devices := getattr(e, "devices", None):
+                    logs += "\n\n" + to_unicode(devices)
+                logging.error(
+                    "Error %s key %r: %s%s",
+                    "releasing" if action == b"SEND_STOP" else "pressing",
+                    key, e, logs,
+                    exc_info=True)
                 send_response(conn, cmd, success=False, data=to_bytes(str(e)))
                 continue
             send_response(conn, cmd, success=True)
