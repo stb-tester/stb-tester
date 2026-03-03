@@ -197,7 +197,7 @@ class AdbDevice():
                         os.path.join(os.environ["HOME"], ".android"))
         os.chmod(os.path.join(os.environ["HOME"], ".android/adbkey"), 0o600)
 
-    def adb(self, args, *, timeout=None, **subprocess_kwargs) \
+    def adb(self, args, *, timeout=None, check=True, **subprocess_kwargs) \
             -> subprocess.CompletedProcess:
         """Run any ADB command.
 
@@ -209,6 +209,7 @@ class AdbDevice():
                    "com.example.myapp/com.example.myapp.MainActivity"])
 
         Any keyword arguments are passed on to `subprocess.run`.
+        Note that ``check`` defaults to True (unlike `subprocess.run`).
 
         :returns: `subprocess.CompletedProcess` from `subprocess.run`.
         :raises: `subprocess.CalledProcessError` if ``check`` is true and
@@ -219,7 +220,8 @@ class AdbDevice():
             unauthorized.
         """
         self._connect(timeout)
-        return self._adb(args, timeout=timeout, **subprocess_kwargs)
+        return self._adb(args, timeout=timeout, check=check,
+                         **subprocess_kwargs)
 
     def devices(self) -> str:
         """Output of ``adb devices -l``."""
