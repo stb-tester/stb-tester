@@ -240,6 +240,10 @@ class DeviceUnderTest():
         first = True
 
         while True:
+            if self._display is None:
+                debug("stbt.frames(): Video capture not initialised "
+                      "(tearing down?)")
+                return
             frame = self._display.get_frame(
                 max(10, timeout_secs or 0), since=timestamp)
             timestamp = frame.time
