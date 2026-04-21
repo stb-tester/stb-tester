@@ -29,6 +29,7 @@ from _stbt.config import ConfigurationError, get_config
 
 if typing.TYPE_CHECKING:
     from _stbt.imgutils import Frame
+    from _stbt.types import PositionT, Region
 
 
 __all__ = [
@@ -113,7 +114,7 @@ class CoordinateSystem(Enum):
     """
 
 
-def adb(args, **subprocess_kwargs) -> subprocess.CompletedProcess:
+def adb(args: list[str], **subprocess_kwargs) -> subprocess.CompletedProcess:
     """Send commands to an Android device using `ADB`_.
 
     This is a convenience function. It will construct an `AdbDevice` with the
@@ -153,8 +154,7 @@ class AdbDevice():
                  adb_server: str|None = None,
                  adb_binary: str|None = None,
                  tcpip: bool|None = None,
-                 coordinate_system: CoordinateSystem|None = None,
-                 lazy_connect: bool = False):
+                 coordinate_system: CoordinateSystem|None = None):
 
         self.address = address or get_config("device_under_test", "ip_address",
                                              default=None)
@@ -182,9 +182,6 @@ class AdbDevice():
 
         self._setup_adb_key()
 
-        if not lazy_connect and self.tcpip:
-            self._connect()
-
     def _setup_adb_key(self):
         if (self.adb_server or os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
                 os.environ.get("ADB_SERVER_SOCKET")):
@@ -205,8 +202,11 @@ class AdbDevice():
                         os.path.join(os.environ["HOME"], ".android"))
         os.chmod(os.path.join(os.environ["HOME"], ".android/adbkey"), 0o600)
 
-    def adb(self, args, *, timeout=None, **subprocess_kwargs) \
-            -> subprocess.CompletedProcess:
+    def adb(self, args: list[str], *,
+            timeout: int|float|None = None,
+            check: bool = True,
+            **subprocess_kwargs,
+            ) -> subprocess.CompletedProcess:
         """Run any ADB command.
 
         For example, the following code will use "adb shell am start" to launch
@@ -217,6 +217,7 @@ class AdbDevice():
                    "com.example.myapp/com.example.myapp.MainActivity"])
 
         Any keyword arguments are passed on to `subprocess.run`.
+        Note that ``check`` defaults to True (unlike `subprocess.run`).
 
         :returns: `subprocess.CompletedProcess` from `subprocess.run`.
         :raises: `subprocess.CalledProcessError` if ``check`` is true and
@@ -227,7 +228,8 @@ class AdbDevice():
             unauthorized.
         """
         self._connect(timeout)
-        return self._adb(args, timeout=timeout, **subprocess_kwargs)
+        return self._adb(args, timeout=timeout, check=check,
+                         **subprocess_kwargs)
 
     def devices(self) -> str:
         """Output of ``adb devices -l``."""
@@ -287,7 +289,7 @@ class AdbDevice():
         img = _resize(img, coordinate_system)
         return Frame(img, time=timestamp)
 
-    def press(self, key) -> None:
+    def press(self, key: str) -> None:
         """Send a keypress.
 
         :param str key: An Android keycode as listed in
@@ -304,7 +306,9 @@ class AdbDevice():
         logger.info("AdbDevice.press(%r)", key)
         self.adb(["shell", "input", "keyevent", key], timeout=10)
 
-    def swipe(self, start_position, end_position) -> None:
+    def swipe(self,
+              start_position: Region|PositionT,
+              end_position: Region|PositionT) -> None:
         """Swipe from one point to another point.
 
         :param start_position:
@@ -327,7 +331,7 @@ class AdbDevice():
                    str(x1), str(y1), str(x2), str(y2)]
         self.adb(command, timeout=10)
 
-    def tap(self, position) -> None:
+    def tap(self, position: Region|PositionT) -> None:
         """Tap on a particular location.
 
         :param position: A `stbt.Region`, or an (x,y) tuple.
@@ -345,7 +349,9 @@ class AdbDevice():
         self.adb(["shell", "input", "tap", str(x), str(y)], timeout=10)
 
     @contextmanager
-    def logcat(self, filename="logcat.log", logcat_args=None):
+    def logcat(self,
+               filename: str = "logcat.log",
+               logcat_args: list[str] | None = None):
         """Run ``adb logcat`` and stream the logs to ``filename``.
 
         This is a context manager. See :doc:`logs` for the recommended way
