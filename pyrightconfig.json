@@ -22,7 +22,6 @@
     "_stbt/keyboard.py",
     "_stbt/libstbt.py",
     "_stbt/mask.py",
-    "_stbt/motion.py",
     "_stbt/ocr.py",
     "_stbt/power.py",
     "_stbt/precondition.py",

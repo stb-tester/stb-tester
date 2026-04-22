@@ -94,7 +94,7 @@ def detect_motion(
     except StopIteration:
         return
 
-    differ = detect_motion.differ.replace(threshold=noise_threshold)
+    differ = detect_motion.differ.replace(threshold=noise_threshold)  # pyright:ignore[reportFunctionMemberAccess]
     dm = DetectMotion(differ, frame, mask)
     for frame in frames:
         result = dm.diff(frame)
@@ -104,7 +104,7 @@ def detect_motion(
         yield result
 
 
-detect_motion.differ : Differ = BGRDiff()
+detect_motion.differ : Differ = BGRDiff()  # pyright:ignore[reportFunctionMemberAccess,reportInvalidTypeForm]
 
 
 class DetectMotion():
@@ -243,6 +243,9 @@ def wait_for_motion(
             assert False, ("Logic error in wait_for_motion: This code "
                            "should never be reached")
         last_frame = res.frame
+
+    if last_frame is None:
+        raise RuntimeError("No frames were processed")
 
     raise MotionTimeout(last_frame, mask, timeout_secs)
 
