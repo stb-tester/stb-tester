@@ -503,18 +503,18 @@ def test_is_screen_black_debug():
 def assert_expected(expected):
     expected = _find_file(expected)
 
+    # To update expected results in source checkout:
+    # import shutil
+    # shutil.rmtree(expected)
+    # shutil.move("stbt-debug", expected)
+
     subprocess.check_call([
-        "diff", "-u", "--exclude=*.png",
+        "diff", "-u", "-r", "--exclude=*.png",
         # The exact output of cv2.matchtemplate isn't deterministic across
         # different versions of OpenCV:
         r"--ignore-matching-lines=0\.99",
         "--ignore-matching-lines=Region",
         expected, "stbt-debug"])
-
-    # To update expected results in source checkout:
-    # import shutil
-    # shutil.rmtree(expected)
-    # shutil.move("stbt-debug", expected)
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):

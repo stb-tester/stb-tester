@@ -5,11 +5,11 @@
 <link href="https://stb-tester.com/assets/bootstrap-3.3.2.min.css" rel="stylesheet">
 <style>
     a.nav { margin: 10px; }
-    a.nav[href*="/00000/"] { visibility: hidden; }
     a.nav.pull-left { margin-left: 0; }
     a.nav.pull-right { margin-right: 0; }
     h5 { margin-top: 40px; }
-    .annotated_image { position: relative; }
+    .annotated_image { position: relative; display: inline-block; }
+    .annotated_image img { max-width: 100%; }
     .region { position: absolute; }
     .source_region { outline: 2px solid #8080ff; }
     .region.matched { outline: 2px solid #ff0020; }
@@ -20,23 +20,24 @@
     img.thumb {
         vertical-align: middle; max-width: 150px; max-height: 36px;
         padding: 1px; border: 1px solid #ccc; }
-    p { line-height: 40px; }
     .table td { vertical-align: middle; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="container-fluid">
+
+
 <a href="../00001/index.html"
    class="nav pull-left">«prev</a>
+
 <a href="../00003/index.html"
    class="nav pull-right">next»</a>
 <h4>
-  detect_motion:
-  Found motion
+  BGRDiff:
+  Found differences
 </h4>
 
-<div class="annotated_image"
-     style="max-width: 640px">
+<div class="annotated_image">
   <img src="source.png">
   
   <div class="region source_region"
@@ -50,29 +51,33 @@
   <div class="region matched"
      style="left: 7.8125%;
             top: 50.0%;
-            width: 7.656250000000001%;
-            height: 12.25%"
+            width: 7.8125%;
+            height: 12.5%"
      
      ></div>
   
 </div>
 
-<h5>ROI Gray:</h5>
-<img src="gray.png" />
-
-<h5>Previous frame ROI Gray:</h5>
-<img src="previous_frame_gray.png" />
-
-<h5>Absolute difference:</h5>
-<img src="absdiff.png" />
+<h5>Result:</h5>
+<pre><code>MotionResult(time=2.000, motion=True, region=Region(x=50, y=200, right=100, bottom=250), frame=&lt;Frame(time=2.000)&gt;)</code></pre>
 
 
 
-<h5>Threshold (noise_threshold=0.84):</h5>
-<img src="absdiff_threshold.png" />
+<h5>Previous frame:</h5>
+<img src="previous_frame.png" />
+
+<h5>Differences:</h5>
+<img src="sqd.png" />
+
+
+
+<h5>Differences above threshold (25):</h5>
+<img src="thresholded.png" />
+
 
 <h5>Eroded:</h5>
-<img src="absdiff_threshold_erode.png" />
+<img src="eroded.png" />
+
 </div>
 </body>
 </html>
