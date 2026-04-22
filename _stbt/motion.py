@@ -14,10 +14,12 @@ from .types import Region, UITestFailure
 
 def detect_motion(
     timeout_secs: float = 10,
-    noise_threshold: Optional[int] = None,
+    threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     frames: Optional[Iterator[FrameT]] = None,
+    *,
+    noise_threshold: Optional[int] = None,
 ) -> Iterator[MotionResult]:
     """Generator that yields a sequence of one `MotionResult` for each frame
     processed from the device-under-test's video stream.
@@ -39,14 +41,13 @@ def detect_motion(
         the iterator will yield frames forever. Note that you can stop
         iterating (for example with ``break``) at any time.
 
-    :param int noise_threshold:
+    :param int threshold:
         The difference in pixel intensity to ignore. Valid values range from 0
         (any difference is considered motion) to 255 (which would never report
         motion).
 
         This defaults to 25. You can override the global default value by
-        setting ``noise_threshold`` in the ``[motion]`` section of
-        :ref:`.stbt.conf`.
+        setting ``threshold`` in the ``[motion]`` section of :ref:`.stbt.conf`.
 
     :param str|numpy.ndarray|Mask|Region mask:
         A `Region` or a mask that specifies which parts of the image to
@@ -58,6 +59,9 @@ def detect_motion(
 
     :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
         Defaults to ``stbt.frames()``.
+
+    :param int noise_threshold:
+        Deprecated synonym for ``threshold``. Use ``threshold`` instead.
 
     Changed in v33: ``mask`` accepts anything that can be converted to a Mask
     using `load_mask`. The ``region`` parameter is deprecated; pass your
@@ -84,8 +88,22 @@ def detect_motion(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    if noise_threshold is None:
-        noise_threshold = get_config('motion', 'noise_threshold', type_=int)
+    if noise_threshold is not None:
+        if threshold is not None:
+            raise ValueError("Cannot specify 'noise_threshold' and 'threshold' "
+                             "at the same time")
+        warnings.warn(
+            "stbt.detect_motion: The 'noise_threshold' parameter is "
+            "deprecated; use 'threshold' instead",
+            DeprecationWarning, stacklevel=2)
+        threshold = noise_threshold
+    if threshold is None:
+        try:
+            # TODO: Add motion.threshold to _stbt/stbt.conf in v35.
+            threshold = get_config('motion', 'threshold', type_=int)
+        except ConfigurationError:
+            # TODO: Drop noise_threshold in v35.
+            threshold = get_config('motion', 'noise_threshold', type_=int)
 
     debug(f"Searching for motion, using mask={mask}")
 
@@ -94,7 +112,7 @@ def detect_motion(
     except StopIteration:
         return
 
-    differ = detect_motion.differ.replace(threshold=noise_threshold)  # pyright:ignore[reportFunctionMemberAccess]
+    differ = detect_motion.differ.replace(threshold=threshold)  # pyright:ignore[reportFunctionMemberAccess]
     dm = DetectMotion(differ, frame, mask)
     for frame in frames:
         result = dm.diff(frame)
@@ -145,10 +163,12 @@ class DetectMotion():
 def wait_for_motion(
     timeout_secs: float = 10,
     consecutive_frames: "Optional[int | str]" = None,
-    noise_threshold: Optional[int] = None,
+    threshold: Optional[int] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     frames: "Optional[Iterator[FrameT]]" = None,
+    *,
+    noise_threshold: Optional[int] = None,
 ) -> MotionResult:
     """Search for motion in the device-under-test's video stream.
 
@@ -172,10 +192,11 @@ def wait_for_motion(
         setting ``consecutive_frames`` in the ``[motion]`` section of
         :ref:`.stbt.conf`.
 
-    :param int noise_threshold: See `detect_motion`.
+    :param int threshold: See `detect_motion`.
     :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
     :param Region region: See `detect_motion`.
     :param Iterator[stbt.Frame] frames: See `detect_motion`.
+    :param int noise_threshold: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
         ``time`` and ``frame`` attributes correspond to the first frame in
@@ -221,6 +242,23 @@ def wait_for_motion(
             DeprecationWarning, stacklevel=2)
         mask = region
 
+    if noise_threshold is not None:
+        if threshold is not None:
+            raise ValueError("Cannot specify 'noise_threshold' and 'threshold' "
+                             "at the same time")
+        warnings.warn(
+            "stbt.wait_for_motion: The 'noise_threshold' parameter is "
+            "deprecated; use 'threshold' instead",
+            DeprecationWarning, stacklevel=2)
+        threshold = noise_threshold
+    if threshold is None:
+        try:
+            # TODO: Add motion.threshold to _stbt/stbt.conf in v35.
+            threshold = get_config('motion', 'threshold', type_=int)
+        except ConfigurationError:
+            # TODO: Drop noise_threshold in v35.
+            threshold = get_config('motion', 'noise_threshold', type_=int)
+
     debug("Waiting for %d out of %d frames with motion, using mask=%r" % (
         motion_frames, considered_frames, mask))
 
@@ -228,7 +266,7 @@ def wait_for_motion(
     motion_count = 0
     last_frame = None
     for res in detect_motion(
-            timeout_secs, noise_threshold, mask, frames=frames):
+            timeout_secs, threshold, mask, frames=frames):
         motion_count += bool(res)
         if len(matches) == matches.maxlen:
             motion_count -= bool(matches.popleft())
