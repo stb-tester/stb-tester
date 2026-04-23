@@ -15,9 +15,10 @@ from .utils import mkdir_p
 if typing.TYPE_CHECKING:
     import traceback
     from _stbt.core import SinkPipeline
+    from .imgutils import FrameT
 
 
-_debug_level = None
+_debug_level: "int | None" = None
 
 # Running in a Jupyter Notebook:
 _jupyter_logging_enabled = "JPY_PARENT_PID" in os.environ
@@ -133,7 +134,7 @@ class ImageLogger():
     """
     _frame_number = itertools.count(1)
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name: str, **kwargs):
         self.jupyter = _jupyter_logging_enabled
         self.enabled = get_debug_level() > 1 or self.jupyter
         if not self.enabled:
@@ -159,7 +160,7 @@ class ImageLogger():
             self.enabled = False
             return
 
-        self.images = OrderedDict()
+        self.images: "OrderedDict[str, FrameT]" = OrderedDict()
         self.data = {}
         for k, v in kwargs.items():
             self.data[k] = v
@@ -178,7 +179,14 @@ class ImageLogger():
                 self.data[k] = []
             self.data[k].append(v)
 
-    def imwrite(self, name, image, regions=None, colours=None, scale=1):
+    def imwrite(
+            self,
+            name: str,
+            image: "FrameT | None",
+            regions: "list[Region] | Region | None" = None,
+            colours: "list[tuple[int, int, int]] | tuple[int, int, int] | None" = None,
+            scale: float = 1,
+    ):
         import cv2
         import numpy
         if not self.enabled:
