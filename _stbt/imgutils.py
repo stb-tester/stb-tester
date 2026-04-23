@@ -60,7 +60,7 @@ class Frame(numpy.ndarray):
         if time := getattr(obj, "time", None):
             self.time = float(time)
         else:
-            self.time = None
+            self.time = typing.cast(float, None)
         self._draw_sink = getattr(obj, '_draw_sink', None)  # pylint: disable=attribute-defined-outside-init
 
     def __repr__(self):

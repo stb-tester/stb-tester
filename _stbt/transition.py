@@ -234,7 +234,6 @@ class _Transition():
     def wait_for_transition_to_end(self, initial_frame: Frame | None):
         if initial_frame is None:
             initial_frame = next(self.frames)
-        assert initial_frame.time is not None
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
@@ -252,8 +251,6 @@ class _Transition():
                 first_stable_frame = f
             else:
                 _debug("No change since previous frame", f)
-            assert f.time is not None
-            assert first_stable_frame.time is not None
             if f.time - first_stable_frame.time >= self.stable_secs:
                 _debug("Transition complete (stable for %ss since %.3f).",
                        first_stable_frame, self.stable_secs,
