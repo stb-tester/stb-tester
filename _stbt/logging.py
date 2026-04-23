@@ -113,6 +113,10 @@ def imshow(img, regions=None):
         display(Image(data=bytes(data.data), format="png"))
 
 
+preserve_loggers = False
+image_loggers: "list[ImageLogger]" = []
+
+
 class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
@@ -128,6 +132,10 @@ class ImageLogger():
 
         self.name = name
         self.frame_number = next(ImageLogger._frame_number)
+
+        if preserve_loggers:
+            # Store this for the summary later
+            image_loggers.append(self)
 
         try:
             outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
