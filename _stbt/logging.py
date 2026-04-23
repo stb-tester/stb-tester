@@ -150,8 +150,8 @@ class ImageLogger():
             # Store this for the summary later
             image_loggers.append(self)
 
+        outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
         try:
-            outdir = os.path.join("stbt-debug", "%05d" % self.frame_number)
             mkdir_p(outdir)
             self.outdir = outdir
         except OSError:
