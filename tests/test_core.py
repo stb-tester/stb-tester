@@ -66,12 +66,13 @@ def test_that_load_image_looks_in_callers_directory(test_pack_root):  # pylint:d
         stbt.load_image("info2.png")
 
 
-def test_load_image_with_unicode_filename():
+def test_load_image_with_unicode_filename(tmp_path):
     print(sys.getfilesystemencoding())
-    shutil.copyfile(_find_file("Rothlisberger.png"),
-                    _find_file("Röthlisberger.png"))
-    assert stbt.load_image("Röthlisberger.png") is not None
-    assert stbt.load_image("R\xf6thlisberger.png") is not None
+    original = _find_file("Rothlisberger.png")
+    new = tmp_path / "Röthlisberger.png"
+    shutil.copyfile(original, new)
+    assert stbt.load_image(str(tmp_path / "Röthlisberger.png")) is not None
+    assert stbt.load_image(str(tmp_path / "R\xf6thlisberger.png")) is not None
 
 
 def test_load_image_with_numpy_array():
