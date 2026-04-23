@@ -6,6 +6,7 @@ from typing import Generator
 
 import pytest
 
+import _stbt.config
 import _stbt.logging
 
 
@@ -31,3 +32,14 @@ def _cwd_is_tmp_path(tmp_path: Path) -> Generator[None, None, None]:
         yield
     finally:
         os.chdir(orig_cwd)
+
+
+@pytest.fixture(autouse=True)
+def set_STBT_CONFIG_FILE_for_tests(monkeypatch):
+    """Set the STBT_CONFIG_FILE environment variable to a test config file.
+
+    This applies to all test functions in the session.
+    """
+    test_config_file = Path(__file__).parent / "stbt.conf"
+    monkeypatch.setenv("STBT_CONFIG_FILE", str(test_config_file))
+    _stbt.config._config_init(force=True)
