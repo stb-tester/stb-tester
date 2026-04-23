@@ -161,6 +161,7 @@ class ImageLogger():
             return
 
         self.images: "OrderedDict[str, FrameT]" = OrderedDict()
+        self.image_annotations: "dict[str, list]" = {}
         self.data = {}
         for k, v in kwargs.items():
             self.data[k] = v
@@ -319,6 +320,9 @@ class ImageLogger():
                 warn("ImageLogger._draw_annotated_image: Expected Region, "
                      "Match/MotionResult, or 3-tuple (region, css_class, title)"
                      "; got %r" % (r,))
+
+        self.image_annotations[source_name] = [
+            {"region": region, "title": title} for region, _, title in _regions]
 
         return jinja2.Template(dedent("""\
             <div class="annotated_image">
