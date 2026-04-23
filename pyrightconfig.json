@@ -14,7 +14,6 @@
     "stbt_virtual_stb.py",
     "_stbt/core.py",
     "_stbt/cv2_compat.py",
-    "_stbt/diff.py",
     "_stbt/grid.py",
     "_stbt/gst_hacks.py",
     "_stbt/gst_utils.py",
