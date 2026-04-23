@@ -5,6 +5,7 @@ import os
 import platform
 
 import numpy
+from numpy.typing import NDArray
 
 
 def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
@@ -81,8 +82,10 @@ def sqdiff(template, frame):
 
 
 def threshold_diff_bgr(
-        a: numpy.ndarray[numpy.uint8], b: numpy.ndarray[numpy.uint8],
-        threshold: int) -> numpy.ndarray[numpy.uint8]:
+        a: NDArray[numpy.uint8],
+        b: NDArray[numpy.uint8],
+        threshold: int,
+) -> NDArray[numpy.uint8]:
     if a.dtype != numpy.uint8 or b.dtype != numpy.uint8:
         raise NotImplementedError("dtype must be uint8")
 

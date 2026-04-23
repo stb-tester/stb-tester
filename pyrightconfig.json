@@ -20,7 +20,6 @@
     "_stbt/gst_utils.py",
     "_stbt/imgproc_cache.py",
     "_stbt/keyboard.py",
-    "_stbt/libstbt.py",
     "_stbt/mask.py",
     "_stbt/motion.py",
     "_stbt/ocr.py",
