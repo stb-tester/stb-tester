@@ -68,10 +68,10 @@ def detect_motion(
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
 
-    Changed in v34: The difference-detection algorithm takes color into
-    account. The ``noise_threshold`` parameter changed range (from 0.0-1.0 to
-    0-255), sense (from "bigger is stricter" to "smaller is stricter"), and
-    default value (from 0.84 to 25).
+    Changed in v34: The difference-detection algorithm takes color into account.
+    Renamed the ``noise_threshold`` parameter to ``threshold``, and changed its
+    range (from 0.0-1.0 to 0-255), sense (from "bigger is stricter" to "smaller
+    is stricter"), and default value (from 0.84 to 25).
     """
     if frames is None:
         import stbt_core
@@ -209,10 +209,10 @@ def wait_for_motion(
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
 
-    Changed in v34: The difference-detection algorithm takes color into
-    account. The ``noise_threshold`` parameter changed range (from 0.0-1.0 to
-    0-255), sense (from "bigger is stricter" to "smaller is stricter"), and
-    default value (from 0.84 to 25).
+    Changed in v34: The difference-detection algorithm takes color into account.
+    Renamed the ``noise_threshold`` parameter to ``threshold``, and changed its
+    range (from 0.0-1.0 to 0-255), sense (from "bigger is stricter" to "smaller
+    is stricter"), and default value (from 0.84 to 25).
     """
     if frames is None:
         import stbt_core
