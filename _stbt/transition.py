@@ -18,7 +18,7 @@ import warnings
 from typing import Iterator, Optional
 
 from .diff import BGRDiff, Differ
-from .imgutils import FrameT
+from .imgutils import Frame
 from .logging import ddebug, debug, draw_on, warn
 from .mask import MaskTypes
 from .motion import DetectMotion
@@ -33,7 +33,7 @@ def press_and_wait(
     stable_secs: float = 1,
     min_size: Optional[SizeT] = None,
     retries: int = 0,
-    frames: Optional[Iterator[FrameT]] = None,
+    frames: Optional[Iterator[Frame]] = None,
     _dut=None,
 ) -> Transition:
 
@@ -128,17 +128,17 @@ def _press_and_wait(key, mask, timeout_secs, stable_secs, min_size,
     return result
 
 
-press_and_wait.differ: Differ = BGRDiff()
+press_and_wait.differ: Differ = BGRDiff()  # type:ignore
 
 
 def wait_for_transition_to_end(
-    initial_frame: Optional[FrameT] = None,
+    initial_frame: Optional[Frame] = None,
     mask: MaskTypes = Region.ALL,
     region: Region = Region.ALL,
     timeout_secs: float = 10,
     stable_secs: float = 1,
     min_size: Optional[SizeT] = None,
-    frames: Optional[Iterator[FrameT]] = None,
+    frames: Optional[Iterator[Frame]] = None,
 ) -> Transition:
 
     """Wait for the screen to stop changing.
@@ -187,7 +187,7 @@ def wait_for_transition_to_end(
 class _Transition():
     def __init__(self, mask: MaskTypes, timeout_secs: float,
                  stable_secs: float, min_size: SizeT | None,
-                 frames: Iterator[FrameT]):
+                 frames: Iterator[Frame]):
         self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -199,7 +199,8 @@ class _Transition():
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
 
-        differ = press_and_wait.differ.replace(min_size=self.min_size)
+        differ = press_and_wait.differ  # type:ignore
+        differ = differ.replace(min_size=self.min_size)
         dm = DetectMotion(differ, press_result.frame_before, self.mask)
 
         # Wait for animation to start
@@ -221,21 +222,27 @@ class _Transition():
                 return Transition(
                     press_result.key, f, TransitionStatus.START_TIMEOUT,
                     press_result.end_time, None, None)
+        else:
+            raise RuntimeError(
+                "Frames exhausted before {self.timeout_secs}s timeout")
 
         end_result = self.wait_for_transition_to_end(f)  # pylint:disable=undefined-loop-variable
         return Transition(
             press_result.key, end_result.frame, end_result.status,
             press_result.end_time, animation_start_time, end_result.end_time)
 
-    def wait_for_transition_to_end(self, initial_frame):
+    def wait_for_transition_to_end(self, initial_frame: Frame | None):
         if initial_frame is None:
             initial_frame = next(self.frames)
+        assert initial_frame.time is not None
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
-        first_stable_frame = initial_frame
-        differ = press_and_wait.differ.replace(min_size=self.min_size)
+        differ = press_and_wait.differ  # type:ignore
+        differ = differ.replace(min_size=self.min_size)
         dm = DetectMotion(differ, initial_frame, self.mask)
+
+        first_stable_frame = initial_frame
         while True:
             f = next(self.frames)
             motion_result = dm.diff(f)
@@ -245,6 +252,8 @@ class _Transition():
                 first_stable_frame = f
             else:
                 _debug("No change since previous frame", f)
+            assert f.time is not None
+            assert first_stable_frame.time is not None
             if f.time - first_stable_frame.time >= self.stable_secs:
                 _debug("Transition complete (stable for %ss since %.3f).",
                        first_stable_frame, self.stable_secs,
@@ -305,7 +314,7 @@ class Transition():
     def __init__(self, key, frame, status, press_time, animation_start_time,
                  end_time):
         self.key: KeyT = key
-        self.frame: FrameT = frame
+        self.frame: Frame = frame
         self.status: TransitionStatus = status
         self.press_time: float = press_time
         self.animation_start_time: float = animation_start_time
