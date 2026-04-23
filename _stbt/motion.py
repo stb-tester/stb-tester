@@ -59,11 +59,11 @@ def detect_motion(
       Deprecated synonym for ``mask``. Use ``mask`` instead.
 
     :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
-        Defaults to ``stbt.frames()``.
+        Defaults to `stbt.frames()`.
 
     :param Differ differ:
         The difference-detection algorithm to use. Defaults to
-        ``stbt.BGRDiff()``.
+        `stbt.BGRDiff()`.
 
     :param int noise_threshold:
         Deprecated synonym for ``threshold``. Use ``threshold`` instead.
