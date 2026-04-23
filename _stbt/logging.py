@@ -264,7 +264,8 @@ class ImageLogger():
             from IPython.display import display, IFrame
             display(IFrame(src=index_html, width=974, height=600))
 
-    def _draw(self, region, source_size, css_class, title=None):
+    @staticmethod
+    def _draw(region, source_size, css_class, title=None):
         import jinja2
 
         if region is None:
