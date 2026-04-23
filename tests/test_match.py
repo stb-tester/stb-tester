@@ -223,6 +223,7 @@ def test_transparent_reference_image_false_negative_caused_by_pyramid(
     (stbt.MatchMethod.CCORR_NORMED, 0.8),
     (stbt.MatchMethod.CCOEFF_NORMED, 0.8),
 ])
+@pytest.mark.usefixtures("cwd_is_tmp_path")
 def test_pyramid_roi_too_small(frame, image, match_method, match_threshold):
     # This is a regression test for an error that was seen with a particular
     # frame from a single test-run, with SQDIFF_NORMED:

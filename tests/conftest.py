@@ -1,6 +1,8 @@
 # pytest configuration
 
 import os
+from pathlib import Path
+from typing import Generator
 
 import pytest
 
@@ -18,3 +20,14 @@ def test_pack_root():
         yield
     finally:
         stbt_core.TEST_PACK_ROOT = None
+
+
+@pytest.fixture(name="cwd_is_tmp_path")
+def _cwd_is_tmp_path(tmp_path: Path) -> Generator[None, None, None]:
+    """Change the CWD to a temporary directory for the duration of a test."""
+    orig_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        yield
+    finally:
+        os.chdir(orig_cwd)
