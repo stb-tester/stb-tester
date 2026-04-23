@@ -410,43 +410,40 @@ def test_ocr_debug():
         stbt.match_text("Summary", f, region=r)  # no match
         stbt.match_text("Summary", f, region=r, text_color=c)
 
-        files = subprocess.check_output("find stbt-debug | sort", shell=True) \
-                          .decode("utf-8")
+        # tessinput.png is created only if tessinput.tif is created by
+        # tesseract, which is dependent on the tesseract version.
+        files = subprocess.check_output(
+            "find stbt-debug | grep -v tessinput.png | sort", shell=True
+        ).decode("utf-8")
         assert files == dedent("""\
             stbt-debug
             stbt-debug/00001
             stbt-debug/00001/index.html
             stbt-debug/00001/source.png
-            stbt-debug/00001/tessinput.png
             stbt-debug/00001/upsampled.png
             stbt-debug/00002
             stbt-debug/00002/index.html
             stbt-debug/00002/source.png
-            stbt-debug/00002/tessinput.png
             stbt-debug/00002/upsampled.png
             stbt-debug/00003
             stbt-debug/00003/binarized.png
             stbt-debug/00003/diff.png
             stbt-debug/00003/index.html
             stbt-debug/00003/source.png
-            stbt-debug/00003/tessinput.png
             stbt-debug/00003/upsampled.png
             stbt-debug/00004
             stbt-debug/00004/index.html
             stbt-debug/00004/source.png
-            stbt-debug/00004/tessinput.png
             stbt-debug/00004/upsampled.png
             stbt-debug/00005
             stbt-debug/00005/index.html
             stbt-debug/00005/source.png
-            stbt-debug/00005/tessinput.png
             stbt-debug/00005/upsampled.png
             stbt-debug/00006
             stbt-debug/00006/binarized.png
             stbt-debug/00006/diff.png
             stbt-debug/00006/index.html
             stbt-debug/00006/source.png
-            stbt-debug/00006/tessinput.png
             stbt-debug/00006/upsampled.png
             """)
 
