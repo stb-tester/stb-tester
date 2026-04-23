@@ -14,7 +14,7 @@ from .utils import mkdir_p
 
 if typing.TYPE_CHECKING:
     import traceback
-    from _stbt.core import SinkPipeline
+    from .core import SinkPipeline
     from .imgutils import FrameT
 
 
