@@ -125,6 +125,7 @@ def wait_until(callable_: Callable[[], T],
     stable_predicate_value = None
     start_time = time.time()
     expiry_time = start_time + timeout_secs
+    stable_since = float("inf")
 
     while True:
         t = time.time()

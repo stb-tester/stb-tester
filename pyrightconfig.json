@@ -1,6 +1,6 @@
 {
   "pythonversion": "3.10",
-  "typeCheckingMode": "basic",
+  "typeCheckingMode": "standard",
   "exclude": [
     "**/__pycache__",
     "**/.*",

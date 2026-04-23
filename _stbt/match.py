@@ -488,6 +488,7 @@ def wait_for_match(
     last_pos = Position(0, 0)
     image = load_image(image)
     debug("Searching for " + (image.relative_filename or "<Image>"))
+    res = None
     for frame in frames:
         res = match(image, match_parameters=match_parameters,
                     region=region, frame=frame)
@@ -499,6 +500,9 @@ def wait_for_match(
         if match_count == consecutive_matches:
             debug("Matched " + (image.relative_filename or "<Image>"))
             return res
+
+    if res is None:
+        raise RuntimeError("No frames were processed")
 
     raise MatchTimeout(res.frame, image.relative_filename, timeout_secs)
 
@@ -611,6 +615,9 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
     image_pyramid = _build_pyramid(image, len(template_pyramid))
     roi_mask = None  # Initial region of interest: The whole image.
 
+    (best_match_position, certainty, heatmap, heatmap_scale, level, matched,
+     threshold) = (None, None, None, None, None, None, None)
+
     for level in reversed(range(len(image_pyramid))):
         if roi_mask is not None:
             if any(x < 3 for x in roi_mask.shape):
@@ -652,7 +659,6 @@ def _find_candidate_matches(image, template, match_parameters, imglog):
             roi_mask = roi_mask.astype(numpy.uint8)
             imwrite("source_matchtemplate_threshold", roi_mask)
 
-    # pylint:disable=undefined-loop-variable
     region = Region(*_upsample(best_match_position, level),
                     width=template.shape[1], height=template.shape[0])
 

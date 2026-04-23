@@ -560,6 +560,7 @@ class RedRatHttpControl(RemoteControl):
                 error_msg = response.json()["error"]
             except Exception:  # pylint:disable=broad-except
                 response.raise_for_status()
+            assert error_msg  # pyright:ignore[reportPossiblyUnboundVariable]
             if re.match("Command '.*' is not known.", error_msg):
                 raise UnknownKeyError(error_msg)
             else:

@@ -61,7 +61,7 @@ def main():
             else:
                 raise Exception("Unknown match_parameter argument '%s'" % p)
     except Exception:  # pylint:disable=broad-except
-        error("Invalid argument '%s'" % p)
+        error("Invalid argument '%s'" % p)  # pyright:ignore[reportPossiblyUnboundVariable]
 
     source_image = cv2.imread(args.source_file)
     if source_image is None:

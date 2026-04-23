@@ -329,7 +329,7 @@ class Color:
     def __repr__(self) -> str:
         return f"Color('{self.hexstring}')"
 
-    def __eq__(self, other: Color) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, Color) and self.hexstring == other.hexstring
 
     def __hash__(self) -> int:
