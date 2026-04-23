@@ -13,6 +13,7 @@ from .types import Region
 from .utils import mkdir_p
 
 if typing.TYPE_CHECKING:
+    import traceback
     from _stbt.core import SinkPipeline
 
 
@@ -117,6 +118,14 @@ preserve_loggers = False
 image_loggers: "list[ImageLogger]" = []
 
 
+# Intended to be overridden externally to remove uninteresting frames from the
+# stack if necessary:
+def filter_traceback(
+        stack_frames: "typing.Sequence[traceback.FrameSummary]",
+) -> "typing.Sequence[traceback.FrameSummary]":
+    return stack_frames
+
+
 class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
@@ -130,8 +139,11 @@ class ImageLogger():
         if not self.enabled:
             return
 
+        import traceback
+
         self.name = name
         self.frame_number = next(ImageLogger._frame_number)
+        self.call_stack = filter_traceback(traceback.extract_stack()[:-2])
 
         if preserve_loggers:
             # Store this for the summary later
@@ -211,6 +223,14 @@ class ImageLogger():
                 "because python 'jinja2' module is not installed.")
             return
 
+        test_pack_root = None
+        try:
+            from stbt_core import TEST_PACK_ROOT
+            test_pack_root = TEST_PACK_ROOT
+        except (ImportError, AttributeError):
+            pass
+        assert test_pack_root is None or os.path.isabs(test_pack_root)
+
         template_kwargs = self.data.copy()
         template_kwargs["images"] = self.images
         template_kwargs.update(kwargs)
@@ -225,8 +245,12 @@ class ImageLogger():
                             draw=self._draw,
                             jupyter=self.jupyter,
                             **template_kwargs))
-            f.write(jinja2.Template(_INDEX_HTML_FOOTER)
-                    .render())
+            f.write(jinja2.Template(_INDEX_HTML_FOOTER, autoescape=True)
+                    .render(call_stack=self.call_stack,
+                            test_pack_root=test_pack_root,
+                            relpath_under=relpath_under,
+                            is_under=_is_under,
+                            ))
 
         if self.jupyter:
             from IPython.display import display, IFrame
@@ -340,8 +364,28 @@ _INDEX_HTML_HEADER = dedent("""\
     {% endif %}
     """)
 
-_INDEX_HTML_FOOTER = dedent("""\
 
+def relpath_under(path: str, start: str):
+    if path.startswith("<"):
+        # Probably not a real python source file:
+        return path
+    rel = os.path.relpath(path, start)
+    if rel.startswith(".."):
+        return os.path.abspath(path)
+    else:
+        return rel
+
+
+def _is_under(path: str, start: str):
+    return not path.startswith('<') and not os.path.relpath(path, start).startswith("..")
+
+
+_INDEX_HTML_FOOTER = dedent("""\
+    <h2>Call stack</h2>
+    <pre>Traceback (most recent call last):
+{% for filename, lineno, funcname, text in call_stack %}{% set user_code = is_under(filename, test_pack_root) %}{% if loop.changed(user_code) %}<{% if not user_code %}/{% endif %}b>{% endif %}  File "{{ relpath_under(filename, test_pack_root) }}", line {{ lineno }}, in {{ funcname }}
+    {{ text }}
+{% endfor %}</pre>
     </div>
     </body>
     </html>
