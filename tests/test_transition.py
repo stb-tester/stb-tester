@@ -61,7 +61,7 @@ def F(state, t):
 
 
 @pytest.fixture(scope="function", params=[stbt.BGRDiff(), stbt.GrayscaleDiff()])
-def diff_algorithm(request):
+def global_differ(request):
     previous = stbt.press_and_wait.differ
     try:
         stbt.press_and_wait.differ = request.param
@@ -73,7 +73,7 @@ def diff_algorithm(request):
 # pylint:disable=redefined-outer-name,unused-argument
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait(diff_algorithm, min_size):
+def test_press_and_wait(global_differ, min_size):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.press_and_wait("white", min_size=min_size,
@@ -96,7 +96,7 @@ def test_press_and_wait(diff_algorithm, min_size):
 
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait_start_timeout(diff_algorithm, min_size):
+def test_press_and_wait_start_timeout(global_differ, min_size):
     transition = stbt.press_and_wait("black", min_size=min_size,
                                      timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
@@ -106,7 +106,7 @@ def test_press_and_wait_start_timeout(diff_algorithm, min_size):
 
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
+def test_press_and_wait_stable_timeout(global_differ, min_size):
     transition = stbt.press_and_wait("ball", min_size=min_size,
                                      timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
@@ -136,7 +136,7 @@ def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
      stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
 def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
-                                            diff_algorithm):
+                                            global_differ):
     transition = stbt.press_and_wait(
         "ball", mask=mask, min_size=min_size, timeout_secs=0.2, stable_secs=0.1,
         _dut=FakeDeviceUnderTest())
@@ -183,7 +183,7 @@ def test_press_and_wait_retries():
         assert transition.status == stbt.TransitionStatus.COMPLETE
 
 
-def test_wait_for_transition_to_end(diff_algorithm):
+def test_wait_for_transition_to_end(global_differ):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.wait_for_transition_to_end(
@@ -197,7 +197,7 @@ def test_wait_for_transition_to_end(diff_algorithm):
     assert transition.status == stbt.TransitionStatus.STABLE_TIMEOUT
 
 
-def test_press_and_wait_timestamps(diff_algorithm):
+def test_press_and_wait_timestamps(global_differ):
     _stbt = FakeDeviceUnderTest(
         ["black"] * 10 + ["fade-to-white"] * 2 + ["white"] * 100)
 
