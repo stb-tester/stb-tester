@@ -29,8 +29,14 @@ class FakeDeviceUnderTest():
     def frames(self):
         if self._frames is not None:
             # Ignore self.state, send the specified frames instead.
+            state = None
             for state in self._frames:  # pylint:disable=not-an-iterable
                 self._t += 0.04  # 25fps
+                array = F(state, self._t)
+                yield stbt.Frame(array, time=self._t)
+            while True:
+                self._t += 0.04  # 25fps
+                assert state is not None
                 array = F(state, self._t)
                 yield stbt.Frame(array, time=self._t)
 
@@ -199,7 +205,7 @@ def test_wait_for_transition_to_end(global_differ):
 
 def test_press_and_wait_timestamps(global_differ):
     _stbt = FakeDeviceUnderTest(
-        ["black"] * 10 + ["fade-to-white"] * 2 + ["white"] * 100)
+        ["black"] * 10 + ["fade-to-white"] * 2 + ["white"])
 
     transition = stbt.press_and_wait("fade-to-white", _dut=_stbt)
     print(transition)
