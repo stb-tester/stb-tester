@@ -4,11 +4,12 @@ import typing
 
 import cv2
 import numpy
+from numpy.typing import NDArray
 
 from .imgutils import Frame, FrameT, crop, _frame_repr, pixel_bounding_box
 from .logging import debug, ddebug, ImageLogger
 from .mask import load_mask, MaskTypes
-from .types import Region, SizeT
+from .types import Region, RegionT, SizeT
 
 
 class MotionResult():
@@ -22,17 +23,18 @@ class MotionResult():
         ``MotionResult`` as a bool. That is, ``if result:`` will behave the
         same as ``if result.motion:``.
 
-    :ivar Region region: Bounding box where the motion was found, or ``None``
-        if no motion was found.
+    :ivar Region|None region: Bounding box where the motion was found, or
+        ``None`` if no motion was found.
 
     :ivar Frame frame: The video frame in which motion was (or wasn't) found.
     """
     _fields = ("time", "motion", "region", "frame")
 
-    def __init__(self, time: float, motion: bool, region: Region, frame: Frame):
+    def __init__(
+            self, time: float, motion: bool, region: RegionT, frame: Frame):
         self.time: float = time
         self.motion: bool = motion
-        self.region: Region = region
+        self.region: RegionT = region
         self.frame: Frame = frame
 
     def __bool__(self) -> bool:
@@ -74,10 +76,12 @@ class Differ:
     # The only public interface is the subclass constructors. The methods are
     # not intended for use by external code.
 
-    _PreProcessedFrame: typing.TypeAlias
-    _PreProcessedMask: typing.TypeAlias
-
-    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+    def replace(
+            self,
+            min_size: SizeT | None = UNSET,  # type:ignore
+            threshold: float = UNSET,  # type:ignore
+            erode: bool | numpy.ndarray = UNSET,  # type:ignore
+    ) -> Differ:
         """
         Return a new Differ with the specified parameters replaced.
 
@@ -95,7 +99,7 @@ class Differ:
     def preprocess_mask(
             self, mask: MaskTypes,
             frame_region: Region  # pylint:disable=unused-argument
-    ) -> "_PreProcessedMask":
+    ) -> typing.Any:
         """
         Pre-process a mask.  The returned value from this will be passed to
         `preprocess` and `diff`.
@@ -106,8 +110,8 @@ class Differ:
 
     def preprocess(
             self, frame: FrameT,
-            mask: "_PreProcessedMask"  # pylint:disable=unused-argument
-    ) -> "_PreProcessedFrame":
+            mask,  # pylint:disable=unused-argument
+    ) -> typing.Any:
         """
         Pre-process a frame.  The returned value from this will be passed to
         `diff`.  `mask_tuple` is the return value from `preprocess_mask`.
@@ -116,8 +120,7 @@ class Differ:
         """
         return frame
 
-    def diff(self, a: "_PreProcessedFrame", b: "_PreProcessedFrame",
-             mask: "_PreProcessedMask") -> MotionResult:
+    def diff(self, a, b, mask) -> MotionResult:
         """
         Compare two frames.  `a` and `b` are the return values from
         `preprocess`.  `mask_tuple` is the return value from `preprocess_mask`.
@@ -146,8 +149,8 @@ class BGRDiff(Differ):
     def __init__(
         self,
         min_size: SizeT | None = None,
-        threshold: float = 25,
-        erode: bool = True,
+        threshold: int = 25,
+        erode: bool | numpy.ndarray = True,
     ):
         self.min_size = min_size
         self.threshold = threshold
@@ -160,14 +163,19 @@ class BGRDiff(Differ):
             kernel = None
         self.kernel = kernel
 
-    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+    def replace(
+            self,
+            min_size: SizeT | None = UNSET,  # type:ignore
+            threshold: float = UNSET,  # type:ignore
+            erode: bool | numpy.ndarray = UNSET,  # type:ignore
+    ) -> BGRDiff:
         if min_size is UNSET:
             min_size = self.min_size
         if threshold is UNSET:
             threshold = self.threshold
         if erode is UNSET:
             erode = self.kernel
-        return self.__class__(min_size, threshold, erode)
+        return self.__class__(min_size, int(threshold), erode)
 
     def preprocess_mask(
             self, mask: MaskTypes, frame_region: Region):
@@ -209,19 +217,23 @@ class BGRDiff(Differ):
             self.min_size is None or
             (out_region.width >= self.min_size[0] and
              out_region.height >= self.min_size[1])))
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
+        result = MotionResult(
+            getattr(frame, "time", None),  # pyright:ignore[reportArgumentType]
+            motion,
+            out_region,
+            frame)
         ddebug(str(result))
         imglog.html(BGRDIFF_HTML, result=result)
         return result
 
 
 def _threshold_diff_bgr(
-        a: numpy.ndarray[numpy.uint8], b: numpy.ndarray[numpy.uint8],
+        a: NDArray[numpy.uint8],
+        b: NDArray[numpy.uint8],
         threshold: int,
         imglog: ImageLogger,
-        mask_pixels: "numpy.ndarray[numpy.uint8] | None"
-) -> numpy.ndarray[numpy.uint8]:
+        mask_pixels: NDArray[numpy.uint8] | None
+) -> NDArray[numpy.uint8]:
 
     if a.shape[:2] != b.shape[:2]:
         raise ValueError("Images must be the same size")
@@ -229,7 +241,7 @@ def _threshold_diff_bgr(
             len(b.shape) < 3 or b.shape[2] != 3):
         raise ValueError("Images must be 3-channel BGR images")
     try:
-        from . import libstbt
+        from . import libstbt  # pyright:ignore[reportAttributeAccessIssue]
         if not imglog.enabled:
             return libstbt.threshold_diff_bgr(a, b, threshold)
     except (ImportError, NotImplementedError) as e:
@@ -239,11 +251,12 @@ def _threshold_diff_bgr(
 
 
 def _threshold_diff_bgr_numpy(
-        a: numpy.ndarray[numpy.uint8], b: numpy.ndarray[numpy.uint8],
+        a: NDArray[numpy.uint8],
+        b: NDArray[numpy.uint8],
         threshold: int,
-        imglog: "ImageLogger | None" = None,
-        mask_pixels: "numpy.ndarray[numpy.uint8] | None" = None
-) -> numpy.ndarray[numpy.uint8]:
+        imglog: ImageLogger | None = None,
+        mask_pixels: NDArray[numpy.uint8] | None = None,
+) -> NDArray[numpy.uint8]:
 
     sqd = numpy.subtract(a, b, dtype=numpy.int32)
     sqd = (sqd[:, :, 0] ** 2 +
@@ -312,7 +325,7 @@ class GrayscaleDiff(Differ):
         self,
         min_size: SizeT | None = None,
         threshold: float = 0.84,
-        erode: bool = True,
+        erode: bool | numpy.ndarray = True,
     ):
         self.min_size = min_size
         self.threshold = threshold
@@ -325,7 +338,12 @@ class GrayscaleDiff(Differ):
             kernel = None
         self.kernel = kernel
 
-    def replace(self, min_size=UNSET, threshold=UNSET, erode=UNSET):
+    def replace(
+            self,
+            min_size: SizeT | None = UNSET,  # type:ignore
+            threshold: float = UNSET,  # type:ignore
+            erode: bool | numpy.ndarray = UNSET,  # type:ignore
+    ) -> GrayscaleDiff:
         if min_size is UNSET:
             min_size = self.min_size
         if threshold is UNSET:
@@ -381,8 +399,11 @@ class GrayscaleDiff(Differ):
             (out_region.width >= self.min_size[0] and
              out_region.height >= self.min_size[1])))
 
-        result = MotionResult(getattr(frame, "time", None), motion,
-                              out_region, frame)
+        result = MotionResult(
+            getattr(frame, "time", None),  # pyright:ignore[reportArgumentType]
+            motion,
+            out_region,
+            frame)
         ddebug(str(result))
         imglog.html(GRAYSCALEDIFF_HTML, result=result)
         return result
