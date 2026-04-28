@@ -92,10 +92,6 @@ def detect_motion(
         if threshold is not None:
             raise ValueError("Cannot specify 'noise_threshold' and 'threshold' "
                              "at the same time")
-        warnings.warn(
-            "stbt.detect_motion: The 'noise_threshold' parameter is "
-            "deprecated; use 'threshold' instead",
-            DeprecationWarning, stacklevel=2)
         threshold = noise_threshold
     if threshold is None:
         try:
@@ -246,10 +242,6 @@ def wait_for_motion(
         if threshold is not None:
             raise ValueError("Cannot specify 'noise_threshold' and 'threshold' "
                              "at the same time")
-        warnings.warn(
-            "stbt.wait_for_motion: The 'noise_threshold' parameter is "
-            "deprecated; use 'threshold' instead",
-            DeprecationWarning, stacklevel=2)
         threshold = noise_threshold
     if threshold is None:
         try:
