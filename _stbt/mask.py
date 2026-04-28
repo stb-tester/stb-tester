@@ -6,17 +6,13 @@ from typing import TypeAlias
 
 import cv2
 import numpy
+import xxhash
 
 from .imgutils import (
     _convert_color, crop, find_file, Image, ImageT, _image_region, load_image,
     pixel_bounding_box, _relative_filename)
 from .logging import logger
 from .types import Region
-
-try:
-    from _stbt.xxhash import Xxhash64
-except ImportError:
-    Xxhash64 = None
 
 
 MaskTypes: TypeAlias = "str | numpy.ndarray | Mask | Region | None"
@@ -137,12 +133,9 @@ class Mask:
         if self._region is not None and not self._invert:
             return hash(self._region)
         elif self._array is not None:
-            if Xxhash64:
-                h = Xxhash64()
-                h.update(numpy.ascontiguousarray(self._array).data)
-                digest = h.hexdigest()
-            else:
-                digest = hash(self._array.data.tobytes())
+            h = xxhash.xxh64()
+            h.update(numpy.ascontiguousarray(self._array).data)
+            digest = h.hexdigest()
             return hash((self._array.shape, digest, self._invert))
         else:
             return hash((self._filename, self._binop, self._region,

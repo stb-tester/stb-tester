@@ -21,7 +21,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gzip \
         language-pack-en \
         librsvg2-bin \
-        libxxhash0 \
         lirc \
         moreutils \
         parallel \
@@ -45,6 +44,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-requests \
         python3-responses \
         python3-serial \
+        python3-xxhash \
         python3-yaml \
         ssh \
         sudo \
