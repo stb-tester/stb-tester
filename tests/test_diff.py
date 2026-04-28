@@ -49,6 +49,7 @@ def test_bgrdiff_c_equivalence():
     expected = numpy.zeros((720, 1280), dtype=numpy.uint8)
     expected[30:40, 70:80] = 1
     assert_np_eq(bgrdiff(f1, f2, 35), expected)
+    assert_np_eq(bgrdiff(f1, f2, 36), ZEROS)
     assert_np_eq(bgrdiff(f, f, 35), ZEROS)
 
     # And with cropping
@@ -61,6 +62,7 @@ def test_bgrdiff_c_equivalence():
     expected = numpy.zeros((10, 10), dtype=numpy.uint8)
     expected[5:10, 5:10] = 1
     assert_np_eq(bgrdiff(crop(f1, r), f2, 35), expected)
+    assert_np_eq(bgrdiff(crop(f1, r), f2, 36), ZEROS[:10, :10])
 
 
 def assert_np_eq(a, b):
