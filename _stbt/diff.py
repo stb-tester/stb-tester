@@ -387,7 +387,7 @@ class GrayscaleDiff(Differ):
         if self.kernel is not None:
             thresholded = cv2.morphologyEx(
                 thresholded, cv2.MORPH_OPEN, self.kernel)
-            imglog.imwrite("absdiff_threshold_erode", thresholded)
+            imglog.imwrite("eroded", thresholded)
 
         out_region = pixel_bounding_box(thresholded)
         if out_region:
@@ -446,6 +446,6 @@ GRAYSCALEDIFF_HTML = """\
 
     {% if "eroded" in images %}
     <h5>Eroded:</h5>
-    <img src="absdiff_threshold_erode.png" />
+    <img src="eroded.png" />
     {% endif %}
 """
