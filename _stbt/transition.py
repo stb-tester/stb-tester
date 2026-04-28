@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import enum
 import warnings
-from typing import Iterator, Optional
+from typing import cast, Iterator, Optional
 
 from .diff import BGRDiff, Differ
 from .imgutils import Frame
@@ -35,6 +35,9 @@ def press_and_wait(
     retries: int = 0,
     frames: Optional[Iterator[Frame]] = None,
     _dut=None,
+    *,
+    threshold: Optional[int] = None,
+    differ: Optional[Differ] = None,
 ) -> Transition:
 
     """Press a key, then wait for the screen to change, then wait for it to stop
@@ -74,6 +77,12 @@ def press_and_wait(
     :param frames: An iterable of video-frames to analyse. Defaults to
         `stbt.frames()`.
 
+    :param threshold: The pixel intensity threshold for the difference-detection
+        algorithm. See `stbt.detect_motion` for details.
+
+    :param differ: The difference-detection algorithm to use. Defaults to
+        `stbt.BGRDiff()`.
+
     :returns:
         A `Transition` object that will evaluate to true if the transition
         completed, false otherwise.
@@ -86,7 +95,8 @@ def press_and_wait(
     `Region` to ``mask`` instead. You can't specify ``mask`` and ``region``
     at the same time.
 
-    Added in v34: The ``retries`` and ``frames`` parameters.
+    Added in v34: The ``retries``, ``frames``, ``threshold``, and ``differ``
+    parameters.
 
     Changed in v34: The difference-detection algorithm takes color into
     account.
@@ -107,20 +117,21 @@ def press_and_wait(
         mask = region
 
     result = _press_and_wait(key, mask, timeout_secs, stable_secs,
-                             min_size, frames, _dut)
+                             min_size, frames, _dut, threshold, differ)
     for i in range(retries):
         if result.status != TransitionStatus.START_TIMEOUT:
             return result
         warn("Keypress %s had no effect; retrying %i/%i", key, i + 1, retries)
         result = _press_and_wait(key, mask, timeout_secs, stable_secs,
-                                 min_size, frames, _dut)
+                                 min_size, frames, _dut, threshold, differ)
     return result
 
 
 def _press_and_wait(key, mask, timeout_secs, stable_secs, min_size,
-                    frames, _dut) -> Transition:
+                    frames, _dut, threshold, differ) -> Transition:
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames,
+                    threshold, differ)
     press_result = _dut.press(key)
     debug("transition: %.3f: Pressed %s" % (press_result.end_time, key))
     result = t.wait(press_result)
@@ -139,6 +150,9 @@ def wait_for_transition_to_end(
     stable_secs: float = 1,
     min_size: Optional[SizeT] = None,
     frames: Optional[Iterator[Frame]] = None,
+    *,
+    threshold: Optional[int] = None,
+    differ: Optional[Differ] = None,
 ) -> Transition:
 
     """Wait for the screen to stop changing.
@@ -178,7 +192,8 @@ def wait_for_transition_to_end(
             DeprecationWarning, stacklevel=2)
         mask = region
 
-    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames)
+    t = _Transition(mask, timeout_secs, stable_secs, min_size, frames,
+                    threshold, differ)
     result = t.wait_for_transition_to_end(initial_frame)
     debug("wait_for_transition_to_end() -> %s" % (result,))
     return result
@@ -187,21 +202,28 @@ def wait_for_transition_to_end(
 class _Transition():
     def __init__(self, mask: MaskTypes, timeout_secs: float,
                  stable_secs: float, min_size: SizeT | None,
-                 frames: Iterator[Frame]):
+                 frames: Iterator[Frame],
+                 threshold: Optional[int] = None,
+                 differ: Optional[Differ] = None):
         self.mask = mask
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
-        self.min_size = min_size
         self.frames = frames
+
+        if differ is not None:
+            self.differ = differ
+        else:
+            self.differ = cast(Differ, press_and_wait.differ)  # type:ignore
+        if min_size is not None:
+            self.differ = self.differ.replace(min_size=min_size)
+        if threshold is not None:
+            self.differ = self.differ.replace(threshold=threshold)
 
         self.expiry_time = None
 
     def wait(self, press_result):
         self.expiry_time = press_result.end_time + self.timeout_secs
-
-        differ = press_and_wait.differ  # type:ignore
-        differ = differ.replace(min_size=self.min_size)
-        dm = DetectMotion(differ, press_result.frame_before, self.mask)
+        dm = DetectMotion(self.differ, press_result.frame_before, self.mask)
 
         # Wait for animation to start
         for f in self.frames:
@@ -237,9 +259,7 @@ class _Transition():
         if self.expiry_time is None:
             self.expiry_time = initial_frame.time + self.timeout_secs
 
-        differ = press_and_wait.differ  # type:ignore
-        differ = differ.replace(min_size=self.min_size)
-        dm = DetectMotion(differ, initial_frame, self.mask)
+        dm = DetectMotion(self.differ, initial_frame, self.mask)
 
         first_stable_frame = initial_frame
         while True:

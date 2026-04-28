@@ -29,8 +29,14 @@ class FakeDeviceUnderTest():
     def frames(self):
         if self._frames is not None:
             # Ignore self.state, send the specified frames instead.
+            state = None
             for state in self._frames:  # pylint:disable=not-an-iterable
                 self._t += 0.04  # 25fps
+                array = F(state, self._t)
+                yield stbt.Frame(array, time=self._t)
+            while True:
+                self._t += 0.04  # 25fps
+                assert state is not None
                 array = F(state, self._t)
                 yield stbt.Frame(array, time=self._t)
 
@@ -57,11 +63,13 @@ def F(state, t):
         # in the left half of the frame.
         array = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
         cv2.circle(array, (int(t * 100) % 625, 360), 15, (255, 255, 255), -1)
+    else:
+        array = stbt.load_image(state)
     return array
 
 
 @pytest.fixture(scope="function", params=[stbt.BGRDiff(), stbt.GrayscaleDiff()])
-def diff_algorithm(request):
+def global_differ(request):
     previous = stbt.press_and_wait.differ
     try:
         stbt.press_and_wait.differ = request.param
@@ -73,7 +81,7 @@ def diff_algorithm(request):
 # pylint:disable=redefined-outer-name,unused-argument
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait(diff_algorithm, min_size):
+def test_press_and_wait(global_differ, min_size):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.press_and_wait("white", min_size=min_size,
@@ -96,7 +104,7 @@ def test_press_and_wait(diff_algorithm, min_size):
 
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait_start_timeout(diff_algorithm, min_size):
+def test_press_and_wait_start_timeout(global_differ, min_size):
     transition = stbt.press_and_wait("black", min_size=min_size,
                                      timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
@@ -106,7 +114,7 @@ def test_press_and_wait_start_timeout(diff_algorithm, min_size):
 
 
 @pytest.mark.parametrize("min_size", [None, (20, 20)])
-def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
+def test_press_and_wait_stable_timeout(global_differ, min_size):
     transition = stbt.press_and_wait("ball", min_size=min_size,
                                      timeout_secs=0.2, stable_secs=0.1,
                                      _dut=FakeDeviceUnderTest())
@@ -136,7 +144,7 @@ def test_press_and_wait_stable_timeout(diff_algorithm, min_size):
      stbt.TransitionStatus.STABLE_TIMEOUT),
 ])
 def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
-                                            diff_algorithm):
+                                            global_differ):
     transition = stbt.press_and_wait(
         "ball", mask=mask, min_size=min_size, timeout_secs=0.2, stable_secs=0.1,
         _dut=FakeDeviceUnderTest())
@@ -161,6 +169,70 @@ def test_press_and_wait_region_parameter():
             timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
 
 
+def test_press_and_wait_differ_parameter(global_differ):
+    # GrayscaleDiff doesn't see the difference in the "?123"
+    # see test_diff.test_bgrdiff
+
+    def dut():
+        frame1 = "images/diff/xfinity-search-keyboard-1.png"
+        frame2 = "images/diff/xfinity-search-keyboard-2.png"
+        return FakeDeviceUnderTest(frames=[frame1, frame2])
+
+    transition = stbt.press_and_wait("KEY_RIGHT", _dut=dut())
+    print(transition)
+    if isinstance(stbt.press_and_wait.differ, stbt.GrayscaleDiff):  # pyright:ignore[reportFunctionMemberAccess]
+        assert not transition
+    else:
+        assert transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", differ=stbt.GrayscaleDiff(), _dut=dut())
+    print(transition)
+    assert not transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", differ=stbt.BGRDiff(), _dut=dut())
+    print(transition)
+    assert transition
+
+
+def test_press_and_wait_threshold_parameter():
+    def dut():
+        frame1 = "images/diff/xfinity-search-keyboard-1.png"
+        frame2 = "images/diff/xfinity-search-keyboard-2.png"
+        return FakeDeviceUnderTest(frames=[frame1, frame2])
+
+    # Just the letters of the keyboard; exclude the focus bars above & below.
+    # GrayscaleDiff doesn't see the difference in the "?123", but there is a
+    # very slight difference, so with a permissive enough threshold we see it.
+    r = stbt.Region(0, 100, width=1280, height=100)
+
+    assert isinstance(stbt.press_and_wait.differ, stbt.BGRDiff)  # pyright:ignore[reportFunctionMemberAccess]
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, _dut=dut())
+    print(transition)
+    assert transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, threshold=90, _dut=dut())
+    print(transition)
+    assert not transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(), _dut=dut())
+    print(transition)
+    assert not transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(), threshold=0.95,
+        _dut=dut())
+    print(transition)
+    assert transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(threshold=0.95),
+        _dut=dut())
+    print(transition)
+    assert transition
+
+
 def test_press_and_wait_retries():
     with scoped_debug_level(1):
 
@@ -183,7 +255,7 @@ def test_press_and_wait_retries():
         assert transition.status == stbt.TransitionStatus.COMPLETE
 
 
-def test_wait_for_transition_to_end(diff_algorithm):
+def test_wait_for_transition_to_end(global_differ):
     _stbt = FakeDeviceUnderTest()
 
     transition = stbt.wait_for_transition_to_end(
@@ -197,9 +269,9 @@ def test_wait_for_transition_to_end(diff_algorithm):
     assert transition.status == stbt.TransitionStatus.STABLE_TIMEOUT
 
 
-def test_press_and_wait_timestamps(diff_algorithm):
+def test_press_and_wait_timestamps(global_differ):
     _stbt = FakeDeviceUnderTest(
-        ["black"] * 10 + ["fade-to-white"] * 2 + ["white"] * 100)
+        ["black"] * 10 + ["fade-to-white"] * 2 + ["white"])
 
     transition = stbt.press_and_wait("fade-to-white", _dut=_stbt)
     print(transition)

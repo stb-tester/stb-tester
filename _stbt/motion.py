@@ -19,6 +19,7 @@ def detect_motion(
     region: Region = Region.ALL,
     frames: Optional[Iterator[FrameT]] = None,
     *,
+    differ: Optional[Differ] = None,
     noise_threshold: Optional[int] = None,
 ) -> Iterator[MotionResult]:
     """Generator that yields a sequence of one `MotionResult` for each frame
@@ -58,7 +59,11 @@ def detect_motion(
       Deprecated synonym for ``mask``. Use ``mask`` instead.
 
     :param Iterator[stbt.Frame] frames: An iterable of video-frames to analyse.
-        Defaults to ``stbt.frames()``.
+        Defaults to `stbt.frames()`.
+
+    :param Differ differ:
+        The difference-detection algorithm to use. Defaults to
+        `stbt.BGRDiff()`.
 
     :param int noise_threshold:
         Deprecated synonym for ``threshold``. Use ``threshold`` instead.
@@ -73,10 +78,11 @@ def detect_motion(
     * The difference-detection algorithm takes color into account.
     * Renamed the ``noise_threshold`` parameter to ``threshold``.  The old name
       is still accepted as a keyword argument but is deprecated.
-    * Changed the way `threshold` is interpreted:
+    * Changed the way ``threshold`` is interpreted:
         * Range is now 0-255, was 0.0-1.0
         * It's now "smaller is stricter", was "bigger is stricter"
         * Default value: was 0.84 now 25.
+    * Added ``differ`` parameter.
     """
     if frames is None:
         import stbt_core
@@ -113,7 +119,10 @@ def detect_motion(
     except StopIteration:
         return
 
-    differ = detect_motion.differ.replace(threshold=threshold)  # pyright:ignore[reportFunctionMemberAccess]
+    if differ is None:
+        differ = detect_motion.differ  # pyright:ignore[reportFunctionMemberAccess]
+        assert differ is not None
+        differ = differ.replace(threshold=threshold)
     dm = DetectMotion(differ, frame, mask)
     for frame in frames:
         result = dm.diff(frame)
@@ -169,6 +178,7 @@ def wait_for_motion(
     region: Region = Region.ALL,
     frames: "Optional[Iterator[FrameT]]" = None,
     *,
+    differ: Optional[Differ] = None,
     noise_threshold: Optional[int] = None,
 ) -> MotionResult:
     """Search for motion in the device-under-test's video stream.
@@ -197,6 +207,7 @@ def wait_for_motion(
     :param str|numpy.ndarray|Mask|Region mask: See `detect_motion`.
     :param Region region: See `detect_motion`.
     :param Iterator[stbt.Frame] frames: See `detect_motion`.
+    :param Differ differ: See `detect_motion`.
     :param int noise_threshold: See `detect_motion`.
 
     :returns: `MotionResult` when motion is detected. The MotionResult's
@@ -215,10 +226,11 @@ def wait_for_motion(
     * The difference-detection algorithm takes color into account.
     * Renamed the ``noise_threshold`` parameter to ``threshold``.  The old name
       is still accepted as a keyword argument but is deprecated.
-    * Changed the way `threshold` is interpreted:
+    * Changed the way ``threshold`` is interpreted:
         * Range is now 0-255, was 0.0-1.0
         * It's now "smaller is stricter", was "bigger is stricter"
         * Default value: was 0.84 now 25.
+    * Added ``differ`` parameter.
     """
     if frames is None:
         import stbt_core
@@ -268,7 +280,7 @@ def wait_for_motion(
     motion_count = 0
     last_frame = None
     for res in detect_motion(
-            timeout_secs, threshold, mask, frames=frames):
+            timeout_secs, threshold, mask, frames=frames, differ=differ):
         motion_count += bool(res)
         if len(matches) == matches.maxlen:
             motion_count -= bool(matches.popleft())
