@@ -5,11 +5,11 @@
 <link href="https://stb-tester.com/assets/bootstrap-3.3.2.min.css" rel="stylesheet">
 <style>
     a.nav { margin: 10px; }
-    a.nav[href*="/00000/"] { visibility: hidden; }
     a.nav.pull-left { margin-left: 0; }
     a.nav.pull-right { margin-right: 0; }
     h5 { margin-top: 40px; }
-    .annotated_image { position: relative; }
+    .annotated_image { position: relative; display: inline-block; }
+    .annotated_image img { max-width: 100%; }
     .region { position: absolute; }
     .source_region { outline: 2px solid #8080ff; }
     .region.matched { outline: 2px solid #ff0020; }
@@ -20,20 +20,21 @@
     img.thumb {
         vertical-align: middle; max-width: 150px; max-height: 36px;
         padding: 1px; border: 1px solid #ccc; }
-    p { line-height: 40px; }
     .table td { vertical-align: middle; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="container-fluid">
+
+
 <a href="../00002/index.html"
    class="nav pull-left">«prev</a>
+
 <a href="../00004/index.html"
    class="nav pull-right">next»</a>
 <h4>is_screen_black: False</h4>
 
-<div class="annotated_image"
-     style="max-width: 320px">
+<div class="annotated_image">
   <img src="source.png">
   
   <div class="region source_region"
@@ -63,7 +64,7 @@
 <img src="gray.png">
 <ul>
   <li>Maximum pixel intensity: 255
-  <li>threshold=10
+  <li>threshold=20
 </ul>
 
 
