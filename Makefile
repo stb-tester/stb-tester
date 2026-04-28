@@ -87,7 +87,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/types.py \
     _stbt/utils.py \
     _stbt/wait.py \
-    _stbt/xxhash.py \
     stbt_core/__init__.py \
     stbt_core/pylint_plugin.py
 
