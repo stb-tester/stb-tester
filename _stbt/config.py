@@ -89,7 +89,7 @@ def get_config(
         if type_ is bool:
             return config.getboolean(section, key)  # type:ignore
         elif issubclass(type_, enum.Enum):  # type:ignore
-            return _to_enum(type_, config.get(section, key), section, key)
+            return _to_enum(type_, config.get(section, key), section, key)  # pyright:ignore[reportReturnType]
         else:
             return type_(config.get(section, key))  # type:ignore
     except configparser.Error as e:

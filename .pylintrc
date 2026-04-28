@@ -80,4 +80,4 @@ dummy-variables-rgx=_
 
 [FORMAT]
 max-line-length=80
-ignore-long-lines=https?://
+ignore-long-lines=https?://|# pyright:
