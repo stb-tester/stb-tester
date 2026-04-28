@@ -63,6 +63,8 @@ def F(state, t):
         # in the left half of the frame.
         array = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
         cv2.circle(array, (int(t * 100) % 625, 360), 15, (255, 255, 255), -1)
+    else:
+        array = stbt.load_image(state)
     return array
 
 
@@ -165,6 +167,70 @@ def test_press_and_wait_region_parameter():
             region=stbt.Region(x=640, y=0, right=1280, bottom=720),
             mask=stbt.Region(x=640, y=0, right=1280, bottom=720),
             timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
+
+
+def test_press_and_wait_differ_parameter(global_differ):
+    # GrayscaleDiff doesn't see the difference in the "?123"
+    # see test_diff.test_bgrdiff
+
+    def dut():
+        frame1 = "images/diff/xfinity-search-keyboard-1.png"
+        frame2 = "images/diff/xfinity-search-keyboard-2.png"
+        return FakeDeviceUnderTest(frames=[frame1, frame2])
+
+    transition = stbt.press_and_wait("KEY_RIGHT", _dut=dut())
+    print(transition)
+    if isinstance(stbt.press_and_wait.differ, stbt.GrayscaleDiff):  # pyright:ignore[reportFunctionMemberAccess]
+        assert not transition
+    else:
+        assert transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", differ=stbt.GrayscaleDiff(), _dut=dut())
+    print(transition)
+    assert not transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", differ=stbt.BGRDiff(), _dut=dut())
+    print(transition)
+    assert transition
+
+
+def test_press_and_wait_threshold_parameter():
+    def dut():
+        frame1 = "images/diff/xfinity-search-keyboard-1.png"
+        frame2 = "images/diff/xfinity-search-keyboard-2.png"
+        return FakeDeviceUnderTest(frames=[frame1, frame2])
+
+    # Just the letters of the keyboard; exclude the focus bars above & below.
+    # GrayscaleDiff doesn't see the difference in the "?123", but there is a
+    # very slight difference, so with a permissive enough threshold we see it.
+    r = stbt.Region(0, 100, width=1280, height=100)
+
+    assert isinstance(stbt.press_and_wait.differ, stbt.BGRDiff)  # pyright:ignore[reportFunctionMemberAccess]
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, _dut=dut())
+    print(transition)
+    assert transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, threshold=90, _dut=dut())
+    print(transition)
+    assert not transition
+
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(), _dut=dut())
+    print(transition)
+    assert not transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(), threshold=0.95,
+        _dut=dut())
+    print(transition)
+    assert transition
+    transition = stbt.press_and_wait(
+        "KEY_RIGHT", mask=r, differ=stbt.GrayscaleDiff(threshold=0.95),
+        _dut=dut())
+    print(transition)
+    assert transition
 
 
 def test_press_and_wait_retries():
