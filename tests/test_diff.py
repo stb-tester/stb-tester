@@ -23,6 +23,8 @@ def test_bgrdiff():
 
 def test_bgrdiff_c_equivalence():
     f = numpy.random.random_integers(0, 255, (720, 1280, 3)).astype(numpy.uint8)
+    ONES = numpy.ones((720, 1280), dtype=numpy.uint8)
+    ZEROS = numpy.zeros((720, 1280), dtype=numpy.uint8)
 
     def bgrdiff(f1, f2, threshold):
         n = diff._threshold_diff_bgr_numpy(f1, f2, threshold)
@@ -30,8 +32,8 @@ def test_bgrdiff_c_equivalence():
         assert numpy.all(n == c)
         return c
 
-    assert_np_eq(bgrdiff(f, f, 0), numpy.ones((720, 1280), dtype=numpy.uint8))
-    assert_np_eq(bgrdiff(f, f, 1), numpy.zeros((720, 1280), dtype=numpy.uint8))
+    assert_np_eq(bgrdiff(f, f, 0), ONES)
+    assert_np_eq(bgrdiff(f, f, 1), ZEROS)
 
     f1 = f.copy()
     f1[30:40, 70:80, 0] = 35
@@ -47,7 +49,7 @@ def test_bgrdiff_c_equivalence():
     expected = numpy.zeros((720, 1280), dtype=numpy.uint8)
     expected[30:40, 70:80] = 1
     assert_np_eq(bgrdiff(f1, f2, 35), expected)
-    assert_np_eq(bgrdiff(f, f, 35), numpy.zeros((720, 1280), dtype=numpy.uint8))
+    assert_np_eq(bgrdiff(f, f, 35), ZEROS)
 
     # And with cropping
     r = stbt.Region(65, 25, 10, 10)
