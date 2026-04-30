@@ -36,7 +36,7 @@ def press_and_wait(
     frames: Optional[Iterator[Frame]] = None,
     _dut=None,
     *,
-    threshold: Optional[int] = None,
+    threshold: Optional[float] = None,
     differ: Optional[Differ] = None,
 ) -> Transition:
 
@@ -151,7 +151,7 @@ def wait_for_transition_to_end(
     min_size: Optional[SizeT] = None,
     frames: Optional[Iterator[Frame]] = None,
     *,
-    threshold: Optional[int] = None,
+    threshold: Optional[float] = None,
     differ: Optional[Differ] = None,
 ) -> Transition:
 
@@ -203,7 +203,7 @@ class _Transition():
     def __init__(self, mask: MaskTypes, timeout_secs: float,
                  stable_secs: float, min_size: SizeT | None,
                  frames: Iterator[Frame],
-                 threshold: Optional[int] = None,
+                 threshold: Optional[float] = None,
                  differ: Optional[Differ] = None):
         self.mask = mask
         self.timeout_secs = timeout_secs
