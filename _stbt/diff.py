@@ -6,6 +6,7 @@ import cv2
 import numpy
 from numpy.typing import NDArray
 
+from .config import get_config
 from .imgutils import Frame, FrameT, crop, _frame_repr, pixel_bounding_box
 from .logging import debug, ddebug, ImageLogger
 from .mask import load_mask, MaskTypes
@@ -149,10 +150,13 @@ class BGRDiff(Differ):
     def __init__(
         self,
         min_size: SizeT | None = None,
-        threshold: int = 25,
+        threshold: float | None = None,
         erode: bool | numpy.ndarray = True,
     ):
         self.min_size = min_size
+
+        if threshold is None:
+            threshold = get_config("motion", "threshold", 25, float)
         self.threshold = threshold
 
         if isinstance(erode, numpy.ndarray):  # For power users
@@ -194,7 +198,7 @@ class BGRDiff(Differ):
         cframe = crop(frame, region)
         cprev = crop(prev_frame, region)
 
-        d = _threshold_diff_bgr(cprev, cframe, (self.threshold ** 2) * 3,
+        d = _threshold_diff_bgr(cprev, cframe, int((self.threshold ** 2) * 3),
                                 imglog, mask_pixels)
         if mask_pixels is not None:
             numpy.bitwise_and(d, mask_pixels[:, :, 0], out=d)
@@ -324,10 +328,13 @@ class GrayscaleDiff(Differ):
     def __init__(
         self,
         min_size: SizeT | None = None,
-        threshold: float = 0.84,
+        threshold: float | None = None,
         erode: bool | numpy.ndarray = True,
     ):
         self.min_size = min_size
+
+        if threshold is None:
+            threshold = get_config("motion", "threshold", 0.84, float)
         self.threshold = threshold
 
         if isinstance(erode, numpy.ndarray):  # For power users
