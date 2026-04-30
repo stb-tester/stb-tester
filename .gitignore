@@ -24,7 +24,6 @@ stb-tester-*.tar.gz
 stb-tester_*.deb
 stbt-control-relay
 stbt-controlc
-stbt-debug
 stbt_core.egg-info/
 TAGS
 tests/stbt-debug-expected-output/*/*/*.png

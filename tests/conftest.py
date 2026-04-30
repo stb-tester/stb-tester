@@ -1,9 +1,12 @@
 # pytest configuration
 
 import os
+from pathlib import Path
+from typing import Generator
 
 import pytest
 
+import _stbt.config
 import _stbt.logging
 
 
@@ -18,3 +21,25 @@ def test_pack_root():
         yield
     finally:
         stbt_core.TEST_PACK_ROOT = None
+
+
+@pytest.fixture(name="cwd_is_tmp_path")
+def _cwd_is_tmp_path(tmp_path: Path) -> Generator[None, None, None]:
+    """Change the CWD to a temporary directory for the duration of a test."""
+    orig_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        yield
+    finally:
+        os.chdir(orig_cwd)
+
+
+@pytest.fixture(autouse=True)
+def set_STBT_CONFIG_FILE_for_tests(monkeypatch):
+    """Set the STBT_CONFIG_FILE environment variable to a test config file.
+
+    This applies to all test functions in the session.
+    """
+    test_config_file = Path(__file__).parent / "stbt.conf"
+    monkeypatch.setenv("STBT_CONFIG_FILE", str(test_config_file))
+    _stbt.config._config_init(force=True)
