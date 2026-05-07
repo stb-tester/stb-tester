@@ -1,4 +1,4 @@
-# Note the implicit includes from setup.py: packages=["stbt", "_stbt"]
+# Note the implicit includes from pyproject ("stbt_core" and "_stbt")
 exclude _stbt/control.py
 exclude _stbt/control_gpl.py
 exclude _stbt/core.py
