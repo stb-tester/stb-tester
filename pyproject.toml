@@ -52,9 +52,15 @@ _stbt = [
     "stbt.conf",
 ]
 
+[tool.setuptools]
+ext-modules = [
+    { name = "_stbt._libstbt", sources = ["_stbt/sqdiff.c"] },
+]
+
 [tool.pylint.master]
 persistent = false
 extension-pkg-whitelist = [
+    "_stbt._libstbt",
     "cv2",
     "lxml",
     "numpy",

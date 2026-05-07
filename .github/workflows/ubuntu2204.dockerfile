@@ -28,6 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pep8 \
         pylint \
         python3-cec \
+        python3-dev \
         python3-docutils \
         python3-gi \
         python3-ipython \

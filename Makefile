@@ -10,7 +10,6 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-platform?=x86_64
 pythondir?=$(prefix)/lib/python3/site-packages
 sysconfdir?=$(prefix)/etc
 
@@ -71,7 +70,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
     _stbt/libstbt.py \
-    _stbt/libstbt.$(platform).so \
+    _stbt/_libstbt$(shell python3-config --extension-suffix) \
     _stbt/logging.py \
     _stbt/mask.py \
     _stbt/match.py \
@@ -266,8 +265,8 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-_stbt/libstbt.$(platform).so : _stbt/sqdiff.c
-	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
+_stbt/_libstbt$(shell python3-config --extension-suffix) : _stbt/sqdiff.c
+	$(CC) $(shell python3-config --includes) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
 
 ### Documentation ############################################################
 
