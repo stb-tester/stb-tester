@@ -54,13 +54,14 @@ class CH9329Control(RemoteControl):
 
 
 def _encode(key: str, keyup: bool = False):
-    m = re.match(r'^KEYCODE_(ACPI|KB|MM)_([a-fA-F0-9]+)$', key)
+    m = re.match(r'^KEYCODE_(ACPI|KB|MM)((?:_(?:LEFT|RIGHT|)(?:META|SHIFT|ALT|CTRL))*)_([a-fA-F0-9]+)$', key)
     if m:
         encoder, _ = ENCODERS[m.group(1)]
+        modifiers = _parse_modifiers(m.group(2))
         if keyup:
-            return encoder(0)
+            return encoder(0, modifiers)
         else:
-            return encoder(int(m.group(2), 16))
+            return encoder(int(m.group(3), 16), modifiers)
 
     # Allow more control over the packets we send for exploratory testing:
     m = re.match(r'^RAW_([a-fA-F0-9]{2})_([a-fA-F0-9]+)_([a-fA-F0-9]+)$', key)
@@ -70,36 +71,77 @@ def _encode(key: str, keyup: bool = False):
         return _frame(0, command, data)
 
     for encoder, key_enum in ENCODERS.values():
+        m = re.match(r'KEY_KB((?:_(?:LEFT|RIGHT|)(?:META|SHIFT|ALT|CTRL))*)_(.*)$', key)
+        if m:
+            modifiers = _parse_modifiers(m.group(1))
+            key = "KEY_KB_" + m.group(2)
+        else:
+            modifiers = CH9329Modifier(0)
         try:
             keycode = getattr(key_enum, key).value
         except AttributeError:
             continue
         if keyup:
-            return encoder(0)
+            return encoder(0, modifiers)
         else:
-            return encoder(keycode)
+            return encoder(keycode, modifiers)
 
     raise ValueError("Unknown key %r" % key)
 
 
-def _encode_kb_general_data(keycode: int):
-    # type: (int) -> bytes
+def test_encode():
+    assert _encode('KEY_KB_A') == b'W\xab\x00\x02\x08\x00\x00\x04\x00\x00\x00\x00\x00\x10'
+    assert _encode('KEY_KB_A', keyup=True) == b'W\xab\x00\x02\x08\x00\x00\x00\x00\x00\x00\x00\x00\x0c'
+    assert _encode('KEY_KB_SHIFT_A') == b'W\xab\x00\x02\x08\x02\x00\x04\x00\x00\x00\x00\x00\x12'
+
+
+def _parse_modifiers(modifiers: str):
+    out = CH9329Modifier(0)
+    if not modifiers:
+        return out
+    assert modifiers.startswith('_')
+    for m in modifiers[1:].split('_'):
+        if not m.startswith(('LEFT', 'RIGHT')):
+            m = 'LEFT' + m
+        flag = CH9329Modifier[m]
+        if flag in out:
+            raise ValueError("Duplicate modifier %s in %r" % (m, modifiers))
+        out |= flag
+    return out
+
+
+def test_parse_modifiers():
+    import pytest
+    assert _parse_modifiers('') == CH9329Modifier(0)
+    assert _parse_modifiers('_SHIFT') == CH9329Modifier.LEFTSHIFT
+    assert _parse_modifiers('_LEFTSHIFT') == CH9329Modifier.LEFTSHIFT
+    assert _parse_modifiers('_RIGHTSHIFT') == CH9329Modifier.RIGHTSHIFT
+    assert _parse_modifiers('_LEFTALT_RIGHTCTRL') == (CH9329Modifier.LEFTALT | CH9329Modifier.RIGHTCTRL)
+    with pytest.raises(ValueError, match="Duplicate modifier LEFTALT in '_LEFTALT_LEFTALT'"):
+        _parse_modifiers('_LEFTALT_LEFTALT')
+
+
+def _encode_kb_general_data(keycode: int, modifiers: "CH9329Modifier"):
     assert keycode < 0x100
     return _frame(
         0, CH9329Command.SEND_KB_GENERAL_DATA.value,
-        struct.pack('BBBBBBBB', 0, 0, keycode, 0, 0, 0, 0, 0))
+        struct.pack('BBBBBBBB', modifiers.value, 0, keycode, 0, 0, 0, 0, 0))
 
 
-def _encode_acpi_key_data(keycode: int):
-    # type: (int) -> bytes
+def _encode_acpi_key_data(keycode: int, modifiers: "CH9329Modifier"):
+    if modifiers:
+        raise ValueError(
+            "ACPI keys don't support modifiers, got %s" % modifiers)
     assert keycode < 0x100
     return _frame(
         0, CH9329Command.SEND_KB_MEDIA_DATA.value,
         struct.pack('BB', 0x01, keycode))
 
 
-def _encode_mm_key_data(keycode: int):
-    # type: (int) -> bytes
+def _encode_mm_key_data(keycode: int, modifiers: "CH9329Modifier"):
+    if modifiers:
+        raise ValueError(
+            "Multimedia keys don't support modifiers, got %s" % modifiers)
     assert keycode < 0x1000000
     return _frame(
         0, CH9329Command.SEND_KB_MEDIA_DATA.value,
@@ -220,15 +262,15 @@ class CH9329Command(enum.Enum):
     CMD_RESET = 0x0f
 
 
-class CH9329Modifier(enum.Enum):
-    LEFT_CTRL = 1 << 0
-    LEFT_SHIFT = 1 << 1
-    LEFT_ALT = 1 << 2
-    LEFT_META = 1 << 3
-    RIGHT_CTRL = 1 << 4
-    RIGHT_SHIFT = 1 << 5
-    RIGHT_ALT = 1 << 6
-    RIGHT_META = 1 << 7
+class CH9329Modifier(enum.Flag):
+    LEFTCTRL = 1 << 0
+    LEFTSHIFT = 1 << 1
+    LEFTALT = 1 << 2
+    LEFTMETA = 1 << 3
+    RIGHTCTRL = 1 << 4
+    RIGHTSHIFT = 1 << 5
+    RIGHTALT = 1 << 6
+    RIGHTMETA = 1 << 7
 
 
 class CH9329Error(enum.Enum):
@@ -471,7 +513,7 @@ class MultimediaKeyCode(enum.Enum):
     KEY_MM_REWIND = 1 << 23 - 16
 
 
-ENCODERS: "dict[str, tuple[typing.Callable[[int], bytes], typing.Type[enum.Enum]]]" = {
+ENCODERS: "dict[str, tuple[typing.Callable[[int, CH9329Modifier], bytes], typing.Type[enum.Enum]]]" = {
     'KB': (_encode_kb_general_data, KeyboardPage),
     'ACPI': (_encode_acpi_key_data, ACPIKeyCode),
     'MM': (_encode_mm_key_data, MultimediaKeyCode),
