@@ -54,7 +54,7 @@ setuptools.setup(
     python_requires=">=3.10",
     extras_require={
         "ocr": ["lxml==4.8.0"],
-        "debug": ["Jinja2==3.0.3"],
+        "debug": ["Jinja2==3.1.6"],
         "keyboard": ["networkx==2.4"],
     },
     install_requires=[
