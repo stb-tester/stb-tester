@@ -877,7 +877,8 @@ def _tesseract_subprocess(
             try:
                 with open(tmp + "/output.tsv", encoding='utf-8') as f:
                     import csv
-                    tsv = list(csv.DictReader(f, delimiter='\t'))
+                    tsv = list(csv.DictReader(
+                        f, delimiter='\t', quoting=csv.QUOTE_NONE))
             except FileNotFoundError:
                 pass
             else:
