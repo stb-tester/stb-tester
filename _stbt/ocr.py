@@ -1098,6 +1098,11 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
         <h5>Tesseract output:</h5>
         <pre><code>{{ output | escape }}</code></pre>
 
+        {% if hocr %-}
+        <h5>HOCR output:</h5>
+        <pre><code>{{ hocr | escape }}</code></pre>
+        {% endif %}
+
         <h5>Parameters:</h5>
         <ul>
           {% if match_text %}
