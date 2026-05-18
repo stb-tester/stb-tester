@@ -870,6 +870,7 @@ def _tesseract_subprocess(
                 hocr = f.read()
         except FileNotFoundError:
             hocr = None
+        imglog.set(hocr_xml=hocr)
 
         if imglog.enabled:
             tsv_regions: list[tuple[Region, str, str | None]] = []
@@ -1097,6 +1098,11 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
 
         <h5>Tesseract output:</h5>
         <pre><code>{{ output | escape }}</code></pre>
+
+        {% if hocr_xml %}
+        <h5>HOCR XML:</h5>
+        <pre><code>{{ hocr_xml | escape }}</code></pre>
+        {% endif %}
 
         <h5>Parameters:</h5>
         <ul>
