@@ -22,6 +22,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from logging import getLogger
+from typing import Optional
 
 from enum import Enum
 
@@ -478,7 +479,10 @@ class AdbError(Exception):
 
 
 class _LogcatCollector():
-    def __init__(self, filename, adb_device, logcat_args=None):
+    def __init__(self,
+                 filename: str,
+                 adb_device: AdbDevice,
+                 logcat_args: Optional[list[str]] = None):
         self.filename = filename
         self.adb_device = adb_device
         self.logcat_args = logcat_args or []
