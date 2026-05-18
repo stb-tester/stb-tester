@@ -1116,7 +1116,7 @@ def _log_match_image_debug(imglog: ImageLogger):
 
     template = """\
         {% macro thumb(name) -%}
-            <a href="{{name}}.png" target="_blank">{{img(name, 'class=thumb')}}</a>
+            <a href="{{name}}.png" target="_blank">{{img(name, classes='thumb')}}</a>
         {%- endmacro %}
         <h4>{{title}}</h4>
 
