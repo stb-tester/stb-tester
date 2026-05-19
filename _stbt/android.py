@@ -197,10 +197,7 @@ class AdbDevice():
         if root is None:
             return
         if not os.path.exists(os.path.join(root, "config/android/adbkey")):
-            raise ConfigurationError(
-                "To run adb on the Stb-tester Node you must generate an ADB "
-                "host key by running 'adb keygen config/android/adbkey' and "
-                "commit the 'config/android' directory to git.")
+            return
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
         os.chmod(os.path.join(os.environ["HOME"], ".android/adbkey"), 0o600)
