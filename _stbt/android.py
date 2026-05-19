@@ -180,16 +180,16 @@ class AdbDevice():
             "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
             type_=CoordinateSystem)
 
-        self._setup_adb_key()
+        if not (self.adb_server or
+                os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
+                os.environ.get("ADB_SERVER_SOCKET")):
+            self._setup_adb_key()
+            subprocess.check_call([self.adb_binary, "start-server"], cwd="/run")
 
         if not lazy_connect and self.tcpip:
             self._connect()
 
     def _setup_adb_key(self):
-        if (self.adb_server or os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
-                os.environ.get("ADB_SERVER_SOCKET")):
-            # Can't manage adbkey for a remote server.
-            return
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
             return
         import stbt_core
