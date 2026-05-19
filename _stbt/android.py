@@ -22,6 +22,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from logging import getLogger
+from typing import Optional
 
 from enum import Enum
 
@@ -375,11 +376,12 @@ class AdbDevice():
             logger.debug("AdbDevice.adb: About to run command: %r", _command)
         return subprocess.run(_command, **kwargs)  # pylint:disable=subprocess-run-check
 
-    def _Popen(self, args, **kwargs):
+    def _Popen(self, args, connect=True, **kwargs):
         """Like `AdbDevice.adb`, but runs `subprocess.Popen` instead of
         `subprocess.run`.
         """
-        self._connect()
+        if connect:
+            self._connect()
         _command = self._build_adb_command() + args
         logger.debug("AdbDevice._Popen: About to run command: %r", _command)
         return subprocess.Popen(_command, **kwargs)
@@ -478,7 +480,10 @@ class AdbError(Exception):
 
 
 class _LogcatCollector():
-    def __init__(self, filename, adb_device, logcat_args=None):
+    def __init__(self,
+                 filename: str,
+                 adb_device: AdbDevice,
+                 logcat_args: Optional[list[str]] = None):
         self.filename = filename
         self.adb_device = adb_device
         self.logcat_args = logcat_args or []
@@ -495,12 +500,18 @@ class _LogcatCollector():
     def run(self):
         with open(self.filename, "wb", 0) as f:
             while True:
-                # Re-run "adb logcat" in case of disconnections. I assume this
-                # means the device-under-test crashed/rebooted so we don't need
-                # to run "logcat --clear" again. If this assumption is wrong
-                # we'll end up with some duplicate log lines. :shrug:
+                # Re-run "adb logcat" in case of disconnections (e.g.
+                # device-under-test reboot). If we have got this far, we have
+                # already connected successfully (when we ran `logcat --clear`).
+                # So after the disconnection we can rely on logcat's built-in
+                # "waiting for device" behaviour, no need to call
+                # `AdbDevice._connect` again.
+                # I assume we were disconnected because the device-under-test
+                # crashed or rebooted, so we don't need to run "logcat --clear"
+                # again. If this assumption is wrong we'll end up with some
+                # duplicate log lines. :shrug:
                 self.process = self.adb_device._Popen(
-                    ['logcat'] + self.logcat_args, stdout=f)
+                    ['logcat'] + self.logcat_args, connect=False, stdout=f)
                 self.process.wait()
                 if self.stopping:
                     return
