@@ -1,0 +1,154 @@
+[tool.pylint.master]
+persistent = false
+extension-pkg-whitelist = [
+    "cv2",
+    "lxml",
+    "numpy",
+]
+init-hook = """
+import gi
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst
+Gst.init()
+"""
+
+[tool.pylint.reports]
+msg-template = "{path}:{line}:{column}: [{msg_id}({symbol}), {obj}] {msg}"
+reports = false
+
+[tool.pylint.messages_control]
+disable = [
+    "bad-classmethod-argument",
+    "bad-continuation",
+    "bad-option-value",
+    "blacklisted-name",
+    "consider-using-f-string",
+    "consider-using-with",
+    "cyclic-import",
+    "duplicate-code",
+    "empty-docstring",
+    "fixme",
+    "global-statement",
+    "import-outside-toplevel",
+    "inconsistent-return-statements",
+    "invalid-name",
+    "len-as-condition",
+    "locally-disabled",
+    "locally-enabled",
+    "misplaced-comparison-constant",
+    "missing-docstring",
+    "multiple-statements",
+    "no-else-break",
+    "no-else-continue",
+    "no-else-raise",
+    "no-else-return",
+    "no-init",
+    "no-self-use",
+    "protected-access",
+    "raise-missing-from",
+    "singleton-comparison",
+    "too-few-public-methods",
+    "too-many-ancestors",
+    "too-many-arguments",
+    "too-many-boolean-expressions",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-public-methods",
+    "too-many-return-statements",
+    "too-many-statements",
+    "ungrouped-imports",
+    "unnecessary-lambda-assignment",
+    "use-implicit-booleaness-not-comparison",
+    "wrong-import-position",
+]
+ignored-modules = [
+    "cv2",
+]
+ignored-classes = [
+    "Buffer",
+    "Caps",
+    "cec",
+    "Client",
+    "Event",
+    "Frame",
+    "generator",
+    "gi.repository.Gst",
+    "MainLoop",
+    "numpy",
+    "pytest",
+    "Sample",
+    "_socketobject",
+]
+
+[tool.pylint.classes]
+valid-metaclass-classmethod-first-arg = "mcs"
+
+[tool.pylint.imports]
+analyse-fallback-blocks = false
+
+[tool.pylint.variables]
+dummy-variables-rgx = "_"
+
+[tool.pylint.format]
+max-line-length = 80
+ignore-long-lines = "https?://|# pyright:"
+
+[tool.pytest.ini_options]
+python_functions = "test_"
+addopts = [
+    "-rs",
+    "--verbose",
+    "--verbose",
+    "--doctest-modules",
+]
+doctest_optionflags = [
+    "ALLOW_UNICODE",
+    "ALLOW_BYTES",
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+]
+log_level = "debug"
+xfail_strict = true
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
+exclude = [
+    "**/__pycache__",
+    "**/.*",
+    "extra/nbstripout.py",
+    "tests/test-install",
+    "tests/validate-ocr.py",
+]
+ignore = [
+    "stbt_control.py",
+    "stbt_run.py",
+    "_stbt/core.py",
+    "_stbt/cv2_compat.py",
+    "_stbt/grid.py",
+    "_stbt/gst_hacks.py",
+    "_stbt/gst_utils.py",
+    "_stbt/imgproc_cache.py",
+    "_stbt/keyboard.py",
+    "_stbt/mask.py",
+    "_stbt/ocr.py",
+    "_stbt/power.py",
+    "_stbt/precondition.py",
+    "_stbt/pylint_plugin.py",
+    "_stbt/sqdiff.py",
+    "_stbt/stbt_run.py",
+    "_stbt/types.py",
+    "stbt_core/__init__.py",
+    "tests/test_core.py",
+    "tests/test_diff.py",
+    "tests/test_frameobject.py",
+    "tests/test_grid.py",
+    "tests/test_keyboard.py",
+    "tests/test_mask.py",
+    "tests/test_match.py",
+    "tests/test_ocr.py",
+    "tests/test_stbt_debug.py",
+    "tests/test_transition.py",
+]

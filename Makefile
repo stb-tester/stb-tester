@@ -194,11 +194,11 @@ PYTHON_FILES := \
 check: check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
-	$(PYTEST) -vv -rs --doctest-modules $(PYTEST_OPTS) \
+	$(PYTEST) $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v -e __init__.py -e ^extra/)
 check-pythonpackage:
-	$(PYTEST) -vv -rs $(PYTEST_OPTS) \
+	$(PYTEST) $(PYTEST_OPTS) \
 	    tests/subdirectory/test_load_image_from_subdirectory.py \
 	    tests/test_android.py \
 	    tests/test_config.py \
