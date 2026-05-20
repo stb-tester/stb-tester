@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import socket
 import subprocess
 import threading
 import time
@@ -181,16 +182,19 @@ class AdbDevice():
             "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
             type_=CoordinateSystem)
 
-        self._setup_adb_key()
+        if not self._is_remote_server():
+            self._setup_adb_key()
 
         if not lazy_connect and self.tcpip:
             self._connect()
 
+    def _is_remote_server(self):
+        return bool(
+            self.adb_server or
+            os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
+            os.environ.get("ADB_SERVER_SOCKET"))
+
     def _setup_adb_key(self):
-        if (self.adb_server or os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
-                os.environ.get("ADB_SERVER_SOCKET")):
-            # Can't manage adbkey for a remote server.
-            return
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
             return
         import stbt_core
@@ -198,10 +202,7 @@ class AdbDevice():
         if root is None:
             return
         if not os.path.exists(os.path.join(root, "config/android/adbkey")):
-            raise ConfigurationError(
-                "To run adb on the Stb-tester Node you must generate an ADB "
-                "host key by running 'adb keygen config/android/adbkey' and "
-                "commit the 'config/android' directory to git.")
+            return
         shutil.copytree(os.path.join(root, "config/android"),
                         os.path.join(os.environ["HOME"], ".android"))
         os.chmod(os.path.join(os.environ["HOME"], ".android/adbkey"), 0o600)
@@ -401,6 +402,16 @@ class AdbDevice():
         # hang indefinitely "waiting for device".
         if timeout is None:
             timeout = 60
+
+        if not self._is_remote_server():
+            # On the Stb-tester Node each test is run in a separate directory.
+            # We don't want adb server to hold the current test-run directory
+            # open, so that it won't be killed by the result upload process.
+            try:
+                socket.create_connection(("127.0.0.1", 5037), timeout=1)
+            except ConnectionRefusedError:
+                subprocess.check_call([self.adb_binary, "start-server"],
+                                      cwd="/run")
 
         devices_output = self.devices()
         devices = _parse_devices(devices_output)
