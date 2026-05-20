@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import socket
 import subprocess
 import threading
 import time
@@ -404,7 +405,11 @@ class AdbDevice():
             # On the Stb-tester Node each test is run in a separate directory.
             # We don't want adb server to hold the current test-run directory
             # open, so that it won't be killed by the result upload process.
-            subprocess.check_call([self.adb_binary, "start-server"], cwd="/run")
+            try:
+                socket.create_connection(("127.0.0.1", 5037), timeout=1)
+            except ConnectionRefusedError:
+                subprocess.check_call([self.adb_binary, "start-server"],
+                                      cwd="/run")
 
         devices_output = self.devices()
         devices = _parse_devices(devices_output)
