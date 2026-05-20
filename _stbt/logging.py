@@ -335,7 +335,13 @@ class ImageLogger():
                     title_html=title_html,
                     )
 
-    def _img(self, name: str, attrs: str = "", desc_suffix: str = "") -> str:
+    def _img(
+            self,
+            name: str,
+            *,
+            desc_suffix: str = "",
+            classes: str = "",
+    ) -> str:
         import markupsafe
         if name not in self.images:
             warn("ImageLogger: No image named '%s'" % name)
@@ -355,9 +361,9 @@ class ImageLogger():
         if desc_suffix:
             title += "\n\n" + desc_suffix
         return markupsafe.Markup(
-            '<img class="img-%s" src="%s.png" title="%s" height="%d" '
-            'width="%d" %s>') % (
-            name, name, title, meta.height, meta.width, attrs)
+            '<img class="img-%s %s" src="%s.png" title="%s" height="%d" '
+            'width="%d">') % (
+            name, classes, name, title, meta.height, meta.width)
 
     def _draw_annotated_image(self, regions=None, source_name="frame"):
         import jinja2
