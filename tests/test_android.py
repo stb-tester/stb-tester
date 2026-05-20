@@ -1,6 +1,5 @@
 import os
 from textwrap import dedent
-from unittest import mock
 
 import cv2
 import pytest
@@ -137,10 +136,7 @@ def test_parse_display_dimensions():
 
 # This is a regression test.
 def test_adbdevice_default_constructor():
-    with mock.patch("subprocess.check_call") as mock_check_call:
-        adb = AdbDevice()
-        assert mock_check_call.mock_calls == [
-            mock.call(["adb", "start-server"], cwd="/run")]
+    adb = AdbDevice()
     assert adb.coordinate_system == CoordinateSystem.HDMI_720P
 
 

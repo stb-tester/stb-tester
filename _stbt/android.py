@@ -180,14 +180,17 @@ class AdbDevice():
             "android", "coordinate_system", default=CoordinateSystem.HDMI_720P,
             type_=CoordinateSystem)
 
-        if not (self.adb_server or
-                os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
-                os.environ.get("ADB_SERVER_SOCKET")):
+        if not self._is_remote_server():
             self._setup_adb_key()
-            subprocess.check_call([self.adb_binary, "start-server"], cwd="/run")
 
         if not lazy_connect and self.tcpip:
             self._connect()
+
+    def _is_remote_server(self):
+        return bool(
+            self.adb_server or
+            os.environ.get("ANDROID_ADB_SERVER_ADDRESS") or
+            os.environ.get("ADB_SERVER_SOCKET"))
 
     def _setup_adb_key(self):
         if os.path.exists(os.path.join(os.environ["HOME"], ".android/adbkey")):
@@ -396,6 +399,12 @@ class AdbDevice():
         # hang indefinitely "waiting for device".
         if timeout is None:
             timeout = 60
+
+        if not self._is_remote_server():
+            # On the Stb-tester Node each test is run in a separate directory.
+            # We don't want adb server to hold the current test-run directory
+            # open, so that it won't be killed by the result upload process.
+            subprocess.check_call([self.adb_binary, "start-server"], cwd="/run")
 
         devices_output = self.devices()
         devices = _parse_devices(devices_output)
