@@ -263,8 +263,8 @@ unicode_test() {
 check_unicode_error() {
     local scenario=$1 output=$2
 
-    case "$python_version,$scenario" in
-        *,raise-unicode) cat <<-EOF ;;
+    case "$scenario" in
+        raise-unicode) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: RuntimeError: Röthlisberger
 		Traceback (most recent call last):
@@ -272,7 +272,7 @@ check_unicode_error() {
 		    raise RuntimeError(u"Röthlisberger".*)
 		RuntimeError: Röthlisberger
 		EOF
-        3,raise-bytes) cat <<-EOF ;;
+        raise-bytes) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: RuntimeError: b'R.xc3.xb6thlisberger'
 		Traceback (most recent call last):
@@ -281,7 +281,7 @@ check_unicode_error() {
 		RuntimeError: b'R.xc3.xb6thlisberger'
 		EOF
         # It looks like "RuntimeError: �" but I can't get grep to match it:
-        *,raise-non-utf8-bytes) cat <<-EOF ;;
+        raise-non-utf8-bytes) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: RuntimeError:
 		Traceback (most recent call last):
@@ -289,7 +289,7 @@ check_unicode_error() {
 		    raise RuntimeError(b".xfe")
 		RuntimeError:
 		EOF
-        *,assert-unicode) cat <<-EOF ;;
+        assert-unicode) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: Röthlisberger
 		Traceback (most recent call last):
@@ -297,7 +297,7 @@ check_unicode_error() {
 		    assert False, u"Röthlisberger".*
 		AssertionError: Röthlisberger
 		EOF
-        3,assert-bytes) cat <<-EOF ;;
+        assert-bytes) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: b'R.xc3.xb6thlisberger'
 		Traceback (most recent call last):
@@ -305,7 +305,7 @@ check_unicode_error() {
 		    assert False, u"Röthlisberger".encode("utf-8")
 		AssertionError: b'R.xc3.xb6thlisberger'
 		EOF
-        *,assert-without-message) cat <<-EOF ;;
+        assert-without-message) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: assert u"Röthlisberger" is None
 		Traceback (most recent call last):

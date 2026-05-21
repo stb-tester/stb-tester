@@ -10,7 +10,6 @@ jobs:
   make_check-pythonpackage:
     runs-on: ubuntu-22.04
     env:
-      python_version: 3
       LANG: C.UTF-8
       SHELL: /bin/bash
       TERM: xterm

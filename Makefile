@@ -11,8 +11,7 @@ datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 platform?=x86_64
-python_version?=3
-pythondir?=$(prefix)/lib/python$(python_version)/site-packages
+pythondir?=$(prefix)/lib/python3/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Enable building/installing man page
@@ -163,7 +162,7 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_PYLIB_FILES) stbt-control-relay
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt-control-relay/_stbt
 	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
-	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python3,' \
 	    stbt_control_relay.py \
 	    > $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
 	chmod 0755 $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
@@ -193,7 +192,7 @@ PYTHON_FILES := \
 
 check: check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
-	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
+	PYTHONPATH=$$PWD:/usr/lib/python3/dist-packages/cec \
 	$(PYTEST) $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v -e __init__.py -e ^extra/)
@@ -212,7 +211,7 @@ check-pythonpackage:
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python3/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh | \
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
