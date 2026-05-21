@@ -264,7 +264,7 @@ check_unicode_error() {
     local scenario=$1 output=$2
 
     case "$python_version,$scenario" in
-        *,raise-unicode|2.7,raise-bytes) cat <<-EOF ;;
+        *,raise-unicode) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: RuntimeError: Röthlisberger
 		Traceback (most recent call last):
@@ -289,7 +289,7 @@ check_unicode_error() {
 		    raise RuntimeError(b".xfe")
 		RuntimeError:
 		EOF
-        *,assert-unicode|2.7,assert-bytes) cat <<-EOF ;;
+        *,assert-unicode) cat <<-EOF ;;
 		Saved screenshot to 'screenshot.png'.
 		FAIL: test.py: AssertionError: Röthlisberger
 		Traceback (most recent call last):
