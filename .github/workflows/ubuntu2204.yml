@@ -9,17 +9,31 @@ on:
 jobs:
   make_check:
     runs-on: ubuntu-latest
-    container:
-      image: stbtester/ci:ubuntu2204
-      env:
-        LANG: en_GB.UTF-8
-        SHELL: /bin/bash
-        TERM: xterm
     steps:
     - uses: actions/checkout@v3
-    - run: git config --global --add safe.directory /__w/stb-tester/stb-tester
-    - run: tesseract --version
-    - run: make check-pylint
-    - run: pyright --version && make check-pyright
-    - run: make check-pytest
-    - run: make check-integrationtests
+    - run: make ci-docker-images
+    - name: Create and start CI container
+      run: |
+        docker container create \
+          --name stb-tester-ci \
+          --volume ${{ github.workspace }}:/project \
+          --workdir /project \
+          --tty \
+          --env LANG=en_GB.UTF-8 \
+          --env SHELL=/bin/bash \
+          --env TERM=xterm \
+          stbtester/ci:ubuntu2204 \
+          cat \
+        && docker container start stb-tester-ci
+    - run: docker container exec stb-tester-ci git config --global --add safe.directory /project
+    - run: docker container exec stb-tester-ci tesseract --version
+    - run: docker container exec stb-tester-ci make check-pylint
+    - run: docker container exec stb-tester-ci pyright --version
+    - run: docker container exec stb-tester-ci make check-pyright
+    - run: docker container exec stb-tester-ci make check-pytest
+    - run: docker container exec stb-tester-ci make check-integrationtests
+    - name: Stop and remove CI container
+      run: |
+        docker container stop stb-tester-ci \
+        && docker container rm stb-tester-ci
+      if: always()
