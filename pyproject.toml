@@ -15,10 +15,14 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "astroid==2.11.6",
-    "attrs==21.2.0",
-    "opencv-python-headless~=4.5",
-    "pylint==2.14.3",
+    "astroid",
+    "attrs",
+    "lmdb",
+    "numpy",
+    "opencv-python-headless",
+    "pylint<2.13",
+    "PyGObject<3.51",  # <3.51 because of https://pypi.org/project/PyGObject/3.51.0.dev0/
+    "xxhash",
 ]
 
 [project.urls]
@@ -26,13 +30,45 @@ dependencies = [
 
 [project.optional-dependencies]
 ocr = [
-    "lxml==4.8.0",
+    "lxml",
+]
+aten_pe6108g = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",  # Required due to a bug in pysnmp's packaging, same below
+]
+apc7xxx = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",
+]
+aviosys_8800_pro = [
+    "pyserial",
 ]
 debug = [
-    "Jinja2==3.0.3",
+    "Jinja2",
+    "IPython<8",
+    "markupsafe"
 ]
 keyboard = [
-    "networkx==2.4",
+    "networkx",
+]
+roku = [
+    "requests",
+]
+
+[dependency-groups]
+deps = [
+    "deptry",
+]
+type = [
+    "pyright[nodejs]",
+]
+lint = [
+    "pycodestyle",
+    "pytest",
+]
+test = [
+    "pytest",
+    "responses",
 ]
 
 [build-system]
@@ -211,4 +247,42 @@ ignore = [
     "tests/test_ocr.py",
     "tests/test_stbt_debug.py",
     "tests/test_transition.py",
+]
+
+[tool.deptry]
+known_first_party = [
+    "stbt_core",
+    "_stbt",
+]
+exclude = [
+    "extra/nbstripout.py",
+    "tests/validate-ocr.py",
+]
+
+[tool.deptry.package_module_name_map]
+attrs = "attr"
+IPython = "IPython"
+PyGObject = "gi"
+pyserial = "serial"
+opencv-python-headless = "cv2"
+
+[tool.deptry.per_rule_ignores]
+# DEP001: imported but not declared as a dependency
+DEP001 = [
+    # cec is provide only by `python3-cec` in Ubuntu, so it's a dependency listed in this file.
+    "cec",
+    # "numba" is only used in a performance test of `sqdiff.py`
+    "numba",
+]
+# DEP002: declared as a dependency but not imported
+DEP002 = [
+    # "pyasn1" is a dependency of `pysnmp`, which has a bug in its packaging that requires us to explicitly depend on it.
+    "pyasn1",
+]
+# DEP004: declared as a dev dependency but imported in production code
+# These *are* dev dependencies, but the tests they are used for are in the
+# production modules.
+DEP004 = [
+    "pytest",
+    "responses",
 ]

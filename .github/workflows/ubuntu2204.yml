@@ -26,6 +26,7 @@ jobs:
           cat \
         && docker container start stb-tester-ci
     - run: docker container exec stb-tester-ci git config --global --add safe.directory /project
+    - run: docker container exec stb-tester-ci pip install -r requirements.txt
     - run: docker container exec stb-tester-ci tesseract --version
     - run: docker container exec stb-tester-ci make check-pylint
     - run: docker container exec stb-tester-ci pyright --version
