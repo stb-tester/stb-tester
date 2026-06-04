@@ -16,7 +16,7 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "astroid==4.0.4",
-    "opencv-python~=4.10",
+    "opencv-python-headless~=4.10",
     "pylint==4.0.5",
 ]
 
