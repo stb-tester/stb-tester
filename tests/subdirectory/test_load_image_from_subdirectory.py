@@ -13,8 +13,13 @@ def test_that_load_image_looks_in_callers_directory(test_pack_root):  # pylint:d
     f = stbt.load_image("videotestsrc-redblue.png")
     assert numpy.array_equal(
         f,
-        cv2.imread(os.path.join(os.path.dirname(__file__),
-                                "../videotestsrc-redblue-flipped.png")))
+        cv2.imread(  # pyright:ignore[reportArgumentType]
+            os.path.join(
+                os.path.dirname(__file__),
+                "../videotestsrc-redblue-flipped.png"
+            )
+        )
+    )
     assert f.filename == "videotestsrc-redblue.png"
     assert f.relative_filename == "subdirectory/videotestsrc-redblue.png"
 

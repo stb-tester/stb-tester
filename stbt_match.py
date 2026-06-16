@@ -70,7 +70,8 @@ def main():
     with _stbt.logging.scoped_debug_level(2 if args.verbose else 1):
         match_found = False
         for result in stbt.match_all(
-                args.reference_file, frame=source_image,
+                args.reference_file,
+                frame=source_image,  # pyright:ignore[reportArgumentType]
                 match_parameters=stbt.MatchParameters(**mp)):
             print("%s: %s" % (
                 "Match found" if result else "No match found. Closest match",
