@@ -31,6 +31,4 @@ else
     echo "warning: pycodestyle not installed; skipping pycodestyle and only running pylint" >&2
 fi
 
-$PYLINT --version
-
 $PYLINT "$@"
