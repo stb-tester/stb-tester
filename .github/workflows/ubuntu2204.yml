@@ -29,7 +29,6 @@ jobs:
     - run: docker container exec stb-tester-ci pip install -r requirements.txt
     - run: docker container exec stb-tester-ci tesseract --version
     - run: docker container exec stb-tester-ci make check-pylint
-    - run: docker container exec stb-tester-ci pyright --version
     - run: docker container exec stb-tester-ci make check-pyright
     - run: docker container exec stb-tester-ci make check-pytest
     - run: docker container exec stb-tester-ci make check-integrationtests
