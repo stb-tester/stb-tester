@@ -148,7 +148,7 @@ def write_video(g):
     Usage: write_video(gradient_wipe())"""
     import cv2
 
-    vw = cv2.VideoWriter("test.avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'),
+    vw = cv2.VideoWriter("test.avi", cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'),
                          30, (1280, 720))
     for frame in g:
         vw.write(frame)
