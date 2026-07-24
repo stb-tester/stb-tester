@@ -21,6 +21,10 @@ Unreleased
   which we target. This includes the `x11` remote type. If you were using
   these tools please [raise an issue] on GitHub.
 
+* We no longer build or publish DEB (Debian/Ubuntu) packages. Users are encouraged to
+  download or build the Python package directly, using the CI Dockerfile as reference
+  for system dependencies.
+
 [#805]: https://github.com/stb-tester/stb-tester/pull/805
 [raise an issue]: https://github.com/stb-tester/stb-tester/issues/new
 

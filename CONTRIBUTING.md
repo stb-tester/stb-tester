@@ -51,14 +51,6 @@ Here are a few guidelines to keep in mind when submitting a pull request:
     * Add the dependencies to the Dockerfile used to run CI at
       `.github/workflows/ubuntu2204.dockerfile`
 
-    * Add the dependencies to the Ubuntu package in `extra/debian/control`.
-      Note that you may need to list the new dependency under "Build-Depends"
-      (if it's needed to build stb-tester or to run the self-tests) *and*
-      under "Depends" (if it's needed at run-time).
-
-    * If you really want to do a thorough job, test the new deb/rpm packages
-      by following the instructions in [MAINTAINERS.md].
-
 Finally, please be patient with us if the review process takes a while. We
 really do appreciate your contribution.
 

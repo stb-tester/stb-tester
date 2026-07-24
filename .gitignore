@@ -10,14 +10,10 @@
 .venv
 __pycache__
 _stbt/libstbt.*.so
-debian-packages
 docs/stbt.1
 dist/
 etc/stbt.conf
-extra/debian/changelog
-extra/stb-tester*.debian.tar.xz
 stb-tester-*.tar.gz
-stb-tester_*.deb
 stbt-control-relay
 stbt-controlc
 stbt_core.egg-info/
