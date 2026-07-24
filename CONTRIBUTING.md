@@ -28,13 +28,9 @@ Here are a few guidelines to keep in mind when submitting a pull request:
 
 * Ensure that `make check` passes.
 
-    * We use the [Travis CI] service to automatically run `make check` on all
-      pull requests.
+    * We use GitHub Actions to automatically run `make check` on all  pull requests.
 
-      If you would like Travis to test your branches on your own fork of
-      stb-tester before you raise a pull request, follow steps 1 and 2 of the
-      [Travis set-up instructions], and after you push commits to your fork
-      you'll see the Travis results in the [GitHub branches view].
+    * These will work "for free" on your fork of the repository.
 
 * New features must be accompanied by self-tests.
 
@@ -52,6 +48,9 @@ Here are a few guidelines to keep in mind when submitting a pull request:
     * The dependencies should be available in the Ubuntu repositories for all
       [Ubuntu current releases].
 
+    * Add the dependencies to the Dockerfile used to run CI at
+      `.github/workflows/ubuntu2204.dockerfile`
+
     * Add the dependencies to the Ubuntu package in `extra/debian/control`.
       Note that you may need to list the new dependency under "Build-Depends"
       (if it's needed to build stb-tester or to run the self-tests) *and*
@@ -60,17 +59,12 @@ Here are a few guidelines to keep in mind when submitting a pull request:
     * If you really want to do a thorough job, test the new deb/rpm packages
       by following the instructions in [MAINTAINERS.md].
 
-    * You'll also need to list the new dependencies in `.travis.yml`, if they
-      are required by any self-tests (and if they aren't: Why not?).
-
 Finally, please be patient with us if the review process takes a while. We
 really do appreciate your contribution.
 
 
 [TODO lists]: https://github.com/blog/1375%0A-task-lists-in-gfm-issues-pulls-comments
 [pytest]: https://pytest.org/
-[Travis CI]: https://travis-ci.org/
-[Travis set-up instructions]: http://docs.travis-ci.com/user/getting-started/
 [GitHub branches view]: https://github.com/stb-tester/stb-tester/branches
 [Ubuntu current releases]: https://wiki.ubuntu.com/Releases#Current
 [MAINTAINERS.md]: https://github.com/stb-tester/stb-tester/blob/master/MAINTAINERS.md
