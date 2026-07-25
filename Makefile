@@ -313,52 +313,8 @@ pypi-publish:
 	python3 setup.py sdist
 	twine upload dist/*
 
-### Debian Packaging #########################################################
-
-ubuntu_releases ?= bionic
-DPKG_OPTS?=
-debian_base_release=1
-debian_architecture=$(shell dpkg --print-architecture 2>/dev/null)
-DPUT_HOST?=ppa:stb-tester/stb-tester
-
-# In the following rules, "%" and "$*" stand for the release number: "1" when
-# building a debian unstable package, or "1~trusty" or "1~utopic" (etc) when
-# building an ubuntu package.
-
-# deb: stb-tester_22-1_amd64.deb
-deb: stb-tester_$(VERSION)-$(debian_base_release)_$(debian_architecture).deb
-
-# Build debian source packages for debian unstable and all $(ubuntu_releases).
-debsrc: \
-  debian-packages/stb-tester_$(VERSION)-$(debian_base_release).dsc \
-  $(ubuntu_releases:%=debian-packages/stb-tester_$(VERSION)-$(debian_base_release)~%.dsc)
-
-# Publish all $(ubuntu_releases) source packages to stb-tester PPA
-ppa-publish: $(ubuntu_releases:%=ppa-publish-$(debian_base_release)~%)
-
-ppa-publish-%: debian-packages/stb-tester_$(VERSION)-%.dsc
-	dput $(DPUT_HOST) \
-	    debian-packages/stb-tester_$(VERSION)-$*_source.changes
-
-# Build debian source package
-debian-packages/stb-tester_$(VERSION)-%.dsc: \
-  stb-tester-$(VERSION).tar.gz extra/debian/changelog.in
-	extra/debian/build-source-package.sh $(VERSION) $*
-
-# Build debian binary package from source package
-# stb-tester_22-1_amd64.deb: debian-packages/stb-tester_22-1.dsc
-stb-tester_$(VERSION)-%_$(debian_architecture).deb: \
-  debian-packages/stb-tester_$(VERSION)-%.dsc
-	tmpdir=$$(mktemp -dt stb-tester-deb-build.XXXXXX) && \
-	dpkg-source -x $< $$tmpdir/source && \
-	(cd "$$tmpdir/source" && \
-	 DEB_BUILD_OPTIONS=nocheck \
-	 debuild -rfakeroot -b $(DPKG_OPTS)) && \
-	mv "$$tmpdir"/*.deb . && \
-	rm -rf "$$tmpdir"
-
-.PHONY: all clean deb dist doc install install-core uninstall
+.PHONY: all clean dist doc install install-core uninstall
 .PHONY: check check-integrationtests
 .PHONY: check-pytest check-pylint install-for-test
-.PHONY: ppa-publish pypi-publish
+.PHONY: pypi-publish
 .PHONY: FORCE TAGS
