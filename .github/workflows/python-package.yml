@@ -17,16 +17,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: install & test
       run: |
-        # We need libgirepository1.0-dev to install PyGObject, as we don't have a wheel available.
-        # In the venv, we install our package, which doesn't have pytest as a runtime dependency,
-        # so we install it separately.
-        # The source package files are then removed to prove that we are testing the installed
-        # package, not the source files.
-        sudo apt-get update &&
-        sudo apt-get install libgirepository1.0-dev &&
         python3 -m venv build_env &&
         source build_env/bin/activate &&
         pip3 install pytest &&
-        pip3 install . &&
+        pip3 install .[ide] &&
         rm -rf stbt_core _stbt &&
         make check-pythonpackage PYTEST=pytest
