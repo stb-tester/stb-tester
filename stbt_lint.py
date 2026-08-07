@@ -30,6 +30,9 @@
 * E7009: FrameObjects are immutable, so \"refresh()\" doesn't modify the
   instance you call it on; it returns a new instance. For example,
   instead of "page.refresh()" you need to use "page = page.refresh()".
+* E7010: FrameObject properties must process a single frame; functions
+  like "stbt.wait_for_match" retrieve additional frames from the device-
+  under-test.
 
 """
 
