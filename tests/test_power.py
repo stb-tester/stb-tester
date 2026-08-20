@@ -32,8 +32,8 @@ def mock_data(int_value):
 @contextmanager
 def mock_command_gen():
     """Perform mocks and return a mocked CommandGenerator instance."""
-    with patch('time.sleep'),\
-            patch('pysnmp.entity.rfc3413.oneliner.cmdgen.UdpTransportTarget'),\
+    with patch('time.sleep'), \
+            patch('pysnmp.entity.rfc3413.oneliner.cmdgen.UdpTransportTarget'), \
             patch('pysnmp.entity.rfc3413.oneliner.cmdgen.CommandGenerator')\
             as mocked_command_gen:
         yield mocked_command_gen.return_value

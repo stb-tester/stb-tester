@@ -1,0 +1,72 @@
+[project]
+name = "stbt_core"
+version = "34.12.0"
+authors = [
+    { name = "Stb-tester.com Ltd.", email = "support@stb-tester.com" },
+]
+description = "Automated GUI testing for Set-Top Boxes"
+readme = "docs/package-readme.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Testing",
+]
+requires-python = ">=3.10"
+dependencies = [
+    # Customers of stb-tester install this variant for lint, type-checking and
+    # autocompletion support in their IDE. These are precise pins to match the
+    # run-time environment on the Stb-tester Node.
+    "astroid==2.11.6",
+    "attrs==21.2.0",
+    "opencv-python-headless~=4.5",
+    "pylint==2.14.3",
+]
+
+[project.urls]
+"Home Page" = "https://stb-tester.com"
+
+[project.optional-dependencies]
+ocr = [
+    "lxml",
+]
+aten_pe6108g = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",  # Required due to a bug in pysnmp's packaging, same below
+]
+apc7xxx = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",
+]
+aviosys_8800_pro = [
+    "pyserial",
+]
+debug = [
+    "Jinja2",
+    "IPython<8",
+    "markupsafe"
+]
+keyboard = [
+    "networkx",
+]
+roku = [
+    "requests",
+]
+
+[build-system]
+requires = [
+    "setuptools",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = [
+    "stbt_core",
+    "_stbt",
+]
+
+[tool.setuptools.package-data]
+_stbt = [
+    "stbt.conf",
+]

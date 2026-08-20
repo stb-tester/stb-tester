@@ -1,7 +1,7 @@
 # Run with ./run-tests.sh
 
 _pytest() {
-    PYTHONPATH=$srcdir:$PYTHONPATH pytest-3 -p stbt_run "$@"
+    PYTHONPATH=$srcdir:$PYTHONPATH python3 -m pytest -p stbt_run "$@"
 }
 
 test_pytest() {

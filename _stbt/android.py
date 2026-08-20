@@ -921,8 +921,11 @@ def _resize(img, coordinate_system):
             w_new = int(w // ratio)
             img = cv2.resize(img, (w_new, 720))
             left = (1280 - w_new) // 2
-            img = cv2.copyMakeBorder(img, 0, 0, left, 1280 - w_new - left,
-                                     cv2.BORDER_CONSTANT, (0, 0, 0))
+            img = cv2.copyMakeBorder(  # pyright:ignore[reportCallIssue]
+                img, 0, 0, left, 1280 - w_new - left,
+                cv2.BORDER_CONSTANT,
+                (0, 0, 0),  # pyright:ignore[reportArgumentType]
+            )
     elif coordinate_system == CoordinateSystem.CAMERA_720P:
         # Resize to 720p landscape for compatibility with screenshots from
         # `stbt.get_frame` with the Stb-tester CAMERA.

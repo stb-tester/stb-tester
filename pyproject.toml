@@ -1,6 +1,101 @@
+[project]
+name = "stbt_core"
+version = "34.12.0"
+authors = [
+    { name = "Stb-tester.com Ltd.", email = "support@stb-tester.com" },
+]
+description = "Automated GUI testing for Set-Top Boxes"
+readme = "docs/package-readme.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Testing",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "attrs",
+    "lmdb",
+    "numpy",
+    "opencv-python-headless",
+    "PyGObject<3.51",  # <3.51 because of https://pypi.org/project/PyGObject/3.51.0.dev0/
+    "xxhash",
+]
+
+[project.urls]
+"Home Page" = "https://stb-tester.com"
+
+[project.optional-dependencies]
+ocr = [
+    "lxml",
+]
+aten_pe6108g = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",  # Required due to a bug in pysnmp's packaging, same below
+]
+apc7xxx = [
+    "pysnmp<5",
+    "pyasn1<0.6.1",
+]
+aviosys_8800_pro = [
+    "pyserial",
+]
+debug = [
+    "Jinja2",
+    "IPython<8",
+    "markupsafe"
+]
+keyboard = [
+    "networkx",
+]
+roku = [
+    "requests",
+]
+
+[dependency-groups]
+deps = [
+    "deptry",
+]
+type = [
+    "pyright[nodejs]",
+]
+lint = [
+    "pycodestyle",
+    "pylint",
+    "pytest",
+]
+test = [
+    "pytest",
+    "responses",
+]
+
+[build-system]
+requires = [
+    "setuptools",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = [
+    "stbt_core",
+    "_stbt",
+]
+
+[tool.setuptools.package-data]
+_stbt = [
+    "stbt.conf",
+]
+
+[tool.setuptools]
+ext-modules = [
+    { name = "_stbt._libstbt", sources = ["_stbt/sqdiff.c"] },
+]
+
 [tool.pylint.master]
 persistent = false
 extension-pkg-whitelist = [
+    "_stbt._libstbt",
     "cv2",
     "lxml",
     "numpy",
@@ -119,6 +214,7 @@ exclude = [
     "**/__pycache__",
     "**/.*",
     "extra/nbstripout.py",
+    "stb-tester-ide/",
     "tests/test-install",
     "tests/validate-ocr.py",
 ]
@@ -151,4 +247,42 @@ ignore = [
     "tests/test_ocr.py",
     "tests/test_stbt_debug.py",
     "tests/test_transition.py",
+]
+
+[tool.deptry]
+known_first_party = [
+    "stbt_core",
+    "_stbt",
+]
+exclude = [
+    "extra/nbstripout.py",
+    "tests/validate-ocr.py",
+]
+
+[tool.deptry.package_module_name_map]
+attrs = "attr"
+IPython = "IPython"
+PyGObject = "gi"
+pyserial = "serial"
+opencv-python-headless = "cv2"
+
+[tool.deptry.per_rule_ignores]
+# DEP001: imported but not declared as a dependency
+DEP001 = [
+    # cec is provide only by `python3-cec` in Ubuntu, so it's a dependency listed in this file.
+    "cec",
+    # "numba" is only used in a performance test of `sqdiff.py`
+    "numba",
+]
+# DEP002: declared as a dependency but not imported
+DEP002 = [
+    # "pyasn1" is a dependency of `pysnmp`, which has a bug in its packaging that requires us to explicitly depend on it.
+    "pyasn1",
+]
+# DEP004: declared as a dev dependency but imported in production code
+# These *are* dev dependencies, but the tests they are used for are in the
+# production modules.
+DEP004 = [
+    "pytest",
+    "responses",
 ]

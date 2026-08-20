@@ -1,3 +1,5 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 #include <stdint.h>
 #include <assert.h>
 
@@ -195,4 +197,112 @@ static void threshold_diff_BGR_line(
         b += 3;
         out += 1;
     }
+}
+
+/* ================= Python bindings ================= */
+
+static PyObject *
+py_sqdiff(PyObject *self, PyObject *args)
+{
+    PyObject *t_obj, *f_obj;
+    Py_buffer t, f;
+    int t_stride, f_stride, width, height, depth;
+
+    if (!PyArg_ParseTuple(
+            args, "OiOiiii",
+            &t_obj, &t_stride,
+            &f_obj, &f_stride,
+            &width, &height,
+            &depth))
+        return NULL;
+
+    if (PyObject_GetBuffer(t_obj, &t, PyBUF_STRIDES) < 0)
+        return NULL;
+
+    if (PyObject_GetBuffer(f_obj, &f, PyBUF_STRIDES) < 0)
+        return NULL;
+
+    SqdiffResult r = sqdiff(
+        t.buf, t_stride,
+        f.buf, f_stride,
+        width, height,
+        depth);
+
+    PyBuffer_Release(&t);
+    PyBuffer_Release(&f);
+
+    return Py_BuildValue("KI", r.total, r.count);
+}
+
+static PyObject *
+py_threshold_diff_bgr(PyObject *self, PyObject *args)
+{
+    Py_buffer out, a, b;
+    PyObject *out_obj, *a_obj, *b_obj;
+    int stride_a, stride_b, width, height;
+    unsigned int threshold_sq;
+
+    if (!PyArg_ParseTuple(
+            args, "OOiOiIii",
+            &out_obj,
+            &a_obj, &stride_a,
+            &b_obj, &stride_b,
+            &threshold_sq,
+            &width, &height))
+        return NULL;
+
+    if (PyObject_GetBuffer(out_obj, &out, PyBUF_WRITABLE | PyBUF_C_CONTIGUOUS) < 0)
+        return NULL;
+
+    if (PyObject_GetBuffer(a_obj, &a, PyBUF_STRIDES) < 0)
+        return NULL;
+
+    if (PyObject_GetBuffer(b_obj, &b, PyBUF_STRIDES) < 0)
+        return NULL;
+
+    threshold_diff_bgr(
+        out.buf,
+        a.buf, stride_a,
+        b.buf, stride_b,
+        threshold_sq,
+        width, height);
+
+    PyBuffer_Release(&out);
+    PyBuffer_Release(&a);
+    PyBuffer_Release(&b);
+
+    Py_RETURN_NONE;
+}
+
+/* ================= Module definition ================= */
+
+static PyMethodDef methods[] = {
+    {"sqdiff", py_sqdiff, METH_VARARGS, "Computes the square difference between template t and frame f and counts the number of pixels not masked."},
+    {"threshold_diff_bgr", py_threshold_diff_bgr, METH_VARARGS, "Calculate the square difference between two images, thresholded by a threshold_sq value. Writes the result to out."},
+    {NULL, NULL, 0, NULL}
+};
+
+PyMODINIT_FUNC
+PyInit__libstbt(void)
+{
+    static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        .m_name = "_libstbt",
+        .m_doc = NULL,
+        -1,
+        .m_size = -1,
+        .m_methods = methods,
+    };
+
+    PyObject *module = PyModule_Create(&moduledef);
+    if (!module) {
+        return NULL;
+    }
+
+    PyModule_AddIntConstant(module, "PIXEL_DEPTH_U8", PIXEL_DEPTH_U8);
+    PyModule_AddIntConstant(module, "PIXEL_DEPTH_BGR", PIXEL_DEPTH_BGR);
+    PyModule_AddIntConstant(module, "PIXEL_DEPTH_BGRx", PIXEL_DEPTH_BGRx);
+    PyModule_AddIntConstant(module, "PIXEL_DEPTH_BGRA", PIXEL_DEPTH_BGRA);
+
+    return module;
 }

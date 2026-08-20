@@ -1,59 +1,14 @@
 from __future__ import annotations
 
-import ctypes
-import os
-import platform
-
 import numpy
 from numpy.typing import NDArray
 
-
-def _find_file(path, root=os.path.dirname(os.path.abspath(__file__))):
-    return os.path.join(root, path)
-
-
-try:
-    _libstbt = ctypes.CDLL(_find_file(f"libstbt.{platform.machine()}.so"))
-except OSError:
-    raise ImportError("Failed to load libstbt.so")
-
-
-class _SqdiffResult(ctypes.Structure):
-    _fields_ = [("total", ctypes.c_uint64),
-                ("count", ctypes.c_uint32)]
-
-
-# SqdiffResult sqdiff(const uint8_t *t, uint16_t t_stride,
-#                     const uint8_t *f, uint16_t f_stride,
-#                     uint16_t width_px, uint16_t height_px,
-#                     int color_depth)
-
-_libstbt.sqdiff.restype = _SqdiffResult
-_libstbt.sqdiff.argtypes = [
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.c_uint16, ctypes.c_uint16,
-    ctypes.c_int
-]
-
-# void threshold_diff_bgr(
-#     uint8_t *out,
-#     const uint8_t* a, uint16_t line_stride_a,
-#     uint8_t* b, uint16_t line_stride_b,
-#     uint32_t threshold_sq,
-#     uint16_t width_px, uint16_t height_px
-# )
-_libstbt.threshold_diff_bgr.argtypes = [
-    ctypes.POINTER(ctypes.c_uint8),
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint16,
-    ctypes.c_uint32,
-    ctypes.c_uint16, ctypes.c_uint16
-]
-
-PIXEL_DEPTH_BGR = 1
-PIXEL_DEPTH_BGRx = 2
-PIXEL_DEPTH_BGRA = 3
+from . import _libstbt
+from ._libstbt import (
+    PIXEL_DEPTH_BGR,
+    PIXEL_DEPTH_BGRx,
+    PIXEL_DEPTH_BGRA,
+)
 
 COLOR_DEPTH_LOOKUP = {
     (3, 3): PIXEL_DEPTH_BGR,
@@ -71,14 +26,11 @@ def sqdiff(template, frame):
         raise NotImplementedError("Pixel data must be contiguous")
 
     color_depth = COLOR_DEPTH_LOOKUP[(template.strides[1], template.shape[2])]
-
-    t = template.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-    f = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-
-    out = _libstbt.sqdiff(t, template.strides[0],
-                          f, frame.strides[0],
+    out = _libstbt.sqdiff(template, template.strides[0],
+                          frame, frame.strides[0],
                           template.shape[1], template.shape[0], color_depth)
-    return out.total, out.count
+    total, count = out
+    return total, count
 
 
 def threshold_diff_bgr(
@@ -94,12 +46,7 @@ def threshold_diff_bgr(
         raise NotImplementedError("Pixel data must be contiguous")
 
     out = numpy.empty(a.shape[:2], dtype=numpy.uint8)
-
-    a_array = a.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-    b_array = b.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-    out_array = out.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-
     _libstbt.threshold_diff_bgr(
-        out_array, a_array, a.strides[0], b_array, b.strides[0],
+        out, a, a.strides[0], b, b.strides[0],
         threshold, a.shape[1], a.shape[0])
     return out

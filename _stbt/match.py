@@ -706,8 +706,8 @@ def _find_candidate_matches(
         # Exclude any positions that would overlap the previous match, then
         # keep iterating until we don't find any more matches.
         exclude = region.extend(x=-(region.width - 1), y=-(region.height - 1))
-        cv2.rectangle(
-            heatmap,
+        cv2.rectangle(  # pyright:ignore[reportCallIssue]
+            heatmap,  # pyright:ignore[reportArgumentType]
             # -1 because cv2.rectangle considers the bottom-right point to be
             # *inside* the rectangle.
             (exclude.x, exclude.y), (exclude.right - 1, exclude.bottom - 1),

@@ -20,31 +20,15 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gstreamer1.0-x \
         gzip \
         language-pack-en \
+        libcairo2-dev \
+        libgirepository1.0-dev \
         librsvg2-bin \
-        libxxhash0 \
         lirc \
         moreutils \
         parallel \
-        pep8 \
-        pylint \
         python3-cec \
-        python3-docutils \
-        python3-gi \
-        python3-ipython \
-        python3-jinja2 \
-        python3-lmdb \
-        python3-lxml \
-        python3-networkx \
-        python3-nose \
-        python3-numpy \
-        python3-opencv \
+        python3-dev \
         python3-pip \
-        python3-pysnmp4 \
-        python3-pytest \
-        python3-requests \
-        python3-responses \
-        python3-serial \
-        python3-yaml \
         ssh \
         sudo \
         tar \
@@ -55,7 +39,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         xterm && \
     apt-get clean
 
-RUN pip3 install pyright[nodejs] && pyright --version
+# Update pip to latest. The version install by the Ubuntu system package is old
+# and can't build the pycairo wheel.
+RUN pip3 install --no-cache-dir --upgrade pip
 
 RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
