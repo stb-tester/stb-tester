@@ -59,7 +59,7 @@ def test_that_get_frame_resizes_to_match_coordinate_system(
             system=coordinate_system.name.lower().replace("_", "-"),
             orientation=orientation)
     expected = cv2.imread(_find_file(expected_filename))
-    assert match(expected, out)
+    assert match(expected, out)  # pyright:ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize("orientation,device_resolution,expected_coordinates", [
@@ -88,7 +88,7 @@ def test_to_native_coordinates(
         "images/android/coordinates/%s-screenshot.png" % description))
     icon = "images/android/coordinates/%s-reference.png" % description
 
-    m = match(icon, screenshot)
+    m = match(icon, screenshot)  # pyright:ignore[reportArgumentType]
     screenshot_x, screenshot_y = _centre_point(m.region)
     native_x, native_y = _to_native_coordinates(
         screenshot_x, screenshot_y, coordinate_system,

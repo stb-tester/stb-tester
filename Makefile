@@ -10,9 +10,7 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-platform?=x86_64
-python_version?=3
-pythondir?=$(prefix)/lib/python$(python_version)/site-packages
+pythondir?=$(prefix)/lib/python3/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Enable building/installing man page
@@ -72,7 +70,7 @@ INSTALL_PYLIB_FILES = \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
     _stbt/libstbt.py \
-    _stbt/libstbt.$(platform).so \
+    _stbt/_libstbt$(shell python3-config --extension-suffix) \
     _stbt/logging.py \
     _stbt/mask.py \
     _stbt/match.py \
@@ -89,7 +87,6 @@ INSTALL_PYLIB_FILES = \
     _stbt/types.py \
     _stbt/utils.py \
     _stbt/wait.py \
-    _stbt/xxhash.py \
     stbt_core/__init__.py \
     stbt_core/pylint_plugin.py
 
@@ -163,7 +160,7 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_PYLIB_FILES) stbt-control-relay
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt-control-relay/_stbt
 	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
-	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python3,' \
 	    stbt_control_relay.py \
 	    > $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
 	chmod 0755 $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
@@ -188,12 +185,11 @@ clean:
 
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
-      | grep -v -e ^setup.py \
-                -e ^vendor/)
+      | grep -v -e ^vendor/)
 
 check: check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
-	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
+	PYTHONPATH=$$PWD:/usr/lib/python3/dist-packages/cec \
 	$(PYTEST) $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v -e __init__.py -e ^extra/)
@@ -212,7 +208,7 @@ check-pythonpackage:
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python3/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh | \
 	$(parallel) tests/run-tests.sh -i
 check-pylint: all
@@ -268,8 +264,8 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-_stbt/libstbt.$(platform).so : _stbt/sqdiff.c
-	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
+_stbt/_libstbt$(shell python3-config --extension-suffix) : _stbt/sqdiff.c
+	$(CC) $(shell python3-config --includes) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
 
 ### Documentation ############################################################
 
@@ -310,7 +306,7 @@ publish-ci-docker-images: $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built)
 
 pypi-publish:
 	rm -rf dist/
-	python3 setup.py sdist
+	python3 -m build --sdist
 	twine upload dist/*
 
 .PHONY: all clean dist doc install install-core uninstall

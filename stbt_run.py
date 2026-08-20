@@ -97,9 +97,9 @@ def pytest_sessionstart(session):
     dut = _stbt.core.new_device_under_test_from_config(args)
     session.dut = dut
     session.video = video(args, dut)
-    session.video.__enter__()
+    session.video.__enter__()  # pylint: disable=unnecessary-dunder-call
     session.imgproc_cache = imgproc_cache.setup_cache(filename=args.cache)
-    session.imgproc_cache.__enter__()
+    session.imgproc_cache.__enter__()  # pylint: disable=unnecessary-dunder-call
     dut.get_frame()  # wait until pipeline is rolling
 
 

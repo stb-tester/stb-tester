@@ -14,9 +14,9 @@ from .logging import logger
 from .types import Region
 
 try:
-    from _stbt.xxhash import Xxhash64
+    import xxhash
 except ImportError:
-    Xxhash64 = None
+    xxhash = None
 
 
 MaskTypes: TypeAlias = "str | numpy.ndarray | Mask | Region | None"
@@ -137,8 +137,8 @@ class Mask:
         if self._region is not None and not self._invert:
             return hash(self._region)
         elif self._array is not None:
-            if Xxhash64:
-                h = Xxhash64()
+            if xxhash is not None:
+                h = xxhash.xxh64()
                 h.update(numpy.ascontiguousarray(self._array).data)
                 digest = h.hexdigest()
             else:

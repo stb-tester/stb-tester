@@ -23,9 +23,10 @@ import numpy
 
 try:
     import lmdb
-    from _stbt.xxhash import Xxhash64
+    import xxhash
 except ImportError:
     lmdb = None
+    xxhash = None
 
 from _stbt.logging import ImageLogger
 from _stbt.utils import mkdir_p, named_temporary_directory, scoped_curdir
@@ -250,7 +251,7 @@ class _ArgsEncoder(json.JSONEncoder):
                 "confirm_threshold": o.confirm_threshold,
                 "erode_passes": o.erode_passes}
         elif isinstance(o, numpy.ndarray):
-            h = Xxhash64()
+            h = xxhash.xxh64()
             h.update(numpy.ascontiguousarray(o).data)
             return (o.shape, h.hexdigest())
         else:
@@ -259,7 +260,7 @@ class _ArgsEncoder(json.JSONEncoder):
 
 def _cache_hash(value):
     # type: (...) -> bytes
-    h = Xxhash64()
+    h = xxhash.xxh64()
 
     class HashWriter():
         def write(self, data):
