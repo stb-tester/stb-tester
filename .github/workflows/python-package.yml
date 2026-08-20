@@ -20,6 +20,6 @@ jobs:
         python3 -m venv build_env &&
         source build_env/bin/activate &&
         pip3 install pytest &&
-        pip3 install .[ide] &&
+        pip3 install ./stb-tester-ide &&
         rm -rf stbt_core _stbt &&
         make check-pythonpackage PYTEST=pytest
