@@ -28,8 +28,7 @@ export srcdir=$(realpath --no-symlinks "$testdir/..")
 export LANG=C.UTF-8
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
-export python_version=${python_version:=3}
-export python=python$python_version
+export python=python3
 
 testsuites=()
 testcases=()
@@ -52,7 +51,7 @@ if [[ "$test_the_installed_version" != "true" ]]; then
     { echo "run-tests.sh: error: Failed to install stbt" >&2; exit 2; }
     export PATH="$test_installation_prefix/bin:$PATH" \
            GST_PLUGIN_PATH=$test_installation_prefix/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH \
-           PYTHONPATH=$test_installation_prefix/lib/python$python_version/site-packages:$PYTHONPATH
+           PYTHONPATH=$test_installation_prefix/lib/python3/site-packages:$PYTHONPATH
 fi
 
 . $testdir/utils.sh

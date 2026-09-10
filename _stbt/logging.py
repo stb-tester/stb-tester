@@ -392,6 +392,10 @@ class ImageLogger():
                      "Match/MotionResult, or 3-tuple (region, css_class, title)"
                      "; got %r" % (r,))
 
+        # Ensure regions are in a deterministic order. Where a region is None,
+        # we sort it as though it were the whole source image.
+        _regions = sorted(_regions, key=lambda el: (el[0] or source_size))
+
         self.image_annotations[source_name] = [
             {"region": region, "title": title} for region, _, title in _regions]
 
