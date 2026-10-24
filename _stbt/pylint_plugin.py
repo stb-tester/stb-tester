@@ -14,16 +14,15 @@ import os
 import re
 import subprocess
 
-from astroid import (
-    Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
-    JoinedStr, Keyword, MANAGER, Name, Raise, Uninferable)
+from astroid import MANAGER, Uninferable
 from astroid.context import InferenceContext
+from astroid.nodes import (
+    Assert, Attribute, BinOp, Call, ClassDef, Const, Expr, FunctionDef,
+    JoinedStr, Keyword, Name, Raise)
 from pylint.checkers import BaseChecker
-from pylint.interfaces import IAstroidChecker
 
 
 class StbtChecker(BaseChecker):
-    __implements__ = IAstroidChecker
     name = 'stb-tester'
     msgs = {
         # Range 70xx reserved for custom checkers: www.logilab.org/ticket/68057
@@ -151,16 +150,20 @@ class StbtChecker(BaseChecker):
 
 def _transform_assert_false_into_raise(assertion):
     if isinstance(assertion.test, Const) and assertion.test.value is False:
-        out = Raise(lineno=assertion.lineno,
-                    col_offset=assertion.col_offset,
-                    parent=assertion.parent)
-        exc = Call(parent=out)
+        position = {
+            "lineno": assertion.lineno,
+            "col_offset": assertion.col_offset,
+            "end_lineno": assertion.end_lineno,
+            "end_col_offset": assertion.end_col_offset,
+        }
+        out = Raise(parent=assertion.parent, **position)
+        exc = Call(parent=out, **position)
         if assertion.fail:
             args = [assertion.fail]
             args[0].parent = exc
         else:
             args = []
-        exc.postinit(Name("AssertionError", parent=exc), args)
+        exc.postinit(Name("AssertionError", parent=exc, **position), args, [])
         out.postinit(exc, None)
         return out
 
@@ -208,7 +211,7 @@ def _in_property(node):
 def _get_argnames(node):
     if isinstance(node, FunctionDef):
         return node.argnames()
-    if isinstance(node, ClassDef) and node.newstyle:
+    if isinstance(node, ClassDef):
         for method in node.methods():
             if method.name == "__init__":
                 return method.argnames()[1:]
