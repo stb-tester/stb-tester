@@ -222,6 +222,7 @@ class ImageLogger():
             assert isinstance(image, numpy.ndarray)
         else:
             image = image.copy()
+        assert image is not None
         if isinstance(source_region, str):
             source_region = self.data[source_region]
             assert isinstance(source_region, (Region, type(None)))
@@ -232,7 +233,6 @@ class ImageLogger():
                     "the device under test")
             if not source_region:
                 source_region = Region(0, 0, image.shape[1], image.shape[0])
-        assert image is not None
         self.images[name] = image
         self.image_meta[name] = _ImageMeta(
             description=description,
