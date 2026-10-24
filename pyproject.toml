@@ -22,6 +22,7 @@ disable = [
     "bad-continuation",
     "bad-option-value",
     "blacklisted-name",
+    "broad-exception-raised",
     "consider-using-f-string",
     "consider-using-with",
     "cyclic-import",
@@ -55,15 +56,18 @@ disable = [
     "too-many-instance-attributes",
     "too-many-lines",
     "too-many-locals",
+    "too-many-positional-arguments",
     "too-many-public-methods",
     "too-many-return-statements",
     "too-many-statements",
     "ungrouped-imports",
     "unnecessary-lambda-assignment",
+    "use-dict-literal",
     "use-implicit-booleaness-not-comparison",
     "wrong-import-position",
 ]
 ignored-modules = [
+    "cec",
     "cv2",
 ]
 ignored-classes = [
@@ -71,6 +75,7 @@ ignored-classes = [
     "Caps",
     "cec",
     "Client",
+    "DebugGraphDetails",
     "Event",
     "Frame",
     "generator",
