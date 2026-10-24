@@ -110,7 +110,7 @@ def imshow(img, regions=None):
         for r in regions:
             cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
 
-    from IPython.core.display import Image, display
+    from IPython.display import Image, display
     if isinstance(img, str):
         display(Image(img))
     else:
