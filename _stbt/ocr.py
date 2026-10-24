@@ -458,7 +458,7 @@ def _apply_ocr_corrections(text, corrections):
         if isinstance(k, str):
             # Match plain strings at word boundaries
             text = re.sub(r"(^|\W)(" + re.escape(k) + r")(\W|$)",
-                          replace_string, text, re.UNICODE)
+                          replace_string, text)
         elif isinstance(k, PatternType):
             text = re.sub(k, replace_regex, text)
     return text
