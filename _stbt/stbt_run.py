@@ -42,15 +42,15 @@ def video(args, dut):
         except Exception as e:
             try:
                 _save_screenshot(dut, result_dir, exception=e,
-                                 save_jpg=(args.save_thumbnail != 'never'),
-                                 save_png=(args.save_screenshot != 'never'))
+                                 save_jpg=args.save_thumbnail != 'never',
+                                 save_png=args.save_screenshot != 'never')
             except Exception:  # pylint: disable=broad-except
                 pass
             raise
         else:
             _save_screenshot(dut, result_dir, exception=None,
-                             save_jpg=(args.save_thumbnail == 'always'),
-                             save_png=(args.save_screenshot == 'always'))
+                             save_jpg=args.save_thumbnail == 'always',
+                             save_png=args.save_screenshot == 'always')
 
 
 def _import_by_filename(filename_):

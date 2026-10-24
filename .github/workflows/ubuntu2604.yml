@@ -1,4 +1,4 @@
-name: ubuntu2204
+name: ubuntu2604
 
 on:
   push:
@@ -10,9 +10,8 @@ jobs:
   make_check:
     runs-on: ubuntu-latest
     container:
-      image: stbtester/ci:ubuntu2204
+      image: stbtester/ci:ubuntu2604
       env:
-        python_version: 3
         LANG: en_GB.UTF-8
         SHELL: /bin/bash
         TERM: xterm

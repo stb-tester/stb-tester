@@ -123,13 +123,13 @@ def _parse_mapping_from_docstring(s):
     code = []
     in_mapping = False
     for line in s.split("\n"):
-        if re.match(r"^            {", line):
+        if re.match(r"^\s+{$", line):
             in_mapping = True
         if in_mapping:
             code.append(line)
-        if re.match(r"^            }", line):
+        if re.match(r"^\s+}$", line):
             break
-    return eval("\n".join(code))  # pylint:disable=eval-used
+    return eval("\n".join(code).strip())  # pylint:disable=eval-used
 
 
 def _letters_to_keys(keys_to_letters):

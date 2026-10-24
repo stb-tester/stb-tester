@@ -458,7 +458,7 @@ def _apply_ocr_corrections(text, corrections):
         if isinstance(k, str):
             # Match plain strings at word boundaries
             text = re.sub(r"(^|\W)(" + re.escape(k) + r")(\W|$)",
-                          replace_string, text, re.UNICODE)
+                          replace_string, text)
         elif isinstance(k, PatternType):
             text = re.sub(k, replace_regex, text)
     return text
@@ -1056,7 +1056,7 @@ def _find_tessdata_dir(tessdata_suffix):
         shutil.which('tesseract') + '/../../share/')
     for suffix in [
             '/tessdata', '/tesseract-ocr/tessdata', '/tesseract/tessdata',
-            '/tesseract-ocr/4.00/tessdata']:
+            '/tesseract-ocr/5/tessdata', '/tesseract-ocr/4.00/tessdata']:
         if os.path.exists(tess_prefix_share + suffix):
             return tess_prefix_share + suffix
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
