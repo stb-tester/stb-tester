@@ -72,9 +72,11 @@ run() {
     fi
     printf "$(bold $1...) "
     echo "Starting $1" > "$log"
+    set -m
     ( cd "$scratchdir" && $1 ) > "$log" 2>&1 &
     wait $!
     local status=$?
+    set +m
     case $status in
         0) echo "$(green OK)";;
         77) status=0; echo "$(yellow SKIPPED)"; cat "$scratchdir/log";;
