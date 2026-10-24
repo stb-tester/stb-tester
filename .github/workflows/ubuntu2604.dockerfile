@@ -27,11 +27,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         parallel \
         pycodestyle \
         pylint \
-        python3-cec \
         python3-docutils \
         python3-gi \
         python3-ipython \
         python3-jinja2 \
+        python3-libcec \
         python3-lmdb \
         python3-lxml \
         python3-networkx \
