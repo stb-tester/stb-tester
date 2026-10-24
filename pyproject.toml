@@ -115,6 +115,11 @@ doctest_optionflags = [
 ]
 log_level = "debug"
 xfail_strict = true
+filterwarnings = [
+    "error::DeprecationWarning",
+    # From inside gi's own GLib overrides, not ours to fix.
+    "ignore:GLib.unix_signal_add_full is deprecated:DeprecationWarning",
+]
 
 [tool.pyright]
 pythonVersion = "3.10"
