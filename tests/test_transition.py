@@ -154,9 +154,11 @@ def test_press_and_wait_with_mask_or_region(mask, min_size, expected,
 
 def test_press_and_wait_region_parameter():
     # region is a synonym of mask, for backwards compatibility
-    transition = stbt.press_and_wait(
-        "ball", region=stbt.Region(x=640, y=0, right=1280, bottom=720),
-        timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
+    with pytest.warns(DeprecationWarning,
+                      match="'region' parameter is deprecated"):
+        transition = stbt.press_and_wait(
+            "ball", region=stbt.Region(x=640, y=0, right=1280, bottom=720),
+            timeout_secs=0.2, stable_secs=0.1, _dut=FakeDeviceUnderTest())
     print(transition)
     assert transition.status == stbt.TransitionStatus.START_TIMEOUT
 
