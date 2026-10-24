@@ -291,7 +291,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu2204
+CI_DOCKER_IMAGES = ubuntu2604
 
 $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built): .github/workflows/.%.built: .github/workflows/%.dockerfile
 	docker build -t stbtester/ci:$* -f .github/workflows/$*.dockerfile \

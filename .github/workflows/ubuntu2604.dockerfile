@@ -1,6 +1,6 @@
 # If you change this dockerfile, run `make publish-ci-docker-images`.
 
-FROM ubuntu:22.04
+FROM ubuntu:26.04
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
