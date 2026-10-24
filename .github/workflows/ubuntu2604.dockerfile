@@ -61,7 +61,8 @@ RUN mkdir -p $HOME/.parallel && \
     touch $HOME/.parallel/will-cite  # Silence citation warning
 
 # Tesseract data files for Legacy *and* LSTM engines.
-ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
+ADD --chmod=644 \
+    https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/eng.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/pol.traineddata \
