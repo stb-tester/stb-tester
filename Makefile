@@ -190,7 +190,7 @@ PYTHON_FILES := \
       | grep -v -e ^setup.py \
                 -e ^vendor/)
 
-check: check-pylint check-pyright check-pytest check-integrationtests
+check: check-pycodestyle check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
 	PYTHONPATH=$$PWD:/usr/lib/python3/dist-packages/cec \
 	$(PYTEST) $(PYTEST_OPTS) \
@@ -214,8 +214,25 @@ check-integrationtests: install-for-test
 	       PYTHONPATH="$$PWD/tests/test-install/lib/python3/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh | \
 	$(parallel) tests/run-tests.sh -i
+# E124: closing bracket does not match visual indentation
+# E203: whitespace before ':'
+# E227: missing whitespace around bitwise or shift operator
+# E241: multiple spaces after ',' (because pylint does it)
+# E301: expected 1 blank line (because pylint does it)
+# E305: expected 2 blank lines after class or function definition (pylint)
+# E402: module level import not at top of file (because pylint does it)
+# E501: line too long > 80 chars (because pylint does it)
+# E711: comparison to None should be 'if cond is not None:' (because I need to do that in unit tests)
+# E721: do not compare types, use 'isinstance()' (because pylint does it)
+# E722: do not use bare except (because pylint does it)
+# E731: do not assign a lambda expression, use a def
+# E741: do not use variables named ‘l’, ‘O’, or ‘I’
+# W291: trailing whitespace (because pylint does it)
+# W504: line break after binary operator
+check-pycodestyle:
+	pycodestyle --ignore=E124,E203,E227,E241,E301,E305,E402,E501,E711,E721,E722,E731,E741,W291,W504 $(PYTHON_FILES)
 check-pylint: all
-	PYTHONPATH=$$PWD PYLINT="$(PYLINT)" extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD $(PYLINT) $(PYTHON_FILES)
 check-pyright: all
 	PYTHONPATH=$$PWD pyright
 
@@ -314,6 +331,6 @@ pypi-publish:
 
 .PHONY: all clean dist doc install install-core uninstall
 .PHONY: check check-integrationtests
-.PHONY: check-pytest check-pylint install-for-test
+.PHONY: check-pytest check-pycodestyle check-pylint install-for-test
 .PHONY: pypi-publish
 .PHONY: FORCE TAGS
