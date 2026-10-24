@@ -66,3 +66,20 @@ ADD https://github.com/tesseract-ocr/tessdata/raw/590567f/deu.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/osd.traineddata \
     https://github.com/tesseract-ocr/tessdata/raw/590567f/pol.traineddata \
     /usr/share/tesseract-ocr/5/tessdata/
+
+# 26.04's python3-libcec is unusable: it installs cec.py into a directory that
+# isn't on sys.path, and it's missing _pycec.so (Debian bug #1134169). It was
+# fixed in libcec 8.1.6+dfsg2-1, which is too late for 26.04 but is in 27.04,
+# and those packages install on 26.04 without dragging in a newer libc or
+# python.
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    printf 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: tenacious\nComponents: universe\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
+        > /etc/apt/sources.list.d/tenacious.sources && \
+    printf 'Package: *\nPin: release n=tenacious\nPin-Priority: -10\n\nPackage: libcec8 python3-libcec\nPin: release n=tenacious\nPin-Priority: 500\n' \
+        > /etc/apt/preferences.d/tenacious && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3-libcec && \
+    rm /etc/apt/sources.list.d/tenacious.sources /etc/apt/preferences.d/tenacious && \
+    apt-get update && \
+    apt-get clean && \
+    python3 -c "import cec"

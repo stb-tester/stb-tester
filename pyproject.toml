@@ -67,7 +67,6 @@ disable = [
     "wrong-import-position",
 ]
 ignored-modules = [
-    "cec",
     "cv2",
 ]
 ignored-classes = [
