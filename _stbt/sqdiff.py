@@ -47,7 +47,7 @@ def _random_template(size=(1280, 720)):
 
 def test_sqdiff():
     from .libstbt import sqdiff as sqdiff_c
-    f = numpy.array(range(1280 * 720 * 3), dtype=numpy.uint8)
+    f = numpy.arange(1280 * 720 * 3, dtype=numpy.uint8)
     f.shape = (720, 1280, 3)
     t = numpy.zeros((720, 1280, 3), dtype=numpy.uint8)
     tt = numpy.zeros((720, 1280, 4), dtype=numpy.uint8)

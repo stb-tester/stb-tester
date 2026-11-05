@@ -11,8 +11,7 @@ datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 platform?=x86_64
-python_version?=3
-pythondir?=$(prefix)/lib/python$(python_version)/site-packages
+pythondir?=$(prefix)/lib/python3/site-packages
 sysconfdir?=$(prefix)/etc
 
 # Enable building/installing man page
@@ -163,7 +162,7 @@ install-stbt-control-relay: $(STBT_CONTROL_RELAY_PYLIB_FILES) stbt-control-relay
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt-control-relay/_stbt
 	$(INSTALL) -m 0755 stbt-control-relay $(DESTDIR)$(bindir)/
-	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
+	sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python3,' \
 	    stbt_control_relay.py \
 	    > $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
 	chmod 0755 $(DESTDIR)$(libexecdir)/stbt-control-relay/stbt_control_relay.py
@@ -191,9 +190,9 @@ PYTHON_FILES := \
       | grep -v -e ^setup.py \
                 -e ^vendor/)
 
-check: check-pylint check-pyright check-pytest check-integrationtests
+check: check-pycodestyle check-pylint check-pyright check-pytest check-integrationtests
 check-pytest: all
-	PYTHONPATH=$$PWD:/usr/lib/python$(python_version)/dist-packages/cec \
+	PYTHONPATH=$$PWD:/usr/lib/python3/dist-packages/cec \
 	$(PYTEST) $(PYTEST_OPTS) \
 	    $$(printf "%s\n" $(PYTHON_FILES) |\
 	       grep -v -e __init__.py -e ^extra/)
@@ -212,11 +211,28 @@ check-pythonpackage:
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
-	       PYTHONPATH="$$PWD/tests/test-install/lib/python$(python_version)/site-packages:$$PYTHONPATH" && \
+	       PYTHONPATH="$$PWD/tests/test-install/lib/python3/site-packages:$$PYTHONPATH" && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh | \
 	$(parallel) tests/run-tests.sh -i
+# E124: closing bracket does not match visual indentation
+# E203: whitespace before ':'
+# E227: missing whitespace around bitwise or shift operator
+# E241: multiple spaces after ',' (because pylint does it)
+# E301: expected 1 blank line (because pylint does it)
+# E305: expected 2 blank lines after class or function definition (pylint)
+# E402: module level import not at top of file (because pylint does it)
+# E501: line too long > 80 chars (because pylint does it)
+# E711: comparison to None should be 'if cond is not None:' (because I need to do that in unit tests)
+# E721: do not compare types, use 'isinstance()' (because pylint does it)
+# E722: do not use bare except (because pylint does it)
+# E731: do not assign a lambda expression, use a def
+# E741: do not use variables named ‘l’, ‘O’, or ‘I’
+# W291: trailing whitespace (because pylint does it)
+# W504: line break after binary operator
+check-pycodestyle:
+	pycodestyle --ignore=E124,E203,E227,E241,E301,E305,E402,E501,E711,E721,E722,E731,E741,W291,W504 $(PYTHON_FILES)
 check-pylint: all
-	PYTHONPATH=$$PWD PYLINT="$(PYLINT)" extra/pylint.sh $(PYTHON_FILES)
+	PYTHONPATH=$$PWD $(PYLINT) $(PYTHON_FILES)
 check-pyright: all
 	PYTHONPATH=$$PWD pyright
 
@@ -292,7 +308,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu2204
+CI_DOCKER_IMAGES = ubuntu2604
 
 $(CI_DOCKER_IMAGES:%=.github/workflows/.%.built): .github/workflows/.%.built: .github/workflows/%.dockerfile
 	docker build -t stbtester/ci:$* -f .github/workflows/$*.dockerfile \
@@ -315,6 +331,6 @@ pypi-publish:
 
 .PHONY: all clean dist doc install install-core uninstall
 .PHONY: check check-integrationtests
-.PHONY: check-pytest check-pylint install-for-test
+.PHONY: check-pytest check-pycodestyle check-pylint install-for-test
 .PHONY: pypi-publish
 .PHONY: FORCE TAGS

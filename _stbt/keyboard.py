@@ -10,7 +10,6 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Optional, TypeAlias, TypeVar
 
-from attr import attrs, attrib
 from _stbt.frameobject import FrameObject
 from _stbt.grid import Grid
 from _stbt.imgutils import FrameT
@@ -161,7 +160,7 @@ class Keyboard():
     .. _Directed Graph: https://en.wikipedia.org/wiki/Directed_graph
     '''
 
-    @attrs(frozen=True)
+    @dataclasses.dataclass(frozen=True, order=True)
     class Key():
         """Represents a key on the on-screen keyboard.
 
@@ -173,10 +172,12 @@ class Keyboard():
         """
         # This is an immutable object so that it is hashable (it must be
         # hashable so that we can use it as a node of networkx graphs).
-        name = attrib(default=None, type=str)
-        text = attrib(default=None, type=str)
-        region = attrib(default=None, type=Region)
-        mode = attrib(default=None, type=str)
+        # It is ordered because we sort keys when we print them in error
+        # messages.
+        name: Optional[str] = None
+        text: Optional[str] = None
+        region: Optional[Region] = None
+        mode: Optional[str] = None
 
     def __init__(
         self, *, mask: MaskTypes = Region.ALL, navigate_timeout: float = 60

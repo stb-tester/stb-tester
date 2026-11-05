@@ -73,7 +73,9 @@ def test_detect_motion_region_and_mask():
     dm(mask="mask-out-left-half-720p.png")
     dm(mask=numpy.full((720, 1280), 255, dtype=numpy.uint8))
     dm(mask=r)
-    dm(region=r)
+    with pytest.warns(DeprecationWarning,
+                      match="'region' parameter is deprecated"):
+        dm(region=r)
 
     with pytest.raises(ValueError,
                        match="Cannot specify mask and region at the same time"):

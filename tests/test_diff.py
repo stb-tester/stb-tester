@@ -22,7 +22,7 @@ def test_bgrdiff():
 
 
 def test_bgrdiff_c_equivalence():
-    f = numpy.random.random_integers(0, 255, (720, 1280, 3)).astype(numpy.uint8)
+    f = numpy.random.randint(0, 256, (720, 1280, 3)).astype(numpy.uint8)
     ONES = numpy.ones((720, 1280), dtype=numpy.uint8)
     ZEROS = numpy.zeros((720, 1280), dtype=numpy.uint8)
 

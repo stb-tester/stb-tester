@@ -174,8 +174,7 @@ def memoize_iterator(additional_fields=None):
                 full_kwargs = inspect.getcallargs(f, *args, **kwargs)  # pylint:disable=deprecated-method
                 key = _cache_hash((func_key, full_kwargs))
             except NotCachable:
-                for x in f(*args, **kwargs):
-                    yield x
+                yield from f(*args, **kwargs)
                 return
 
             for i in itertools.count():

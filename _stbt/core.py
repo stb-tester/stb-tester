@@ -234,6 +234,7 @@ class DeviceUnderTest():
             self.press(key)
 
     def frames(self, timeout_secs=None):
+        end_time = None
         if timeout_secs is not None:
             end_time = self._time.time() + timeout_secs
         timestamp = None
@@ -248,7 +249,7 @@ class DeviceUnderTest():
                 max(10, timeout_secs or 0), since=timestamp)
             timestamp = frame.time
 
-            if not first and timeout_secs is not None and timestamp > end_time:
+            if not first and end_time is not None and timestamp > end_time:
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
                 return
 

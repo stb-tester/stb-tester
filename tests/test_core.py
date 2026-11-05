@@ -346,7 +346,9 @@ def test_is_screen_black_region_parameter():
     frame = stbt.load_image("videotestsrc-full-frame.png")
     region = stbt.Region(x=160, y=180, right=240, bottom=240)
     assert stbt.is_screen_black(frame, mask=region)
-    assert stbt.is_screen_black(frame, region=region)
+    with pytest.warns(DeprecationWarning,
+                      match="'region' parameter is deprecated"):
+        assert stbt.is_screen_black(frame, region=region)
 
     with pytest.raises(ValueError):
         stbt.is_screen_black(frame, mask=region, region=region)

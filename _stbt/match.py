@@ -812,9 +812,9 @@ def _match_template(
             if cv2_compat.version < [4, 4, 0]:
                 # matchTemplateMask normalises source & template image to [0,1].
                 # https://github.com/opencv/opencv/blob/3.2.0/modules/imgproc/src/templmatch.cpp#L840-L917
-                scale = max(1, numpy.count_nonzero(mask))
+                scale = max(1, int(numpy.count_nonzero(mask)))
             else:
-                scale = max(1, numpy.count_nonzero(mask)) * (255 ** 2)
+                scale = max(1, int(numpy.count_nonzero(mask))) * (255 ** 2)
         else:
             scale = template.size * (255 ** 2)
     else:

@@ -110,7 +110,7 @@ def imshow(img, regions=None):
         for r in regions:
             cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
 
-    from IPython.core.display import Image, display
+    from IPython.display import Image, display
     if isinstance(img, str):
         display(Image(img))
     else:
@@ -222,6 +222,7 @@ class ImageLogger():
             assert isinstance(image, numpy.ndarray)
         else:
             image = image.copy()
+        assert image is not None
         if isinstance(source_region, str):
             source_region = self.data[source_region]
             assert isinstance(source_region, (Region, type(None)))
@@ -232,7 +233,6 @@ class ImageLogger():
                     "the device under test")
             if not source_region:
                 source_region = Region(0, 0, image.shape[1], image.shape[0])
-        assert image is not None
         self.images[name] = image
         self.image_meta[name] = _ImageMeta(
             description=description,
@@ -391,6 +391,10 @@ class ImageLogger():
                 warn("ImageLogger._draw_annotated_image: Expected Region, "
                      "Match/MotionResult, or 3-tuple (region, css_class, title)"
                      "; got %r" % (r,))
+
+        # Ensure regions are in a deterministic order. Where a region is None,
+        # we sort it as though it were the whole source image.
+        _regions = sorted(_regions, key=lambda el: (el[0] or source_size))
 
         self.image_annotations[source_name] = [
             {"region": region, "title": title} for region, _, title in _regions]

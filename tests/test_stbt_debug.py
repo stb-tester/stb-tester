@@ -342,9 +342,11 @@ def test_motion_debug(tmp_path):
             pass
         for _ in stbt.detect_motion(frames=fake_frames(), mask="box-00000.png"):
             pass
-        for _ in stbt.detect_motion(frames=fake_frames(),
-                                    region=stbt.Region(0, 0, 320, 400)):
-            pass
+        with pytest.warns(DeprecationWarning,
+                          match="'region' parameter is deprecated"):
+            for _ in stbt.detect_motion(frames=fake_frames(),
+                                        region=stbt.Region(0, 0, 320, 400)):
+                pass
 
         stbt_debug_dir = tmp_path / "stbt-debug"
         assert stbt_debug_dir.is_dir()
@@ -480,7 +482,9 @@ def test_is_screen_black_debug(tmp_path):
         stbt.is_screen_black(f)
         stbt.is_screen_black(f, mask="videotestsrc-mask-non-black.png")
         stbt.is_screen_black(f, mask="videotestsrc-mask-no-video.png")
-        stbt.is_screen_black(f, region=stbt.Region(0, 0, 160, 120))
+        with pytest.warns(DeprecationWarning,
+                          match="'region' parameter is deprecated"):
+            stbt.is_screen_black(f, region=stbt.Region(0, 0, 160, 120))
 
         stbt_debug_dir = tmp_path / "stbt-debug"
         assert stbt_debug_dir.is_dir()

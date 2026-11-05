@@ -14,9 +14,9 @@ from _stbt.types import PDU
 if typing.TYPE_CHECKING:
     # pylint: disable=unused-import
     import configparser
-    import pysnmp.hlapi
+    import pysnmp.hlapi.v3arch
     SnmpAuth: typing.TypeAlias = (
-        pysnmp.hlapi.CommunityData | pysnmp.hlapi.UsmUserData)
+        pysnmp.hlapi.v3arch.CommunityData | pysnmp.hlapi.v3arch.UsmUserData)
     # pylint: enable=unused-import
 
 
@@ -398,7 +398,7 @@ def _snmp_config(
     expects the same keys and values as `man snmp.conf`, but snake_case rather
     than camelCase.
     """
-    from pysnmp import hlapi
+    from pysnmp.hlapi import v3arch as hlapi
 
     if defaults is None:
         defaults = {}
@@ -475,7 +475,7 @@ def _snmp_config(
 
 def test_snmp_config():
     import pytest
-    from pysnmp import hlapi
+    from pysnmp.hlapi import v3arch as hlapi
 
     with pytest.raises(KeyError):
         # address is mandatory
@@ -495,12 +495,12 @@ def test_snmp_config():
     assert c.communityName == "public"
 
     # If community is specified, version defaults to 2c:
-    assert c.mpModel == 1
+    assert c.message_processing_model == 1
 
     # But it can be overridden:
     _, c = _snmp_config({
         "address": "localhost", "community": "public", "version": "1"})
-    assert c.mpModel == 0
+    assert c.message_processing_model == 0
 
     # Version 3 takes precedence over v2c if both are username and community
     # are specified:
@@ -508,24 +508,24 @@ def test_snmp_config():
         "address": "localhost", "community": "public", "username": "stbt"})
     assert isinstance(c, hlapi.UsmUserData)
     assert c.userName == "stbt"
-    assert c.authKey is None
-    assert c.authProtocol == hlapi.usmNoAuthProtocol
-    assert c.privKey is None
-    assert c.privProtocol == hlapi.usmNoPrivProtocol
+    assert c.authentication_key is None
+    assert c.authentication_protocol == hlapi.usmNoAuthProtocol
+    assert c.privacy_key is None
+    assert c.privacy_protocol == hlapi.usmNoPrivProtocol
 
     _, c = _snmp_config({
         "address": "localhost", "username": "stbt",
         "auth_passphrase": "passw0rd!"})
-    assert c.authKey == "passw0rd!"
-    assert c.authProtocol == hlapi.usmHMACMD5AuthProtocol
-    assert c.privKey is None
+    assert c.authentication_key == "passw0rd!"
+    assert c.authentication_protocol == hlapi.usmHMACMD5AuthProtocol
+    assert c.privacy_key is None
 
     _, c = _snmp_config({
         "address": "localhost", "username": "stbt",
         "auth_passphrase": "passw0rd!",
         "priv_passphrase": "s3cret"})
-    assert c.privKey == "s3cret"
-    assert c.privProtocol == hlapi.usmDESPrivProtocol
+    assert c.privacy_key == "s3cret"
+    assert c.privacy_protocol == hlapi.usmDESPrivProtocol
 
     _, c = _snmp_config({
         "address": "localhost", "username": "stbt",
@@ -534,15 +534,14 @@ def test_snmp_config():
         "auth_protocol": "sha",
         "priv_protocol": "aes"
     })
-    assert c.authProtocol == hlapi.usmHMACSHAAuthProtocol
-    assert c.privProtocol == hlapi.usmAesCfb128Protocol
+    assert c.authentication_protocol == hlapi.usmHMACSHAAuthProtocol
+    assert c.privacy_protocol == hlapi.usmAesCfb128Protocol
 
 
 class _SnmpInteger():
     def __init__(self, address: "tuple[str, int]", oid: str, auth: "SnmpAuth"):
-        from pysnmp.entity.rfc3413.oneliner.cmdgen import UdpTransportTarget
         self.oid = oid
-        self._transport = UdpTransportTarget(address)
+        self._address = address
         self._auth = auth
 
     def set(self, value: int) -> int:
@@ -552,18 +551,26 @@ class _SnmpInteger():
         return self._cmd(None)
 
     def _cmd(self, value: "int | None") -> int:
-        from pysnmp.entity.rfc3413.oneliner import cmdgen
+        import asyncio
+        from pysnmp.hlapi.v3arch import asyncio as hlapi
         from pysnmp.proto.rfc1905 import NoSuchObject
         from pysnmp.proto.rfc1902 import Integer
 
-        command_generator = cmdgen.CommandGenerator()
+        async def run():
+            transport = await hlapi.UdpTransportTarget.create(self._address)
+            if value is None:  # `status` command
+                return await hlapi.get_cmd(
+                    hlapi.SnmpEngine(), self._auth, transport,
+                    hlapi.ContextData(),
+                    hlapi.ObjectType(hlapi.ObjectIdentity(self.oid)))
+            else:
+                return await hlapi.set_cmd(
+                    hlapi.SnmpEngine(), self._auth, transport,
+                    hlapi.ContextData(),
+                    hlapi.ObjectType(hlapi.ObjectIdentity(self.oid),
+                                     Integer(value)))
 
-        if value is None:  # `status` command
-            error_ind, _, _, var_binds = command_generator.getCmd(
-                self._auth, self._transport, self.oid)
-        else:
-            error_ind, _, _, var_binds = command_generator.setCmd(
-                self._auth, self._transport, (self.oid, Integer(value)))
+        error_ind, _, _, var_binds = asyncio.run(run())
 
         if error_ind is not None:
             raise RuntimeError("SNMP Error ({})".format(error_ind))

@@ -639,8 +639,7 @@ def read_records(stream, sep):
         buf += s
         cmds = buf.split(sep)
         buf = cmds[-1]
-        for i in cmds[:-1]:
-            yield i
+        yield from cmds[:-1]
 
 
 def _connect_tcp_socket(address, port, timeout=3):
