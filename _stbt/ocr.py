@@ -166,6 +166,7 @@ def ocr(
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
     corrections: Optional[CorrectionsT] = None,
+    confidence_threshold: Optional[float] = None,
 ):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -287,6 +288,14 @@ def ocr(
         `stbt.set_global_ocr_corrections`. If global corrections have been set
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
+
+    :param float confidence_threshold:
+        Ignore any line of text if the OCR engine's confidence in what it read
+        is lower than this (between 0 and 1). This filters out junk "text"
+        that the engine reads from icons, logos and images. Defaults to 0.6.
+        You can override the global default value by setting
+        ``confidence_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        Invalid for engines other than ``OcrEngine.PADDLEOCR_V6``.
     """
     if frame is None:
         from stbt_core import get_frame
@@ -301,13 +310,16 @@ def ocr(
         frame, region, engine, text_color, text_color_threshold,
         char_whitelist).with_defaults(config)
     tess_args = TesseractArgs(mode, lang, tesseract_config, upsample)
+    paddle_args = PaddleOcrArgs(confidence_threshold)
     if engine == OcrEngine.PADDLEOCR_V6:
         _check_no_tesseract_params(
             tess_args, tesseract_user_words=tesseract_user_words,
             tesseract_user_patterns=tesseract_user_patterns)
         from .ocr_paddleocr import ocr_paddleocr
-        text = ocr_paddleocr(common_args, corrections)
+        text = ocr_paddleocr(
+            common_args, paddle_args.with_defaults(config), corrections)
     else:
+        _check_no_paddle_params(paddle_args)
         from .ocr_tesseract import ocr_tesseract
         text = ocr_tesseract(
             common_args, tess_args.with_defaults(config),
@@ -336,6 +348,7 @@ def match_text(
     text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
+    confidence_threshold: Optional[float] = None,
 ) -> TextMatchResult:
     """Search for the specified text in a single video frame.
 
@@ -354,6 +367,7 @@ def match_text(
     :param engine: See `ocr`.
     :param char_whitelist: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
+    :param confidence_threshold: See `ocr`.
 
     :returns:
       A `TextMatchResult`, which will evaluate to True if the text was found,
@@ -380,11 +394,15 @@ def match_text(
         frame, region, engine, text_color, text_color_threshold,
         char_whitelist).with_defaults(config)
     tess_args = TesseractArgs(mode, lang, tesseract_config, upsample)
+    paddle_args = PaddleOcrArgs(confidence_threshold)
     if engine == OcrEngine.PADDLEOCR_V6:
         _check_no_tesseract_params(tess_args)
         from .ocr_paddleocr import match_text_paddleocr
-        result = match_text_paddleocr(text, common_args, case_sensitive)
+        result = match_text_paddleocr(
+            text, common_args, paddle_args.with_defaults(config),
+            case_sensitive)
     else:
+        _check_no_paddle_params(paddle_args)
         from .ocr_tesseract import match_text_tesseract
         result = match_text_tesseract(
             text, common_args, tess_args.with_defaults(config),
@@ -569,6 +587,7 @@ class OcrConfig:
     lang: str
     upsample: bool
     text_color_threshold: float
+    confidence_threshold: float
 
     @staticmethod
     def load() -> OcrConfig:
@@ -577,7 +596,9 @@ class OcrConfig:
             lang=get_config("ocr", "lang", "eng"),
             upsample=get_config("ocr", "upsample", type_=bool),
             text_color_threshold=get_config(
-                "ocr", "text_color_threshold", type_=int))
+                "ocr", "text_color_threshold", type_=int),
+            confidence_threshold=get_config(
+                "ocr", "confidence_threshold", type_=float))
 
 
 @dataclasses.dataclass
@@ -615,12 +636,31 @@ class TesseractArgs:
             else self.upsample)
 
 
+@dataclasses.dataclass
+class PaddleOcrArgs:
+    """The arguments to `ocr` & `match_text` that only PaddleOCR uses."""
+    confidence_threshold: Optional[float]
+
+    def with_defaults(self, config: OcrConfig) -> PaddleOcrArgs:
+        if self.confidence_threshold is None:
+            return dataclasses.replace(
+                self, confidence_threshold=config.confidence_threshold)
+        return self
+
+
 def _check_no_tesseract_params(tess_args: TesseractArgs, **kwargs):
     kwargs.update(dataclasses.asdict(tess_args))
     for name, value in kwargs.items():
         if value is not None:
             raise ValueError(
                 "%s isn't supported by OcrEngine.PADDLEOCR_V6" % name)
+
+
+def _check_no_paddle_params(paddle_args: PaddleOcrArgs):
+    for name, value in dataclasses.asdict(paddle_args).items():
+        if value is not None:
+            raise ValueError(
+                "%s is only supported by OcrEngine.PADDLEOCR_V6" % name)
 
 
 def bgr_diff(frame, color, threshold, imglog: ImageLogger):

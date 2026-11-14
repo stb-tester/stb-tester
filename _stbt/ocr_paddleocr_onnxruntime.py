@@ -17,6 +17,7 @@ from .ocr import (
     CorrectionsT,
     find_phrase,
     ocr_postprocess,
+    PaddleOcrArgs,
     TextMatchResult,
 )
 from .types import PositionT, Region
@@ -51,10 +52,11 @@ class PaddleOcrLine:
 
 def ocr_paddleocr(
     common_args: CommonArgs,
+    paddle_args: PaddleOcrArgs,
     corrections: Optional[CorrectionsT],
 ) -> str:
     imglog = ImageLogger("ocr", result=None)
-    lines = _paddleocr(common_args, imglog)
+    lines = _paddleocr(common_args, paddle_args, imglog)
     text = ocr_postprocess(lines_to_text(lines), corrections)
     imglog.html(_PADDLEOCR_DEBUG_TEMPLATE, match_text=False, output=text,
                 title="stbt.ocr")
@@ -64,10 +66,11 @@ def ocr_paddleocr(
 def match_text_paddleocr(
     text: str,
     common_args: CommonArgs,
+    paddle_args: PaddleOcrArgs,
     case_sensitive: bool,
 ) -> TextMatchResult:
     imglog = ImageLogger("match_text")
-    lines = _paddleocr(common_args, imglog)
+    lines = _paddleocr(common_args, paddle_args, imglog)
     result = match_text_result(text, common_args.frame, lines, case_sensitive)
     imglog.html(
         _PADDLEOCR_DEBUG_TEMPLATE,
@@ -80,10 +83,12 @@ def match_text_paddleocr(
 
 def _paddleocr(
         common_args: CommonArgs,
+        paddle_args: PaddleOcrArgs,
         imglog: ImageLogger,
 ) -> list[TextLine]:
     imglog.imwrite("frame", common_args.frame)
-    imglog.set(region=common_args.region, common_args=common_args)
+    imglog.set(region=common_args.region, common_args=common_args,
+               paddle_args=paddle_args)
 
     frame = crop(common_args.frame, common_args.region)
     if (text_color := common_args.text_color) is not None:
@@ -106,7 +111,7 @@ def _paddleocr(
     frame = numpy.ascontiguousarray(frame[:, :, :3])
     return postprocess(
         _predict(frame, common_args.char_whitelist), common_args.region,
-        imglog)
+        paddle_args.confidence_threshold, imglog)
 
 
 def _predict(frame: FrameT, char_whitelist: str | None) -> list[PaddleOcrLine]:
@@ -127,10 +132,13 @@ def _predict(frame: FrameT, char_whitelist: str | None) -> list[PaddleOcrLine]:
 def postprocess(
         predictions: list[PaddleOcrLine],
         region: Region,
+        confidence_threshold: Optional[float],
         imglog: ImageLogger,
 ) -> list[TextLine]:
     """The lines of text that the engine read from `region`, in the frame's
-    coordinates."""
+    coordinates, without those whose confidence is below
+    `confidence_threshold`."""
+    assert confidence_threshold is not None
     dx = max(0, region.x)
     dy = max(0, region.y)
     lines = [
@@ -140,7 +148,7 @@ def postprocess(
             [(w, box.translate(dx, dy))
              for w, box in _paddleocr_words(line.words, line.quad)])
         for line in predictions
-        if line.text.strip()]
+        if line.text.strip() and line.score >= confidence_threshold]
     if imglog.enabled:
         imglog.set(source_tsv_regions=[
             (box, "tsv-word", "%s (%.2f)" % (word, line.score))
@@ -255,6 +263,7 @@ _PADDLEOCR_DEBUG_TEMPLATE = """\
       <li>case_sensitive={{case_sensitive}}
       {% endif %}
       <li>char_whitelist={{common_args.char_whitelist}}
+      <li>confidence_threshold={{paddle_args.confidence_threshold}}
       <li>engine={{common_args.engine}}
       {% if match_text %}
       <li>text={{text}}
