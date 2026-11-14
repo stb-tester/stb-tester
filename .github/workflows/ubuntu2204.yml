@@ -24,3 +24,12 @@ jobs:
     - run: pyright --version && make check-pyright
     - run: make check-pytest
     - run: make check-integrationtests
+    - name: PaddleOCR tests
+      # paddleocr needs newer numpy & opencv than Ubuntu's, so we only use
+      # them for these tests.
+      run: |
+        pip3 install --target /tmp/paddleocr \
+            paddleocr==3.7.0 onnxruntime==1.23.2 &&
+        export PYTHONPATH=/tmp/paddleocr:$PWD &&
+        python3 -c "from _stbt import ocr; ocr._paddleocr_pipeline()" &&
+        python3 -m pytest -p no:anyio -k paddleocr tests/test_ocr.py
