@@ -833,9 +833,8 @@ def _paddleocr(
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
     frame = numpy.ascontiguousarray(frame[:, :, :3])
 
-    lines = [line for line in _paddleocr_cached(  # pylint:disable=unexpected-keyword-arg
-                 frame, char_whitelist, use_cache=True)
-             if line["score"] >= confidence_threshold]
+    lines = _paddleocr_cached(  # pylint:disable=unexpected-keyword-arg
+        frame, char_whitelist, use_cache=True)
 
     dx = max(0, region.x)
     dy = max(0, region.y)
@@ -844,12 +843,19 @@ def _paddleocr(
         for word in line["words"]:
             x0, y0, x1, y1 = word[1]
             word[1] = [x0 + dx, y0 + dy, x1 + dx, y1 + dy]
+    accepted = [x for x in lines if x["score"] >= confidence_threshold]
     if imglog.enabled:
-        imglog.set(source_tsv_regions=[
-            (Region.from_extents(*box), "tsv-word",
-             "%s (%.2f)" % (word, line["score"]))
-            for line in lines for word, box in line["words"]])
-    return lines
+        ignored = [x for x in lines if x["score"] < confidence_threshold]
+        imglog.set(
+            source_tsv_regions=[
+                (Region.from_extents(*box), css_class,
+                 "%s (confidence: %.2f)" % (word, line["score"]))
+                for css_class, lines_ in [("tsv-word", accepted),
+                                          ("ocr-ignored", ignored)]
+                for line in lines_ for word, box in line["words"]],
+            ignored=[(line["text"], "%.2f" % line["score"])
+                     for line in ignored])
+    return accepted
 
 
 _CONFIDENCE_THRESHOLD_UNSUPPORTED = (
@@ -1305,6 +1311,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
             .tsv-paragraph { outline: 3px solid yellow; }
             .tsv-line { outline: 2px solid green; }
             .tsv-word { outline: 1px solid blue; }
+            .ocr-ignored { outline: 1px dashed red; }
             img.img-tessinput { outline: 2px solid #8080ff; }
         </style>
         <h4>{{title}}</h4>
@@ -1316,8 +1323,19 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
         <pre><code>{{ result | escape }}</code></pre>
         {% endif %}
 
-        <h5>Tesseract output:</h5>
+        <h5>{{ "PaddleOCR" if engine.name == "PADDLEOCR_V6" else "Tesseract" }}
+          output:</h5>
         <pre><code>{{ output | escape }}</code></pre>
+
+        {% if ignored %}
+        <h5>Ignored because the confidence is lower than confidence_threshold
+          ({{ confidence_threshold }}):</h5>
+        <ul>
+          {% for text, score in ignored %}
+          <li><code>{{ text | escape }}</code> (confidence: {{ score }})
+          {% endfor %}
+        </ul>
+        {% endif %}
 
         {% if hocr_xml %}
         <h5>HOCR XML:</h5>
