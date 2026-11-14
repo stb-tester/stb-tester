@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Optional, TypeAlias
 
 if typing.TYPE_CHECKING:
+    import numpy
     from .mask import Mask
 
 
@@ -592,4 +593,24 @@ class PDU:
         raise NotImplementedError()
 
     def get(self) -> bool:
+        raise NotImplementedError()
+
+
+class PaddleOcrIface:
+    """The subset of the `paddleocr.PaddleOCR` API that `stbt.ocr` uses."""
+    def __init__(self) -> None:
+        pass
+
+    def predict(self, img: numpy.ndarray, *, char_whitelist: str | None = None
+                ) -> dict[str, list]:
+        """Detect & recognise the text in a BGR uint8 image.
+
+        Returns a dict like `paddleocr.PaddleOCR.predict(img,
+        return_word_box=True)[0]`, with (at least) the keys ``rec_texts``,
+        ``rec_scores``, ``rec_polys``, ``text_word`` and ``text_word_region``.
+
+        `char_whitelist` limits the recognised characters to the characters
+        in this string. Raises `ValueError` if the implementation doesn't
+        support it.
+        """
         raise NotImplementedError()
