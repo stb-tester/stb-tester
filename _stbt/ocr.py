@@ -4,6 +4,7 @@ import collections
 import errno
 import functools
 import os
+import pprint
 import re
 import shutil
 import subprocess
@@ -854,7 +855,8 @@ def _paddleocr(
                                           ("ocr-ignored", ignored)]
                 for line in lines_ for word, box in line["words"]],
             ignored=[(line["text"], "%.2f" % line["score"])
-                     for line in ignored])
+                     for line in ignored],
+            paddleocr_output=pprint.pformat(lines, sort_dicts=False))
     return accepted
 
 
@@ -1335,6 +1337,11 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
           <li><code>{{ text | escape }}</code> (confidence: {{ score }})
           {% endfor %}
         </ul>
+        {% endif %}
+
+        {% if paddleocr_output %}
+        <h5>PaddleOCR lines:</h5>
+        <pre><code>{{ paddleocr_output | escape }}</code></pre>
         {% endif %}
 
         {% if hocr_xml %}
