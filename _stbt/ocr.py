@@ -173,6 +173,7 @@ def ocr(
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
     corrections: Optional[CorrectionsT] = None,
+    confidence_threshold: Optional[float] = None,
 ):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -294,6 +295,14 @@ def ocr(
         `stbt.set_global_ocr_corrections`. If global corrections have been set
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
+
+    :param float confidence_threshold:
+        Ignore any line of text if the OCR engine's confidence in what it read
+        is lower than this (between 0 and 1). This filters out junk "text"
+        that the engine reads from icons, logos and images. Defaults to 0.6.
+        You can override the global default value by setting
+        ``confidence_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        Invalid for engines other than ``OcrEngine.PADDLEOCR_V6``.
     """
     if frame is None:
         from stbt_core import get_frame
@@ -309,6 +318,8 @@ def ocr(
             tesseract_user_words=tesseract_user_words,
             tesseract_user_patterns=tesseract_user_patterns,
             upsample=upsample)
+    elif confidence_threshold is not None:
+        raise ValueError(_CONFIDENCE_THRESHOLD_UNSUPPORTED)
 
     if isinstance(tesseract_user_words, (bytes, str)):
         tesseract_user_words = [tesseract_user_words]
@@ -332,7 +343,7 @@ def ocr(
     if engine == OcrEngine.PADDLEOCR_V6:
         text = _lines_to_text(_paddleocr(
             frame, region, text_color, text_color_threshold, char_whitelist,
-            imglog))
+            confidence_threshold, imglog))
     else:
         text, _ = _tesseract(
             frame, region, mode, lang, tesseract_config,
@@ -360,6 +371,7 @@ def match_text(
     text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
+    confidence_threshold: Optional[float] = None,
 ) -> TextMatchResult:
     """Search for the specified text in a single video frame.
 
@@ -378,6 +390,7 @@ def match_text(
     :param engine: See `ocr`.
     :param char_whitelist: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
+    :param confidence_threshold: See `ocr`.
 
     :returns:
       A `TextMatchResult`, which will evaluate to True if the text was found,
@@ -403,6 +416,8 @@ def match_text(
         _check_no_tesseract_params(
             mode=mode, lang=lang, tesseract_config=tesseract_config,
             upsample=upsample)
+    elif confidence_threshold is not None:
+        raise ValueError(_CONFIDENCE_THRESHOLD_UNSUPPORTED)
 
     if upsample is None:
         upsample = get_config("ocr", "upsample", type_=bool)
@@ -420,7 +435,7 @@ def match_text(
         hocr = None
         lines = _paddleocr(
             frame, region, text_color, text_color_threshold, char_whitelist,
-            imglog)
+            confidence_threshold, imglog)
         p = _find_phrase(
             [(w, Region.from_extents(*box))
              for line in lines for w, box in line["words"]],
@@ -779,6 +794,7 @@ def _paddleocr(
         text_color: Optional[ColorT],
         text_color_threshold: Optional[float],
         char_whitelist: Optional[str],
+        confidence_threshold: Optional[float],
         imglog: ImageLogger,
 ) -> list[dict]:
     """Returns the lines of text in `region`; see `_paddleocr_cached`.
@@ -788,12 +804,16 @@ def _paddleocr(
     if text_color_threshold is None:
         text_color_threshold = get_config(
             "ocr", "text_color_threshold", type_=int)
+    if confidence_threshold is None:
+        confidence_threshold = get_config(
+            "ocr", "confidence_threshold", type_=float)
 
     imglog.imwrite("frame", frame)
     imglog.set(region=region, engine=OcrEngine.PADDLEOCR_V6,
                text_color=text_color,
                text_color_threshold=text_color_threshold,
-               char_whitelist=char_whitelist)
+               char_whitelist=char_whitelist,
+               confidence_threshold=confidence_threshold)
 
     frame = crop(frame, region)
     if text_color is not None:
@@ -813,8 +833,9 @@ def _paddleocr(
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
     frame = numpy.ascontiguousarray(frame[:, :, :3])
 
-    lines = _paddleocr_cached(  # pylint:disable=unexpected-keyword-arg
-        frame, char_whitelist, use_cache=True)
+    lines = [line for line in _paddleocr_cached(  # pylint:disable=unexpected-keyword-arg
+                 frame, char_whitelist, use_cache=True)
+             if line["score"] >= confidence_threshold]
 
     dx = max(0, region.x)
     dy = max(0, region.y)
@@ -829,6 +850,10 @@ def _paddleocr(
              "%s (%.2f)" % (word, line["score"]))
             for line in lines for word, box in line["words"]])
     return lines
+
+
+_CONFIDENCE_THRESHOLD_UNSUPPORTED = (
+    "confidence_threshold is only supported by OcrEngine.PADDLEOCR_V6")
 
 
 def _check_no_tesseract_params(**kwargs):
@@ -1305,6 +1330,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
           <li>case_sensitive={{case_sensitive}}
           {% endif %}
           <li>char_whitelist={{char_whitelist}}
+          <li>confidence_threshold={{confidence_threshold}}
           <li>engine={{engine}}
           <li>lang={{lang}}
           <li>mode={{mode}}

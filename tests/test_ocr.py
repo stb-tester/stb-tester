@@ -768,6 +768,37 @@ def test_paddleocr_text_color(paddleocr):  # pylint:disable=redefined-outer-name
         "Summary Details More Episodes"
 
 
+def test_paddleocr_confidence_threshold(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/Summary.png")
+    icon = stbt.Region(x=70, y=0, right=100, bottom=40)
+    text = "Summary Details More Episodes"
+    junk = "•. " + text + "\nO"
+    assert stbt.ocr(frame) == text
+    assert stbt.ocr(frame, confidence_threshold=0.3) == junk
+    assert not stbt.match_text("•.", frame)
+    assert icon.contains(
+        stbt.match_text("•.", frame, confidence_threshold=0.3).region)
+    with temporary_config({"ocr.confidence_threshold": "0.3"}):
+        assert stbt.ocr(frame) == junk
+
+
+@pytest.mark.parametrize("engine", [
+    stbt.OcrEngine.TESSERACT, stbt.OcrEngine.LSTM, stbt.OcrEngine.DEFAULT])
+def test_confidence_threshold_unsupported_by_tesseract(engine):
+    frame = load_image("ocr/Summary.png")
+    error = "confidence_threshold is only supported by OcrEngine.PADDLEOCR_V6"
+    with pytest.raises(ValueError, match=error):
+        stbt.ocr(frame, engine=engine, confidence_threshold=0.3)
+    with pytest.raises(ValueError, match=error):
+        stbt.match_text("Summary", frame, engine=engine,
+                        confidence_threshold=0.3)
+    with temporary_config({"ocr.engine": engine.name}), \
+            pytest.raises(ValueError, match=error):
+        stbt.ocr(frame, confidence_threshold=0.3)
+    # The default from the config file is fine:
+    assert stbt.ocr(frame, engine=engine)
+
+
 def test_that_cache_speeds_up_paddleocr(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
     frame = load_image("ocr/menu.png")
     region = stbt.Region(x=360, y=400, right=600, bottom=480)
