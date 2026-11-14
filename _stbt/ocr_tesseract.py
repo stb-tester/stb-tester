@@ -14,13 +14,14 @@ from . import imgproc_cache
 from .imgutils import crop, FrameT
 from .logging import ImageLogger, warn
 from .ocr import (
-    _ocr_transtab,
     CommonArgs,
     CorrectionsT,
+    find_phrase,
     ocr,
     ocr_postprocess,
     OcrEngine,
     OcrMode,
+    TesseractArgs,
     TextMatchResult,
 )
 from .types import Region
@@ -29,6 +30,7 @@ from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 def ocr_tesseract(
     common_args: CommonArgs,
+    tess_args: TesseractArgs,
     tesseract_user_words: Optional[list[str] | str],
     tesseract_user_patterns: Optional[list[str] | str],
     corrections: Optional[CorrectionsT],
@@ -38,10 +40,10 @@ def ocr_tesseract(
         tesseract_user_words = [tesseract_user_words]
     if isinstance(tesseract_user_patterns, (bytes, str)):
         tesseract_user_patterns = [tesseract_user_patterns]
-    _config = dict(common_args.tesseract_config or {})
+    _config = dict(tess_args.tesseract_config or {})
     _config['tessedit_create_txt'] = 1
     text, _ = _tesseract(
-        dataclasses.replace(common_args, tesseract_config=_config),
+        common_args, dataclasses.replace(tess_args, tesseract_config=_config),
         tesseract_user_patterns, tesseract_user_words, imglog)
     assert text is not None
     text = ocr_postprocess(text, corrections)
@@ -53,16 +55,17 @@ def ocr_tesseract(
 def match_text_tesseract(
     text: str,
     common_args: CommonArgs,
+    tess_args: TesseractArgs,
     case_sensitive: bool,
 ) -> TextMatchResult:
     frame, region = common_args.frame, common_args.region
     rts = getattr(frame, "time", None)
     imglog = ImageLogger("match_text")
-    _config = dict(common_args.tesseract_config or {})
+    _config = dict(tess_args.tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
     _config['tessedit_create_txt'] = 0
     _, xml = _tesseract(
-        dataclasses.replace(common_args, tesseract_config=_config),
+        common_args, dataclasses.replace(tess_args, tesseract_config=_config),
         None, text.split(), imglog)
     if xml == '':
         result = TextMatchResult(rts, False, None, frame, text)
@@ -79,7 +82,7 @@ def match_text_tesseract(
                                         for _, elem in p])
             # _tesseract crops to region and scales up by a factor of 3 so
             # we must undo this transformation here.
-            n = 3 if common_args.upsample else 1
+            n = 3 if tess_args.upsample else 1
             box = Region.from_extents(
                 region.x + box.x // n, region.y + box.y // n,
                 region.x + box.right // n, region.y + box.bottom // n)
@@ -135,20 +138,21 @@ def _tesseract_version(output=None):
 
 def _tesseract(
         common_args: CommonArgs,
+        tess_args: TesseractArgs,
         user_patterns: Optional[list[str]],
         user_words: Optional[list[str]],
         imglog: ImageLogger,
 ):
-    """`common_args` must have its defaults resolved."""
+    """`tess_args` must have its defaults resolved."""
     frame, region = common_args.frame, common_args.region
-    mode, lang, engine = common_args.mode, common_args.lang, common_args.engine
-    upsample = common_args.upsample
-    assert lang is not None
+    mode, lang, engine = tess_args.mode, tess_args.lang, common_args.engine
+    upsample = tess_args.upsample
+    assert mode is not None and lang is not None
 
-    if common_args.tesseract_config is None:
+    if tess_args.tesseract_config is None:
         _config = {}
     else:
-        _config = dict(common_args.tesseract_config)
+        _config = dict(tess_args.tesseract_config)
 
     text_color_threshold = common_args.text_color_threshold
 
@@ -157,6 +161,7 @@ def _tesseract(
     if tesseract_version < [4, 0]:
         if engine == OcrEngine.DEFAULT:
             engine = OcrEngine.TESSERACT
+            common_args = dataclasses.replace(common_args, engine=engine)
         if engine != OcrEngine.TESSERACT:
             # NB `str(engine)` looks like "OcrEngine.LSTM"
             raise ValueError("%s isn't available in tesseract %s"
@@ -167,11 +172,9 @@ def _tesseract(
         raise ValueError("%s isn't available in tesseract %s"
                          % (mode, tesseract_version))
 
-    common_args = dataclasses.replace(
-        common_args, engine=engine, lang=lang,
-        tesseract_config=_config.copy())
+    tess_args = dataclasses.replace(tess_args, tesseract_config=_config.copy())
     imglog.imwrite("frame", frame)
-    imglog.set(region=region, common_args=common_args,
+    imglog.set(region=region, common_args=common_args, tess_args=tess_args,
                user_patterns=user_patterns, user_words=user_words,
                tesseract_version=tesseract_version)
 
@@ -476,22 +479,9 @@ def _hocr_iterate(hocr):
 
 
 def _hocr_find_phrase(hocr, phrase, case_sensitive):
-    if case_sensitive:
-        lower = lambda s: s
-    else:
-        lower = lambda s: s.lower()
-
-    words_only = [(lower(w).translate(_ocr_transtab), elem)
-                  for w, elem in _hocr_iterate(hocr) if w.strip() != '']
-    phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
-
-    # Dumb and poor algorithmic complexity but succint and simple
-    if len(phrase) <= len(words_only):
-        for x in range(0, len(words_only)):
-            sublist = words_only[x:x + len(phrase)]
-            if all(w[0] == p for w, p in zip(sublist, phrase)):
-                return sublist
-    return None
+    return find_phrase(
+        [(w, elem) for w, elem in _hocr_iterate(hocr) if w.strip() != ''],
+        phrase, case_sensitive)
 
 
 def _hocr_elem_region(elem):
@@ -555,9 +545,9 @@ _TESSERACT_DEBUG_TEMPLATE = """\
       {% endif %}
       <li>char_whitelist={{common_args.char_whitelist}}
       <li>engine={{common_args.engine}}
-      <li>lang={{common_args.lang}}
-      <li>mode={{common_args.mode}}
-      <li>tesseract_config={{common_args.tesseract_config}}
+      <li>lang={{tess_args.lang}}
+      <li>mode={{tess_args.mode}}
+      <li>tesseract_config={{tess_args.tesseract_config}}
       <li>tesseract_user_patterns={{user_patterns}}
       <li>tesseract_user_words={{user_words}}
       <li>tesseract_version={{tesseract_version}}
@@ -566,7 +556,7 @@ _TESSERACT_DEBUG_TEMPLATE = """\
       {% endif %}
       <li>text_color={{common_args.text_color}}
       <li>text_color_threshold={{common_args.text_color_threshold}}
-      <li>upsample={{common_args.upsample}}
+      <li>upsample={{tess_args.upsample}}
     </ul>
 
     {% if "upsampled" in images %}

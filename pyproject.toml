@@ -134,6 +134,8 @@ ignore = [
     "_stbt/keyboard.py",
     "_stbt/mask.py",
     "_stbt/ocr.py",
+    "_stbt/ocr_paddleocr.py",
+    "_stbt/ocr_paddleocr_onnxruntime.py",
     "_stbt/ocr_tesseract.py",
     "_stbt/power.py",
     "_stbt/precondition.py",

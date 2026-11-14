@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import timeit
 from contextlib import contextmanager
 from textwrap import dedent
@@ -642,3 +643,143 @@ def test_ocr_eq_replacements():
     assert stbt.ocr_eq("App version", "App vefslon")  # YouTube settings menu
     assert stbt.ocr_eq("YuppTV - Live, CatchUp, Movies",
                        "YuppTV - Live, CatchUp. Movies")  # Roku
+
+
+@pytest.fixture
+def paddleocr():
+    """Use the PaddleOCR engine by default; skip if it isn't installed."""
+    from _stbt import ocr_paddleocr_onnxruntime
+
+    with temporary_config({"ocr.engine": "PADDLEOCR_V6"}):
+        try:
+            ocr_paddleocr_onnxruntime._pypi_pipeline()
+        except RuntimeError as e:
+            pytest.skip(str(e))
+        yield
+
+
+@pytest.mark.parametrize("image, expected_text, region", [
+    # pylint: disable=line-too-long
+    ("Connection-status--white-on-dark-blue.png", "Connection status: Connected", stbt.Region.ALL),
+    ("Connection-status--white-on-dark-blue.png", "Connected", stbt.Region(x=210, y=0, width=120, height=40)),
+    ("192.168.10.1.png", "192.168.10.1", stbt.Region.ALL),
+    ("UJJM--white-text-on-gray-boxes.png", "UJJM", stbt.Region.ALL),
+    ("ch8.png", "8", stbt.Region.ALL),
+    ("unicode.png", "£500\nDavid Röthlisberger", stbt.Region.ALL),
+    ("small.png", "Small anti-aliased text is hard to read\nunless you magnify", stbt.Region.ALL),
+    ("itv-player.png", "BBC iPlayer ITV Player All 4 Demand 5", stbt.Region.ALL),
+])
+def test_paddleocr_on_static_images(paddleocr, image, expected_text, region):  # pylint:disable=redefined-outer-name,unused-argument
+    assert stbt.ocr(load_image("ocr/" + image), region=region) == expected_text
+
+
+def test_paddleocr_engine_parameter(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/Operacja Napoleon.png")
+    with temporary_config({"ocr.engine": "TESSERACT"}):
+        assert stbt.ocr(frame, engine=stbt.OcrEngine.PADDLEOCR_V6) == \
+            "Operacja Napoleon"
+
+
+def test_paddleocr_match_text(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/menu.png")
+    for text, region, multiline in iterate_menu():
+        if multiline:
+            continue
+        result = stbt.match_text(text, frame)
+        assert result
+        assert region.contains(result.region)
+
+        # Coordinates are relative to the frame, not to the region:
+        assert region.contains(
+            stbt.match_text(text, frame, region=region).region)
+
+    assert stbt.match_text("ONION BHAJI", frame)
+    assert not stbt.match_text("ONION BHAJI", frame, case_sensitive=True)
+    assert not stbt.match_text("Noodle Soup", frame)
+
+    m = stbt.match_text("Bhaji", frame)
+    assert stbt.match_text("Onion Bhaji", frame).region.contains(m.region)
+    assert m.region.width < 70
+
+
+def test_paddleocr_on_single_channel_image(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/menu.png", color_channels=1)
+    assert stbt.match_text("Onion Bhaji", frame)
+
+
+def test_paddleocr_char_whitelist(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/Connection-status--white-on-dark-blue.png")
+    with pytest.raises(ValueError, match="char_whitelist isn't supported"):
+        stbt.ocr(frame, char_whitelist="Cnecto")
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"mode": stbt.OcrMode.SINGLE_LINE},
+    {"lang": "eng"},
+    {"tesseract_config": {}},
+    {"upsample": False},
+])
+def test_paddleocr_tesseract_params(kwargs):
+    frame = load_image("ocr/menu.png")
+    engine = stbt.OcrEngine.PADDLEOCR_V6
+    error = "%s isn't supported" % list(kwargs)[0]
+    with pytest.raises(ValueError, match=error):
+        stbt.ocr(frame, engine=engine, **kwargs)
+    with pytest.raises(ValueError, match=error):
+        stbt.match_text("Onion Bhaji", frame, engine=engine, **kwargs)
+    with temporary_config({"ocr.engine": "PADDLEOCR_V6"}), \
+            pytest.raises(ValueError, match=error):
+        stbt.ocr(frame, **kwargs)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"tesseract_user_words": ["Bhaji"]},
+    {"tesseract_user_patterns": [r"\d\d"]},
+])
+def test_paddleocr_tesseract_user_words(kwargs):
+    error = "%s isn't supported" % list(kwargs)[0]
+    with pytest.raises(ValueError, match=error):
+        stbt.ocr(load_image("ocr/menu.png"),
+                 engine=stbt.OcrEngine.PADDLEOCR_V6, **kwargs)
+
+
+def test_paddleocr_text_color(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/blue-search-white-guide.png")
+    assert stbt.ocr(frame) == "Search\nGuide"
+    orange, white = (220, 133, 2), (255, 255, 255)
+    assert stbt.ocr(frame, text_color=orange,
+                    text_color_threshold=80) == "Search"
+    assert stbt.ocr(frame, text_color=white, text_color_threshold=80) == "Guide"
+    assert stbt.match_text("Search", frame)
+    assert stbt.match_text("Search", frame, text_color=orange,
+                           text_color_threshold=80)
+    assert not stbt.match_text("Guide", frame, text_color=orange,
+                               text_color_threshold=80)
+    assert not stbt.match_text("Search", frame, text_color=white,
+                               text_color_threshold=80)
+
+    # The default threshold is too low for this small text
+    assert stbt.ocr(frame, text_color=white) != "Guide"
+    with temporary_config({"ocr.text_color_threshold": "80"}):
+        assert stbt.ocr(frame, text_color=white) == "Guide"
+
+    frame = load_image("ocr/Summary.png")
+    assert stbt.ocr(frame, text_color="#ebebeb") == "Summary"
+    assert stbt.ocr(frame, text_color="#ebebeb", text_color_threshold=80) == \
+        "Summary Details More Episodes"
+
+
+def test_that_cache_speeds_up_paddleocr(paddleocr):  # pylint:disable=redefined-outer-name,unused-argument
+    frame = load_image("ocr/menu.png")
+    region = stbt.Region(x=360, y=400, right=600, bottom=480)
+    with named_temporary_directory() as tmpdir, \
+            imgproc_cache.setup_cache(tmpdir):
+        uncached = [stbt.ocr(frame, region=region),
+                    stbt.match_text("Prawn", frame, region=region).region]
+        start = time.time()
+        cached = [stbt.ocr(frame, region=region),
+                  stbt.match_text("Prawn", frame, region=region).region]
+        assert time.time() - start < 0.01
+        assert cached == uncached
+        assert cached[0] == "Kerala Prawn Curry"
+        assert region.contains(cached[1])

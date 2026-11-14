@@ -94,8 +94,16 @@ class OcrEngine(IntEnum):
     #: because it favours the result from the LSTM engine too heavily.
     TESSERACT_AND_LSTM = 2
 
-    #: Default engine, based on what is installed.
+    #: Default engine, based on what is installed. This chooses between
+    #: ``TESSERACT`` and ``LSTM`` only.
     DEFAULT = 3
+
+    #: PaddleOCR's PP-OCRv6 text detection & recognition models. The
+    #: Tesseract-specific parameters ``mode``, ``lang``, ``upsample``,
+    #: ``tesseract_config``, ``tesseract_user_words`` and
+    #: ``tesseract_user_patterns`` are invalid with this engine.
+    PADDLEOCR_V6 = 4
+
 
     def __repr__(self):
         return str(self)
@@ -147,7 +155,7 @@ class TextMatchResult():
 def ocr(
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    mode: Optional[OcrMode] = None,
     lang: Optional[str] = None,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]] = None,
     tesseract_user_words: Optional[list[str] | str] = None,
@@ -171,7 +179,9 @@ def ocr(
     :param Region region:
       Only search within the specified region of the video frame.
 
-    :param OcrMode mode: Tesseract's layout analysis mode.
+    :param OcrMode mode: Tesseract's layout analysis mode. Defaults to
+        ``OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD``. Invalid when
+        ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :param str lang:
         The three-letter
@@ -190,18 +200,20 @@ def ocr(
         instructions
         `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
 
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
+
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
         See the `tesseract documentation
         <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`__
-        for details.
+        for details. Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :type tesseract_user_words: unicode string, or list of unicode strings
     :param tesseract_user_words:
         List of words to be added to the tesseract dictionary. To replace the
         tesseract system dictionary altogether, also set
         ``tesseract_config={'load_system_dawg': False, 'load_freq_dawg':
-        False}``.
+        False}``. Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :type tesseract_user_patterns: unicode string, or list of unicode strings
     :param tesseract_user_patterns:
@@ -219,6 +231,8 @@ def ocr(
             \A         [A-Z]
             \*         *
 
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
+
     :param bool upsample:
         Upsample the image 3x before passing it to tesseract. This helps to
         preserve information in the text's anti-aliasing that would otherwise
@@ -227,6 +241,7 @@ def ocr(
         in the ``[ocr]`` section of :ref:`.stbt.conf`. You should set this to
         False if the text is already quite large, or if you are doing your own
         binarisation (pre-processing the image to make it black and white).
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :param Color text_color:
         Color of the text. Specifying this can improve OCR results when
@@ -284,11 +299,19 @@ def ocr(
         engine = config.engine
     common_args = CommonArgs(
         frame, region, engine, text_color, text_color_threshold,
-        char_whitelist, mode, lang, tesseract_config, upsample,
-    ).with_defaults(config)
-    from .ocr_tesseract import ocr_tesseract
-    text = ocr_tesseract(common_args, tesseract_user_words,
-                         tesseract_user_patterns, corrections)
+        char_whitelist).with_defaults(config)
+    tess_args = TesseractArgs(mode, lang, tesseract_config, upsample)
+    if engine == OcrEngine.PADDLEOCR_V6:
+        _check_no_tesseract_params(
+            tess_args, tesseract_user_words=tesseract_user_words,
+            tesseract_user_patterns=tesseract_user_patterns)
+        from .ocr_paddleocr import ocr_paddleocr
+        text = ocr_paddleocr(common_args, corrections)
+    else:
+        from .ocr_tesseract import ocr_tesseract
+        text = ocr_tesseract(
+            common_args, tess_args.with_defaults(config),
+            tesseract_user_words, tesseract_user_patterns, corrections)
 
     debug("ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     draw_source_region(frame, region)
@@ -304,7 +327,7 @@ def match_text(
     text: str,
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    mode: Optional[OcrMode] = None,
     lang: Optional[str] = None,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]] = None,
     case_sensitive: bool = False,
@@ -355,10 +378,17 @@ def match_text(
         engine = config.engine
     common_args = CommonArgs(
         frame, region, engine, text_color, text_color_threshold,
-        char_whitelist, mode, lang, tesseract_config, upsample,
-    ).with_defaults(config)
-    from .ocr_tesseract import match_text_tesseract
-    result = match_text_tesseract(text, common_args, case_sensitive)
+        char_whitelist).with_defaults(config)
+    tess_args = TesseractArgs(mode, lang, tesseract_config, upsample)
+    if engine == OcrEngine.PADDLEOCR_V6:
+        _check_no_tesseract_params(tess_args)
+        from .ocr_paddleocr import match_text_paddleocr
+        result = match_text_paddleocr(text, common_args, case_sensitive)
+    else:
+        from .ocr_tesseract import match_text_tesseract
+        result = match_text_tesseract(
+            text, common_args, tess_args.with_defaults(config),
+            case_sensitive)
 
     if result.match:
         debug("match_text: Match found: %s" % str(result))
@@ -552,28 +582,45 @@ class OcrConfig:
 
 @dataclasses.dataclass
 class CommonArgs:
-    """The arguments to `ocr` & `match_text` that they have in common."""
+    """The arguments to `ocr` & `match_text` that every engine uses."""
     frame: FrameT
     region: Region
     engine: OcrEngine
     text_color: Optional[ColorT]
     text_color_threshold: Optional[float]
     char_whitelist: Optional[str]
-    mode: OcrMode
+
+    def with_defaults(self, config: OcrConfig) -> CommonArgs:
+        if self.text_color_threshold is None:
+            return dataclasses.replace(
+                self, text_color_threshold=config.text_color_threshold)
+        return self
+
+
+@dataclasses.dataclass
+class TesseractArgs:
+    """The arguments to `ocr` & `match_text` that only Tesseract uses."""
+    mode: Optional[OcrMode]
     lang: Optional[str]
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]]
     upsample: Optional[bool]
 
-    def with_defaults(self, config: OcrConfig) -> CommonArgs:
+    def with_defaults(self, config: OcrConfig) -> TesseractArgs:
         return dataclasses.replace(
             self,
-            text_color_threshold=(
-                config.text_color_threshold
-                if self.text_color_threshold is None
-                else self.text_color_threshold),
+            mode=(OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD if self.mode is None
+                  else self.mode),
             lang=config.lang if self.lang is None else self.lang,
             upsample=config.upsample if self.upsample is None
             else self.upsample)
+
+
+def _check_no_tesseract_params(tess_args: TesseractArgs, **kwargs):
+    kwargs.update(dataclasses.asdict(tess_args))
+    for name, value in kwargs.items():
+        if value is not None:
+            raise ValueError(
+                "%s isn't supported by OcrEngine.PADDLEOCR_V6" % name)
 
 
 def bgr_diff(frame, color, threshold, imglog: ImageLogger):
@@ -613,3 +660,25 @@ def bgr_diff(frame, color, threshold, imglog: ImageLogger):
 
 
 ocr.text_color_differ = bgr_diff
+
+
+_T = typing.TypeVar("_T")
+
+
+def find_phrase(words: list[tuple[str, _T]], phrase: list[str],
+                case_sensitive: bool) -> list[tuple[str, _T]] | None:
+    if case_sensitive:
+        lower = lambda s: s
+    else:
+        lower = lambda s: s.lower()
+
+    words_only = [(lower(w).translate(_ocr_transtab), x) for w, x in words]
+    phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
+
+    # Dumb and poor algorithmic complexity but succint and simple
+    if len(phrase) <= len(words_only):
+        for x in range(0, len(words_only)):
+            sublist = words_only[x:x + len(phrase)]
+            if all(w[0] == p for w, p in zip(sublist, phrase)):
+                return sublist
+    return None
