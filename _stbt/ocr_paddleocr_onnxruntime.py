@@ -139,6 +139,7 @@ def postprocess(
     coordinates, without those whose confidence is below
     `confidence_threshold`."""
     assert confidence_threshold is not None
+    imglog.set(paddleocr_lines=predictions)
     dx = max(0, region.x)
     dy = max(0, region.y)
     lines = [
@@ -275,6 +276,9 @@ _PADDLEOCR_DEBUG_TEMPLATE = """\
       {% endfor %}
     </ul>
     {% endif %}
+
+    <h5>PaddleOCR lines:</h5>
+    <pre><code>{{ paddleocr_lines | pprint | escape }}</code></pre>
 
     <h5>Parameters:</h5>
     <ul>
