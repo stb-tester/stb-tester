@@ -148,12 +148,20 @@ def postprocess(
             [(w, box.translate(dx, dy))
              for w, box in _paddleocr_words(line.words, line.quad)])
         for line in predictions
-        if line.text.strip() and line.score >= confidence_threshold]
+        if line.text.strip()]
+    accepted = [x for x in lines if x.score >= confidence_threshold]
     if imglog.enabled:
-        imglog.set(source_tsv_regions=[
-            (box, "tsv-word", "%s (%.2f)" % (word, line.score))
-            for line in lines for word, box in line.words])
-    return lines
+        ignored = [x for x in lines if x.score < confidence_threshold]
+        imglog.set(
+            source_tsv_regions=[
+                (box, css_class,
+                 "%s (confidence: %.2f)" % (word, line.score))
+                for css_class, lines_ in [("tsv-word", accepted),
+                                          ("ocr-ignored", ignored)]
+                for line in lines_ for word, box in line.words],
+            ignored=[(line.text, "%.2f" % line.score)
+                     for line in ignored])
+    return accepted
 
 
 def match_text_result(
@@ -244,6 +252,7 @@ def lines_to_text(lines: list[TextLine]) -> str:
 _PADDLEOCR_DEBUG_TEMPLATE = """\
     <style>
         .tsv-word { outline: 1px solid blue; }
+        .ocr-ignored { outline: 1px dashed red; }
     </style>
     <h4>{{title}}</h4>
 
@@ -256,6 +265,16 @@ _PADDLEOCR_DEBUG_TEMPLATE = """\
 
     <h5>PaddleOCR output:</h5>
     <pre><code>{{ output | escape }}</code></pre>
+
+    {% if ignored %}
+    <h5>Ignored because the confidence is lower than confidence_threshold
+      ({{ paddle_args.confidence_threshold }}):</h5>
+    <ul>
+      {% for text, score in ignored %}
+      <li><code>{{ text | escape }}</code> (confidence: {{ score }})
+      {% endfor %}
+    </ul>
+    {% endif %}
 
     <h5>Parameters:</h5>
     <ul>
