@@ -133,8 +133,7 @@ def memoize(additional_fields=None):
                               sort_keys=True)
 
         @functools.wraps(f)
-        def inner(*args, **kwargs):
-            use_cache = kwargs.pop("use_cache", None)
+        def inner(*args, use_cache=None, **kwargs):
             try:
                 if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
@@ -166,8 +165,7 @@ def memoize_iterator(additional_fields=None):
                               sort_keys=True)
 
         @functools.wraps(f)
-        def inner(*args, **kwargs):
-            use_cache = kwargs.pop("use_cache", None)
+        def inner(*args, use_cache=None, **kwargs):
             try:
                 if _cache is None or (not _enabled and not use_cache):
                     raise NotCachable()
