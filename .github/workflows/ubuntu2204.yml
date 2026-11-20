@@ -2,9 +2,9 @@ name: ubuntu2204
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'stb-tester-node/*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'stb-tester-node/*' ]
 
 jobs:
   make_check:
