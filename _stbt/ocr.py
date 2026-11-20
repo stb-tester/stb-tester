@@ -798,7 +798,7 @@ def _paddleocr(
         confidence_threshold: Optional[float],
         imglog: ImageLogger,
 ) -> list[dict]:
-    """Returns the lines of text in `region`; see `_paddleocr_cached`.
+    """Returns the lines of text in `region`; see `_paddleocr_lines`.
 
     Coordinates are relative to `frame`.
     """
@@ -834,8 +834,7 @@ def _paddleocr(
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
     frame = numpy.ascontiguousarray(frame[:, :, :3])
 
-    lines = _paddleocr_cached(  # pylint:disable=unexpected-keyword-arg
-        frame, char_whitelist, use_cache=True)
+    lines = _paddleocr_lines(frame, char_whitelist)
 
     dx = max(0, region.x)
     dy = max(0, region.y)
@@ -877,8 +876,7 @@ def _paddleocr_pipeline() -> PaddleOcrIface:
     return paddleocr.PaddleOcr()
 
 
-@imgproc_cache.memoize({"version": "34"})
-def _paddleocr_cached(frame: FrameT, char_whitelist: str | None) -> list[dict]:
+def _paddleocr_lines(frame: FrameT, char_whitelist: str | None) -> list[dict]:
     """Returns a list of lines, top-to-bottom & left-to-right.
 
     Each line is a dict with keys "text", "score" (the mean probability of

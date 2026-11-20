@@ -612,5 +612,9 @@ class PaddleOcrIface:
         `char_whitelist` limits the recognised characters to the characters
         in this string. Raises `ValueError` if the implementation doesn't
         support it.
+
+        Implementations should cache their results (e.g. with
+        `imgproc_cache.memoize`, keyed on whatever affects them): `stbt.ocr`
+        doesn't.
         """
         raise NotImplementedError()
