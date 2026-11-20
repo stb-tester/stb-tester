@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import typing
 from collections import namedtuple
 from enum import Enum
@@ -596,18 +597,31 @@ class PDU:
         raise NotImplementedError()
 
 
+@dataclasses.dataclass
+class PaddleOcrResult:
+    """The lines of text that `PaddleOcrIface.predict` found, top-to-bottom &
+    left-to-right. Like the fields of the same names in
+    `paddleocr.PaddleOCR.predict(img, return_word_box=True)[0]`, but JSON
+    serialisable (lists, not numpy arrays), so that it can be cached.
+
+    Corners are [x, y] pixel coordinates: top-left, top-right, bottom-right,
+    bottom-left.
+    """
+    rec_texts: list[str]
+    rec_scores: list[float]  # the mean probability of each line's characters
+    rec_polys: list[list[list[int]]]  # each line's corners
+    text_word: list[list[str]]  # each line in PaddleOCR's "words"
+    text_word_region: list[list[list[list[int]]]]  # each word's corners
+
+
 class PaddleOcrIface:
     """The subset of the `paddleocr.PaddleOCR` API that `stbt.ocr` uses."""
     def __init__(self) -> None:
         pass
 
     def predict(self, img: numpy.ndarray, *, char_whitelist: str | None = None
-                ) -> dict[str, list]:
+                ) -> PaddleOcrResult:
         """Detect & recognise the text in a BGR uint8 image.
-
-        Returns a dict like `paddleocr.PaddleOCR.predict(img,
-        return_word_box=True)[0]`, with (at least) the keys ``rec_texts``,
-        ``rec_scores``, ``rec_polys``, ``text_word`` and ``text_word_region``.
 
         `char_whitelist` limits the recognised characters to the characters
         in this string. Raises `ValueError` if the implementation doesn't

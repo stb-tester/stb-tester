@@ -10,7 +10,7 @@ import os
 import numpy
 
 from . import imgproc_cache
-from .types import PaddleOcrIface
+from .types import PaddleOcrIface, PaddleOcrResult
 
 
 class PaddleOcr(PaddleOcrIface):
@@ -22,8 +22,8 @@ class PaddleOcr(PaddleOcrIface):
         if char_whitelist is not None:
             raise ValueError(
                 "char_whitelist isn't supported by the paddleocr package")
-        r = _predict(img, use_cache=True)  # pylint:disable=unexpected-keyword-arg
-        return dict(r, rec_polys=[numpy.array(q) for q in r["rec_polys"]])
+        return PaddleOcrResult(**_predict(  # pylint:disable=unexpected-keyword-arg
+            img, use_cache=True))
 
 
 @functools.cache
@@ -49,8 +49,8 @@ def _pipeline():
 @imgproc_cache.memoize(
     {"version": "34", "det": "PP-OCRv6_small", "rec": "PP-OCRv6_small"})
 def _predict(img):
-    """`PaddleOcr.predict`, but JSON serialisable (lists instead of numpy
-    arrays), so that `imgproc_cache` can store it."""
+    """`PaddleOcr.predict`'s `PaddleOcrResult`, as a dict, for
+    `imgproc_cache`."""
     r = _pipeline().predict(img, return_word_box=True)[0]
     return {
         "rec_texts": list(r["rec_texts"]),

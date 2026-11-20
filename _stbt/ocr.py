@@ -888,12 +888,12 @@ def _paddleocr_lines(frame: FrameT, char_whitelist: str | None) -> list[dict]:
         frame, char_whitelist=char_whitelist)
     return [
         {"text": text,
-         "score": float(score),
-         "quad": quad.tolist(),
+         "score": score,
+         "quad": quad,
          "words": _paddleocr_words(tokens, regions)}
         for text, score, quad, tokens, regions in zip(
-            result["rec_texts"], result["rec_scores"], result["rec_polys"],
-            result["text_word"], result["text_word_region"])
+            result.rec_texts, result.rec_scores, result.rec_polys,
+            result.text_word, result.text_word_region)
         if text.strip()]
 
 
