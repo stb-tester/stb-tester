@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import collections
 import errno
+import functools
 import os
+import pprint
 import re
 import shutil
 import subprocess
@@ -25,7 +27,7 @@ from .imgutils import (
     _validate_region,
 )
 from .logging import debug, draw_source_region, ImageLogger, warn
-from .types import Region
+from .types import PaddleOcrIface, Region
 from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 CorrectionsT = dict[re.Pattern | str, str]
@@ -101,8 +103,15 @@ class OcrEngine(IntEnum):
     #: because it favours the result from the LSTM engine too heavily.
     TESSERACT_AND_LSTM = 2
 
-    #: Default engine, based on what is installed.
+    #: Default engine, based on what is installed. This chooses between
+    #: ``TESSERACT`` and ``LSTM`` only.
     DEFAULT = 3
+
+    #: PaddleOCR's PP-OCRv6 text detection & recognition models. The
+    #: Tesseract-specific parameters ``mode``, ``lang``, ``upsample``,
+    #: ``tesseract_config``, ``tesseract_user_words`` and
+    #: ``tesseract_user_patterns`` are invalid with this engine.
+    PADDLEOCR_V6 = 4
 
     def __repr__(self):
         return str(self)
@@ -154,7 +163,7 @@ class TextMatchResult():
 def ocr(
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    mode: Optional[OcrMode] = None,
     lang: Optional[str] = None,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]] = None,
     tesseract_user_words: Optional[list[str] | str] = None,
@@ -165,6 +174,7 @@ def ocr(
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
     corrections: Optional[CorrectionsT] = None,
+    confidence_threshold: Optional[float] = None,
 ):
     r"""Return the text present in the video frame as a Unicode string.
 
@@ -178,7 +188,9 @@ def ocr(
     :param Region region:
       Only search within the specified region of the video frame.
 
-    :param OcrMode mode: Tesseract's layout analysis mode.
+    :param OcrMode mode: Tesseract's layout analysis mode. Defaults to
+        ``OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD``. Invalid when
+        ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :param str lang:
         The three-letter
@@ -197,18 +209,20 @@ def ocr(
         instructions
         `here <https://stb-tester.com/manual/faq#installing-language-packs>`__.
 
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
+
     :param dict tesseract_config:
         Allows passing configuration down to the underlying OCR engine.
         See the `tesseract documentation
         <https://github.com/tesseract-ocr/tesseract/wiki/ControlParams>`__
-        for details.
+        for details. Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :type tesseract_user_words: unicode string, or list of unicode strings
     :param tesseract_user_words:
         List of words to be added to the tesseract dictionary. To replace the
         tesseract system dictionary altogether, also set
         ``tesseract_config={'load_system_dawg': False, 'load_freq_dawg':
-        False}``.
+        False}``. Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :type tesseract_user_patterns: unicode string, or list of unicode strings
     :param tesseract_user_patterns:
@@ -226,6 +240,8 @@ def ocr(
             \A         [A-Z]
             \*         *
 
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
+
     :param bool upsample:
         Upsample the image 3x before passing it to tesseract. This helps to
         preserve information in the text's anti-aliasing that would otherwise
@@ -234,6 +250,7 @@ def ocr(
         in the ``[ocr]`` section of :ref:`.stbt.conf`. You should set this to
         False if the text is already quite large, or if you are doing your own
         binarisation (pre-processing the image to make it black and white).
+        Invalid when ``engine=OcrEngine.PADDLEOCR_V6``.
 
     :param Color text_color:
         Color of the text. Specifying this can improve OCR results when
@@ -279,12 +296,31 @@ def ocr(
         `stbt.set_global_ocr_corrections`. If global corrections have been set
         *and* this ``corrections`` parameter is specified, the corrections in
         this parameter are applied first.
+
+    :param float confidence_threshold:
+        Ignore any line of text if the OCR engine's confidence in what it read
+        is lower than this (between 0 and 1). This filters out junk "text"
+        that the engine reads from icons, logos and images. Defaults to 0.6.
+        You can override the global default value by setting
+        ``confidence_threshold`` in the ``[ocr]`` section of :ref:`.stbt.conf`.
+        Invalid for engines other than ``OcrEngine.PADDLEOCR_V6``.
     """
     if frame is None:
         from stbt_core import get_frame
         frame = get_frame()
 
     region = _validate_region(frame, region)
+
+    if engine is None:
+        engine = get_config("ocr", "engine", type_=OcrEngine)
+    if engine == OcrEngine.PADDLEOCR_V6:
+        _check_no_tesseract_params(
+            mode=mode, lang=lang, tesseract_config=tesseract_config,
+            tesseract_user_words=tesseract_user_words,
+            tesseract_user_patterns=tesseract_user_patterns,
+            upsample=upsample)
+    elif confidence_threshold is not None:
+        raise ValueError(_CONFIDENCE_THRESHOLD_UNSUPPORTED)
 
     if isinstance(tesseract_user_words, (bytes, str)):
         tesseract_user_words = [tesseract_user_words]
@@ -305,10 +341,15 @@ def ocr(
     draw_source_region(frame, region)
     imglog = ImageLogger("ocr", result=None)
 
-    text, _ = _tesseract(
-        frame, region, mode, lang, tesseract_config,
-        tesseract_user_patterns, tesseract_user_words, upsample, text_color,
-        text_color_threshold, engine, char_whitelist, imglog)
+    if engine == OcrEngine.PADDLEOCR_V6:
+        text = _lines_to_text(_paddleocr(
+            frame, region, text_color, text_color_threshold, char_whitelist,
+            confidence_threshold, imglog))
+    else:
+        text, _ = _tesseract(
+            frame, region, mode, lang, tesseract_config,
+            tesseract_user_patterns, tesseract_user_words, upsample,
+            text_color, text_color_threshold, engine, char_whitelist, imglog)
     assert text is not None
     text = text.strip().translate(_ocr_transtab)
     text = apply_ocr_corrections(text, corrections)
@@ -322,7 +363,7 @@ def match_text(
     text: str,
     frame: Optional[FrameT] = None,
     region: Region = Region.ALL,
-    mode: OcrMode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+    mode: Optional[OcrMode] = None,
     lang: Optional[str] = None,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]] = None,
     case_sensitive: bool = False,
@@ -331,6 +372,7 @@ def match_text(
     text_color_threshold: Optional[float] = None,
     engine: Optional[OcrEngine] = None,
     char_whitelist: Optional[str] = None,
+    confidence_threshold: Optional[float] = None,
 ) -> TextMatchResult:
     """Search for the specified text in a single video frame.
 
@@ -349,6 +391,7 @@ def match_text(
     :param engine: See `ocr`.
     :param char_whitelist: See `ocr`.
     :param bool case_sensitive: Ignore case if False (the default).
+    :param confidence_threshold: See `ocr`.
 
     :returns:
       A `TextMatchResult`, which will evaluate to True if the text was found,
@@ -368,6 +411,15 @@ def match_text(
 
     region = _validate_region(frame, region)
 
+    if engine is None:
+        engine = get_config("ocr", "engine", type_=OcrEngine)
+    if engine == OcrEngine.PADDLEOCR_V6:
+        _check_no_tesseract_params(
+            mode=mode, lang=lang, tesseract_config=tesseract_config,
+            upsample=upsample)
+    elif confidence_threshold is not None:
+        raise ValueError(_CONFIDENCE_THRESHOLD_UNSUPPORTED)
+
     if upsample is None:
         upsample = get_config("ocr", "upsample", type_=bool)
 
@@ -380,31 +432,48 @@ def match_text(
     draw_source_region(frame, region)
     imglog = ImageLogger("match_text")
 
-    _, xml = _tesseract(
-        frame, region, mode, lang, _config,
-        None, text.split(), upsample, text_color,
-        text_color_threshold, engine, char_whitelist,
-        imglog)
-    if xml == '':
+    if engine == OcrEngine.PADDLEOCR_V6:
         hocr = None
-        result = TextMatchResult(rts, False, None, frame, text)
-    else:
-        import lxml.etree
-        hocr = lxml.etree.fromstring(xml.encode('utf-8'))
-        p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
+        lines = _paddleocr(
+            frame, region, text_color, text_color_threshold, char_whitelist,
+            confidence_threshold, imglog)
+        p = _find_phrase(
+            [(w, Region.from_extents(*box))
+             for line in lines for w, box in line["words"]],
+            to_unicode(text).split(), case_sensitive)
         if p:
-            # Find bounding box
-            box = Region.bounding_box(*[_hocr_elem_region(elem)
-                                        for _, elem in p])
-            # _tesseract crops to region and scales up by a factor of 3 so
-            # we must undo this transformation here.
-            n = 3 if upsample else 1
-            box = Region.from_extents(
-                region.x + box.x // n, region.y + box.y // n,
-                region.x + box.right // n, region.y + box.bottom // n)
+            box = Region.bounding_box(*[r for _, r in p])
             result = TextMatchResult(rts, True, box, frame, text)
         else:
             result = TextMatchResult(rts, False, None, frame, text)
+        imglog.set(output=_lines_to_text(lines))
+    else:
+        _, xml = _tesseract(
+            frame, region, mode, lang, _config,
+            None, text.split(), upsample, text_color,
+            text_color_threshold, engine, char_whitelist,
+            imglog)
+        if xml == '':
+            hocr = None
+            result = TextMatchResult(rts, False, None, frame, text)
+        else:
+            import lxml.etree
+            hocr = lxml.etree.fromstring(xml.encode('utf-8'))
+            p = _hocr_find_phrase(
+                hocr, to_unicode(text).split(), case_sensitive)
+            if p:
+                # Find bounding box
+                box = Region.bounding_box(*[_hocr_elem_region(elem)
+                                            for _, elem in p])
+                # _tesseract crops to region and scales up by a factor of 3 so
+                # we must undo this transformation here.
+                n = 3 if upsample else 1
+                box = Region.from_extents(
+                    region.x + box.x // n, region.y + box.y // n,
+                    region.x + box.right // n, region.y + box.bottom // n)
+                result = TextMatchResult(rts, True, box, frame, text)
+            else:
+                result = TextMatchResult(rts, False, None, frame, text)
 
     if result.match:
         debug("match_text: Match found: %s" % str(result))
@@ -623,7 +692,7 @@ def _tesseract_version(output=None):
 def _tesseract(
         frame: FrameT,
         region: Region,
-        mode: OcrMode,
+        mode: Optional[OcrMode],
         lang: Optional[str],
         _config: Optional[dict[str, bool | str | int]],
         user_patterns: Optional[list[str]],
@@ -640,6 +709,9 @@ def _tesseract(
         _config = {}
     else:
         _config = dict(_config)
+
+    if mode is None:
+        mode = OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD
 
     if lang is None:
         lang = get_config("ocr", "lang", "eng")
@@ -715,6 +787,154 @@ def _tesseract(
     assert isinstance(txt, (str, type(None)))
     assert isinstance(hocr, (str, type(None)))
     return txt, hocr
+
+
+def _paddleocr(
+        frame: FrameT,
+        region: Region,
+        text_color: Optional[ColorT],
+        text_color_threshold: Optional[float],
+        char_whitelist: Optional[str],
+        confidence_threshold: Optional[float],
+        imglog: ImageLogger,
+) -> list[dict]:
+    """Returns the lines of text in `region`; see `_paddleocr_lines`.
+
+    Coordinates are relative to `frame`.
+    """
+    if text_color_threshold is None:
+        text_color_threshold = get_config(
+            "ocr", "text_color_threshold", type_=int)
+    if confidence_threshold is None:
+        confidence_threshold = get_config(
+            "ocr", "confidence_threshold", type_=float)
+
+    imglog.imwrite("frame", frame)
+    imglog.set(region=region, engine=OcrEngine.PADDLEOCR_V6,
+               text_color=text_color,
+               text_color_threshold=text_color_threshold,
+               char_whitelist=char_whitelist,
+               confidence_threshold=confidence_threshold)
+
+    frame = crop(frame, region)
+    if text_color is not None:
+        # Unlike Tesseract, we don't binarise the image.
+        d = numpy.subtract(frame, Color(text_color).array, dtype=numpy.int32)
+        d = numpy.sqrt((d ** 2).sum(axis=2) / 3)
+        frame = numpy.clip(d * (255 / text_color_threshold), 0, 255) \
+            .astype(numpy.uint8)
+        imglog.imwrite(
+            "diff", frame,
+            description=(
+                f"The distance of each pixel from the specified text_color "
+                f"({text_color!r}); white pixels are further away than "
+                f"text_color_threshold ({text_color_threshold})."),
+            source_region=imglog.data.get("region"))
+    if frame.ndim == 2 or frame.shape[2] == 1:
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    frame = numpy.ascontiguousarray(frame[:, :, :3])
+
+    lines = _paddleocr_lines(frame, char_whitelist)
+
+    dx = max(0, region.x)
+    dy = max(0, region.y)
+    for line in lines:
+        line["quad"] = [[x + dx, y + dy] for x, y in line["quad"]]
+        for word in line["words"]:
+            x0, y0, x1, y1 = word[1]
+            word[1] = [x0 + dx, y0 + dy, x1 + dx, y1 + dy]
+    accepted = [x for x in lines if x["score"] >= confidence_threshold]
+    if imglog.enabled:
+        ignored = [x for x in lines if x["score"] < confidence_threshold]
+        imglog.set(
+            source_tsv_regions=[
+                (Region.from_extents(*box), css_class,
+                 "%s (confidence: %.2f)" % (word, line["score"]))
+                for css_class, lines_ in [("tsv-word", accepted),
+                                          ("ocr-ignored", ignored)]
+                for line in lines_ for word, box in line["words"]],
+            ignored=[(line["text"], "%.2f" % line["score"])
+                     for line in ignored],
+            paddleocr_output=pprint.pformat(lines, sort_dicts=False))
+    return accepted
+
+
+_CONFIDENCE_THRESHOLD_UNSUPPORTED = (
+    "confidence_threshold is only supported by OcrEngine.PADDLEOCR_V6")
+
+
+def _check_no_tesseract_params(**kwargs):
+    for name, value in kwargs.items():
+        if value is not None:
+            raise ValueError(
+                "%s isn't supported by OcrEngine.PADDLEOCR_V6" % name)
+
+
+@functools.cache
+def _paddleocr_pipeline() -> PaddleOcrIface:
+    from . import paddleocr
+    return paddleocr.PaddleOcr()
+
+
+def _paddleocr_lines(frame: FrameT, char_whitelist: str | None) -> list[dict]:
+    """Returns a list of lines, top-to-bottom & left-to-right.
+
+    Each line is a dict with keys "text", "score" (the mean probability of
+    its characters), "quad" (the corners as [x, y] pixel coordinates in
+    `frame`: top-left, top-right, bottom-right, bottom-left), and "words"
+    (a list of [word, [x0, y0, x1, y1]] for each whitespace-separated word).
+    """
+    result = _paddleocr_pipeline().predict(
+        frame, char_whitelist=char_whitelist)
+    return [
+        {"text": text,
+         "score": score,
+         "quad": quad,
+         "words": _paddleocr_words(tokens, regions)}
+        for text, score, quad, tokens, regions in zip(
+            result.rec_texts, result.rec_scores, result.rec_polys,
+            result.text_word, result.text_word_region)
+        if text.strip()]
+
+
+def _paddleocr_words(tokens: list[str], regions: list) -> list[list]:
+    """Convert PaddleOCR's word boxes to boxes for whitespace-separated words.
+
+    PaddleOCR's "words" are runs of letters & digits, individual CJK
+    characters, or runs of other characters (including spaces), and `regions`
+    has the corners of each one.
+    """
+    spans = []
+    end = 0
+    for token, corners in zip(tokens, regions):
+        xs, ys = zip(*corners)
+        start, end = end, end + len(token)
+        spans.append((start, end, (min(xs), min(ys), max(xs), max(ys))))
+    words = []
+    for m in re.finditer(r"\S+", "".join(tokens)):
+        boxes = [box for start, end, box in spans
+                 if start < m.end() and end > m.start()]
+        words.append([m.group(), [int(min(b[0] for b in boxes)),
+                                  int(min(b[1] for b in boxes)),
+                                  int(max(b[2] for b in boxes)),
+                                  int(max(b[3] for b in boxes))]])
+    return words
+
+
+def _lines_to_text(lines: list[dict]) -> str:
+    """Join the lines that are side-by-side with a space."""
+    rows = []
+    for line in lines:
+        ys = [y for _, y in line["quad"]]
+        y, h = (min(ys) + max(ys)) / 2, max(ys) - min(ys)
+        if rows and abs(y - rows[-1][0]) < h / 2:
+            rows[-1][1].append(line)
+        else:
+            rows.append((y, [line]))
+    return "\n".join(
+        " ".join(line["text"]
+                 for line in sorted(row, key=lambda line: line["quad"][0][0]))
+        for _, row in rows)
 
 
 def bgr_diff(frame, color, threshold, imglog: ImageLogger):
@@ -1015,13 +1235,18 @@ def _hocr_iterate(hocr):
 
 
 def _hocr_find_phrase(hocr, phrase, case_sensitive):
+    return _find_phrase(
+        [(w, elem) for w, elem in _hocr_iterate(hocr) if w.strip() != ''],
+        phrase, case_sensitive)
+
+
+def _find_phrase(words, phrase, case_sensitive):
     if case_sensitive:
         lower = lambda s: s
     else:
         lower = lambda s: s.lower()
 
-    words_only = [(lower(w).translate(_ocr_transtab), elem)
-                  for w, elem in _hocr_iterate(hocr) if w.strip() != '']
+    words_only = [(lower(w).translate(_ocr_transtab), x) for w, x in words]
     phrase = [lower(w).translate(_ocr_transtab) for w in phrase]
 
     # Dumb and poor algorithmic complexity but succint and simple
@@ -1076,7 +1301,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
             "Matched" if imglog.data["result"] else "Didn't match")
         hocr = imglog.data["hocr"]
         if hocr is None:
-            output = ""
+            output = imglog.data.get("output", "")
         else:
             output = "".join(x for x, _ in _hocr_iterate(hocr))
 
@@ -1086,6 +1311,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
             .tsv-paragraph { outline: 3px solid yellow; }
             .tsv-line { outline: 2px solid green; }
             .tsv-word { outline: 1px solid blue; }
+            .ocr-ignored { outline: 1px dashed red; }
             img.img-tessinput { outline: 2px solid #8080ff; }
         </style>
         <h4>{{title}}</h4>
@@ -1097,8 +1323,24 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
         <pre><code>{{ result | escape }}</code></pre>
         {% endif %}
 
-        <h5>Tesseract output:</h5>
+        <h5>{{ "PaddleOCR" if engine.name == "PADDLEOCR_V6" else "Tesseract" }}
+          output:</h5>
         <pre><code>{{ output | escape }}</code></pre>
+
+        {% if ignored %}
+        <h5>Ignored because the confidence is lower than confidence_threshold
+          ({{ confidence_threshold }}):</h5>
+        <ul>
+          {% for text, score in ignored %}
+          <li><code>{{ text | escape }}</code> (confidence: {{ score }})
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if paddleocr_output %}
+        <h5>PaddleOCR lines:</h5>
+        <pre><code>{{ paddleocr_output | escape }}</code></pre>
+        {% endif %}
 
         {% if hocr_xml %}
         <h5>HOCR XML:</h5>
@@ -1111,6 +1353,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
           <li>case_sensitive={{case_sensitive}}
           {% endif %}
           <li>char_whitelist={{char_whitelist}}
+          <li>confidence_threshold={{confidence_threshold}}
           <li>engine={{engine}}
           <li>lang={{lang}}
           <li>mode={{mode}}
