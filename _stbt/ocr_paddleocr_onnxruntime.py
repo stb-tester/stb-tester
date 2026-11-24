@@ -155,6 +155,9 @@ def postprocess(
         ignored = [x for x in lines if x.score < confidence_threshold]
         imglog.set(
             source_tsv_regions=[
+                (_quad_bounding_box(line.quad), "tsv-line",
+                 "%s (confidence: %.2f)" % (line.text, line.score))
+                for line in accepted] + [
                 (box, css_class,
                  "%s (confidence: %.2f)" % (word, line.score))
                 for css_class, lines_ in [("tsv-word", accepted),
@@ -207,6 +210,11 @@ class TextLine:
     words: list[tuple[str, Region]]
 
 
+def _quad_bounding_box(quad) -> Region:
+    xs, ys = zip(*quad)
+    return Region.from_extents(min(xs), min(ys), max(xs), max(ys))
+
+
 def _paddleocr_words(
         tokens: list[PaddleOcrWord], quad: Quad) -> list[tuple[str, Region]]:
     """Convert PaddleOCR's word boxes to boxes for whitespace-separated words.
@@ -252,6 +260,7 @@ def lines_to_text(lines: list[TextLine]) -> str:
 
 _PADDLEOCR_DEBUG_TEMPLATE = """\
     <style>
+        .tsv-line { outline: 2px solid green; }
         .tsv-word { outline: 1px solid blue; }
         .ocr-ignored { outline: 1px dashed red; }
     </style>
