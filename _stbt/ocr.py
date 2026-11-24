@@ -49,7 +49,22 @@ _ocr_replacements = {
     '–': '-',
     '—': '-',
     '―': '-',
+    '−': '-',
+    '′': "'",
+    '″': '"',
+    '…': '...',
+    '\u3000': ' ',  # Ideographic space
+    '∨': 'v',
+    '∶': ':',
+    '∕': '/',
+    '∼': '~',
+    '∙': '•',
+    '⋅': '·',
 }
+# Fullwidth ASCII and Roman numerals:
+_ocr_replacements.update(
+    (c, unicodedata.normalize("NFKC", c))
+    for c in map(chr, [*range(0xFF01, 0xFF5F), *range(0x2160, 0x2180)]))
 _ocr_transtab = dict((ord(amb), to) for amb, to in _ocr_replacements.items())
 
 
