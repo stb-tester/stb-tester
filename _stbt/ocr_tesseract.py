@@ -555,6 +555,77 @@ def _find_tessdata_dir(tessdata_suffix):
     raise RuntimeError('Installation error: Cannot locate tessdata directory')
 
 
+_TESSERACT_DEBUG_TEMPLATE = """\
+    <style>
+        .tsv-block { outline: 4px solid orange; }
+        .tsv-paragraph { outline: 3px solid yellow; }
+        .tsv-line { outline: 2px solid green; }
+        .tsv-word { outline: 1px solid blue; }
+        img.img-tessinput { outline: 2px solid #8080ff; }
+    </style>
+    <h4>{{title}}</h4>
+
+    {{ annotated_image([result] + source_tsv_regions) }}
+
+    {% if match_text %}
+    <h5>Result:</h5>
+    <pre><code>{{ result | escape }}</code></pre>
+    {% endif %}
+
+    <h5>Tesseract output:</h5>
+    <pre><code>{{ output | escape }}</code></pre>
+
+    {% if hocr_xml %}
+    <h5>HOCR XML:</h5>
+    <pre><code>{{ hocr_xml | escape }}</code></pre>
+    {% endif %}
+
+    <h5>Parameters:</h5>
+    <ul>
+      {% if match_text %}
+      <li>case_sensitive={{case_sensitive}}
+      {% endif %}
+      <li>char_whitelist={{char_whitelist}}
+      <li>engine={{engine}}
+      <li>lang={{lang}}
+      <li>mode={{mode}}
+      <li>tesseract_config={{tesseract_config}}
+      <li>tesseract_user_patterns={{user_patterns}}
+      <li>tesseract_user_words={{user_words}}
+      <li>tesseract_version={{tesseract_version}}
+      {% if match_text %}
+      <li>text={{text}}
+      {% endif %}
+      <li>text_color={{text_color}}
+      <li>text_color_threshold={{text_color_threshold}}
+      <li>upsample={{upsample}}
+    </ul>
+
+    {% if "upsampled" in images %}
+    <h5>ROI Scaled:</h5>
+    {{ img("upsampled") }}
+    {% endif %}
+
+    {% if "diff" in images %}
+    <h5>Color difference {{ text_color }}:</h5>
+    {{ img("diff") }}
+    {% endif %}
+
+    {% if "binarized" in images %}
+    <h5>
+      Color difference – binarised
+      (threshold={{ text_color_threshold }}):
+    </h5>
+    {{ img("binarized") }}
+    {% endif %}
+
+    {% if "tessinput" in images %}
+    <h5>Tesseract's binarisation:</h5>
+    {{ annotated_image(tsv_regions, source_name="tessinput") }}
+    {% endif %}
+"""
+
+
 def _log_ocr_image_debug(imglog: ImageLogger, output=None):
     if not imglog.enabled:
         return
@@ -573,75 +644,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
         else:
             output = "".join(x for x, _ in _hocr_iterate(hocr))
 
-    template = """\
-        <style>
-            .tsv-block { outline: 4px solid orange; }
-            .tsv-paragraph { outline: 3px solid yellow; }
-            .tsv-line { outline: 2px solid green; }
-            .tsv-word { outline: 1px solid blue; }
-            img.img-tessinput { outline: 2px solid #8080ff; }
-        </style>
-        <h4>{{title}}</h4>
-
-        {{ annotated_image([result] + source_tsv_regions) }}
-
-        {% if match_text %}
-        <h5>Result:</h5>
-        <pre><code>{{ result | escape }}</code></pre>
-        {% endif %}
-
-        <h5>Tesseract output:</h5>
-        <pre><code>{{ output | escape }}</code></pre>
-
-        {% if hocr_xml %}
-        <h5>HOCR XML:</h5>
-        <pre><code>{{ hocr_xml | escape }}</code></pre>
-        {% endif %}
-
-        <h5>Parameters:</h5>
-        <ul>
-          {% if match_text %}
-          <li>case_sensitive={{case_sensitive}}
-          {% endif %}
-          <li>char_whitelist={{char_whitelist}}
-          <li>engine={{engine}}
-          <li>lang={{lang}}
-          <li>mode={{mode}}
-          <li>tesseract_config={{tesseract_config}}
-          <li>tesseract_user_patterns={{user_patterns}}
-          <li>tesseract_user_words={{user_words}}
-          <li>tesseract_version={{tesseract_version}}
-          {% if match_text %}
-          <li>text={{text}}
-          {% endif %}
-          <li>text_color={{text_color}}
-          <li>text_color_threshold={{text_color_threshold}}
-          <li>upsample={{upsample}}
-        </ul>
-
-        {% if "upsampled" in images %}
-        <h5>ROI Scaled:</h5>
-        {{ img("upsampled") }}
-        {% endif %}
-
-        {% if "diff" in images %}
-        <h5>Color difference {{ text_color }}:</h5>
-        {{ img("diff") }}
-        {% endif %}
-
-        {% if "binarized" in images %}
-        <h5>
-          Color difference – binarised
-          (threshold={{ text_color_threshold }}):
-        </h5>
-        {{ img("binarized") }}
-        {% endif %}
-
-        {% if "tessinput" in images %}
-        <h5>Tesseract's binarisation:</h5>
-        {{ annotated_image(tsv_regions, source_name="tessinput") }}
-        {% endif %}
-    """
+    template = _TESSERACT_DEBUG_TEMPLATE
 
     imglog.html(
         template,
