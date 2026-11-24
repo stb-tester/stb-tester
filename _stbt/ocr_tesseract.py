@@ -57,7 +57,8 @@ def ocr_tesseract(
         engine, char_whitelist, imglog)
     assert text is not None
     text = ocr_postprocess(text, corrections)
-    _log_ocr_image_debug(imglog, text)
+    imglog.html(_TESSERACT_DEBUG_TEMPLATE, match_text=False, output=text,
+                title="stbt.ocr")
     return text
 
 
@@ -109,8 +110,11 @@ def match_text_tesseract(
             result = TextMatchResult(rts, True, box, frame, text)
         else:
             result = TextMatchResult(rts, False, None, frame, text)
-    imglog.set(text=text, case_sensitive=case_sensitive, result=result)
-    _log_ocr_image_debug(imglog)
+    imglog.html(
+        _TESSERACT_DEBUG_TEMPLATE, match_text=True, text=text,
+        case_sensitive=case_sensitive, result=result,
+        title="stbt.match_text(%r): %s" % (
+            text, "Matched" if result else "Didn't match"))
     return result
 
 
@@ -625,30 +629,6 @@ _TESSERACT_DEBUG_TEMPLATE = """\
     {{ annotated_image(tsv_regions, source_name="tessinput") }}
     {% endif %}
 """
-
-
-def _log_ocr_image_debug(imglog: ImageLogger, output=None):
-    if not imglog.enabled:
-        return
-
-    if imglog.name == "ocr":
-        title = "stbt.ocr"
-        match_text = False  # pylint:disable=redefined-outer-name
-    else:
-        match_text = True
-        title = "stbt.match_text(%r): %s" % (
-            imglog.data["text"],
-            "Matched" if imglog.data["result"] else "Didn't match")
-        output = imglog.data["output"]
-
-    template = _TESSERACT_DEBUG_TEMPLATE
-
-    imglog.html(
-        template,
-        match_text=match_text,
-        output=output,
-        title=title,
-    )
 
 
 def _symlink_copy_dir(a, b):
