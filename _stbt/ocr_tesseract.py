@@ -88,11 +88,13 @@ def match_text_tesseract(
         text_color_threshold, engine, char_whitelist,
         imglog)
     if xml == '':
-        hocr = None
         result = TextMatchResult(rts, False, None, frame, text)
+        imglog.set(output="")
     else:
         import lxml.etree
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
+        if imglog.enabled:
+            imglog.set(output="".join(x for x, _ in _hocr_iterate(hocr)))
         p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
@@ -107,8 +109,7 @@ def match_text_tesseract(
             result = TextMatchResult(rts, True, box, frame, text)
         else:
             result = TextMatchResult(rts, False, None, frame, text)
-    imglog.set(text=text, case_sensitive=case_sensitive,
-               result=result, hocr=hocr)
+    imglog.set(text=text, case_sensitive=case_sensitive, result=result)
     _log_ocr_image_debug(imglog)
     return result
 
@@ -638,11 +639,7 @@ def _log_ocr_image_debug(imglog: ImageLogger, output=None):
         title = "stbt.match_text(%r): %s" % (
             imglog.data["text"],
             "Matched" if imglog.data["result"] else "Didn't match")
-        hocr = imglog.data["hocr"]
-        if hocr is None:
-            output = ""
-        else:
-            output = "".join(x for x, _ in _hocr_iterate(hocr))
+        output = imglog.data["output"]
 
     template = _TESSERACT_DEBUG_TEMPLATE
 
