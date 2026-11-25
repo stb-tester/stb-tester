@@ -11,7 +11,8 @@ import _stbt.config
 import stbt_core as stbt
 from _stbt import imgproc_cache
 from _stbt.imgutils import load_image
-from _stbt.ocr import _tesseract_version, Replacements
+from _stbt.ocr import Replacements
+from _stbt.ocr_tesseract import _tesseract_version
 from _stbt.types import Region
 from _stbt.utils import named_temporary_directory
 
