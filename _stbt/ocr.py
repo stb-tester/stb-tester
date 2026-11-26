@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import dataclasses
 import re
 import typing
 import unicodedata
@@ -9,6 +10,7 @@ from typing import Optional
 
 import numpy
 
+from .config import get_config
 from .imgutils import (
     Color,
     ColorT,
@@ -277,6 +279,16 @@ def ocr(
 
     region = _validate_region(frame, region)
 
+    config = OcrConfig.load()
+    if lang is None:
+        lang = config.lang
+    if upsample is None:
+        upsample = config.upsample
+    if text_color_threshold is None:
+        text_color_threshold = config.text_color_threshold
+    if engine is None:
+        engine = config.engine
+
     from .ocr_tesseract import ocr_tesseract
     text = ocr_tesseract(
         frame, region, mode, lang, tesseract_config, tesseract_user_words,
@@ -342,6 +354,16 @@ def match_text(
         frame = get_frame()
 
     region = _validate_region(frame, region)
+
+    config = OcrConfig.load()
+    if lang is None:
+        lang = config.lang
+    if upsample is None:
+        upsample = config.upsample
+    if text_color_threshold is None:
+        text_color_threshold = config.text_color_threshold
+    if engine is None:
+        engine = config.engine
 
     from .ocr_tesseract import match_text_tesseract
     result = match_text_tesseract(
@@ -518,6 +540,24 @@ ocr_eq.replacements = Replacements({
 
 
 ocr_eq.normalize = normalize
+
+
+@dataclasses.dataclass
+class OcrConfig:
+    """The ``[ocr]`` section of the configuration files."""
+    engine: OcrEngine
+    lang: str
+    upsample: bool
+    text_color_threshold: float
+
+    @staticmethod
+    def load() -> OcrConfig:
+        return OcrConfig(
+            engine=get_config("ocr", "engine", type_=OcrEngine),
+            lang=get_config("ocr", "lang", "eng"),
+            upsample=get_config("ocr", "upsample", type_=bool),
+            text_color_threshold=get_config(
+                "ocr", "text_color_threshold", type_=int))
 
 
 def bgr_diff(frame, color, threshold, imglog: ImageLogger):

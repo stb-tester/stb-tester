@@ -11,7 +11,6 @@ from typing import Optional
 import cv2
 
 from . import imgproc_cache
-from .config import get_config
 from .imgutils import ColorT, crop, FrameT
 from .logging import ImageLogger, warn
 from .ocr import (
@@ -31,14 +30,14 @@ def ocr_tesseract(
     frame: FrameT,
     region: Region,
     mode: OcrMode,
-    lang: Optional[str],
+    lang: str,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]],
     tesseract_user_words: Optional[list[str] | str],
     tesseract_user_patterns: Optional[list[str] | str],
-    upsample: Optional[bool],
+    upsample: bool,
     text_color: Optional[ColorT],
-    text_color_threshold: Optional[float],
-    engine: Optional[OcrEngine],
+    text_color_threshold: float,
+    engine: OcrEngine,
     char_whitelist: Optional[str],
     corrections: Optional[CorrectionsT],
 ) -> str:
@@ -47,8 +46,6 @@ def ocr_tesseract(
         tesseract_user_words = [tesseract_user_words]
     if isinstance(tesseract_user_patterns, (bytes, str)):
         tesseract_user_patterns = [tesseract_user_patterns]
-    if upsample is None:
-        upsample = get_config("ocr", "upsample", type_=bool)
     _config = dict(tesseract_config or {})
     _config['tessedit_create_txt'] = 1
     text, _ = _tesseract(
@@ -67,19 +64,17 @@ def match_text_tesseract(
     frame: FrameT,
     region: Region,
     mode: OcrMode,
-    lang: Optional[str],
+    lang: str,
     tesseract_config: Optional[typing.Mapping[str, bool | str | int]],
     case_sensitive: bool,
-    upsample: Optional[bool],
+    upsample: bool,
     text_color: Optional[ColorT],
-    text_color_threshold: Optional[float],
-    engine: Optional[OcrEngine],
+    text_color_threshold: float,
+    engine: OcrEngine,
     char_whitelist: Optional[str],
 ) -> TextMatchResult:
     rts = getattr(frame, "time", None)
     imglog = ImageLogger("match_text")
-    if upsample is None:
-        upsample = get_config("ocr", "upsample", type_=bool)
     _config = dict(tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
     _config['tessedit_create_txt'] = 0
@@ -161,14 +156,14 @@ def _tesseract(
         frame: FrameT,
         region: Region,
         mode: OcrMode,
-        lang: Optional[str],
+        lang: str,
         _config: Optional[dict[str, bool | str | int]],
         user_patterns: Optional[list[str]],
         user_words: Optional[list[str]],
         upsample: bool,
         text_color: Optional[ColorT],
-        text_color_threshold: Optional[float],
-        engine: Optional[OcrEngine],
+        text_color_threshold: float,
+        engine: OcrEngine,
         char_whitelist: Optional[str],
         imglog: ImageLogger,
 ):
@@ -177,16 +172,6 @@ def _tesseract(
         _config = {}
     else:
         _config = dict(_config)
-
-    if lang is None:
-        lang = get_config("ocr", "lang", "eng")
-
-    if text_color_threshold is None:
-        text_color_threshold = get_config(
-            "ocr", "text_color_threshold", type_=int)
-
-    if engine is None:
-        engine = get_config("ocr", "engine", type_=OcrEngine)
 
     tesseract_version = _tesseract_version()
 
