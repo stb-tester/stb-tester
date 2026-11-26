@@ -280,20 +280,15 @@ def ocr(
     region = _validate_region(frame, region)
 
     config = OcrConfig.load()
-    if lang is None:
-        lang = config.lang
-    if upsample is None:
-        upsample = config.upsample
-    if text_color_threshold is None:
-        text_color_threshold = config.text_color_threshold
     if engine is None:
         engine = config.engine
-
+    common_args = CommonArgs(
+        frame, region, engine, text_color, text_color_threshold,
+        char_whitelist, mode, lang, tesseract_config, upsample,
+    ).with_defaults(config)
     from .ocr_tesseract import ocr_tesseract
-    text = ocr_tesseract(
-        frame, region, mode, lang, tesseract_config, tesseract_user_words,
-        tesseract_user_patterns, upsample, text_color, text_color_threshold,
-        engine, char_whitelist, corrections)
+    text = ocr_tesseract(common_args, tesseract_user_words,
+                         tesseract_user_patterns, corrections)
 
     debug("ocr(frame=%s, region=%r): %r" % (_frame_repr(frame), region, text))
     draw_source_region(frame, region)
@@ -356,19 +351,14 @@ def match_text(
     region = _validate_region(frame, region)
 
     config = OcrConfig.load()
-    if lang is None:
-        lang = config.lang
-    if upsample is None:
-        upsample = config.upsample
-    if text_color_threshold is None:
-        text_color_threshold = config.text_color_threshold
     if engine is None:
         engine = config.engine
-
+    common_args = CommonArgs(
+        frame, region, engine, text_color, text_color_threshold,
+        char_whitelist, mode, lang, tesseract_config, upsample,
+    ).with_defaults(config)
     from .ocr_tesseract import match_text_tesseract
-    result = match_text_tesseract(
-        text, frame, region, mode, lang, tesseract_config, case_sensitive,
-        upsample, text_color, text_color_threshold, engine, char_whitelist)
+    result = match_text_tesseract(text, common_args, case_sensitive)
 
     if result.match:
         debug("match_text: Match found: %s" % str(result))
@@ -558,6 +548,32 @@ class OcrConfig:
             upsample=get_config("ocr", "upsample", type_=bool),
             text_color_threshold=get_config(
                 "ocr", "text_color_threshold", type_=int))
+
+
+@dataclasses.dataclass
+class CommonArgs:
+    """The arguments to `ocr` & `match_text` that they have in common."""
+    frame: FrameT
+    region: Region
+    engine: OcrEngine
+    text_color: Optional[ColorT]
+    text_color_threshold: Optional[float]
+    char_whitelist: Optional[str]
+    mode: OcrMode
+    lang: Optional[str]
+    tesseract_config: Optional[typing.Mapping[str, bool | str | int]]
+    upsample: Optional[bool]
+
+    def with_defaults(self, config: OcrConfig) -> CommonArgs:
+        return dataclasses.replace(
+            self,
+            text_color_threshold=(
+                config.text_color_threshold
+                if self.text_color_threshold is None
+                else self.text_color_threshold),
+            lang=config.lang if self.lang is None else self.lang,
+            upsample=config.upsample if self.upsample is None
+            else self.upsample)
 
 
 def bgr_diff(frame, color, threshold, imglog: ImageLogger):

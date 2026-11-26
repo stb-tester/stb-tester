@@ -1,20 +1,21 @@
 from __future__ import annotations
 
+import dataclasses
 import errno
 import os
 import re
 import shutil
 import subprocess
-import typing
 from typing import Optional
 
 import cv2
 
 from . import imgproc_cache
-from .imgutils import ColorT, crop, FrameT
+from .imgutils import crop, FrameT
 from .logging import ImageLogger, warn
 from .ocr import (
     _ocr_transtab,
+    CommonArgs,
     CorrectionsT,
     ocr,
     ocr_postprocess,
@@ -27,18 +28,9 @@ from .utils import LooseVersion, named_temporary_directory, to_unicode
 
 
 def ocr_tesseract(
-    frame: FrameT,
-    region: Region,
-    mode: OcrMode,
-    lang: str,
-    tesseract_config: Optional[typing.Mapping[str, bool | str | int]],
+    common_args: CommonArgs,
     tesseract_user_words: Optional[list[str] | str],
     tesseract_user_patterns: Optional[list[str] | str],
-    upsample: bool,
-    text_color: Optional[ColorT],
-    text_color_threshold: float,
-    engine: OcrEngine,
-    char_whitelist: Optional[str],
     corrections: Optional[CorrectionsT],
 ) -> str:
     imglog = ImageLogger("ocr", result=None)
@@ -46,12 +38,11 @@ def ocr_tesseract(
         tesseract_user_words = [tesseract_user_words]
     if isinstance(tesseract_user_patterns, (bytes, str)):
         tesseract_user_patterns = [tesseract_user_patterns]
-    _config = dict(tesseract_config or {})
+    _config = dict(common_args.tesseract_config or {})
     _config['tessedit_create_txt'] = 1
     text, _ = _tesseract(
-        frame, region, mode, lang, _config, tesseract_user_patterns,
-        tesseract_user_words, upsample, text_color, text_color_threshold,
-        engine, char_whitelist, imglog)
+        dataclasses.replace(common_args, tesseract_config=_config),
+        tesseract_user_patterns, tesseract_user_words, imglog)
     assert text is not None
     text = ocr_postprocess(text, corrections)
     imglog.html(_TESSERACT_DEBUG_TEMPLATE, match_text=False, output=text,
@@ -61,28 +52,18 @@ def ocr_tesseract(
 
 def match_text_tesseract(
     text: str,
-    frame: FrameT,
-    region: Region,
-    mode: OcrMode,
-    lang: str,
-    tesseract_config: Optional[typing.Mapping[str, bool | str | int]],
+    common_args: CommonArgs,
     case_sensitive: bool,
-    upsample: bool,
-    text_color: Optional[ColorT],
-    text_color_threshold: float,
-    engine: OcrEngine,
-    char_whitelist: Optional[str],
 ) -> TextMatchResult:
+    frame, region = common_args.frame, common_args.region
     rts = getattr(frame, "time", None)
     imglog = ImageLogger("match_text")
-    _config = dict(tesseract_config or {})
+    _config = dict(common_args.tesseract_config or {})
     _config['tessedit_create_hocr'] = 1
     _config['tessedit_create_txt'] = 0
     _, xml = _tesseract(
-        frame, region, mode, lang, _config,
-        None, text.split(), upsample, text_color,
-        text_color_threshold, engine, char_whitelist,
-        imglog)
+        dataclasses.replace(common_args, tesseract_config=_config),
+        None, text.split(), imglog)
     if xml == '':
         result = TextMatchResult(rts, False, None, frame, text)
         imglog.set(output="")
@@ -98,7 +79,7 @@ def match_text_tesseract(
                                         for _, elem in p])
             # _tesseract crops to region and scales up by a factor of 3 so
             # we must undo this transformation here.
-            n = 3 if upsample else 1
+            n = 3 if common_args.upsample else 1
             box = Region.from_extents(
                 region.x + box.x // n, region.y + box.y // n,
                 region.x + box.right // n, region.y + box.bottom // n)
@@ -153,25 +134,23 @@ def _tesseract_version(output=None):
 
 
 def _tesseract(
-        frame: FrameT,
-        region: Region,
-        mode: OcrMode,
-        lang: str,
-        _config: Optional[dict[str, bool | str | int]],
+        common_args: CommonArgs,
         user_patterns: Optional[list[str]],
         user_words: Optional[list[str]],
-        upsample: bool,
-        text_color: Optional[ColorT],
-        text_color_threshold: float,
-        engine: OcrEngine,
-        char_whitelist: Optional[str],
         imglog: ImageLogger,
 ):
+    """`common_args` must have its defaults resolved."""
+    frame, region = common_args.frame, common_args.region
+    mode, lang, engine = common_args.mode, common_args.lang, common_args.engine
+    upsample = common_args.upsample
+    assert lang is not None
 
-    if _config is None:
+    if common_args.tesseract_config is None:
         _config = {}
     else:
-        _config = dict(_config)
+        _config = dict(common_args.tesseract_config)
+
+    text_color_threshold = common_args.text_color_threshold
 
     tesseract_version = _tesseract_version()
 
@@ -188,19 +167,18 @@ def _tesseract(
         raise ValueError("%s isn't available in tesseract %s"
                          % (mode, tesseract_version))
 
+    common_args = dataclasses.replace(
+        common_args, engine=engine, lang=lang,
+        tesseract_config=_config.copy())
     imglog.imwrite("frame", frame)
-    imglog.set(region=region, engine=engine, mode=mode, lang=lang,
-               tesseract_config=_config.copy(),
+    imglog.set(region=region, common_args=common_args,
                user_patterns=user_patterns, user_words=user_words,
-               upsample=upsample, text_color=text_color,
-               text_color_threshold=text_color_threshold,
-               char_whitelist=char_whitelist,
                tesseract_version=tesseract_version)
 
     frame = crop(frame, region)
 
     upsample_arg = upsample
-    if text_color is not None:
+    if (text_color := common_args.text_color) is not None:
         if upsample:
             frame = _upsample(frame, imglog)
             upsample_arg = False
@@ -209,7 +187,7 @@ def _tesseract(
 
     txt, hocr = _tesseract_subprocess(  # pylint:disable=unexpected-keyword-arg
         frame, mode, lang, _config, user_patterns, user_words, upsample_arg,
-        engine, char_whitelist, imglog, tesseract_version,
+        engine, common_args.char_whitelist, imglog, tesseract_version,
         use_cache=True)
 
     if imglog.enabled:
@@ -575,20 +553,20 @@ _TESSERACT_DEBUG_TEMPLATE = """\
       {% if match_text %}
       <li>case_sensitive={{case_sensitive}}
       {% endif %}
-      <li>char_whitelist={{char_whitelist}}
-      <li>engine={{engine}}
-      <li>lang={{lang}}
-      <li>mode={{mode}}
-      <li>tesseract_config={{tesseract_config}}
+      <li>char_whitelist={{common_args.char_whitelist}}
+      <li>engine={{common_args.engine}}
+      <li>lang={{common_args.lang}}
+      <li>mode={{common_args.mode}}
+      <li>tesseract_config={{common_args.tesseract_config}}
       <li>tesseract_user_patterns={{user_patterns}}
       <li>tesseract_user_words={{user_words}}
       <li>tesseract_version={{tesseract_version}}
       {% if match_text %}
       <li>text={{text}}
       {% endif %}
-      <li>text_color={{text_color}}
-      <li>text_color_threshold={{text_color_threshold}}
-      <li>upsample={{upsample}}
+      <li>text_color={{common_args.text_color}}
+      <li>text_color_threshold={{common_args.text_color_threshold}}
+      <li>upsample={{common_args.upsample}}
     </ul>
 
     {% if "upsampled" in images %}
@@ -597,14 +575,14 @@ _TESSERACT_DEBUG_TEMPLATE = """\
     {% endif %}
 
     {% if "diff" in images %}
-    <h5>Color difference {{ text_color }}:</h5>
+    <h5>Color difference {{ common_args.text_color }}:</h5>
     {{ img("diff") }}
     {% endif %}
 
     {% if "binarized" in images %}
     <h5>
       Color difference – binarised
-      (threshold={{ text_color_threshold }}):
+      (threshold={{ common_args.text_color_threshold }}):
     </h5>
     {{ img("binarized") }}
     {% endif %}
