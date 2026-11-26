@@ -79,6 +79,9 @@ INSTALL_PYLIB_FILES = \
     _stbt/motion.py \
     _stbt/multipress.py \
     _stbt/ocr.py \
+    _stbt/ocr_paddleocr.py \
+    _stbt/ocr_paddleocr_onnxruntime.py \
+    _stbt/ocr_tesseract.py \
     _stbt/precondition.py \
     _stbt/power.py \
     _stbt/pylint_plugin.py \
