@@ -27,6 +27,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         parallel \
         pycodestyle \
         pylint \
+        python3-dev \
         python3-docutils \
         python3-gi \
         python3-ipython \

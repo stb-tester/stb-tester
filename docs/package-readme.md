@@ -1,7 +1,3 @@
-import setuptools
-
-
-long_description = """\
 # Stb-tester open-source APIs (stbt_core)
 
 **Automated User Interface Testing for Set-Top Boxes & Smart TVs**
@@ -28,38 +24,3 @@ This package doesn't bundle the Tesseract OCR engine, so `ocr()` and
 
 [LICENSE]: https://github.com/stb-tester/stb-tester/blob/master/LICENSE
 [Stb-tester Platform]: https://stb-tester.com
-"""
-
-setuptools.setup(
-    name="stbt_core",
-    version="34.12.0",
-    author="Stb-tester.com Ltd.",
-    author_email="support@stb-tester.com",
-    description="Automated GUI testing for Set-Top Boxes",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://stb-tester.com",
-    packages=["stbt_core", "_stbt"],
-    package_data={
-        "_stbt": ["stbt.conf"],
-    },
-    classifiers=[
-        # pylint:disable=line-too-long
-        "Development Status :: 5 - Production/Stable",
-        "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.14",
-        "Topic :: Software Development :: Testing",
-    ],
-    python_requires=">=3.10",
-    extras_require={
-        "ocr": ["lxml==6.0.2"],
-        "debug": ["Jinja2==3.1.6"],
-        "keyboard": ["networkx==3.2.1"],
-    },
-    install_requires=[
-        "astroid==4.0.4",
-        "opencv-python~=4.10",
-        "pylint==4.0.5",
-    ],
-)

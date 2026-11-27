@@ -9,7 +9,8 @@
 .stbt-prefix
 .venv
 __pycache__
-_stbt/libstbt.*.so
+_stbt/_libstbt.*.so
+build/
 docs/stbt.1
 dist/
 etc/stbt.conf
